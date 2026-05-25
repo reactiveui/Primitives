@@ -136,12 +136,12 @@ namespace ReactiveUI.Primitives.Core
         /// Returns an observable sequence with a single Spark, using the immediate scheduler.
         /// </summary>
         /// <returns>The observable sequence that surfaces the behavior of the Spark upon subscription.</returns>
-        public IObservable<T> ToObservable() => ToObservable(Scheduler.Immediate);
+        public IObservable<T> ToObservable() => ToObservable(Sequencer.Immediate);
 
         /// <summary>
         /// Returns an observable sequence with a single Spark.
         /// </summary>
-        /// <param name="scheduler">Scheduler to send out the Spark calls on.</param>
+        /// <param name="scheduler">Sequencer to send out the Spark calls on.</param>
         /// <returns>The observable sequence that surfaces the behavior of the Spark upon subscription.</returns>
         public IObservable<T> ToObservable(ISequencer scheduler)
         {

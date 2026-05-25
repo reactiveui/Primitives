@@ -8,31 +8,31 @@ using System.Diagnostics;
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>
-/// CurrentThreadScheduler.
+/// CurrentThreadSequencer.
 /// </summary>
 /// <seealso cref="ReactiveUI.Primitives.Concurrency.ISequencer" />
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-public sealed class CurrentThreadScheduler : ISequencer
+public sealed class CurrentThreadSequencer : ISequencer
 {
-    private static readonly Lazy<CurrentThreadScheduler> StaticInstance = new(() => new CurrentThreadScheduler());
+    private static readonly Lazy<CurrentThreadSequencer> StaticInstance = new(() => new CurrentThreadSequencer());
 
     [ThreadStatic]
     private static bool _running;
 
     [ThreadStatic]
-    private static SchedulerQueue<TimeSpan>? _threadLocalQueue;
+    private static SequencerQueue<TimeSpan>? _threadLocalQueue;
 
     [ThreadStatic]
     private static Stopwatch? clock;
 
-    private CurrentThreadScheduler()
+    private CurrentThreadSequencer()
     {
     }
 
     /// <summary>
     /// Gets the singleton instance of the current thread scheduler.
     /// </summary>
-    public static CurrentThreadScheduler Instance => StaticInstance.Value;
+    public static CurrentThreadSequencer Instance => StaticInstance.Value;
 
     /// <summary>
     /// Gets a value indicating whether gets a value that indicates whether the caller must call a Schedule method.
@@ -95,7 +95,7 @@ public sealed class CurrentThreadScheduler : ISequencer
             throw new ArgumentNullException(nameof(action));
         }
 
-        SchedulerQueue<TimeSpan>? queue;
+        SequencerQueue<TimeSpan>? queue;
 
         // There is no timed task and no task is currently running
         if (!_running)
@@ -149,11 +149,11 @@ public sealed class CurrentThreadScheduler : ISequencer
         // if there is a task running or there is a queue
         if (queue == null)
         {
-            queue = new SchedulerQueue<TimeSpan>(4);
+            queue = new SequencerQueue<TimeSpan>(4);
             SetQueue(queue);
         }
 
-        var dt = Time + Scheduler.Normalize(dueTime);
+        var dt = Time + Sequencer.Normalize(dueTime);
 
         // queue up more work
         var si = new ScheduledItem<TimeSpan, TState>(this, state, action, dt);
@@ -173,17 +173,17 @@ public sealed class CurrentThreadScheduler : ISequencer
     /// </returns>
     public IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action)
     {
-        var due = Scheduler.Normalize(dueTime - Now);
+        var due = Sequencer.Normalize(dueTime - Now);
         return Schedule(state, due, action);
     }
 
-    private static SchedulerQueue<TimeSpan>? GetQueue() => _threadLocalQueue;
+    private static SequencerQueue<TimeSpan>? GetQueue() => _threadLocalQueue;
 
-    private static void SetQueue(SchedulerQueue<TimeSpan>? newQueue) => _threadLocalQueue = newQueue;
+    private static void SetQueue(SequencerQueue<TimeSpan>? newQueue) => _threadLocalQueue = newQueue;
 
     private static class Trampoline
     {
-        public static void Run(SchedulerQueue<TimeSpan> queue)
+        public static void Run(SequencerQueue<TimeSpan> queue)
         {
             while (queue.Count > 0)
             {

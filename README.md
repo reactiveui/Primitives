@@ -314,7 +314,7 @@ using ReactiveUI.Primitives.Signals;
 using var subscription = Signal.Timer(
         dueTime: TimeSpan.FromMilliseconds(250),
         period: TimeSpan.FromSeconds(1),
-        scheduler: ThreadPoolScheduler.Instance)
+        scheduler: ThreadPoolSequencer.Instance)
     .Take(3)
     .Subscribe(
         tick => Console.WriteLine($"tick {tick}"),
@@ -391,17 +391,17 @@ using var subscription = failed.Subscribe(
     () => Console.WriteLine("completed"));
 ```
 
-## Schedulers
+## Sequencers
 
-Schedulers live in `ReactiveUI.Primitives.Concurrency` and implement `ISequencer`.
+Sequencers live in `ReactiveUI.Primitives.Concurrency` and implement `ISequencer`.
 
-| Scheduler | Purpose |
+| Sequencer | Purpose |
 |---|---|
-| `Scheduler.Immediate` / `ImmediateScheduler.Instance` | Execute work immediately. |
-| `Scheduler.CurrentThread` / `CurrentThreadScheduler.Instance` | Queue recursive/current-thread work deterministically. |
-| `ThreadPoolScheduler.Instance` | Schedule work through the thread pool. |
-| `TaskPoolScheduler.Instance` | Schedule work through tasks. |
-| `DispatcherScheduler` | Schedule onto a WPF dispatcher on Windows TFMs. |
+| `Sequencer.Immediate` / `ImmediateSequencer.Instance` | Execute work immediately. |
+| `Sequencer.CurrentThread` / `CurrentThreadSequencer.Instance` | Queue recursive/current-thread work deterministically. |
+| `ThreadPoolSequencer.Instance` | Schedule work through the thread pool. |
+| `TaskPoolSequencer.Instance` | Schedule work through tasks. |
+| `DispatcherSequencer` | Schedule onto a WPF dispatcher on Windows TFMs. |
 | `VirtualClock` / `TestClock` | Virtual-time scheduling for deterministic tests. |
 
 Scheduling APIs include absolute, relative, recursive, and action-based overloads:
@@ -409,7 +409,7 @@ Scheduling APIs include absolute, relative, recursive, and action-based overload
 ```csharp
 using ReactiveUI.Primitives.Concurrency;
 
-IDisposable scheduled = ThreadPoolScheduler.Instance.Schedule(
+IDisposable scheduled = ThreadPoolSequencer.Instance.Schedule(
     TimeSpan.FromMilliseconds(100),
     () => Console.WriteLine("scheduled work"));
 
@@ -560,15 +560,15 @@ ReactiveUI.Primitives is not a byte-for-byte clone of System.Reactive. It keeps 
 | `SingleAssignmentDisposable` | `SingleDisposable` or `AssignmentSlot` |
 | `IDisposable.Dispose()` | unchanged |
 
-### Scheduler mapping
+### Sequencer mapping
 
 | System.Reactive scheduler concept | ReactiveUI.Primitives scheduler |
 |---|---|
-| `ImmediateScheduler.Instance` | `Scheduler.Immediate` or `ImmediateScheduler.Instance` |
-| `CurrentThreadScheduler.Instance` | `Scheduler.CurrentThread` or `CurrentThreadScheduler.Instance` |
-| `ThreadPoolScheduler.Instance` | `ThreadPoolScheduler.Instance` |
-| task-pool scheduling | `TaskPoolScheduler.Instance` |
-| dispatcher scheduling | `DispatcherScheduler` |
+| `ImmediateSequencer.Instance` | `Sequencer.Immediate` or `ImmediateSequencer.Instance` |
+| `CurrentThreadSequencer.Instance` | `Sequencer.CurrentThread` or `CurrentThreadSequencer.Instance` |
+| `ThreadPoolSequencer.Instance` | `ThreadPoolSequencer.Instance` |
+| task-pool scheduling | `TaskPoolSequencer.Instance` |
+| dispatcher scheduling | `DispatcherSequencer` |
 | `TestScheduler` / virtual time | `VirtualClock` or `TestClock` |
 
 ### Testing migration
