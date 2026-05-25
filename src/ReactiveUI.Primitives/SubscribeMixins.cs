@@ -51,6 +51,16 @@ public static class SubscribeMixins
     /// <returns>A IDisposable.</returns>
     public static IDisposable Subscribe<T>(this IObservable<T> source, Action<T> onNext)
     {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        if (onNext == null)
+        {
+            throw new ArgumentNullException(nameof(onNext));
+        }
+
         if (source is Signals.Signal<T> signal)
         {
             return signal.SubscribeAction(onNext);
@@ -74,7 +84,14 @@ public static class SubscribeMixins
     /// <param name="onError">The on error.</param>
     /// <returns>A IDisposable.</returns>
     public static IDisposable Subscribe<T>(this IObservable<T> source, Action<T> onNext, Action<Exception> onError)
-        => Subscribe(source, onNext, onError, nop);
+    {
+        if (onError == null)
+        {
+            throw new ArgumentNullException(nameof(onError));
+        }
+
+        return Subscribe(source, onNext, onError, nop);
+    }
 
     /// <summary>
     /// Subscribes to the Signals providing both the <paramref name="onNext" /> and
@@ -86,7 +103,14 @@ public static class SubscribeMixins
     /// <param name="onCompleted">The on completed.</param>
     /// <returns>A IDisposable.</returns>
     public static IDisposable Subscribe<T>(this IObservable<T> source, Action<T> onNext, Action onCompleted)
-        => Subscribe(source, onNext, rethrow, onCompleted);
+    {
+        if (onCompleted == null)
+        {
+            throw new ArgumentNullException(nameof(onCompleted));
+        }
+
+        return Subscribe(source, onNext, rethrow, onCompleted);
+    }
 
     /// <summary>
     /// Subscribes to the Signals providing all three <paramref name="onNext" />,
@@ -100,12 +124,32 @@ public static class SubscribeMixins
     /// <returns>A IDisposable.</returns>
     public static IDisposable Subscribe<T>(this IObservable<T> source, Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        if (onNext == null)
+        {
+            throw new ArgumentNullException(nameof(onNext));
+        }
+
+        if (onError == null)
+        {
+            throw new ArgumentNullException(nameof(onError));
+        }
+
+        if (onCompleted == null)
+        {
+            throw new ArgumentNullException(nameof(onCompleted));
+        }
+
         if (source is IInlineSignal<T> inline)
         {
             return inline.Subscribe(onNext, onError, onCompleted);
         }
 
-        return source?.Subscribe(new EmptyWitness<T>(onNext, onError, onCompleted))!;
+        return source.Subscribe(new EmptyWitness<T>(onNext, onError, onCompleted));
     }
 
     /// <summary>

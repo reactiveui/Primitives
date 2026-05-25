@@ -14,6 +14,26 @@ namespace ReactiveUI.Primitives.Tests;
 public class BehaviourSignalTests
 {
     /// <summary>
+    /// Initial value used by behavior signal value tests.
+    /// </summary>
+    private const int InitialValue = 42;
+
+    /// <summary>
+    /// First updated value used by behavior signal value tests.
+    /// </summary>
+    private const int FirstUpdatedValue = 43;
+
+    /// <summary>
+    /// Second updated value used by behavior signal value tests.
+    /// </summary>
+    private const int SecondUpdatedValue = 44;
+
+    /// <summary>
+    /// Value that should be ignored after completion.
+    /// </summary>
+    private const int IgnoredAfterCompletionValue = 1234;
+
+    /// <summary>
     /// Subscribes the argument checking.
     /// </summary>
     [Test]
@@ -125,10 +145,10 @@ public class BehaviourSignalTests
         var s = new BehaviourSignal<int>(42);
         Assert.False(s.HasObservers);
 
-        var d = s.Subscribe(_ => { });
+        using var subscription = s.Subscribe(_ => { });
         Assert.True(s.HasObservers);
 
-        s.OnNext(42);
+        s.OnNext(InitialValue);
         Assert.True(s.HasObservers);
 
         s.OnCompleted();
@@ -144,13 +164,13 @@ public class BehaviourSignalTests
         var s = new BehaviourSignal<int>(42);
         Assert.False(s.HasObservers);
 
-        var d = s.Subscribe(_ => { }, _ => { });
+        using var subscription = s.Subscribe(_ => { }, _ => { });
         Assert.True(s.HasObservers);
 
-        s.OnNext(42);
+        s.OnNext(InitialValue);
         Assert.True(s.HasObservers);
 
-        s.OnError(new Exception());
+        s.OnError(new InvalidOperationException());
         Assert.False(s.HasObservers);
     }
 
@@ -160,11 +180,11 @@ public class BehaviourSignalTests
     [Test]
     public void Value_Initial()
     {
-        var s = new BehaviourSignal<int>(42);
-        Assert.Equal(42, s.Value);
+        var s = new BehaviourSignal<int>(InitialValue);
+        Assert.Equal(InitialValue, s.Value);
 
         Assert.True(s.TryGetValue(out var x));
-        Assert.Equal(42, x);
+        Assert.Equal(InitialValue, x);
     }
 
     /// <summary>
@@ -173,17 +193,17 @@ public class BehaviourSignalTests
     [Test]
     public void Value_First()
     {
-        var s = new BehaviourSignal<int>(42);
-        Assert.Equal(42, s.Value);
+        var s = new BehaviourSignal<int>(InitialValue);
+        Assert.Equal(InitialValue, s.Value);
 
         Assert.True(s.TryGetValue(out var x));
-        Assert.Equal(42, x);
+        Assert.Equal(InitialValue, x);
 
-        s.OnNext(43);
-        Assert.Equal(43, s.Value);
+        s.OnNext(FirstUpdatedValue);
+        Assert.Equal(FirstUpdatedValue, s.Value);
 
         Assert.True(s.TryGetValue(out x));
-        Assert.Equal(43, x);
+        Assert.Equal(FirstUpdatedValue, x);
     }
 
     /// <summary>
@@ -192,23 +212,23 @@ public class BehaviourSignalTests
     [Test]
     public void Value_Second()
     {
-        var s = new BehaviourSignal<int>(42);
-        Assert.Equal(42, s.Value);
+        var s = new BehaviourSignal<int>(InitialValue);
+        Assert.Equal(InitialValue, s.Value);
 
         Assert.True(s.TryGetValue(out var x));
-        Assert.Equal(42, x);
+        Assert.Equal(InitialValue, x);
 
-        s.OnNext(43);
-        Assert.Equal(43, s.Value);
-
-        Assert.True(s.TryGetValue(out x));
-        Assert.Equal(43, x);
-
-        s.OnNext(44);
-        Assert.Equal(44, s.Value);
+        s.OnNext(FirstUpdatedValue);
+        Assert.Equal(FirstUpdatedValue, s.Value);
 
         Assert.True(s.TryGetValue(out x));
-        Assert.Equal(44, x);
+        Assert.Equal(FirstUpdatedValue, x);
+
+        s.OnNext(SecondUpdatedValue);
+        Assert.Equal(SecondUpdatedValue, s.Value);
+
+        Assert.True(s.TryGetValue(out x));
+        Assert.Equal(SecondUpdatedValue, x);
     }
 
     /// <summary>
@@ -217,35 +237,35 @@ public class BehaviourSignalTests
     [Test]
     public void Value_FrozenAfterOnCompleted()
     {
-        var s = new BehaviourSignal<int>(42);
-        Assert.Equal(42, s.Value);
+        var s = new BehaviourSignal<int>(InitialValue);
+        Assert.Equal(InitialValue, s.Value);
 
         Assert.True(s.TryGetValue(out var x));
-        Assert.Equal(42, x);
+        Assert.Equal(InitialValue, x);
 
-        s.OnNext(43);
-        Assert.Equal(43, s.Value);
-
-        Assert.True(s.TryGetValue(out x));
-        Assert.Equal(43, x);
-
-        s.OnNext(44);
-        Assert.Equal(44, s.Value);
+        s.OnNext(FirstUpdatedValue);
+        Assert.Equal(FirstUpdatedValue, s.Value);
 
         Assert.True(s.TryGetValue(out x));
-        Assert.Equal(44, x);
+        Assert.Equal(FirstUpdatedValue, x);
+
+        s.OnNext(SecondUpdatedValue);
+        Assert.Equal(SecondUpdatedValue, s.Value);
+
+        Assert.True(s.TryGetValue(out x));
+        Assert.Equal(SecondUpdatedValue, x);
 
         s.OnCompleted();
-        Assert.Equal(44, s.Value);
+        Assert.Equal(SecondUpdatedValue, s.Value);
 
         Assert.True(s.TryGetValue(out x));
-        Assert.Equal(44, x);
+        Assert.Equal(SecondUpdatedValue, x);
 
-        s.OnNext(1234);
-        Assert.Equal(44, s.Value);
+        s.OnNext(IgnoredAfterCompletionValue);
+        Assert.Equal(SecondUpdatedValue, s.Value);
 
         Assert.True(s.TryGetValue(out x));
-        Assert.Equal(44, x);
+        Assert.Equal(SecondUpdatedValue, x);
     }
 
     /// <summary>
@@ -254,17 +274,14 @@ public class BehaviourSignalTests
     [Test]
     public void Value_ThrowsAfterOnError()
     {
-        var s = new BehaviourSignal<int>(42);
-        Assert.Equal(42, s.Value);
+        var s = new BehaviourSignal<int>(InitialValue);
+        Assert.Equal(InitialValue, s.Value);
 
         s.OnError(new InvalidOperationException());
 
-        Assert.Throws<InvalidOperationException>(() =>
-        {
-            var ignored = s.Value;
-        });
+        Assert.Throws<InvalidOperationException>(() => _ = s.Value);
 
-        Assert.Throws<InvalidOperationException>(() => s.TryGetValue(out var x));
+        Assert.Throws<InvalidOperationException>(() => s.TryGetValue(out _));
     }
 
     /// <summary>
@@ -273,16 +290,13 @@ public class BehaviourSignalTests
     [Test]
     public void Value_ThrowsOnDispose()
     {
-        var s = new BehaviourSignal<int>(42);
-        Assert.Equal(42, s.Value);
+        var s = new BehaviourSignal<int>(InitialValue);
+        Assert.Equal(InitialValue, s.Value);
 
         s.Dispose();
 
-        Assert.Throws<ObjectDisposedException>(() =>
-        {
-            var ignored = s.Value;
-        });
+        Assert.Throws<ObjectDisposedException>(() => _ = s.Value);
 
-        Assert.False(s.TryGetValue(out var x));
+        Assert.False(s.TryGetValue(out _));
     }
 }

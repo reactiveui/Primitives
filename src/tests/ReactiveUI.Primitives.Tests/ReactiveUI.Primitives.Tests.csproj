@@ -6,8 +6,6 @@
     <IsPackable>false</IsPackable>
     <LangVersion>preview</LangVersion>
     <OutputType>Exe</OutputType>
-    <EnableNETAnalyzers>false</EnableNETAnalyzers>
-    <RunAnalyzers>false</RunAnalyzers>
     <NoWarn>$(NoWarn);CS8625;CS8634</NoWarn>
     <CollectCoverage Condition="'$(CollectCoverage)' == ''">false</CollectCoverage>
     <CoverletOutput>$(MSBuildProjectDirectory)\TestResults\coverage\</CoverletOutput>

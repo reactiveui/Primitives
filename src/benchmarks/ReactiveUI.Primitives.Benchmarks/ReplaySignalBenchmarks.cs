@@ -1,0 +1,64 @@
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// ReactiveUI Association Incorporated licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
+
+using BenchmarkDotNet.Attributes;
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
+using R3;
+
+using RxReplaySubject = System.Reactive.Subjects.ReplaySubject<int>;
+
+namespace ReactiveUI.Primitives.Benchmarks;
+
+/// <summary>
+/// Benchmarks replay/snapshot behavior for bounded replay buffers.
+/// </summary>
+[MemoryDiagnoser]
+public class ReplaySignalBenchmarks
+{
+    /// <summary>
+    /// Baseline bounded replay subscription benchmark for primitives.
+    /// </summary>
+    /// <returns>The sum replayed to a late subscriber.</returns>
+    [Benchmark(Baseline = true)]
+    public int PrimitivesReplaySubscribe()
+    {
+        var observer = new IntSignalObserver();
+        using var subject = new ReplaySignal<int>(16);
+        PopulateReplaySubject(subject);
+        using var subscription = subject.Subscribe(observer);
+        return observer.Total;
+    }
+
+    /// <summary>
+    /// Bounded replay subscription benchmark for System.Reactive.
+    /// </summary>
+    /// <returns>The sum replayed to a late subscriber.</returns>
+    [Benchmark]
+    public int SystemReactiveReplaySubscribe()
+    {
+        var observer = new IntSignalObserver();
+        using var subject = new RxReplaySubject(16);
+        PopulateReplaySubject(subject);
+        using var subscription = subject.Subscribe(observer);
+        return observer.Total;
+    }
+
+    private static void PopulateReplaySubject(ReplaySignal<int> subject)
+    {
+        for (var i = 0; i < 16; i++)
+        {
+            subject.OnNext(i);
+        }
+    }
+
+    private static void PopulateReplaySubject(RxReplaySubject subject)
+    {
+        for (var i = 0; i < 16; i++)
+        {
+            subject.OnNext(i);
+        }
+    }
+}
+

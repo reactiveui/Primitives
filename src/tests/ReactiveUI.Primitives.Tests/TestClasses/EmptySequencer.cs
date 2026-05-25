@@ -6,18 +6,28 @@ using System;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
+/// <summary>
+/// Provides a sequencer test double that rejects scheduled work.
+/// </summary>
 internal sealed class EmptySequencer : ISequencer
 {
-    public static readonly EmptySequencer Instance = new();
+    /// <summary>
+    /// Gets the shared empty sequencer instance.
+    /// </summary>
+    public static EmptySequencer Instance { get; } = new();
 
-    public DateTimeOffset Now => DateTimeOffset.MinValue;
+    /// <inheritdoc/>
+    public DateTimeOffset Now => DateTimeOffset.UnixEpoch;
 
+    /// <inheritdoc/>
     public IDisposable Schedule<TState>(TState state, Func<ISequencer, TState, IDisposable> action) =>
-        throw new NotImplementedException();
+        throw new NotSupportedException();
 
+    /// <inheritdoc/>
     public IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<ISequencer, TState, IDisposable> action) =>
-        throw new NotImplementedException();
+        throw new NotSupportedException();
 
+    /// <inheritdoc/>
     public IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action) =>
-        throw new NotImplementedException();
+        throw new NotSupportedException();
 }

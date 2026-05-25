@@ -596,12 +596,43 @@ Use the generated bridge only at boundaries. Prefer native ReactiveUI.Primitives
 
 ## Benchmarks and performance posture
 
-Benchmarks live in `src/ReactiveUI.Primitives.Benchmarks`. The benchmark project may reference System.Reactive and R3 to compare throughput and allocation behavior; the production package must not.
+Benchmarks live in `src/benchmarks/ReactiveUI.Primitives.Benchmarks`. The benchmark project may reference System.Reactive and R3 to compare throughput and allocation behavior; the production package must not.
 
-Recovered benchmark evidence in `docs/PERFORMANCE.md` records that the optimized `Signal<T>` single-subscriber dispatch path outperformed System.Reactive and R3 on focused subject throughput cases:
+The latest joined BenchmarkDotNet ShortRun was captured on 2026-05-25 with .NET SDK 10.0.300 on Windows 11, using:
 
-- Count=32: ReactiveUI.Primitives 88.21 ns / 208 B; System.Reactive 117.55 ns / 224 B; R3 139.75 ns / 232 B.
-- Count=1024: ReactiveUI.Primitives 1,620.33 ns / 208 B; System.Reactive 1,751.44 ns / 224 B; R3 2,396.59 ns / 232 B.
+```powershell
+dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- -f '*' -j Short --join
+```
+
+Raw artifacts for the joined run are under `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-25-21-12-14-report.*`. The focused `FromEnumerable` row was captured in `src/BenchmarkDotNet.Artifacts/results/ReactiveUI.Primitives.Benchmarks.FactoryFromEnumerableBenchmarks-report.*` after the dedicated inline fast path was added. ShortRun is useful for fast regression checks; rerun with a longer BenchmarkDotNet job before making release claims.
+
+| Scenario | ReactiveUI.Primitives | System.Reactive | R3 |
+|---|---:|---:|---:|
+| Completed task bridge | 17.6833 ns / 88 B | 1,348.2890 ns / 793 B | n/a |
+| Pocket / composite dispose | 90.8799 ns / 408 B | 138.6110 ns / 512 B | n/a |
+| Current-thread schedule | 22.8205 ns / 88 B | 28.3162 ns / 88 B | n/a |
+| Safe witness wrapper | 40.2300 ns / 168 B | n/a | n/a |
+| Completed spark | 0.3007 ns / 0 B | n/a | n/a |
+| Return subscribe | 0.4417 ns / 0 B | 91.5187 ns / 120 B | 49.3844 ns / 72 B |
+| Empty subscribe | 7.3897 ns / 40 B | 79.6293 ns / 96 B | 43.8897 ns / 48 B |
+| Range subscribe | 55.9990 ns / 96 B | 4,153.4012 ns / 2,472 B | 119.9919 ns / 72 B |
+| Repeat subscribe | 10.3262 ns / 0 B | 3,951.5395 ns / 2,408 B | 116.7110 ns / 72 B |
+| FromEnumerable subscribe | 48.9910 ns / 40 B | 3,740.3600 ns / 2,504 B | 131.3610 ns / 80 B |
+| Throw subscribe | 100.3490 ns / 120 B | 190.9367 ns / 240 B | 158.5640 ns / 192 B |
+| Map + Keep | 213.9322 ns / 208 B | 4,463.8969 ns / 2,616 B | 423.8154 ns / 264 B |
+| DistinctBy + Count + Any | 427.3704 ns / 992 B | 8,842.7094 ns / 5,896 B | 932.2863 ns / 1,280 B |
+| StartWith + Append + DefaultIfEmpty | 79.0351 ns / 184 B | 1,511.0960 ns / 1,257 B | 226.6506 ns / 280 B |
+| SelectMany over ranges | 1,174.3683 ns / 712 B | 5,989.3754 ns / 3,872 B | 1,530.4454 ns / 1,032 B |
+| Zip over ranges | 1,920.5231 ns / 1,320 B | 5,434.1159 ns / 2,976 B | 1,103.3186 ns / 648 B |
+| Replay subscribe | 491.2126 ns / 320 B | 944.9225 ns / 696 B | n/a |
+| Behaviour signal, 32 values | 717.1898 ns / 176 B | 735.4731 ns / 200 B | 831.3793 ns / 184 B |
+| Behaviour signal, 1024 values | 19,587.6333 ns / 176 B | 18,925.1658 ns / 200 B | 21,464.7502 ns / 184 B |
+| Signal subscribe/dispose, 8 subscribers | 415.4351 ns / 1,176 B | 506.4101 ns / 1,288 B | 719.0130 ns / 840 B |
+| Signal subscribe/dispose, 64 subscribers | 4,503.8029 ns / 8,864 B | 8,526.7609 ns / 38,472 B | 5,480.4075 ns / 6,216 B |
+| Signal emit, 32 values | 108.2371 ns / 160 B | 122.6897 ns / 136 B | 213.9175 ns / 152 B |
+| Signal emit, 1024 values | 2,130.8298 ns / 160 B | 1,994.6875 ns / 136 B | 3,677.6208 ns / 152 B |
+
+Current benchmark coverage is intentionally visible rather than overstated. The next benchmark expansion areas are factory/adapters (`Never`, `Create`, `Defer`, `FromEnumerable`, `FromAsyncEnumerable`, `Start`, `Unfold`, `Use`), time/scheduler operators (`Delay`, `DelayStart`, `Throttle`, `Sample`, `Timestamp`, `TimeInterval`, `Timeout`, `ObserveOn`), higher-order combinators (`Concat`, `Merge`, `Race`, `Switch`, `CombineLatest`, `WithLatest`, `ForkJoin`), terminal/collection APIs, connectable/share APIs, and state/task command surfaces.
 
 Performance constraints used by the project:
 
@@ -619,7 +650,7 @@ Performance constraints used by the project:
 | `src/ReactiveUI.Primitives.SystemReactiveBridge.Generator` | Source generator for System.Reactive bridge adapters. |
 | `src/ReactiveUI.Primitives.R3Bridge.Generator` | Source generator for R3 bridge adapters. |
 | `src/ReactiveUI.Primitives.Tests` | Test project using Microsoft Testing Platform/TUnit-style validation. |
-| `src/ReactiveUI.Primitives.Benchmarks` | BenchmarkDotNet comparison harness. |
+| `src/benchmarks/ReactiveUI.Primitives.Benchmarks` | BenchmarkDotNet comparison harness. |
 | `docs/API-COVERAGE.md` | Public API inventory and parity notes. |
 | `docs/PERFORMANCE.md` | Benchmark plan and recovered benchmark evidence. |
 | `docs/TASKLIST.md` | Project task/status notes. |
@@ -640,7 +671,7 @@ git diff --check
 To run the focused benchmark used by the performance notes:
 
 ```bash
-"/mnt/c/Program Files/dotnet/dotnet.exe" run --project src/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter '*SubjectThroughput*'
+"/mnt/c/Program Files/dotnet/dotnet.exe" run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter '*SubjectThroughput*'
 ```
 
 For NuGet package verification, inspect the generated `.nupkg` and confirm:

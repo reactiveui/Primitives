@@ -15,8 +15,272 @@ using TUnit.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
+/// <summary>
+/// Verifies factory and operator contract behavior for the primitives surface.
+/// </summary>
 public class FactoryOperatorContractTests
 {
+    /// <summary>
+    /// The first integer used by parity sequences.
+    /// </summary>
+    private const int FirstValue = 1;
+
+    /// <summary>
+    /// The second integer used by parity sequences.
+    /// </summary>
+    private const int SecondValue = 2;
+
+    /// <summary>
+    /// The third integer used by parity sequences.
+    /// </summary>
+    private const int RetrySuccessAttempt = 3;
+
+    /// <summary>
+    /// The fourth integer used by parity sequences.
+    /// </summary>
+    private const int FourthValue = 4;
+
+    /// <summary>
+    /// A representative even value used by predicate tests.
+    /// </summary>
+    private const int SixthValue = 6;
+
+    /// <summary>
+    /// A resource-scoped sequence value.
+    /// </summary>
+    private const int ResourceFirstValue = 7;
+
+    /// <summary>
+    /// A resource-scoped sequence value.
+    /// </summary>
+    private const int ResourceSecondValue = 8;
+
+    /// <summary>
+    /// The repeated value used by finite factory tests.
+    /// </summary>
+    private const int RepeatValue = 9;
+
+    /// <summary>
+    /// The multiplier used by unfold and projection tests.
+    /// </summary>
+    private const int ProjectionMultiplier = 10;
+
+    /// <summary>
+    /// The first projected value after applying the projection multiplier.
+    /// </summary>
+    private const int ProjectedFirstValue = 10;
+
+    /// <summary>
+    /// The second projected value after applying the projection multiplier.
+    /// </summary>
+    private const int ProjectedSecondValue = 11;
+
+    /// <summary>
+    /// The third projected value after applying the projection multiplier.
+    /// </summary>
+    private const int ProjectedThirdValue = 20;
+
+    /// <summary>
+    /// The fourth projected value after applying the projection multiplier.
+    /// </summary>
+    private const int ProjectedFourthValue = 21;
+
+    /// <summary>
+    /// A peer value used to verify distinct-by bucketing.
+    /// </summary>
+    private const int ProjectedSecondBucketPeerValue = 12;
+
+    /// <summary>
+    /// The zip result expected from the first pair.
+    /// </summary>
+    private const int FirstZipResult = 11;
+
+    /// <summary>
+    /// The zip or fork-join result expected from the second pair.
+    /// </summary>
+    private const int SecondZipResult = 22;
+
+    /// <summary>
+    /// The third unfolded value.
+    /// </summary>
+    private const int ThirdUnfoldedValue = 30;
+
+    /// <summary>
+    /// The terminal value used by default and recovery tests.
+    /// </summary>
+    private const int RetryResult = 42;
+
+    /// <summary>
+    /// Delay used by the async enumerable cancellation test.
+    /// </summary>
+    private const int AsyncEnumeratorDelayMilliseconds = 5000;
+
+    /// <summary>
+    /// Settle delay used by the async enumerable cancellation test.
+    /// </summary>
+    private const int AsyncEnumeratorSettleMilliseconds = 50;
+
+    /// <summary>
+    /// Virtual clock due time for one-shot timers.
+    /// </summary>
+    private const int AfterTicks = 5;
+
+    /// <summary>
+    /// Virtual clock period for recurring timers.
+    /// </summary>
+    private const int EveryTicks = 3;
+
+    /// <summary>
+    /// Virtual clock advance used before a boundary tick.
+    /// </summary>
+    private const int InitialAdvanceTicks = 4;
+
+    /// <summary>
+    /// Virtual clock advance used after disposing recurring work.
+    /// </summary>
+    private const int FinalAdvanceTicks = 10;
+
+    /// <summary>
+    /// Index of the third interval captured in the interval test.
+    /// </summary>
+    private const int ThirdIntervalIndex = 2;
+
+    /// <summary>
+    /// Expected values for finite factory composition.
+    /// </summary>
+    private static readonly int[] FiniteFactoryExpected =
+    [
+        SecondValue,
+        RetrySuccessAttempt,
+        FourthValue,
+        RepeatValue,
+        RepeatValue,
+        ProjectedFirstValue,
+        ProjectedThirdValue,
+        ThirdUnfoldedValue,
+        ResourceFirstValue,
+        ResourceSecondValue,
+    ];
+
+    /// <summary>
+    /// Expected values from the unary materialization test.
+    /// </summary>
+    private static readonly int[] UnaryExpected = [FourthValue, ProjectedFirstValue, 18];
+
+    /// <summary>
+    /// Expected source values from a four-item sequence.
+    /// </summary>
+    private static readonly int[] FourItemExpected = [FirstValue, SecondValue, RetrySuccessAttempt, FourthValue];
+
+    /// <summary>
+    /// Expected selected values after source disposal.
+    /// </summary>
+    private static readonly int[] SelectedAfterDisposeExpected = [SecondValue, RetrySuccessAttempt];
+
+    /// <summary>
+    /// Expected values from a single-filter pass.
+    /// </summary>
+    private static readonly int[] SingleSecondValueExpected = [SecondValue];
+
+    /// <summary>
+    /// Expected values from the zip test.
+    /// </summary>
+    private static readonly int[] ZippedExpected = [FirstZipResult, SecondZipResult];
+
+    /// <summary>
+    /// Expected values from combine-latest style operators.
+    /// </summary>
+    private static readonly string[] LatestExpected = ["2a", "2b"];
+
+    /// <summary>
+    /// Expected values from virtual recurring timers.
+    /// </summary>
+    private static readonly long[] EveryExpected = [0L, 1L, 2L];
+
+    /// <summary>
+    /// Expected values from lead, append, and prepend.
+    /// </summary>
+    private static readonly int[] LeadAppendExpected = [0, FirstValue, SecondValue, RetrySuccessAttempt, FourthValue];
+
+    /// <summary>
+    /// Expected values from the System.Reactive named alias migration test.
+    /// </summary>
+    private static readonly int[] SystemReactiveNamedAliasExpected = [0, FirstValue, SecondValue, RetrySuccessAttempt];
+
+    /// <summary>
+    /// Expected values after distinct-by bucketing.
+    /// </summary>
+    private static readonly int[] DistinctByExpected = [ProjectedSecondValue, ProjectedFourthValue];
+
+    /// <summary>
+    /// Expected values from a take-while sequence.
+    /// </summary>
+    private static readonly int[] TakeWhileExpected = [FirstValue, SecondValue];
+
+    /// <summary>
+    /// Expected values from a skip-while sequence.
+    /// </summary>
+    private static readonly int[] SkipWhileExpected = [RetrySuccessAttempt, FirstValue];
+
+    /// <summary>
+    /// Expected values from bind selection.
+    /// </summary>
+    private static readonly int[] SelectedProjectionExpected =
+    [
+        ProjectedFirstValue,
+        ProjectedSecondValue,
+        ProjectedThirdValue,
+        ProjectedFourthValue,
+    ];
+
+    /// <summary>
+    /// Expected true result for boolean terminal operators.
+    /// </summary>
+    private static readonly bool[] TrueExpected = [true];
+
+    /// <summary>
+    /// Expected one-shot timer result before repeated timer advancement.
+    /// </summary>
+    private static readonly long[] OneShotTimerExpected = [0L];
+
+    /// <summary>
+    /// Expected retry recovery value.
+    /// </summary>
+    private static readonly int[] RetryResultExpected = [RetryResult];
+
+    /// <summary>
+    /// Expected async enumerable value before disposal.
+    /// </summary>
+    private static readonly int[] AsyncEnumerableBeforeDisposeExpected = [FirstValue];
+
+    /// <summary>
+    /// Expected observed value after virtual clock processing.
+    /// </summary>
+    private static readonly int[] ObservedResourceExpected = [ResourceFirstValue];
+
+    /// <summary>
+    /// Expected throttle output after the quiet period.
+    /// </summary>
+    private static readonly int[] ThrottleExpected = [RetrySuccessAttempt];
+
+    /// <summary>
+    /// Expected sample output over the virtual clock ticks.
+    /// </summary>
+    private static readonly int[] SampleExpected = [SecondValue, RetrySuccessAttempt];
+
+    /// <summary>
+    /// Expected fork-join output.
+    /// </summary>
+    private static readonly int[] ForkJoinExpected = [SecondZipResult];
+
+    /// <summary>
+    /// Expected collected task output.
+    /// </summary>
+    private static readonly int[] CollectedExpected = [FirstValue, SecondValue, RetrySuccessAttempt];
+
+    /// <summary>
+    /// Verifies finite factory composition and resource disposal.
+    /// </summary>
     [Test]
     public void FactoriesEmitExpectedFiniteSequencesAndDisposeResources()
     {
@@ -24,19 +288,22 @@ public class FactoryOperatorContractTests
         var completed = 0;
         var disposed = 0;
 
-        Signal.Range(2, 3)
-            .Concat(Signal.Repeat(9, 2))
-            .Concat(Signal.Unfold(1, state => state <= 3, state => state + 1, state => state * 10))
+        Signal.Range(SecondValue, RetrySuccessAttempt)
+            .Concat(Signal.Repeat(RepeatValue, SecondValue))
+            .Concat(Signal.Unfold(FirstValue, state => state <= RetrySuccessAttempt, state => state + FirstValue, state => state * ProjectionMultiplier))
             .Concat(Signal.Use(
                 () => Disposable.Create(() => disposed++),
-                _ => Signal.FromEnumerable([7, 8])))
+                _ => Signal.FromEnumerable([ResourceFirstValue, ResourceSecondValue])))
             .Subscribe(values.Add, ex => throw ex, () => completed++);
 
-        Assert.Equal(new[] { 2, 3, 4, 9, 9, 10, 20, 30, 7, 8 }, values);
+        Assert.Equal(FiniteFactoryExpected, values);
         Assert.Equal(1, completed);
         Assert.Equal(1, disposed);
     }
 
+    /// <summary>
+    /// Verifies unary transformation, filtering, aggregation, and materialization operators.
+    /// </summary>
     [Test]
     public void UnaryOperatorsTransformFilterAggregateAndMaterialize()
     {
@@ -45,25 +312,28 @@ public class FactoryOperatorContractTests
         var terminal = new List<int>();
         var taps = 0;
 
-        Signal.FromEnumerable([1, 2, 2, 3, 4])
-            .Map(value => value * 2)
-            .Keep(value => value >= 4)
+        Signal.FromEnumerable([FirstValue, SecondValue, SecondValue, RetrySuccessAttempt, FourthValue])
+            .Map(value => value * SecondValue)
+            .Keep(value => value >= FourthValue)
             .DistinctUntilChanged()
             .Tap(_ => taps++)
             .Scan(0, (sum, value) => sum + value)
-            .Take(3)
+            .Take(RetrySuccessAttempt)
             .Sparkify()
             .Subscribe(sparks.Add);
 
         Signal.FromEnumerable(sparks).Unspark().Subscribe(values.Add);
-        Signal.FromEnumerable([1, 2, 3, 4]).Fold(0, (sum, value) => sum + value).Subscribe(terminal.Add);
+        Signal.FromEnumerable(FourItemExpected).Fold(0, (sum, value) => sum + value).Subscribe(terminal.Add);
 
-        Assert.Equal(new[] { 4, 10, 18 }, values);
-        Assert.Equal(new[] { 10 }, terminal);
-        Assert.Equal(3, taps);
+        Assert.Equal(UnaryExpected, values);
+        Assert.Equal(new[] { ProjectedFirstValue }, terminal);
+        Assert.Equal(RetrySuccessAttempt, taps);
         Assert.Equal(SparkKind.OnCompleted, sparks[^1].Kind);
     }
 
+    /// <summary>
+    /// Verifies cold select and where operators detach from their source when disposed.
+    /// </summary>
     [Test]
     public void SelectAndWhereStayColdUntilSubscribedAndDetachOnDispose()
     {
@@ -79,18 +349,21 @@ public class FactoryOperatorContractTests
         var filteredSubscription = filtered.Subscribe(filteredValues.Add);
 
         Assert.True(source.HasObservers);
-        source.OnNext(1);
-        source.OnNext(2);
+        source.OnNext(FirstValue);
+        source.OnNext(SecondValue);
         selectedSubscription.Dispose();
         filteredSubscription.Dispose();
 
         Assert.False(source.HasObservers);
-        source.OnNext(3);
+        source.OnNext(RetrySuccessAttempt);
 
-        Assert.Equal(new[] { 2, 3 }, selectedValues);
-        Assert.Equal(new[] { 2 }, filteredValues);
+        Assert.Equal(SelectedAfterDisposeExpected, selectedValues);
+        Assert.Equal(SingleSecondValueExpected, filteredValues);
     }
 
+    /// <summary>
+    /// Verifies merge, concat, zip, and combine-latest ordering semantics.
+    /// </summary>
     [Test]
     public void CombiningOperatorsPreserveCoreOrderingSemantics()
     {
@@ -99,17 +372,20 @@ public class FactoryOperatorContractTests
         var zipped = new List<int>();
         var latest = new List<string>();
 
-        Signal.Merge(Signal.FromEnumerable([1, 2]), Signal.FromEnumerable([3, 4])).Subscribe(merged.Add);
-        Signal.Concat(Signal.FromEnumerable([1, 2]), Signal.FromEnumerable([3, 4])).Subscribe(concatenated.Add);
-        Signal.Zip(Signal.FromEnumerable([1, 2]), Signal.FromEnumerable([10, 20]), (left, right) => left + right).Subscribe(zipped.Add);
-        Signal.CombineLatest(Signal.FromEnumerable([1, 2]), Signal.FromEnumerable(["a", "b"]), (left, right) => left + right).Subscribe(latest.Add);
+        Signal.Merge(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable([RetrySuccessAttempt, FourthValue])).Subscribe(merged.Add);
+        Signal.Concat(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable([RetrySuccessAttempt, FourthValue])).Subscribe(concatenated.Add);
+        Signal.Zip(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable([ProjectedFirstValue, ProjectedThirdValue]), (left, right) => left + right).Subscribe(zipped.Add);
+        Signal.CombineLatest(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable(["a", "b"]), (left, right) => left + right).Subscribe(latest.Add);
 
-        Assert.Equal(new[] { 1, 2, 3, 4 }, merged);
-        Assert.Equal(new[] { 1, 2, 3, 4 }, concatenated);
-        Assert.Equal(new[] { 11, 22 }, zipped);
-        Assert.Equal(new[] { "2a", "2b" }, latest);
+        Assert.Equal(FourItemExpected, merged);
+        Assert.Equal(FourItemExpected, concatenated);
+        Assert.Equal(ZippedExpected, zipped);
+        Assert.Equal(LatestExpected, latest);
     }
 
+    /// <summary>
+    /// Verifies retry resubscribes until a deferred source succeeds.
+    /// </summary>
     [Test]
     public void RetryResubscribesUntilSuccess()
     {
@@ -119,15 +395,21 @@ public class FactoryOperatorContractTests
         Signal.Defer(() =>
             {
                 attempts++;
-                return attempts < 3 ? Signal.Throw<int>(new InvalidOperationException("try again")) : Signal.Return(42);
+                return attempts < RetrySuccessAttempt
+                    ? Signal.Throw<int>(new InvalidOperationException("try again"))
+                    : Signal.Return(RetryResult);
             })
-            .Retry(3)
+            .Retry(RetrySuccessAttempt)
             .Subscribe(values.Add);
 
-        Assert.Equal(3, attempts);
-        Assert.Equal(new[] { 42 }, values);
+        Assert.Equal(RetrySuccessAttempt, attempts);
+        Assert.Equal(RetryResultExpected, values);
     }
 
+    /// <summary>
+    /// Verifies async enumerable subscriptions cancel and dispose the enumerator.
+    /// </summary>
+    /// <returns>A task that completes when the asynchronous assertions have run.</returns>
     [Test]
     public async Task AsyncEnumerableFactoryCancelsEnumeratorOnDispose()
     {
@@ -138,9 +420,9 @@ public class FactoryOperatorContractTests
         {
             try
             {
-                yield return 1;
-                await Task.Delay(5000, token);
-                yield return 2;
+                yield return FirstValue;
+                await Task.Delay(AsyncEnumeratorDelayMilliseconds, token);
+                yield return SecondValue;
             }
             finally
             {
@@ -149,14 +431,17 @@ public class FactoryOperatorContractTests
         }
 
         var subscription = Signal.FromAsyncEnumerable(Values()).Subscribe(values.Add, _ => { }, () => { });
-        await Task.Delay(50);
+        await Task.Delay(AsyncEnumeratorSettleMilliseconds);
         subscription.Dispose();
-        await Task.Delay(50);
+        await Task.Delay(AsyncEnumeratorSettleMilliseconds);
 
-        Assert.Equal(new[] { 1 }, values);
+        Assert.Equal(AsyncEnumerableBeforeDisposeExpected, values);
         Assert.True(disposed);
     }
 
+    /// <summary>
+    /// Verifies timer factories use an injected virtual sequencer.
+    /// </summary>
     [Test]
     public void TimeFactoriesUseInjectedScheduler()
     {
@@ -164,65 +449,37 @@ public class FactoryOperatorContractTests
         var after = new List<long>();
         var every = new List<long>();
 
-        Signal.After(TimeSpan.FromTicks(5), clock).Subscribe(after.Add);
-        var subscription = Signal.Every(TimeSpan.FromTicks(3), clock).Subscribe(every.Add);
+        Signal.After(TimeSpan.FromTicks(AfterTicks), clock).Subscribe(after.Add);
+        var subscription = Signal.Every(TimeSpan.FromTicks(EveryTicks), clock).Subscribe(every.Add);
 
-        clock.AdvanceBy(TimeSpan.FromTicks(4));
+        clock.AdvanceBy(TimeSpan.FromTicks(InitialAdvanceTicks));
         Assert.Equal(0, after.Count);
-        Assert.Equal(new[] { 0L }, every);
+        Assert.Equal(OneShotTimerExpected, every);
 
-        clock.AdvanceBy(TimeSpan.FromTicks(1));
-        Assert.Equal(new[] { 0L }, after);
+        clock.AdvanceBy(TimeSpan.FromTicks(FirstValue));
+        Assert.Equal(OneShotTimerExpected, after);
 
-        clock.AdvanceBy(TimeSpan.FromTicks(4));
+        clock.AdvanceBy(TimeSpan.FromTicks(InitialAdvanceTicks));
         subscription.Dispose();
-        clock.AdvanceBy(TimeSpan.FromTicks(10));
-        Assert.Equal(new[] { 0L, 1L, 2L }, every);
+        clock.AdvanceBy(TimeSpan.FromTicks(FinalAdvanceTicks));
+        Assert.Equal(EveryExpected, every);
     }
 
+    /// <summary>
+    /// Verifies additional factory and unary operator parity helpers.
+    /// </summary>
     [Test]
     public void AdditionalFactoriesAndUnaryOperatorsCoverCommonParitySurface()
     {
-        var leadAppend = new List<int>();
-        var ignored = new List<int>();
-        var distinctBy = new List<int>();
-        var takeWhile = new List<int>();
-        var skipWhile = new List<int>();
-        var defaulted = new List<int>();
-        var count = new List<int>();
-        var any = new List<bool>();
-        var all = new List<bool>();
-        var contains = new List<bool>();
-        var isEmpty = new List<bool>();
-        var selected = new List<int>();
-
-        Signal.FromEnumerable([2, 3]).Lead(1).Append(4).Prepend(0).Subscribe(leadAppend.Add);
-        Signal.FromEnumerable([1, 2, 3]).IgnoreValues().Subscribe(ignored.Add);
-        Signal.FromEnumerable([11, 12, 21, 22]).DistinctBy(value => value / 10).Subscribe(distinctBy.Add);
-        Signal.FromEnumerable([1, 2, 3, 1]).TakeWhile(value => value < 3).Subscribe(takeWhile.Add);
-        Signal.FromEnumerable([1, 2, 3, 1]).SkipWhile(value => value < 3).Subscribe(skipWhile.Add);
-        Signal.Empty<int>().DefaultIfEmpty(42).Subscribe(defaulted.Add);
-        Signal.FromEnumerable([1, 2, 3]).Count().Subscribe(count.Add);
-        Signal.FromEnumerable([1, 2, 3]).Any(value => value == 2).Subscribe(any.Add);
-        Signal.FromEnumerable([2, 4, 6]).All(value => value % 2 == 0).Subscribe(all.Add);
-        Signal.FromEnumerable([2, 4, 6]).Contains(4).Subscribe(contains.Add);
-        Signal.Empty<int>().IsEmpty().Subscribe(isEmpty.Add);
-        Signal.FromEnumerable([1, 2]).Bind(value => Signal.Range(value * 10, 2)).Subscribe(selected.Add);
-
-        Assert.Equal(new[] { 0, 1, 2, 3, 4 }, leadAppend);
-        Assert.Equal(0, ignored.Count);
-        Assert.Equal(new[] { 11, 21 }, distinctBy);
-        Assert.Equal(new[] { 1, 2 }, takeWhile);
-        Assert.Equal(new[] { 3, 1 }, skipWhile);
-        Assert.Equal(new[] { 42 }, defaulted);
-        Assert.Equal(new[] { 3 }, count);
-        Assert.Equal(new[] { true }, any);
-        Assert.Equal(new[] { true }, all);
-        Assert.Equal(new[] { true }, contains);
-        Assert.Equal(new[] { true }, isEmpty);
-        Assert.Equal(new[] { 10, 11, 20, 21 }, selected);
+        VerifySequenceBoundaryOperators();
+        VerifyBooleanTerminalOperators();
+        VerifySelectionAndProjectionOperators();
     }
 
+    /// <summary>
+    /// Verifies System.Reactive-style aliases intended to ease migration.
+    /// </summary>
+    /// <returns>A task that completes when the asynchronous assertions have run.</returns>
     [Test]
     public async Task SystemReactiveNamedAliasesCoverMigrationConvenienceSurface()
     {
@@ -233,38 +490,34 @@ public class FactoryOperatorContractTests
         var clock = new TestClock();
         var source = new Signal<int>();
 
-        Signal.FromEnumerable([2, 3])
-            .StartWith([0, 1])
+        Signal.FromEnumerable([SecondValue, RetrySuccessAttempt])
+            .StartWith(0, FirstValue)
             .Do(sideEffects.Add)
             .AsObservable()
             .Subscribe(values.Add);
 
         Signal.Throw<int>(new InvalidOperationException("recover"))
-            .Catch(_ => Signal.Return(42))
+            .Catch(_ => Signal.Return(RetryResult))
             .Subscribe(recovered.Add);
 
         source.ObserveOn(clock).Subscribe(observed.Add);
-        source.OnNext(7);
+        source.OnNext(ResourceFirstValue);
 
-        Assert.Equal(new[] { 0, 1, 2, 3 }, values);
+        Assert.Equal(SystemReactiveNamedAliasExpected, values);
         Assert.Equal((IEnumerable<int>)values, sideEffects);
-        Assert.Equal(new[] { 42 }, recovered);
+        Assert.Equal(RetryResultExpected, recovered);
         Assert.Equal(0, observed.Count);
 
         clock.Start();
 
-        Assert.Equal(new[] { 7 }, observed);
+        Assert.Equal(ObservedResourceExpected, observed);
 
-        var converted = new[] { 4, 5 }.ToObservable();
-        var last = await converted.ToTask();
-        var first = await Signal.FromEnumerable([9, 10]).FirstAsync().ToTask();
-        var started = await Signal.Start(() => 11, Sequencer.CurrentThread).ToTask();
-
-        Assert.Equal(5, last);
-        Assert.Equal(9, first);
-        Assert.Equal(11, started);
+        await VerifyTaskAliasOperators();
     }
 
+    /// <summary>
+    /// Verifies boundary and latest-value operators with virtual time.
+    /// </summary>
     [Test]
     public void BoundaryAndLatestOperatorsUseVirtualTimeAndCompletionSemantics()
     {
@@ -276,40 +529,125 @@ public class FactoryOperatorContractTests
         var latest = new List<string>();
         var forkJoined = new List<int>();
 
-        source.Throttle(TimeSpan.FromTicks(5), clock).Subscribe(throttled.Add);
-        source.Sample(TimeSpan.FromTicks(4), clock).Subscribe(sampled.Add);
+        source.Throttle(TimeSpan.FromTicks(AfterTicks), clock).Subscribe(throttled.Add);
+        source.Sample(TimeSpan.FromTicks(InitialAdvanceTicks), clock).Subscribe(sampled.Add);
         source.TimeInterval(clock).Subscribe(intervals.Add);
 
-        source.OnNext(1);
-        clock.AdvanceBy(TimeSpan.FromTicks(2));
-        source.OnNext(2);
-        clock.AdvanceBy(TimeSpan.FromTicks(4));
-        source.OnNext(3);
-        clock.AdvanceBy(TimeSpan.FromTicks(5));
+        source.OnNext(FirstValue);
+        clock.AdvanceBy(TimeSpan.FromTicks(SecondValue));
+        source.OnNext(SecondValue);
+        clock.AdvanceBy(TimeSpan.FromTicks(InitialAdvanceTicks));
+        source.OnNext(RetrySuccessAttempt);
+        clock.AdvanceBy(TimeSpan.FromTicks(AfterTicks));
         source.OnCompleted();
-        clock.AdvanceBy(TimeSpan.FromTicks(4));
+        clock.AdvanceBy(TimeSpan.FromTicks(InitialAdvanceTicks));
 
-        Signal.FromEnumerable([1, 2]).ZipLatest(Signal.FromEnumerable(["a", "b"]), (left, right) => left + right).Subscribe(latest.Add);
-        Signal.ForkJoin(Signal.FromEnumerable([1, 2]), Signal.FromEnumerable([10, 20]), (left, right) => left + right).Subscribe(forkJoined.Add);
+        Signal.FromEnumerable(TakeWhileExpected).ZipLatest(Signal.FromEnumerable(["a", "b"]), (left, right) => left + right).Subscribe(latest.Add);
+        Signal.ForkJoin(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable([ProjectedFirstValue, ProjectedThirdValue]), (left, right) => left + right).Subscribe(forkJoined.Add);
 
-        Assert.Equal(new[] { 3 }, throttled);
-        Assert.Equal(new[] { 2, 3 }, sampled);
+        Assert.Equal(ThrottleExpected, throttled);
+        Assert.Equal(SampleExpected, sampled);
         Assert.Equal(TimeSpan.Zero, intervals[0].Interval);
-        Assert.Equal(TimeSpan.FromTicks(2), intervals[1].Interval);
-        Assert.Equal(TimeSpan.FromTicks(4), intervals[2].Interval);
-        Assert.Equal(new[] { "2a", "2b" }, latest);
-        Assert.Equal(new[] { 22 }, forkJoined);
+        Assert.Equal(TimeSpan.FromTicks(SecondValue), intervals[1].Interval);
+        Assert.Equal(TimeSpan.FromTicks(InitialAdvanceTicks), intervals[ThirdIntervalIndex].Interval);
+        Assert.Equal(LatestExpected, latest);
+        Assert.Equal(ForkJoinExpected, forkJoined);
     }
 
+    /// <summary>
+    /// Verifies terminal task operators complete with their expected values.
+    /// </summary>
+    /// <returns>A task that completes when the asynchronous assertions have run.</returns>
     [Test]
     public async Task TerminalTaskOperatorsCompleteWithExpectedSemantics()
     {
-        var first = await Signal.FromEnumerable([3, 4]).FirstAsync();
-        var collected = await Signal.FromEnumerable([1, 2, 3]).CollectArrayAsync();
-        var none = await Signal.Empty<int>().FirstOrDefaultAsync(42);
+        var first = await Signal.FromEnumerable([RetrySuccessAttempt, FourthValue]).FirstAsync();
+        var collected = await Signal.FromEnumerable([FirstValue, SecondValue, RetrySuccessAttempt]).CollectArrayAsync();
+        var none = await Signal.Empty<int>().FirstOrDefaultAsync(RetryResult);
 
-        Assert.Equal(3, first);
-        Assert.Equal([1, 2, 3], (IEnumerable<int>)collected);
-        Assert.Equal(42, none);
+        Assert.Equal(RetrySuccessAttempt, first);
+        Assert.Equal(CollectedExpected, (IEnumerable<int>)collected);
+        Assert.Equal(RetryResult, none);
+    }
+
+    /// <summary>
+    /// Verifies sequence boundary operators.
+    /// </summary>
+    private static void VerifySequenceBoundaryOperators()
+    {
+        var leadAppend = new List<int>();
+        var ignored = new List<int>();
+        var distinctBy = new List<int>();
+        var takeWhile = new List<int>();
+        var skipWhile = new List<int>();
+        var defaulted = new List<int>();
+
+        Signal.FromEnumerable([SecondValue, RetrySuccessAttempt]).Lead(FirstValue).Append(FourthValue).Prepend(0).Subscribe(leadAppend.Add);
+        Signal.FromEnumerable([FirstValue, SecondValue, RetrySuccessAttempt]).IgnoreValues().Subscribe(ignored.Add);
+        Signal.FromEnumerable([ProjectedSecondValue, ProjectedSecondBucketPeerValue, ProjectedFourthValue, SecondZipResult])
+            .DistinctBy(value => value / ProjectionMultiplier)
+            .Subscribe(distinctBy.Add);
+        Signal.FromEnumerable([FirstValue, SecondValue, RetrySuccessAttempt, FirstValue]).TakeWhile(value => value < RetrySuccessAttempt).Subscribe(takeWhile.Add);
+        Signal.FromEnumerable([FirstValue, SecondValue, RetrySuccessAttempt, FirstValue]).SkipWhile(value => value < RetrySuccessAttempt).Subscribe(skipWhile.Add);
+        Signal.Empty<int>().DefaultIfEmpty(RetryResult).Subscribe(defaulted.Add);
+
+        Assert.Equal(LeadAppendExpected, leadAppend);
+        Assert.Equal(0, ignored.Count);
+        Assert.Equal(DistinctByExpected, distinctBy);
+        Assert.Equal(TakeWhileExpected, takeWhile);
+        Assert.Equal(SkipWhileExpected, skipWhile);
+        Assert.Equal(RetryResultExpected, defaulted);
+    }
+
+    /// <summary>
+    /// Verifies boolean terminal operators.
+    /// </summary>
+    private static void VerifyBooleanTerminalOperators()
+    {
+        var count = new List<int>();
+        var any = new List<bool>();
+        var all = new List<bool>();
+        var contains = new List<bool>();
+        var isEmpty = new List<bool>();
+
+        Signal.FromEnumerable([FirstValue, SecondValue, RetrySuccessAttempt]).Count().Subscribe(count.Add);
+        Signal.FromEnumerable([FirstValue, SecondValue, RetrySuccessAttempt]).Any(value => value == SecondValue).Subscribe(any.Add);
+        Signal.FromEnumerable([SecondValue, FourthValue, SixthValue]).All(value => value % SecondValue == 0).Subscribe(all.Add);
+        Signal.FromEnumerable([SecondValue, FourthValue, SixthValue]).Contains(FourthValue).Subscribe(contains.Add);
+        Signal.Empty<int>().IsEmpty().Subscribe(isEmpty.Add);
+
+        Assert.Equal(new[] { RetrySuccessAttempt }, count);
+        Assert.Equal(TrueExpected, any);
+        Assert.Equal(TrueExpected, all);
+        Assert.Equal(TrueExpected, contains);
+        Assert.Equal(TrueExpected, isEmpty);
+    }
+
+    /// <summary>
+    /// Verifies selection and projection operators.
+    /// </summary>
+    private static void VerifySelectionAndProjectionOperators()
+    {
+        var selected = new List<int>();
+
+        Signal.FromEnumerable(TakeWhileExpected).Bind(value => Signal.Range(value * ProjectionMultiplier, SecondValue)).Subscribe(selected.Add);
+
+        Assert.Equal(SelectedProjectionExpected, selected);
+    }
+
+    /// <summary>
+    /// Verifies task-based alias operators.
+    /// </summary>
+    /// <returns>A task that completes when assertions have run.</returns>
+    private static async Task VerifyTaskAliasOperators()
+    {
+        var converted = new[] { 4, AfterTicks }.ToObservable();
+        var last = await converted.ToTask();
+        var first = await Signal.FromEnumerable([RepeatValue, ProjectionMultiplier]).FirstAsync().ToTask();
+        var started = await Signal.Start(() => ProjectedSecondValue, Sequencer.CurrentThread).ToTask();
+
+        Assert.Equal(AfterTicks, last);
+        Assert.Equal(RepeatValue, first);
+        Assert.Equal(ProjectedSecondValue, started);
     }
 }

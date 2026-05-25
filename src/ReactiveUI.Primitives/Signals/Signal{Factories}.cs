@@ -165,6 +165,13 @@ public static partial class Signal
     }
 
     /// <summary>
+    /// Creates a signal whose subscription lifetime owns a resource.
+    /// </summary>
+    public static IObservable<T> Using<TResource, T>(Func<TResource> resourceFactory, Func<TResource, IObservable<T>> signalFactory)
+        where TResource : IDisposable =>
+        Use(resourceFactory, signalFactory);
+
+    /// <summary>
     /// Creates a signal from an enumerable sequence.
     /// </summary>
     public static IObservable<T> FromEnumerable<T>(IEnumerable<T> values)
@@ -174,16 +181,7 @@ public static partial class Signal
             throw new ArgumentNullException(nameof(values));
         }
 
-        return CreateSafe<T>(observer =>
-        {
-            foreach (var value in values)
-            {
-                observer.OnNext(value);
-            }
-
-            observer.OnCompleted();
-            return Disposable.Empty;
-        });
+        return new FromEnumerableSignal<T>(values);
     }
 
     /// <summary>
@@ -468,19 +466,19 @@ public static partial class Signal
     /// Concatenates the supplied signals.
     /// </summary>
     public static IObservable<T> Concat<T>(params IObservable<T>[] sources) =>
-        FromEnumerable(sources).Concat();
+        FromEnumerable(ValidateSources(sources)).Concat();
 
     /// <summary>
     /// Merges the supplied signals.
     /// </summary>
     public static IObservable<T> Merge<T>(params IObservable<T>[] sources) =>
-        FromEnumerable(sources).Merge();
+        FromEnumerable(ValidateSources(sources)).Merge();
 
     /// <summary>
     /// Races the supplied signals and mirrors the first one to produce a value or terminal signal.
     /// </summary>
     public static IObservable<T> Race<T>(params IObservable<T>[] sources) =>
-        FromEnumerable(sources).Race();
+        FromEnumerable(ValidateSources(sources)).Race();
 
     /// <summary>
     /// Zips two signals with a result selector.
@@ -505,6 +503,30 @@ public static partial class Signal
     /// </summary>
     public static IObservable<TResult> ForkJoin<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) =>
         left.ForkJoin(right, selector);
+
+    /// <summary>
+    /// Validates source arrays supplied to params-based factories.
+    /// </summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    /// <param name="sources">The source array.</param>
+    /// <returns>The validated source array.</returns>
+    private static IObservable<T>[] ValidateSources<T>(IObservable<T>[] sources)
+    {
+        if (sources == null)
+        {
+            throw new ArgumentNullException(nameof(sources));
+        }
+
+        for (var i = 0; i < sources.Length; i++)
+        {
+            if (sources[i] == null)
+            {
+                throw new ArgumentNullException(nameof(sources));
+            }
+        }
+
+        return sources;
+    }
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER
 

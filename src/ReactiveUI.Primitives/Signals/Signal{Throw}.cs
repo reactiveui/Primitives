@@ -20,8 +20,9 @@ public static partial class Signal
     /// <param name="scheduler">The scheduler.</param>
     /// <returns>An Signals.</returns>
 #pragma warning disable S4018 // Result type is intentionally explicit for Rx-style factory APIs.
-    public static IObservable<T> Throw<T>(Exception error, ISequencer scheduler) =>
-        new ThrowSignal<T>(error, scheduler);
+    public static IObservable<T> Throw<T>(Exception error, ISequencer scheduler) => scheduler == Sequencer.Immediate
+        ? new ImmediateThrowSignal<T>(error)
+        : new ThrowSignal<T>(error, scheduler);
 
     /// <summary>
     /// Empty Signals. Returns only onError.
@@ -30,7 +31,7 @@ public static partial class Signal
     /// <param name="error">The error.</param>
     /// <returns>An Signals.</returns>
     public static IObservable<T> Throw<T>(Exception error) =>
-        Throw<T>(error, Sequencer.Immediate);
+        new ImmediateThrowSignal<T>(error);
 #pragma warning restore S4018
 
     /// <summary>
@@ -42,7 +43,7 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
 #pragma warning disable RCS1163 // Unused parameter.
     public static IObservable<T> Throw<T>(Exception error, T witness) =>
-        Throw<T>(error, Sequencer.Immediate);
+        new ImmediateThrowSignal<T>(error);
 
     /// <summary>
     /// Empty Signals. Returns only onError on specified scheduler. witness if for Type inference.

@@ -12,8 +12,14 @@ using TUnit.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
+/// <summary>
+/// Verifies core runtime contracts for sparks, witnesses, disposables, and sequencers.
+/// </summary>
 public class CoreRuntimeContractTests
 {
+    /// <summary>
+    /// Verifies completed spark instances are cached for each value type.
+    /// </summary>
     [Test]
     public void CompletedSparksAreCachedPerValueType()
     {
@@ -24,9 +30,13 @@ public class CoreRuntimeContractTests
         Assert.True(first == second);
     }
 
+    /// <summary>
+    /// Verifies delegate witnesses route next, error, and completion callbacks.
+    /// </summary>
     [Test]
     public void WitnessCreateRoutesCallbacks()
     {
+        const int observedValue = 7;
         var calls = new List<string>();
         var error = new InvalidOperationException("boom");
         var witness = Witness.Create<int>(
@@ -34,16 +44,22 @@ public class CoreRuntimeContractTests
             ex => calls.Add("E" + ex.Message),
             () => calls.Add("C"));
 
-        witness.OnNext(7);
+        witness.OnNext(observedValue);
         witness.OnError(error);
         witness.OnCompleted();
 
-        Assert.Equal(new[] { "N7", "Eboom", "C" }, calls);
+        var expected = new[] { "N" + observedValue, "Eboom", "C" };
+        Assert.Equal(expected, calls);
     }
 
+    /// <summary>
+    /// Verifies safe witnesses ignore notifications after termination and dispose once.
+    /// </summary>
     [Test]
     public void SafeWitnessIgnoresSignalsAfterTerminalAndDisposesOnce()
     {
+        const int firstValue = 1;
+        const int lateValue = 2;
         var calls = new List<string>();
         var disposed = 0;
         var witness = Witness.Safe(
@@ -53,16 +69,20 @@ public class CoreRuntimeContractTests
                 () => calls.Add("C")),
             Disposable.Create(() => disposed++));
 
-        witness.OnNext(1);
+        witness.OnNext(firstValue);
         witness.OnCompleted();
-        witness.OnNext(2);
+        witness.OnNext(lateValue);
         witness.OnError(new InvalidOperationException("late"));
         witness.OnCompleted();
 
-        Assert.Equal(new[] { "N1", "C" }, calls);
+        var expected = new[] { "N" + firstValue, "C" };
+        Assert.Equal(expected, calls);
         Assert.Equal(1, disposed);
     }
 
+    /// <summary>
+    /// Verifies a null disposable action uses the shared empty disposable.
+    /// </summary>
     [Test]
     public void DisposableCreateNullActionReturnsEmptyDisposable()
     {
@@ -72,6 +92,9 @@ public class CoreRuntimeContractTests
         Assert.Same(Disposable.Empty, disposable);
     }
 
+    /// <summary>
+    /// Verifies removing one disposable leaves the others attached until disposal.
+    /// </summary>
     [Test]
     public void MultipleDisposableRemoveDisposesOnlyTheRequestedItem()
     {
@@ -92,6 +115,9 @@ public class CoreRuntimeContractTests
         Assert.Equal(1, second);
     }
 
+    /// <summary>
+    /// Verifies assigning a disposed single slot disposes the incoming disposable immediately.
+    /// </summary>
     [Test]
     public void SingleDisposableCreateAfterDisposeDisposesIncomingDisposableImmediately()
     {
@@ -105,6 +131,9 @@ public class CoreRuntimeContractTests
         Assert.Equal(1, disposed);
     }
 
+    /// <summary>
+    /// Verifies a replaceable disposable invokes its disposal action only once.
+    /// </summary>
     [Test]
     public void SingleReplaceableDisposableRunsActionOnlyOnce()
     {
@@ -117,21 +146,31 @@ public class CoreRuntimeContractTests
         Assert.Equal(1, actionCount);
     }
 
+    /// <summary>
+    /// Verifies nested current-thread work is queued until the current action finishes.
+    /// </summary>
     [Test]
     public void CurrentThreadSequencerQueuesNestedWorkUntilCurrentActionCompletes()
     {
+        const int firstCall = 1;
+        const int secondCall = 2;
+        const int thirdCall = 3;
         var calls = new List<int>();
 
         Sequencer.CurrentThread.Schedule(() =>
         {
-            calls.Add(1);
-            Sequencer.CurrentThread.Schedule(() => calls.Add(3));
-            calls.Add(2);
+            calls.Add(firstCall);
+            Sequencer.CurrentThread.Schedule(() => calls.Add(thirdCall));
+            calls.Add(secondCall);
         });
 
-        Assert.Equal(new[] { 1, 2, 3 }, calls);
+        var expected = new[] { firstCall, secondCall, thirdCall };
+        Assert.Equal(expected, calls);
     }
 
+    /// <summary>
+    /// Verifies the immediate sequencer waits until an absolute due time.
+    /// </summary>
     [Test]
     public void ImmediateSequencerHonorsAbsoluteDueTime()
     {
@@ -143,21 +182,30 @@ public class CoreRuntimeContractTests
         Assert.True(elapsed.Elapsed >= TimeSpan.FromMilliseconds(20));
     }
 
+    /// <summary>
+    /// Verifies virtual-clock work runs only after the clock reaches the due time.
+    /// </summary>
     [Test]
     public void VirtualClockRunsScheduledWorkOnlyWhenAdvancedPastDueTime()
     {
+        const long dueTicks = 10;
+        const long beforeDueTicks = 9;
         var clock = new VirtualClock();
         var calls = new List<long>();
 
-        clock.Schedule(TimeSpan.FromTicks(10), () => calls.Add(clock.Clock.Ticks));
+        clock.Schedule(TimeSpan.FromTicks(dueTicks), () => calls.Add(clock.Clock.Ticks));
 
-        clock.AdvanceBy(TimeSpan.FromTicks(9));
+        clock.AdvanceBy(TimeSpan.FromTicks(beforeDueTicks));
         Assert.Equal(0, calls.Count);
 
         clock.AdvanceBy(TimeSpan.FromTicks(1));
-        Assert.Equal(new[] { 10L }, calls);
+        var expected = new[] { dueTicks };
+        Assert.Equal(expected, calls);
     }
 
+    /// <summary>
+    /// Verifies default sequencer aliases expose migration-friendly names.
+    /// </summary>
     [Test]
     public void SchedulerDefaultAliasesExposeMigrationFriendlyNames()
     {
@@ -166,25 +214,40 @@ public class CoreRuntimeContractTests
         Assert.Same(ThreadPoolSequencer.Instance, ThreadPoolSequencer.Instance);
     }
 
+    /// <summary>
+    /// Verifies nullable time value structs use deterministic null hash codes.
+    /// </summary>
     [Test]
     public void NullableValueTimeStructsUseDeterministicNullHashCodes()
     {
+        const int nullHashSeed = 1963;
         var timestamp = new DateTimeOffset(2026, 5, 24, 22, 52, 0, TimeSpan.Zero);
         var moment = new Moment<string?>(null, timestamp);
         var interval = TimeSpan.FromMilliseconds(123);
         var timeInterval = new TimeInterval<string?>(null, interval);
 
-        Assert.Equal(timestamp.GetHashCode() ^ 1963, moment.GetHashCode());
-        Assert.Equal(interval.GetHashCode() ^ 1963, timeInterval.GetHashCode());
+        Assert.Equal(timestamp.GetHashCode() ^ nullHashSeed, moment.GetHashCode());
+        Assert.Equal(interval.GetHashCode() ^ nullHashSeed, timeInterval.GetHashCode());
     }
 
+    /// <summary>
+    /// Verifies scheduled-item constructor argument validation.
+    /// </summary>
     [Test]
     public void ScheduledItemConstructorValidatesSchedulerAndAction()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new ScheduledItem<DateTimeOffset, int>(null!, 42, (_, _) => Disposable.Empty, DateTimeOffset.UnixEpoch));
+        const int state = 42;
 
         Assert.Throws<ArgumentNullException>(() =>
-            new ScheduledItem<DateTimeOffset, int>(Sequencer.Immediate, 42, null!, DateTimeOffset.UnixEpoch));
+            CreateScheduledItem(null!, state, (_, _) => Disposable.Empty));
+
+        Assert.Throws<ArgumentNullException>(() =>
+            CreateScheduledItem(Sequencer.Immediate, state, null!));
+
+        static void CreateScheduledItem(
+            ISequencer scheduler,
+            int state,
+            Func<ISequencer, int, IDisposable> action) =>
+            GC.KeepAlive(new ScheduledItem<DateTimeOffset, int>(scheduler, state, action, DateTimeOffset.UnixEpoch));
     }
 }

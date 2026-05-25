@@ -31,7 +31,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        return Signal.Concat(Signal.Return(value), source);
+        return new PrependSignal<T>(source, value);
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        return Signal.Concat(source, Signal.Return(value));
+        return new AppendSignal<T>(source, value);
     }
 
     /// <summary>
@@ -67,7 +67,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(values));
         }
 
-        return Signal.Concat(Signal.FromEnumerable(values), source);
+        return new StartWithEnumerableSignal<T>(source, values);
     }
 
     /// <summary>
@@ -85,7 +85,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(values));
         }
 
-        return Signal.Concat(Signal.FromEnumerable(values), source);
+        return new StartWithEnumerableSignal<T>(source, values);
     }
 
     /// <summary>
@@ -211,26 +211,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var seen = false;
-            return source.Subscribe(
-                value =>
-                {
-                    seen = true;
-                    observer.OnNext(value);
-                },
-                observer.OnError,
-                () =>
-                {
-                    if (!seen)
-                    {
-                        observer.OnNext(defaultValue);
-                    }
-
-                    observer.OnCompleted();
-                });
-        });
+        return new DefaultIfEmptySignal<T>(source, defaultValue);
     }
 
     /// <summary>
@@ -254,22 +235,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(keySelector));
         }
 
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var seen = new HashSet<TKey>(comparer);
-            return source.Subscribe(
-                value =>
-                {
-                    if (!seen.Add(keySelector(value)))
-                    {
-                        return;
-                    }
-
-                    observer.OnNext(value);
-                },
-                observer.OnError,
-                observer.OnCompleted);
-        });
+        return new DistinctBySignal<T, TKey>(source, keySelector, comparer);
     }
 
     /// <summary>
@@ -411,11 +377,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(selector));
         }
 
-        return Signal.Create<TResult>(observer =>
-        {
-            var sources = source.Map(selector);
-            return sources.Concat().Subscribe(observer);
-        });
+        return new SelectManySignal<TSource, TResult>(source, selector);
     }
 
     /// <summary>
@@ -436,13 +398,21 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(resultSelector));
         }
 
-        return source.SelectMany(value => collectionSelector(value).Map(inner => resultSelector(value, inner)));
+        return new SelectManyResultSignal<TSource, TCollection, TResult>(source, collectionSelector, resultSelector);
     }
 
     /// <summary>
     /// Counts the source values as an <see cref="int"/>.
     /// </summary>
-    public static IObservable<int> Count<T>(this IObservable<T> source) => source.Count(_ => true);
+    public static IObservable<int> Count<T>(this IObservable<T> source)
+    {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        return new CountSignal<T>(source);
+    }
 
     /// <summary>
     /// Counts source values that satisfy the predicate as an <see cref="int"/>.
@@ -454,13 +424,26 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(predicate));
         }
 
-        return source.Fold(0, (count, value) => predicate(value) ? checked(count + 1) : count);
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        return new CountPredicateSignal<T>(source, predicate);
     }
 
     /// <summary>
     /// Counts the source values as an <see cref="long"/>.
     /// </summary>
-    public static IObservable<long> LongCount<T>(this IObservable<T> source) => source.LongCount(_ => true);
+    public static IObservable<long> LongCount<T>(this IObservable<T> source)
+    {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        return new LongCountSignal<T>(source);
+    }
 
     /// <summary>
     /// Counts source values that satisfy the predicate as an <see cref="long"/>.
@@ -472,13 +455,26 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(predicate));
         }
 
-        return source.Fold(0L, (count, value) => predicate(value) ? checked(count + 1L) : count);
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        return new LongCountPredicateSignal<T>(source, predicate);
     }
 
     /// <summary>
     /// Emits true when any value is present.
     /// </summary>
-    public static IObservable<bool> Any<T>(this IObservable<T> source) => source.Any(_ => true);
+    public static IObservable<bool> Any<T>(this IObservable<T> source)
+    {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        return new AnySignal<T>(source);
+    }
 
     /// <summary>
     /// Emits true when any value satisfies the predicate.
@@ -495,33 +491,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(predicate));
         }
 
-        return Signal.CreateSafe<bool>(observer =>
-        {
-            var matched = false;
-            return source.Subscribe(
-                value =>
-                {
-                    if (matched || !predicate(value))
-                    {
-                        return;
-                    }
-
-                    matched = true;
-                    observer.OnNext(true);
-                    observer.OnCompleted();
-                },
-                observer.OnError,
-                () =>
-                {
-                    if (matched)
-                    {
-                        return;
-                    }
-
-                    observer.OnNext(false);
-                    observer.OnCompleted();
-                });
-        });
+        return new AnyPredicateSignal<T>(source, predicate);
     }
 
     /// <summary>
@@ -942,365 +912,7 @@ public static partial class LinqMixins
                 {
                     completion.TrySetException(new InvalidOperationException("The source completed without producing a value."));
                 }
-            });
+        });
         return completion.Task;
-    }
-
-    /// <summary>
-    /// Coordinates a sampled observable sequence.
-    /// </summary>
-    /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class SampleCoordinator<T> : IDisposable
-    {
-        /// <summary>
-        /// The source observable.
-        /// </summary>
-        private readonly IObservable<T> _source;
-
-        /// <summary>
-        /// The sample period.
-        /// </summary>
-        private readonly TimeSpan _period;
-
-        /// <summary>
-        /// The sequencer used to schedule ticks.
-        /// </summary>
-        private readonly ISequencer _sequencer;
-
-        /// <summary>
-        /// The synchronization gate.
-        /// </summary>
-        private readonly OperatorGate _gate = new();
-
-        /// <summary>
-        /// The active subscriptions.
-        /// </summary>
-        private readonly MultipleDisposable _subscriptions = new();
-
-        /// <summary>
-        /// The timer slot.
-        /// </summary>
-        private readonly SingleReplaceableDisposable _timer = new();
-
-        /// <summary>
-        /// The downstream observer.
-        /// </summary>
-        private IObserver<T>? _observer;
-
-        /// <summary>
-        /// A value indicating whether a latest value is available.
-        /// </summary>
-        private bool _hasLatest;
-
-        /// <summary>
-        /// The latest value.
-        /// </summary>
-        private T? _latest;
-
-        /// <summary>
-        /// A value indicating whether the source has completed.
-        /// </summary>
-        private bool _done;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SampleCoordinator{T}"/> class.
-        /// </summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="period">The sample period.</param>
-        /// <param name="sequencer">The sequencer used to schedule ticks.</param>
-        internal SampleCoordinator(IObservable<T> source, TimeSpan period, ISequencer sequencer)
-        {
-            _source = source;
-            _period = period;
-            _sequencer = sequencer;
-        }
-
-        /// <summary>
-        /// Releases the active subscriptions.
-        /// </summary>
-        public void Dispose()
-        {
-            _timer.Dispose();
-            _subscriptions.Dispose();
-        }
-
-        /// <summary>
-        /// Starts sampling the source.
-        /// </summary>
-        /// <param name="observer">The downstream observer.</param>
-        /// <returns>The coordinator that owns the subscription cleanup.</returns>
-        internal SampleCoordinator<T> Run(IObserver<T> observer)
-        {
-            _observer = observer;
-            _subscriptions.Add(_timer);
-            _subscriptions.Add(_source.Subscribe(OnNext, observer.OnError, OnCompleted));
-            ScheduleNext();
-            return this;
-        }
-
-        /// <summary>
-        /// Records the latest source value.
-        /// </summary>
-        /// <param name="value">The source value.</param>
-        private void OnNext(T value)
-        {
-            lock (_gate.SyncRoot)
-            {
-                _hasLatest = true;
-                _latest = value;
-            }
-        }
-
-        /// <summary>
-        /// Marks the source as completed.
-        /// </summary>
-        private void OnCompleted()
-        {
-            lock (_gate.SyncRoot)
-            {
-                _done = true;
-            }
-
-            _observer!.OnCompleted();
-        }
-
-        /// <summary>
-        /// Schedules the next sample tick.
-        /// </summary>
-        private void ScheduleNext() =>
-            _timer.Create(_sequencer.Schedule(_period, Tick));
-
-        /// <summary>
-        /// Handles a sample tick.
-        /// </summary>
-        private void Tick()
-        {
-            if (!TryTake(out var value))
-            {
-                return;
-            }
-
-            _observer!.OnNext(value);
-            if (_timer.IsDisposed)
-            {
-                return;
-            }
-
-            ScheduleNext();
-        }
-
-        /// <summary>
-        /// Attempts to take the latest value.
-        /// </summary>
-        /// <param name="value">The latest value.</param>
-        /// <returns><c>true</c> when a value should be emitted; otherwise, <c>false</c>.</returns>
-        private bool TryTake(out T value)
-        {
-            lock (_gate.SyncRoot)
-            {
-                if (_done || !_hasLatest)
-                {
-                    value = default!;
-                    return false;
-                }
-
-                value = _latest!;
-                _hasLatest = false;
-                return true;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Coordinates a two-source fork-join operation.
-    /// </summary>
-    /// <typeparam name="TLeft">The left value type.</typeparam>
-    /// <typeparam name="TRight">The right value type.</typeparam>
-    /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class ForkJoinCoordinator<TLeft, TRight, TResult>
-    {
-        /// <summary>
-        /// The synchronization gate.
-        /// </summary>
-        private readonly OperatorGate _gate = new();
-
-        /// <summary>
-        /// The downstream observer.
-        /// </summary>
-        private readonly IObserver<TResult> _observer;
-
-        /// <summary>
-        /// The projection function.
-        /// </summary>
-        private readonly Func<TLeft, TRight, TResult> _selector;
-
-        /// <summary>
-        /// A value indicating whether the left source produced a value.
-        /// </summary>
-        private bool _hasLeft;
-
-        /// <summary>
-        /// A value indicating whether the right source produced a value.
-        /// </summary>
-        private bool _hasRight;
-
-        /// <summary>
-        /// A value indicating whether the left source completed.
-        /// </summary>
-        private bool _leftDone;
-
-        /// <summary>
-        /// A value indicating whether the right source completed.
-        /// </summary>
-        private bool _rightDone;
-
-        /// <summary>
-        /// The latest left value.
-        /// </summary>
-        private TLeft? _latestLeft;
-
-        /// <summary>
-        /// The latest right value.
-        /// </summary>
-        private TRight? _latestRight;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ForkJoinCoordinator{TLeft, TRight, TResult}"/> class.
-        /// </summary>
-        /// <param name="observer">The downstream observer.</param>
-        /// <param name="selector">The projection function.</param>
-        internal ForkJoinCoordinator(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
-        {
-            _observer = observer;
-            _selector = selector;
-        }
-
-        /// <summary>
-        /// Subscribes to both fork-join sources.
-        /// </summary>
-        /// <param name="left">The left source.</param>
-        /// <param name="right">The right source.</param>
-        /// <returns>The subscription cleanup.</returns>
-        internal MultipleDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
-            new(
-                left.Subscribe(OnLeftNext, _observer.OnError, OnLeftCompleted),
-                right.Subscribe(OnRightNext, _observer.OnError, OnRightCompleted));
-
-        /// <summary>
-        /// Records a left value.
-        /// </summary>
-        /// <param name="value">The left value.</param>
-        private void OnLeftNext(TLeft value)
-        {
-            lock (_gate.SyncRoot)
-            {
-                _hasLeft = true;
-                _latestLeft = value;
-            }
-        }
-
-        /// <summary>
-        /// Records a right value.
-        /// </summary>
-        /// <param name="value">The right value.</param>
-        private void OnRightNext(TRight value)
-        {
-            lock (_gate.SyncRoot)
-            {
-                _hasRight = true;
-                _latestRight = value;
-            }
-        }
-
-        /// <summary>
-        /// Marks the left source as complete.
-        /// </summary>
-        private void OnLeftCompleted()
-        {
-            if (!CompleteLeft(out var result, out var emit))
-            {
-                return;
-            }
-
-            Finish(result, emit);
-        }
-
-        /// <summary>
-        /// Marks the right source as complete.
-        /// </summary>
-        private void OnRightCompleted()
-        {
-            if (!CompleteRight(out var result, out var emit))
-            {
-                return;
-            }
-
-            Finish(result, emit);
-        }
-
-        /// <summary>
-        /// Marks the left source complete and computes the result if both sources are complete.
-        /// </summary>
-        /// <param name="result">The result to emit.</param>
-        /// <param name="emit">A value indicating whether a result should be emitted.</param>
-        /// <returns><c>true</c> when fork-join is ready to finish; otherwise, <c>false</c>.</returns>
-        private bool CompleteLeft(out TResult result, out bool emit)
-        {
-            lock (_gate.SyncRoot)
-            {
-                _leftDone = true;
-                return TryFinish(out result, out emit);
-            }
-        }
-
-        /// <summary>
-        /// Marks the right source complete and computes the result if both sources are complete.
-        /// </summary>
-        /// <param name="result">The result to emit.</param>
-        /// <param name="emit">A value indicating whether a result should be emitted.</param>
-        /// <returns><c>true</c> when fork-join is ready to finish; otherwise, <c>false</c>.</returns>
-        private bool CompleteRight(out TResult result, out bool emit)
-        {
-            lock (_gate.SyncRoot)
-            {
-                _rightDone = true;
-                return TryFinish(out result, out emit);
-            }
-        }
-
-        /// <summary>
-        /// Computes the final result when both sources are complete.
-        /// </summary>
-        /// <param name="result">The result to emit.</param>
-        /// <param name="emit">A value indicating whether a result should be emitted.</param>
-        /// <returns><c>true</c> when both sources are complete; otherwise, <c>false</c>.</returns>
-        private bool TryFinish(out TResult result, out bool emit)
-        {
-            if (!_leftDone || !_rightDone)
-            {
-                result = default!;
-                emit = false;
-                return false;
-            }
-
-            emit = _hasLeft && _hasRight;
-            result = emit ? _selector(_latestLeft!, _latestRight!) : default!;
-            return true;
-        }
-
-        /// <summary>
-        /// Emits the final result and completes.
-        /// </summary>
-        /// <param name="result">The result to emit.</param>
-        /// <param name="emit">A value indicating whether a result should be emitted.</param>
-        private void Finish(TResult result, bool emit)
-        {
-            if (emit)
-            {
-                _observer.OnNext(result);
-            }
-
-            _observer.OnCompleted();
-        }
     }
 }

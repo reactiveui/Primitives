@@ -4,17 +4,26 @@
 
 using System;
 using System.Threading;
-using System.Threading.Tasks;
 using ReactiveUI.Primitives.Signals;
 using TUnit.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>
-/// AsyncSignalTests.
+/// Tests asynchronous signal behavior.
 /// </summary>
 public class AsyncSignalTests
 {
+    /// <summary>
+    /// Defines the integer value observed by asynchronous tests.
+    /// </summary>
+    private const int ExpectedValue = 42;
+
+    /// <summary>
+    /// Defines the maximum time to wait for cross-thread test work.
+    /// </summary>
+    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>
     /// Subscribes the argument checking.
     /// </summary>
@@ -37,6 +46,8 @@ public class AsyncSignalTests
     {
         var s = new AsyncSignal<int>();
         GetResult_BlockingImpl(s.GetAwaiter());
+
+        Assert.True(s.IsCompleted);
     }
 
     /// <summary>
@@ -47,6 +58,8 @@ public class AsyncSignalTests
     {
         var s = new AsyncSignal<int>();
         GetResult_Blocking_ThrowImpl(s.GetAwaiter());
+
+        Assert.True(s.IsCompleted);
     }
 
     /// <summary>
@@ -64,13 +77,25 @@ public class AsyncSignalTests
     /// Gets the result blocking.
     /// </summary>
     [Test]
-    public void GetResult_Blocking() => GetResult_BlockingImpl(new AsyncSignal<int>());
+    public void GetResult_Blocking()
+    {
+        var s = new AsyncSignal<int>();
+        GetResult_BlockingImpl(s);
+
+        Assert.True(s.IsCompleted);
+    }
 
     /// <summary>
     /// Gets the result blocking throw.
     /// </summary>
     [Test]
-    public void GetResult_Blocking_Throw() => GetResult_Blocking_ThrowImpl(new AsyncSignal<int>());
+    public void GetResult_Blocking_Throw()
+    {
+        var s = new AsyncSignal<int>();
+        GetResult_Blocking_ThrowImpl(s);
+
+        Assert.True(s.IsCompleted);
+    }
 
     /// <summary>
     /// Gets the result context.
@@ -81,20 +106,27 @@ public class AsyncSignalTests
         var x = new AsyncSignal<int>();
 
         var ctx = new MyContext();
-        var e = new ManualResetEvent(false);
+        using var registered = new ManualResetEventSlim();
+        using var completed = new ManualResetEventSlim();
 
-        Task.Run(() =>
+        var registrationThread = new Thread(() =>
         {
             SynchronizationContext.SetSynchronizationContext(ctx);
 
             var a = x.GetAwaiter();
-            a.OnCompleted(() => e.Set());
+            a.OnCompleted(() => completed.Set());
+            registered.Set();
         });
 
-        x.OnNext(42);
+        registrationThread.Start();
+
+        Assert.True(registered.Wait(WaitTimeout));
+        Assert.True(registrationThread.Join(WaitTimeout));
+
+        x.OnNext(ExpectedValue);
         x.OnCompleted();
 
-        e.WaitOne();
+        Assert.True(completed.Wait(WaitTimeout));
 
         Assert.True(ctx.Ran);
     }
@@ -200,11 +232,13 @@ public class AsyncSignalTests
         var d = s.Subscribe(_ => { });
         Assert.True(s.HasObservers);
 
-        s.OnNext(42);
+        s.OnNext(ExpectedValue);
         Assert.True(s.HasObservers);
 
         s.OnCompleted();
         Assert.False(s.HasObservers);
+
+        d.Dispose();
     }
 
     /// <summary>
@@ -219,11 +253,13 @@ public class AsyncSignalTests
         var d = s.Subscribe(_ => { }, _ => { });
         Assert.True(s.HasObservers);
 
-        s.OnNext(42);
+        s.OnNext(ExpectedValue);
         Assert.True(s.HasObservers);
 
-        s.OnError(new Exception());
+        s.OnError(new InvalidOperationException());
         Assert.False(s.HasObservers);
+
+        d.Dispose();
     }
 
     /// <summary>
@@ -234,27 +270,36 @@ public class AsyncSignalTests
     {
         Assert.False(s.IsCompleted);
 
-        var e = new ManualResetEvent(false);
+        using var release = new ManualResetEventSlim();
+        using var started = new ManualResetEventSlim();
 
-        new Thread(() =>
+        var producer = new Thread(() =>
         {
-            e.WaitOne();
-            s.OnNext(42);
+            if (!release.Wait(WaitTimeout))
+            {
+                return;
+            }
+
+            s.OnNext(ExpectedValue);
             s.OnCompleted();
-        }).Start();
+        });
 
         var y = default(int);
-        var t = new Thread(() => y = s.GetResult());
-        t.Start();
-
-        while (t.ThreadState != ThreadState.WaitSleepJoin)
+        var consumer = new Thread(() =>
         {
-        }
+            started.Set();
+            y = s.GetResult();
+        });
 
-        e.Set();
-        t.Join();
+        producer.Start();
+        consumer.Start();
 
-        Assert.Equal(42, y);
+        Assert.True(started.Wait(WaitTimeout));
+        release.Set();
+        Assert.True(consumer.Join(WaitTimeout));
+        Assert.True(producer.Join(WaitTimeout));
+
+        Assert.Equal(ExpectedValue, y);
         Assert.True(s.IsCompleted);
     }
 
@@ -266,47 +311,67 @@ public class AsyncSignalTests
     {
         Assert.False(s.IsCompleted);
 
-        var e = new ManualResetEvent(false);
+        using var release = new ManualResetEventSlim();
+        using var started = new ManualResetEventSlim();
 
-        var ex = new Exception();
+        var expectedException = new InvalidOperationException();
 
-        new Thread(() =>
+        var producer = new Thread(() =>
         {
-            e.WaitOne();
-            s.OnError(ex);
-        }).Start();
+            if (!release.Wait(WaitTimeout))
+            {
+                return;
+            }
 
-        var y = default(Exception);
-        var t = new Thread(() =>
+            s.OnError(expectedException);
+        });
+
+        Exception? caughtException = null;
+        var consumer = new Thread(() =>
         {
+            started.Set();
+
             try
             {
                 s.GetResult();
             }
-            catch (Exception ex_)
+            catch (Exception exception)
             {
-                y = ex_;
+                caughtException = exception;
             }
         });
-        t.Start();
 
-        while (t.ThreadState != ThreadState.WaitSleepJoin)
-        {
-        }
+        producer.Start();
+        consumer.Start();
 
-        e.Set();
-        t.Join();
+        Assert.True(started.Wait(WaitTimeout));
+        release.Set();
+        Assert.True(consumer.Join(WaitTimeout));
+        Assert.True(producer.Join(WaitTimeout));
 
-        Assert.Same(ex, y);
+        Assert.NotNull(caughtException);
+        Assert.Same(expectedException, caughtException!);
         Assert.True(s.IsCompleted);
     }
 
-    private class MyContext : SynchronizationContext
+    /// <summary>
+    /// Captures whether a continuation was posted through the synchronization context.
+    /// </summary>
+    private sealed class MyContext : SynchronizationContext
     {
-        public bool Ran { get; set; }
+        /// <summary>
+        /// Gets a value indicating whether a continuation was posted.
+        /// </summary>
+        public bool Ran { get; private set; }
 
+        /// <inheritdoc/>
         public override void Post(SendOrPostCallback d, object? state)
         {
+            if (d is null)
+            {
+                throw new ArgumentNullException(nameof(d));
+            }
+
             Ran = true;
             d(state);
         }
