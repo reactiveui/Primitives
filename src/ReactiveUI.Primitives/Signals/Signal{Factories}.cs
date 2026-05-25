@@ -181,16 +181,7 @@ public static partial class Signal
             throw new ArgumentNullException(nameof(values));
         }
 
-        return CreateSafe<T>(observer =>
-        {
-            foreach (var value in values)
-            {
-                observer.OnNext(value);
-            }
-
-            observer.OnCompleted();
-            return Disposable.Empty;
-        });
+        return new FromEnumerableSignal<T>(values);
     }
 
     /// <summary>

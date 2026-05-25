@@ -596,7 +596,7 @@ Use the generated bridge only at boundaries. Prefer native ReactiveUI.Primitives
 
 ## Benchmarks and performance posture
 
-Benchmarks live in `src/ReactiveUI.Primitives.Benchmarks`. The benchmark project may reference System.Reactive and R3 to compare throughput and allocation behavior; the production package must not.
+Benchmarks live in `src/benchmarks/ReactiveUI.Primitives.Benchmarks`. The benchmark project may reference System.Reactive and R3 to compare throughput and allocation behavior; the production package must not.
 
 The latest joined BenchmarkDotNet ShortRun was captured on 2026-05-25 with .NET SDK 10.0.300 on Windows 11, using:
 
@@ -604,7 +604,7 @@ The latest joined BenchmarkDotNet ShortRun was captured on 2026-05-25 with .NET 
 dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- -f '*' -j Short --join
 ```
 
-Raw artifacts are under `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-25-21-12-14-report.*`. ShortRun is useful for fast regression checks; rerun with a longer BenchmarkDotNet job before making release claims.
+Raw artifacts for the joined run are under `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-25-21-12-14-report.*`. The focused `FromEnumerable` row was captured in `src/BenchmarkDotNet.Artifacts/results/ReactiveUI.Primitives.Benchmarks.FactoryFromEnumerableBenchmarks-report.*` after the dedicated inline fast path was added. ShortRun is useful for fast regression checks; rerun with a longer BenchmarkDotNet job before making release claims.
 
 | Scenario | ReactiveUI.Primitives | System.Reactive | R3 |
 |---|---:|---:|---:|
@@ -617,6 +617,7 @@ Raw artifacts are under `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2
 | Empty subscribe | 7.3897 ns / 40 B | 79.6293 ns / 96 B | 43.8897 ns / 48 B |
 | Range subscribe | 55.9990 ns / 96 B | 4,153.4012 ns / 2,472 B | 119.9919 ns / 72 B |
 | Repeat subscribe | 10.3262 ns / 0 B | 3,951.5395 ns / 2,408 B | 116.7110 ns / 72 B |
+| FromEnumerable subscribe | 48.9910 ns / 40 B | 3,740.3600 ns / 2,504 B | 131.3610 ns / 80 B |
 | Throw subscribe | 100.3490 ns / 120 B | 190.9367 ns / 240 B | 158.5640 ns / 192 B |
 | Map + Keep | 213.9322 ns / 208 B | 4,463.8969 ns / 2,616 B | 423.8154 ns / 264 B |
 | DistinctBy + Count + Any | 427.3704 ns / 992 B | 8,842.7094 ns / 5,896 B | 932.2863 ns / 1,280 B |
@@ -649,7 +650,7 @@ Performance constraints used by the project:
 | `src/ReactiveUI.Primitives.SystemReactiveBridge.Generator` | Source generator for System.Reactive bridge adapters. |
 | `src/ReactiveUI.Primitives.R3Bridge.Generator` | Source generator for R3 bridge adapters. |
 | `src/ReactiveUI.Primitives.Tests` | Test project using Microsoft Testing Platform/TUnit-style validation. |
-| `src/ReactiveUI.Primitives.Benchmarks` | BenchmarkDotNet comparison harness. |
+| `src/benchmarks/ReactiveUI.Primitives.Benchmarks` | BenchmarkDotNet comparison harness. |
 | `docs/API-COVERAGE.md` | Public API inventory and parity notes. |
 | `docs/PERFORMANCE.md` | Benchmark plan and recovered benchmark evidence. |
 | `docs/TASKLIST.md` | Project task/status notes. |
@@ -670,7 +671,7 @@ git diff --check
 To run the focused benchmark used by the performance notes:
 
 ```bash
-"/mnt/c/Program Files/dotnet/dotnet.exe" run --project src/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter '*SubjectThroughput*'
+"/mnt/c/Program Files/dotnet/dotnet.exe" run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter '*SubjectThroughput*'
 ```
 
 For NuGet package verification, inspect the generated `.nupkg` and confirm:
