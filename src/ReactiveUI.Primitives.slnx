@@ -1,0 +1,26 @@
+<Solution>
+    <Folder Name="/benchmarks/">
+        <Project Path="benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj" />
+    </Folder>
+    <Folder Name="/SolutionConfig/">
+        <File Path="../.editorconfig" />
+        <File Path="../.gitattributes" />
+        <File Path="../.github/workflows/ci-build.yml" />
+        <File Path="../.gitignore" />
+        <File Path="../LICENSE" />
+        <File Path="../README.md" />
+        <File Path="../version.json" />
+        <File Path="directory.build.props" />
+        <File Path="directory.build.targets" />
+        <File Path="directory.packages.props" />
+        <File Path="global.json" />
+        <File Path="stylecop.json" />
+        <File Path="testconfig.json" />
+    </Folder>
+    <Project Path="ReactiveUI.Primitives/ReactiveUI.Primitives.csproj" />
+    <Project Path="ReactiveUI.Primitives.R3Bridge.Generator/ReactiveUI.Primitives.R3Bridge.Generator.csproj" />
+    <Project Path="ReactiveUI.Primitives.SystemReactiveBridge.Generator/ReactiveUI.Primitives.SystemReactiveBridge.Generator.csproj" />
+    <Folder Name="/tests/">
+        <Project Path="tests/ReactiveUI.Primitives.Tests/ReactiveUI.Primitives.Tests.csproj" />
+    </Folder>
+</Solution>
