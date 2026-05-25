@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
@@ -11,11 +12,22 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// </summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-public abstract class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, IComparable<ScheduledItem<TAbsolute>>, IsDisposed
+public abstract class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, IComparable<ScheduledItem<TAbsolute>>, IsDisposed, IComparable
     where TAbsolute : IComparable<TAbsolute>
 {
+    /// <summary>
+    /// Compares scheduled items by due time.
+    /// </summary>
     private readonly IComparer<TAbsolute> _comparer;
+
+    /// <summary>
+    /// Holds the disposable returned by the scheduled action.
+    /// </summary>
     private IDisposable? _disposable;
+
+    /// <summary>
+    /// Tracks cancellation without taking a lock.
+    /// </summary>
     private int _isDisposed;
 
     /// <summary>
@@ -106,7 +118,11 @@ public abstract class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICom
     /// </summary>
     /// <param name="other">Work item to compare the current work item to.</param>
     /// <returns>Relative ordering between this and the specified work item.</returns>
-    /// <remarks>The inequality operators are overloaded to provide results consistent with the <see cref="IComparable"/> implementation. Equality operators implement traditional reference equality semantics.</remarks>
+    /// <remarks>
+    /// The inequality operators are overloaded to provide results consistent with the
+    /// <see cref="IComparable"/> implementation. Equality operators implement traditional
+    /// reference equality semantics.
+    /// </remarks>
     public int CompareTo(ScheduledItem<TAbsolute>? other)
     {
         // MSDN: By definition, any object compares greater than null, and two null references compare equal to each other.
@@ -116,6 +132,26 @@ public abstract class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICom
         }
 
         return _comparer.Compare(DueTime, other.DueTime);
+    }
+
+    /// <summary>
+    /// Compares the current instance with another object of the same type and returns an integer that indicates relative ordering.
+    /// </summary>
+    /// <param name="obj">An object to compare with this instance.</param>
+    /// <returns>A value that indicates the relative order of the objects being compared.</returns>
+    public int CompareTo(object? obj)
+    {
+        if (obj == null)
+        {
+            return 1;
+        }
+
+        if (obj is ScheduledItem<TAbsolute> x)
+        {
+            return CompareTo(x);
+        }
+
+        throw new ArgumentException("Object must be a compatible scheduled item.", nameof(obj));
     }
 
     /// <summary>
@@ -131,14 +167,18 @@ public abstract class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICom
     /// Determines whether a <see cref="ScheduledItem{TAbsolute}" /> object is equal to the specified object.
     /// </summary>
     /// <param name="obj">The object to compare to the current <see cref="ScheduledItem{TAbsolute}" /> object.</param>
-    /// <returns><c>true</c> if the obj parameter is a <see cref="ScheduledItem{TAbsolute}" /> object and is equal to the current <see cref="ScheduledItem{TAbsolute}" /> object; otherwise, <c>false</c>.</returns>
+    /// <returns>
+    /// <c>true</c> if the obj parameter is a <see cref="ScheduledItem{TAbsolute}" />
+    /// object and is equal to the current <see cref="ScheduledItem{TAbsolute}" />
+    /// object; otherwise, <c>false</c>.
+    /// </returns>
     public override bool Equals(object? obj) => ReferenceEquals(this, obj);
 
     /// <summary>
     /// Returns the hash code for the current <see cref="ScheduledItem{TAbsolute}" /> object.
     /// </summary>
     /// <returns>A 32-bit signed integer hash code.</returns>
-    public override int GetHashCode() => base.GetHashCode();
+    public override int GetHashCode() => RuntimeHelpers.GetHashCode(this);
 
     /// <summary>
     /// Invokes the work item.
@@ -158,10 +198,12 @@ public abstract class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICom
             return;
         }
 
-        if (IsDisposed)
+        if (!IsDisposed)
         {
-            disposable.Dispose();
+            return;
         }
+
+        disposable.Dispose();
     }
 
     /// <summary>
@@ -170,10 +212,12 @@ public abstract class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICom
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
     protected virtual void Dispose(bool disposing)
     {
-        if (disposing && Interlocked.Exchange(ref _isDisposed, 1) == 0)
+        if (!disposing || Interlocked.Exchange(ref _isDisposed, 1) != 0)
         {
-            Interlocked.Exchange(ref _disposable, Disposable.Empty)?.Dispose();
+            return;
         }
+
+        Interlocked.Exchange(ref _disposable, Disposable.Empty)?.Dispose();
     }
 
     /// <summary>

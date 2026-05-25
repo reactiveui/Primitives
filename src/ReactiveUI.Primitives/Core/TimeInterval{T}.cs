@@ -83,7 +83,7 @@ public readonly struct TimeInterval<T> : IEquatable<TimeInterval<T>>
     /// <returns>A hash code for the current TimeInterval value.</returns>
     public override int GetHashCode()
     {
-        var valueHashCode = Value == null ? 1963 : Value.GetHashCode();
+        var valueHashCode = Value is null ? 1963 : EqualityComparer<T>.Default.GetHashCode(Value);
 
         return Interval.GetHashCode() ^ valueHashCode;
     }

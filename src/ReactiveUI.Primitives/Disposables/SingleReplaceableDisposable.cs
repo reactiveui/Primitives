@@ -10,27 +10,53 @@ namespace ReactiveUI.Primitives.Disposables;
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public class SingleReplaceableDisposable : IsDisposed
 {
+    /// <summary>
+    /// Marker used once the slot has been disposed.
+    /// </summary>
     private static readonly IDisposable DisposedSentinel = new DisposedMarker();
 
+    /// <summary>
+    /// Action invoked before disposal.
+    /// </summary>
     private readonly Action? _action;
+
+    /// <summary>
+    /// Current disposable or the disposed marker.
+    /// </summary>
     private IDisposable? _disposable;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SingleReplaceableDisposable"/> class.
     /// </summary>
+    public SingleReplaceableDisposable()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SingleReplaceableDisposable"/> class.
+    /// </summary>
     /// <param name="action">The action.</param>
-    public SingleReplaceableDisposable(Action? action = null) =>
+    public SingleReplaceableDisposable(Action? action) =>
         _action = action;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SingleReplaceableDisposable"/> class.
     /// </summary>
     /// <param name="disposable">The disposable.</param>
-    /// <param name="action">The action to call before disposal.</param>
-    public SingleReplaceableDisposable(IDisposable disposable, Action? action = null)
+    public SingleReplaceableDisposable(IDisposable disposable)
+        : this(disposable, null)
     {
-        Create(disposable);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SingleReplaceableDisposable"/> class.
+    /// </summary>
+    /// <param name="disposable">The disposable.</param>
+    /// <param name="action">The action to call before disposal.</param>
+    public SingleReplaceableDisposable(IDisposable disposable, Action? action)
+    {
         _action = action;
+        Create(disposable);
     }
 
     /// <summary>
@@ -51,14 +77,20 @@ public class SingleReplaceableDisposable : IsDisposed
     /// Creates the specified disposable.
     /// </summary>
     /// <param name="disposable">The disposable.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="disposable"/> is <see langword="null"/>.</exception>
     public void Create(IDisposable disposable)
     {
+        if (disposable == null)
+        {
+            throw new ArgumentNullException(nameof(disposable));
+        }
+
         while (true)
         {
             var current = Volatile.Read(ref _disposable);
             if (ReferenceEquals(current, DisposedSentinel))
             {
-                disposable?.Dispose();
+                disposable.Dispose();
                 _action?.Invoke();
                 return;
             }
@@ -99,8 +131,12 @@ public class SingleReplaceableDisposable : IsDisposed
         _action?.Invoke();
     }
 
+    /// <summary>
+    /// Disposable marker for disposed slots.
+    /// </summary>
     private sealed class DisposedMarker : IDisposable
     {
+        /// <inheritdoc/>
         public void Dispose()
         {
         }

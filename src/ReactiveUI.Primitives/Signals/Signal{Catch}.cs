@@ -19,7 +19,9 @@ public static partial class Signal
     /// <typeparam name="TException">The type of the exception to catch and handle. Needs to derive from <see cref="System.Exception"/>.</typeparam>
     /// <param name="source">Source sequence.</param>
     /// <param name="handler">Exception handler function, producing another observable sequence.</param>
-    /// <returns>An observable sequence containing the source sequence's elements, followed by the elements produced by the handler's resulting observable sequence in case an exception occurred.</returns>
+    /// <returns>
+    /// An observable sequence containing the source sequence's elements, followed by the handler sequence's elements when an exception occurs.
+    /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="handler"/> is null.</exception>
     public static IObservable<TSource> Catch<TSource, TException>(this IObservable<TSource> source, Func<TException, IObservable<TSource>> handler)
         where TException : Exception

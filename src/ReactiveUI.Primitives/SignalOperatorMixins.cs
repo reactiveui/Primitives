@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
@@ -94,10 +93,12 @@ public static partial class LinqMixins
         return Signal.CreateSafe<T>(observer => source.Subscribe(
             value =>
             {
-                if (value != null)
+                if (value == null)
                 {
-                    observer.OnNext(value);
+                    return;
                 }
+
+                observer.OnNext(value);
             },
             observer.OnError,
             observer.OnCompleted));
@@ -106,6 +107,10 @@ public static partial class LinqMixins
     /// <summary>
     /// Projects only values assignable to <typeparamref name="TResult"/>.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4018:Generic methods should provide type parameters",
+        Justification = "LINQ-style OfType requires the caller to provide the result type.")]
     public static IObservable<TResult> OfType<TResult>(this IObservable<object?> source)
     {
         if (source == null)
@@ -116,10 +121,12 @@ public static partial class LinqMixins
         return Signal.CreateSafe<TResult>(observer => source.Subscribe(
             value =>
             {
-                if (value is TResult result)
+                if (value is not TResult result)
                 {
-                    observer.OnNext(result);
+                    return;
                 }
+
+                observer.OnNext(result);
             },
             observer.OnError,
             observer.OnCompleted));
@@ -128,6 +135,10 @@ public static partial class LinqMixins
     /// <summary>
     /// Casts every value to <typeparamref name="TResult"/>.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4018:Generic methods should provide type parameters",
+        Justification = "LINQ-style Cast requires the caller to provide the result type.")]
     public static IObservable<TResult> Cast<TResult>(this IObservable<object?> source)
     {
         if (source == null)
@@ -260,10 +271,12 @@ public static partial class LinqMixins
 
                     observer.OnNext(value);
                     remaining--;
-                    if (remaining == 0)
+                    if (remaining != 0)
                     {
-                        observer.OnCompleted();
+                        return;
                     }
+
+                    observer.OnCompleted();
                 },
                 observer.OnError,
                 observer.OnCompleted);
@@ -307,7 +320,13 @@ public static partial class LinqMixins
     /// <summary>
     /// Suppresses duplicate values according to the comparer.
     /// </summary>
-    public static IObservable<T> Distinct<T>(this IObservable<T> source, IEqualityComparer<T>? comparer = null)
+    public static IObservable<T> Distinct<T>(this IObservable<T> source) =>
+        source.Distinct(null);
+
+    /// <summary>
+    /// Suppresses duplicate values according to the comparer.
+    /// </summary>
+    public static IObservable<T> Distinct<T>(this IObservable<T> source, IEqualityComparer<T>? comparer)
     {
         if (source == null)
         {
@@ -320,10 +339,12 @@ public static partial class LinqMixins
             return source.Subscribe(
                 value =>
                 {
-                    if (seen.Add(value))
+                    if (!seen.Add(value))
                     {
-                        observer.OnNext(value);
+                        return;
                     }
+
+                    observer.OnNext(value);
                 },
                 observer.OnError,
                 observer.OnCompleted);
@@ -333,7 +354,13 @@ public static partial class LinqMixins
     /// <summary>
     /// Suppresses adjacent duplicate values according to the comparer.
     /// </summary>
-    public static IObservable<T> DistinctUntilChanged<T>(this IObservable<T> source, IEqualityComparer<T>? comparer = null)
+    public static IObservable<T> DistinctUntilChanged<T>(this IObservable<T> source) =>
+        source.DistinctUntilChanged(null);
+
+    /// <summary>
+    /// Suppresses adjacent duplicate values according to the comparer.
+    /// </summary>
+    public static IObservable<T> DistinctUntilChanged<T>(this IObservable<T> source, IEqualityComparer<T>? comparer)
     {
         if (source == null)
         {
@@ -348,12 +375,14 @@ public static partial class LinqMixins
             return source.Subscribe(
                 value =>
                 {
-                    if (!hasLast || !comparer.Equals(last!, value))
+                    if (hasLast && comparer.Equals(last!, value))
                     {
-                        hasLast = true;
-                        last = value;
-                        observer.OnNext(value);
+                        return;
                     }
+
+                    hasLast = true;
+                    last = value;
+                    observer.OnNext(value);
                 },
                 observer.OnError,
                 observer.OnCompleted);
@@ -412,7 +441,7 @@ public static partial class LinqMixins
 
         return Signal.Create<T>(observer =>
         {
-            var gate = new object();
+            var gate = new OperatorGate();
             var queue = new Queue<IObservable<T>>();
             var pocket = new MultipleDisposable();
             var active = false;
@@ -421,7 +450,7 @@ public static partial class LinqMixins
             void Drain()
             {
                 IObservable<T>? next = null;
-                lock (gate)
+                lock (gate.SyncRoot)
                 {
                     if (active)
                     {
@@ -440,21 +469,23 @@ public static partial class LinqMixins
                     }
                 }
 
-                if (next != null)
+                if (next == null)
                 {
-                    pocket.Add(next.Subscribe(
-                        observer.OnNext,
-                        observer.OnError,
-                        () =>
-                        {
-                            lock (gate)
-                            {
-                                active = false;
-                            }
-
-                            Drain();
-                        }));
+                    return;
                 }
+
+                pocket.Add(next.Subscribe(
+                    observer.OnNext,
+                    observer.OnError,
+                    () =>
+                    {
+                        lock (gate.SyncRoot)
+                        {
+                            active = false;
+                        }
+
+                        Drain();
+                    }));
             }
 
             pocket.Add(sources.Subscribe(
@@ -466,7 +497,7 @@ public static partial class LinqMixins
                         return;
                     }
 
-                    lock (gate)
+                    lock (gate.SyncRoot)
                     {
                         queue.Enqueue(source);
                     }
@@ -476,7 +507,7 @@ public static partial class LinqMixins
                 observer.OnError,
                 () =>
                 {
-                    lock (gate)
+                    lock (gate.SyncRoot)
                     {
                         outerCompleted = true;
                     }
@@ -506,14 +537,14 @@ public static partial class LinqMixins
 
         return Signal.Create<T>(observer =>
         {
-            var gate = new object();
+            var gate = new OperatorGate();
             var pocket = new MultipleDisposable();
             var outerCompleted = false;
             var active = 0;
 
             void TryComplete()
             {
-                lock (gate)
+                lock (gate.SyncRoot)
                 {
                     if (outerCompleted && active == 0)
                     {
@@ -531,7 +562,7 @@ public static partial class LinqMixins
                         return;
                     }
 
-                    lock (gate)
+                    lock (gate.SyncRoot)
                     {
                         active++;
                     }
@@ -541,7 +572,7 @@ public static partial class LinqMixins
                         observer.OnError,
                         () =>
                         {
-                            lock (gate)
+                            lock (gate.SyncRoot)
                             {
                                 active--;
                             }
@@ -552,7 +583,7 @@ public static partial class LinqMixins
                 observer.OnError,
                 () =>
                 {
-                    lock (gate)
+                    lock (gate.SyncRoot)
                     {
                         outerCompleted = true;
                     }
@@ -574,55 +605,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(sources));
         }
 
-        return Signal.Create<T>(observer =>
-        {
-            var gate = new object();
-            var pocket = new MultipleDisposable();
-            var winner = -1;
-            var index = 0;
-
-            pocket.Add(sources.Subscribe(source =>
-            {
-                var current = index++;
-                pocket.Add(source.Subscribe(
-                    value =>
-                    {
-                        if (Win(current))
-                        {
-                            observer.OnNext(value);
-                        }
-                    },
-                    error =>
-                    {
-                        if (Win(current))
-                        {
-                            observer.OnError(error);
-                        }
-                    },
-                    () =>
-                    {
-                        if (Win(current))
-                        {
-                            observer.OnCompleted();
-                        }
-                    }));
-            }, observer.OnError, () => { }));
-
-            return pocket;
-
-            bool Win(int candidate)
-            {
-                lock (gate)
-                {
-                    if (winner < 0)
-                    {
-                        winner = candidate;
-                    }
-
-                    return winner == candidate;
-                }
-            }
-        });
+        return Signal.Create<T>(observer => new RaceCoordinator<T>(observer).Run(sources));
     }
 
     /// <summary>
@@ -645,44 +628,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(selector));
         }
 
-        return Signal.CreateSafe<TResult>(observer =>
-        {
-            var gate = new object();
-            var leftQueue = new Queue<TLeft>();
-            var rightQueue = new Queue<TRight>();
-            var leftCompleted = false;
-            var rightCompleted = false;
-
-            void Drain()
-            {
-                while (true)
-                {
-                    TLeft l;
-                    TRight r;
-                    lock (gate)
-                    {
-                        if (leftQueue.Count == 0 || rightQueue.Count == 0)
-                        {
-                            if ((leftCompleted && leftQueue.Count == 0) || (rightCompleted && rightQueue.Count == 0))
-                            {
-                                observer.OnCompleted();
-                            }
-
-                            return;
-                        }
-
-                        l = leftQueue.Dequeue();
-                        r = rightQueue.Dequeue();
-                    }
-
-                    observer.OnNext(selector(l, r));
-                }
-            }
-
-            return MultipleDisposable.Create(
-                left.Subscribe(value => { lock (gate) { leftQueue.Enqueue(value); } Drain(); }, observer.OnError, () => { lock (gate) { leftCompleted = true; } Drain(); }),
-                right.Subscribe(value => { lock (gate) { rightQueue.Enqueue(value); } Drain(); }, observer.OnError, () => { lock (gate) { rightCompleted = true; } Drain(); }));
-        });
+        return Signal.CreateSafe<TResult>(observer => new ZipCoordinator<TLeft, TRight, TResult>(observer, selector).Run(left, right));
     }
 
     /// <summary>
@@ -705,66 +651,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(selector));
         }
 
-        return Signal.CreateSafe<TResult>(observer =>
-        {
-            var gate = new object();
-            var hasLeft = false;
-            var hasRight = false;
-            var leftDone = false;
-            var rightDone = false;
-            var latestLeft = default(TLeft);
-            var latestRight = default(TRight);
-
-            void CompleteIfBothDone()
-            {
-                if (leftDone && rightDone)
-                {
-                    observer.OnCompleted();
-                }
-            }
-
-            return MultipleDisposable.Create(
-                left.Subscribe(value =>
-                {
-                    TResult? projected = default;
-                    var emit = false;
-                    lock (gate)
-                    {
-                        latestLeft = value;
-                        hasLeft = true;
-                        if (hasRight)
-                        {
-                            projected = selector(latestLeft!, latestRight!);
-                            emit = true;
-                        }
-                    }
-
-                    if (emit)
-                    {
-                        observer.OnNext(projected!);
-                    }
-                }, observer.OnError, () => { lock (gate) { leftDone = true; CompleteIfBothDone(); } }),
-                right.Subscribe(value =>
-                {
-                    TResult? projected = default;
-                    var emit = false;
-                    lock (gate)
-                    {
-                        latestRight = value;
-                        hasRight = true;
-                        if (hasLeft)
-                        {
-                            projected = selector(latestLeft!, latestRight!);
-                            emit = true;
-                        }
-                    }
-
-                    if (emit)
-                    {
-                        observer.OnNext(projected!);
-                    }
-                }, observer.OnError, () => { lock (gate) { rightDone = true; CompleteIfBothDone(); } }));
-        });
+        return Signal.CreateSafe<TResult>(observer => new CombineLatestCoordinator<TLeft, TRight, TResult>(observer, selector).Run(left, right));
     }
 
     /// <summary>
@@ -789,26 +676,39 @@ public static partial class LinqMixins
 
         return Signal.CreateSafe<TResult>(observer =>
         {
-            var gate = new object();
+            var gate = new OperatorGate();
             var hasRight = false;
             var latestRight = default(TRight);
             return MultipleDisposable.Create(
-                right.Subscribe(value => { lock (gate) { hasRight = true; latestRight = value; } }, observer.OnError, () => { }),
-                left.Subscribe(value =>
-                {
-                    TRight rightValue;
-                    lock (gate)
+                right.Subscribe(
+                    value =>
                     {
-                        if (!hasRight)
+                        lock (gate.SyncRoot)
                         {
-                            return;
+                            hasRight = true;
+                            latestRight = value;
+                        }
+                    },
+                    observer.OnError,
+                    () => { }),
+                left.Subscribe(
+                    value =>
+                    {
+                        TRight rightValue;
+                        lock (gate.SyncRoot)
+                        {
+                            if (!hasRight)
+                            {
+                                return;
+                            }
+
+                            rightValue = latestRight!;
                         }
 
-                        rightValue = latestRight!;
-                    }
-
-                    observer.OnNext(selector(value, rightValue));
-                }, observer.OnError, observer.OnCompleted));
+                        observer.OnNext(selector(value, rightValue));
+                    },
+                    observer.OnError,
+                    observer.OnCompleted));
         });
     }
 
@@ -822,55 +722,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(sources));
         }
 
-        return Signal.Create<T>(observer =>
-        {
-            var gate = new object();
-            var pocket = new MultipleDisposable();
-            var innerSlot = new SingleReplaceableDisposable();
-            var outerCompleted = false;
-            var innerActive = false;
-            var version = 0;
-            pocket.Add(innerSlot);
-
-            void TryComplete()
-            {
-                lock (gate)
-                {
-                    if (outerCompleted && !innerActive)
-                    {
-                        observer.OnCompleted();
-                    }
-                }
-            }
-
-            pocket.Add(sources.Subscribe(source =>
-            {
-                int current;
-                lock (gate)
-                {
-                    current = ++version;
-                    innerActive = true;
-                }
-
-                innerSlot.Create(source.Subscribe(
-                    value => { lock (gate) { if (current == version) { observer.OnNext(value); } } },
-                    error => { lock (gate) { if (current == version) { observer.OnError(error); } } },
-                    () =>
-                    {
-                        lock (gate)
-                        {
-                            if (current == version)
-                            {
-                                innerActive = false;
-                            }
-                        }
-
-                        TryComplete();
-                    }));
-            }, observer.OnError, () => { lock (gate) { outerCompleted = true; } TryComplete(); }));
-
-            return pocket;
-        });
+        return Signal.Create<T>(observer => new SwitchCoordinator<T>(observer).Run(sources));
     }
 
     /// <summary>
@@ -921,7 +773,7 @@ public static partial class LinqMixins
     /// Recovers from errors by switching to a handler-provided signal.
     /// </summary>
     public static IObservable<T> Rescue<T>(this IObservable<T> source, Func<Exception, IObservable<T>> handler) =>
-        Signal.Catch<T, Exception>(source, handler);
+        source.Catch<T, Exception>(handler);
 
     /// <summary>
     /// Continues with a fallback signal after an error.
@@ -933,13 +785,19 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(fallback));
         }
 
-        return Signal.Catch<T, Exception>(source, _ => fallback);
+        return source.Catch<T, Exception>(_ => fallback);
     }
 
     /// <summary>
     /// Delays notifications by <paramref name="dueTime"/>.
     /// </summary>
-    public static IObservable<T> Delay<T>(this IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler = null)
+    public static IObservable<T> Delay<T>(this IObservable<T> source, TimeSpan dueTime) =>
+        source.Delay(dueTime, null);
+
+    /// <summary>
+    /// Delays notifications by <paramref name="dueTime"/>.
+    /// </summary>
+    public static IObservable<T> Delay<T>(this IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler)
     {
         if (source == null)
         {
@@ -947,21 +805,29 @@ public static partial class LinqMixins
         }
 
         scheduler ??= ThreadPoolSequencer.Instance;
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var pocket = new MultipleDisposable();
-            pocket.Add(source.Subscribe(
-                value => pocket.Add(scheduler.Schedule(dueTime, () => observer.OnNext(value))),
-                error => pocket.Add(scheduler.Schedule(dueTime, () => observer.OnError(error))),
-                () => pocket.Add(scheduler.Schedule(dueTime, observer.OnCompleted))));
-            return pocket;
-        }, scheduler == Sequencer.CurrentThread);
+        return Signal.CreateSafe<T>(
+            observer =>
+            {
+                var pocket = new MultipleDisposable();
+                pocket.Add(source.Subscribe(
+                    value => pocket.Add(scheduler.Schedule(dueTime, () => observer.OnNext(value))),
+                    error => pocket.Add(scheduler.Schedule(dueTime, () => observer.OnError(error))),
+                    () => pocket.Add(scheduler.Schedule(dueTime, observer.OnCompleted))));
+                return pocket;
+            },
+            scheduler == Sequencer.CurrentThread);
     }
 
     /// <summary>
     /// Fails the signal if no terminal signal arrives before the timeout.
     /// </summary>
-    public static IObservable<T> Timeout<T>(this IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler = null)
+    public static IObservable<T> Timeout<T>(this IObservable<T> source, TimeSpan dueTime) =>
+        source.Timeout(dueTime, null);
+
+    /// <summary>
+    /// Fails the signal if no terminal signal arrives before the timeout.
+    /// </summary>
+    public static IObservable<T> Timeout<T>(this IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler)
     {
         if (source == null)
         {
@@ -975,16 +841,42 @@ public static partial class LinqMixins
             var done = 0;
             pocket.Add(scheduler.Schedule(dueTime, () =>
             {
-                if (Interlocked.Exchange(ref done, 1) == 0)
+                if (Interlocked.Exchange(ref done, 1) != 0)
                 {
-                    observer.OnError(new TimeoutException());
-                    pocket.Dispose();
+                    return;
                 }
+
+                observer.OnError(new TimeoutException());
+                pocket.Dispose();
             }));
             pocket.Add(source.Subscribe(
-                value => { if (Volatile.Read(ref done) == 0) { observer.OnNext(value); } },
-                error => { if (Interlocked.Exchange(ref done, 1) == 0) { observer.OnError(error); } },
-                () => { if (Interlocked.Exchange(ref done, 1) == 0) { observer.OnCompleted(); } }));
+                value =>
+                {
+                    if (Volatile.Read(ref done) != 0)
+                    {
+                        return;
+                    }
+
+                    observer.OnNext(value);
+                },
+                error =>
+                {
+                    if (Interlocked.Exchange(ref done, 1) != 0)
+                    {
+                        return;
+                    }
+
+                    observer.OnError(error);
+                },
+                () =>
+                {
+                    if (Interlocked.Exchange(ref done, 1) != 0)
+                    {
+                        return;
+                    }
+
+                    observer.OnCompleted();
+                }));
             return pocket;
         });
     }

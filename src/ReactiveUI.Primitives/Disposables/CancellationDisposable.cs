@@ -10,6 +10,9 @@ namespace ReactiveUI.Primitives.Disposables;
 /// <seealso cref="System.IDisposable" />
 public sealed class CancellationDisposable : IsDisposed
 {
+    /// <summary>
+    /// Cancellation source owned by this disposable.
+    /// </summary>
     private readonly CancellationTokenSource _cts;
 
     /// <summary>
@@ -50,19 +53,24 @@ public sealed class CancellationDisposable : IsDisposed
     {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
-        GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// Releases resources used by this disposable.
+    /// </summary>
+    /// <param name="disposing"><see langword="true"/> when called from <see cref="Dispose()"/>.</param>
     private void Dispose(bool disposing)
     {
-        if (!IsDisposed)
+        if (IsDisposed)
         {
-            if (disposing)
-            {
-               _cts.Cancel();
-            }
-
-            IsDisposed = true;
+            return;
         }
+
+        if (disposing)
+        {
+            _cts.Cancel();
+        }
+
+        IsDisposed = true;
     }
 }

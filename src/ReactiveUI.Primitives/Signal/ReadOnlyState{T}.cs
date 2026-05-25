@@ -13,7 +13,14 @@ namespace ReactiveUI.Primitives.Signals;
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ReadOnlyState<T> : IObservable<T>, IDisposable
 {
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly StateSignal<T> _inner;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly IDisposable _subscription;
 
     /// <summary>
@@ -42,10 +49,15 @@ public sealed class ReadOnlyState<T> : IObservable<T>, IDisposable
     /// </summary>
     public IObservable<T> Changed => _inner;
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Executes the Subscribe operation.
+    /// </summary>
+    /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<T> observer) => _inner.Subscribe(observer);
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Executes the Dispose operation.
+    /// </summary>
     public void Dispose()
     {
         _subscription.Dispose();
@@ -83,9 +95,12 @@ public static class StateSignalMixins
             throw new ArgumentNullException(nameof(selector));
         }
 
-        return new ReadOnlyState<TResult>(ReactiveUI.Primitives.Signals.Signal.CreateSafe<TResult>(observer => source.Subscribe(
-            value => observer.OnNext(selector(value)),
-            observer.OnError,
-            observer.OnCompleted)), initialValue);
+        return new ReadOnlyState<TResult>(
+            ReactiveUI.Primitives.Signals.Signal.CreateSafe<TResult>(
+                observer => source.Subscribe(
+                    value => observer.OnNext(selector(value)),
+                    observer.OnError,
+                    observer.OnCompleted)),
+            initialValue);
     }
 }

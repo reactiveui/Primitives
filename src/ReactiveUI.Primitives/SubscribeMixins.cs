@@ -14,7 +14,14 @@ namespace ReactiveUI.Primitives;
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public static class SubscribeMixins
 {
+    /// <summary>
+    /// Error callback that rethrows with the original exception dispatch information.
+    /// </summary>
     private static readonly Action<Exception> rethrow = e => ExceptionDispatchInfo.Capture(e).Throw();
+
+    /// <summary>
+    /// Completion callback that does nothing.
+    /// </summary>
     private static readonly Action nop = () => { };
 
     /// <summary>
@@ -32,7 +39,7 @@ public static class SubscribeMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        return Subscribe(source, OnNextNoOp<T>(), nop);
+        return Subscribe(source, OnNextNoOpCache<T>.Instance, nop);
     }
 
     /// <summary>
@@ -107,11 +114,23 @@ public static class SubscribeMixins
     /// <param name="exception">The exception.</param>
     public static void Rethrow(this Exception? exception)
     {
-        if (exception != null)
+        if (exception == null)
         {
-            throw exception;
+            return;
         }
+
+        throw exception;
     }
 
-    private static Action<T> OnNextNoOp<T>() => _ => { };
+    /// <summary>
+    /// Holds cached no-op value callbacks by value type.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private static class OnNextNoOpCache<T>
+    {
+        /// <summary>
+        /// Gets the cached no-op value callback.
+        /// </summary>
+        public static readonly Action<T> Instance = _ => { };
+    }
 }

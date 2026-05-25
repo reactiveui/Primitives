@@ -1,7 +1,8 @@
-// Copyright (c) 2019-2023 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive.Concurrency;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 using ReactiveUI.Primitives;
@@ -9,7 +10,6 @@ using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
-using System.Reactive.Concurrency;
 using RxBehaviorSubject = System.Reactive.Subjects.BehaviorSubject<int>;
 using RxCompositeDisposable = System.Reactive.Disposables.CompositeDisposable;
 using RxCurrentThreadScheduler = System.Reactive.Concurrency.CurrentThreadScheduler;
@@ -646,10 +646,12 @@ internal sealed class R3CountingObserver<T> : R3.Observer<T>
     protected override void OnNextCore(T value)
     {
         Count++;
-        if (value is int intValue)
+        if (value is not int intValue)
         {
-            Total += intValue;
+            return;
         }
+
+        Total += intValue;
     }
 
     protected override void OnErrorResumeCore(Exception error) => throw error;

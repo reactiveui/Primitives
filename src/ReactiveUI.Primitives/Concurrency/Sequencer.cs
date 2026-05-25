@@ -24,7 +24,16 @@ public static partial class Sequencer
     /// </summary>
     public static ISequencer Default => TaskPoolSequencer.Default;
 
-    internal static DateTimeOffset Now => DateTime.UtcNow;
+    /// <summary>
+    /// Gets the shared wall-clock time used by real-time sequencers.
+    /// </summary>
+#if NET8_0_OR_GREATER
+    internal static DateTimeOffset Now => TimeProvider.System.GetUtcNow();
+#else
+#pragma warning disable S6354 // TimeProvider is not available on supported .NET Framework target frameworks.
+    internal static DateTimeOffset Now => DateTimeOffset.UtcNow;
+#pragma warning restore S6354
+#endif
 
     /// <summary>
     /// Normalizes the specified <see cref="TimeSpan"/> value to a positive value.

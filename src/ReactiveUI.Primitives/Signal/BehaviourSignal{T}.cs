@@ -14,17 +14,42 @@ namespace ReactiveUI.Primitives.Signals;
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public class BehaviourSignal<T> : ISignal<T>
 {
+    /// <summary>
+    /// Executes the new operation.
+    /// </summary>
+    /// <returns>The result.</returns>
     private readonly object _observerLock = new();
+#pragma warning disable S3459 // Broadcaster<T> is a mutable struct whose default value is the empty broadcaster.
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private Broadcaster<T> _broadcaster;
+#pragma warning restore S3459
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private bool _isStopped;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private T? _lastValue;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private Exception? _lastError;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BehaviourSignal{T}"/> class.
     /// </summary>
     /// <param name="defaultValue">The default value.</param>
-    public BehaviourSignal(T defaultValue) => _lastValue = defaultValue;
+    public BehaviourSignal(T defaultValue)
+    {
+        _lastValue = defaultValue;
+    }
 
     /// <summary>
     /// Gets the current value or throws an exception.
@@ -228,42 +253,72 @@ public class BehaviourSignal<T> : ISignal<T>
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
     protected virtual void Dispose(bool disposing)
     {
-        if (!IsDisposed)
-        {
-            if (disposing)
-            {
-                lock (_observerLock)
-                {
-                    _broadcaster.Clear();
-                    _lastError = null;
-                    _lastValue = default;
-                }
-            }
-
-            IsDisposed = true;
-        }
-    }
-
-    private void ThrowIfDisposed()
-    {
         if (IsDisposed)
         {
-            throw new ObjectDisposedException(string.Empty);
+            return;
         }
+
+        if (disposing)
+        {
+            lock (_observerLock)
+            {
+                _broadcaster.Clear();
+                _lastError = null;
+                _lastValue = default;
+            }
+        }
+
+        IsDisposed = true;
     }
 
-    private class ObserverHandler : IDisposable
+    /// <summary>
+    /// Executes the ThrowIfDisposed operation.
+    /// </summary>
+    private void ThrowIfDisposed()
     {
+        if (!IsDisposed)
+        {
+            return;
+        }
+
+        throw new ObjectDisposedException(string.Empty);
+    }
+
+    /// <summary>
+    /// Represents the ObserverHandler class.
+    /// </summary>
+    private sealed class ObserverHandler : IDisposable
+    {
+        /// <summary>
+        /// Executes the new operation.
+        /// </summary>
+        /// <returns>The result.</returns>
         private readonly object _lock = new();
+
+        /// <summary>
+        /// Stores state for the signal implementation.
+        /// </summary>
         private BehaviourSignal<T>? _subject;
+
+        /// <summary>
+        /// Stores state for the signal implementation.
+        /// </summary>
         private IObserver<T>? _observer;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ObserverHandler"/> class.
+        /// </summary>
+        /// <param name="subject">The subject value.</param>
+        /// <param name="observer">The observer value.</param>
         public ObserverHandler(BehaviourSignal<T> subject, IObserver<T> observer)
         {
             _subject = subject;
             _observer = observer;
         }
 
+        /// <summary>
+        /// Executes the Dispose operation.
+        /// </summary>
         public void Dispose()
         {
             lock (_lock)

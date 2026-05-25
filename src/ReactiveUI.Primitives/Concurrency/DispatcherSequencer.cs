@@ -89,7 +89,7 @@ public class DispatcherSequencer : ISequencer
 
         var timeSpan = Sequencer.Normalize(dueTime);
         var timer = new DispatcherTimer();
-        timer.Tick += (s, e) =>
+        timer.Tick += (_, _) =>
         {
             timer?.Stop();
             timer = null;

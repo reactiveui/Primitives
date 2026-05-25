@@ -113,13 +113,19 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(scheduler));
         }
 
-        return Signal.WitnessOn(source, scheduler);
+        return source.WitnessOn(scheduler);
     }
 
     /// <summary>
     /// Alias for <see cref="DelayStart{T}(IObservable{T}, TimeSpan, ISequencer?)"/> using the System.Reactive operator name.
     /// </summary>
-    public static IObservable<T> DelaySubscription<T>(this IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler = null) =>
+    public static IObservable<T> DelaySubscription<T>(this IObservable<T> source, TimeSpan dueTime) =>
+        source.DelayStart(dueTime, null);
+
+    /// <summary>
+    /// Alias for <see cref="DelayStart{T}(IObservable{T}, TimeSpan, ISequencer?)"/> using the System.Reactive operator name.
+    /// </summary>
+    public static IObservable<T> DelaySubscription<T>(this IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler) =>
         source.DelayStart(dueTime, scheduler);
 
     /// <summary>
@@ -192,7 +198,13 @@ public static partial class LinqMixins
     /// <summary>
     /// Emits the supplied value if the source completes without values.
     /// </summary>
-    public static IObservable<T> DefaultIfEmpty<T>(this IObservable<T> source, T defaultValue = default!)
+    public static IObservable<T> DefaultIfEmpty<T>(this IObservable<T> source) =>
+        source.DefaultIfEmpty(default!);
+
+    /// <summary>
+    /// Emits the supplied value if the source completes without values.
+    /// </summary>
+    public static IObservable<T> DefaultIfEmpty<T>(this IObservable<T> source, T defaultValue)
     {
         if (source == null)
         {
@@ -224,7 +236,13 @@ public static partial class LinqMixins
     /// <summary>
     /// Suppresses duplicate keys according to the comparer.
     /// </summary>
-    public static IObservable<T> DistinctBy<T, TKey>(this IObservable<T> source, Func<T, TKey> keySelector, IEqualityComparer<TKey>? comparer = null)
+    public static IObservable<T> DistinctBy<T, TKey>(this IObservable<T> source, Func<T, TKey> keySelector) =>
+        source.DistinctBy(keySelector, null);
+
+    /// <summary>
+    /// Suppresses duplicate keys according to the comparer.
+    /// </summary>
+    public static IObservable<T> DistinctBy<T, TKey>(this IObservable<T> source, Func<T, TKey> keySelector, IEqualityComparer<TKey>? comparer)
     {
         if (source == null)
         {
@@ -242,10 +260,12 @@ public static partial class LinqMixins
             return source.Subscribe(
                 value =>
                 {
-                    if (seen.Add(keySelector(value)))
+                    if (!seen.Add(keySelector(value)))
                     {
-                        observer.OnNext(value);
+                        return;
                     }
+
+                    observer.OnNext(value);
                 },
                 observer.OnError,
                 observer.OnCompleted);
@@ -255,7 +275,13 @@ public static partial class LinqMixins
     /// <summary>
     /// Suppresses adjacent duplicate keys according to the comparer.
     /// </summary>
-    public static IObservable<T> DistinctUntilChangedBy<T, TKey>(this IObservable<T> source, Func<T, TKey> keySelector, IEqualityComparer<TKey>? comparer = null)
+    public static IObservable<T> DistinctUntilChangedBy<T, TKey>(this IObservable<T> source, Func<T, TKey> keySelector) =>
+        source.DistinctUntilChangedBy(keySelector, null);
+
+    /// <summary>
+    /// Suppresses adjacent duplicate keys according to the comparer.
+    /// </summary>
+    public static IObservable<T> DistinctUntilChangedBy<T, TKey>(this IObservable<T> source, Func<T, TKey> keySelector, IEqualityComparer<TKey>? comparer)
     {
         if (source == null)
         {
@@ -276,12 +302,14 @@ public static partial class LinqMixins
                 value =>
                 {
                     var key = keySelector(value);
-                    if (!hasLast || !comparer.Equals(last!, key))
+                    if (hasLast && comparer.Equals(last!, key))
                     {
-                        hasLast = true;
-                        last = key;
-                        observer.OnNext(value);
+                        return;
                     }
+
+                    hasLast = true;
+                    last = key;
+                    observer.OnNext(value);
                 },
                 observer.OnError,
                 observer.OnCompleted);
@@ -473,21 +501,25 @@ public static partial class LinqMixins
             return source.Subscribe(
                 value =>
                 {
-                    if (!matched && predicate(value))
+                    if (matched || !predicate(value))
                     {
-                        matched = true;
-                        observer.OnNext(true);
-                        observer.OnCompleted();
+                        return;
                     }
+
+                    matched = true;
+                    observer.OnNext(true);
+                    observer.OnCompleted();
                 },
                 observer.OnError,
                 () =>
                 {
-                    if (!matched)
+                    if (matched)
                     {
-                        observer.OnNext(false);
-                        observer.OnCompleted();
+                        return;
                     }
+
+                    observer.OnNext(false);
+                    observer.OnCompleted();
                 });
         });
     }
@@ -513,21 +545,25 @@ public static partial class LinqMixins
             return source.Subscribe(
                 value =>
                 {
-                    if (!failed && !predicate(value))
+                    if (failed || predicate(value))
                     {
-                        failed = true;
-                        observer.OnNext(false);
-                        observer.OnCompleted();
+                        return;
                     }
+
+                    failed = true;
+                    observer.OnNext(false);
+                    observer.OnCompleted();
                 },
                 observer.OnError,
                 () =>
                 {
-                    if (!failed)
+                    if (failed)
                     {
-                        observer.OnNext(true);
-                        observer.OnCompleted();
+                        return;
                     }
+
+                    observer.OnNext(true);
+                    observer.OnCompleted();
                 });
         });
     }
@@ -535,7 +571,13 @@ public static partial class LinqMixins
     /// <summary>
     /// Emits true when the source contains the requested value.
     /// </summary>
-    public static IObservable<bool> Contains<T>(this IObservable<T> source, T value, IEqualityComparer<T>? comparer = null)
+    public static IObservable<bool> Contains<T>(this IObservable<T> source, T value) =>
+        source.Contains(value, null);
+
+    /// <summary>
+    /// Emits true when the source contains the requested value.
+    /// </summary>
+    public static IObservable<bool> Contains<T>(this IObservable<T> source, T value, IEqualityComparer<T>? comparer)
     {
         comparer ??= EqualityComparer<T>.Default;
         return source.Any(candidate => comparer.Equals(candidate, value));
@@ -549,7 +591,13 @@ public static partial class LinqMixins
     /// <summary>
     /// Emits values from source after delaying subscription by the due time.
     /// </summary>
-    public static IObservable<T> DelayStart<T>(this IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler = null)
+    public static IObservable<T> DelayStart<T>(this IObservable<T> source, TimeSpan dueTime) =>
+        source.DelayStart(dueTime, null);
+
+    /// <summary>
+    /// Emits values from source after delaying subscription by the due time.
+    /// </summary>
+    public static IObservable<T> DelayStart<T>(this IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler)
     {
         if (source == null)
         {
@@ -568,7 +616,13 @@ public static partial class LinqMixins
     /// <summary>
     /// Emits only the most recent value after the quiet period elapses.
     /// </summary>
-    public static IObservable<T> Throttle<T>(this IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler = null)
+    public static IObservable<T> Throttle<T>(this IObservable<T> source, TimeSpan dueTime) =>
+        source.Throttle(dueTime, null);
+
+    /// <summary>
+    /// Emits only the most recent value after the quiet period elapses.
+    /// </summary>
+    public static IObservable<T> Throttle<T>(this IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler)
     {
         if (source == null)
         {
@@ -576,43 +630,51 @@ public static partial class LinqMixins
         }
 
         scheduler ??= ThreadPoolSequencer.Instance;
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var gate = new object();
-            var pocket = new MultipleDisposable();
-            var slot = new SingleReplaceableDisposable();
-            var version = 0;
-            pocket.Add(slot);
-            pocket.Add(source.Subscribe(
-                value =>
-                {
-                    int current;
-                    lock (gate)
+        return Signal.CreateSafe<T>(
+            observer =>
+            {
+                var gate = new OperatorGate();
+                var pocket = new MultipleDisposable();
+                var slot = new SingleReplaceableDisposable();
+                var version = 0;
+                pocket.Add(slot);
+                pocket.Add(source.Subscribe(
+                    value =>
                     {
-                        current = ++version;
-                    }
-
-                    slot.Create(scheduler.Schedule(Sequencer.Normalize(dueTime), () =>
-                    {
-                        lock (gate)
+                        int current;
+                        lock (gate.SyncRoot)
                         {
-                            if (current == version)
-                            {
-                                observer.OnNext(value);
-                            }
+                            current = ++version;
                         }
-                    }));
-                },
-                observer.OnError,
-                observer.OnCompleted));
-            return pocket;
-        }, scheduler == Sequencer.CurrentThread);
+
+                        slot.Create(scheduler.Schedule(Sequencer.Normalize(dueTime), () =>
+                        {
+                            lock (gate.SyncRoot)
+                            {
+                                if (current == version)
+                                {
+                                    observer.OnNext(value);
+                                }
+                            }
+                        }));
+                    },
+                    observer.OnError,
+                    observer.OnCompleted));
+                return pocket;
+            },
+            scheduler == Sequencer.CurrentThread);
     }
 
     /// <summary>
     /// Emits the latest source value whenever the sampling period ticks.
     /// </summary>
-    public static IObservable<T> Sample<T>(this IObservable<T> source, TimeSpan period, ISequencer? scheduler = null)
+    public static IObservable<T> Sample<T>(this IObservable<T> source, TimeSpan period) =>
+        source.Sample(period, null);
+
+    /// <summary>
+    /// Emits the latest source value whenever the sampling period ticks.
+    /// </summary>
+    public static IObservable<T> Sample<T>(this IObservable<T> source, TimeSpan period, ISequencer? scheduler)
     {
         if (source == null)
         {
@@ -625,79 +687,21 @@ public static partial class LinqMixins
         }
 
         scheduler ??= ThreadPoolSequencer.Instance;
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var gate = new object();
-            var pocket = new MultipleDisposable();
-            var timer = new SingleReplaceableDisposable();
-            var hasLatest = false;
-            var latest = default(T);
-            var done = false;
-            pocket.Add(timer);
-            pocket.Add(source.Subscribe(
-                value =>
-                {
-                    lock (gate)
-                    {
-                        hasLatest = true;
-                        latest = value;
-                    }
-                },
-                observer.OnError,
-                () =>
-                {
-                    lock (gate)
-                    {
-                        done = true;
-                    }
-
-                    observer.OnCompleted();
-                }));
-
-            Action? tick = null;
-            tick = () => timer.Create(scheduler.Schedule(period, () =>
-            {
-                T value;
-                var emit = false;
-                lock (gate)
-                {
-                    if (hasLatest)
-                    {
-                        value = latest!;
-                        hasLatest = false;
-                        emit = true;
-                    }
-                    else
-                    {
-                        value = default!;
-                    }
-
-                    if (done)
-                    {
-                        return;
-                    }
-                }
-
-                if (emit)
-                {
-                    observer.OnNext(value);
-                }
-
-                if (!timer.IsDisposed)
-                {
-                    tick!();
-                }
-            }));
-
-            tick();
-            return pocket;
-        }, scheduler == Sequencer.CurrentThread);
+        return Signal.CreateSafe<T>(
+            observer => new SampleCoordinator<T>(source, period, scheduler).Run(observer),
+            scheduler == Sequencer.CurrentThread);
     }
 
     /// <summary>
     /// Annotates values with their scheduler timestamp.
     /// </summary>
-    public static IObservable<Moment<T>> Timestamp<T>(this IObservable<T> source, ISequencer? scheduler = null)
+    public static IObservable<Moment<T>> Timestamp<T>(this IObservable<T> source) =>
+        source.Timestamp(null);
+
+    /// <summary>
+    /// Annotates values with their scheduler timestamp.
+    /// </summary>
+    public static IObservable<Moment<T>> Timestamp<T>(this IObservable<T> source, ISequencer? scheduler)
     {
         if (source == null)
         {
@@ -711,7 +715,13 @@ public static partial class LinqMixins
     /// <summary>
     /// Annotates each value with the elapsed scheduler time since the previous value.
     /// </summary>
-    public static IObservable<TimeInterval<T>> TimeInterval<T>(this IObservable<T> source, ISequencer? scheduler = null)
+    public static IObservable<TimeInterval<T>> TimeInterval<T>(this IObservable<T> source) =>
+        source.TimeInterval(null);
+
+    /// <summary>
+    /// Annotates each value with the elapsed scheduler time since the previous value.
+    /// </summary>
+    public static IObservable<TimeInterval<T>> TimeInterval<T>(this IObservable<T> source, ISequencer? scheduler)
     {
         if (source == null)
         {
@@ -769,50 +779,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(selector));
         }
 
-        return Signal.CreateSafe<TResult>(observer =>
-        {
-            var gate = new object();
-            var hasLeft = false;
-            var hasRight = false;
-            var leftDone = false;
-            var rightDone = false;
-            var latestLeft = default(TLeft);
-            var latestRight = default(TRight);
-
-            void FinishIfReady()
-            {
-                TResult result;
-                var emit = false;
-                lock (gate)
-                {
-                    if (!leftDone || !rightDone)
-                    {
-                        return;
-                    }
-
-                    if (hasLeft && hasRight)
-                    {
-                        result = selector(latestLeft!, latestRight!);
-                        emit = true;
-                    }
-                    else
-                    {
-                        result = default!;
-                    }
-                }
-
-                if (emit)
-                {
-                    observer.OnNext(result);
-                }
-
-                observer.OnCompleted();
-            }
-
-            return MultipleDisposable.Create(
-                left.Subscribe(value => { lock (gate) { hasLeft = true; latestLeft = value; } }, observer.OnError, () => { lock (gate) { leftDone = true; } FinishIfReady(); }),
-                right.Subscribe(value => { lock (gate) { hasRight = true; latestRight = value; } }, observer.OnError, () => { lock (gate) { rightDone = true; } FinishIfReady(); }));
-        });
+        return Signal.CreateSafe<TResult>(observer => new ForkJoinCoordinator<TLeft, TRight, TResult>(observer, selector).Run(left, right));
     }
 
     /// <summary>
@@ -823,7 +790,13 @@ public static partial class LinqMixins
     /// <summary>
     /// Awaits the first source value, returning a default value when the source is empty.
     /// </summary>
-    public static Task<T> FirstOrDefaultAsync<T>(this IObservable<T> source, T defaultValue = default!) => source.FirstOrDefaultCoreAsync(true, defaultValue);
+    public static Task<T> FirstOrDefaultAsync<T>(this IObservable<T> source) =>
+        source.FirstOrDefaultCoreAsync(true, default!);
+
+    /// <summary>
+    /// Awaits the first source value, returning a default value when the source is empty.
+    /// </summary>
+    public static Task<T> FirstOrDefaultAsync<T>(this IObservable<T> source, T defaultValue) => source.FirstOrDefaultCoreAsync(true, defaultValue);
 
     /// <summary>
     /// Awaits source completion and returns the last value produced by the source.
@@ -905,7 +878,7 @@ public static partial class LinqMixins
 
         var completion = new TaskCompletionSource<T[]>();
         var values = new List<T>();
-        source.Subscribe(values.Add, error => completion.TrySetException(error), () => completion.TrySetResult(values.ToArray()));
+        source.Subscribe(values.Add, error => completion.TrySetException(error), () => completion.TrySetResult([.. values]));
         return completion.Task;
     }
 
@@ -925,6 +898,14 @@ public static partial class LinqMixins
         return completion.Task;
     }
 
+    /// <summary>
+    /// Awaits the first source value and applies the configured empty-source behavior.
+    /// </summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    /// <param name="source">The source observable.</param>
+    /// <param name="hasDefault">A value indicating whether to use <paramref name="defaultValue"/> when the source is empty.</param>
+    /// <param name="defaultValue">The fallback value to use when the source is empty.</param>
+    /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
     private static Task<T> FirstOrDefaultCoreAsync<T>(this IObservable<T> source, bool hasDefault, T defaultValue)
     {
         if (source == null)
@@ -937,27 +918,389 @@ public static partial class LinqMixins
         source.Subscribe(
             value =>
             {
-                if (!seen)
+                if (seen)
                 {
-                    seen = true;
-                    completion.TrySetResult(value);
+                    return;
                 }
+
+                seen = true;
+                completion.TrySetResult(value);
             },
             error => completion.TrySetException(error),
             () =>
             {
-                if (!seen)
+                if (seen)
                 {
-                    if (hasDefault)
-                    {
-                        completion.TrySetResult(defaultValue);
-                    }
-                    else
-                    {
-                        completion.TrySetException(new InvalidOperationException("The source completed without producing a value."));
-                    }
+                    return;
+                }
+
+                if (hasDefault)
+                {
+                    completion.TrySetResult(defaultValue);
+                }
+                else
+                {
+                    completion.TrySetException(new InvalidOperationException("The source completed without producing a value."));
                 }
             });
         return completion.Task;
+    }
+
+    /// <summary>
+    /// Coordinates a sampled observable sequence.
+    /// </summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    private sealed class SampleCoordinator<T> : IDisposable
+    {
+        /// <summary>
+        /// The source observable.
+        /// </summary>
+        private readonly IObservable<T> _source;
+
+        /// <summary>
+        /// The sample period.
+        /// </summary>
+        private readonly TimeSpan _period;
+
+        /// <summary>
+        /// The sequencer used to schedule ticks.
+        /// </summary>
+        private readonly ISequencer _sequencer;
+
+        /// <summary>
+        /// The synchronization gate.
+        /// </summary>
+        private readonly OperatorGate _gate = new();
+
+        /// <summary>
+        /// The active subscriptions.
+        /// </summary>
+        private readonly MultipleDisposable _subscriptions = new();
+
+        /// <summary>
+        /// The timer slot.
+        /// </summary>
+        private readonly SingleReplaceableDisposable _timer = new();
+
+        /// <summary>
+        /// The downstream observer.
+        /// </summary>
+        private IObserver<T>? _observer;
+
+        /// <summary>
+        /// A value indicating whether a latest value is available.
+        /// </summary>
+        private bool _hasLatest;
+
+        /// <summary>
+        /// The latest value.
+        /// </summary>
+        private T? _latest;
+
+        /// <summary>
+        /// A value indicating whether the source has completed.
+        /// </summary>
+        private bool _done;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SampleCoordinator{T}"/> class.
+        /// </summary>
+        /// <param name="source">The source observable.</param>
+        /// <param name="period">The sample period.</param>
+        /// <param name="sequencer">The sequencer used to schedule ticks.</param>
+        internal SampleCoordinator(IObservable<T> source, TimeSpan period, ISequencer sequencer)
+        {
+            _source = source;
+            _period = period;
+            _sequencer = sequencer;
+        }
+
+        /// <summary>
+        /// Releases the active subscriptions.
+        /// </summary>
+        public void Dispose()
+        {
+            _timer.Dispose();
+            _subscriptions.Dispose();
+        }
+
+        /// <summary>
+        /// Starts sampling the source.
+        /// </summary>
+        /// <param name="observer">The downstream observer.</param>
+        /// <returns>The coordinator that owns the subscription cleanup.</returns>
+        internal SampleCoordinator<T> Run(IObserver<T> observer)
+        {
+            _observer = observer;
+            _subscriptions.Add(_timer);
+            _subscriptions.Add(_source.Subscribe(OnNext, observer.OnError, OnCompleted));
+            ScheduleNext();
+            return this;
+        }
+
+        /// <summary>
+        /// Records the latest source value.
+        /// </summary>
+        /// <param name="value">The source value.</param>
+        private void OnNext(T value)
+        {
+            lock (_gate.SyncRoot)
+            {
+                _hasLatest = true;
+                _latest = value;
+            }
+        }
+
+        /// <summary>
+        /// Marks the source as completed.
+        /// </summary>
+        private void OnCompleted()
+        {
+            lock (_gate.SyncRoot)
+            {
+                _done = true;
+            }
+
+            _observer!.OnCompleted();
+        }
+
+        /// <summary>
+        /// Schedules the next sample tick.
+        /// </summary>
+        private void ScheduleNext() =>
+            _timer.Create(_sequencer.Schedule(_period, Tick));
+
+        /// <summary>
+        /// Handles a sample tick.
+        /// </summary>
+        private void Tick()
+        {
+            if (!TryTake(out var value))
+            {
+                return;
+            }
+
+            _observer!.OnNext(value);
+            if (_timer.IsDisposed)
+            {
+                return;
+            }
+
+            ScheduleNext();
+        }
+
+        /// <summary>
+        /// Attempts to take the latest value.
+        /// </summary>
+        /// <param name="value">The latest value.</param>
+        /// <returns><c>true</c> when a value should be emitted; otherwise, <c>false</c>.</returns>
+        private bool TryTake(out T value)
+        {
+            lock (_gate.SyncRoot)
+            {
+                if (_done || !_hasLatest)
+                {
+                    value = default!;
+                    return false;
+                }
+
+                value = _latest!;
+                _hasLatest = false;
+                return true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Coordinates a two-source fork-join operation.
+    /// </summary>
+    /// <typeparam name="TLeft">The left value type.</typeparam>
+    /// <typeparam name="TRight">The right value type.</typeparam>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    private sealed class ForkJoinCoordinator<TLeft, TRight, TResult>
+    {
+        /// <summary>
+        /// The synchronization gate.
+        /// </summary>
+        private readonly OperatorGate _gate = new();
+
+        /// <summary>
+        /// The downstream observer.
+        /// </summary>
+        private readonly IObserver<TResult> _observer;
+
+        /// <summary>
+        /// The projection function.
+        /// </summary>
+        private readonly Func<TLeft, TRight, TResult> _selector;
+
+        /// <summary>
+        /// A value indicating whether the left source produced a value.
+        /// </summary>
+        private bool _hasLeft;
+
+        /// <summary>
+        /// A value indicating whether the right source produced a value.
+        /// </summary>
+        private bool _hasRight;
+
+        /// <summary>
+        /// A value indicating whether the left source completed.
+        /// </summary>
+        private bool _leftDone;
+
+        /// <summary>
+        /// A value indicating whether the right source completed.
+        /// </summary>
+        private bool _rightDone;
+
+        /// <summary>
+        /// The latest left value.
+        /// </summary>
+        private TLeft? _latestLeft;
+
+        /// <summary>
+        /// The latest right value.
+        /// </summary>
+        private TRight? _latestRight;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ForkJoinCoordinator{TLeft, TRight, TResult}"/> class.
+        /// </summary>
+        /// <param name="observer">The downstream observer.</param>
+        /// <param name="selector">The projection function.</param>
+        internal ForkJoinCoordinator(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
+        {
+            _observer = observer;
+            _selector = selector;
+        }
+
+        /// <summary>
+        /// Subscribes to both fork-join sources.
+        /// </summary>
+        /// <param name="left">The left source.</param>
+        /// <param name="right">The right source.</param>
+        /// <returns>The subscription cleanup.</returns>
+        internal MultipleDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
+            new(
+                left.Subscribe(OnLeftNext, _observer.OnError, OnLeftCompleted),
+                right.Subscribe(OnRightNext, _observer.OnError, OnRightCompleted));
+
+        /// <summary>
+        /// Records a left value.
+        /// </summary>
+        /// <param name="value">The left value.</param>
+        private void OnLeftNext(TLeft value)
+        {
+            lock (_gate.SyncRoot)
+            {
+                _hasLeft = true;
+                _latestLeft = value;
+            }
+        }
+
+        /// <summary>
+        /// Records a right value.
+        /// </summary>
+        /// <param name="value">The right value.</param>
+        private void OnRightNext(TRight value)
+        {
+            lock (_gate.SyncRoot)
+            {
+                _hasRight = true;
+                _latestRight = value;
+            }
+        }
+
+        /// <summary>
+        /// Marks the left source as complete.
+        /// </summary>
+        private void OnLeftCompleted()
+        {
+            if (!CompleteLeft(out var result, out var emit))
+            {
+                return;
+            }
+
+            Finish(result, emit);
+        }
+
+        /// <summary>
+        /// Marks the right source as complete.
+        /// </summary>
+        private void OnRightCompleted()
+        {
+            if (!CompleteRight(out var result, out var emit))
+            {
+                return;
+            }
+
+            Finish(result, emit);
+        }
+
+        /// <summary>
+        /// Marks the left source complete and computes the result if both sources are complete.
+        /// </summary>
+        /// <param name="result">The result to emit.</param>
+        /// <param name="emit">A value indicating whether a result should be emitted.</param>
+        /// <returns><c>true</c> when fork-join is ready to finish; otherwise, <c>false</c>.</returns>
+        private bool CompleteLeft(out TResult result, out bool emit)
+        {
+            lock (_gate.SyncRoot)
+            {
+                _leftDone = true;
+                return TryFinish(out result, out emit);
+            }
+        }
+
+        /// <summary>
+        /// Marks the right source complete and computes the result if both sources are complete.
+        /// </summary>
+        /// <param name="result">The result to emit.</param>
+        /// <param name="emit">A value indicating whether a result should be emitted.</param>
+        /// <returns><c>true</c> when fork-join is ready to finish; otherwise, <c>false</c>.</returns>
+        private bool CompleteRight(out TResult result, out bool emit)
+        {
+            lock (_gate.SyncRoot)
+            {
+                _rightDone = true;
+                return TryFinish(out result, out emit);
+            }
+        }
+
+        /// <summary>
+        /// Computes the final result when both sources are complete.
+        /// </summary>
+        /// <param name="result">The result to emit.</param>
+        /// <param name="emit">A value indicating whether a result should be emitted.</param>
+        /// <returns><c>true</c> when both sources are complete; otherwise, <c>false</c>.</returns>
+        private bool TryFinish(out TResult result, out bool emit)
+        {
+            if (!_leftDone || !_rightDone)
+            {
+                result = default!;
+                emit = false;
+                return false;
+            }
+
+            emit = _hasLeft && _hasRight;
+            result = emit ? _selector(_latestLeft!, _latestRight!) : default!;
+            return true;
+        }
+
+        /// <summary>
+        /// Emits the final result and completes.
+        /// </summary>
+        /// <param name="result">The result to emit.</param>
+        /// <param name="emit">A value indicating whether a result should be emitted.</param>
+        private void Finish(TResult result, bool emit)
+        {
+            if (emit)
+            {
+                _observer.OnNext(result);
+            }
+
+            _observer.OnCompleted();
+        }
     }
 }

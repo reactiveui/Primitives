@@ -15,6 +15,14 @@ namespace ReactiveUI.Primitives.Concurrency;
 public class SequencerQueue<TAbsolute>
     where TAbsolute : IComparable<TAbsolute>
 {
+    /// <summary>
+    /// Default initial capacity for scheduler queues.
+    /// </summary>
+    private const int DefaultCapacity = 1024;
+
+    /// <summary>
+    /// Priority queue storing scheduled work.
+    /// </summary>
     private readonly PriorityQueue<ScheduledItem<TAbsolute>> _queue;
 
     /// <summary>
@@ -22,7 +30,7 @@ public class SequencerQueue<TAbsolute>
     /// Creates a new scheduler queue with a default initial capacity.
     /// </summary>
     public SequencerQueue()
-        : this(1024)
+        : this(DefaultCapacity)
     {
     }
 

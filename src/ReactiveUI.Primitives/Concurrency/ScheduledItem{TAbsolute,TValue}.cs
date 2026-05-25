@@ -12,8 +12,19 @@ namespace ReactiveUI.Primitives.Concurrency;
 public sealed class ScheduledItem<TAbsolute, TValue> : ScheduledItem<TAbsolute>
     where TAbsolute : IComparable<TAbsolute>
 {
+    /// <summary>
+    /// Sequencer passed to the scheduled action.
+    /// </summary>
     private readonly ISequencer _scheduler;
+
+    /// <summary>
+    /// State passed to the scheduled action.
+    /// </summary>
     private readonly TValue _state;
+
+    /// <summary>
+    /// Action invoked when the scheduled item runs.
+    /// </summary>
     private readonly Func<ISequencer, TValue, IDisposable> _action;
 
     /// <summary>

@@ -13,8 +13,15 @@ public sealed class Slot : SingleReplaceableDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="Slot"/> class.
     /// </summary>
+    public Slot()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Slot"/> class.
+    /// </summary>
     /// <param name="action">Action to call when the slot is disposed.</param>
-    public Slot(Action? action = null)
+    public Slot(Action? action)
         : base(action)
     {
     }
@@ -23,8 +30,17 @@ public sealed class Slot : SingleReplaceableDisposable
     /// Initializes a new instance of the <see cref="Slot"/> class.
     /// </summary>
     /// <param name="disposable">Initial disposable.</param>
+    public Slot(IDisposable disposable)
+        : base(disposable)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Slot"/> class.
+    /// </summary>
+    /// <param name="disposable">Initial disposable.</param>
     /// <param name="action">Action to call when the slot is disposed.</param>
-    public Slot(IDisposable disposable, Action? action = null)
+    public Slot(IDisposable disposable, Action? action)
         : base(disposable, action)
     {
     }

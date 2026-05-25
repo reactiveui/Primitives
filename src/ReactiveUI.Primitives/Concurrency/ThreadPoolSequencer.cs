@@ -18,9 +18,20 @@ namespace ReactiveUI.Primitives.Concurrency
         /// Gets the shared thread-pool scheduler instance.
         /// </summary>
         public static readonly ThreadPoolSequencer Instance = new();
-        internal static readonly object Gate = new();
-        internal static readonly Dictionary<System.Threading.Timer, object> Timers = new();
 
+        /// <summary>
+        /// Guards access to outstanding timers.
+        /// </summary>
+        internal static readonly object Gate = new();
+
+        /// <summary>
+        /// Keeps timers rooted until they fire or are cancelled.
+        /// </summary>
+        internal static readonly Dictionary<System.Threading.Timer, object> Timers = [];
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class.
+        /// </summary>
         private ThreadPoolSequencer()
         {
         }

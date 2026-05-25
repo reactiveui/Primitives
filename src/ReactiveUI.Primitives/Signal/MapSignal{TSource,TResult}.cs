@@ -6,21 +6,47 @@ using ReactiveUI.Primitives.Core;
 
 namespace ReactiveUI.Primitives.Signals;
 
+/// <summary>
+/// Represents the MapSignal class.
+/// </summary>
+/// <typeparam name="TSource">The TSource type.</typeparam>
+/// <typeparam name="TResult">The TResult type.</typeparam>
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-internal sealed class MapSignal<TSource, TResult> : IObservable<TResult>, IRequireCurrentThread<TResult>
+internal sealed class MapSignal<TSource, TResult> : IRequireCurrentThread<TResult>
 {
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly IObservable<TSource> _source;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly Func<TSource, TResult> _selector;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MapSignal{TSource,TResult}"/> class.
+    /// </summary>
+    /// <param name="source">The source value.</param>
+    /// <param name="selector">The selector value.</param>
     public MapSignal(IObservable<TSource> source, Func<TSource, TResult> selector)
     {
         _source = source;
         _selector = selector;
     }
 
+    /// <summary>
+    /// Executes the IsRequiredSubscribeOnCurrentThread operation.
+    /// </summary>
+    /// <returns>The result.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() =>
         _source is IRequireCurrentThread<TSource> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread();
 
+    /// <summary>
+    /// Executes the Subscribe operation.
+    /// </summary>
+    /// <param name="observer">The observer value.</param>
+    /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<TResult> observer)
     {
         if (observer == null)
@@ -31,36 +57,70 @@ internal sealed class MapSignal<TSource, TResult> : IObservable<TResult>, IRequi
         return _source.Subscribe(new MapObserver(observer, _selector));
     }
 
+    /// <summary>
+    /// Represents the MapObserver class.
+    /// </summary>
     private sealed class MapObserver : IObserver<TSource>
     {
+        /// <summary>
+        /// Stores state for the signal implementation.
+        /// </summary>
         private readonly IObserver<TResult> _observer;
+
+        /// <summary>
+        /// Stores state for the signal implementation.
+        /// </summary>
         private readonly Func<TSource, TResult> _selector;
+
+        /// <summary>
+        /// Stores state for the signal implementation.
+        /// </summary>
         private bool _stopped;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MapObserver"/> class.
+        /// </summary>
+        /// <param name="observer">The observer value.</param>
+        /// <param name="selector">The selector value.</param>
         public MapObserver(IObserver<TResult> observer, Func<TSource, TResult> selector)
         {
             _observer = observer;
             _selector = selector;
         }
 
+        /// <summary>
+        /// Executes the OnCompleted operation.
+        /// </summary>
         public void OnCompleted()
         {
-            if (!_stopped)
+            if (_stopped)
             {
-                _stopped = true;
-                _observer.OnCompleted();
+                return;
             }
+
+            _stopped = true;
+            _observer.OnCompleted();
         }
 
+        /// <summary>
+        /// Executes the OnError operation.
+        /// </summary>
+        /// <param name="error">The error value.</param>
         public void OnError(Exception error)
         {
-            if (!_stopped)
+            if (_stopped)
             {
-                _stopped = true;
-                _observer.OnError(error);
+                return;
             }
+
+            _stopped = true;
+            _observer.OnError(error);
         }
 
+        /// <summary>
+        /// Executes the OnNext operation.
+        /// </summary>
+        /// <param name="value">The value.</param>
         public void OnNext(TSource value)
         {
             if (_stopped)

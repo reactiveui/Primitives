@@ -1,10 +1,11 @@
-// Copyright (c) 2019-2023 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -86,7 +87,8 @@ public class StatefulSharingAndBridgeContractTests
     public async Task CommandSignalPublishesResultsFailuresAndRunningState()
     {
         var canRun = new StateSignal<bool>(true);
-        var command = new CommandSignal<int>(async token =>
+        var command = new CommandSignal<int>(
+            async token =>
         {
             await Task.Yield();
             token.ThrowIfCancellationRequested();
@@ -109,6 +111,7 @@ public class StatefulSharingAndBridgeContractTests
     }
 
     [Test]
+    [RequiresAssemblyFiles()]
     public void BridgeGeneratorsEmitOnlyWhenExternalShapesArePresentAndCompileSmokeAdapters()
     {
         const string source = """
@@ -160,6 +163,7 @@ public static class BridgeSmoke
     }
 
     [Test]
+    [RequiresAssemblyFiles()]
     public void BridgeGeneratorsDoNotEmitExternalAdaptersWhenExternalPackagesAreAbsent()
     {
         const string source = """
@@ -179,6 +183,7 @@ public static class CoreOnlySmoke
         Assert.False(generatedSources.Any(text => text.Contains("R3SignalBridge")));
     }
 
+    [RequiresAssemblyFiles("Calls System.Reflection.Assembly.Location")]
     private static (ImmutableArray<Diagnostic> Diagnostics, string[] GeneratedSources) RunGenerators(string source)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview);
@@ -197,16 +202,15 @@ public static class CoreOnlySmoke
 
         var compilation = CSharpCompilation.Create(
             "BridgeGeneratorSmoke",
-            new[] { CSharpSyntaxTree.ParseText(source, parseOptions) },
+            [CSharpSyntaxTree.ParseText(source, parseOptions)],
             references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         var driver = CSharpGeneratorDriver.Create(
-            new ISourceGenerator[]
-            {
+            [
                 new SystemReactiveBridgeGenerator().AsSourceGenerator(),
                 new R3BridgeGenerator().AsSourceGenerator(),
-            },
+            ],
             parseOptions: parseOptions);
 
         driver = (CSharpGeneratorDriver)driver.RunGeneratorsAndUpdateCompilation(compilation, out var updatedCompilation, out var generatorDiagnostics);

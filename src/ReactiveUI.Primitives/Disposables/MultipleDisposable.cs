@@ -10,14 +10,44 @@ namespace ReactiveUI.Primitives.Disposables;
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public class MultipleDisposable : IsDisposed
 {
+    /// <summary>
+    /// Initial capacity for overflow disposable storage.
+    /// </summary>
     private const int OverflowInitialCapacity = 2;
+
+    /// <summary>
+    /// Growth factor for overflow disposable storage.
+    /// </summary>
     private const int OverflowGrowthFactor = 2;
 
+    /// <summary>
+    /// Synchronizes mutations to the disposable set.
+    /// </summary>
     private readonly object _gate = new();
+
+    /// <summary>
+    /// First inline disposable slot.
+    /// </summary>
     private IDisposable? _slot0;
+
+    /// <summary>
+    /// Second inline disposable slot.
+    /// </summary>
     private IDisposable? _slot1;
+
+    /// <summary>
+    /// Overflow disposable slots used after the inline slots are occupied.
+    /// </summary>
     private IDisposable[]? _overflow;
+
+    /// <summary>
+    /// Number of active overflow disposable slots.
+    /// </summary>
     private int _overflowCount;
+
+    /// <summary>
+    /// Value indicating whether this group is disposed.
+    /// </summary>
     private bool _disposed;
 
     /// <summary>
@@ -117,10 +147,12 @@ public class MultipleDisposable : IsDisposed
             }
         }
 
-        if (shouldDispose)
+        if (!shouldDispose)
         {
-            disposable.Dispose();
+            return;
         }
+
+        disposable.Dispose();
     }
 
     /// <summary>
@@ -207,6 +239,10 @@ public class MultipleDisposable : IsDisposed
         }
     }
 
+    /// <summary>
+    /// Adds a disposable while the caller holds the gate.
+    /// </summary>
+    /// <param name="disposable">Disposable to add.</param>
     private void AddCore(IDisposable disposable)
     {
         if (_slot0 == null)
@@ -235,6 +271,11 @@ public class MultipleDisposable : IsDisposed
         _overflow[_overflowCount++] = disposable;
     }
 
+    /// <summary>
+    /// Removes a disposable while the caller holds the gate.
+    /// </summary>
+    /// <param name="item">Disposable to remove.</param>
+    /// <returns><see langword="true"/> when the item was removed; otherwise, <see langword="false"/>.</returns>
     private bool RemoveCore(IDisposable item)
     {
         if (_slot0 != null && EqualityComparer<IDisposable>.Default.Equals(_slot0, item))
@@ -275,22 +316,35 @@ public class MultipleDisposable : IsDisposed
         return false;
     }
 
+    /// <summary>
+    /// Array-backed disposable group returned by the static factory.
+    /// </summary>
     private sealed class MultipleDisposableBase : IDisposable
     {
+        /// <summary>
+        /// Disposables to release, or <see langword="null"/> after disposal.
+        /// </summary>
         private IDisposable[]? _disposables;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MultipleDisposableBase"/> class.
+        /// </summary>
+        /// <param name="disposables">Disposables owned by the group.</param>
         public MultipleDisposableBase(IDisposable[] disposables) =>
             Volatile.Write(ref _disposables, disposables ?? throw new ArgumentNullException(nameof(disposables)));
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             var disposables = Interlocked.Exchange(ref _disposables, null);
-            if (disposables != null)
+            if (disposables == null)
             {
-                foreach (var disposable in disposables)
-                {
-                    disposable?.Dispose();
-                }
+                return;
+            }
+
+            foreach (var disposable in disposables)
+            {
+                disposable?.Dispose();
             }
         }
     }

@@ -7,12 +7,28 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
+/// <summary>
+/// Represents the ReturnSignal class.
+/// </summary>
+/// <typeparam name="T">The T type.</typeparam>
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-internal class ReturnSignal<T> : SignalsBase<T>
+internal sealed class ReturnSignal<T> : SignalsBase<T>
 {
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly T _value;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly ISequencer _scheduler;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReturnSignal{T}"/> class.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    /// <param name="scheduler">The scheduler value.</param>
     public ReturnSignal(T value, ISequencer scheduler)
         : base(scheduler == Sequencer.CurrentThread)
     {
@@ -20,6 +36,12 @@ internal class ReturnSignal<T> : SignalsBase<T>
         _scheduler = scheduler;
     }
 
+    /// <summary>
+    /// Executes the SubscribeCore operation.
+    /// </summary>
+    /// <param name="observer">The observer value.</param>
+    /// <param name="cancel">The cancel value.</param>
+    /// <returns>The result.</returns>
     protected override IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel)
     {
         observer = new Return(observer, cancel);
@@ -38,13 +60,25 @@ internal class ReturnSignal<T> : SignalsBase<T>
         });
     }
 
-    private class Return : WitnessBase<T, T>
+    /// <summary>
+    /// Represents the Return class.
+    /// </summary>
+    private sealed class Return : WitnessBase<T, T>
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Return"/> class.
+        /// </summary>
+        /// <param name="observer">The observer value.</param>
+        /// <param name="cancel">The cancel value.</param>
         public Return(IObserver<T> observer, IDisposable cancel)
             : base(observer, cancel)
         {
         }
 
+        /// <summary>
+        /// Executes the OnNext operation.
+        /// </summary>
+        /// <param name="value">The value.</param>
         public override void OnNext(T value)
         {
             try
@@ -58,6 +92,10 @@ internal class ReturnSignal<T> : SignalsBase<T>
             }
         }
 
+        /// <summary>
+        /// Executes the OnError operation.
+        /// </summary>
+        /// <param name="error">The error value.</param>
         public override void OnError(Exception error)
         {
             try
@@ -70,6 +108,9 @@ internal class ReturnSignal<T> : SignalsBase<T>
             }
         }
 
+        /// <summary>
+        /// Executes the OnCompleted operation.
+        /// </summary>
         public override void OnCompleted()
         {
             try

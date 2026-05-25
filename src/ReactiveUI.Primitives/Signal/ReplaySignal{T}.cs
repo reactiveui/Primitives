@@ -15,18 +15,72 @@ namespace ReactiveUI.Primitives.Signals;
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public class ReplaySignal<T> : ISignal<T>
 {
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly int _bufferSize;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly TimeSpan _window;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly DateTimeOffset _startTime;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly ISequencer _scheduler;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly bool _usesWindow;
+
+    /// <summary>
+    /// Executes the new operation.
+    /// </summary>
+    /// <returns>The result.</returns>
     private readonly object _observerLock = new();
+#pragma warning disable S3459 // Broadcaster<T> is a mutable struct whose default value is the empty broadcaster.
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private Broadcaster<T> _broadcaster;
+#pragma warning restore S3459
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private bool _isStopped;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private Exception? _lastError;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private Queue<TimeInterval<T>>? _queue;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private T[]? _ring;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private int _ringCount;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private int _ringNext;
 
     /// <summary>
@@ -64,7 +118,7 @@ public class ReplaySignal<T> : ISignal<T>
         }
         else
         {
-            _ring = bufferSize == 0 ? Array.Empty<T>() : new T[bufferSize];
+            _ring = bufferSize == 0 ? [] : new T[bufferSize];
         }
     }
 
@@ -237,7 +291,6 @@ public class ReplaySignal<T> : ISignal<T>
                 _queue!.Enqueue(new TimeInterval<T>(value, interval));
                 Trim();
             }
-
         }
 
         _broadcaster.Next(value);
@@ -305,33 +358,43 @@ public class ReplaySignal<T> : ISignal<T>
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
     protected virtual void Dispose(bool disposing)
     {
-        if (!IsDisposed)
-        {
-            if (disposing)
-            {
-                lock (_observerLock)
-                {
-                    _broadcaster.Clear();
-                    _lastError = null;
-                    _queue = null;
-                    _ring = null;
-                    _ringCount = 0;
-                    _ringNext = 0;
-                }
-            }
-
-            IsDisposed = true;
-        }
-    }
-
-    private void ThrowIfDisposed()
-    {
         if (IsDisposed)
         {
-            throw new ObjectDisposedException(string.Empty);
+            return;
         }
+
+        if (disposing)
+        {
+            lock (_observerLock)
+            {
+                _broadcaster.Clear();
+                _lastError = null;
+                _queue = null;
+                _ring = null;
+                _ringCount = 0;
+                _ringNext = 0;
+            }
+        }
+
+        IsDisposed = true;
     }
 
+    /// <summary>
+    /// Executes the ThrowIfDisposed operation.
+    /// </summary>
+    private void ThrowIfDisposed()
+    {
+        if (!IsDisposed)
+        {
+            return;
+        }
+
+        throw new ObjectDisposedException(string.Empty);
+    }
+
+    /// <summary>
+    /// Executes the Trim operation.
+    /// </summary>
     private void Trim()
     {
         while (_queue!.Count > _bufferSize)
@@ -352,6 +415,10 @@ public class ReplaySignal<T> : ISignal<T>
         }
     }
 
+    /// <summary>
+    /// Executes the AppendToRing operation.
+    /// </summary>
+    /// <param name="value">The value.</param>
     private void AppendToRing(T value)
     {
         var ring = _ring!;
@@ -367,12 +434,18 @@ public class ReplaySignal<T> : ISignal<T>
             _ringNext = 0;
         }
 
-        if (_ringCount < ring.Length)
+        if (_ringCount >= ring.Length)
         {
-            _ringCount++;
+            return;
         }
+
+        _ringCount++;
     }
 
+    /// <summary>
+    /// Executes the ReplayRing operation.
+    /// </summary>
+    /// <param name="observer">The observer value.</param>
     private void ReplayRing(IObserver<T> observer)
     {
         var ring = _ring!;
@@ -398,18 +471,41 @@ public class ReplaySignal<T> : ISignal<T>
         }
     }
 
-    private class ObserverHandler : IDisposable
+    /// <summary>
+    /// Represents the ObserverHandler class.
+    /// </summary>
+    private sealed class ObserverHandler : IDisposable
     {
+        /// <summary>
+        /// Executes the new operation.
+        /// </summary>
+        /// <returns>The result.</returns>
         private readonly object _lock = new();
+
+        /// <summary>
+        /// Stores state for the signal implementation.
+        /// </summary>
         private ReplaySignal<T>? _subject;
+
+        /// <summary>
+        /// Stores state for the signal implementation.
+        /// </summary>
         private IObserver<T>? _observer;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ObserverHandler"/> class.
+        /// </summary>
+        /// <param name="subject">The subject value.</param>
+        /// <param name="observer">The observer value.</param>
         public ObserverHandler(ReplaySignal<T> subject, IObserver<T> observer)
         {
             _subject = subject;
             _observer = observer;
         }
 
+        /// <summary>
+        /// Executes the Dispose operation.
+        /// </summary>
         public void Dispose()
         {
             lock (_lock)

@@ -14,17 +14,32 @@ namespace ReactiveUI.Primitives.Concurrency;
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class CurrentThreadSequencer : ISequencer
 {
+    /// <summary>
+    /// Singleton holder for the current-thread sequencer.
+    /// </summary>
     private static readonly Lazy<CurrentThreadSequencer> StaticInstance = new(() => new CurrentThreadSequencer());
 
+    /// <summary>
+    /// Tracks whether the current thread is running scheduled work.
+    /// </summary>
     [ThreadStatic]
     private static bool _running;
 
+    /// <summary>
+    /// Holds recursive work queued for the current thread.
+    /// </summary>
     [ThreadStatic]
     private static SequencerQueue<TimeSpan>? _threadLocalQueue;
 
+    /// <summary>
+    /// Measures relative due times for the current thread.
+    /// </summary>
     [ThreadStatic]
     private static Stopwatch? clock;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CurrentThreadSequencer"/> class.
+    /// </summary>
     private CurrentThreadSequencer()
     {
     }
@@ -45,8 +60,11 @@ public sealed class CurrentThreadSequencer : ISequencer
     /// <summary>
     /// Gets the scheduler's notion of current time.
     /// </summary>
-    public DateTimeOffset Now => DateTimeOffset.UtcNow;
+    public DateTimeOffset Now => Sequencer.Now;
 
+    /// <summary>
+    /// Gets elapsed time on the current thread.
+    /// </summary>
     private static TimeSpan Time
     {
         get
@@ -100,7 +118,7 @@ public sealed class CurrentThreadSequencer : ISequencer
         // There is no timed task and no task is currently running
         if (!_running)
         {
-            _running = true;
+            SetRunning(true);
 
             if (dueTime > TimeSpan.Zero)
             {
@@ -116,7 +134,7 @@ public sealed class CurrentThreadSequencer : ISequencer
             catch
             {
                 SetQueue(null);
-                _running = false;
+                SetRunning(false);
                 throw;
             }
 
@@ -133,12 +151,12 @@ public sealed class CurrentThreadSequencer : ISequencer
                 finally
                 {
                     SetQueue(null);
-                    _running = false;
+                    SetRunning(false);
                 }
             }
             else
             {
-                _running = false;
+                SetRunning(false);
             }
 
             return d;
@@ -177,12 +195,33 @@ public sealed class CurrentThreadSequencer : ISequencer
         return Schedule(state, due, action);
     }
 
+    /// <summary>
+    /// Gets the queued recursive work for the current thread.
+    /// </summary>
+    /// <returns>The current thread queue, if one exists.</returns>
     private static SequencerQueue<TimeSpan>? GetQueue() => _threadLocalQueue;
 
+    /// <summary>
+    /// Sets the queued recursive work for the current thread.
+    /// </summary>
+    /// <param name="newQueue">The queue to assign.</param>
     private static void SetQueue(SequencerQueue<TimeSpan>? newQueue) => _threadLocalQueue = newQueue;
 
+    /// <summary>
+    /// Sets the current-thread running marker.
+    /// </summary>
+    /// <param name="running">Value indicating whether work is running.</param>
+    private static void SetRunning(bool running) => _running = running;
+
+    /// <summary>
+    /// Runs queued current-thread work.
+    /// </summary>
     private static class Trampoline
     {
+        /// <summary>
+        /// Runs all work currently in the queue.
+        /// </summary>
+        /// <param name="queue">Queue to drain.</param>
         public static void Run(SequencerQueue<TimeSpan> queue)
         {
             while (queue.Count > 0)

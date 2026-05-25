@@ -7,25 +7,53 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
+/// <summary>
+/// Represents the ImmutableEmptySignal class.
+/// </summary>
+/// <typeparam name="T">The T type.</typeparam>
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class ImmutableEmptySignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
 {
 #pragma warning disable SA1401 // Fields should be private
+
+    /// <summary>
+    /// Executes the new operation.
+    /// </summary>
+    /// <returns>The result.</returns>
     internal static ImmutableEmptySignal<T> Instance = new();
 #pragma warning restore SA1401 // Fields should be private
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ImmutableEmptySignal{T}"/> class.
+    /// </summary>
     private ImmutableEmptySignal()
     {
     }
 
+    /// <summary>
+    /// Executes the IsRequiredSubscribeOnCurrentThread operation.
+    /// </summary>
+    /// <returns>The result.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
+    /// <summary>
+    /// Executes the Subscribe operation.
+    /// </summary>
+    /// <param name="observer">The observer value.</param>
+    /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         observer.OnCompleted();
         return Disposable.Empty;
     }
 
+    /// <summary>
+    /// Executes the Subscribe operation.
+    /// </summary>
+    /// <param name="onNext">The onNext value.</param>
+    /// <param name="onError">The onError value.</param>
+    /// <param name="onCompleted">The onCompleted value.</param>
+    /// <returns>The result.</returns>
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
         onCompleted();

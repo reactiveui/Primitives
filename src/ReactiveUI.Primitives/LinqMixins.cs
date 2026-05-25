@@ -103,9 +103,17 @@ public static partial class LinqMixins
     /// Disposes the with.
     /// </summary>
     /// <param name="disposable">The disposable.</param>
+    /// <returns>A SingleDisposable.</returns>
+    public static SingleDisposable DisposeWith(this IDisposable disposable) =>
+        new(disposable);
+
+    /// <summary>
+    /// Disposes the with.
+    /// </summary>
+    /// <param name="disposable">The disposable.</param>
     /// <param name="action">The action.</param>
     /// <returns>A SingleDisposable.</returns>
-    public static SingleDisposable DisposeWith(this IDisposable disposable, Action? action = null) =>
+    public static SingleDisposable DisposeWith(this IDisposable disposable, Action? action) =>
         new(disposable, action);
 
     /// <summary>

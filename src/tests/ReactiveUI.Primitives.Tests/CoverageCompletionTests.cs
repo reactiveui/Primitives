@@ -1,9 +1,10 @@
-// Copyright (c) 2019-2023 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -114,7 +115,7 @@ public class CoverageCompletionTests
         Assert.Throws<ArgumentNullException>(() => Signal.Use<IDisposable, int>(null!, _ => Signal.Return(1)));
         Assert.Throws<ArgumentNullException>(() => Signal.Use<IDisposable, int>(() => Disposable.Empty, null!));
         Assert.Throws<ArgumentNullException>(() => Signal.FromEnumerable<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.FromTask<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.FromTask((Task<int>)null!));
         Assert.Throws<ArgumentNullException>(() => Signal.FromAsyncEnumerable<int>(null!));
         Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Every(TimeSpan.FromTicks(-1)));
 
@@ -152,7 +153,7 @@ public class CoverageCompletionTests
         Assert.Equal(1, terminal);
 
         var keepNotNull = new List<string>();
-        Signal.FromEnumerable(new string?[] { null, "x", null, "y" }).KeepNotNull().Subscribe(keepNotNull.Add);
+        Signal.FromEnumerable([null, "x", null, "y"]).KeepNotNull().Subscribe(keepNotNull.Add);
         Assert.Equal(new[] { "x", "y" }, keepNotNull);
 
         var emptyTake = new List<int>();
@@ -169,18 +170,18 @@ public class CoverageCompletionTests
         var allFalse = new List<bool>();
         var containsFalse = new List<bool>();
         var longCount = new List<long>();
-        Signal.FromEnumerable(new[] { 1, 2, 3 }).Any(value => value > 9).Subscribe(anyFalse.Add);
-        Signal.FromEnumerable(new[] { 2, 4, 5 }).All(value => value % 2 == 0).Subscribe(allFalse.Add);
-        Signal.FromEnumerable(new[] { 2, 4, 6 }).Contains(7).Subscribe(containsFalse.Add);
-        Signal.FromEnumerable(new[] { 1, 2, 3, 4 }).LongCount(value => value % 2 == 0).Subscribe(longCount.Add);
+        Signal.FromEnumerable([1, 2, 3]).Any(value => value > 9).Subscribe(anyFalse.Add);
+        Signal.FromEnumerable([2, 4, 5]).All(value => value % 2 == 0).Subscribe(allFalse.Add);
+        Signal.FromEnumerable([2, 4, 6]).Contains(7).Subscribe(containsFalse.Add);
+        Signal.FromEnumerable([1, 2, 3, 4]).LongCount(value => value % 2 == 0).Subscribe(longCount.Add);
         Assert.Equal(new[] { false }, anyFalse);
         Assert.Equal(new[] { false }, allFalse);
         Assert.Equal(new[] { false }, containsFalse);
         Assert.Equal(new[] { 2L }, longCount);
 
         var selectMany = new List<string>();
-        Signal.FromEnumerable(new[] { 1, 2 })
-            .SelectMany(value => Signal.FromEnumerable(new[] { value, value + 10 }), (outer, inner) => outer + ":" + inner)
+        Signal.FromEnumerable([1, 2])
+            .SelectMany(value => Signal.FromEnumerable([value, value + 10]), (outer, inner) => outer + ":" + inner)
             .Subscribe(selectMany.Add);
         Assert.Equal(new[] { "1:1", "1:11", "2:2", "2:12" }, selectMany);
     }
@@ -201,18 +202,20 @@ public class CoverageCompletionTests
             .Subscribe(spark =>
             {
                 sparkKinds.Add(spark.Kind);
-                if (spark.Exception != null)
+                if (spark.Exception == null)
                 {
-                    sparkErrors.Add(spark.Exception.Message);
+                    return;
                 }
+
+                sparkErrors.Add(spark.Exception.Message);
             });
 
-        Signal.FromEnumerable(new[]
-            {
+        Signal.FromEnumerable(
+            [
                 Spark.CreateOnNext(1),
                 Spark.CreateOnError<int>(new InvalidOperationException("unspark")),
                 Spark.CreateOnCompleted<int>(),
-            })
+            ])
             .Unspark()
             .Subscribe(unsparkValues.Add, ex => unsparkErrors.Add(ex.Message));
 
@@ -221,7 +224,7 @@ public class CoverageCompletionTests
             .Subscribe(rescueValues.Add);
 
         Signal.Throw<int>(new InvalidOperationException("resume"))
-            .Resume(Signal.FromEnumerable(new[] { 4, 5 }))
+            .Resume(Signal.FromEnumerable([4, 5]))
             .Subscribe(resumeValues.Add);
 
         Signal.Defer(() => Signal.Throw<int>(new InvalidOperationException("stop")))
@@ -263,7 +266,7 @@ public class CoverageCompletionTests
         second.OnCompleted();
         outer.OnCompleted();
 
-        Signal.Merge(Signal.FromEnumerable(new[] { 1, 2 }), Signal.FromEnumerable(new[] { 3 })).Subscribe(mergeValues.Add, ex => throw ex, () => completed["merge"] = 1);
+        Signal.Merge(Signal.FromEnumerable([1, 2]), Signal.FromEnumerable([3])).Subscribe(mergeValues.Add, ex => throw ex, () => completed["merge"] = 1);
 
         var raceLoser = new Signal<int>();
         var raceWinner = new Signal<int>();
@@ -294,11 +297,11 @@ public class CoverageCompletionTests
         left.OnNext(3);
         left.OnCompleted();
 
-        Signal.FromEnumerable(new[] { 1, 2, 3 }).Zip(Signal.Return(10), (l, r) => l + r).Subscribe(zipShortValues.Add, ex => throw ex, () => completed["zip"] = 1);
+        Signal.FromEnumerable([1, 2, 3]).Zip(Signal.Return(10), (l, r) => l + r).Subscribe(zipShortValues.Add, ex => throw ex, () => completed["zip"] = 1);
         Signal.Empty<int>().ForkJoin(Signal.Return(1), (l, r) => l + r).Subscribe(forkJoinEmpty.Add, ex => throw ex, () => completed["forkJoinEmpty"] = 1);
 
         Assert.Equal(new[] { 1, 2, 21 }, concatValues);
-        Assert.Equal(new[] { 1, 2, 3 }, mergeValues.OrderBy(value => value));
+        Assert.Equal([1, 2, 3], mergeValues.Order());
         Assert.Equal(new[] { 7 }, raceValues);
         Assert.Equal(new[] { 1, 3 }, switchValues);
         Assert.Equal(new[] { "2a", "3b" }, withLatestValues);
@@ -333,7 +336,7 @@ public class CoverageCompletionTests
         manual.OnNext(2);
         Assert.Equal(new[] { 2 }, delayStartValues);
 
-        Signal.FromEnumerable(new[] { 3, 4 }).Delay(TimeSpan.FromTicks(3), clock).Subscribe(delayedValues.Add);
+        Signal.FromEnumerable([3, 4]).Delay(TimeSpan.FromTicks(3), clock).Subscribe(delayedValues.Add);
         clock.AdvanceBy(TimeSpan.FromTicks(2));
         Assert.Equal(0, delayedValues.Count);
         clock.AdvanceBy(TimeSpan.FromTicks(1));
@@ -364,8 +367,8 @@ public class CoverageCompletionTests
         timer.Dispose();
         Assert.Equal(new[] { 0L, 1L, 2L }, timerValues);
 
-        Signal.FromEnumerable(new[] { 8, 9 }).Timestamp(clock).Subscribe(timestamps.Add);
-        Assert.Equal(new[] { 8, 9 }, timestamps.Select(item => item.Value));
+        Signal.FromEnumerable([8, 9]).Timestamp(clock).Subscribe(timestamps.Add);
+        Assert.Equal([8, 9], timestamps.Select(item => item.Value));
         Assert.True(timestamps.All(item => item.Timestamp == clock.Now));
     }
 
@@ -383,7 +386,7 @@ public class CoverageCompletionTests
         await ObserveTaskError(Task.FromCanceled<int>(new CancellationToken(true)), taskErrors);
         await ObserveTaskError(Task.FromException<int>(new InvalidOperationException("faulted")), taskErrors);
 
-        async IAsyncEnumerable<int> ThrowingAsyncEnumerable()
+        static async IAsyncEnumerable<int> ThrowingAsyncEnumerable()
         {
             yield return 1;
             await Task.Yield();
@@ -407,6 +410,8 @@ public class CoverageCompletionTests
     }
 
     [Test]
+    [RequiresUnreferencedCode("The test exercises reflection and dynamic-code coverage branches.")]
+    [RequiresDynamicCode("The test exercises reflection and dynamic-code coverage branches.")]
     public void CoreValueTypesDisposablesAndHandlesCoverEqualityAndLifecycleBranches()
     {
         var moment = new Moment<int>(7, new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
@@ -415,7 +420,7 @@ public class CoverageCompletionTests
         var interval = new TimeInterval<int>(7, TimeSpan.FromTicks(3));
         var sameInterval = new TimeInterval<int>(7, TimeSpan.FromTicks(3));
         var differentInterval = new TimeInterval<int>(8, TimeSpan.FromTicks(4));
-        var rxVoid = new RxVoid();
+        var rxVoid = default(RxVoid);
         var ignored = 0;
         var thrown = new InvalidOperationException("throw-me");
 
@@ -435,10 +440,10 @@ public class CoverageCompletionTests
         Assert.Equal(interval.GetHashCode(), sameInterval.GetHashCode());
         Assert.True(interval.ToString().Contains("7", StringComparison.Ordinal));
 
-        Assert.True(rxVoid == new RxVoid());
-        Assert.False(rxVoid != new RxVoid());
-        Assert.True(rxVoid.Equals(new RxVoid()));
-        Assert.True(rxVoid.Equals((object)new RxVoid()));
+        Assert.True(rxVoid == default);
+        Assert.False(rxVoid != default);
+        Assert.True(rxVoid.Equals(default));
+        Assert.True(rxVoid.Equals((object)default(RxVoid)));
         Assert.Equal(0, rxVoid.GetHashCode());
         Assert.Equal("()", rxVoid.ToString());
 
@@ -575,6 +580,8 @@ public class CoverageCompletionTests
         await SpinUntil(() => errors.Count > 0, TimeSpan.FromSeconds(2));
     }
 
+    [RequiresDynamicCode("Calls System.Type.MakeGenericType(params Type[])")]
+    [RequiresUnreferencedCode("Calls System.Reflection.Assembly.GetType(String)")]
     private static void InvokeInternalHandleMembers(Exception exception)
     {
         var assembly = typeof(RxVoid).Assembly;
@@ -592,11 +599,13 @@ public class CoverageCompletionTests
         InvokeThrows(assembly.GetType("ReactiveUI.Primitives.Handle`3")!.MakeGenericType(typeof(int), typeof(int), typeof(int)).GetField("Throw", BindingFlags.Public | BindingFlags.Static)!.GetValue(null)!, exception, 1, 2, 3);
     }
 
+    [RequiresUnreferencedCode("Calls System.Reflection.Assembly.GetType(String)")]
+    [RequiresDynamicCode("Calls System.Reflection.MethodInfo.MakeGenericMethod(params Type[])")]
     private static IObservable<T> InvokeInternalCatchIgnore<T>(Exception exception)
     {
         var handle = typeof(RxVoid).Assembly.GetType("ReactiveUI.Primitives.Handle")!;
         var method = handle.GetMethod("CatchIgnore", BindingFlags.Public | BindingFlags.Static)!.MakeGenericMethod(typeof(T));
-        return (IObservable<T>)method.Invoke(null, new object[] { exception })!;
+        return (IObservable<T>)method.Invoke(null, [exception])!;
     }
 
     private static void InvokeAction(object action, params object[] args) => ((Delegate)action).DynamicInvoke(args);
@@ -646,7 +655,7 @@ public class CoverageCompletionTests
 
     private sealed class RecordingResultObserver<T> : IObserver<T>, IObserver<T, string>
     {
-        public List<string> Events { get; } = new();
+        public List<string> Events { get; } = [];
 
         public void OnCompleted() => Events.Add("completed");
 

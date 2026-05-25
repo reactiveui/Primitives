@@ -9,13 +9,13 @@ namespace ReactiveUI.Primitives.Core;
 /// </summary>
 /// <typeparam name="TValue">
 /// The type of the elements received by the observer.
-/// This type parameter is contravariant. That is, you can use either the type you specified or any type that is less derived. For more information about covariance and contravariance, see Covariance and Contravariance in Generics.
+/// This type parameter is contravariant. That is, you can use either the type you specified or any type that is less derived.
 /// </typeparam>
 /// <typeparam name="TResult">
 /// The type of the result returned from the observer's notification handlers.
-/// This type parameter is covariant. That is, you can use either the type you specified or any type that is more derived. For more information about covariance and contravariance, see Covariance and Contravariance in Generics.
+/// This type parameter is covariant. That is, you can use either the type you specified or any type that is more derived.
 /// </typeparam>
-public interface IObserver<TValue, TResult>
+public interface IObserver<in TValue, out TResult>
 {
     /// <summary>
     /// Notifies the observer of a new element in the sequence.

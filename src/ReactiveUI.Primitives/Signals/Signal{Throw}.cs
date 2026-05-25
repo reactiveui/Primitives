@@ -19,6 +19,7 @@ public static partial class Signal
     /// <param name="error">The error.</param>
     /// <param name="scheduler">The scheduler.</param>
     /// <returns>An Signals.</returns>
+#pragma warning disable S4018 // Result type is intentionally explicit for Rx-style factory APIs.
     public static IObservable<T> Throw<T>(Exception error, ISequencer scheduler) =>
         new ThrowSignal<T>(error, scheduler);
 
@@ -30,6 +31,7 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     public static IObservable<T> Throw<T>(Exception error) =>
         Throw<T>(error, Sequencer.Immediate);
+#pragma warning restore S4018
 
     /// <summary>
     /// Empty Signals. Returns only onError. witness if for Type inference.

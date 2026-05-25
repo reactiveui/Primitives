@@ -4,21 +4,34 @@
 
 namespace ReactiveUI.Primitives.Core;
 
+/// <summary>
+/// Observer that ignores values and completion and rethrows errors.
+/// </summary>
+/// <typeparam name="T">The observed value type.</typeparam>
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class ThrowWitness<T> : IObserver<T>
 {
+    /// <summary>
+    /// Gets the shared throw witness instance.
+    /// </summary>
     public static readonly ThrowWitness<T> Instance = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ThrowWitness{T}"/> class.
+    /// </summary>
     private ThrowWitness()
     {
     }
 
+    /// <inheritdoc/>
     public void OnCompleted()
     {
     }
 
+    /// <inheritdoc/>
     public void OnError(Exception error) => error.Rethrow();
 
+    /// <inheritdoc/>
     public void OnNext(T value)
     {
     }

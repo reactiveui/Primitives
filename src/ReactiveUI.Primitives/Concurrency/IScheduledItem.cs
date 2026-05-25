@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// Represents a work item that has been scheduled.
 /// </summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
-public interface IScheduledItem<TAbsolute>
+public interface IScheduledItem<out TAbsolute>
 {
     /// <summary>
     /// Gets the absolute time at which the item is due for invocation.
