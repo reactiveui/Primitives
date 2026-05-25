@@ -11,7 +11,6 @@ namespace ReactiveUI.Primitives.Concurrency
     /// ThreadPoolSequencer.
     /// </summary>
     /// <seealso cref="ReactiveUI.Primitives.Concurrency.ISequencer" />
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public sealed class ThreadPoolSequencer : ISequencer
     {
         /// <summary>

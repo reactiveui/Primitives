@@ -13,7 +13,6 @@ namespace ReactiveUI.Primitives;
 /// Connectable hot signal that subscribes to its source only when connected.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ConnectableSignal<T> : IObservable<T>
 {
     /// <summary>
@@ -79,7 +78,6 @@ public sealed class ConnectableSignal<T> : IObservable<T>
 /// <summary>
 /// Hot-sharing operators for Primitives connectable signals.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public static class ConnectableSignalMixins
 {
     /// <summary>

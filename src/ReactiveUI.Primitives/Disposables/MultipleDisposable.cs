@@ -7,7 +7,6 @@ namespace ReactiveUI.Primitives.Disposables;
 /// <summary>
 /// A disposable pocket that contains a set of disposables and disposes them together.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public class MultipleDisposable : IsDisposed
 {
     /// <summary>

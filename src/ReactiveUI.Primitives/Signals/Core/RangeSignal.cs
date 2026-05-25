@@ -10,7 +10,6 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// <summary>
 /// Represents the RangeSignal class.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class RangeSignal : IRequireCurrentThread<int>, IInlineSignal<int>
 {
     /// <summary>

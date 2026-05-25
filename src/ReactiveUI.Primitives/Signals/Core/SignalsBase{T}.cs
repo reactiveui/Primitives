@@ -12,7 +12,6 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// Represents the SignalsBase class.
 /// </summary>
 /// <typeparam name="T">The T type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal abstract class SignalsBase<T> : IRequireCurrentThread<T>
 {
     /// <summary>

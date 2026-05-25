@@ -651,28 +651,8 @@ Performance constraints used by the project:
 | `src/ReactiveUI.Primitives.R3Bridge.Generator` | Source generator for R3 bridge adapters. |
 | `src/ReactiveUI.Primitives.Tests` | Test project using Microsoft Testing Platform/TUnit-style validation. |
 | `src/benchmarks/ReactiveUI.Primitives.Benchmarks` | BenchmarkDotNet comparison harness. |
-| `docs/API-COVERAGE.md` | Public API inventory and parity notes. |
-| `docs/PERFORMANCE.md` | Benchmark plan and recovered benchmark evidence. |
-| `docs/TASKLIST.md` | Project task/status notes. |
-| `docs/research` | System.Reactive and R3 API inventory research. |
 
 ## Validation commands
-
-From WSL, use Windows dotnet for this repository:
-
-```bash
-"/mnt/c/Program Files/dotnet/dotnet.exe" restore src/ReactiveUI.Primitives.sln
-"/mnt/c/Program Files/dotnet/dotnet.exe" build src/ReactiveUI.Primitives.sln --configuration Release --no-restore
-"/mnt/c/Program Files/dotnet/dotnet.exe" test --project src/ReactiveUI.Primitives.Tests/ReactiveUI.Primitives.Tests.csproj --configuration Release --no-build -- --minimum-expected-tests 1
-"/mnt/c/Program Files/dotnet/dotnet.exe" pack src/ReactiveUI.Primitives/ReactiveUI.Primitives.csproj --configuration Release --no-restore -v minimal
-git diff --check
-```
-
-To run the focused benchmark used by the performance notes:
-
-```bash
-"/mnt/c/Program Files/dotnet/dotnet.exe" run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter '*SubjectThroughput*'
-```
 
 For NuGet package verification, inspect the generated `.nupkg` and confirm:
 

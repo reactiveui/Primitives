@@ -14,7 +14,6 @@ namespace ReactiveUI.Primitives.Core
     /// </summary>
     /// <typeparam name="T">The type of the elements received by the observer.</typeparam>
     [Serializable]
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public abstract class Spark<T> : IEquatable<Spark<T>>
     {
         /// <summary>

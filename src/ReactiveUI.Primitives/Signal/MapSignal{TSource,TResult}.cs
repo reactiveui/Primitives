@@ -11,7 +11,6 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="TSource">The TSource type.</typeparam>
 /// <typeparam name="TResult">The TResult type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class MapSignal<TSource, TResult> : IRequireCurrentThread<TResult>
 {
     /// <summary>

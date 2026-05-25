@@ -11,7 +11,6 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// Represents a finite signal backed by an enumerable sequence.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
 {
     /// <summary>

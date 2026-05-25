@@ -11,7 +11,6 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// Represents the ImmutableNeverSignal class.
 /// </summary>
 /// <typeparam name="T">The T type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class ImmutableNeverSignal<T> : IRequireCurrentThread<T>
 {
 #pragma warning disable SA1401 // Fields should be private

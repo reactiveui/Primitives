@@ -9,7 +9,6 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// </summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 /// <typeparam name="TRelative">Relative time representation type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSequencerBase<TAbsolute, TRelative>
     where TAbsolute : IComparable<TAbsolute>
 {

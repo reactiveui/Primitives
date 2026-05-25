@@ -7,7 +7,6 @@ namespace ReactiveUI.Primitives.Disposables;
 /// <summary>
 /// SingleReplaceableDisposable.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public class SingleReplaceableDisposable : IsDisposed
 {
     /// <summary>

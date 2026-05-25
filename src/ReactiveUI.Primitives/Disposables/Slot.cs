@@ -7,7 +7,6 @@ namespace ReactiveUI.Primitives.Disposables;
 /// <summary>
 /// Primitives alias for a replaceable disposable slot.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class Slot : SingleReplaceableDisposable
 {
     /// <summary>

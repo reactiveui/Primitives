@@ -10,7 +10,6 @@ namespace ReactiveUI.Primitives.Signals;
 /// Represents the KeepSignal class.
 /// </summary>
 /// <typeparam name="T">The T type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class KeepSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>

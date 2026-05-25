@@ -10,7 +10,6 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// <summary>
 /// Represents the ImmutableReturnRxVoidSignal class.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class ImmutableReturnRxVoidSignal : IRequireCurrentThread<RxVoid>, IInlineSignal<RxVoid>
 {
 #pragma warning disable SA1401 // Fields should be private

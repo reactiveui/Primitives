@@ -8,7 +8,6 @@ namespace ReactiveUI.Primitives.Core;
 /// Observer that ignores values and completion and rethrows errors.
 /// </summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class ThrowWitness<T> : IObserver<T>
 {
     /// <summary>

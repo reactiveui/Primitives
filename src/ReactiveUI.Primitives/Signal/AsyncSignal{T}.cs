@@ -12,7 +12,6 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="T">The Type.</typeparam>
 /// <seealso cref="ReactiveUI.Primitives.Signals.ISignal&lt;T&gt;" />
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public class AsyncSignal<T> : IAwaitSignal<T>
 {
     /// <summary>

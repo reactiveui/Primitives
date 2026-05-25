@@ -10,7 +10,6 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// <summary>
 /// Represents the ImmutableReturnTrueSignal class.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class ImmutableReturnTrueSignal : IRequireCurrentThread<bool>, IInlineSignal<bool>
 {
 #pragma warning disable SA1401 // Fields should be private

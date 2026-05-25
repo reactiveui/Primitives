@@ -11,7 +11,6 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// Represents the ThrowSignal class.
 /// </summary>
 /// <typeparam name="T">The T type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class ThrowSignal<T> : SignalsBase<T>
 {
     /// <summary>

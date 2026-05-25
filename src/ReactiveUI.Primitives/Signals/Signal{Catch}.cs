@@ -9,7 +9,6 @@ namespace ReactiveUI.Primitives.Signals;
 /// <summary>
 /// Signals.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public static partial class Signal
 {
     /// <summary>

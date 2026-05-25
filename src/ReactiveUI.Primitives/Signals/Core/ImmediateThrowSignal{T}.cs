@@ -11,7 +11,6 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// Represents the immediate Throw signal fast path.
 /// </summary>
 /// <typeparam name="T">The T type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class ImmediateThrowSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
 {
     /// <summary>

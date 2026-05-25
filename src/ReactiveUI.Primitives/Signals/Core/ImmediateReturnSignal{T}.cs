@@ -11,7 +11,6 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// Represents the ImmediateReturnSignal class.
 /// </summary>
 /// <typeparam name="T">The T type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class ImmediateReturnSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
 {
     /// <summary>

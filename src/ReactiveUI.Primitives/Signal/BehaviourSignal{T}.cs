@@ -11,7 +11,6 @@ namespace ReactiveUI.Primitives.Signals;
 /// BehaviourSignal.
 /// </summary>
 /// <typeparam name="T">The Type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public class BehaviourSignal<T> : ISignal<T>
 {
     /// <summary>

@@ -9,7 +9,6 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="T">The T type.</typeparam>
 /// <typeparam name="TResult">The TResult type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class BufferSignal<T, TResult> : Signal<TResult>
     where TResult : class, IList<T>
 {
