@@ -10,17 +10,17 @@ namespace ReactiveUI.Primitives.Concurrency;
 public static partial class Sequencer
 {
     /// <summary>
-    /// Gets a scheduler that schedules work as soon as possible on the current thread.
+    /// Gets a sequencer that schedules work as soon as possible on the current thread.
     /// </summary>
     public static CurrentThreadSequencer CurrentThread => CurrentThreadSequencer.Instance;
 
     /// <summary>
-    /// Gets a scheduler that schedules work immediately on the current thread.
+    /// Gets a sequencer that schedules work immediately on the current thread.
     /// </summary>
     public static ImmediateSequencer Immediate => ImmediateSequencer.Instance;
 
     /// <summary>
-    /// Gets the default queueing scheduler for background work.
+    /// Gets the default queueing sequencer for background work.
     /// </summary>
     public static ISequencer Default => TaskPoolSequencer.Default;
 
