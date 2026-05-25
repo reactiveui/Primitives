@@ -15,6 +15,86 @@ namespace ReactiveUI.Primitives.Tests;
 public class SignalTests
 {
     /// <summary>
+    /// Number of values expected in pair buffers.
+    /// </summary>
+    private const int PairCount = 2;
+
+    /// <summary>
+    /// Number of values skipped between non-overlapping buffers.
+    /// </summary>
+    private const int SkipCount = 2;
+
+    /// <summary>
+    /// Test value two.
+    /// </summary>
+    private const int ValueTwo = 2;
+
+    /// <summary>
+    /// Test value three.
+    /// </summary>
+    private const int ValueThree = 3;
+
+    /// <summary>
+    /// Test value four.
+    /// </summary>
+    private const int ValueFour = 4;
+
+    /// <summary>
+    /// Test value five.
+    /// </summary>
+    private const int ValueFive = 5;
+
+    /// <summary>
+    /// Test value six.
+    /// </summary>
+    private const int ValueSix = 6;
+
+    /// <summary>
+    /// Test value seven.
+    /// </summary>
+    private const int ValueSeven = 7;
+
+    /// <summary>
+    /// Test value eight.
+    /// </summary>
+    private const int ValueEight = 8;
+
+    /// <summary>
+    /// Divisor used by even-value filters.
+    /// </summary>
+    private const int EvenDivisor = 2;
+
+    /// <summary>
+    /// Multiplier used by select projection tests.
+    /// </summary>
+    private const int SelectMultiplier = 2;
+
+    /// <summary>
+    /// Expected first pair of buffered values.
+    /// </summary>
+    private static readonly int[] FirstPair = [1, ValueTwo];
+
+    /// <summary>
+    /// Expected second pair of buffered values.
+    /// </summary>
+    private static readonly int[] SecondPair = [ValueThree, ValueFour];
+
+    /// <summary>
+    /// Expected third pair of buffered values.
+    /// </summary>
+    private static readonly int[] ThirdPair = [ValueFive, ValueSix];
+
+    /// <summary>
+    /// Expected single RxVoid notification.
+    /// </summary>
+    private static readonly RxVoid[] SingleRxVoid = [RxVoid.Default];
+
+    /// <summary>
+    /// Expected pair of RxVoid notifications.
+    /// </summary>
+    private static readonly RxVoid[] DoubleRxVoid = [RxVoid.Default, RxVoid.Default];
+
+    /// <summary>
     /// Called when [next].
     /// </summary>
     [Test]
@@ -29,12 +109,12 @@ public class SignalTests
         Assert.Equal(1, value);
 
         subject.OnNext(1);
-        Assert.Equal(2, value);
+        Assert.Equal(PairCount, value);
 
         subscription.Dispose();
 
         subject.OnNext(1);
-        Assert.Equal(2, value);
+        Assert.Equal(PairCount, value);
     }
 
     /// <summary>
@@ -75,7 +155,7 @@ public class SignalTests
         var subject = new Signal<int>();
         var completed = false;
 
-        var subscription = subject.Subscribe(_ => { }, () => completed = true);
+        using var subscription = subject.Subscribe(_ => { }, () => completed = true);
 
         subject.OnCompleted();
 
@@ -90,7 +170,7 @@ public class SignalTests
     {
         var subject = new Signal<int>();
 
-        var subscription = subject.Subscribe(_ => { });
+        using var subscription = subject.Subscribe(_ => { });
 
         subject.OnCompleted();
     }
@@ -104,7 +184,7 @@ public class SignalTests
         var subject = new Signal<int>();
         var completed = 0;
 
-        var subscription = subject.Subscribe(_ => { }, () => completed++);
+        using var subscription = subject.Subscribe(_ => { }, () => completed++);
 
         subject.OnCompleted();
 
@@ -153,9 +233,9 @@ public class SignalTests
         var subject = new Signal<int>();
         var error = false;
 
-        var subscription = subject.Subscribe(_ => { }, _ => error = true);
+        using var subscription = subject.Subscribe(_ => { }, _ => error = true);
 
-        subject.OnError(new Exception());
+        subject.OnError(new InvalidOperationException());
 
         Assert.True(error);
     }
@@ -169,13 +249,13 @@ public class SignalTests
         var subject = new Signal<int>();
         var errors = 0;
 
-        var subscription = subject.Subscribe(_ => { }, _ => errors++);
+        using var subscription = subject.Subscribe(_ => { }, _ => errors++);
 
-        subject.OnError(new Exception());
+        subject.OnError(new InvalidOperationException());
 
         Assert.Equal(1, errors);
 
-        subject.OnError(new Exception());
+        subject.OnError(new InvalidOperationException());
 
         Assert.Equal(1, errors);
     }
@@ -190,7 +270,7 @@ public class SignalTests
 
         subject.Dispose();
 
-        Assert.Throws<ObjectDisposedException>(() => subject.OnError(new Exception()));
+        Assert.Throws<ObjectDisposedException>(() => subject.OnError(new InvalidOperationException()));
     }
 
     /// <summary>
@@ -204,7 +284,7 @@ public class SignalTests
 
         subject.Subscribe(_ => { }, _ => error = true).Dispose();
 
-        subject.OnError(new Exception());
+        subject.OnError(new InvalidOperationException());
 
         Assert.False(error);
     }
@@ -217,7 +297,7 @@ public class SignalTests
     {
         var subject = new Signal<int>();
 
-        var subs = subject.Subscribe(_ => { });
+        using var subscription = subject.Subscribe(_ => { });
 
         Assert.Throws<ArgumentException>(() => subject.OnError(new ArgumentException()));
     }
@@ -271,7 +351,7 @@ public class SignalTests
     public void SubscribeOnError()
     {
         var subject = new Signal<int>();
-        subject.OnError(new Exception());
+        subject.OnError(new InvalidOperationException());
         var error = false;
 
         subject.Subscribe(_ => { }, _ => error = true);
@@ -299,17 +379,17 @@ public class SignalTests
         Assert.Equal(1, second);
 
         firstSubscription.Dispose();
-        subject.OnNext(2);
+        subject.OnNext(ValueTwo);
 
         Assert.Equal(1, first);
-        Assert.Equal(3, second);
+        Assert.Equal(ValueThree, second);
         Assert.True(subject.HasObservers);
 
         secondSubscription.Dispose();
-        subject.OnNext(4);
+        subject.OnNext(ValueFour);
 
         Assert.Equal(1, first);
-        Assert.Equal(3, second);
+        Assert.Equal(ValueThree, second);
         Assert.False(subject.HasObservers);
     }
 
@@ -320,10 +400,10 @@ public class SignalTests
     public void SubjectWhere()
     {
         var subject = new Signal<int>();
-        subject.Where(i => i % 2 == 0).Subscribe(i => Assert.Equal(2, i));
+        subject.Where(i => i % EvenDivisor == 0).Subscribe(i => Assert.Equal(ValueTwo, i));
         subject.OnNext(1);
-        subject.OnNext(2);
-        subject.OnNext(3);
+        subject.OnNext(ValueTwo);
+        subject.OnNext(ValueThree);
         subject.Dispose();
     }
 
@@ -334,8 +414,8 @@ public class SignalTests
     public void SubjectSelect()
     {
         var subject = new Signal<int>();
-        subject.Select(i => i * 2).Subscribe(i => Assert.Equal(4, i));
-        subject.OnNext(2);
+        subject.Select(i => i * SelectMultiplier).Subscribe(i => Assert.Equal(ValueFour, i));
+        subject.OnNext(ValueTwo);
         subject.Dispose();
     }
 
@@ -347,16 +427,16 @@ public class SignalTests
     {
         var subject = new Signal<int>();
         var result = new List<int>();
-        subject.Buffer(2).Subscribe(i => result = [.. i]);
+        subject.Buffer(PairCount).Subscribe(i => result = [.. i]);
         subject.OnNext(1);
-        subject.OnNext(2);
-        Assert.Equal(new[] { 1, 2 }, result);
-        subject.OnNext(3);
-        subject.OnNext(4);
-        Assert.Equal(new[] { 3, 4 }, result);
-        subject.OnNext(5);
-        subject.OnNext(6);
-        Assert.Equal(new[] { 5, 6 }, result);
+        subject.OnNext(ValueTwo);
+        Assert.Equal(FirstPair, result);
+        subject.OnNext(ValueThree);
+        subject.OnNext(ValueFour);
+        Assert.Equal(SecondPair, result);
+        subject.OnNext(ValueFive);
+        subject.OnNext(ValueSix);
+        Assert.Equal(ThirdPair, result);
         subject.Dispose();
     }
 
@@ -368,19 +448,19 @@ public class SignalTests
     {
         var subject = new Signal<int>();
         var result = new List<int>();
-        subject.Buffer(2, 2).Subscribe(i => result = [.. i]);
+        subject.Buffer(PairCount, SkipCount).Subscribe(i => result = [.. i]);
         subject.OnNext(1);
-        subject.OnNext(2);
-        Assert.Equal(new[] { 1, 2 }, result);
-        subject.OnNext(3);
-        subject.OnNext(4);
-        Assert.Equal(new[] { 1, 2 }, result);
-        subject.OnNext(5);
-        subject.OnNext(6);
-        Assert.Equal(new[] { 5, 6 }, result);
-        subject.OnNext(7);
-        subject.OnNext(8);
-        Assert.Equal(new[] { 5, 6 }, result);
+        subject.OnNext(ValueTwo);
+        Assert.Equal(FirstPair, result);
+        subject.OnNext(ValueThree);
+        subject.OnNext(ValueFour);
+        Assert.Equal(FirstPair, result);
+        subject.OnNext(ValueFive);
+        subject.OnNext(ValueSix);
+        Assert.Equal(ThirdPair, result);
+        subject.OnNext(ValueSeven);
+        subject.OnNext(ValueEight);
+        Assert.Equal(ThirdPair, result);
         subject.Dispose();
     }
 
@@ -394,9 +474,9 @@ public class SignalTests
         var result = new List<RxVoid>();
         subject.Subscribe(result.Add);
         subject.OnNext(RxVoid.Default);
-        Assert.Equal(new[] { RxVoid.Default }, result);
+        Assert.Equal(SingleRxVoid, result);
         subject.OnNext(RxVoid.Default);
-        Assert.Equal(new[] { RxVoid.Default, RxVoid.Default }, result);
+        Assert.Equal(DoubleRxVoid, result);
         subject.Dispose();
     }
 }

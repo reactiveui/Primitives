@@ -52,11 +52,19 @@ internal sealed class ThrowSignal<T> : SignalsBase<T>
             return Disposable.Empty;
         }
 
-        return _scheduler.Schedule(() =>
-        {
-            observer.OnError(_error);
-            observer.OnCompleted();
-        });
+        return _scheduler.Schedule((observer, _error), static (_, state) => SignalError(state));
+    }
+
+    /// <summary>
+    /// Emits the scheduled error notification.
+    /// </summary>
+    /// <param name="state">The observer and error state.</param>
+    /// <returns>An empty disposable.</returns>
+    private static IDisposable SignalError((IObserver<T> Observer, Exception Error) state)
+    {
+        state.Observer.OnError(state.Error);
+        state.Observer.OnCompleted();
+        return Disposable.Empty;
     }
 
     /// <summary>

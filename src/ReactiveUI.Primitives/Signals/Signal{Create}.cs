@@ -139,8 +139,15 @@ public static partial class Signal
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="observableFactory">The observable factory.</param>
     /// <returns>An Observable.</returns>
-    public static IObservable<T> Defer<T>(Func<IObservable<T>> observableFactory) =>
-        new DeferSignal<T>(observableFactory);
+    public static IObservable<T> Defer<T>(Func<IObservable<T>> observableFactory)
+    {
+        if (observableFactory == null)
+        {
+            throw new ArgumentNullException(nameof(observableFactory));
+        }
+
+        return new DeferSignal<T>(observableFactory);
+    }
 
     /// <summary>
     /// Witnesses the on.

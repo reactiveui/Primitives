@@ -17,6 +17,11 @@ namespace ReactiveUI.Primitives.Tests;
 public class SignalCreateTests
 {
     /// <summary>
+    /// Value emitted by create-signal tests.
+    /// </summary>
+    private const int CreatedValue = 42;
+
+    /// <summary>
     /// Creates the argument checking.
     /// </summary>
     [Test]
@@ -35,7 +40,7 @@ public class SignalCreateTests
     {
         var xs = Signal.Create<int>(o =>
         {
-            o.OnNext(42);
+            o.OnNext(CreatedValue);
             return Disposable.Create(default!);
         });
 
@@ -43,7 +48,7 @@ public class SignalCreateTests
         var d = xs.Subscribe(lst.Add);
         d.Dispose();
 
-        Assert.True(lst.SequenceEqual([42]));
+        Assert.True(lst.SequenceEqual([CreatedValue]));
     }
 
     /// <summary>
@@ -69,7 +74,7 @@ public class SignalCreateTests
         Assert.Throws<InvalidOperationException>(() =>
             Signal.Create<int>(o =>
             {
-                o.OnError(new Exception());
+                o.OnError(new InvalidOperationException("source"));
                 return Disposable.Empty;
             }).Subscribe(x => { }, ex => throw new InvalidOperationException()));
         Assert.Throws<InvalidOperationException>(() =>
@@ -103,7 +108,7 @@ public class SignalCreateTests
     {
         var xs = Signal.Create<int>(o =>
         {
-            o.OnNext(42);
+            o.OnNext(CreatedValue);
             return default!;
         });
 
@@ -111,7 +116,7 @@ public class SignalCreateTests
         var d = xs.Subscribe(lst.Add);
         d.Dispose();
 
-        Assert.True(lst.SequenceEqual([42]));
+        Assert.True(lst.SequenceEqual([CreatedValue]));
     }
 
     /// <summary>

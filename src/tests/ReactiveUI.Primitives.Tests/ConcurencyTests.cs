@@ -11,109 +11,143 @@ using TUnit.Core;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>
-/// ConcurencyTests.
+/// Tests task-pool sequencer behavior.
 /// </summary>
 public class ConcurencyTests
 {
     /// <summary>
-    /// Tests this instance.
+    /// Defines the maximum time to wait for scheduled work in tests.
+    /// </summary>
+    private static readonly TimeSpan ScheduleTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Defines the maximum tolerated difference between sequencer and system time.
+    /// </summary>
+    private static readonly TimeSpan ClockTolerance = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Defines the short due time used by delayed scheduling tests.
+    /// </summary>
+    private static readonly TimeSpan ShortDueTime = TimeSpan.FromMilliseconds(10);
+
+    /// <summary>
+    /// Defines the due time used by cancellation tests.
+    /// </summary>
+    private static readonly TimeSpan CancelDueTime = TimeSpan.FromMilliseconds(200);
+
+    /// <summary>
+    /// Defines the observation window used after canceling scheduled work.
+    /// </summary>
+    private static readonly TimeSpan CancelObservationWindow = TimeSpan.FromMilliseconds(400);
+
+    /// <summary>
+    /// Verifies that scheduling state returns a disposable.
     /// </summary>
     [Test]
     public void TestCreate()
     {
         var scheduler = TaskPoolSequencer.Instance;
-        var disposable = scheduler.Schedule(0, (__, _) => Disposable.Empty);
+        var disposable = scheduler.Schedule(0, (_, _) => Disposable.Empty);
         Assert.NotNull(disposable);
         disposable.Dispose();
     }
 
     /// <summary>
-    /// Tasks the pool now.
+    /// Verifies that the task-pool sequencer reports current UTC time.
     /// </summary>
     [Test]
     public void TaskPoolNow()
     {
-        var res = TaskPoolSequencer.Instance.Now - DateTime.Now;
-        Assert.True(res.Seconds < 1);
+        var delta = TaskPoolSequencer.Instance.Now - TimeProvider.System.GetUtcNow();
+
+        Assert.True(delta.Duration() < ClockTolerance);
     }
 
     /// <summary>
-    /// Tasks the pool schedule action.
+    /// Verifies that immediate work is scheduled on a different thread.
     /// </summary>
     [Test]
     public void TaskPoolScheduleAction()
     {
         var id = Environment.CurrentManagedThreadId;
         var nt = TaskPoolSequencer.Instance;
-        var evt = new ManualResetEvent(false);
-        nt.Schedule(() =>
+        using var completed = new ManualResetEventSlim();
+        using var scheduled = nt.Schedule(() =>
         {
             Assert.NotEqual(id, Environment.CurrentManagedThreadId);
-            evt.Set();
+            completed.Set();
         });
-        evt.WaitOne();
+
+        Assert.True(completed.Wait(ScheduleTimeout));
     }
 
     /// <summary>
-    /// Tasks the pool schedule action due now.
+    /// Verifies that work due immediately is scheduled on a different thread.
     /// </summary>
     [Test]
     public void TaskPoolScheduleActionDueNow()
     {
         var id = Environment.CurrentManagedThreadId;
         var nt = TaskPoolSequencer.Instance;
-        var evt = new ManualResetEvent(false);
-        nt.Schedule(TimeSpan.Zero, () =>
+        using var completed = new ManualResetEventSlim();
+        using var scheduled = nt.Schedule(TimeSpan.Zero, () =>
         {
             Assert.NotEqual(id, Environment.CurrentManagedThreadId);
-            evt.Set();
+            completed.Set();
         });
-        evt.WaitOne();
+
+        Assert.True(completed.Wait(ScheduleTimeout));
     }
 
     /// <summary>
-    /// Tasks the pool schedule action due.
+    /// Verifies that delayed work is scheduled on a different thread.
     /// </summary>
     [Test]
     public void TaskPoolScheduleActionDue()
     {
         var id = Environment.CurrentManagedThreadId;
         var nt = TaskPoolSequencer.Instance;
-        var evt = new ManualResetEvent(false);
-        nt.Schedule(TimeSpan.FromMilliseconds(1), () =>
+        using var completed = new ManualResetEventSlim();
+        using var scheduled = nt.Schedule(ShortDueTime, () =>
         {
             Assert.NotEqual(id, Environment.CurrentManagedThreadId);
-            evt.Set();
+            completed.Set();
         });
-        evt.WaitOne();
+
+        Assert.True(completed.Wait(ScheduleTimeout));
     }
 
     /// <summary>
-    /// Tasks the pool schedule action cancel.
+    /// Verifies that canceled delayed work does not run.
     /// </summary>
     [Test]
     public void TaskPoolScheduleActionCancel()
     {
-        var id = Environment.CurrentManagedThreadId;
         var nt = TaskPoolSequencer.Instance;
-        var set = false;
-        var d = nt.Schedule(TimeSpan.FromSeconds(0.2), () => set = true);
-        d.Dispose();
-        Thread.Sleep(400);
-        Assert.False(set);
+        var runCount = 0;
+        using var completed = new ManualResetEventSlim();
+        using var scheduled = nt.Schedule(CancelDueTime, () =>
+        {
+            Volatile.Write(ref runCount, 1);
+            completed.Set();
+        });
+
+        scheduled.Dispose();
+
+        Assert.False(completed.Wait(CancelObservationWindow));
+        Assert.Equal(0, Volatile.Read(ref runCount));
     }
 
     /// <summary>
-    /// Tasks the pool delay larger than int maximum value.
+    /// Verifies that delays larger than <see cref="int.MaxValue"/> milliseconds are accepted.
     /// </summary>
     [Test]
     public void TaskPoolDelayLargerThanIntMaxValue()
     {
         var dueTime = TimeSpan.FromMilliseconds((double)int.MaxValue + 1);
 
-        // Just ensuring the call to Schedule does not throw.
-        var d = TaskPoolSequencer.Instance.Schedule(dueTime, () => { });
+        using var scheduled = TaskPoolSequencer.Instance.Schedule(dueTime, () => { });
 
-        d.Dispose();
+        Assert.NotNull(scheduled);
     }
 }

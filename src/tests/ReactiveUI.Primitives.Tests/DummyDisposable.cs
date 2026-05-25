@@ -3,14 +3,21 @@
 // See the LICENSE file in the project root for full license information.
 
 using System;
-#if NET48
-#endif
 
 namespace ReactiveUI.Primitives.Tests;
 
-internal class DummyDisposable : IDisposable
+/// <summary>
+/// Provides a reusable disposable test instance.
+/// </summary>
+internal sealed class DummyDisposable : IDisposable
 {
-    public static readonly DummyDisposable Instance = new();
+    /// <summary>
+    /// Gets the shared disposable instance.
+    /// </summary>
+    public static DummyDisposable Instance { get; } = new();
 
-    public void Dispose() => throw new NotImplementedException();
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+    }
 }

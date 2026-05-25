@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.ExceptionServices;
+using System.Threading;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
@@ -34,7 +35,7 @@ public class Signal<T> : ISignal<T>
     /// Executes the new operation.
     /// </summary>
     /// <returns>The result.</returns>
-    private readonly object _observerLock = new();
+    private SpinLock _observerLock = new(false);
 
     /// <summary>
     /// Stores state for the signal implementation.
@@ -45,6 +46,11 @@ public class Signal<T> : ISignal<T>
     /// Stores state for the signal implementation.
     /// </summary>
     private SignalSubscription? _singleActionSubscription;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
+    private SignalSubscription? _singleObserverSubscription;
 
     /// <summary>
     /// Stores state for the signal implementation.
@@ -79,7 +85,7 @@ public class Signal<T> : ISignal<T>
     /// <summary>
     /// Gets a value indicating whether indicates whether the subject has observers subscribed to it.
     /// </summary>
-    public virtual bool HasObservers => (_singleActionSubscription != null || _subscriptionCount != 0) && !_isStopped;
+    public virtual bool HasObservers => (_singleActionSubscription != null || _singleObserverSubscription != null || _subscriptionCount != 0) && !_isStopped;
 
     /// <summary>
     /// Gets a value indicating whether indicates whether the subject has been disposed.
@@ -100,21 +106,32 @@ public class Signal<T> : ISignal<T>
     /// </summary>
     public void OnCompleted()
     {
+        SignalSubscription? singleObserver;
         SignalSubscription?[]? subscriptions;
+        var lockTaken = false;
 
-        lock (_observerLock)
+        try
         {
+            _observerLock.Enter(ref lockTaken);
             ThrowIfDisposed();
             if (_isStopped)
             {
                 return;
             }
 
+            singleObserver = _singleObserverSubscription;
             subscriptions = ClearObserversLocked();
             _isStopped = true;
         }
+        finally
+        {
+            if (lockTaken)
+            {
+                _observerLock.Exit(false);
+            }
+        }
 
-        Completed(subscriptions);
+        Completed(singleObserver, subscriptions);
     }
 
     /// <summary>
@@ -128,11 +145,14 @@ public class Signal<T> : ISignal<T>
             throw new ArgumentNullException(nameof(error));
         }
 
+        SignalSubscription? singleObserver;
         SignalSubscription?[]? subscriptions;
         var hasActionSubscribers = false;
+        var lockTaken = false;
 
-        lock (_observerLock)
+        try
         {
+            _observerLock.Enter(ref lockTaken);
             ThrowIfDisposed();
             if (_isStopped)
             {
@@ -141,11 +161,19 @@ public class Signal<T> : ISignal<T>
 
             _exception = error;
             hasActionSubscribers = _singleActionSubscription != null || HasActionSubscribers(_subscriptions);
+            singleObserver = _singleObserverSubscription;
             subscriptions = ClearObserversLocked();
             _isStopped = true;
         }
+        finally
+        {
+            if (lockTaken)
+            {
+                _observerLock.Exit(false);
+            }
+        }
 
-        Error(subscriptions, error);
+        Error(singleObserver, subscriptions, error);
         if (!hasActionSubscribers)
         {
             return;
@@ -158,7 +186,17 @@ public class Signal<T> : ISignal<T>
     /// Called when [next].
     /// </summary>
     /// <param name="value">The value.</param>
-    public void OnNext(T value) => _onNext(value);
+    public void OnNext(T value)
+    {
+        var singleObserver = Volatile.Read(ref _singleObserverSubscription);
+        if (singleObserver != null)
+        {
+            singleObserver.Observer!.OnNext(value);
+            return;
+        }
+
+        _onNext(value);
+    }
 
     /// <summary>
     /// Subscribes the specified observer.
@@ -177,18 +215,36 @@ public class Signal<T> : ISignal<T>
         Exception? ex;
         bool stopped;
         SignalSubscription? subscription = null;
+        var lockTaken = false;
 
-        lock (_observerLock)
+        try
         {
+            _observerLock.Enter(ref lockTaken);
             ThrowIfDisposed();
             stopped = _isStopped;
             ex = _exception;
             if (!stopped)
             {
-                PromoteSingleActionObserverLocked();
-                subscription = new SignalSubscription(this, observer);
-                AddSubscriptionLocked(subscription);
-                _onNext = DispatchSubscriptions;
+                if (_singleActionSubscription == null && _singleObserverSubscription == null && _subscriptionCount == 0)
+                {
+                    subscription = new SignalSubscription(this, observer);
+                    _singleObserverSubscription = subscription;
+                }
+                else
+                {
+                    PromoteSingleObserverLocked();
+                    PromoteSingleActionObserverLocked();
+                    subscription = new SignalSubscription(this, observer);
+                    AddSubscriptionLocked(subscription);
+                    _onNext = DispatchSubscriptions;
+                }
+            }
+        }
+        finally
+        {
+            if (lockTaken)
+            {
+                _observerLock.Exit(false);
             }
         }
 
@@ -224,26 +280,36 @@ public class Signal<T> : ISignal<T>
         Exception? ex;
         bool stopped;
         SignalSubscription? subscription = null;
+        var lockTaken = false;
 
-        lock (_observerLock)
+        try
         {
+            _observerLock.Enter(ref lockTaken);
             ThrowIfDisposed();
             stopped = _isStopped;
             ex = _exception;
             if (!stopped)
             {
                 subscription = new SignalSubscription(this, onNext);
-                if (_singleActionSubscription == null && _subscriptionCount == 0)
+                if (_singleActionSubscription == null && _singleObserverSubscription == null && _subscriptionCount == 0)
                 {
                     _singleActionSubscription = subscription;
                     _onNext = onNext;
                 }
                 else
                 {
+                    PromoteSingleObserverLocked();
                     PromoteSingleActionObserverLocked();
                     AddSubscriptionLocked(subscription);
                     _onNext = DispatchSubscriptions;
                 }
+            }
+        }
+        finally
+        {
+            if (lockTaken)
+            {
+                _observerLock.Exit(false);
             }
         }
 
@@ -277,17 +343,29 @@ public class Signal<T> : ISignal<T>
         }
 
         SignalSubscription? singleActionSubscription;
+        SignalSubscription? singleObserverSubscription;
         SignalSubscription?[]? subscriptions;
-        lock (_observerLock)
+        var lockTaken = false;
+        try
         {
+            _observerLock.Enter(ref lockTaken);
             singleActionSubscription = _singleActionSubscription;
+            singleObserverSubscription = _singleObserverSubscription;
             subscriptions = ClearObserversLocked();
             _exception = null;
             _onNext = ThrowDisposedOnNext;
             _isDisposed = true;
         }
+        finally
+        {
+            if (lockTaken)
+            {
+                _observerLock.Exit(false);
+            }
+        }
 
         singleActionSubscription?.Dispose();
+        singleObserverSubscription?.Dispose();
         DisposeSubscriptions(subscriptions);
     }
 
@@ -299,9 +377,11 @@ public class Signal<T> : ISignal<T>
     /// <summary>
     /// Executes the Completed operation.
     /// </summary>
+    /// <param name="singleObserver">The single observer fast-path subscription.</param>
     /// <param name="subscriptions">The subscriptions value.</param>
-    private static void Completed(SignalSubscription?[]? subscriptions)
+    private static void Completed(SignalSubscription? singleObserver, SignalSubscription?[]? subscriptions)
     {
+        singleObserver?.Observer?.OnCompleted();
         if (subscriptions == null)
         {
             return;
@@ -316,10 +396,12 @@ public class Signal<T> : ISignal<T>
     /// <summary>
     /// Executes the Error operation.
     /// </summary>
+    /// <param name="singleObserver">The single observer fast-path subscription.</param>
     /// <param name="subscriptions">The subscriptions value.</param>
     /// <param name="exception">The exception value.</param>
-    private static void Error(SignalSubscription?[]? subscriptions, Exception exception)
+    private static void Error(SignalSubscription? singleObserver, SignalSubscription?[]? subscriptions, Exception exception)
     {
+        singleObserver?.Observer?.OnError(exception);
         if (subscriptions == null)
         {
             return;
@@ -431,6 +513,7 @@ public class Signal<T> : ISignal<T>
     private SignalSubscription?[]? ClearObserversLocked()
     {
         _singleActionSubscription = null;
+        _singleObserverSubscription = null;
         var subscriptions = _subscriptions;
         Volatile.Write(ref _subscriptions, null);
         _subscriptionCount = 0;
@@ -455,37 +538,94 @@ public class Signal<T> : ISignal<T>
     }
 
     /// <summary>
+    /// Executes the PromoteSingleObserverLocked operation.
+    /// </summary>
+    private void PromoteSingleObserverLocked()
+    {
+        var single = _singleObserverSubscription;
+        if (single == null)
+        {
+            return;
+        }
+
+        _singleObserverSubscription = null;
+        AddSubscriptionLocked(single);
+    }
+
+    /// <summary>
     /// Executes the Remove operation.
     /// </summary>
     /// <param name="subscription">The subscription value.</param>
     private void Remove(SignalSubscription subscription)
     {
-        lock (_observerLock)
+        var lockTaken = false;
+        try
         {
-            if (ReferenceEquals(_singleActionSubscription, subscription))
-            {
-                _singleActionSubscription = null;
-                _onNext = _subscriptionCount == 0 ? NoopOnNext : DispatchSubscriptions;
-                return;
-            }
-
-            var subscriptions = _subscriptions;
-            var index = subscription.Index;
-            if (subscriptions == null ||
-                (uint)index >= (uint)subscriptions.Length ||
-                !ReferenceEquals(subscriptions[index], subscription))
+            _observerLock.Enter(ref lockTaken);
+            if (RemoveSingleSubscriptionLocked(subscription))
             {
                 return;
             }
 
-            Volatile.Write(ref subscriptions[index], null);
-            _subscriptionCount--;
-            if (_subscriptionCount == 0)
+            RemoveArraySubscriptionLocked(subscription);
+        }
+        finally
+        {
+            if (lockTaken)
             {
-                _subscriptionTail = 0;
-                _onNext = NoopOnNext;
+                _observerLock.Exit(false);
             }
         }
+    }
+
+    /// <summary>
+    /// Removes a single-subscription fast path entry.
+    /// </summary>
+    /// <param name="subscription">The subscription value.</param>
+    /// <returns><c>true</c> when a single subscription was removed; otherwise, <c>false</c>.</returns>
+    private bool RemoveSingleSubscriptionLocked(SignalSubscription subscription)
+    {
+        if (ReferenceEquals(_singleActionSubscription, subscription))
+        {
+            _singleActionSubscription = null;
+            _onNext = _subscriptionCount == 0 && _singleObserverSubscription == null ? NoopOnNext : DispatchSubscriptions;
+            return true;
+        }
+
+        if (!ReferenceEquals(_singleObserverSubscription, subscription))
+        {
+            return false;
+        }
+
+        _singleObserverSubscription = null;
+        _onNext = _subscriptionCount == 0 && _singleActionSubscription == null ? NoopOnNext : DispatchSubscriptions;
+        return true;
+    }
+
+    /// <summary>
+    /// Removes an array-backed subscription.
+    /// </summary>
+    /// <param name="subscription">The subscription value.</param>
+    private void RemoveArraySubscriptionLocked(SignalSubscription subscription)
+    {
+        var subscriptions = _subscriptions;
+        var index = subscription.Index;
+        if (subscriptions == null ||
+            (uint)index >= (uint)subscriptions.Length ||
+            !ReferenceEquals(subscriptions[index], subscription))
+        {
+            return;
+        }
+
+        Volatile.Write(ref subscriptions[index], null);
+        _subscriptionCount--;
+        if (_subscriptionCount != 0)
+        {
+            return;
+        }
+
+        _subscriptionTail = 0;
+        _onNext = _singleActionSubscription == null && _singleObserverSubscription == null ? NoopOnNext : DispatchSubscriptions;
     }
 
     /// <summary>
