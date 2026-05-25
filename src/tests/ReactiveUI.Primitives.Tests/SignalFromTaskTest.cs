@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -242,7 +242,7 @@ public class SignalFromTaskTest
         await Task.Delay(6000).ConfigureAwait(false);
 
         Assert.DoesNotContain("finished command Normally", statusTrail.Select(x => x.Item2));
-        Assert.Equal("Should always come here.", statusTrail.Last().Item2);
+        Assert.Equal("Should always come here.", statusTrail[^1].Item2);
 
         //// (0, "started command")
         //// (1, "Should always come here.")
@@ -300,7 +300,7 @@ public class SignalFromTaskTest
         Assert.DoesNotContain("starting cancelling command", statusTrail.Select(x => x.Item2));
         Assert.DoesNotContain("finished cancelling command", statusTrail.Select(x => x.Item2));
         Assert.Contains("finished command Normally", statusTrail.Select(x => x.Item2));
-        Assert.Equal("Should always come here.", statusTrail.Last().Item2);
+        Assert.Equal("Should always come here.", statusTrail[^1].Item2);
         Assert.True(result);
         //// (0, "started command")
         //// (2, "finished command Normally")
@@ -532,7 +532,7 @@ public class SignalFromTaskTest
         await Task.Delay(6000).ConfigureAwait(false);
 
         Assert.DoesNotContain("finished command Normally", statusTrail.Select(x => x.Item2));
-        Assert.Equal("Should always come here.", statusTrail.Last().Item2);
+        Assert.Equal("Should always come here.", statusTrail[^1].Item2);
 
         //// (0, "started command")
         //// (1, "Should always come here.")
@@ -590,7 +590,7 @@ public class SignalFromTaskTest
         Assert.DoesNotContain("starting cancelling command", statusTrail.Select(x => x.Item2));
         Assert.DoesNotContain("finished cancelling command", statusTrail.Select(x => x.Item2));
         Assert.Contains("finished command Normally", statusTrail.Select(x => x.Item2));
-        Assert.Equal("Should always come here.", statusTrail.Last().Item2);
+        Assert.Equal("Should always come here.", statusTrail[^1].Item2);
         Assert.True(result);
         //// (0, "started command")
         //// (2, "finished command Normally")

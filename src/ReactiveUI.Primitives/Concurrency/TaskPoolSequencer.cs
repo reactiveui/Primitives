@@ -13,6 +13,9 @@ namespace ReactiveUI.Primitives.Concurrency;
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class TaskPoolSequencer : ISequencer
 {
+    /// <summary>
+    /// Task factory used to schedule asynchronous work.
+    /// </summary>
     private readonly TaskFactory _taskFactory;
 
     /// <summary>
@@ -95,7 +98,7 @@ public sealed class TaskPoolSequencer : ISequencer
             throw new ArgumentNullException(nameof(action));
         }
 
-        var g = new MultipleDisposable(new IDisposable[0]);
+        var g = new MultipleDisposable();
         g.Add(ThreadPoolSequencer.Instance.Schedule(state, Sequencer.Normalize(dueTime), action));
         return g;
     }

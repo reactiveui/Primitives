@@ -7,12 +7,28 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
+/// <summary>
+/// Represents the ThrowSignal class.
+/// </summary>
+/// <typeparam name="T">The T type.</typeparam>
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-internal class ThrowSignal<T> : SignalsBase<T>
+internal sealed class ThrowSignal<T> : SignalsBase<T>
 {
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly Exception _error;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly ISequencer _scheduler;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ThrowSignal{T}"/> class.
+    /// </summary>
+    /// <param name="error">The error value.</param>
+    /// <param name="scheduler">The scheduler value.</param>
     public ThrowSignal(Exception error, ISequencer scheduler)
         : base(scheduler == Sequencer.CurrentThread)
     {
@@ -20,6 +36,12 @@ internal class ThrowSignal<T> : SignalsBase<T>
         _scheduler = scheduler;
     }
 
+    /// <summary>
+    /// Executes the SubscribeCore operation.
+    /// </summary>
+    /// <param name="observer">The observer value.</param>
+    /// <param name="cancel">The cancel value.</param>
+    /// <returns>The result.</returns>
     protected override IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel)
     {
         observer = new Throw(observer, cancel);
@@ -37,13 +59,25 @@ internal class ThrowSignal<T> : SignalsBase<T>
         });
     }
 
-    private class Throw : WitnessBase<T, T>
+    /// <summary>
+    /// Represents the Throw class.
+    /// </summary>
+    private sealed class Throw : WitnessBase<T, T>
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Throw"/> class.
+        /// </summary>
+        /// <param name="observer">The observer value.</param>
+        /// <param name="cancel">The cancel value.</param>
         public Throw(IObserver<T> observer, IDisposable cancel)
             : base(observer, cancel)
         {
         }
 
+        /// <summary>
+        /// Executes the OnNext operation.
+        /// </summary>
+        /// <param name="value">The value.</param>
         public override void OnNext(T value)
         {
             try
@@ -57,6 +91,10 @@ internal class ThrowSignal<T> : SignalsBase<T>
             }
         }
 
+        /// <summary>
+        /// Executes the OnError operation.
+        /// </summary>
+        /// <param name="error">The error value.</param>
         public override void OnError(Exception error)
         {
             try
@@ -69,6 +107,9 @@ internal class ThrowSignal<T> : SignalsBase<T>
             }
         }
 
+        /// <summary>
+        /// Executes the OnCompleted operation.
+        /// </summary>
         public override void OnCompleted()
         {
             try

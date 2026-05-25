@@ -6,11 +6,31 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives;
 
+/// <summary>
+/// Shared delegate handlers.
+/// </summary>
 internal static class Handle
 {
+    /// <summary>
+    /// Action that does nothing.
+    /// </summary>
     public static readonly Action Nop = () => { };
+
+    /// <summary>
+    /// Error handler that throws the supplied exception.
+    /// </summary>
     public static readonly Action<Exception> Throw = ex => ex.Throw();
 
+    /// <summary>
+    /// Converts an error into an empty observable sequence.
+    /// </summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <param name="ex">Ignored exception.</param>
+    /// <returns>An empty sequence.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Sonar Code Smell",
+        "S4018:Generic methods should provide type parameters",
+        Justification = "The type parameter determines the empty sequence value type.")]
     public static IObservable<TSource> CatchIgnore<TSource>(Exception ex) =>
         Signal.Empty<TSource>();
 }

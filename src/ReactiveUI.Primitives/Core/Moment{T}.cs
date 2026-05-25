@@ -59,7 +59,7 @@ public readonly struct Moment<T> : IEquatable<Moment<T>>
     /// <inheritdoc/>
     public override int GetHashCode()
     {
-        var valueHashCode = Value == null ? 1963 : Value.GetHashCode();
+        var valueHashCode = Value is null ? 1963 : EqualityComparer<T>.Default.GetHashCode(Value);
         return Timestamp.GetHashCode() ^ valueHashCode;
     }
 

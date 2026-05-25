@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -43,7 +43,7 @@ public class SignalCreateTests
         var d = xs.Subscribe(lst.Add);
         d.Dispose();
 
-        Assert.True(lst.SequenceEqual(new[] { 42 }));
+        Assert.True(lst.SequenceEqual([42]));
     }
 
     /// <summary>
@@ -65,19 +65,19 @@ public class SignalCreateTests
             {
                 o.OnNext(1);
                 return Disposable.Empty;
-            }).Subscribe(x => { throw new InvalidOperationException(); }));
+            }).Subscribe(x => throw new InvalidOperationException()));
         Assert.Throws<InvalidOperationException>(() =>
             Signal.Create<int>(o =>
             {
                 o.OnError(new Exception());
                 return Disposable.Empty;
-            }).Subscribe(x => { }, ex => { throw new InvalidOperationException(); }));
+            }).Subscribe(x => { }, ex => throw new InvalidOperationException()));
         Assert.Throws<InvalidOperationException>(() =>
             Signal.Create<int>(o =>
             {
                 o.OnCompleted();
                 return Disposable.Empty;
-            }).Subscribe(x => { }, ex => { }, () => { throw new InvalidOperationException(); }));
+            }).Subscribe(x => { }, ex => { }, () => throw new InvalidOperationException()));
     }
 
     /// <summary>
@@ -111,7 +111,7 @@ public class SignalCreateTests
         var d = xs.Subscribe(lst.Add);
         d.Dispose();
 
-        Assert.True(lst.SequenceEqual(new[] { 42 }));
+        Assert.True(lst.SequenceEqual([42]));
     }
 
     /// <summary>

@@ -7,15 +7,35 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
+/// <summary>
+/// Represents the ImmediateReturnSignal class.
+/// </summary>
+/// <typeparam name="T">The T type.</typeparam>
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-internal class ImmediateReturnSignal<T> : IObservable<T>, IRequireCurrentThread<T>, IInlineSignal<T>
+internal sealed class ImmediateReturnSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
 {
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly T _value;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ImmediateReturnSignal{T}"/> class.
+    /// </summary>
+    /// <param name="value">The value.</param>
     public ImmediateReturnSignal(T value) => _value = value;
 
+    /// <summary>
+    /// Executes the IsRequiredSubscribeOnCurrentThread operation.
+    /// </summary>
+    /// <returns>The result.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
+    /// <summary>
+    /// Executes the Subscribe operation.
+    /// </summary>
+    /// <param name="observer">The observer value.</param>
+    /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         observer.OnNext(_value);
@@ -23,6 +43,13 @@ internal class ImmediateReturnSignal<T> : IObservable<T>, IRequireCurrentThread<
         return Disposable.Empty;
     }
 
+    /// <summary>
+    /// Executes the Subscribe operation.
+    /// </summary>
+    /// <param name="onNext">The onNext value.</param>
+    /// <param name="onError">The onError value.</param>
+    /// <param name="onCompleted">The onCompleted value.</param>
+    /// <returns>The result.</returns>
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
         onNext(_value);

@@ -13,37 +13,87 @@ namespace ReactiveUI.Primitives.Signals;
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class CommandSignal<TResult> : IDisposable
 {
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly Func<CancellationToken, Task<TResult>> _execute;
+
+    /// <summary>
+    /// Executes the new operation.
+    /// </summary>
+    /// <returns>The result.</returns>
     private readonly object _gate = new();
+
+    /// <summary>
+    /// Executes the new operation.
+    /// </summary>
+    /// <returns>The result.</returns>
     private readonly Signal<TResult> _results = new();
+
+    /// <summary>
+    /// Executes the new operation.
+    /// </summary>
+    /// <returns>The result.</returns>
     private readonly Signal<Exception> _faults = new();
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly IDisposable? _canRunSubscription;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private bool _canRun;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CommandSignal{TResult}"/> class.
     /// </summary>
     /// <param name="execute">The async operation to execute.</param>
-    /// <param name="canRun">Optional gating signal. When omitted, execution is always allowed.</param>
-    public CommandSignal(Func<CancellationToken, Task<TResult>> execute, IObservable<bool>? canRun = null)
+    public CommandSignal(Func<CancellationToken, Task<TResult>> execute)
+        : this(execute, null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CommandSignal{TResult}"/> class.
+    /// </summary>
+    /// <param name="execute">The async operation to execute.</param>
+    /// <param name="canRun">Gating signal. When null, execution is always allowed.</param>
+    public CommandSignal(Func<CancellationToken, Task<TResult>> execute, IObservable<bool>? canRun)
     {
         _execute = execute ?? throw new ArgumentNullException(nameof(execute));
         _canRun = canRun == null;
         IsRunning = new StateSignal<bool>(false);
 
-        if (canRun != null)
+        if (canRun == null)
         {
-            _canRunSubscription = canRun.Subscribe(value => _canRun = value, _faults.OnNext);
+            return;
         }
+
+        _canRunSubscription = canRun.Subscribe(value => _canRun = value, _faults.OnNext);
     }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CommandSignal{TResult}"/> class.
     /// </summary>
     /// <param name="execute">The synchronous operation to execute.</param>
-    /// <param name="canRun">Optional gating signal. When omitted, execution is always allowed.</param>
-    public CommandSignal(Func<TResult> execute, IObservable<bool>? canRun = null)
+    public CommandSignal(Func<TResult> execute)
+        : this(execute, null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CommandSignal{TResult}"/> class.
+    /// </summary>
+    /// <param name="execute">The synchronous operation to execute.</param>
+    /// <param name="canRun">Gating signal. When null, execution is always allowed.</param>
+    public CommandSignal(Func<TResult> execute, IObservable<bool>? canRun)
         : this(_ => Task.FromResult((execute ?? throw new ArgumentNullException(nameof(execute)))()), canRun)
     {
     }
@@ -71,9 +121,15 @@ public sealed class CommandSignal<TResult> : IDisposable
     /// <summary>
     /// Executes the command if allowed and publishes the result or fault.
     /// </summary>
+    /// <returns>The command result.</returns>
+    public Task<TResult> ExecuteAsync() => ExecuteAsync(CancellationToken.None);
+
+    /// <summary>
+    /// Executes the command if allowed and publishes the result or fault.
+    /// </summary>
     /// <param name="cancellationToken">Cancellation token for the operation.</param>
     /// <returns>The command result.</returns>
-    public async Task<TResult> ExecuteAsync(CancellationToken cancellationToken = default)
+    public async Task<TResult> ExecuteAsync(CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
         lock (_gate)
@@ -103,7 +159,9 @@ public sealed class CommandSignal<TResult> : IDisposable
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Executes the Dispose operation.
+    /// </summary>
     public void Dispose()
     {
         if (_disposed)
@@ -118,11 +176,16 @@ public sealed class CommandSignal<TResult> : IDisposable
         IsRunning.Dispose();
     }
 
+    /// <summary>
+    /// Executes the ThrowIfDisposed operation.
+    /// </summary>
     private void ThrowIfDisposed()
     {
-        if (_disposed)
+        if (!_disposed)
         {
-            throw new ObjectDisposedException(nameof(CommandSignal<TResult>));
+            return;
         }
+
+        throw new ObjectDisposedException(nameof(CommandSignal<TResult>));
     }
 }

@@ -11,8 +11,14 @@ namespace ReactiveUI.Primitives.Concurrency;
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ImmediateSequencer : ISequencer
 {
+    /// <summary>
+    /// Singleton holder for the immediate sequencer.
+    /// </summary>
     private static readonly Lazy<ImmediateSequencer> StaticInstance = new(static () => new ImmediateSequencer());
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ImmediateSequencer"/> class.
+    /// </summary>
     private ImmediateSequencer()
     {
     }
@@ -25,7 +31,7 @@ public sealed class ImmediateSequencer : ISequencer
     /// <summary>
     /// Gets the scheduler's notion of current time.
     /// </summary>
-    public DateTimeOffset Now => DateTimeOffset.UtcNow;
+    public DateTimeOffset Now => Sequencer.Now;
 
     /// <summary>
     /// Schedules the specified state.

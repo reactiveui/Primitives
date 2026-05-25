@@ -13,6 +13,9 @@ namespace ReactiveUI.Primitives.Concurrency;
 public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSequencerBase<TAbsolute, TRelative>
     where TAbsolute : IComparable<TAbsolute>
 {
+    /// <summary>
+    /// Queue of scheduled virtual-time work.
+    /// </summary>
     private readonly SequencerQueue<TAbsolute> _queue = new();
 
     /// <summary>

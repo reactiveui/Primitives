@@ -6,12 +6,28 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
+/// <summary>
+/// Represents the FinallySignal class.
+/// </summary>
+/// <typeparam name="T">The T type.</typeparam>
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-internal class FinallySignal<T> : SignalsBase<T>
+internal sealed class FinallySignal<T> : SignalsBase<T>
 {
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly IObservable<T> _source;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly Action _finallyAction;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FinallySignal{T}"/> class.
+    /// </summary>
+    /// <param name="source">The source value.</param>
+    /// <param name="finallyAction">The finallyAction value.</param>
     public FinallySignal(IObservable<T> source, Action finallyAction)
         : base(true)
     {
@@ -19,17 +35,39 @@ internal class FinallySignal<T> : SignalsBase<T>
         _finallyAction = finallyAction;
     }
 
+    /// <summary>
+    /// Executes the SubscribeCore operation.
+    /// </summary>
+    /// <param name="observer">The observer value.</param>
+    /// <param name="cancel">The cancel value.</param>
+    /// <returns>The result.</returns>
     protected override IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
         new Finally(this, observer, cancel).Run();
 
-    private class Finally : WitnessBase<T, T>
+    /// <summary>
+    /// Represents the Finally class.
+    /// </summary>
+    private sealed class Finally : WitnessBase<T, T>
     {
+        /// <summary>
+        /// Stores state for the signal implementation.
+        /// </summary>
         private readonly FinallySignal<T> _parent;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Finally"/> class.
+        /// </summary>
+        /// <param name="parent">The parent value.</param>
+        /// <param name="observer">The observer value.</param>
+        /// <param name="cancel">The cancel value.</param>
         public Finally(FinallySignal<T> parent, IObserver<T> observer, IDisposable cancel)
             : base(observer, cancel) => _parent = parent;
 
-        public IDisposable Run()
+        /// <summary>
+        /// Executes the Run operation.
+        /// </summary>
+        /// <returns>The result.</returns>
+        public MultipleDisposable Run()
         {
             IDisposable subscription;
             try
@@ -45,8 +83,16 @@ internal class FinallySignal<T> : SignalsBase<T>
             return new MultipleDisposable(subscription, Disposable.Create(() => _parent._finallyAction()));
         }
 
+        /// <summary>
+        /// Executes the OnNext operation.
+        /// </summary>
+        /// <param name="value">The value.</param>
         public override void OnNext(T value) => Observer.OnNext(value);
 
+        /// <summary>
+        /// Executes the OnError operation.
+        /// </summary>
+        /// <param name="error">The error value.</param>
         public override void OnError(Exception error)
         {
             try
@@ -59,6 +105,9 @@ internal class FinallySignal<T> : SignalsBase<T>
             }
         }
 
+        /// <summary>
+        /// Executes the OnCompleted operation.
+        /// </summary>
         public override void OnCompleted()
         {
             try

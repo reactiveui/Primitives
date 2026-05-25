@@ -23,8 +23,12 @@ public static class Disposable
     public static IDisposable Create(Action dispose) =>
         dispose == null ? Empty : new AnonymousDisposable(dispose);
 
+    /// <summary>
+    /// Disposable that performs no action.
+    /// </summary>
     internal sealed class EmptyDisposable : IDisposable
     {
+        /// <inheritdoc/>
         public void Dispose()
         {
         }
@@ -35,6 +39,9 @@ public static class Disposable
     /// </summary>
     internal sealed class AnonymousDisposable : IDisposable
     {
+        /// <summary>
+        /// Disposal action, cleared after the first dispose call.
+        /// </summary>
         private volatile Action? _dispose;
 
         /// <summary>

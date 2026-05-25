@@ -14,18 +14,14 @@ namespace ReactiveUI.Primitives.Core
     /// </summary>
     /// <typeparam name="T">The type of the elements received by the observer.</typeparam>
     [Serializable]
-#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
-#pragma warning disable CS0661 // Type defines operator == or operator != but does not override Object.GetHashCode()
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public abstract class Spark<T> : IEquatable<Spark<T>>
-#pragma warning restore CS0661 // Type defines operator == or operator != but does not override Object.GetHashCode()
-#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Spark{T}"/> class.
         /// Default constructor used by derived types.
         /// </summary>
-        protected internal Spark()
+        private protected Spark()
         {
         }
 
@@ -54,27 +50,35 @@ namespace ReactiveUI.Primitives.Core
         /// </summary>
         /// <param name="left">The first Spark&lt;T&gt; to compare, or null.</param>
         /// <param name="right">The second Spark&lt;T&gt; to compare, or null.</param>
-        /// <returns>true if the first Spark&lt;T&gt; value has a different observer message payload as the second Spark&lt;T&gt; value; otherwise, false.</returns>
+        /// <returns>
+        /// <see langword="true"/> if the first Spark&lt;T&gt; value has a different observer message payload as the second Spark&lt;T&gt; value;
+        /// otherwise, <see langword="false"/>.
+        /// </returns>
         /// <remarks>
-        /// Equality of Spark&lt;T&gt; objects is based on the equality of the observer message payload they represent, including the Spark Kind and the Value or Exception (if any).
-        /// This means two Spark&lt;T&gt; objects can be equal even though they don't represent the same observer method call, but have the same Kind and have equal parameters passed to the observer method.
-        /// In case one wants to determine whether two Spark&lt;T&gt; objects represent a different observer method call, use Object.ReferenceEquals identity equality instead.
+        /// Equality of Spark&lt;T&gt; objects is based on the equality of the observer message payload they represent,
+        /// including the Spark Kind and the Value or Exception (if any). This means two Spark&lt;T&gt; objects can be equal even though
+        /// they don't represent the same observer method call, but have the same Kind and have equal parameters passed to the observer method.
+        /// Use Object.ReferenceEquals identity equality to determine whether two Spark&lt;T&gt; objects represent a different observer method call.
         /// </remarks>
-        public static bool operator !=(Spark<T> left, Spark<T> right) => !(left == right);
+        public static bool operator !=(Spark<T>? left, Spark<T>? right) => !(left == right);
 
         /// <summary>
         /// Determines whether the two specified Spark&lt;T&gt; objects have the same observer message payload.
         /// </summary>
         /// <param name="left">The first Spark&lt;T&gt; to compare, or null.</param>
         /// <param name="right">The second Spark&lt;T&gt; to compare, or null.</param>
-        /// <returns>true if the first Spark&lt;T&gt; value has the same observer message payload as the second Spark&lt;T&gt; value; otherwise, false.</returns>
+        /// <returns>
+        /// <see langword="true"/> if the first Spark&lt;T&gt; value has the same observer message payload as the second Spark&lt;T&gt; value;
+        /// otherwise, <see langword="false"/>.
+        /// </returns>
         /// <remarks>
-        /// Equality of Spark&lt;T&gt; objects is based on the equality of the observer message payload they represent, including the Spark Kind and the Value or Exception (if any).
-        /// This means two Spark&lt;T&gt; objects can be equal even though they don't represent the same observer method call, but have the same Kind and have equal parameters passed to the observer method.
-        /// In case one wants to determine whether two Spark&lt;T&gt; objects represent a different observer method call, use Object.ReferenceEquals identity equality instead.
+        /// Equality of Spark&lt;T&gt; objects is based on the equality of the observer message payload they represent,
+        /// including the Spark Kind and the Value or Exception (if any). This means two Spark&lt;T&gt; objects can be equal even though
+        /// they don't represent the same observer method call, but have the same Kind and have equal parameters passed to the observer method.
+        /// Use Object.ReferenceEquals identity equality to determine whether two Spark&lt;T&gt; objects represent a different observer method call.
         /// </remarks>
         public static bool operator ==(Spark<T>? left, Spark<T>? right) =>
-            ReferenceEquals(left, right) || (left is not null && left.Equals(right));
+            ReferenceEquals(left, right) || (left?.Equals(right) == true);
 
         /// <summary>
         /// Determines whether the current Spark&lt;T&gt; object has the same observer message payload as a specified Spark&lt;T&gt; value.
@@ -82,9 +86,10 @@ namespace ReactiveUI.Primitives.Core
         /// <param name="other">An object to compare to the current Spark&lt;T&gt; object.</param>
         /// <returns>true if both Spark&lt;T&gt; objects have the same observer message payload; otherwise, false.</returns>
         /// <remarks>
-        /// Equality of Spark&lt;T&gt; objects is based on the equality of the observer message payload they represent, including the Spark Kind and the Value or Exception (if any).
-        /// This means two Spark&lt;T&gt; objects can be equal even though they don't represent the same observer method call, but have the same Kind and have equal parameters passed to the observer method.
-        /// In case one wants to determine whether two Spark&lt;T&gt; objects represent the same observer method call, use Object.ReferenceEquals identity equality instead.
+        /// Equality of Spark&lt;T&gt; objects is based on the equality of the observer message payload they represent,
+        /// including the Spark Kind and the Value or Exception (if any). This means two Spark&lt;T&gt; objects can be equal even though
+        /// they don't represent the same observer method call, but have the same Kind and have equal parameters passed to the observer method.
+        /// Use Object.ReferenceEquals identity equality to determine whether two Spark&lt;T&gt; objects represent the same observer method call.
         /// </remarks>
         public abstract bool Equals(Spark<T>? other);
 
@@ -94,11 +99,18 @@ namespace ReactiveUI.Primitives.Core
         /// <param name="obj">The System.Object to compare with the current Spark&lt;T&gt;.</param>
         /// <returns>true if the specified System.Object is equal to the current Spark&lt;T&gt;; otherwise, false.</returns>
         /// <remarks>
-        /// Equality of Spark&lt;T&gt; objects is based on the equality of the observer message payload they represent, including the Spark Kind and the Value or Exception (if any).
-        /// This means two Spark&lt;T&gt; objects can be equal even though they don't represent the same observer method call, but have the same Kind and have equal parameters passed to the observer method.
-        /// In case one wants to determine whether two Spark&lt;T&gt; objects represent the same observer method call, use Object.ReferenceEquals identity equality instead.
+        /// Equality of Spark&lt;T&gt; objects is based on the equality of the observer message payload they represent,
+        /// including the Spark Kind and the Value or Exception (if any). This means two Spark&lt;T&gt; objects can be equal even though
+        /// they don't represent the same observer method call, but have the same Kind and have equal parameters passed to the observer method.
+        /// Use Object.ReferenceEquals identity equality to determine whether two Spark&lt;T&gt; objects represent the same observer method call.
         /// </remarks>
         public override bool Equals(object? obj) => Equals(obj as Spark<T>);
+
+        /// <summary>
+        /// Returns the hash code for this spark.
+        /// </summary>
+        /// <returns>A hash code for this spark.</returns>
+        public abstract override int GetHashCode();
 
         /// <summary>
         /// Invokes the observer's method corresponding to the Spark.
@@ -153,10 +165,12 @@ namespace ReactiveUI.Primitives.Core
             return Signal.Create<T>(observer => scheduler.Schedule(() =>
             {
                 Accept(observer);
-                if (Kind == SparkKind.OnNext)
+                if (Kind != SparkKind.OnNext)
                 {
-                    observer.OnCompleted();
+                    return;
                 }
+
+                observer.OnCompleted();
             }));
         }
 
@@ -171,6 +185,7 @@ namespace ReactiveUI.Primitives.Core
             /// Initializes a new instance of the <see cref="OnNextSpark"/> class.
             /// Constructs a Spark of a new value.
             /// </summary>
+            /// <param name="value">The value carried by the spark.</param>
             public OnNextSpark(T value) => Value = value;
 
             /// <summary>
@@ -196,6 +211,7 @@ namespace ReactiveUI.Primitives.Core
             /// <summary>
             /// Returns the hash code for this instance.
             /// </summary>
+            /// <returns>A hash code for this instance.</returns>
             public override int GetHashCode() => EqualityComparer<T>.Default.GetHashCode(Value!);
 
             /// <summary>
@@ -226,6 +242,7 @@ namespace ReactiveUI.Primitives.Core
             /// <summary>
             /// Returns a string representation of this instance.
             /// </summary>
+            /// <returns>A string representation of this instance.</returns>
             public override string ToString() => string.Format(CultureInfo.CurrentCulture, "OnNext({0})", Value);
 
             /// <summary>
@@ -245,6 +262,7 @@ namespace ReactiveUI.Primitives.Core
             /// <summary>
             /// Invokes the observer's method corresponding to the Spark and returns the produced result.
             /// </summary>
+            /// <typeparam name="TResult">The result type.</typeparam>
             /// <param name="observer">Observer to invoke the Spark on.</param>
             /// <returns>Result produced by the observation.</returns>
             public override TResult Accept<TResult>(IObserver<T, TResult> observer)
@@ -286,6 +304,7 @@ namespace ReactiveUI.Primitives.Core
             /// <summary>
             /// Invokes the delegate corresponding to the Spark and returns the produced result.
             /// </summary>
+            /// <typeparam name="TResult">The result type.</typeparam>
             /// <param name="onNext">Delegate to invoke for an OnNext Spark.</param>
             /// <param name="onError">Delegate to invoke for an OnError Spark.</param>
             /// <param name="onCompleted">Delegate to invoke for an OnCompleted Spark.</param>
@@ -322,11 +341,16 @@ namespace ReactiveUI.Primitives.Core
             /// Initializes a new instance of the <see cref="OnErrorSpark"/> class.
             /// Constructs a Spark of an exception.
             /// </summary>
+            /// <param name="exception">The exception carried by the spark.</param>
             public OnErrorSpark(Exception exception) => Exception = exception;
 
             /// <summary>
             /// Gets throws the exception.
             /// </summary>
+            [System.Diagnostics.CodeAnalysis.SuppressMessage(
+                "Sonar Code Smell",
+                "S2372:Exceptions should not be thrown from property getters",
+                Justification = "Non-OnNext sparks intentionally throw when their Value is requested.")]
             public override T Value
             {
                 get
@@ -354,11 +378,14 @@ namespace ReactiveUI.Primitives.Core
             /// <summary>
             /// Returns the hash code for this instance.
             /// </summary>
+            /// <returns>A hash code for this instance.</returns>
             public override int GetHashCode() => Exception.GetHashCode();
 
             /// <summary>
             /// Indicates whether this instance and other are equal.
             /// </summary>
+            /// <param name="other">The other spark.</param>
+            /// <returns><see langword="true"/> when the sparks are equal; otherwise, <see langword="false"/>.</returns>
             public override bool Equals(Spark<T>? other)
             {
                 if (ReferenceEquals(this, other))
@@ -382,6 +409,7 @@ namespace ReactiveUI.Primitives.Core
             /// <summary>
             /// Returns a string representation of this instance.
             /// </summary>
+            /// <returns>A string representation of this instance.</returns>
             public override string ToString() => string.Format(CultureInfo.CurrentCulture, "OnError({0})", Exception.GetType().FullName);
 
             /// <summary>
@@ -401,6 +429,7 @@ namespace ReactiveUI.Primitives.Core
             /// <summary>
             /// Invokes the observer's method corresponding to the Spark and returns the produced result.
             /// </summary>
+            /// <typeparam name="TResult">The result type.</typeparam>
             /// <param name="observer">Observer to invoke the Spark on.</param>
             /// <returns>Result produced by the observation.</returns>
             public override TResult Accept<TResult>(IObserver<T, TResult> observer)
@@ -442,6 +471,7 @@ namespace ReactiveUI.Primitives.Core
             /// <summary>
             /// Invokes the delegate corresponding to the Spark and returns the produced result.
             /// </summary>
+            /// <typeparam name="TResult">The result type.</typeparam>
             /// <param name="onNext">Delegate to invoke for an OnNext Spark.</param>
             /// <param name="onError">Delegate to invoke for an OnError Spark.</param>
             /// <param name="onCompleted">Delegate to invoke for an OnCompleted Spark.</param>
@@ -475,16 +505,12 @@ namespace ReactiveUI.Primitives.Core
         internal sealed class OnCompletedSpark : Spark<T>
         {
             /// <summary>
-            /// Initializes a new instance of the <see cref="OnCompletedSpark"/> class.
-            /// Constructs a Spark of the end of a sequence.
-            /// </summary>
-            public OnCompletedSpark()
-            {
-            }
-
-            /// <summary>
             /// Gets throws an InvalidOperationException.
             /// </summary>
+            [System.Diagnostics.CodeAnalysis.SuppressMessage(
+                "Sonar Code Smell",
+                "S2372:Exceptions should not be thrown from property getters",
+                Justification = "Non-OnNext sparks intentionally throw when their Value is requested.")]
             public override T Value => throw new InvalidOperationException("No Value");
 
             /// <summary>
@@ -505,11 +531,14 @@ namespace ReactiveUI.Primitives.Core
             /// <summary>
             /// Returns the hash code for this instance.
             /// </summary>
+            /// <returns>A hash code for this instance.</returns>
             public override int GetHashCode() => typeof(T).GetHashCode() ^ 8510;
 
             /// <summary>
             /// Indicates whether this instance and other are equal.
             /// </summary>
+            /// <param name="other">The other spark.</param>
+            /// <returns><see langword="true"/> when the sparks are equal; otherwise, <see langword="false"/>.</returns>
             public override bool Equals(Spark<T>? other)
             {
                 if (ReferenceEquals(this, other))
@@ -528,6 +557,7 @@ namespace ReactiveUI.Primitives.Core
             /// <summary>
             /// Returns a string representation of this instance.
             /// </summary>
+            /// <returns>A string representation of this instance.</returns>
             public override string ToString() => "OnCompleted()";
 
             /// <summary>
@@ -547,6 +577,7 @@ namespace ReactiveUI.Primitives.Core
             /// <summary>
             /// Invokes the observer's method corresponding to the Spark and returns the produced result.
             /// </summary>
+            /// <typeparam name="TResult">The result type.</typeparam>
             /// <param name="observer">Observer to invoke the Spark on.</param>
             /// <returns>Result produced by the observation.</returns>
             public override TResult Accept<TResult>(IObserver<T, TResult> observer)
@@ -588,6 +619,7 @@ namespace ReactiveUI.Primitives.Core
             /// <summary>
             /// Invokes the delegate corresponding to the Spark and returns the produced result.
             /// </summary>
+            /// <typeparam name="TResult">The result type.</typeparam>
             /// <param name="onNext">Delegate to invoke for an OnNext Spark.</param>
             /// <param name="onError">Delegate to invoke for an OnError Spark.</param>
             /// <param name="onCompleted">Delegate to invoke for an OnCompleted Spark.</param>

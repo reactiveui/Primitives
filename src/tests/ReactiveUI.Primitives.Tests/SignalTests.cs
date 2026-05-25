@@ -1,10 +1,9 @@
-// Copyright (c) 2019-2023 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using ReactiveUI.Primitives.Signals;
 using TUnit.Core;
 
@@ -126,7 +125,7 @@ public class SignalTests
 
         subject.Dispose();
 
-        Assert.Throws<ObjectDisposedException>(() => subject.OnCompleted());
+        Assert.Throws<ObjectDisposedException>(subject.OnCompleted);
     }
 
     /// <summary>
@@ -348,7 +347,7 @@ public class SignalTests
     {
         var subject = new Signal<int>();
         var result = new List<int>();
-        subject.Buffer(2).Subscribe(i => result = i.ToList());
+        subject.Buffer(2).Subscribe(i => result = [.. i]);
         subject.OnNext(1);
         subject.OnNext(2);
         Assert.Equal(new[] { 1, 2 }, result);
@@ -369,7 +368,7 @@ public class SignalTests
     {
         var subject = new Signal<int>();
         var result = new List<int>();
-        subject.Buffer(2, 2).Subscribe(i => result = i.ToList());
+        subject.Buffer(2, 2).Subscribe(i => result = [.. i]);
         subject.OnNext(1);
         subject.OnNext(2);
         Assert.Equal(new[] { 1, 2 }, result);

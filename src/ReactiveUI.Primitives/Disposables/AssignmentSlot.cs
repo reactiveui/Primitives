@@ -13,8 +13,15 @@ public sealed class AssignmentSlot : SingleDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="AssignmentSlot"/> class.
     /// </summary>
+    public AssignmentSlot()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AssignmentSlot"/> class.
+    /// </summary>
     /// <param name="action">Action to invoke before the assigned disposable is disposed.</param>
-    public AssignmentSlot(Action? action = null)
+    public AssignmentSlot(Action? action)
         : base(action)
     {
     }
@@ -23,8 +30,17 @@ public sealed class AssignmentSlot : SingleDisposable
     /// Initializes a new instance of the <see cref="AssignmentSlot"/> class.
     /// </summary>
     /// <param name="disposable">Initial assignment.</param>
+    public AssignmentSlot(IDisposable disposable)
+        : base(disposable)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AssignmentSlot"/> class.
+    /// </summary>
+    /// <param name="disposable">Initial assignment.</param>
     /// <param name="action">Action to invoke before the assigned disposable is disposed.</param>
-    public AssignmentSlot(IDisposable disposable, Action? action = null)
+    public AssignmentSlot(IDisposable disposable, Action? action)
         : base(disposable, action)
     {
     }

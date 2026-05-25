@@ -8,16 +8,36 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
+/// <summary>
+/// Represents the SignalsBase class.
+/// </summary>
+/// <typeparam name="T">The T type.</typeparam>
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal abstract class SignalsBase<T> : IRequireCurrentThread<T>
 {
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private readonly bool _isRequiredSubscribeOnCurrentThread;
 
-    internal SignalsBase(bool isRequiredSubscribeOnCurrentThread) =>
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SignalsBase{T}"/> class.
+    /// </summary>
+    /// <param name="isRequiredSubscribeOnCurrentThread">The isRequiredSubscribeOnCurrentThread value.</param>
+    private protected SignalsBase(bool isRequiredSubscribeOnCurrentThread) =>
         _isRequiredSubscribeOnCurrentThread = isRequiredSubscribeOnCurrentThread;
 
+    /// <summary>
+    /// Executes the IsRequiredSubscribeOnCurrentThread operation.
+    /// </summary>
+    /// <returns>The result.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() => _isRequiredSubscribeOnCurrentThread;
 
+    /// <summary>
+    /// Executes the Subscribe operation.
+    /// </summary>
+    /// <param name="observer">The observer value.</param>
+    /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         if (observer == null)
@@ -39,5 +59,11 @@ internal abstract class SignalsBase<T> : IRequireCurrentThread<T>
         return subscription;
     }
 
+    /// <summary>
+    /// Executes the SubscribeCore operation.
+    /// </summary>
+    /// <param name="observer">The observer value.</param>
+    /// <param name="cancel">The cancel value.</param>
+    /// <returns>The result.</returns>
     protected abstract IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel);
 }

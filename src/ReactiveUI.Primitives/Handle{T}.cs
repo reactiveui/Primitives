@@ -4,9 +4,24 @@
 
 namespace ReactiveUI.Primitives;
 
+/// <summary>
+/// Shared delegate handlers for one-argument callbacks.
+/// </summary>
+/// <typeparam name="T">The value type.</typeparam>
 internal static class Handle<T>
 {
-    public static readonly Action<T> Ignore = (T _) => { };
-    public static readonly Func<T, T> Identity = (T t) => t;
+    /// <summary>
+    /// Callback that ignores its value.
+    /// </summary>
+    public static readonly Action<T> Ignore = (_) => { };
+
+    /// <summary>
+    /// Function that returns its input.
+    /// </summary>
+    public static readonly Func<T, T> Identity = (t) => t;
+
+    /// <summary>
+    /// Error callback that throws the supplied exception.
+    /// </summary>
     public static readonly Action<Exception, T> Throw = (ex, _) => ex.Throw();
 }

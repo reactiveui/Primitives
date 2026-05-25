@@ -68,6 +68,11 @@ public static class VirtualTimeSequencerExtensions
         return scheduler.ScheduleAbsolute(action, dueTime, static (_, a) => Invoke(a));
     }
 
+    /// <summary>
+    /// Invokes an action and returns an empty disposable.
+    /// </summary>
+    /// <param name="action">Action to invoke.</param>
+    /// <returns>An empty disposable.</returns>
     private static IDisposable Invoke(Action action)
     {
         action();

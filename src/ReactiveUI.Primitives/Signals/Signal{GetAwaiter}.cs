@@ -49,6 +49,14 @@ public static partial class Signal
     }
 
 #pragma warning disable RCS1047 // Non-asynchronous method name should not end with 'Async'.
+
+    /// <summary>
+    /// Executes the RunAsync operation.
+    /// </summary>
+    /// <typeparam name="TSource">The TSource type.</typeparam>
+    /// <param name="source">The source value.</param>
+    /// <param name="cancellationToken">The cancellationToken value.</param>
+    /// <returns>The result.</returns>
     private static IAwaitSignal<TSource> RunAsync<TSource>(IObservable<TSource> source, CancellationToken cancellationToken)
 #pragma warning restore RCS1047 // Non-asynchronous method name should not end with 'Async'.
     {
@@ -69,12 +77,26 @@ public static partial class Signal
         return s;
     }
 
+    /// <summary>
+    /// Executes the Cancel operation.
+    /// </summary>
+    /// <typeparam name="T">The T type.</typeparam>
+    /// <param name="subject">The subject value.</param>
+    /// <param name="cancellationToken">The cancellationToken value.</param>
+    /// <returns>The result.</returns>
     private static IAwaitSignal<T> Cancel<T>(IAwaitSignal<T> subject, CancellationToken cancellationToken)
     {
         subject.OnError(new OperationCanceledException(cancellationToken));
         return subject;
     }
 
+    /// <summary>
+    /// Executes the RegisterCancelation operation.
+    /// </summary>
+    /// <typeparam name="T">The T type.</typeparam>
+    /// <param name="subject">The subject value.</param>
+    /// <param name="subscription">The subscription value.</param>
+    /// <param name="token">The token value.</param>
     private static void RegisterCancelation<T>(IAwaitSignal<T> subject, IDisposable subscription, CancellationToken token)
     {
         var ctr = token.Register(() =>

@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Core;
 /// IRequireCurrentThread.
 /// </summary>
 /// <typeparam name="T">The Type.</typeparam>
-public interface IRequireCurrentThread<T> : IObservable<T>
+public interface IRequireCurrentThread<out T> : IObservable<T>
 {
     /// <summary>
     /// Determines whether [is required subscribe on current thread].

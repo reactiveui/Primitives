@@ -13,7 +13,14 @@ namespace ReactiveUI.Primitives.Core;
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public static class Witness
 {
+    /// <summary>
+    /// Completion callback that does nothing.
+    /// </summary>
     private static readonly Action Nop = static () => { };
+
+    /// <summary>
+    /// Error callback that rethrows with preserved exception details.
+    /// </summary>
     private static readonly Action<Exception> Rethrow = static error => ExceptionDispatchInfo.Capture(error).Throw();
 
     /// <summary>
@@ -106,12 +113,33 @@ public static class Witness
         return new SafeWitness<T>(observer, cancel);
     }
 
+    /// <summary>
+    /// Delegate-backed observer implementation.
+    /// </summary>
+    /// <typeparam name="T">The observed value type.</typeparam>
     private sealed class DelegateWitness<T> : IObserver<T>
     {
+        /// <summary>
+        /// Callback invoked for each value.
+        /// </summary>
         private readonly Action<T> _onNext;
+
+        /// <summary>
+        /// Callback invoked for an error.
+        /// </summary>
         private readonly Action<Exception> _onError;
+
+        /// <summary>
+        /// Callback invoked for completion.
+        /// </summary>
         private readonly Action _onCompleted;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DelegateWitness{T}"/> class.
+        /// </summary>
+        /// <param name="onNext">Callback invoked for each value.</param>
+        /// <param name="onError">Callback invoked for an error.</param>
+        /// <param name="onCompleted">Callback invoked for completion.</param>
         public DelegateWitness(Action<T> onNext, Action<Exception> onError, Action onCompleted)
         {
             _onNext = onNext;
@@ -119,25 +147,49 @@ public static class Witness
             _onCompleted = onCompleted;
         }
 
+        /// <inheritdoc/>
         public void OnCompleted() => _onCompleted();
 
+        /// <inheritdoc/>
         public void OnError(Exception error) => _onError(error ?? throw new ArgumentNullException(nameof(error)));
 
+        /// <inheritdoc/>
         public void OnNext(T value) => _onNext(value);
     }
 
+    /// <summary>
+    /// Observer wrapper that prevents notifications after termination.
+    /// </summary>
+    /// <typeparam name="T">The observed value type.</typeparam>
     private sealed class SafeWitness<T> : IObserver<T>
     {
+        /// <summary>
+        /// Wrapped observer.
+        /// </summary>
         private readonly IObserver<T> _observer;
+
+        /// <summary>
+        /// Cancellation resource disposed on terminal notifications.
+        /// </summary>
         private IDisposable? _cancel;
+
+        /// <summary>
+        /// Non-zero after the observer has stopped.
+        /// </summary>
         private int _stopped;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SafeWitness{T}"/> class.
+        /// </summary>
+        /// <param name="observer">Wrapped observer.</param>
+        /// <param name="cancel">Cancellation resource disposed on terminal notifications.</param>
         public SafeWitness(IObserver<T> observer, IDisposable cancel)
         {
             _observer = observer;
             _cancel = cancel;
         }
 
+        /// <inheritdoc/>
         public void OnCompleted()
         {
             if (Interlocked.Exchange(ref _stopped, 1) != 0)
@@ -155,6 +207,7 @@ public static class Witness
             }
         }
 
+        /// <inheritdoc/>
         public void OnError(Exception error)
         {
             if (error == null)
@@ -177,6 +230,7 @@ public static class Witness
             }
         }
 
+        /// <inheritdoc/>
         public void OnNext(T value)
         {
             if (Volatile.Read(ref _stopped) != 0)
@@ -196,6 +250,9 @@ public static class Witness
             }
         }
 
+        /// <summary>
+        /// Disposes the cancellation resource exactly once.
+        /// </summary>
         private void DisposeCancel() => Interlocked.Exchange(ref _cancel, null)?.Dispose();
     }
 }

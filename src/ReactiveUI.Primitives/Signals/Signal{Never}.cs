@@ -16,7 +16,9 @@ public static partial class Signal
     /// </summary>
     /// <typeparam name="T">The type.</typeparam>
     /// <returns>An Signals.</returns>
+#pragma warning disable S4018 // Result type is intentionally explicit for Rx-style factory APIs.
     public static IObservable<T> Never<T>() => ImmutableNeverSignal<T>.Instance;
+#pragma warning restore S4018
 
     /// <summary>
     /// Non-Terminating Signals. It's no returns, never finish. witness is for type inference.

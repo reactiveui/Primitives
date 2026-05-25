@@ -71,7 +71,11 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
     /// </summary>
     /// <param name="time">Relative time to advance the scheduler's clock by.</param>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="time"/> is negative.</exception>
-    /// <exception cref="InvalidOperationException">The scheduler is already running. VirtualTimeSequencer doesn't support running nested work dispatch loops. To simulate time slippage while running work on the scheduler, use <see cref="Sleep"/>.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The scheduler is already running. VirtualTimeSequencer doesn't support running nested
+    /// work dispatch loops. To simulate time slippage while running work on the scheduler,
+    /// use <see cref="Sleep"/>.
+    /// </exception>
     public void AdvanceBy(TRelative time)
     {
         var dt = Add(Clock, time);
@@ -102,7 +106,11 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
     /// </summary>
     /// <param name="time">Absolute time to advance the scheduler's clock to.</param>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="time"/> is in the past.</exception>
-    /// <exception cref="InvalidOperationException">The scheduler is already running. VirtualTimeSequencer doesn't support running nested work dispatch loops. To simulate time slippage while running work on the scheduler, use <see cref="Sleep"/>.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The scheduler is already running. VirtualTimeSequencer doesn't support running nested
+    /// work dispatch loops. To simulate time slippage while running work on the scheduler,
+    /// use <see cref="Sleep"/>.
+    /// </exception>
     public void AdvanceTo(TAbsolute time)
     {
         var dueToClock = Comparer.Compare(time, Clock);
@@ -266,28 +274,30 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
     /// </summary>
     public void Start()
     {
-        if (!IsEnabled)
+        if (IsEnabled)
         {
-            IsEnabled = true;
-            do
-            {
-                var next = GetNext();
-                if (next != null)
-                {
-                    if (Comparer.Compare(next.DueTime, Clock) > 0)
-                    {
-                        Clock = next.DueTime;
-                    }
-
-                    next.Invoke();
-                }
-                else
-                {
-                    IsEnabled = false;
-                }
-            }
-            while (IsEnabled);
+            return;
         }
+
+        IsEnabled = true;
+        do
+        {
+            var next = GetNext();
+            if (next != null)
+            {
+                if (Comparer.Compare(next.DueTime, Clock) > 0)
+                {
+                    Clock = next.DueTime;
+                }
+
+                next.Invoke();
+            }
+            else
+            {
+                IsEnabled = false;
+            }
+        }
+        while (IsEnabled);
     }
 
     /// <summary>
@@ -331,12 +341,12 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
     /// <returns>Object implementing the requested service, if available; null otherwise.</returns>
     protected virtual object? GetService(Type serviceType)
     {
-        if (serviceType == typeof(IStopwatchProvider))
+        if (serviceType != typeof(IStopwatchProvider))
         {
-            return this;
+            return null;
         }
 
-        return null;
+        return this;
     }
 
     /// <summary>
@@ -353,19 +363,41 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
     /// <returns>The corresponding relative time value.</returns>
     protected abstract TRelative ToRelative(TimeSpan timeSpan);
 
+    /// <summary>
+    /// Converts the current clock value to a <see cref="DateTimeOffset"/>.
+    /// </summary>
+    /// <returns>The current virtual clock as a date-time offset.</returns>
     private DateTimeOffset ClockToDateTimeOffset() => ToDateTimeOffset(Clock);
 
+    /// <summary>
+    /// Stopwatch backed by virtual time.
+    /// </summary>
     private sealed class VirtualTimeStopwatch : IStopwatch
     {
+        /// <summary>
+        /// Parent sequencer that owns the virtual clock.
+        /// </summary>
         private readonly VirtualTimeSequencerBase<TAbsolute, TRelative> _parent;
+
+        /// <summary>
+        /// Start time captured when the stopwatch was created.
+        /// </summary>
         private readonly DateTimeOffset _start;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="VirtualTimeStopwatch"/> class.
+        /// </summary>
+        /// <param name="parent">Parent virtual-time sequencer.</param>
+        /// <param name="start">Start time for elapsed calculations.</param>
         public VirtualTimeStopwatch(VirtualTimeSequencerBase<TAbsolute, TRelative> parent, DateTimeOffset start)
         {
             _parent = parent;
             _start = start;
         }
 
+        /// <summary>
+        /// Gets the elapsed virtual time.
+        /// </summary>
         public TimeSpan Elapsed => _parent.ClockToDateTimeOffset() - _start;
     }
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -29,7 +29,7 @@ public class FactoryOperatorContractTests
             .Concat(Signal.Unfold(1, state => state <= 3, state => state + 1, state => state * 10))
             .Concat(Signal.Use(
                 () => Disposable.Create(() => disposed++),
-                _ => Signal.FromEnumerable(new[] { 7, 8 })))
+                _ => Signal.FromEnumerable([7, 8])))
             .Subscribe(values.Add, ex => throw ex, () => completed++);
 
         Assert.Equal(new[] { 2, 3, 4, 9, 9, 10, 20, 30, 7, 8 }, values);
@@ -45,7 +45,7 @@ public class FactoryOperatorContractTests
         var terminal = new List<int>();
         var taps = 0;
 
-        Signal.FromEnumerable(new[] { 1, 2, 2, 3, 4 })
+        Signal.FromEnumerable([1, 2, 2, 3, 4])
             .Map(value => value * 2)
             .Keep(value => value >= 4)
             .DistinctUntilChanged()
@@ -56,7 +56,7 @@ public class FactoryOperatorContractTests
             .Subscribe(sparks.Add);
 
         Signal.FromEnumerable(sparks).Unspark().Subscribe(values.Add);
-        Signal.FromEnumerable(new[] { 1, 2, 3, 4 }).Fold(0, (sum, value) => sum + value).Subscribe(terminal.Add);
+        Signal.FromEnumerable([1, 2, 3, 4]).Fold(0, (sum, value) => sum + value).Subscribe(terminal.Add);
 
         Assert.Equal(new[] { 4, 10, 18 }, values);
         Assert.Equal(new[] { 10 }, terminal);
@@ -99,10 +99,10 @@ public class FactoryOperatorContractTests
         var zipped = new List<int>();
         var latest = new List<string>();
 
-        Signal.Merge(Signal.FromEnumerable(new[] { 1, 2 }), Signal.FromEnumerable(new[] { 3, 4 })).Subscribe(merged.Add);
-        Signal.Concat(Signal.FromEnumerable(new[] { 1, 2 }), Signal.FromEnumerable(new[] { 3, 4 })).Subscribe(concatenated.Add);
-        Signal.Zip(Signal.FromEnumerable(new[] { 1, 2 }), Signal.FromEnumerable(new[] { 10, 20 }), (left, right) => left + right).Subscribe(zipped.Add);
-        Signal.CombineLatest(Signal.FromEnumerable(new[] { 1, 2 }), Signal.FromEnumerable(new[] { "a", "b" }), (left, right) => left + right).Subscribe(latest.Add);
+        Signal.Merge(Signal.FromEnumerable([1, 2]), Signal.FromEnumerable([3, 4])).Subscribe(merged.Add);
+        Signal.Concat(Signal.FromEnumerable([1, 2]), Signal.FromEnumerable([3, 4])).Subscribe(concatenated.Add);
+        Signal.Zip(Signal.FromEnumerable([1, 2]), Signal.FromEnumerable([10, 20]), (left, right) => left + right).Subscribe(zipped.Add);
+        Signal.CombineLatest(Signal.FromEnumerable([1, 2]), Signal.FromEnumerable(["a", "b"]), (left, right) => left + right).Subscribe(latest.Add);
 
         Assert.Equal(new[] { 1, 2, 3, 4 }, merged);
         Assert.Equal(new[] { 1, 2, 3, 4 }, concatenated);
@@ -196,18 +196,18 @@ public class FactoryOperatorContractTests
         var isEmpty = new List<bool>();
         var selected = new List<int>();
 
-        Signal.FromEnumerable(new[] { 2, 3 }).Lead(1).Append(4).Prepend(0).Subscribe(leadAppend.Add);
-        Signal.FromEnumerable(new[] { 1, 2, 3 }).IgnoreValues().Subscribe(ignored.Add);
-        Signal.FromEnumerable(new[] { 11, 12, 21, 22 }).DistinctBy(value => value / 10).Subscribe(distinctBy.Add);
-        Signal.FromEnumerable(new[] { 1, 2, 3, 1 }).TakeWhile(value => value < 3).Subscribe(takeWhile.Add);
-        Signal.FromEnumerable(new[] { 1, 2, 3, 1 }).SkipWhile(value => value < 3).Subscribe(skipWhile.Add);
+        Signal.FromEnumerable([2, 3]).Lead(1).Append(4).Prepend(0).Subscribe(leadAppend.Add);
+        Signal.FromEnumerable([1, 2, 3]).IgnoreValues().Subscribe(ignored.Add);
+        Signal.FromEnumerable([11, 12, 21, 22]).DistinctBy(value => value / 10).Subscribe(distinctBy.Add);
+        Signal.FromEnumerable([1, 2, 3, 1]).TakeWhile(value => value < 3).Subscribe(takeWhile.Add);
+        Signal.FromEnumerable([1, 2, 3, 1]).SkipWhile(value => value < 3).Subscribe(skipWhile.Add);
         Signal.Empty<int>().DefaultIfEmpty(42).Subscribe(defaulted.Add);
-        Signal.FromEnumerable(new[] { 1, 2, 3 }).Count().Subscribe(count.Add);
-        Signal.FromEnumerable(new[] { 1, 2, 3 }).Any(value => value == 2).Subscribe(any.Add);
-        Signal.FromEnumerable(new[] { 2, 4, 6 }).All(value => value % 2 == 0).Subscribe(all.Add);
-        Signal.FromEnumerable(new[] { 2, 4, 6 }).Contains(4).Subscribe(contains.Add);
+        Signal.FromEnumerable([1, 2, 3]).Count().Subscribe(count.Add);
+        Signal.FromEnumerable([1, 2, 3]).Any(value => value == 2).Subscribe(any.Add);
+        Signal.FromEnumerable([2, 4, 6]).All(value => value % 2 == 0).Subscribe(all.Add);
+        Signal.FromEnumerable([2, 4, 6]).Contains(4).Subscribe(contains.Add);
         Signal.Empty<int>().IsEmpty().Subscribe(isEmpty.Add);
-        Signal.FromEnumerable(new[] { 1, 2 }).Bind(value => Signal.Range(value * 10, 2)).Subscribe(selected.Add);
+        Signal.FromEnumerable([1, 2]).Bind(value => Signal.Range(value * 10, 2)).Subscribe(selected.Add);
 
         Assert.Equal(new[] { 0, 1, 2, 3, 4 }, leadAppend);
         Assert.Equal(0, ignored.Count);
@@ -233,8 +233,8 @@ public class FactoryOperatorContractTests
         var clock = new TestClock();
         var source = new Signal<int>();
 
-        Signal.FromEnumerable(new[] { 2, 3 })
-            .StartWith(new[] { 0, 1 })
+        Signal.FromEnumerable([2, 3])
+            .StartWith([0, 1])
             .Do(sideEffects.Add)
             .AsObservable()
             .Subscribe(values.Add);
@@ -257,7 +257,7 @@ public class FactoryOperatorContractTests
 
         var converted = new[] { 4, 5 }.ToObservable();
         var last = await converted.ToTask();
-        var first = await Signal.FromEnumerable(new[] { 9, 10 }).FirstAsync().ToTask();
+        var first = await Signal.FromEnumerable([9, 10]).FirstAsync().ToTask();
         var started = await Signal.Start(() => 11, Sequencer.CurrentThread).ToTask();
 
         Assert.Equal(5, last);
@@ -289,8 +289,8 @@ public class FactoryOperatorContractTests
         source.OnCompleted();
         clock.AdvanceBy(TimeSpan.FromTicks(4));
 
-        Signal.FromEnumerable(new[] { 1, 2 }).ZipLatest(Signal.FromEnumerable(new[] { "a", "b" }), (left, right) => left + right).Subscribe(latest.Add);
-        Signal.ForkJoin(Signal.FromEnumerable(new[] { 1, 2 }), Signal.FromEnumerable(new[] { 10, 20 }), (left, right) => left + right).Subscribe(forkJoined.Add);
+        Signal.FromEnumerable([1, 2]).ZipLatest(Signal.FromEnumerable(["a", "b"]), (left, right) => left + right).Subscribe(latest.Add);
+        Signal.ForkJoin(Signal.FromEnumerable([1, 2]), Signal.FromEnumerable([10, 20]), (left, right) => left + right).Subscribe(forkJoined.Add);
 
         Assert.Equal(new[] { 3 }, throttled);
         Assert.Equal(new[] { 2, 3 }, sampled);
@@ -304,12 +304,12 @@ public class FactoryOperatorContractTests
     [Test]
     public async Task TerminalTaskOperatorsCompleteWithExpectedSemantics()
     {
-        var first = await Signal.FromEnumerable(new[] { 3, 4 }).FirstAsync();
-        var collected = await Signal.FromEnumerable(new[] { 1, 2, 3 }).CollectArrayAsync();
+        var first = await Signal.FromEnumerable([3, 4]).FirstAsync();
+        var collected = await Signal.FromEnumerable([1, 2, 3]).CollectArrayAsync();
         var none = await Signal.Empty<int>().FirstOrDefaultAsync(42);
 
         Assert.Equal(3, first);
-        Assert.Equal(new[] { 1, 2, 3 }, (IEnumerable<int>)collected);
+        Assert.Equal([1, 2, 3], (IEnumerable<int>)collected);
         Assert.Equal(42, none);
     }
 }

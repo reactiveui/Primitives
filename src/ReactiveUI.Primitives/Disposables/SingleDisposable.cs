@@ -10,23 +10,49 @@ namespace ReactiveUI.Primitives.Disposables;
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public class SingleDisposable : IsDisposed
 {
+    /// <summary>
+    /// Marker used once the slot has been disposed.
+    /// </summary>
     private static readonly IDisposable DisposedSentinel = new DisposedMarker();
 
+    /// <summary>
+    /// Action invoked before disposal.
+    /// </summary>
     private readonly Action? _action;
+
+    /// <summary>
+    /// Assigned disposable or the disposed marker.
+    /// </summary>
     private IDisposable? _disposable;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SingleDisposable"/> class.
     /// </summary>
+    public SingleDisposable()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SingleDisposable"/> class.
+    /// </summary>
     /// <param name="action">Action to invoke before the assigned disposable is disposed.</param>
-    public SingleDisposable(Action? action = null) => _action = action;
+    public SingleDisposable(Action? action) => _action = action;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SingleDisposable"/> class.
+    /// </summary>
+    /// <param name="disposable">The disposable.</param>
+    public SingleDisposable(IDisposable disposable)
+        : this(disposable, null)
+    {
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SingleDisposable"/> class.
     /// </summary>
     /// <param name="disposable">The disposable.</param>
     /// <param name="action">Action to invoke before the assigned disposable is disposed.</param>
-    public SingleDisposable(IDisposable disposable, Action? action = null)
+    public SingleDisposable(IDisposable disposable, Action? action)
         : this(action) => Create(disposable);
 
     /// <summary>
@@ -66,7 +92,7 @@ public class SingleDisposable : IsDisposed
             return;
         }
 
-        throw new InvalidOperationException("The disposable slot has already been assigned.");
+        throw new InvalidOperationException($"The {nameof(disposable)} slot has already been assigned.");
     }
 
     /// <summary>
@@ -99,8 +125,12 @@ public class SingleDisposable : IsDisposed
         disposable.Dispose();
     }
 
+    /// <summary>
+    /// Disposable marker for disposed slots.
+    /// </summary>
     private sealed class DisposedMarker : IDisposable
     {
+        /// <inheritdoc/>
         public void Dispose()
         {
         }

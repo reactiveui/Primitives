@@ -14,17 +14,66 @@ namespace ReactiveUI.Primitives.Signals;
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public class Signal<T> : ISignal<T>
 {
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
+    private const int InitialSubscriptionCapacity = 4;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private static readonly Action<T> NoopOnNext = static _ => { };
+
+    /// <summary>
+    /// Executes the ThrowDisposed operation.
+    /// </summary>
+    /// <returns>The result.</returns>
     private static readonly Action<T> ThrowDisposedOnNext = static _ => ThrowDisposed();
 
+    /// <summary>
+    /// Executes the new operation.
+    /// </summary>
+    /// <returns>The result.</returns>
     private readonly object _observerLock = new();
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private Exception? _exception;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private SignalSubscription? _singleActionSubscription;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private SignalSubscription?[]? _subscriptions;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private int _subscriptionCount;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private int _subscriptionTail;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private Action<T> _onNext = NoopOnNext;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private bool _isDisposed;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
     private bool _isStopped;
 
     /// <summary>
@@ -97,10 +146,12 @@ public class Signal<T> : ISignal<T>
         }
 
         Error(subscriptions, error);
-        if (hasActionSubscribers)
+        if (!hasActionSubscribers)
         {
-            ExceptionDispatchInfo.Capture(error).Throw();
+            return;
         }
+
+        ExceptionDispatchInfo.Capture(error).Throw();
     }
 
     /// <summary>
@@ -158,6 +209,11 @@ public class Signal<T> : ISignal<T>
         return Disposable.Empty;
     }
 
+    /// <summary>
+    /// Executes the SubscribeAction operation.
+    /// </summary>
+    /// <param name="onNext">The onNext value.</param>
+    /// <returns>The result.</returns>
     internal IDisposable SubscribeAction(Action<T> onNext)
     {
         if (onNext == null)
@@ -210,23 +266,40 @@ public class Signal<T> : ISignal<T>
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
     protected virtual void Dispose(bool disposing)
     {
-        if (!IsDisposed)
+        if (IsDisposed)
         {
-            if (disposing)
-            {
-                lock (_observerLock)
-                {
-                    ClearObserversLocked();
-                    _exception = null;
-                    _onNext = ThrowDisposedOnNext;
-                    _isDisposed = true;
-                }
-            }
+            return;
         }
+
+        if (!disposing)
+        {
+            return;
+        }
+
+        SignalSubscription? singleActionSubscription;
+        SignalSubscription?[]? subscriptions;
+        lock (_observerLock)
+        {
+            singleActionSubscription = _singleActionSubscription;
+            subscriptions = ClearObserversLocked();
+            _exception = null;
+            _onNext = ThrowDisposedOnNext;
+            _isDisposed = true;
+        }
+
+        singleActionSubscription?.Dispose();
+        DisposeSubscriptions(subscriptions);
     }
 
+    /// <summary>
+    /// Executes the ThrowDisposed operation.
+    /// </summary>
     private static void ThrowDisposed() => throw new ObjectDisposedException(string.Empty);
 
+    /// <summary>
+    /// Executes the Completed operation.
+    /// </summary>
+    /// <param name="subscriptions">The subscriptions value.</param>
     private static void Completed(SignalSubscription?[]? subscriptions)
     {
         if (subscriptions == null)
@@ -240,7 +313,12 @@ public class Signal<T> : ISignal<T>
         }
     }
 
-    private static void Error(SignalSubscription?[]? subscriptions, Exception error)
+    /// <summary>
+    /// Executes the Error operation.
+    /// </summary>
+    /// <param name="subscriptions">The subscriptions value.</param>
+    /// <param name="exception">The exception value.</param>
+    private static void Error(SignalSubscription?[]? subscriptions, Exception exception)
     {
         if (subscriptions == null)
         {
@@ -249,10 +327,15 @@ public class Signal<T> : ISignal<T>
 
         for (var i = 0; i < subscriptions.Length; i++)
         {
-            subscriptions[i]?.Observer?.OnError(error);
+            subscriptions[i]?.Observer?.OnError(exception);
         }
     }
 
+    /// <summary>
+    /// Executes the HasActionSubscribers operation.
+    /// </summary>
+    /// <param name="subscriptions">The subscriptions value.</param>
+    /// <returns>The result.</returns>
     private static bool HasActionSubscribers(SignalSubscription?[]? subscriptions)
     {
         if (subscriptions == null)
@@ -271,20 +354,46 @@ public class Signal<T> : ISignal<T>
         return false;
     }
 
-    private void ThrowIfDisposed()
+    /// <summary>
+    /// Executes the DisposeSubscriptions operation.
+    /// </summary>
+    /// <param name="subscriptions">The subscriptions value.</param>
+    private static void DisposeSubscriptions(SignalSubscription?[]? subscriptions)
     {
-        if (IsDisposed)
+        if (subscriptions == null)
         {
-            ThrowDisposed();
+            return;
+        }
+
+        for (var i = 0; i < subscriptions.Length; i++)
+        {
+            subscriptions[i]?.Dispose();
         }
     }
 
+    /// <summary>
+    /// Executes the ThrowIfDisposed operation.
+    /// </summary>
+    private void ThrowIfDisposed()
+    {
+        if (!IsDisposed)
+        {
+            return;
+        }
+
+        ThrowDisposed();
+    }
+
+    /// <summary>
+    /// Executes the AddSubscriptionLocked operation.
+    /// </summary>
+    /// <param name="subscription">The subscription value.</param>
     private void AddSubscriptionLocked(SignalSubscription subscription)
     {
         var subscriptions = _subscriptions;
         if (subscriptions == null)
         {
-            subscriptions = new SignalSubscription[4];
+            subscriptions = new SignalSubscription[InitialSubscriptionCapacity];
             Volatile.Write(ref _subscriptions, subscriptions);
         }
 
@@ -315,6 +424,10 @@ public class Signal<T> : ISignal<T>
         _subscriptionCount++;
     }
 
+    /// <summary>
+    /// Executes the ClearObserversLocked operation.
+    /// </summary>
+    /// <returns>The result.</returns>
     private SignalSubscription?[]? ClearObserversLocked()
     {
         _singleActionSubscription = null;
@@ -326,6 +439,9 @@ public class Signal<T> : ISignal<T>
         return subscriptions;
     }
 
+    /// <summary>
+    /// Executes the PromoteSingleActionObserverLocked operation.
+    /// </summary>
     private void PromoteSingleActionObserverLocked()
     {
         var single = _singleActionSubscription;
@@ -338,6 +454,10 @@ public class Signal<T> : ISignal<T>
         AddSubscriptionLocked(single);
     }
 
+    /// <summary>
+    /// Executes the Remove operation.
+    /// </summary>
+    /// <param name="subscription">The subscription value.</param>
     private void Remove(SignalSubscription subscription)
     {
         lock (_observerLock)
@@ -368,6 +488,10 @@ public class Signal<T> : ISignal<T>
         }
     }
 
+    /// <summary>
+    /// Executes the DispatchSubscriptions operation.
+    /// </summary>
+    /// <param name="value">The value.</param>
     private void DispatchSubscriptions(T value)
     {
         var subscriptions = Volatile.Read(ref _subscriptions);
@@ -396,10 +520,21 @@ public class Signal<T> : ISignal<T>
         }
     }
 
+    /// <summary>
+    /// Represents the SignalSubscription class.
+    /// </summary>
     private sealed class SignalSubscription : IDisposable
     {
+        /// <summary>
+        /// Stores state for the signal implementation.
+        /// </summary>
         private Signal<T>? _subject;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SignalSubscription"/> class.
+        /// </summary>
+        /// <param name="subject">The subject value.</param>
+        /// <param name="observer">The observer value.</param>
         public SignalSubscription(Signal<T> subject, IObserver<T> observer)
         {
             _subject = subject;
@@ -407,6 +542,11 @@ public class Signal<T> : ISignal<T>
             Index = -1;
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SignalSubscription"/> class.
+        /// </summary>
+        /// <param name="subject">The subject value.</param>
+        /// <param name="onNext">The onNext value.</param>
         public SignalSubscription(Signal<T> subject, Action<T> onNext)
         {
             _subject = subject;
@@ -414,12 +554,24 @@ public class Signal<T> : ISignal<T>
             Index = -1;
         }
 
+        /// <summary>
+        /// Gets or sets the value.
+        /// </summary>
         public int Index { get; set; }
 
+        /// <summary>
+        /// Gets the value.
+        /// </summary>
         public IObserver<T>? Observer { get; }
 
+        /// <summary>
+        /// Gets the value.
+        /// </summary>
         public Action<T>? OnNext { get; }
 
+        /// <summary>
+        /// Executes the Dispose operation.
+        /// </summary>
         public void Dispose()
         {
             var subject = Interlocked.Exchange(ref _subject, null);

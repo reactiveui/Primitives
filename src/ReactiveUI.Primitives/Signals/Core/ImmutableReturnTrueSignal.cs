@@ -7,19 +7,39 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
+/// <summary>
+/// Represents the ImmutableReturnTrueSignal class.
+/// </summary>
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-internal sealed class ImmutableReturnTrueSignal : IObservable<bool>, IRequireCurrentThread<bool>, IInlineSignal<bool>
+internal sealed class ImmutableReturnTrueSignal : IRequireCurrentThread<bool>, IInlineSignal<bool>
 {
 #pragma warning disable SA1401 // Fields should be private
-    internal static ImmutableReturnTrueSignal Instance = new ImmutableReturnTrueSignal();
+
+    /// <summary>
+    /// Executes the new operation.
+    /// </summary>
+    /// <returns>The result.</returns>
+    internal static ImmutableReturnTrueSignal Instance = new();
 #pragma warning restore SA1401 // Fields should be private
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ImmutableReturnTrueSignal"/> class.
+    /// </summary>
     private ImmutableReturnTrueSignal()
     {
     }
 
+    /// <summary>
+    /// Executes the IsRequiredSubscribeOnCurrentThread operation.
+    /// </summary>
+    /// <returns>The result.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
+    /// <summary>
+    /// Executes the Subscribe operation.
+    /// </summary>
+    /// <param name="observer">The observer value.</param>
+    /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<bool> observer)
     {
         observer.OnNext(true);
@@ -27,6 +47,13 @@ internal sealed class ImmutableReturnTrueSignal : IObservable<bool>, IRequireCur
         return Disposable.Empty;
     }
 
+    /// <summary>
+    /// Executes the Subscribe operation.
+    /// </summary>
+    /// <param name="onNext">The onNext value.</param>
+    /// <param name="onError">The onError value.</param>
+    /// <param name="onCompleted">The onCompleted value.</param>
+    /// <returns>The result.</returns>
     public IDisposable Subscribe(Action<bool> onNext, Action<Exception> onError, Action onCompleted)
     {
         onNext(true);

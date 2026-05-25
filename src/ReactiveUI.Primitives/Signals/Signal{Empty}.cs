@@ -18,6 +18,7 @@ public static partial class Signal
     /// <typeparam name="T">The Type.</typeparam>
     /// <param name="scheduler">The scheduler.</param>
     /// <returns>An Signals.</returns>
+#pragma warning disable S4018 // Result type is intentionally explicit for Rx-style factory APIs.
     public static IObservable<T> Empty<T>(ISequencer scheduler)
     {
         if (scheduler == Sequencer.Immediate)
@@ -47,6 +48,7 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     public static IObservable<T> Empty<T>() =>
         Empty<T>(Sequencer.Immediate);
+#pragma warning restore S4018
 
     /// <summary>
     /// Empty Signals. Returns only OnCompleted. witness is for type inference.

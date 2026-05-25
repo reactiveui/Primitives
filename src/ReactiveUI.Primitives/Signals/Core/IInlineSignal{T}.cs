@@ -4,7 +4,18 @@
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
+/// <summary>
+/// Represents the IInlineSignal interface.
+/// </summary>
+/// <typeparam name="T">The T type.</typeparam>
 internal interface IInlineSignal<T> : IObservable<T>
 {
+    /// <summary>
+    /// Executes the Subscribe operation.
+    /// </summary>
+    /// <param name="onNext">The onNext value.</param>
+    /// <param name="onError">The onError value.</param>
+    /// <param name="onCompleted">The onCompleted value.</param>
+    /// <returns>The result.</returns>
     IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted);
 }

@@ -12,18 +12,26 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="T">The object that provides notification information.</typeparam>
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-internal class TaskSignal<T> : ITaskSignal<T>
+internal sealed class TaskSignal<T> : ITaskSignal<T>
 {
-    private readonly ISequencer _scheduler;
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
+    private readonly ISequencer _sequencer;
+
+    /// <summary>
+    /// Executes the new operation.
+    /// </summary>
+    /// <returns>The result.</returns>
     private readonly MultipleDisposable? _cleanUp = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TaskSignal{T}" /> class.
     /// </summary>
     /// <param name="observableFactory">The observable factory.</param>
-    /// <param name="scheduler">The scheduler.</param>
+    /// <param name="sequencer">The sequencer.</param>
     /// <param name="cancellationTokenSource">The cancellation token source.</param>
-    public TaskSignal(Func<ITaskSignal<T>, IObservable<T>> observableFactory, ISequencer? scheduler = null, CancellationTokenSource? cancellationTokenSource = null)
+    public TaskSignal(Func<ITaskSignal<T>, IObservable<T>> observableFactory, ISequencer? sequencer = null, CancellationTokenSource? cancellationTokenSource = null)
     {
         if (observableFactory is null)
         {
@@ -31,7 +39,7 @@ internal class TaskSignal<T> : ITaskSignal<T>
         }
 
         CancellationTokenSource = cancellationTokenSource ?? new();
-        _scheduler = scheduler ?? CurrentThreadSequencer.Instance;
+        _sequencer = sequencer ?? CurrentThreadSequencer.Instance;
         Source = observableFactory(this);
     }
 
@@ -77,7 +85,7 @@ internal class TaskSignal<T> : ITaskSignal<T>
     /// <param name="observer">The observer.</param>
     /// <returns>A Disposable.</returns>
     public IDisposable Subscribe(IObserver<T> observer) =>
-        Source!.WitnessOn(_scheduler).Subscribe(observer).DisposeWith(_cleanUp!);
+        Source!.WitnessOn(_sequencer).Subscribe(observer).DisposeWith(_cleanUp!);
 
     /// <summary>
     /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
@@ -85,27 +93,29 @@ internal class TaskSignal<T> : ITaskSignal<T>
     public void Dispose()
     {
         Dispose(true);
-        GC.SuppressFinalize(this);
     }
 
     /// <summary>
     /// Releases unmanaged and - optionally - managed resources.
     /// </summary>
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
-        if (_cleanUp?.IsDisposed == false && disposing)
+        if (_cleanUp?.IsDisposed != false || !disposing)
         {
-            try
-            {
-                CancellationTokenSource?.Cancel();
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-
-            _cleanUp?.Dispose();
-            CancellationTokenSource?.Dispose();
+            return;
         }
+
+        try
+        {
+            CancellationTokenSource?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // The token source can be disposed by the task completion path.
+        }
+
+        _cleanUp?.Dispose();
+        CancellationTokenSource?.Dispose();
     }
 }
