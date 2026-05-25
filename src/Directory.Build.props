@@ -72,12 +72,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <PackageReference Include="Microsoft.NET.Test.Sdk"/>
-    <PackageReference Include="Microsoft.Reactive.Testing"/>
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage"/>
-    <PackageReference Include="PublicApiGenerator"/>
     <PackageReference Include="TUnit"/>
     <PackageReference Include="Verify.TUnit"/>
-    <PackageReference Include="DynamicData"/>
   </ItemGroup>
 
   <ItemGroup Condition="'$(IsTestProject)' != 'true'">

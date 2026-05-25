@@ -24,14 +24,11 @@
     <PackageVersion Include="System.ValueTuple" Version="4.6.2" />
   </ItemGroup>
   <ItemGroup>
-    <PackageVersion Include="DynamicData" Version="9.4.31" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
-    <PackageVersion Include="Microsoft.Reactive.Testing" Version="6.1.0" />
     <PackageVersion Include="TUnit" Version="1.45.8" />
     <PackageVersion Include="Verify.TUnit" Version="31.16.3" />
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.7.0" />
-    <PackageVersion Include="PublicApiGenerator" Version="11.5.4" />
   </ItemGroup>
   <Import Project="$(MSBuildThisFileDirectory)/directory.packages.support.props" Condition="Exists('$(MSBuildThisFileDirectory)/directory.packages.support.props')" />
 </Project>
