@@ -1,0 +1,26 @@
+name: Build
+
+on:
+    push:
+        branches: [ main ]
+    pull_request:
+        branches: [ main ]
+
+env:
+    productNamespacePrefix: "ReactiveUI.Primitives"
+
+# Needed so the reusable workflow can optionally delete the temp per-OS artifacts it creates.
+permissions:
+    contents: read
+    actions: write
+
+jobs:
+    build:
+        uses: reactiveui/actions-common/.github/workflows/workflow-common-setup-and-build.yml@main
+        with:
+            productNamespacePrefix: ReactiveUI.Primitives
+            installWorkloads: true
+            minverMinimumMajorMinor: '0.1'
+            testTimeout: '15m'
+        secrets:
+            CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
