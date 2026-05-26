@@ -5,8 +5,6 @@
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
 
-#pragma warning disable SA1107, SA1116, SA1117, SA1501, SA1611, SA1615, SA1618
-
 namespace ReactiveUI.Primitives;
 
 /// <summary>
@@ -199,8 +197,9 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Shared disposable sink for single-source terminal operators.
+    /// Abstract base class for observers that manage a single upstream subscription.
     /// </summary>
+    /// <typeparam name="T">The type of elements observed.</typeparam>
     private abstract class SingleSourceObserver<T> : IObserver<T>, IDisposable
     {
         /// <summary>

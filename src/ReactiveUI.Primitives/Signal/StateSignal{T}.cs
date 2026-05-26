@@ -4,8 +4,6 @@
 
 using ReactiveUI.Primitives;
 
-#pragma warning disable SA1501
-
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>
