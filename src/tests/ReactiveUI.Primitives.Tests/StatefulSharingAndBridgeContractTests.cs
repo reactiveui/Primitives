@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.R3Bridge.Generator;
 using ReactiveUI.Primitives.Signals;
 using ReactiveUI.Primitives.SystemReactiveBridge.Generator;
@@ -219,6 +220,96 @@ public class StatefulSharingAndBridgeContractTests
     }
 
     /// <summary>
+    /// Verifies connectable aliases, auto-connect validation, and replay window overloads.
+    /// </summary>
+    [Test]
+    public void ConnectableAliasesValidateAndConnectAtThreshold()
+    {
+        var source = new Signal<int>();
+        var sourceSubscriptions = 0;
+        var cold = Signal.Create<int>(observer =>
+        {
+            sourceSubscriptions++;
+            return source.Subscribe(observer);
+        });
+
+        var auto = cold.Publish().AutoConnect(2);
+        var first = new List<int>();
+        var second = new List<int>();
+        using var firstSubscription = auto.Subscribe(first.Add);
+        source.OnNext(FirstSharedValue);
+        using var secondSubscription = auto.Subscribe(second.Add);
+        source.OnNext(SecondSharedValue);
+
+        Assert.Equal(1, sourceSubscriptions);
+        Assert.Equal(ExpectedSecondSharedValues[1..], first);
+        Assert.Equal(ExpectedSecondSharedValues[1..], second);
+        Assert.Throws<ArgumentNullException>(() => ConnectableSignalMixins.Multicast(null!, new Signal<int>()));
+        Assert.Throws<ArgumentNullException>(() => Signal.Never<int>().Multicast(null!));
+        Assert.Throws<ArgumentNullException>(() => ConnectableSignalMixins.RefCount<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => ConnectableSignalMixins.AutoConnect<int>(null!));
+        Assert.Throws<ArgumentOutOfRangeException>(() => cold.PublishLive().AutoConnect(-1));
+
+        var replayed = cold.Replay(1, TimeSpan.FromSeconds(1));
+        using var connection = replayed.Connect();
+        source.OnNext(FirstReplayValue);
+        var replayValues = new List<int>();
+        replayed.Subscribe(replayValues.Add);
+
+        Assert.Equal(ExpectedReplayValues[..1], replayValues);
+    }
+
+    /// <summary>
+    /// Verifies command aliases, sync execution failures, and disposal branches.
+    /// </summary>
+    /// <returns>A task that completes when command assertions finish.</returns>
+    [Test]
+    public async Task CommandSignalCoversSyncFaultAndDisposalBranches()
+    {
+        var behavior = new BehaviorSignal<int>(InitialStateValue);
+        var disposable = new MultipleDisposable(Disposable.Empty);
+        var fault = new InvalidOperationException("sync failed");
+        var command = new CommandSignal<int>(() => throw fault);
+        var results = new List<int>();
+        var faults = new List<Exception>();
+
+        command.Results.Subscribe(results.Add);
+        command.Faults.Subscribe(faults.Add);
+        behavior.OnNext(UpdatedStateValue);
+        disposable.Dispose();
+
+        InvalidOperationException? observed = null;
+        try
+        {
+            await command.ExecuteAsync();
+        }
+        catch (InvalidOperationException error)
+        {
+            observed = error;
+        }
+
+        command.Dispose();
+        command.Dispose();
+        ObjectDisposedException? disposed = null;
+        try
+        {
+            await command.ExecuteAsync();
+        }
+        catch (ObjectDisposedException error)
+        {
+            disposed = error;
+        }
+
+        Assert.Same(fault, observed!);
+        Assert.Equal(0, results.Count);
+        Assert.Equal(1, faults.Count);
+        Assert.Same(fault, faults[0]);
+        Assert.Equal(UpdatedStateValue, behavior.Value);
+        Assert.True(disposable.IsDisposed);
+        Assert.NotNull(disposed);
+    }
+
+    /// <summary>
     /// Verifies bridge generators emit adapters when external shapes are present.
     /// </summary>
     [Test]
@@ -239,17 +330,50 @@ namespace System.Reactive.Linq
 
 namespace R3
 {
+    public readonly struct Result
+    {
+        public static Result Success => default;
+
+        public static Result Failure(Exception exception) => new Result(exception);
+
+        private Result(Exception exception) => Exception = exception;
+
+        public Exception Exception { get; }
+
+        public bool IsFailure => Exception != null;
+    }
+
+    public abstract class Observer<T> : IDisposable
+    {
+        public void OnNext(T value) => OnNextCore(value);
+
+        public void OnErrorResume(Exception error) => OnErrorResumeCore(error);
+
+        public void OnCompleted(Result result) => OnCompletedCore(result);
+
+        public void Dispose() { }
+
+        protected abstract void OnNextCore(T value);
+
+        protected abstract void OnErrorResumeCore(Exception error);
+
+        protected abstract void OnCompletedCore(Result result);
+    }
+
     public abstract class Observable<T>
     {
-        public abstract IDisposable Subscribe(IObserver<T> observer);
+        public abstract IDisposable Subscribe(Observer<T> observer);
+    }
 
-        public static Observable<T> Create(Func<IObserver<T>, IDisposable> subscribe) => new DelegateObservable<T>(subscribe);
+    public static class Observable
+    {
+        public static Observable<T> Create<T>(Func<Observer<T>, IDisposable> subscribe) => new DelegateObservable<T>(subscribe);
 
         private sealed class DelegateObservable<TValue> : Observable<TValue>
         {
-            private readonly Func<IObserver<TValue>, IDisposable> _subscribe;
-            public DelegateObservable(Func<IObserver<TValue>, IDisposable> subscribe) => _subscribe = subscribe;
-            public override IDisposable Subscribe(IObserver<TValue> observer) => _subscribe(observer);
+            private readonly Func<Observer<TValue>, IDisposable> _subscribe;
+            public DelegateObservable(Func<Observer<TValue>, IDisposable> subscribe) => _subscribe = subscribe;
+            public override IDisposable Subscribe(Observer<TValue> observer) => _subscribe(observer);
         }
     }
 }

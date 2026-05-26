@@ -7,7 +7,7 @@ namespace ReactiveUI.Primitives.Disposables;
 /// <summary>
 /// CancellationDisposable.
 /// </summary>
-/// <seealso cref="System.IDisposable" />
+/// <seealso cref="IDisposable" />
 public sealed class CancellationDisposable : IsDisposed
 {
     /// <summary>
@@ -19,7 +19,7 @@ public sealed class CancellationDisposable : IsDisposed
     /// Initializes a new instance of the <see cref="CancellationDisposable"/> class.
     /// </summary>
     /// <param name="cts">The CTS.</param>
-    /// <exception cref="System.ArgumentNullException">cts.</exception>
+    /// <exception cref="ArgumentNullException">cts.</exception>
     public CancellationDisposable(CancellationTokenSource cts) => _cts = cts ?? throw new ArgumentNullException(nameof(cts));
 
     /// <summary>

@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <summary>
 /// CurrentThreadSequencer.
 /// </summary>
-/// <seealso cref="ReactiveUI.Primitives.Concurrency.ISequencer" />
+/// <seealso cref="ISequencer" />
 public sealed class CurrentThreadSequencer : ISequencer
 {
     /// <summary>
@@ -103,7 +103,7 @@ public sealed class CurrentThreadSequencer : ISequencer
     /// <returns>
     /// The disposable object used to cancel the scheduled action (best effort).
     /// </returns>
-    /// <exception cref="System.ArgumentNullException">action.</exception>
+    /// <exception cref="ArgumentNullException">action.</exception>
     /// <exception cref="ArgumentNullException"><paramref name="action" /> is <c>null</c>.</exception>
     public IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<ISequencer, TState, IDisposable> action)
     {

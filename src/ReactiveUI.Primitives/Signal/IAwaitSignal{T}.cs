@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// IAwaitSignal.
 /// </summary>
 /// <typeparam name="T">The Type of Signal.</typeparam>
-/// <seealso cref="ReactiveUI.Primitives.Signals.ISignal&lt;T&gt;" />
+/// <seealso cref="ISignal&lt;T&gt;" />
 /// <seealso cref="System.Runtime.CompilerServices.INotifyCompletion" />
 public interface IAwaitSignal<T> : ISignal<T>, System.Runtime.CompilerServices.INotifyCompletion
 {

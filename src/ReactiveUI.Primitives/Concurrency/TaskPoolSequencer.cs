@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <summary>
 /// TaskPoolSequencer.
 /// </summary>
-/// <seealso cref="ReactiveUI.Primitives.Concurrency.ISequencer" />
+/// <seealso cref="ISequencer" />
 public sealed class TaskPoolSequencer : ISequencer
 {
     /// <summary>

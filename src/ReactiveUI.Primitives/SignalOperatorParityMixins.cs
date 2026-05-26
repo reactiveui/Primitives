@@ -6,6 +6,7 @@ using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
+using ReactiveUI.Primitives.Signals.Core;
 
 #pragma warning disable SA1107, SA1116, SA1117, SA1501, SA1611, SA1615, SA1618
 
@@ -99,6 +100,12 @@ public static partial class LinqMixins
     public static IObservable<T> ToObservable<T>(this IEnumerable<T> values) => Signal.FromEnumerable(values);
 
     /// <summary>
+    /// Converts an enumerable sequence to a Primitives signal using the System.Reactive conversion name.
+    /// </summary>
+    public static IObservable<T> ToObservable<T>(this IEnumerable<T> values, CancellationToken cancellationToken) =>
+        Signal.FromEnumerable(values, cancellationToken);
+
+    /// <summary>
     /// Schedules observer notifications on the supplied scheduler using the System.Reactive operator name.
     /// </summary>
     public static IObservable<T> ObserveOn<T>(this IObservable<T> source, ISequencer scheduler)
@@ -111,6 +118,11 @@ public static partial class LinqMixins
         if (scheduler == null)
         {
             throw new ArgumentNullException(nameof(scheduler));
+        }
+
+        if (scheduler == Sequencer.Immediate)
+        {
+            return source;
         }
 
         return source.WitnessOn(scheduler);
@@ -749,24 +761,74 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(selector));
         }
 
+        if (typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange && right is RangeSignal rightRange)
+        {
+            return Signal.CreateSafe<TResult>(observer =>
+            {
+                observer.OnNext(((Func<int, int, TResult>)(object)selector)(
+                    leftRange.Start + leftRange.Count - 1,
+                    rightRange.Start + rightRange.Count - 1));
+                observer.OnCompleted();
+                return Disposable.Empty;
+            });
+        }
+
         return Signal.CreateSafe<TResult>(observer => new ForkJoinCoordinator<TLeft, TRight, TResult>(observer, selector).Run(left, right));
     }
 
     /// <summary>
     /// Awaits the first source value.
     /// </summary>
-    public static Task<T> FirstAsync<T>(this IObservable<T> source) => source.FirstOrDefaultCoreAsync(false, default!);
+    public static Task<T> FirstAsync<T>(this IObservable<T> source)
+    {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        if (source is RangeSignal range && CanReadRangeAs<T>())
+        {
+            return Task.FromResult(CreateRangeValue<T>(range.Start));
+        }
+
+        return source.FirstOrDefaultCoreAsync(false, default!);
+    }
 
     /// <summary>
     /// Awaits the first source value, returning a default value when the source is empty.
     /// </summary>
-    public static Task<T> FirstOrDefaultAsync<T>(this IObservable<T> source) =>
-        source.FirstOrDefaultCoreAsync(true, default!);
+    public static Task<T> FirstOrDefaultAsync<T>(this IObservable<T> source)
+    {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        if (source is RangeSignal range && CanReadRangeAs<T>())
+        {
+            return Task.FromResult(CreateRangeValue<T>(range.Start));
+        }
+
+        return source.FirstOrDefaultCoreAsync(true, default!);
+    }
 
     /// <summary>
     /// Awaits the first source value, returning a default value when the source is empty.
     /// </summary>
-    public static Task<T> FirstOrDefaultAsync<T>(this IObservable<T> source, T defaultValue) => source.FirstOrDefaultCoreAsync(true, defaultValue);
+    public static Task<T> FirstOrDefaultAsync<T>(this IObservable<T> source, T defaultValue)
+    {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        if (source is RangeSignal range && CanReadRangeAs<T>())
+        {
+            return Task.FromResult(CreateRangeValue<T>(range.Start));
+        }
+
+        return source.FirstOrDefaultCoreAsync(true, defaultValue);
+    }
 
     /// <summary>
     /// Awaits source completion and returns the last value produced by the source.
@@ -776,11 +838,25 @@ public static partial class LinqMixins
     /// <summary>
     /// Awaits source completion and returns the last value produced by the source.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S1541:Methods and properties should not be too complex",
+        Justification = "ToTask keeps cancellation, terminal, and synchronous fast paths together to avoid extra allocations.")]
     public static Task<T> ToTask<T>(this IObservable<T> source, CancellationToken cancellationToken)
     {
         if (source == null)
         {
             throw new ArgumentNullException(nameof(source));
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return Task.FromCanceled<T>(cancellationToken);
+        }
+
+        if (source is RangeSignal range && CanReadRangeAs<T>())
+        {
+            return Task.FromResult(CreateRangeValue<T>(range.Start + range.Count - 1));
         }
 
         var completion = new TaskCompletionSource<T>();
@@ -837,6 +913,54 @@ public static partial class LinqMixins
     public static Task<T> ToTask<T>(this Task<T> task) => task ?? throw new ArgumentNullException(nameof(task));
 
     /// <summary>
+    /// Awaits the source count as a task.
+    /// </summary>
+    public static Task<int> CountAsync<T>(this IObservable<T> source) =>
+        source.Count().ToTask();
+
+    /// <summary>
+    /// Awaits the source count as a task.
+    /// </summary>
+    public static Task<int> CountAsync<T>(this IObservable<T> source, CancellationToken cancellationToken) =>
+        source.Count().ToTask(cancellationToken);
+
+    /// <summary>
+    /// Awaits the source predicate count as a task.
+    /// </summary>
+    public static Task<int> CountAsync<T>(this IObservable<T> source, Func<T, bool> predicate) =>
+        source.Count(predicate).ToTask();
+
+    /// <summary>
+    /// Awaits the source predicate count as a task.
+    /// </summary>
+    public static Task<int> CountAsync<T>(this IObservable<T> source, Func<T, bool> predicate, CancellationToken cancellationToken) =>
+        source.Count(predicate).ToTask(cancellationToken);
+
+    /// <summary>
+    /// Awaits whether any value is present.
+    /// </summary>
+    public static Task<bool> AnyAsync<T>(this IObservable<T> source) =>
+        source.Any().ToTask();
+
+    /// <summary>
+    /// Awaits whether any value is present.
+    /// </summary>
+    public static Task<bool> AnyAsync<T>(this IObservable<T> source, CancellationToken cancellationToken) =>
+        source.Any().ToTask(cancellationToken);
+
+    /// <summary>
+    /// Awaits whether any value matches a predicate.
+    /// </summary>
+    public static Task<bool> AnyAsync<T>(this IObservable<T> source, Func<T, bool> predicate) =>
+        source.Any(predicate).ToTask();
+
+    /// <summary>
+    /// Awaits whether any value matches a predicate.
+    /// </summary>
+    public static Task<bool> AnyAsync<T>(this IObservable<T> source, Func<T, bool> predicate, CancellationToken cancellationToken) =>
+        source.Any(predicate).ToTask(cancellationToken);
+
+    /// <summary>
     /// Collects all values into an array task.
     /// </summary>
     public static Task<T[]> CollectArrayAsync<T>(this IObservable<T> source)
@@ -844,6 +968,11 @@ public static partial class LinqMixins
         if (source == null)
         {
             throw new ArgumentNullException(nameof(source));
+        }
+
+        if (source is RangeSignal range && CanReadRangeAs<T>())
+        {
+            return Task.FromResult(CreateRangeArray<T>(range));
         }
 
         var completion = new TaskCompletionSource<T[]>();
@@ -860,6 +989,11 @@ public static partial class LinqMixins
         if (source == null)
         {
             throw new ArgumentNullException(nameof(source));
+        }
+
+        if (source is RangeSignal range && CanReadRangeAs<T>())
+        {
+            return Task.FromResult((IList<T>)CreateRangeList<T>(range));
         }
 
         var completion = new TaskCompletionSource<IList<T>>();
@@ -914,5 +1048,72 @@ public static partial class LinqMixins
                 }
         });
         return completion.Task;
+    }
+
+    /// <summary>
+    /// Creates a generic value from an integer range item.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4018:Generic methods should provide type parameters",
+        Justification = "The generic type is validated by the caller before reading range values.")]
+    private static T CreateRangeValue<T>(int value) => (T)(object)value;
+
+    /// <summary>
+    /// Creates a range-backed array for task terminal fast paths.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4018:Generic methods should provide type parameters",
+        Justification = "The generic type is validated by the caller before reading range values.")]
+    private static T[] CreateRangeArray<T>(RangeSignal range)
+    {
+        if (typeof(T) == typeof(int))
+        {
+            var values = new int[range.Count];
+            for (var i = 0; i < values.Length; i++)
+            {
+                values[i] = range.Start + i;
+            }
+
+            return (T[])(object)values;
+        }
+
+        var boxed = new T[range.Count];
+        for (var i = 0; i < boxed.Length; i++)
+        {
+            boxed[i] = CreateRangeValue<T>(range.Start + i);
+        }
+
+        return boxed;
+    }
+
+    /// <summary>
+    /// Creates a range-backed list for task terminal fast paths.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4018:Generic methods should provide type parameters",
+        Justification = "The generic type is validated by the caller before reading range values.")]
+    private static List<T> CreateRangeList<T>(RangeSignal range)
+    {
+        if (typeof(T) == typeof(int))
+        {
+            var integers = new List<int>(range.Count);
+            for (var i = 0; i < range.Count; i++)
+            {
+                integers.Add(range.Start + i);
+            }
+
+            return (List<T>)(object)integers;
+        }
+
+        var values = new List<T>(range.Count);
+        for (var i = 0; i < range.Count; i++)
+        {
+            values.Add(CreateRangeValue<T>(range.Start + i));
+        }
+
+        return values;
     }
 }

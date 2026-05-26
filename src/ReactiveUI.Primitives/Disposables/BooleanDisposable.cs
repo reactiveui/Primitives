@@ -7,7 +7,7 @@ namespace ReactiveUI.Primitives.Disposables;
 /// <summary>
 /// BooleanDisposable.
 /// </summary>
-/// <seealso cref="ReactiveUI.Primitives.Disposables.IsDisposed" />
+/// <seealso cref="Disposables.IsDisposed" />
 public sealed class BooleanDisposable : IsDisposed
 {
     /// <summary>

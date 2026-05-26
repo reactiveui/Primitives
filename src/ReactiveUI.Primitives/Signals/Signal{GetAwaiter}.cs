@@ -16,7 +16,7 @@ public static partial class Signal
     /// <typeparam name="TSource">The type of the source.</typeparam>
     /// <param name="source">Source sequence to await.</param>
     /// <returns>An AsyncSignal.</returns>
-    /// <exception cref="System.ArgumentNullException">source.</exception>
+    /// <exception cref="ArgumentNullException">source.</exception>
     public static IAwaitSignal<TSource> GetAwaiter<TSource>(this IObservable<TSource> source)
     {
         if (source == null)
@@ -37,7 +37,7 @@ public static partial class Signal
     /// <returns>
     /// An AsyncSignal.
     /// </returns>
-    /// <exception cref="System.ArgumentNullException">source.</exception>
+    /// <exception cref="ArgumentNullException">source.</exception>
     public static IAwaitSignal<TSource> GetAwaiter<TSource>(this IObservable<TSource> source, CancellationToken cancellationToken)
     {
         if (source == null)

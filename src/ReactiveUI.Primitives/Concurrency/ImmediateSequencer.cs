@@ -7,7 +7,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <summary>
 /// ImmediateSequencer.
 /// </summary>
-/// <seealso cref="ReactiveUI.Primitives.Concurrency.ISequencer" />
+/// <seealso cref="ISequencer" />
 public sealed class ImmediateSequencer : ISequencer
 {
     /// <summary>

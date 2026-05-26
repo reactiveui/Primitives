@@ -185,6 +185,21 @@ public static partial class Signal
     }
 
     /// <summary>
+    /// Creates a signal from an enumerable sequence and stops enumeration when the token is cancelled.
+    /// </summary>
+    public static IObservable<T> FromEnumerable<T>(IEnumerable<T> values, CancellationToken cancellationToken)
+    {
+        if (values == null)
+        {
+            throw new ArgumentNullException(nameof(values));
+        }
+
+        return cancellationToken.CanBeCanceled
+            ? new FromEnumerableSignal<T>(values, cancellationToken)
+            : new FromEnumerableSignal<T>(values);
+    }
+
+    /// <summary>
     /// Creates a signal from a task instance.
     /// </summary>
     public static IObservable<T> FromTask<T>(Task<T> task)
@@ -240,6 +255,38 @@ public static partial class Signal
 
             return Disposable.Create(() => Volatile.Write(ref disposed, 1));
         });
+    }
+
+    /// <summary>
+    /// Creates a signal by invoking an asynchronous factory at subscription time.
+    /// </summary>
+    public static IObservable<T> FromAsync<T>(Func<Task<T>> taskFactory)
+    {
+        if (taskFactory == null)
+        {
+            throw new ArgumentNullException(nameof(taskFactory));
+        }
+
+        return Defer(() => FromTask(taskFactory()));
+    }
+
+    /// <summary>
+    /// Creates a signal by invoking an asynchronous factory at subscription time.
+    /// </summary>
+    public static IObservable<T> FromAsync<T>(Func<CancellationToken, Task<T>> taskFactory) =>
+        FromAsync(taskFactory, CancellationToken.None);
+
+    /// <summary>
+    /// Creates a signal by invoking an asynchronous factory at subscription time.
+    /// </summary>
+    public static IObservable<T> FromAsync<T>(Func<CancellationToken, Task<T>> taskFactory, CancellationToken cancellationToken)
+    {
+        if (taskFactory == null)
+        {
+            throw new ArgumentNullException(nameof(taskFactory));
+        }
+
+        return Defer(() => FromTask(taskFactory(cancellationToken)));
     }
 
     /// <summary>
@@ -465,20 +512,36 @@ public static partial class Signal
     /// <summary>
     /// Concatenates the supplied signals.
     /// </summary>
-    public static IObservable<T> Concat<T>(params IObservable<T>[] sources) =>
-        FromEnumerable(ValidateSources(sources)).Concat();
+    public static IObservable<T> Concat<T>(params IObservable<T>[] sources)
+    {
+        var validated = ValidateSources(sources);
+        var rangeConcat = TryCreateRangeConcat(validated);
+        return rangeConcat == null ? FromEnumerable(validated).Concat() : (IObservable<T>)(object)rangeConcat;
+    }
 
     /// <summary>
     /// Merges the supplied signals.
     /// </summary>
-    public static IObservable<T> Merge<T>(params IObservable<T>[] sources) =>
-        FromEnumerable(ValidateSources(sources)).Merge();
+    public static IObservable<T> Merge<T>(params IObservable<T>[] sources)
+    {
+        var validated = ValidateSources(sources);
+        var rangeConcat = TryCreateRangeConcat(validated);
+        return rangeConcat == null ? FromEnumerable(validated).Merge() : (IObservable<T>)(object)rangeConcat;
+    }
 
     /// <summary>
     /// Races the supplied signals and mirrors the first one to produce a value or terminal signal.
     /// </summary>
-    public static IObservable<T> Race<T>(params IObservable<T>[] sources) =>
-        FromEnumerable(ValidateSources(sources)).Race();
+    public static IObservable<T> Race<T>(params IObservable<T>[] sources)
+    {
+        var validated = ValidateSources(sources);
+        if (validated.Length > 0 && validated[0] is RangeSignal)
+        {
+            return validated[0];
+        }
+
+        return FromEnumerable(validated).Race();
+    }
 
     /// <summary>
     /// Zips two signals with a result selector.
@@ -526,6 +589,33 @@ public static partial class Signal
         }
 
         return sources;
+    }
+
+    /// <summary>
+    /// Creates a range concat signal when every source is a synchronous integer range.
+    /// </summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    /// <param name="sources">The validated sources.</param>
+    /// <returns>A range concat signal, or <see langword="null"/> when the fast path is not applicable.</returns>
+    private static RangeConcatSignal? TryCreateRangeConcat<T>(IObservable<T>[] sources)
+    {
+        if (typeof(T) != typeof(int) || sources.Length == 0)
+        {
+            return null;
+        }
+
+        var ranges = new RangeSignal[sources.Length];
+        for (var i = 0; i < sources.Length; i++)
+        {
+            if (sources[i] is not RangeSignal range)
+            {
+                return null;
+            }
+
+            ranges[i] = range;
+        }
+
+        return new RangeConcatSignal(ranges);
     }
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER

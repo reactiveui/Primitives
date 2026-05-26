@@ -3,6 +3,8 @@
 // See the LICENSE file in the project root for full license information.
 
 using ReactiveUI.Primitives.Core;
+using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives;
 
@@ -139,6 +141,13 @@ public static partial class LinqMixins
                 throw new ArgumentNullException(nameof(observer));
             }
 
+            if (_source is RangeSignal range)
+            {
+                observer.OnNext(range.Count);
+                observer.OnCompleted();
+                return Disposable.Empty;
+            }
+
             if (_source is ICountSource countSource)
             {
                 return countSource.SubscribeCount(observer);
@@ -224,6 +233,13 @@ public static partial class LinqMixins
                 throw new ArgumentNullException(nameof(observer));
             }
 
+            if (_source is RangeSignal range)
+            {
+                observer.OnNext(range.Count);
+                observer.OnCompleted();
+                return Disposable.Empty;
+            }
+
             if (_source is ICountSource countSource)
             {
                 return countSource.SubscribeLongCount(observer);
@@ -307,6 +323,13 @@ public static partial class LinqMixins
             if (observer == null)
             {
                 throw new ArgumentNullException(nameof(observer));
+            }
+
+            if (_source is RangeSignal)
+            {
+                observer.OnNext(true);
+                observer.OnCompleted();
+                return Disposable.Empty;
             }
 
             var sink = new AnyObserver<T>(observer);

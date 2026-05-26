@@ -629,7 +629,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(selector));
         }
 
-        if (left is RangeSignal leftRange && right is RangeSignal rightRange)
+        if (typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange && right is RangeSignal rightRange)
         {
             return new RangeZipSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
         }
@@ -657,6 +657,11 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(selector));
         }
 
+        if (typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange && right is RangeSignal rightRange)
+        {
+            return CreateRangeCombineLatestSignal(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
+        }
+
         return Signal.CreateSafe<TResult>(observer => new CombineLatestCoordinator<TLeft, TRight, TResult>(observer, selector).Run(left, right));
     }
 
@@ -678,6 +683,11 @@ public static partial class LinqMixins
         if (selector == null)
         {
             throw new ArgumentNullException(nameof(selector));
+        }
+
+        if (typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange && right is RangeSignal rightRange)
+        {
+            return CreateRangeWithLatestSignal(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
         }
 
         return Signal.CreateSafe<TResult>(observer =>
@@ -897,6 +907,11 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
+        if (source is RangeSignal range && CanReadRangeAs<T>())
+        {
+            return CreateRangeListSignal<T>(range);
+        }
+
         return Signal.CreateSafe<IList<T>>(observer =>
         {
             var values = new List<T>();
@@ -914,8 +929,31 @@ public static partial class LinqMixins
     /// <summary>
     /// Collects all values into an array when the source completes.
     /// </summary>
-    public static IObservable<T[]> CollectArray<T>(this IObservable<T> source) =>
-        source.CollectList().Map(values => values.ToArray());
+    public static IObservable<T[]> CollectArray<T>(this IObservable<T> source)
+    {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        if (source is RangeSignal range && CanReadRangeAs<T>())
+        {
+            return CreateRangeArraySignal<T>(range);
+        }
+
+        return Signal.CreateSafe<T[]>(observer =>
+        {
+            var values = new List<T>();
+            return source.Subscribe(
+                values.Add,
+                observer.OnError,
+                () =>
+                {
+                    observer.OnNext([.. values]);
+                    observer.OnCompleted();
+                });
+        });
+    }
 
     /// <summary>
     /// Converts an enumerable to a signal.
@@ -923,7 +961,146 @@ public static partial class LinqMixins
     public static IObservable<T> ToSignal<T>(this IEnumerable<T> values) => Signal.FromEnumerable(values);
 
     /// <summary>
+    /// Converts an enumerable to a signal and stops enumeration when cancelled.
+    /// </summary>
+    public static IObservable<T> ToSignal<T>(this IEnumerable<T> values, CancellationToken cancellationToken) =>
+        Signal.FromEnumerable(values, cancellationToken);
+
+    /// <summary>
     /// Converts an observable to a signal-compatible observable.
     /// </summary>
     public static IObservable<T> ToSignal<T>(this IObservable<T> source) => source ?? throw new ArgumentNullException(nameof(source));
+
+    /// <summary>
+    /// Creates a combine-latest range signal without coordinator subscriptions.
+    /// </summary>
+    private static IObservable<TResult> CreateRangeCombineLatestSignal<TResult>(
+        RangeSignal left,
+        RangeSignal right,
+        Func<int, int, TResult> selector) =>
+        Signal.CreateSafe<TResult>(observer =>
+        {
+            var leftValue = left.Start + left.Count - 1;
+            for (var i = 0; i < right.Count; i++)
+            {
+                observer.OnNext(selector(leftValue, right.Start + i));
+            }
+
+            observer.OnCompleted();
+            return Disposable.Empty;
+        });
+
+    /// <summary>
+    /// Creates a with-latest range signal without coordinator subscriptions.
+    /// </summary>
+    private static IObservable<TResult> CreateRangeWithLatestSignal<TResult>(
+        RangeSignal left,
+        RangeSignal right,
+        Func<int, int, TResult> selector) =>
+        Signal.CreateSafe<TResult>(observer =>
+        {
+            var rightValue = right.Start + right.Count - 1;
+            for (var i = 0; i < left.Count; i++)
+            {
+                observer.OnNext(selector(left.Start + i, rightValue));
+            }
+
+            observer.OnCompleted();
+            return Disposable.Empty;
+        });
+
+    /// <summary>
+    /// Creates a range-backed list signal without per-value subscriptions.
+    /// </summary>
+    /// <typeparam name="T">The result element type.</typeparam>
+    /// <param name="range">The source range.</param>
+    /// <returns>The list signal.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4018:Generic methods should provide type parameters",
+        Justification = "The generic type is validated by the caller before creating a range-backed signal.")]
+    private static IObservable<IList<T>> CreateRangeListSignal<T>(RangeSignal range)
+    {
+        if (typeof(T) == typeof(int))
+        {
+            return (IObservable<IList<T>>)(object)Signal.CreateSafe<IList<int>>(observer =>
+            {
+                var values = new List<int>(range.Count);
+                for (var i = 0; i < range.Count; i++)
+                {
+                    values.Add(range.Start + i);
+                }
+
+                observer.OnNext(values);
+                observer.OnCompleted();
+                return Disposable.Empty;
+            });
+        }
+
+        return Signal.CreateSafe<IList<T>>(observer =>
+        {
+            var values = new List<T>(range.Count);
+            for (var i = 0; i < range.Count; i++)
+            {
+                values.Add((T)(object)(range.Start + i));
+            }
+
+            observer.OnNext(values);
+            observer.OnCompleted();
+            return Disposable.Empty;
+        });
+    }
+
+    /// <summary>
+    /// Creates a range-backed array signal without per-value subscriptions.
+    /// </summary>
+    /// <typeparam name="T">The result element type.</typeparam>
+    /// <param name="range">The source range.</param>
+    /// <returns>The array signal.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4018:Generic methods should provide type parameters",
+        Justification = "The generic type is validated by the caller before creating a range-backed signal.")]
+    private static IObservable<T[]> CreateRangeArraySignal<T>(RangeSignal range)
+    {
+        if (typeof(T) == typeof(int))
+        {
+            return (IObservable<T[]>)(object)Signal.CreateSafe<int[]>(observer =>
+            {
+                var values = new int[range.Count];
+                for (var i = 0; i < values.Length; i++)
+                {
+                    values[i] = range.Start + i;
+                }
+
+                observer.OnNext(values);
+                observer.OnCompleted();
+                return Disposable.Empty;
+            });
+        }
+
+        return Signal.CreateSafe<T[]>(observer =>
+        {
+            var values = new T[range.Count];
+            for (var i = 0; i < values.Length; i++)
+            {
+                values[i] = (T)(object)(range.Start + i);
+            }
+
+            observer.OnNext(values);
+            observer.OnCompleted();
+            return Disposable.Empty;
+        });
+    }
+
+    /// <summary>
+    /// Determines whether a generic observer type can receive boxed range integers.
+    /// </summary>
+    /// <typeparam name="T">The observer value type.</typeparam>
+    /// <returns><see langword="true"/> when the cast is valid.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4018:Generic methods should provide type parameters",
+        Justification = "The method is a generic type test used by range fast paths.")]
+    private static bool CanReadRangeAs<T>() => typeof(T).IsAssignableFrom(typeof(int));
 }

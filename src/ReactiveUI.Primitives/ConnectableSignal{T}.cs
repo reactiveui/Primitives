@@ -112,6 +112,15 @@ public static class ConnectableSignalMixins
         source.Multicast(new Signal<T>());
 
     /// <summary>
+    /// Publishes source values through a live signal hub.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">Source sequence to publish.</param>
+    /// <returns>A connectable live signal.</returns>
+    public static ConnectableSignal<T> Publish<T>(this IObservable<T> source) =>
+        source.PublishLive();
+
+    /// <summary>
     /// Replays source values through a bounded replay hub.
     /// </summary>
     /// <typeparam name="T">The value type.</typeparam>
@@ -133,12 +142,41 @@ public static class ConnectableSignalMixins
         source.Multicast(new ReplaySignal<T>(bufferSize, window));
 
     /// <summary>
+    /// Replays source values through a bounded replay hub.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">Source sequence to replay.</param>
+    /// <param name="bufferSize">Maximum number of values to replay.</param>
+    /// <returns>A connectable replay signal.</returns>
+    public static ConnectableSignal<T> Replay<T>(this IObservable<T> source, int bufferSize) =>
+        source.ReplayLive(bufferSize);
+
+    /// <summary>
+    /// Replays source values through a replay hub constrained by count and time.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">Source sequence to replay.</param>
+    /// <param name="bufferSize">Maximum number of values to replay.</param>
+    /// <param name="window">Maximum replay window.</param>
+    /// <returns>A connectable replay signal.</returns>
+    public static ConnectableSignal<T> Replay<T>(this IObservable<T> source, int bufferSize, TimeSpan window) =>
+        source.ReplayLive(bufferSize, window);
+
+    /// <summary>
     /// Shares one live source subscription while at least one observer is subscribed.
     /// </summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="source">Source sequence to share.</param>
     /// <returns>A reference-counted live sequence.</returns>
     public static IObservable<T> ShareLive<T>(this IObservable<T> source) => source.PublishLive().RefCount();
+
+    /// <summary>
+    /// Shares one live source subscription while at least one observer is subscribed.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">Source sequence to share.</param>
+    /// <returns>A reference-counted live sequence.</returns>
+    public static IObservable<T> Share<T>(this IObservable<T> source) => source.ShareLive();
 
     /// <summary>
     /// Connects on first subscriber and disconnects when the last subscriber disposes.

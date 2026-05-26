@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// AsyncSignal.
 /// </summary>
 /// <typeparam name="T">The Type.</typeparam>
-/// <seealso cref="ReactiveUI.Primitives.Signals.ISignal&lt;T&gt;" />
+/// <seealso cref="ISignal&lt;T&gt;" />
 public class AsyncSignal<T> : IAwaitSignal<T>
 {
     /// <summary>
@@ -54,7 +54,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
     /// <value>
     /// The value.
     /// </value>
-    /// <exception cref="System.InvalidOperationException">AsyncSubject is not completed yet.</exception>
+    /// <exception cref="InvalidOperationException">AsyncSubject is not completed yet.</exception>
     public T Value
     {
         get
@@ -140,7 +140,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
     /// Called when [error].
     /// </summary>
     /// <param name="error">The error.</param>
-    /// <exception cref="System.ArgumentNullException">error.</exception>
+    /// <exception cref="ArgumentNullException">error.</exception>
     public void OnError(Exception error)
     {
         if (error == null)
@@ -190,7 +190,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
     /// </summary>
     /// <param name="observer">The observer.</param>
     /// <returns>A Disposable.</returns>
-    /// <exception cref="System.ArgumentNullException">observer.</exception>
+    /// <exception cref="ArgumentNullException">observer.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         if (observer == null)

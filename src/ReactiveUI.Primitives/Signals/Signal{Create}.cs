@@ -19,7 +19,7 @@ public static partial class Signal
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="subscribe">The subscribe.</param>
     /// <returns>An Signals.</returns>
-    /// <exception cref="System.ArgumentNullException">subscribe.</exception>
+    /// <exception cref="ArgumentNullException">subscribe.</exception>
     /// <exception cref="ArgumentNullException"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> Create<T>(Func<IObserver<T>, IDisposable> subscribe)
     {
@@ -39,7 +39,7 @@ public static partial class Signal
     /// <param name="subscribe">The subscribe.</param>
     /// <param name="isRequiredSubscribeOnCurrentThread">if set to <c>true</c> [is required subscribe on current thread].</param>
     /// <returns>An Signals.</returns>
-    /// <exception cref="System.ArgumentNullException">subscribe.</exception>
+    /// <exception cref="ArgumentNullException">subscribe.</exception>
     /// <exception cref="ArgumentNullException"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> Create<T>(Func<IObserver<T>, IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread)
     {
@@ -60,7 +60,7 @@ public static partial class Signal
     /// <param name="state">The state.</param>
     /// <param name="subscribe">The subscribe.</param>
     /// <returns>An Signals.</returns>
-    /// <exception cref="System.ArgumentNullException">subscribe.</exception>
+    /// <exception cref="ArgumentNullException">subscribe.</exception>
     /// <exception cref="ArgumentNullException"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> CreateWithState<T, TState>(TState state, Func<TState, IObserver<T>, IDisposable> subscribe)
     {
@@ -82,7 +82,7 @@ public static partial class Signal
     /// <param name="subscribe">The subscribe.</param>
     /// <param name="isRequiredSubscribeOnCurrentThread">if set to <c>true</c> [is required subscribe on current thread].</param>
     /// <returns>An Signals.</returns>
-    /// <exception cref="System.ArgumentNullException">subscribe.</exception>
+    /// <exception cref="ArgumentNullException">subscribe.</exception>
     /// <exception cref="ArgumentNullException"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> CreateWithState<T, TState>(TState state, Func<TState, IObserver<T>, IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread)
     {
@@ -101,7 +101,7 @@ public static partial class Signal
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="subscribe">The subscribe.</param>
     /// <returns>An Signals.</returns>
-    /// <exception cref="System.ArgumentNullException">subscribe.</exception>
+    /// <exception cref="ArgumentNullException">subscribe.</exception>
     /// <exception cref="ArgumentNullException"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> CreateSafe<T>(Func<IObserver<T>, IDisposable> subscribe)
     {
@@ -121,7 +121,7 @@ public static partial class Signal
     /// <param name="subscribe">The subscribe.</param>
     /// <param name="isRequiredSubscribeOnCurrentThread">if set to <c>true</c> [is required subscribe on current thread].</param>
     /// <returns>An Observable.</returns>
-    /// <exception cref="System.ArgumentNullException">subscribe.</exception>
+    /// <exception cref="ArgumentNullException">subscribe.</exception>
     /// <exception cref="ArgumentNullException"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> CreateSafe<T>(Func<IObserver<T>, IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread)
     {

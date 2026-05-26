@@ -4,13 +4,14 @@
 
 using ReactiveUI.Primitives.Disposables;
 using static ReactiveUI.Primitives.Disposables.Disposable;
+using Timer = System.Threading.Timer;
 
 namespace ReactiveUI.Primitives.Concurrency
 {
     /// <summary>
     /// ThreadPoolSequencer.
     /// </summary>
-    /// <seealso cref="ReactiveUI.Primitives.Concurrency.ISequencer" />
+    /// <seealso cref="ISequencer" />
     public sealed class ThreadPoolSequencer : ISequencer
     {
         /// <summary>
@@ -26,7 +27,7 @@ namespace ReactiveUI.Primitives.Concurrency
         /// <summary>
         /// Keeps timers rooted until they fire or are cancelled.
         /// </summary>
-        internal static readonly Dictionary<System.Threading.Timer, object> Timers = [];
+        internal static readonly Dictionary<Timer, object> Timers = [];
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class.
@@ -49,7 +50,7 @@ namespace ReactiveUI.Primitives.Concurrency
         /// <returns>
         /// The disposable object used to cancel the scheduled action (best effort).
         /// </returns>
-        /// <exception cref="System.ArgumentNullException">action.</exception>
+        /// <exception cref="ArgumentNullException">action.</exception>
         public IDisposable Schedule<TState>(TState state, Func<ISequencer, TState, IDisposable> action)
         {
             if (action == null)
@@ -83,7 +84,7 @@ namespace ReactiveUI.Primitives.Concurrency
         /// <returns>
         /// The disposable object used to cancel the scheduled action (best effort).
         /// </returns>
-        /// <exception cref="System.ArgumentNullException">action.</exception>
+        /// <exception cref="ArgumentNullException">action.</exception>
         public IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<ISequencer, TState, IDisposable> action)
         {
             if (action == null)
@@ -94,7 +95,7 @@ namespace ReactiveUI.Primitives.Concurrency
             var dueTime1 = Sequencer.Normalize(dueTime);
             var hasAdded = false;
             var hasRemoved = false;
-            System.Threading.Timer timer = null!;
+            Timer timer = null!;
             timer = new(
                 _ =>
             {
