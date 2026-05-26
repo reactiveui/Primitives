@@ -8,7 +8,8 @@ namespace ReactiveUI.Primitives.Disposables;
 /// CancellationDisposable.
 /// </summary>
 /// <seealso cref="IDisposable" />
-public sealed class CancellationDisposable : IsDisposed
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed partial class CancellationDisposable : IsDisposed
 {
     /// <summary>
     /// Cancellation source owned by this disposable.

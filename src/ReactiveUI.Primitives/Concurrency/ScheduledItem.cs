@@ -11,7 +11,8 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// Abstract base class for scheduled work items.
 /// </summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
-public abstract class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, IComparable<ScheduledItem<TAbsolute>>, IsDisposed, IComparable
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public abstract partial class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, IComparable<ScheduledItem<TAbsolute>>, IsDisposed, IComparable
     where TAbsolute : IComparable<TAbsolute>
 {
     /// <summary>

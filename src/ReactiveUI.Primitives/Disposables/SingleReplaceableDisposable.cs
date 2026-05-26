@@ -7,7 +7,8 @@ namespace ReactiveUI.Primitives.Disposables;
 /// <summary>
 /// SingleReplaceableDisposable.
 /// </summary>
-public class SingleReplaceableDisposable : IsDisposed
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public partial class SingleReplaceableDisposable : IsDisposed
 {
     /// <summary>
     /// Marker used once the slot has been disposed.

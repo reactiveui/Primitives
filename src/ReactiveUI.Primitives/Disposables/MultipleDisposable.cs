@@ -7,7 +7,8 @@ namespace ReactiveUI.Primitives.Disposables;
 /// <summary>
 /// A disposable pocket that contains a set of disposables and disposes them together.
 /// </summary>
-public class MultipleDisposable : IsDisposed
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public partial class MultipleDisposable : IsDisposed
 {
     /// <summary>
     /// Initial capacity for overflow disposable storage.

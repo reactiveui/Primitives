@@ -12,7 +12,8 @@ namespace ReactiveUI.Primitives.Core;
 /// </summary>
 /// <typeparam name="T">The type of the value being annotated with time interval information.</typeparam>
 [Serializable]
-public readonly struct TimeInterval<T> : IEquatable<TimeInterval<T>>
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public readonly partial struct TimeInterval<T> : IEquatable<TimeInterval<T>>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="TimeInterval{T}"/> struct.

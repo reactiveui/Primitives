@@ -7,7 +7,8 @@ namespace ReactiveUI.Primitives.Disposables;
 /// <summary>
 /// Primitives alias for a replaceable disposable slot.
 /// </summary>
-public sealed class Slot : SingleReplaceableDisposable
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed partial class Slot : SingleReplaceableDisposable
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="Slot"/> class.

@@ -7,7 +7,8 @@ namespace ReactiveUI.Primitives.Disposables;
 /// <summary>
 /// Primitives alias for a group of disposables that are disposed together.
 /// </summary>
-public sealed class Pocket : MultipleDisposable
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed partial class Pocket : MultipleDisposable
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="Pocket"/> class.

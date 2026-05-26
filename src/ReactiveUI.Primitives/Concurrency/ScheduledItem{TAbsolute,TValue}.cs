@@ -9,7 +9,8 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// </summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 /// <typeparam name="TValue">Type of the state passed to the scheduled action.</typeparam>
-public sealed class ScheduledItem<TAbsolute, TValue> : ScheduledItem<TAbsolute>
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed partial class ScheduledItem<TAbsolute, TValue> : ScheduledItem<TAbsolute>
     where TAbsolute : IComparable<TAbsolute>
 {
     /// <summary>

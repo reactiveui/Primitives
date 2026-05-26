@@ -8,7 +8,8 @@ namespace ReactiveUI.Primitives.Signals;
 /// Read-only latest-value signal for projected or externally owned state.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
-public sealed class ReadOnlyState<T> : IObservable<T>, IDisposable
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed partial class ReadOnlyState<T> : IObservable<T>, IDisposable
 {
     /// <summary>
     /// Stores state for the signal implementation.

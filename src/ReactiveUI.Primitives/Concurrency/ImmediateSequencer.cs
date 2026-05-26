@@ -8,7 +8,8 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// ImmediateSequencer.
 /// </summary>
 /// <seealso cref="ISequencer" />
-public sealed class ImmediateSequencer : ISequencer
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed partial class ImmediateSequencer : ISequencer
 {
     /// <summary>
     /// Singleton holder for the immediate sequencer.

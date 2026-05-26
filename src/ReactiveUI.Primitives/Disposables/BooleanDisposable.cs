@@ -8,7 +8,8 @@ namespace ReactiveUI.Primitives.Disposables;
 /// BooleanDisposable.
 /// </summary>
 /// <seealso cref="Disposables.IsDisposed" />
-public sealed class BooleanDisposable : IsDisposed
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed partial class BooleanDisposable : IsDisposed
 {
     /// <summary>
     /// Gets a value indicating whether this instance is disposed.

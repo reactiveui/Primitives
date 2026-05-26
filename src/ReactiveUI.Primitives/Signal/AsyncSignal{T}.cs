@@ -12,7 +12,8 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="T">The Type.</typeparam>
 /// <seealso cref="ISignal&lt;T&gt;" />
-public class AsyncSignal<T> : IAwaitSignal<T>
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public partial class AsyncSignal<T> : IAwaitSignal<T>
 {
     /// <summary>
     /// Executes the new operation.

@@ -14,7 +14,8 @@ namespace ReactiveUI.Primitives.Core
     /// </summary>
     /// <typeparam name="T">The type of the elements received by the observer.</typeparam>
     [Serializable]
-    public abstract class Spark<T> : IEquatable<Spark<T>>
+    [DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public abstract partial class Spark<T> : IEquatable<Spark<T>>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Spark{T}"/> class.

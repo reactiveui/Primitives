@@ -15,7 +15,8 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// DispatcherSequencer.
 /// </summary>
 /// <seealso cref="ReactiveUI.Primitives.Concurrency.ISequencer" />
-public class DispatcherSequencer : ISequencer
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public partial class DispatcherSequencer : ISequencer
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DispatcherSequencer"/> class.

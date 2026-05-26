@@ -11,7 +11,8 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// CurrentThreadSequencer.
 /// </summary>
 /// <seealso cref="ISequencer" />
-public sealed class CurrentThreadSequencer : ISequencer
+[DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed partial class CurrentThreadSequencer : ISequencer
 {
     /// <summary>
     /// Singleton holder for the current-thread sequencer.

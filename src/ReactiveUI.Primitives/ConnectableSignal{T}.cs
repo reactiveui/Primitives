@@ -11,7 +11,8 @@ namespace ReactiveUI.Primitives;
 /// Connectable hot signal that subscribes to its source only when connected.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
-public sealed class ConnectableSignal<T> : IObservable<T>
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed partial class ConnectableSignal<T> : IObservable<T>
 {
     /// <summary>
     /// Synchronizes connection state.

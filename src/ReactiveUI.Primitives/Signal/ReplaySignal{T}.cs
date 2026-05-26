@@ -12,7 +12,8 @@ namespace ReactiveUI.Primitives.Signals;
 /// ReplaySignal.
 /// </summary>
 /// <typeparam name="T">The Type.</typeparam>
-public class ReplaySignal<T> : ISignal<T>
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public partial class ReplaySignal<T> : ISignal<T>
 {
     /// <summary>
     /// Stores state for the signal implementation.

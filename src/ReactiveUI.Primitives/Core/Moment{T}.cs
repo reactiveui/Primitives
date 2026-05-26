@@ -11,7 +11,8 @@ namespace ReactiveUI.Primitives.Core;
 /// </summary>
 /// <typeparam name="T">The captured value type.</typeparam>
 [Serializable]
-public readonly struct Moment<T> : IEquatable<Moment<T>>
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public readonly partial struct Moment<T> : IEquatable<Moment<T>>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="Moment{T}"/> struct.

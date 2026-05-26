@@ -12,7 +12,8 @@ namespace ReactiveUI.Primitives.Concurrency
     /// ThreadPoolSequencer.
     /// </summary>
     /// <seealso cref="ISequencer" />
-    public sealed class ThreadPoolSequencer : ISequencer
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed partial class ThreadPoolSequencer : ISequencer
     {
         /// <summary>
         /// Gets the shared thread-pool scheduler instance.
