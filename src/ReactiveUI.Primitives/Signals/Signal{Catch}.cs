@@ -15,7 +15,7 @@ public static partial class Signal
     /// Continues an observable sequence that is terminated by an exception of the specified type with the observable sequence produced by the handler.
     /// </summary>
     /// <typeparam name="TSource">The type of the elements in the source sequence and sequences returned by the exception handler function.</typeparam>
-    /// <typeparam name="TException">The type of the exception to catch and handle. Needs to derive from <see cref="System.Exception"/>.</typeparam>
+    /// <typeparam name="TException">The type of the exception to catch and handle. Needs to derive from <see cref="Exception"/>.</typeparam>
     /// <param name="source">Source sequence.</param>
     /// <param name="handler">Exception handler function, producing another observable sequence.</param>
     /// <returns>

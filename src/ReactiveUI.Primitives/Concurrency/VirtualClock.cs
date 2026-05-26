@@ -7,7 +7,8 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <summary>
 /// Deterministic virtual scheduler backed by <see cref="DateTimeOffset"/> and <see cref="TimeSpan"/>.
 /// </summary>
-public class VirtualClock : VirtualTimeSequencer<DateTimeOffset, TimeSpan>
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public partial class VirtualClock : VirtualTimeSequencer<DateTimeOffset, TimeSpan>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="VirtualClock"/> class at the default clock value.

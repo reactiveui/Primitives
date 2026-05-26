@@ -7,8 +7,9 @@ namespace ReactiveUI.Primitives.Disposables;
 /// <summary>
 /// CancellationDisposable.
 /// </summary>
-/// <seealso cref="System.IDisposable" />
-public sealed class CancellationDisposable : IsDisposed
+/// <seealso cref="IDisposable" />
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed partial class CancellationDisposable : IsDisposed
 {
     /// <summary>
     /// Cancellation source owned by this disposable.
@@ -19,7 +20,7 @@ public sealed class CancellationDisposable : IsDisposed
     /// Initializes a new instance of the <see cref="CancellationDisposable"/> class.
     /// </summary>
     /// <param name="cts">The CTS.</param>
-    /// <exception cref="System.ArgumentNullException">cts.</exception>
+    /// <exception cref="ArgumentNullException">cts.</exception>
     public CancellationDisposable(CancellationTokenSource cts) => _cts = cts ?? throw new ArgumentNullException(nameof(cts));
 
     /// <summary>

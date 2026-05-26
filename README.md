@@ -124,6 +124,7 @@ Subscriptions and scheduled work return `IDisposable`. ReactiveUI.Primitives inc
 | `BooleanDisposable` | Track simple disposed state. |
 | `CancellationDisposable` | Tie disposal to a `CancellationTokenSource`. |
 | `MultipleDisposable` | Composite-disposable equivalent; add/remove multiple disposables. |
+| `CompositeDisposable` | System.Reactive-compatible alias over `MultipleDisposable`. |
 | `Pocket` | Named `MultipleDisposable` specialization. |
 | `SingleDisposable` / `AssignmentSlot` | Single-assignment disposable container. |
 | `SingleReplaceableDisposable` / `Slot` | Replaceable disposable container. |
@@ -165,8 +166,10 @@ Creation APIs live on `ReactiveUI.Primitives.Signals.Signal`.
 | `Signal.Unfold<TState,TResult>(...)` | Generate a finite sequence from state. |
 | `Signal.Use<TResource,T>(...)` | Tie a resource lifetime to a subscription. |
 | `Signal.FromEnumerable<T>(IEnumerable<T>)` | Convert an enumerable. |
+| `Signal.FromEnumerable<T>(IEnumerable<T>, CancellationToken)` | Convert an enumerable and stop synchronous enumeration when cancelled. |
 | `Signal.FromAsyncEnumerable<T>(IAsyncEnumerable<T>, CancellationToken)` | Convert an async enumerable on modern TFMs. |
 | `Signal.FromTask<T>(Task<T>)` | Convert a task to a signal. |
+| `Signal.FromAsync<T>(...)` | Invoke a task factory per subscription. |
 | `Signal.After(TimeSpan, ISequencer?)` | Emit one `long` tick after a delay. |
 | `Signal.Every(TimeSpan, ISequencer?)` | Emit increasing `long` ticks repeatedly. |
 | `Signal.Pulse(...)` | Alias of `Every`. |
@@ -342,7 +345,7 @@ ReactiveUI.Primitives uses explicit names instead of cloning every System.Reacti
 | System.Reactive type | ReactiveUI.Primitives equivalent | Notes |
 |---|---|---|
 | `Subject<T>` | `Signal<T>` | Push values, errors, and completion to subscribers. |
-| `BehaviorSubject<T>` | `BehaviourSignal<T>` or `StateSignal<T>` | Stores the latest value and emits it to new subscribers. `StateSignal<T>` adds a mutable `Value` setter and `Changed`. |
+| `BehaviorSubject<T>` | `BehaviorSignal<T>`, or `StateSignal<T>` | Stores the latest value and emits it to new subscribers. `StateSignal<T>` adds a mutable `Value` setter and `Changed`. |
 | `ReplaySubject<T>` | `ReplaySignal<T>` | Replays buffered values by size and/or time window. |
 | `AsyncSubject<T>` | `AsyncSignal<T>` | Awaitable subject-like signal; also implements `IAwaitSignal<T>`. |
 | `ReactiveProperty<T>` / state holder | `StateSignal<T>` plus `ReadOnlyState<T>` | Mutable state and read-only projected state. |
@@ -493,12 +496,13 @@ ReactiveUI.Primitives is not a byte-for-byte clone of System.Reactive. It keeps 
 | `Observable.Repeat(value)` | `Signal.Repeat(value)` | Indefinite repeat. |
 | `Observable.Repeat(value, count)` | `Signal.Repeat(value, count)` | Fixed repeat. |
 | `Observable.Defer(factory)` | `Signal.Defer(factory)` | Create source per subscription. |
+| `Observable.FromAsync(...)` | `Signal.FromAsync(...)` | Invoke a task factory per subscription. |
 | `Observable.Create<T>(...)` | `Signal.Create<T>(...)` or `Signal.CreateSafe<T>(...)` | Prefer `CreateSafe` for general custom sources. |
 | `Observable.Using(...)` | `Signal.Use(...)` | Resource scoped to subscription. |
 | `Observable.Timer(dueTime)` | `Signal.Timer(dueTime)` or `Signal.After(dueTime)` | Emits `long` tick `0`. |
 | `Observable.Timer(dueTime, period)` | `Signal.Timer(dueTime, period)` | Periodic `long` ticks. |
 | `Observable.Interval(period)` | `Signal.Interval(period)` or `Signal.Every(period)` | Repeating ticks. |
-| `ToObservable()` from enumerable | `Signal.FromEnumerable(values)` or `values.ToSignal()` | `ToSignal` extension is available. |
+| `ToObservable()` from enumerable | `Signal.FromEnumerable(values)`, `values.ToSignal()`, or `values.ToObservable()` | Cancellation-token overloads are available. |
 | task conversion | `Signal.FromTask(task)` | Function-based task signals also exist. |
 
 ### Subject/state mapping
@@ -506,7 +510,7 @@ ReactiveUI.Primitives is not a byte-for-byte clone of System.Reactive. It keeps 
 | System.Reactive | ReactiveUI.Primitives | Migration detail |
 |---|---|---|
 | `new Subject<T>()` | `new Signal<T>()` | Use `OnNext`, `OnError`, `OnCompleted`, and `Subscribe`. |
-| `new BehaviorSubject<T>(initial)` | `new BehaviourSignal<T>(initial)` | Keeps `Value` getter and emits latest value to subscribers. |
+| `new BehaviorSubject<T>(initial)` | `new BehaviorSignal<T>(initial)` | Keeps `Value` getter and emits latest value to subscribers. |
 | mutable reactive property | `new StateSignal<T>(initial)` | Set `Value` to emit. Use `Changed` for observable state stream. |
 | `new ReplaySubject<T>()` | `new ReplaySignal<T>()` | Unbounded replay. |
 | `new ReplaySubject<T>(bufferSize)` | `new ReplaySignal<T>(bufferSize)` | Size-limited replay. |
@@ -546,6 +550,7 @@ ReactiveUI.Primitives is not a byte-for-byte clone of System.Reactive. It keeps 
 | `Buffer(count)` | `Buffer(count)` | Fixed-size buffers. |
 | `ToList` / `ToArray` | `CollectList` / `CollectArray` | Signal results. |
 | `FirstAsync` | `FirstAsync` | Task result. |
+| `CountAsync` / `AnyAsync` | `CountAsync` / `AnyAsync` | Task-shaped terminal helpers, including cancellation overloads. |
 
 ### Disposable mapping
 

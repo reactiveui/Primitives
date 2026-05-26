@@ -83,7 +83,7 @@ public class StatefulSignalBenchmarks
     private static int EmitAndReadBehaviourSignal(int count)
     {
         var observer = new IntSignalObserver();
-        using var subject = new BehaviourSignal<int>(0);
+        using var subject = new BehaviorSignal<int>(0);
         using var subscription = subject.Subscribe(observer);
         for (var i = 1; i <= count; i++)
         {

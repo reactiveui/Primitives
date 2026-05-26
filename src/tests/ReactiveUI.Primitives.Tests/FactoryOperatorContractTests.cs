@@ -7,10 +7,12 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
+using ReactiveUI.Primitives.Signals.Core;
 using TUnit.Core;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -381,16 +383,42 @@ public class FactoryOperatorContractTests
         var concatenated = new List<int>();
         var zipped = new List<int>();
         var latest = new List<string>();
+        var rangeConcatenated = new List<int>();
+        var rangeMerged = new List<int>();
+        var rangeRace = new List<int>();
+        var rangeLatest = new List<int>();
+        var rangeWithLatest = new List<int>();
+        var rangeForkJoin = new List<int>();
+        var rangeObserver = new RecordingObserver<int>();
 
+        var rangeConcatSignal = Signal.Concat(Signal.Range(FirstValue, SecondValue), Signal.Range(RetrySuccessAttempt, SecondValue));
         Signal.Merge(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable([RetrySuccessAttempt, FourthValue])).Subscribe(merged.Add);
         Signal.Concat(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable([RetrySuccessAttempt, FourthValue])).Subscribe(concatenated.Add);
         Signal.Zip(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable([ProjectedFirstValue, ProjectedThirdValue]), (left, right) => left + right).Subscribe(zipped.Add);
         Signal.CombineLatest(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable(["a", "b"]), (left, right) => left + right).Subscribe(latest.Add);
+        rangeConcatSignal.Subscribe(rangeConcatenated.Add);
+        rangeConcatSignal.Subscribe(rangeObserver);
+        Signal.Merge(Signal.Range(FirstValue, SecondValue), Signal.Range(RetrySuccessAttempt, SecondValue)).Subscribe(rangeMerged.Add);
+        Signal.Race(Signal.Range(FirstValue, SecondValue), Signal.Range(RetrySuccessAttempt, SecondValue)).Subscribe(rangeRace.Add);
+        Signal.CombineLatest(Signal.Range(FirstValue, SecondValue), Signal.Range(ProjectionMultiplier, SecondValue), static (left, right) => left + right).Subscribe(rangeLatest.Add);
+        Signal.Range(FirstValue, SecondValue).WithLatest(Signal.Range(ProjectionMultiplier, SecondValue), static (left, right) => left + right).Subscribe(rangeWithLatest.Add);
+        Signal.ForkJoin(Signal.Range(FirstValue, SecondValue), Signal.Range(ProjectionMultiplier, SecondValue), static (left, right) => left + right).Subscribe(rangeForkJoin.Add);
+        Assert.Throws<ArgumentNullException>(() => rangeConcatSignal.Subscribe((IObserver<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => ((IInlineSignal<int>)rangeConcatSignal).Subscribe(null!, _ => { }, () => { }));
+        Assert.Throws<ArgumentNullException>(() => ((IInlineSignal<int>)rangeConcatSignal).Subscribe(_ => { }, _ => { }, null!));
 
         Assert.Equal(FourItemExpected, merged);
         Assert.Equal(FourItemExpected, concatenated);
         Assert.Equal(ZippedExpected, zipped);
         Assert.Equal(LatestExpected, latest);
+        Assert.Equal(FourItemExpected, rangeConcatenated);
+        Assert.Equal(FourItemExpected, rangeObserver.Values);
+        Assert.Equal(1, rangeObserver.Completed);
+        Assert.Equal(FourItemExpected, rangeMerged);
+        Assert.Equal(TakeWhileExpected, rangeRace);
+        Assert.Equal(new[] { ProjectedSecondBucketPeerValue, RangeZipShorterSecondResult }, rangeLatest);
+        Assert.Equal(new[] { ProjectedSecondBucketPeerValue, RangeZipShorterSecondResult }, rangeWithLatest);
+        Assert.Equal(new[] { RangeZipShorterSecondResult }, rangeForkJoin);
     }
 
     /// <summary>
@@ -590,10 +618,65 @@ public class FactoryOperatorContractTests
         var first = await Signal.FromEnumerable([RetrySuccessAttempt, FourthValue]).FirstAsync();
         var collected = await Signal.FromEnumerable([FirstValue, SecondValue, RetrySuccessAttempt]).CollectArrayAsync();
         var none = await Signal.Empty<int>().FirstOrDefaultAsync(RetryResult);
+        var rangeFirst = await Signal.Range(FirstValue, FourthValue).FirstAsync();
+        var rangeLast = await Signal.Range(FirstValue, FourthValue).ToTask();
+        var rangeCollected = await Signal.Range(FirstValue, RetrySuccessAttempt).CollectListAsync();
+        var count = await Signal.Range(FirstValue, FourthValue).CountAsync();
+        var countEven = await Signal.Range(FirstValue, FourthValue).CountAsync(static value => value % 2 == 0);
+        var any = await Signal.Range(FirstValue, FourthValue).AnyAsync(static value => value == FourthValue);
 
         Assert.Equal(RetrySuccessAttempt, first);
         Assert.Equal(CollectedExpected, (IEnumerable<int>)collected);
         Assert.Equal(RetryResult, none);
+        Assert.Equal(FirstValue, rangeFirst);
+        Assert.Equal(FourthValue, rangeLast);
+        Assert.Equal(CollectedExpected, (IEnumerable<int>)rangeCollected);
+        Assert.Equal(FourthValue, count);
+        Assert.Equal(SecondValue, countEven);
+        Assert.True(any);
+    }
+
+    /// <summary>
+    /// Verifies factory guards, async aliases, and cancellation-aware enumerable conversion.
+    /// </summary>
+    /// <returns>A task that completes when asynchronous assertions finish.</returns>
+    [Test]
+    public async Task FactoryAliasesAndGuardsCoverParityBranches()
+    {
+        var values = new List<int>();
+        var errors = new List<Exception>();
+        var completed = 0;
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Range(FirstValue, -1));
+        Assert.Throws<ArgumentNullException>(() => Signal.Range(FirstValue, SecondValue, null!));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Repeat(FirstValue, -1));
+        Assert.Throws<ArgumentNullException>(() => Signal.Unfold<int, int>(0, null!, static state => state, static state => state));
+        Assert.Throws<ArgumentNullException>(() => Signal.Unfold<int, int>(0, static _ => true, null!, static state => state));
+        Assert.Throws<ArgumentNullException>(() => Signal.Unfold<int, int>(0, static _ => true, static state => state, null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Start((Func<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Start(static () => FirstValue, null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Start((Action)null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.After(TimeSpan.Zero, null!));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Every(TimeSpan.FromTicks(-1)));
+        Assert.Throws<ArgumentNullException>(() => Signal.Timer(TimeSpan.Zero, TimeSpan.Zero, null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.FromAsync<int>((Func<Task<int>>)null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.FromAsync<int>((Func<CancellationToken, Task<int>>)null!));
+
+        Signal.Range(FirstValue, 0).Subscribe(values.Add, errors.Add, () => completed++);
+        Signal.Repeat(FirstValue, 0).Subscribe(values.Add, errors.Add, () => completed++);
+        new[] { FirstValue, SecondValue }.ToObservable(cancelled.Token).Subscribe(values.Add, errors.Add, () => completed++);
+        Signal.Start<int>(() => throw new InvalidOperationException("start failed"), Sequencer.Immediate).Subscribe(values.Add, errors.Add, () => completed++);
+
+        var fromAsync = await Signal.FromAsync(() => Task.FromResult(RetryResult)).ToTask();
+        var fromAsyncWithToken = await Signal.FromAsync(static token => Task.FromResult(token.IsCancellationRequested ? -1 : RetrySuccessAttempt)).ToTask();
+
+        Assert.Equal(RetryResult, fromAsync);
+        Assert.Equal(RetrySuccessAttempt, fromAsyncWithToken);
+        Assert.Equal(0, values.Count);
+        Assert.Equal(SecondValue, completed);
+        Assert.Equal(1, errors.Count);
     }
 
     /// <summary>
@@ -675,5 +758,31 @@ public class FactoryOperatorContractTests
         Assert.Equal(AfterTicks, last);
         Assert.Equal(RepeatValue, first);
         Assert.Equal(ProjectedSecondValue, started);
+    }
+
+    /// <summary>
+    /// Records observer values and terminal signals.
+    /// </summary>
+    /// <typeparam name="T">The observed value type.</typeparam>
+    private sealed class RecordingObserver<T> : IObserver<T>
+    {
+        /// <summary>
+        /// Gets observed values.
+        /// </summary>
+        public List<T> Values { get; } = [];
+
+        /// <summary>
+        /// Gets completion count.
+        /// </summary>
+        public int Completed { get; private set; }
+
+        /// <inheritdoc/>
+        public void OnCompleted() => Completed++;
+
+        /// <inheritdoc/>
+        public void OnError(Exception error) => throw error;
+
+        /// <inheritdoc/>
+        public void OnNext(T value) => Values.Add(value);
     }
 }

@@ -36,7 +36,7 @@ public static partial class Signal
     /// <param name="value">The value.</param>
     /// <returns>An Signals.</returns>
     public static IObservable<T> Return<T>(T value) =>
-        Return<T>(value, Sequencer.Immediate);
+        Return(value, Sequencer.Immediate);
 
     /// <summary>
     /// Return single sequence Immediately, optimized for RxVoid(no allocate memory).

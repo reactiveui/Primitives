@@ -2,15 +2,14 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-#pragma warning disable SA1501
-
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>
 /// Minimal reactive command that gates execution and publishes result, fault, and running state streams.
 /// </summary>
 /// <typeparam name="TResult">The command result type.</typeparam>
-public sealed class CommandSignal<TResult> : IDisposable
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed partial class CommandSignal<TResult> : IDisposable
 {
     /// <summary>
     /// Stores state for the signal implementation.

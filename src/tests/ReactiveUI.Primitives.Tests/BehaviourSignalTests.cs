@@ -38,14 +38,14 @@ public class BehaviourSignalTests
     /// </summary>
     [Test]
     public void Subscribe_ArgumentChecking() =>
-        Assert.Throws<ArgumentNullException>(() => new BehaviourSignal<int>(1).Subscribe(null!));
+        Assert.Throws<ArgumentNullException>(() => new BehaviorSignal<int>(1).Subscribe(null!));
 
     /// <summary>
     /// Called when [error argument checking].
     /// </summary>
     [Test]
     public void OnError_ArgumentChecking() =>
-        Assert.Throws<ArgumentNullException>(() => new BehaviourSignal<int>(1).OnError(null!));
+        Assert.Throws<ArgumentNullException>(() => new BehaviorSignal<int>(1).OnError(null!));
 
     /// <summary>
     /// Determines whether this instance has observers.
@@ -53,7 +53,7 @@ public class BehaviourSignalTests
     [Test]
     public void HasObservers()
     {
-        var s = new BehaviourSignal<int>(42);
+        var s = new BehaviorSignal<int>(42);
         Assert.False(s.HasObservers);
 
         var d1 = s.Subscribe(_ => { });
@@ -81,7 +81,7 @@ public class BehaviourSignalTests
     [Test]
     public void HasObservers_Dispose1()
     {
-        var s = new BehaviourSignal<int>(42);
+        var s = new BehaviorSignal<int>(42);
         Assert.False(s.HasObservers);
         Assert.False(s.IsDisposed);
 
@@ -104,7 +104,7 @@ public class BehaviourSignalTests
     [Test]
     public void HasObservers_Dispose2()
     {
-        var s = new BehaviourSignal<int>(42);
+        var s = new BehaviorSignal<int>(42);
         Assert.False(s.HasObservers);
         Assert.False(s.IsDisposed);
 
@@ -127,7 +127,7 @@ public class BehaviourSignalTests
     [Test]
     public void HasObservers_Dispose3()
     {
-        var s = new BehaviourSignal<int>(42);
+        var s = new BehaviorSignal<int>(42);
         Assert.False(s.HasObservers);
         Assert.False(s.IsDisposed);
 
@@ -142,7 +142,7 @@ public class BehaviourSignalTests
     [Test]
     public void HasObservers_OnCompleted()
     {
-        var s = new BehaviourSignal<int>(42);
+        var s = new BehaviorSignal<int>(42);
         Assert.False(s.HasObservers);
 
         using var subscription = s.Subscribe(_ => { });
@@ -161,7 +161,7 @@ public class BehaviourSignalTests
     [Test]
     public void HasObservers_OnError()
     {
-        var s = new BehaviourSignal<int>(42);
+        var s = new BehaviorSignal<int>(42);
         Assert.False(s.HasObservers);
 
         using var subscription = s.Subscribe(_ => { }, _ => { });
@@ -180,7 +180,7 @@ public class BehaviourSignalTests
     [Test]
     public void Value_Initial()
     {
-        var s = new BehaviourSignal<int>(InitialValue);
+        var s = new BehaviorSignal<int>(InitialValue);
         Assert.Equal(InitialValue, s.Value);
 
         Assert.True(s.TryGetValue(out var x));
@@ -193,7 +193,7 @@ public class BehaviourSignalTests
     [Test]
     public void Value_First()
     {
-        var s = new BehaviourSignal<int>(InitialValue);
+        var s = new BehaviorSignal<int>(InitialValue);
         Assert.Equal(InitialValue, s.Value);
 
         Assert.True(s.TryGetValue(out var x));
@@ -212,7 +212,7 @@ public class BehaviourSignalTests
     [Test]
     public void Value_Second()
     {
-        var s = new BehaviourSignal<int>(InitialValue);
+        var s = new BehaviorSignal<int>(InitialValue);
         Assert.Equal(InitialValue, s.Value);
 
         Assert.True(s.TryGetValue(out var x));
@@ -237,7 +237,7 @@ public class BehaviourSignalTests
     [Test]
     public void Value_FrozenAfterOnCompleted()
     {
-        var s = new BehaviourSignal<int>(InitialValue);
+        var s = new BehaviorSignal<int>(InitialValue);
         Assert.Equal(InitialValue, s.Value);
 
         Assert.True(s.TryGetValue(out var x));
@@ -274,7 +274,7 @@ public class BehaviourSignalTests
     [Test]
     public void Value_ThrowsAfterOnError()
     {
-        var s = new BehaviourSignal<int>(InitialValue);
+        var s = new BehaviorSignal<int>(InitialValue);
         Assert.Equal(InitialValue, s.Value);
 
         s.OnError(new InvalidOperationException());
@@ -290,7 +290,7 @@ public class BehaviourSignalTests
     [Test]
     public void Value_ThrowsOnDispose()
     {
-        var s = new BehaviourSignal<int>(InitialValue);
+        var s = new BehaviorSignal<int>(InitialValue);
         Assert.Equal(InitialValue, s.Value);
 
         s.Dispose();

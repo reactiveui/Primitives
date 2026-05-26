@@ -42,7 +42,7 @@ public static partial class Sequencer
     /// <returns>
     /// The disposable object used to cancel the scheduled action (best effort).
     /// </returns>
-    /// <exception cref="System.ArgumentNullException">
+    /// <exception cref="ArgumentNullException">
     /// scheduler
     /// or
     /// action.
@@ -72,7 +72,7 @@ public static partial class Sequencer
     /// <returns>
     /// The disposable object used to cancel the scheduled action (best effort).
     /// </returns>
-    /// <exception cref="System.ArgumentNullException">
+    /// <exception cref="ArgumentNullException">
     /// scheduler
     /// or
     /// action.
@@ -124,7 +124,7 @@ public static partial class Sequencer
     /// <returns>
     /// The disposable object used to cancel the scheduled action (best effort).
     /// </returns>
-    /// <exception cref="System.ArgumentNullException">
+    /// <exception cref="ArgumentNullException">
     /// scheduler
     /// or
     /// action.
@@ -190,7 +190,7 @@ public static partial class Sequencer
     /// <returns>
     /// The disposable object used to cancel the scheduled action (best effort).
     /// </returns>
-    /// <exception cref="System.ArgumentNullException">
+    /// <exception cref="ArgumentNullException">
     /// scheduler
     /// or
     /// action.
@@ -222,7 +222,7 @@ public static partial class Sequencer
     /// <returns>
     /// The disposable object used to cancel the scheduled action (best effort).
     /// </returns>
-    /// <exception cref="System.ArgumentNullException">
+    /// <exception cref="ArgumentNullException">
     /// scheduler
     /// or
     /// action.
@@ -254,7 +254,7 @@ public static partial class Sequencer
     /// <returns>
     /// The disposable object used to cancel the scheduled action (best effort).
     /// </returns>
-    /// <exception cref="System.ArgumentNullException">
+    /// <exception cref="ArgumentNullException">
     /// scheduler
     /// or
     /// action.
@@ -286,7 +286,7 @@ public static partial class Sequencer
     /// <returns>
     /// The disposable object used to cancel the scheduled action (best effort).
     /// </returns>
-    /// <exception cref="System.ArgumentNullException">
+    /// <exception cref="ArgumentNullException">
     /// scheduler
     /// or
     /// action.

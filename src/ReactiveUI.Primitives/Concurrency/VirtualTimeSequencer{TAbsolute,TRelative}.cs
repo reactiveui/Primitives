@@ -9,7 +9,8 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// </summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 /// <typeparam name="TRelative">Relative time representation type.</typeparam>
-public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSequencerBase<TAbsolute, TRelative>
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public abstract partial class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSequencerBase<TAbsolute, TRelative>
     where TAbsolute : IComparable<TAbsolute>
 {
     /// <summary>
@@ -47,7 +48,7 @@ public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSe
     /// <returns>
     /// The disposable object used to cancel the scheduled action (best effort).
     /// </returns>
-    /// <exception cref="System.ArgumentNullException">action.</exception>
+    /// <exception cref="ArgumentNullException">action.</exception>
     /// <exception cref="ArgumentNullException"><paramref name="action" /> is <c>null</c>.</exception>
     public override IDisposable ScheduleAbsolute<TState>(TState state, TAbsolute dueTime, Func<ISequencer, TState, IDisposable> action)
     {

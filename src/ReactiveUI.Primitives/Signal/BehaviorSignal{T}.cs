@@ -11,7 +11,8 @@ namespace ReactiveUI.Primitives.Signals;
 /// BehaviourSignal.
 /// </summary>
 /// <typeparam name="T">The Type.</typeparam>
-public class BehaviourSignal<T> : ISignal<T>
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public class BehaviorSignal<T> : ISignal<T>
 {
     /// <summary>
     /// Executes the new operation.
@@ -42,10 +43,10 @@ public class BehaviourSignal<T> : ISignal<T>
     private Exception? _lastError;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="BehaviourSignal{T}"/> class.
+    /// Initializes a new instance of the <see cref="BehaviorSignal{T}"/> class.
     /// </summary>
     /// <param name="defaultValue">The default value.</param>
-    public BehaviourSignal(T defaultValue)
+    public BehaviorSignal(T defaultValue)
     {
         _lastValue = defaultValue;
     }
@@ -89,6 +90,18 @@ public class BehaviourSignal<T> : ISignal<T>
     ///   <c>true</c> if this instance is disposed; otherwise, <c>false</c>.
     /// </value>
     public bool IsDisposed { get; private set; }
+
+    /// <summary>
+    /// Gets the string representation of this object for debugger display purposes.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string? DebuggerDisplay
+    {
+        get
+        {
+            return ToString();
+        }
+    }
 
     /// <summary>
     /// Tries to get the current value or throws an exception.
@@ -297,7 +310,7 @@ public class BehaviourSignal<T> : ISignal<T>
         /// <summary>
         /// Stores state for the signal implementation.
         /// </summary>
-        private BehaviourSignal<T>? _subject;
+        private BehaviorSignal<T>? _subject;
 
         /// <summary>
         /// Stores state for the signal implementation.
@@ -309,7 +322,7 @@ public class BehaviourSignal<T> : ISignal<T>
         /// </summary>
         /// <param name="subject">The subject value.</param>
         /// <param name="observer">The observer value.</param>
-        public ObserverHandler(BehaviourSignal<T> subject, IObserver<T> observer)
+        public ObserverHandler(BehaviorSignal<T> subject, IObserver<T> observer)
         {
             _subject = subject;
             _observer = observer;

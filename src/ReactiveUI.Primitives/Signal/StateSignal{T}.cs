@@ -4,15 +4,14 @@
 
 using ReactiveUI.Primitives;
 
-#pragma warning disable SA1501
-
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>
 /// Mutable latest-value signal with a ReactiveUI.Primitives name for reactive-property parity.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
-public class StateSignal<T> : BehaviourSignal<T>
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public partial class StateSignal<T> : BehaviorSignal<T>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="StateSignal{T}"/> class.

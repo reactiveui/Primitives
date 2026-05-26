@@ -53,7 +53,7 @@ internal static class R3SignalBridge
             throw new global::System.ArgumentNullException(nameof(source));
         }
 
-        return global::ReactiveUI.Primitives.Signals.Signal.Create<T>(observer => source.Subscribe(observer));
+        return global::ReactiveUI.Primitives.Signals.Signal.Create<T>(observer => source.Subscribe(new R3ToPrimitivesObserver<T>(observer)));
     }
 
     /// <summary>
@@ -66,7 +66,42 @@ internal static class R3SignalBridge
             throw new global::System.ArgumentNullException(nameof(source));
         }
 
-        return global::R3.Observable<T>.Create(observer => source.Subscribe(observer));
+        return global::R3.Observable.Create<T>(observer => source.Subscribe(new PrimitivesToR3Observer<T>(observer)));
+    }
+
+    private sealed class R3ToPrimitivesObserver<T> : global::R3.Observer<T>
+    {
+        private readonly global::System.IObserver<T> _observer;
+
+        public R3ToPrimitivesObserver(global::System.IObserver<T> observer) => _observer = observer;
+
+        protected override void OnNextCore(T value) => _observer.OnNext(value);
+
+        protected override void OnErrorResumeCore(global::System.Exception error) => _observer.OnError(error);
+
+        protected override void OnCompletedCore(global::R3.Result result)
+        {
+            if (result.IsFailure)
+            {
+                _observer.OnError(result.Exception);
+                return;
+            }
+
+            _observer.OnCompleted();
+        }
+    }
+
+    private sealed class PrimitivesToR3Observer<T> : global::System.IObserver<T>
+    {
+        private readonly global::R3.Observer<T> _observer;
+
+        public PrimitivesToR3Observer(global::R3.Observer<T> observer) => _observer = observer;
+
+        public void OnNext(T value) => _observer.OnNext(value);
+
+        public void OnError(global::System.Exception error) => _observer.OnCompleted(global::R3.Result.Failure(error));
+
+        public void OnCompleted() => _observer.OnCompleted(global::R3.Result.Success);
     }
 }
 """;

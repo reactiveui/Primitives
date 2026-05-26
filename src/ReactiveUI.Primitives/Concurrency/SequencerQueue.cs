@@ -11,7 +11,8 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// </summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 /// <remarks>This type is not thread safe; users should ensure proper synchronization.</remarks>
-public class SequencerQueue<TAbsolute>
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public partial class SequencerQueue<TAbsolute>
     where TAbsolute : IComparable<TAbsolute>
 {
     /// <summary>

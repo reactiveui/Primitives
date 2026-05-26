@@ -19,11 +19,27 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
     private readonly IEnumerable<T> _values;
 
     /// <summary>
+    /// Cancels synchronous enumeration when requested.
+    /// </summary>
+    private readonly CancellationToken _cancellationToken;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="FromEnumerableSignal{T}"/> class.
     /// </summary>
     /// <param name="values">The source values.</param>
     public FromEnumerableSignal(IEnumerable<T> values) =>
         _values = values;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FromEnumerableSignal{T}"/> class.
+    /// </summary>
+    /// <param name="values">The source values.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public FromEnumerableSignal(IEnumerable<T> values, CancellationToken cancellationToken)
+    {
+        _values = values;
+        _cancellationToken = cancellationToken;
+    }
 
     /// <summary>
     /// Executes the IsRequiredSubscribeOnCurrentThread operation.
@@ -43,7 +59,7 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
             throw new ArgumentNullException(nameof(observer));
         }
 
-        if (_values is T[] array)
+        if (!_cancellationToken.CanBeCanceled && _values is T[] array)
         {
             for (var i = 0; i < array.Length; i++)
             {
@@ -54,7 +70,7 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
             return Disposable.Empty;
         }
 
-        if (_values is IReadOnlyList<T> readOnlyList)
+        if (!_cancellationToken.CanBeCanceled && _values is IReadOnlyList<T> readOnlyList)
         {
             for (var i = 0; i < readOnlyList.Count; i++)
             {
@@ -67,6 +83,11 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
 
         foreach (var value in _values)
         {
+            if (_cancellationToken.IsCancellationRequested)
+            {
+                return Disposable.Empty;
+            }
+
             observer.OnNext(value);
         }
 
@@ -81,6 +102,10 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
     /// <param name="onError">The onError value.</param>
     /// <param name="onCompleted">The onCompleted value.</param>
     /// <returns>The subscription.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S1541:Methods and properties should not be too complex",
+        Justification = "The method keeps array, read-only-list, iterator, and cancellation fast paths allocation-free.")]
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
         if (onNext == null)
@@ -93,7 +118,7 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
             throw new ArgumentNullException(nameof(onCompleted));
         }
 
-        if (_values is T[] array)
+        if (!_cancellationToken.CanBeCanceled && _values is T[] array)
         {
             for (var i = 0; i < array.Length; i++)
             {
@@ -104,7 +129,7 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
             return Disposable.Empty;
         }
 
-        if (_values is IReadOnlyList<T> readOnlyList)
+        if (!_cancellationToken.CanBeCanceled && _values is IReadOnlyList<T> readOnlyList)
         {
             for (var i = 0; i < readOnlyList.Count; i++)
             {
@@ -117,6 +142,11 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
 
         foreach (var value in _values)
         {
+            if (_cancellationToken.IsCancellationRequested)
+            {
+                return Disposable.Empty;
+            }
+
             onNext(value);
         }
 

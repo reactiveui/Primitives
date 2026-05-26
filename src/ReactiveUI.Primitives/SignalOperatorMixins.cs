@@ -8,8 +8,6 @@ using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 using ReactiveUI.Primitives.Signals.Core;
 
-#pragma warning disable SA1107, SA1116, SA1117, SA1501, SA1611, SA1615, SA1618
-
 namespace ReactiveUI.Primitives;
 
 /// <summary>
@@ -19,8 +17,15 @@ namespace ReactiveUI.Primitives;
 public static partial class LinqMixins
 {
     /// <summary>
-    /// Maps every value with <paramref name="selector"/>.
+    /// Projects each element of an observable sequence into a new form.
     /// </summary>
+    /// <typeparam name="TSource">The type of the elements in the source sequence.</typeparam>
+    /// <typeparam name="TResult">The type of the elements in the result sequence.</typeparam>
+    /// <param name="source">An observable sequence of elements to project.</param>
+    /// <param name="selector">A transform function to apply to each element.</param>
+    /// <returns>An observable sequence whose elements are the result of invoking the transform function on each element of the
+    /// source sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
     public static IObservable<TResult> Map<TSource, TResult>(this IObservable<TSource> source, Func<TSource, TResult> selector)
     {
         if (source == null)
@@ -37,8 +42,18 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Maps every value with explicit state to avoid closure allocations in hot paths.
+    /// Projects each element of an observable sequence into a new form by incorporating state that is passed to the
+    /// selector function.
     /// </summary>
+    /// <typeparam name="TSource">The type of the elements in the source sequence.</typeparam>
+    /// <typeparam name="TState">The type of the state used in the selector function.</typeparam>
+    /// <typeparam name="TResult">The type of the elements in the result sequence.</typeparam>
+    /// <param name="source">An observable sequence of elements to project.</param>
+    /// <param name="state">The state to pass to the selector function.</param>
+    /// <param name="selector">A transform function to apply to each source element along with the state.</param>
+    /// <returns>An observable sequence whose elements are the result of invoking the transform function on each element of the
+    /// source along with the state.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="selector"/> is <see langword="null"/>.</exception>
     public static IObservable<TResult> MapWith<TSource, TState, TResult>(this IObservable<TSource> source, TState state, Func<TState, TSource, TResult> selector)
     {
         if (selector == null)
@@ -50,8 +65,14 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Keeps values that satisfy <paramref name="predicate"/>.
+    /// Filters an observable sequence to include only elements that satisfy a specified condition.
     /// </summary>
+    /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
+    /// <param name="source">The source observable sequence to filter.</param>
+    /// <param name="predicate">A function to test each element for a condition.</param>
+    /// <returns>An observable sequence that contains elements from the input sequence that satisfy the condition specified by
+    /// <paramref name="predicate"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="predicate"/> is <see langword="null"/>.</exception>
     public static IObservable<T> Keep<T>(this IObservable<T> source, Func<T, bool> predicate)
     {
         if (source == null)
@@ -68,8 +89,16 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Keeps values that satisfy a stateful predicate.
+    /// Filters elements from an observable sequence based on a predicate that uses external state.
     /// </summary>
+    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
+    /// <typeparam name="TState">The type of the state parameter passed to the predicate.</typeparam>
+    /// <param name="source">The source observable sequence to filter.</param>
+    /// <param name="state">The state value to pass to the predicate for each element.</param>
+    /// <param name="predicate">A function to test each element along with the state; returns <see langword="true"/> to keep the element, <see
+    /// langword="false"/> to filter it out.</param>
+    /// <returns>An observable sequence containing only the elements from the source sequence that satisfy the predicate.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="predicate"/> is <see langword="null"/>.</exception>
     public static IObservable<T> KeepWith<T, TState>(this IObservable<T> source, TState state, Func<TState, T, bool> predicate)
     {
         if (predicate == null)
@@ -81,8 +110,12 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Keeps non-null values and narrows nullable references.
+    /// Filters out null values from the source observable sequence, emitting only non-null values.
     /// </summary>
+    /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
+    /// <param name="source">The source observable sequence to filter.</param>
+    /// <returns>An observable sequence that emits only non-null values from the source sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is null.</exception>
     public static IObservable<T> KeepNotNull<T>(this IObservable<T?> source)
         where T : class
     {
@@ -106,8 +139,12 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Projects only values assignable to <typeparamref name="TResult"/>.
+    /// Filters values to those assignable to <typeparamref name="TResult"/>.
     /// </summary>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A sequence containing only values assignable to <typeparamref name="TResult"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
@@ -134,8 +171,12 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Casts every value to <typeparamref name="TResult"/>.
+    /// Casts each source value to <typeparamref name="TResult"/>.
     /// </summary>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A sequence containing each value cast to <typeparamref name="TResult"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
@@ -151,8 +192,13 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Runs a side effect for every value while preserving the source values.
+    /// Invokes an action for each value while preserving the original sequence.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="onNext">The action to invoke for each value.</param>
+    /// <returns>The source values after the action has run.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="onNext"/> is <see langword="null"/>.</exception>
     public static IObservable<T> Tap<T>(this IObservable<T> source, Action<T> onNext)
     {
         if (onNext == null)
@@ -168,8 +214,15 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Runs a stateful side effect for every value while preserving the source values.
+    /// Invokes a stateful action for each value while preserving the original sequence.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <typeparam name="TState">The state type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="state">The state passed to <paramref name="onNext"/>.</param>
+    /// <param name="onNext">The action to invoke for each value.</param>
+    /// <returns>The source values after the action has run.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="onNext"/> is <see langword="null"/>.</exception>
     public static IObservable<T> TapWith<T, TState>(this IObservable<T> source, TState state, Action<TState, T> onNext)
     {
         if (onNext == null)
@@ -181,8 +234,15 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Emits accumulated state for every source value.
+    /// Emits the accumulated state after each source value.
     /// </summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <typeparam name="TAccumulate">The accumulated value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="seed">The initial accumulated value.</param>
+    /// <param name="accumulator">The function that combines the current state with the next source value.</param>
+    /// <returns>A sequence of intermediate accumulated values.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="accumulator"/> is <see langword="null"/>.</exception>
     public static IObservable<TAccumulate> Scan<TSource, TAccumulate>(this IObservable<TSource> source, TAccumulate seed, Func<TAccumulate, TSource, TAccumulate> accumulator)
     {
         if (source == null)
@@ -210,8 +270,15 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Emits one final accumulated value when the source completes.
+    /// Emits the final accumulated state when the source completes.
     /// </summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <typeparam name="TAccumulate">The accumulated value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="seed">The initial accumulated value.</param>
+    /// <param name="accumulator">The function that combines the current state with the next source value.</param>
+    /// <returns>A sequence that emits one accumulated value on completion.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="accumulator"/> is <see langword="null"/>.</exception>
     public static IObservable<TAccumulate> Fold<TSource, TAccumulate>(this IObservable<TSource> source, TAccumulate seed, Func<TAccumulate, TSource, TAccumulate> accumulator)
     {
         if (source == null)
@@ -241,6 +308,12 @@ public static partial class LinqMixins
     /// <summary>
     /// Emits at most <paramref name="count"/> values before completing.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="count">The maximum number of values to emit.</param>
+    /// <returns>A sequence containing at most <paramref name="count"/> source values.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is less than zero.</exception>
     public static IObservable<T> Take<T>(this IObservable<T> source, int count)
     {
         if (source == null)
@@ -285,8 +358,14 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Skips <paramref name="count"/> values.
+    /// Skips the first <paramref name="count"/> source values.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="count">The number of values to skip.</param>
+    /// <returns>A sequence containing source values after the skipped prefix.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is less than zero.</exception>
     public static IObservable<T> Skip<T>(this IObservable<T> source, int count)
     {
         if (source == null)
@@ -319,14 +398,23 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Suppresses duplicate values according to the comparer.
+    /// Suppresses values that have already been observed.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A sequence containing the first occurrence of each source value.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     public static IObservable<T> Distinct<T>(this IObservable<T> source) =>
         source.Distinct(null);
 
     /// <summary>
-    /// Suppresses duplicate values according to the comparer.
+    /// Suppresses values that have already been observed using the supplied comparer.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="comparer">The comparer used to identify duplicate values.</param>
+    /// <returns>A sequence containing the first occurrence of each source value.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     public static IObservable<T> Distinct<T>(this IObservable<T> source, IEqualityComparer<T>? comparer)
     {
         if (source == null)
@@ -353,14 +441,23 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Suppresses adjacent duplicate values according to the comparer.
+    /// Suppresses adjacent duplicate values.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A sequence with adjacent duplicates removed.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     public static IObservable<T> DistinctUntilChanged<T>(this IObservable<T> source) =>
         source.DistinctUntilChanged(null);
 
     /// <summary>
-    /// Suppresses adjacent duplicate values according to the comparer.
+    /// Suppresses adjacent duplicate values using the supplied comparer.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="comparer">The comparer used to compare adjacent values.</param>
+    /// <returns>A sequence with adjacent duplicates removed.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     public static IObservable<T> DistinctUntilChanged<T>(this IObservable<T> source, IEqualityComparer<T>? comparer)
     {
         if (source == null)
@@ -391,8 +488,12 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Converts values and terminal messages into sparks.
+    /// Converts source values and terminal notifications into <see cref="Spark{T}"/> values.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A sequence of spark values representing source notifications; terminal sparks are followed by completion.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     public static IObservable<Spark<T>> Sparkify<T>(this IObservable<T> source)
     {
         if (source == null)
@@ -415,8 +516,12 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Converts spark values back into source notifications.
+    /// Converts <see cref="Spark{T}"/> values back into observer notifications.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The spark sequence.</param>
+    /// <returns>A sequence represented by the supplied spark values.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     public static IObservable<T> Unspark<T>(this IObservable<Spark<T>> source)
     {
         if (source == null)
@@ -431,8 +536,12 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Concatenates a signal of signals.
+    /// Subscribes to inner sequences one at a time in source order.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="sources">The outer sequence of inner sequences.</param>
+    /// <returns>A sequence that emits each inner sequence after the previous one completes.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
     public static IObservable<T> Concat<T>(this IObservable<IObservable<T>> sources)
     {
         if (sources == null)
@@ -521,14 +630,22 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Concatenates this signal followed by <paramref name="second"/>.
+    /// Concatenates two sequences.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="first">The first sequence.</param>
+    /// <param name="second">The second sequence.</param>
+    /// <returns>A sequence that emits <paramref name="second"/> after <paramref name="first"/> completes.</returns>
     public static IObservable<T> Concat<T>(this IObservable<T> first, IObservable<T> second) =>
         Signal.Concat(first, second);
 
     /// <summary>
-    /// Merges a signal of signals.
+    /// Subscribes to all inner sequences and forwards their values as they arrive.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="sources">The outer sequence of inner sequences.</param>
+    /// <returns>A sequence containing values from all inner sequences.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
     public static IObservable<T> Merge<T>(this IObservable<IObservable<T>> sources)
     {
         if (sources == null)
@@ -597,8 +714,12 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Races the supplied source signals and mirrors the first source to emit any notification.
+    /// Mirrors the first inner sequence to produce any notification.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="sources">The competing inner sequences.</param>
+    /// <returns>A sequence that mirrors the winning inner sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
     public static IObservable<T> Race<T>(this IObservable<IObservable<T>> sources)
     {
         if (sources == null)
@@ -610,8 +731,16 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Zips two signals by waiting for one value from both sides.
+    /// Combines paired values from two sequences, completing when no more pairs can be formed.
     /// </summary>
+    /// <typeparam name="TLeft">The left value type.</typeparam>
+    /// <typeparam name="TRight">The right value type.</typeparam>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    /// <param name="left">The left sequence.</param>
+    /// <param name="right">The right sequence.</param>
+    /// <param name="selector">The function that combines paired values.</param>
+    /// <returns>A sequence containing one result for each available value pair.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="left"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
     public static IObservable<TResult> Zip<TLeft, TRight, TResult>(this IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
     {
         if (left == null)
@@ -629,7 +758,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(selector));
         }
 
-        if (left is RangeSignal leftRange && right is RangeSignal rightRange)
+        if (typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange && right is RangeSignal rightRange)
         {
             return new RangeZipSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
         }
@@ -638,8 +767,16 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Combines the latest values after both sides have produced at least one value.
+    /// Combines the latest values after both sequences have produced at least one value.
     /// </summary>
+    /// <typeparam name="TLeft">The left value type.</typeparam>
+    /// <typeparam name="TRight">The right value type.</typeparam>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    /// <param name="left">The left sequence.</param>
+    /// <param name="right">The right sequence.</param>
+    /// <param name="selector">The function that combines the latest values.</param>
+    /// <returns>A sequence containing selected latest-value combinations.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="left"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
     public static IObservable<TResult> CombineLatest<TLeft, TRight, TResult>(this IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
     {
         if (left == null)
@@ -657,12 +794,26 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(selector));
         }
 
+        if (typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange && right is RangeSignal rightRange)
+        {
+            return CreateRangeCombineLatestSignal(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
+        }
+
         return Signal.CreateSafe<TResult>(observer => new CombineLatestCoordinator<TLeft, TRight, TResult>(observer, selector).Run(left, right));
     }
 
     /// <summary>
-    /// Combines each left value with the latest right value after the right side has produced one value.
+    /// Combines each left value with the latest right value after the right sequence has produced a value.
     /// </summary>
+    /// <typeparam name="TLeft">The left value type.</typeparam>
+    /// <typeparam name="TRight">The right value type.</typeparam>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    /// <param name="left">The triggering sequence.</param>
+    /// <param name="right">The sequence that supplies the latest value.</param>
+    /// <param name="selector">The function that combines the left value with the latest right value.</param>
+    /// <returns>A sequence containing selected left/latest-right combinations.</returns>
+    /// <remarks>Left values produced before the first right value are ignored.</remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="left"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
     public static IObservable<TResult> WithLatest<TLeft, TRight, TResult>(this IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
     {
         if (left == null)
@@ -678,6 +829,11 @@ public static partial class LinqMixins
         if (selector == null)
         {
             throw new ArgumentNullException(nameof(selector));
+        }
+
+        if (typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange && right is RangeSignal rightRange)
+        {
+            return CreateRangeWithLatestSignal(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
         }
 
         return Signal.CreateSafe<TResult>(observer =>
@@ -719,8 +875,12 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Switches to the most recent inner signal.
+    /// Switches to the most recent inner sequence.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="sources">The outer sequence of inner sequences.</param>
+    /// <returns>A sequence that mirrors only the latest inner sequence.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
     public static IObservable<T> Switch<T>(this IObservable<IObservable<T>> sources)
     {
         if (sources == null)
@@ -732,8 +892,14 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Retries the source up to <paramref name="retryCount"/> times after failures.
+    /// Resubscribes to the source after an error up to <paramref name="retryCount"/> times.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="retryCount">The maximum number of retry attempts after the initial subscription.</param>
+    /// <returns>A sequence that retries the source before forwarding the final error.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="retryCount"/> is less than zero.</exception>
     public static IObservable<T> Retry<T>(this IObservable<T> source, int retryCount)
     {
         if (source == null)
@@ -776,14 +942,24 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Recovers from errors by switching to a handler-provided signal.
+    /// Recovers from errors by switching to a handler-provided sequence.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="handler">The function that creates the recovery sequence for an error.</param>
+    /// <returns>A sequence that continues with the handler result after an error.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="handler"/> is <see langword="null"/>.</exception>
     public static IObservable<T> Rescue<T>(this IObservable<T> source, Func<Exception, IObservable<T>> handler) =>
         source.Catch<T, Exception>(handler);
 
     /// <summary>
-    /// Continues with a fallback signal after an error.
+    /// Continues with a fallback sequence after an error.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="fallback">The sequence to subscribe to after an error.</param>
+    /// <returns>A sequence that resumes with <paramref name="fallback"/> after an error.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="fallback"/> is <see langword="null"/>.</exception>
     public static IObservable<T> Resume<T>(this IObservable<T> source, IObservable<T> fallback)
     {
         if (fallback == null)
@@ -795,14 +971,23 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Delays notifications by <paramref name="dueTime"/>.
+    /// Delays source notifications by the specified duration.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="dueTime">The delay applied to each notification.</param>
+    /// <returns>A sequence that forwards source notifications after the delay.</returns>
     public static IObservable<T> Delay<T>(this IObservable<T> source, TimeSpan dueTime) =>
         source.Delay(dueTime, null);
 
     /// <summary>
-    /// Delays notifications by <paramref name="dueTime"/>.
+    /// Delays source notifications by the specified duration on a sequencer.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="dueTime">The delay applied to each notification.</param>
+    /// <param name="scheduler">The sequencer used to schedule delayed notifications.</param>
+    /// <returns>A sequence that forwards source notifications after the delay.</returns>
     public static IObservable<T> Delay<T>(this IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler)
     {
         if (source == null)
@@ -825,14 +1010,23 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Fails the signal if no terminal signal arrives before the timeout.
+    /// Fails the sequence if it does not terminate before the timeout.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="dueTime">The timeout duration.</param>
+    /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
     public static IObservable<T> Timeout<T>(this IObservable<T> source, TimeSpan dueTime) =>
         source.Timeout(dueTime, null);
 
     /// <summary>
-    /// Fails the signal if no terminal signal arrives before the timeout.
+    /// Fails the sequence if it does not terminate before the sequencer timeout.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="dueTime">The timeout duration.</param>
+    /// <param name="scheduler">The sequencer used to schedule the timeout.</param>
+    /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
     public static IObservable<T> Timeout<T>(this IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler)
     {
         if (source == null)
@@ -890,11 +1084,19 @@ public static partial class LinqMixins
     /// <summary>
     /// Collects all values into a list when the source completes.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A sequence that emits one list containing all source values.</returns>
     public static IObservable<IList<T>> CollectList<T>(this IObservable<T> source)
     {
         if (source == null)
         {
             throw new ArgumentNullException(nameof(source));
+        }
+
+        if (source is RangeSignal range && CanReadRangeAs<T>())
+        {
+            return CreateRangeListSignal<T>(range);
         }
 
         return Signal.CreateSafe<IList<T>>(observer =>
@@ -914,16 +1116,201 @@ public static partial class LinqMixins
     /// <summary>
     /// Collects all values into an array when the source completes.
     /// </summary>
-    public static IObservable<T[]> CollectArray<T>(this IObservable<T> source) =>
-        source.CollectList().Map(values => values.ToArray());
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A sequence that emits one array containing all source values.</returns>
+    public static IObservable<T[]> CollectArray<T>(this IObservable<T> source)
+    {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        if (source is RangeSignal range && CanReadRangeAs<T>())
+        {
+            return CreateRangeArraySignal<T>(range);
+        }
+
+        return Signal.CreateSafe<T[]>(observer =>
+        {
+            var values = new List<T>();
+            return source.Subscribe(
+                values.Add,
+                observer.OnError,
+                () =>
+                {
+                    observer.OnNext([.. values]);
+                    observer.OnCompleted();
+                });
+        });
+    }
 
     /// <summary>
-    /// Converts an enumerable to a signal.
+    /// Converts an enumerable sequence to a signal.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="values">The values to enumerate.</param>
+    /// <returns>A signal that emits the enumerable values.</returns>
     public static IObservable<T> ToSignal<T>(this IEnumerable<T> values) => Signal.FromEnumerable(values);
 
     /// <summary>
-    /// Converts an observable to a signal-compatible observable.
+    /// Converts an enumerable sequence to a signal that observes cancellation.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="values">The values to enumerate.</param>
+    /// <param name="cancellationToken">The token used to stop enumeration.</param>
+    /// <returns>A signal that emits the enumerable values until enumeration completes or cancellation is requested.</returns>
+    public static IObservable<T> ToSignal<T>(this IEnumerable<T> values, CancellationToken cancellationToken) =>
+        Signal.FromEnumerable(values, cancellationToken);
+
+    /// <summary>
+    /// Returns an observable sequence as a signal-compatible observable.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>The supplied source sequence.</returns>
     public static IObservable<T> ToSignal<T>(this IObservable<T> source) => source ?? throw new ArgumentNullException(nameof(source));
+
+    /// <summary>
+    /// Creates the optimized range-backed combine-latest sequence.
+    /// </summary>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    /// <param name="left">The left range source.</param>
+    /// <param name="right">The right range source.</param>
+    /// <param name="selector">The function that combines range values.</param>
+    /// <returns>The optimized combine-latest sequence.</returns>
+    private static IObservable<TResult> CreateRangeCombineLatestSignal<TResult>(
+        RangeSignal left,
+        RangeSignal right,
+        Func<int, int, TResult> selector) =>
+        Signal.CreateSafe<TResult>(observer =>
+        {
+            var leftValue = left.Start + left.Count - 1;
+            for (var i = 0; i < right.Count; i++)
+            {
+                observer.OnNext(selector(leftValue, right.Start + i));
+            }
+
+            observer.OnCompleted();
+            return Disposable.Empty;
+        });
+
+    /// <summary>
+    /// Creates the optimized range-backed with-latest sequence.
+    /// </summary>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    /// <param name="left">The left range source.</param>
+    /// <param name="right">The right range source.</param>
+    /// <param name="selector">The function that combines range values.</param>
+    /// <returns>The optimized with-latest sequence.</returns>
+    private static IObservable<TResult> CreateRangeWithLatestSignal<TResult>(
+        RangeSignal left,
+        RangeSignal right,
+        Func<int, int, TResult> selector) =>
+        Signal.CreateSafe<TResult>(observer =>
+        {
+            var rightValue = right.Start + right.Count - 1;
+            for (var i = 0; i < left.Count; i++)
+            {
+                observer.OnNext(selector(left.Start + i, rightValue));
+            }
+
+            observer.OnCompleted();
+            return Disposable.Empty;
+        });
+
+    /// <summary>
+    /// Creates a range-backed list signal without per-value subscriptions.
+    /// </summary>
+    /// <typeparam name="T">The result element type.</typeparam>
+    /// <param name="range">The source range.</param>
+    /// <returns>The list signal.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4018:Generic methods should provide type parameters",
+        Justification = "The generic type is validated by the caller before creating a range-backed signal.")]
+    private static IObservable<IList<T>> CreateRangeListSignal<T>(RangeSignal range)
+    {
+        if (typeof(T) == typeof(int))
+        {
+            return (IObservable<IList<T>>)(object)Signal.CreateSafe<IList<int>>(observer =>
+            {
+                var values = new List<int>(range.Count);
+                for (var i = 0; i < range.Count; i++)
+                {
+                    values.Add(range.Start + i);
+                }
+
+                observer.OnNext(values);
+                observer.OnCompleted();
+                return Disposable.Empty;
+            });
+        }
+
+        return Signal.CreateSafe<IList<T>>(observer =>
+        {
+            var values = new List<T>(range.Count);
+            for (var i = 0; i < range.Count; i++)
+            {
+                values.Add((T)(object)(range.Start + i));
+            }
+
+            observer.OnNext(values);
+            observer.OnCompleted();
+            return Disposable.Empty;
+        });
+    }
+
+    /// <summary>
+    /// Creates a range-backed array signal without per-value subscriptions.
+    /// </summary>
+    /// <typeparam name="T">The result element type.</typeparam>
+    /// <param name="range">The source range.</param>
+    /// <returns>The array signal.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4018:Generic methods should provide type parameters",
+        Justification = "The generic type is validated by the caller before creating a range-backed signal.")]
+    private static IObservable<T[]> CreateRangeArraySignal<T>(RangeSignal range)
+    {
+        if (typeof(T) == typeof(int))
+        {
+            return (IObservable<T[]>)(object)Signal.CreateSafe<int[]>(observer =>
+            {
+                var values = new int[range.Count];
+                for (var i = 0; i < values.Length; i++)
+                {
+                    values[i] = range.Start + i;
+                }
+
+                observer.OnNext(values);
+                observer.OnCompleted();
+                return Disposable.Empty;
+            });
+        }
+
+        return Signal.CreateSafe<T[]>(observer =>
+        {
+            var values = new T[range.Count];
+            for (var i = 0; i < values.Length; i++)
+            {
+                values[i] = (T)(object)(range.Start + i);
+            }
+
+            observer.OnNext(values);
+            observer.OnCompleted();
+            return Disposable.Empty;
+        });
+    }
+
+    /// <summary>
+    /// Determines whether a generic observer type can receive boxed range integers.
+    /// </summary>
+    /// <typeparam name="T">The observer value type.</typeparam>
+    /// <returns><see langword="true"/> when the cast is valid.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4018:Generic methods should provide type parameters",
+        Justification = "The method is a generic type test used by range fast paths.")]
+    private static bool CanReadRangeAs<T>() => typeof(T).IsAssignableFrom(typeof(int));
 }

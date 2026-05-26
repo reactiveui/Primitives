@@ -9,8 +9,9 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <summary>
 /// TaskPoolSequencer.
 /// </summary>
-/// <seealso cref="ReactiveUI.Primitives.Concurrency.ISequencer" />
-public sealed class TaskPoolSequencer : ISequencer
+/// <seealso cref="ISequencer" />
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed partial class TaskPoolSequencer : ISequencer
 {
     /// <summary>
     /// Task factory used to schedule asynchronous work.

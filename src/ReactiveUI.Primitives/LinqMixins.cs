@@ -20,7 +20,7 @@ public static partial class LinqMixins
     /// <param name="source">The source.</param>
     /// <param name="selector">The selector.</param>
     /// <returns>A ISignals.</returns>
-    /// <exception cref="System.ArgumentNullException">
+    /// <exception cref="ArgumentNullException">
     /// source
     /// or
     /// selector.
@@ -35,8 +35,8 @@ public static partial class LinqMixins
     /// <param name="source">The source.</param>
     /// <param name="count">The count of each buffer.</param>
     /// <returns>An Signals sequence of buffers.</returns>
-    /// <exception cref="System.ArgumentNullException">source.</exception>
-    /// <exception cref="System.ArgumentOutOfRangeException">count.</exception>
+    /// <exception cref="ArgumentNullException">source.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">count.</exception>
     public static IObservable<IList<TSource>> Buffer<TSource>(this IObservable<TSource> source, int count)
     {
         if (source == null)
@@ -60,8 +60,8 @@ public static partial class LinqMixins
     /// <param name="count">Length of each buffer before being skipped.</param>
     /// <param name="skip">Number of elements to skip between creation of consecutive buffers.</param>
     /// <returns>An Signals sequence of buffers taking the count then skipping the skipped value, the sequecnce is then repeated.</returns>
-    /// <exception cref="System.ArgumentNullException">source.</exception>
-    /// <exception cref="System.ArgumentOutOfRangeException">
+    /// <exception cref="ArgumentNullException">source.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
     /// count
     /// or
     /// skip.
@@ -122,7 +122,7 @@ public static partial class LinqMixins
     /// <param name="source">The source.</param>
     /// <param name="predicate">The predicate.</param>
     /// <returns>An ISignals.</returns>
-    /// <exception cref="System.ArgumentNullException">
+    /// <exception cref="ArgumentNullException">
     /// source
     /// or
     /// predicate.

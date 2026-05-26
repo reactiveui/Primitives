@@ -8,7 +8,8 @@ namespace ReactiveUI.Primitives;
 /// A Reactive Void.
 /// </summary>
 [Serializable]
-public readonly struct RxVoid : IEquatable<RxVoid>
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public readonly partial struct RxVoid : IEquatable<RxVoid>
 {
     /// <summary>
     /// Gets the single <see cref="RxVoid"/> value.
