@@ -10,7 +10,6 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// Represents the CreateSignal class.
 /// </summary>
 /// <typeparam name="T">The T type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class CreateSignal<T> : SignalsBase<T>
 {
     /// <summary>

@@ -10,7 +10,6 @@ namespace ReactiveUI.Primitives.Signals;
 /// Minimal reactive command that gates execution and publishes result, fault, and running state streams.
 /// </summary>
 /// <typeparam name="TResult">The command result type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class CommandSignal<TResult> : IDisposable
 {
     /// <summary>

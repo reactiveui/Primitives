@@ -10,7 +10,6 @@ namespace ReactiveUI.Primitives.Core;
 /// Delegate-backed observer that defaults missing handlers to no-op behavior.
 /// </summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class EmptyWitness<T> : IObserver<T>
 {
     /// <summary>

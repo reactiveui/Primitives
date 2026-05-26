@@ -15,7 +15,6 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// DispatcherSequencer.
 /// </summary>
 /// <seealso cref="ReactiveUI.Primitives.Concurrency.ISequencer" />
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public class DispatcherSequencer : ISequencer
 {
     /// <summary>

@@ -11,7 +11,6 @@ namespace ReactiveUI.Primitives.Signals;
 /// TaskSignal.
 /// </summary>
 /// <typeparam name="T">The object that provides notification information.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class TaskSignal<T> : ITaskSignal<T>
 {
     /// <summary>

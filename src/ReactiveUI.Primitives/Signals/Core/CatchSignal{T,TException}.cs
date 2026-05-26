@@ -11,7 +11,6 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// </summary>
 /// <typeparam name="T">The T type.</typeparam>
 /// <typeparam name="TException">The TException type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class CatchSignal<T, TException> : SignalsBase<T>
         where TException : Exception
 {

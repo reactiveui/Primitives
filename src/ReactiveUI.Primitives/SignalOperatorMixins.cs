@@ -6,6 +6,7 @@ using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
+using ReactiveUI.Primitives.Signals.Core;
 
 #pragma warning disable SA1107, SA1116, SA1117, SA1501, SA1611, SA1615, SA1618
 
@@ -626,6 +627,11 @@ public static partial class LinqMixins
         if (selector == null)
         {
             throw new ArgumentNullException(nameof(selector));
+        }
+
+        if (left is RangeSignal leftRange && right is RangeSignal rightRange)
+        {
+            return new RangeZipSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
         }
 
         return Signal.CreateSafe<TResult>(observer => new ZipCoordinator<TLeft, TRight, TResult>(observer, selector).Run(left, right));

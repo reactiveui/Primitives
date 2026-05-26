@@ -10,7 +10,6 @@ namespace ReactiveUI.Primitives;
 /// <summary>
 /// SelectMixins.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public static partial class LinqMixins
 {
     /// <summary>

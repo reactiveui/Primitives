@@ -8,7 +8,6 @@ namespace ReactiveUI.Primitives.Core;
 /// Immutable array-backed list optimized for copy-on-write observer storage.
 /// </summary>
 /// <typeparam name="T">The item type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class ImmutableList<T>
 {
     /// <summary>

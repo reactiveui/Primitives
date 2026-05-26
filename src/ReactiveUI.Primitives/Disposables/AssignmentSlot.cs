@@ -7,7 +7,6 @@ namespace ReactiveUI.Primitives.Disposables;
 /// <summary>
 /// Primitives alias for a single-assignment disposable slot.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class AssignmentSlot : SingleDisposable
 {
     /// <summary>

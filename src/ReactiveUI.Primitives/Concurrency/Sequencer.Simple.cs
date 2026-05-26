@@ -9,7 +9,6 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <summary>
 /// Sequencer.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public static partial class Sequencer
 {
     /// <summary>

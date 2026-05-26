@@ -7,7 +7,6 @@ namespace ReactiveUI.Primitives.Disposables;
 /// <summary>
 /// Single-assignment disposable slot.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public class SingleDisposable : IsDisposed
 {
     /// <summary>

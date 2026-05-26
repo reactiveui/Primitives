@@ -10,19 +10,8 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// <summary>
 /// Represents the RangeSignal class.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class RangeSignal : IRequireCurrentThread<int>, IInlineSignal<int>
 {
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
-    private readonly int _start;
-
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
-    private readonly int _count;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="RangeSignal"/> class.
     /// </summary>
@@ -30,9 +19,19 @@ internal sealed class RangeSignal : IRequireCurrentThread<int>, IInlineSignal<in
     /// <param name="count">The count value.</param>
     public RangeSignal(int start, int count)
     {
-        _start = start;
-        _count = count;
+        Start = start;
+        Count = count;
     }
+
+    /// <summary>
+    /// Gets the first value emitted by the range.
+    /// </summary>
+    internal int Start { get; }
+
+    /// <summary>
+    /// Gets the number of values emitted by the range.
+    /// </summary>
+    internal int Count { get; }
 
     /// <summary>
     /// Executes the IsRequiredSubscribeOnCurrentThread operation.
@@ -52,9 +51,9 @@ internal sealed class RangeSignal : IRequireCurrentThread<int>, IInlineSignal<in
             throw new ArgumentNullException(nameof(observer));
         }
 
-        for (var i = 0; i < _count; i++)
+        for (var i = 0; i < Count; i++)
         {
-            observer.OnNext(_start + i);
+            observer.OnNext(Start + i);
         }
 
         observer.OnCompleted();
@@ -75,9 +74,9 @@ internal sealed class RangeSignal : IRequireCurrentThread<int>, IInlineSignal<in
             throw new ArgumentNullException(nameof(onNext));
         }
 
-        for (var i = 0; i < _count; i++)
+        for (var i = 0; i < Count; i++)
         {
-            onNext(_start + i);
+            onNext(Start + i);
         }
 
         onCompleted();

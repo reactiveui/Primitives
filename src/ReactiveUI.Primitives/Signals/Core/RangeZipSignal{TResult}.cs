@@ -8,15 +8,20 @@ using ReactiveUI.Primitives.Disposables;
 namespace ReactiveUI.Primitives.Signals.Core;
 
 /// <summary>
-/// Represents the RepeatSignal class.
+/// Zips two synchronous integer ranges without coordinator queues.
 /// </summary>
-/// <typeparam name="T">The T type.</typeparam>
-internal sealed class RepeatSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
+/// <typeparam name="TResult">The result value type.</typeparam>
+internal sealed class RangeZipSignal<TResult> : IRequireCurrentThread<TResult>, IInlineSignal<TResult>
 {
     /// <summary>
     /// Stores state for the signal implementation.
     /// </summary>
-    private readonly T _value;
+    private readonly int _leftStart;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
+    private readonly int _rightStart;
 
     /// <summary>
     /// Stores state for the signal implementation.
@@ -24,14 +29,22 @@ internal sealed class RepeatSignal<T> : IRequireCurrentThread<T>, IInlineSignal<
     private readonly int _count;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="RepeatSignal{T}"/> class.
+    /// Stores state for the signal implementation.
     /// </summary>
-    /// <param name="value">The value.</param>
-    /// <param name="count">The count value.</param>
-    public RepeatSignal(T value, int count)
+    private readonly Func<int, int, TResult> _selector;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RangeZipSignal{TResult}"/> class.
+    /// </summary>
+    /// <param name="left">The left range source.</param>
+    /// <param name="right">The right range source.</param>
+    /// <param name="selector">The projection function.</param>
+    public RangeZipSignal(RangeSignal left, RangeSignal right, Func<int, int, TResult> selector)
     {
-        _value = value;
-        _count = count;
+        _leftStart = left.Start;
+        _rightStart = right.Start;
+        _count = Math.Min(left.Count, right.Count);
+        _selector = selector;
     }
 
     /// <summary>
@@ -45,7 +58,7 @@ internal sealed class RepeatSignal<T> : IRequireCurrentThread<T>, IInlineSignal<
     /// </summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
-    public IDisposable Subscribe(IObserver<T> observer)
+    public IDisposable Subscribe(IObserver<TResult> observer)
     {
         if (observer == null)
         {
@@ -54,7 +67,7 @@ internal sealed class RepeatSignal<T> : IRequireCurrentThread<T>, IInlineSignal<
 
         for (var i = 0; i < _count; i++)
         {
-            observer.OnNext(_value);
+            observer.OnNext(_selector(_leftStart + i, _rightStart + i));
         }
 
         observer.OnCompleted();
@@ -68,7 +81,7 @@ internal sealed class RepeatSignal<T> : IRequireCurrentThread<T>, IInlineSignal<
     /// <param name="onError">The onError value.</param>
     /// <param name="onCompleted">The onCompleted value.</param>
     /// <returns>The result.</returns>
-    public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
+    public IDisposable Subscribe(Action<TResult> onNext, Action<Exception> onError, Action onCompleted)
     {
         if (onNext == null)
         {
@@ -77,7 +90,7 @@ internal sealed class RepeatSignal<T> : IRequireCurrentThread<T>, IInlineSignal<
 
         for (var i = 0; i < _count; i++)
         {
-            onNext(_value);
+            onNext(_selector(_leftStart + i, _rightStart + i));
         }
 
         onCompleted();

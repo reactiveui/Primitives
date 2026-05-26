@@ -101,6 +101,11 @@ public class FactoryOperatorContractTests
     private const int SecondZipResult = 22;
 
     /// <summary>
+    /// The second result expected from the shorter range zip test.
+    /// </summary>
+    private const int RangeZipShorterSecondResult = 13;
+
+    /// <summary>
     /// The third unfolded value.
     /// </summary>
     private const int ThirdUnfoldedValue = 30;
@@ -186,6 +191,11 @@ public class FactoryOperatorContractTests
     /// Expected values from the zip test.
     /// </summary>
     private static readonly int[] ZippedExpected = [FirstZipResult, SecondZipResult];
+
+    /// <summary>
+    /// Expected values from the shorter range zip test.
+    /// </summary>
+    private static readonly int[] RangeZipShorterExpected = [FirstZipResult, RangeZipShorterSecondResult];
 
     /// <summary>
     /// Expected values from combine-latest style operators.
@@ -381,6 +391,22 @@ public class FactoryOperatorContractTests
         Assert.Equal(FourItemExpected, concatenated);
         Assert.Equal(ZippedExpected, zipped);
         Assert.Equal(LatestExpected, latest);
+    }
+
+    /// <summary>
+    /// Verifies the range-specialized zip path preserves shorter-source completion semantics.
+    /// </summary>
+    [Test]
+    public void RangeZipCompletesAtShorterRange()
+    {
+        var values = new List<int>();
+        var completed = 0;
+
+        Signal.Zip(Signal.Range(FirstValue, FourthValue), Signal.Range(ProjectionMultiplier, SecondValue), static (left, right) => left + right)
+            .Subscribe(values.Add, _ => { }, () => completed++);
+
+        Assert.Equal(RangeZipShorterExpected, values);
+        Assert.Equal(1, completed);
     }
 
     /// <summary>

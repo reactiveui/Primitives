@@ -12,7 +12,6 @@ namespace ReactiveUI.Primitives.Signals;
 /// ReplaySignal.
 /// </summary>
 /// <typeparam name="T">The Type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public class ReplaySignal<T> : ISignal<T>
 {
     /// <summary>

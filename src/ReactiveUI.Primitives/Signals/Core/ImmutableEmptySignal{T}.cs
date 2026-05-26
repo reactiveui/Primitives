@@ -11,7 +11,6 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// Represents the ImmutableEmptySignal class.
 /// </summary>
 /// <typeparam name="T">The T type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class ImmutableEmptySignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
 {
 #pragma warning disable SA1401 // Fields should be private

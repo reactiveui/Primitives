@@ -1,5 +1,5 @@
-# Auto-detect text files and normalise line endings to LF in the repository.
-* text=auto
+# Auto-detect text files and normalise line endings to CRLF in the repository.
+* text=auto eol=crlf
 
 # Source code
 *.cs       text diff=csharp
@@ -15,7 +15,7 @@
 *.yaml     text
 *.md       text
 *.txt      text
-*.sh       text eol=lf
+*.sh       text eol=crlf
 *.ps1      text
 *.cmd      text eol=crlf
 *.bat      text eol=crlf

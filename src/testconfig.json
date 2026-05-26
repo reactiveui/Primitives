@@ -8,16 +8,14 @@
         "Configuration": {
             "Format": "cobertura",
             "CodeCoverage": {
-                "SkipAutoProperties": true,
                 "ModulePaths": {
+                    "Include": [
+                        ".*ReactiveUI\\.Primitives.*\\.dll$"
+                    ],
                     "Exclude": [
                         ".*Tests\\.dll$",
+                        ".*Benchmarks\\.dll$",
                         ".*TestRunner.*"
-                    ]
-                },
-                "Functions": {
-                    "Exclude": [
-                        ".*__.*"
                     ]
                 }
             }

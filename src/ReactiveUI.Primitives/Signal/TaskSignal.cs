@@ -9,7 +9,6 @@ namespace ReactiveUI.Primitives.Signals;
 /// <summary>
 /// TaskSignal.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public static class TaskSignal
 {
     /// <summary>

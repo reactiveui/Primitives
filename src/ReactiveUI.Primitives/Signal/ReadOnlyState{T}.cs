@@ -10,7 +10,6 @@ namespace ReactiveUI.Primitives.Signals;
 /// Read-only latest-value signal for projected or externally owned state.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ReadOnlyState<T> : IObservable<T>, IDisposable
 {
     /// <summary>
@@ -68,7 +67,6 @@ public sealed class ReadOnlyState<T> : IObservable<T>, IDisposable
 /// <summary>
 /// State projection helpers.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public static class StateSignalMixins
 {
     /// <summary>

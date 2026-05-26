@@ -8,7 +8,6 @@ namespace ReactiveUI.Primitives.Core;
 /// Observer that rejects every notification because the subscription has already been disposed.
 /// </summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class DisposedWitness<T> : IObserver<T>
 {
     /// <summary>

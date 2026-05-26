@@ -10,7 +10,6 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// Represents the FinallySignal class.
 /// </summary>
 /// <typeparam name="T">The T type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class FinallySignal<T> : SignalsBase<T>
 {
     /// <summary>

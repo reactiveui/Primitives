@@ -8,7 +8,6 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// ImmediateSequencer.
 /// </summary>
 /// <seealso cref="ReactiveUI.Primitives.Concurrency.ISequencer" />
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class ImmediateSequencer : ISequencer
 {
     /// <summary>

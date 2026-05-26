@@ -9,7 +9,6 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <summary>
 /// Provides a set of extension methods for virtual time scheduling.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public static class VirtualTimeSequencerExtensions
 {
     /// <summary>

@@ -11,7 +11,6 @@ namespace ReactiveUI.Primitives;
 /// <summary>
 /// SubscribeMixins.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public static class SubscribeMixins
 {
     /// <summary>

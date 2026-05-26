@@ -12,7 +12,6 @@ namespace ReactiveUI.Primitives.Signals;
 /// Mutable latest-value signal with a ReactiveUI.Primitives name for reactive-property parity.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public class StateSignal<T> : BehaviourSignal<T>
 {
     /// <summary>

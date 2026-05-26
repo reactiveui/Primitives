@@ -8,7 +8,6 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// Represents the DeferSignal class.
 /// </summary>
 /// <typeparam name="T">The T type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class DeferSignal<T> : SignalsBase<T>
 {
     /// <summary>

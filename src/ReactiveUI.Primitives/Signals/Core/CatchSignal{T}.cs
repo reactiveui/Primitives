@@ -11,7 +11,6 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// Represents the CatchSignal class.
 /// </summary>
 /// <typeparam name="T">The T type.</typeparam>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 internal sealed class CatchSignal<T> : SignalsBase<T>
 {
     /// <summary>
@@ -102,7 +101,8 @@ internal sealed class CatchSignal<T> : SignalsBase<T>
                 lock (_gate)
                 {
                     _isDisposed = true;
-                    _e.Dispose();
+                    _e?.Dispose();
+                    _e = null;
                 }
             }));
         }

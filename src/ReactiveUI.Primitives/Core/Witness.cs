@@ -10,7 +10,6 @@ namespace ReactiveUI.Primitives.Core;
 /// <summary>
 /// Factory methods for allocation-conscious observers in the ReactiveUI.Primitives vocabulary.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public static class Witness
 {
     /// <summary>

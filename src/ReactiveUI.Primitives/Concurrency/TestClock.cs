@@ -7,7 +7,6 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <summary>
 /// Test-facing alias for <see cref="VirtualClock"/>.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public sealed class TestClock : VirtualClock
 {
     /// <summary>
