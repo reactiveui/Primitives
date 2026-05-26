@@ -345,7 +345,6 @@ ReactiveUI.Primitives uses explicit names instead of cloning every System.Reacti
 | System.Reactive type | ReactiveUI.Primitives equivalent | Notes |
 |---|---|---|
 | `Subject<T>` | `Signal<T>` | Push values, errors, and completion to subscribers. |
-| `BehaviorSubject<T>` | `BehaviourSignal<T>` or `StateSignal<T>` | Stores the latest value and emits it to new subscribers. `StateSignal<T>` adds a mutable `Value` setter and `Changed`. |
 | `BehaviorSubject<T>` | `BehaviorSignal<T>`, or `StateSignal<T>` | Stores the latest value and emits it to new subscribers. `StateSignal<T>` adds a mutable `Value` setter and `Changed`. |
 | `ReplaySubject<T>` | `ReplaySignal<T>` | Replays buffered values by size and/or time window. |
 | `AsyncSubject<T>` | `AsyncSignal<T>` | Awaitable subject-like signal; also implements `IAwaitSignal<T>`. |
@@ -503,7 +502,6 @@ ReactiveUI.Primitives is not a byte-for-byte clone of System.Reactive. It keeps 
 | `Observable.Timer(dueTime)` | `Signal.Timer(dueTime)` or `Signal.After(dueTime)` | Emits `long` tick `0`. |
 | `Observable.Timer(dueTime, period)` | `Signal.Timer(dueTime, period)` | Periodic `long` ticks. |
 | `Observable.Interval(period)` | `Signal.Interval(period)` or `Signal.Every(period)` | Repeating ticks. |
-| `ToObservable()` from enumerable | `Signal.FromEnumerable(values)` or `values.ToSignal()` | `ToSignal` extension is available. |
 | `ToObservable()` from enumerable | `Signal.FromEnumerable(values)`, `values.ToSignal()`, or `values.ToObservable()` | Cancellation-token overloads are available. |
 | task conversion | `Signal.FromTask(task)` | Function-based task signals also exist. |
 
@@ -512,7 +510,6 @@ ReactiveUI.Primitives is not a byte-for-byte clone of System.Reactive. It keeps 
 | System.Reactive | ReactiveUI.Primitives | Migration detail |
 |---|---|---|
 | `new Subject<T>()` | `new Signal<T>()` | Use `OnNext`, `OnError`, `OnCompleted`, and `Subscribe`. |
-| `new BehaviorSubject<T>(initial)` | `new BehaviourSignal<T>(initial)` | Keeps `Value` getter and emits latest value to subscribers. |
 | `new BehaviorSubject<T>(initial)` | `new BehaviorSignal<T>(initial)` | Keeps `Value` getter and emits latest value to subscribers. |
 | mutable reactive property | `new StateSignal<T>(initial)` | Set `Value` to emit. Use `Changed` for observable state stream. |
 | `new ReplaySubject<T>()` | `new ReplaySignal<T>()` | Unbounded replay. |
