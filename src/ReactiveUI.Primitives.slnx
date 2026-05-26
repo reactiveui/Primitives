@@ -22,4 +22,6 @@
     <Project Path="ReactiveUI.Primitives.R3Bridge.Generator/ReactiveUI.Primitives.R3Bridge.Generator.csproj" />
     <Project Path="ReactiveUI.Primitives.SystemReactiveBridge.Generator/ReactiveUI.Primitives.SystemReactiveBridge.Generator.csproj" />
     <Project Path="ReactiveUI.Primitives/ReactiveUI.Primitives.csproj" />
+    <Project Path="ReactiveUI.Primitives.WinForms/ReactiveUI.Primitives.WinForms.csproj" />
+    <Project Path="ReactiveUI.Primitives.Wpf/ReactiveUI.Primitives.Wpf.csproj" />
 </Solution>

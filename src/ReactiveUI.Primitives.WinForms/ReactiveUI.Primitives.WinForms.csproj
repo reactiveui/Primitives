@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(WindowsLibraryTargetFrameworks)</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <UseWindowsForms>true</UseWindowsForms>
+    <PackageDescription>Windows Forms integration sequencers for ReactiveUI.Primitives.</PackageDescription>
+    <PackageTags>system.reactive;rx;reactive;primitives;winforms;windows-forms;scheduler;sequencer</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj" />
+  </ItemGroup>
+
+</Project>

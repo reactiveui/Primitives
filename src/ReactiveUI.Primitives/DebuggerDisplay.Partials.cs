@@ -39,17 +39,6 @@ namespace ReactiveUI.Primitives.Concurrency
         private string DebuggerDisplay => ToString() ?? string.Empty;
     }
 
-#if WINDOWS
-    public partial class DispatcherSequencer
-    {
-        /// <summary>
-        /// Gets the debugger display text.
-        /// </summary>
-        [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-        private string DebuggerDisplay => ToString() ?? string.Empty;
-    }
-#endif
-
     public sealed partial class ImmediateSequencer
     {
         /// <summary>

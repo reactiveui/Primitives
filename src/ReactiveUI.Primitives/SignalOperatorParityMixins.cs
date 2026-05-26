@@ -175,6 +175,34 @@ public static partial class LinqMixins
     }
 
     /// <summary>
+    /// Schedules source subscription on the supplied sequencer.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="scheduler">The sequencer used to perform subscription.</param>
+    /// <returns>A sequence that subscribes to <paramref name="source"/> on <paramref name="scheduler"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="scheduler"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> SubscribeOn<T>(this IObservable<T> source, ISequencer scheduler)
+    {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        if (scheduler == null)
+        {
+            throw new ArgumentNullException(nameof(scheduler));
+        }
+
+        return Signal.Create<T>(observer =>
+        {
+            var subscription = new SingleReplaceableDisposable();
+            var scheduled = scheduler.Schedule(() => subscription.Create(source.Subscribe(observer)));
+            return MultipleDisposable.Create(scheduled, subscription);
+        });
+    }
+
+    /// <summary>
     /// Alias for <see cref="DelayStart{T}(IObservable{T}, TimeSpan, ISequencer?)"/> using the System.Reactive operator name.
     /// </summary>
     /// <typeparam name="T">The value type.</typeparam>
@@ -1211,6 +1239,40 @@ public static partial class LinqMixins
     public static Task<T> ToTask<T>(this Task<T> task) => task ?? throw new ArgumentNullException(nameof(task));
 
     /// <summary>
+    /// Awaits source completion and returns the last value produced by the source.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A task that completes with the final source value.</returns>
+    public static Task<T> LastAsync<T>(this IObservable<T> source) => source.ToTask();
+
+    /// <summary>
+    /// Awaits source completion and returns the last value produced by the source, or <see langword="default"/> when the source is empty.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A task that completes with the final source value, or <see langword="default"/> when the source is empty.</returns>
+    public static Task<T> LastOrDefaultAsync<T>(this IObservable<T> source) =>
+        source.LastOrDefaultAsync(default!);
+
+    /// <summary>
+    /// Awaits source completion and returns the last value produced by the source, or <paramref name="defaultValue"/> when the source is empty.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="defaultValue">The fallback value to use when the source is empty.</param>
+    /// <returns>A task that completes with the final source value, or <paramref name="defaultValue"/> when the source is empty.</returns>
+    public static Task<T> LastOrDefaultAsync<T>(this IObservable<T> source, T defaultValue)
+    {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        return source.DefaultIfEmpty(defaultValue).ToTask();
+    }
+
+    /// <summary>
     /// Awaits the source count as a task.
     /// </summary>
     /// <typeparam name="T">The value type.</typeparam>
@@ -1324,6 +1386,22 @@ public static partial class LinqMixins
     }
 
     /// <summary>
+    /// Collects all values into an array.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A sequence that emits a single array containing all source values.</returns>
+    public static IObservable<T[]> ToArray<T>(this IObservable<T> source) => source.CollectArray();
+
+    /// <summary>
+    /// Collects all values into an array task.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A task that completes with all source values in an array.</returns>
+    public static Task<T[]> ToArrayAsync<T>(this IObservable<T> source) => source.CollectArrayAsync();
+
+    /// <summary>
     /// Collects all values into a list task.
     /// </summary>
     /// <typeparam name="T">The value type.</typeparam>
@@ -1347,6 +1425,22 @@ public static partial class LinqMixins
         source.Subscribe(values.Add, error => completion.TrySetException(error), () => completion.TrySetResult(values));
         return completion.Task;
     }
+
+    /// <summary>
+    /// Collects all values into a list.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A sequence that emits a single list containing all source values.</returns>
+    public static IObservable<IList<T>> ToList<T>(this IObservable<T> source) => source.CollectList();
+
+    /// <summary>
+    /// Collects all values into a list task.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A task that completes with all source values in a list.</returns>
+    public static Task<IList<T>> ToListAsync<T>(this IObservable<T> source) => source.CollectListAsync();
 
     /// <summary>
     /// Awaits the first source value and applies the configured empty-source behavior.
