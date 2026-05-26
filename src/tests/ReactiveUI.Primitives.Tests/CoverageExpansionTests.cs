@@ -205,8 +205,13 @@ public class CoverageExpansionTests
         Assert.Same(finalError, finalErrors[0]);
 
         var completed = 0;
-        Signal.Catch(Array.Empty<IObservable<int>>()).Subscribe(_ => { }, ex => throw ex, () => completed++);
+        var completedSubscription = Signal.Catch(Array.Empty<IObservable<int>>()).Subscribe(_ => { }, ex => throw ex, () => completed++);
+        completedSubscription.Dispose();
+        completedSubscription.Dispose();
         Assert.Equal(1, completed);
+
+        var activeSubscription = Signal.Catch(Signal.Never<int>()).Subscribe(_ => { }, ex => throw ex, () => { });
+        activeSubscription.Dispose();
 
         var nullSourceErrors = new List<Exception>();
         Signal.Catch(new IObservable<int>?[] { null! }!)

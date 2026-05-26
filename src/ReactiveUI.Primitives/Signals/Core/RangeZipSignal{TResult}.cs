@@ -8,30 +8,44 @@ using ReactiveUI.Primitives.Disposables;
 namespace ReactiveUI.Primitives.Signals.Core;
 
 /// <summary>
-/// Represents the RangeSignal class.
+/// Zips two synchronous integer ranges without coordinator queues.
 /// </summary>
-internal sealed class RangeSignal : IRequireCurrentThread<int>, IInlineSignal<int>
+/// <typeparam name="TResult">The result value type.</typeparam>
+internal sealed class RangeZipSignal<TResult> : IRequireCurrentThread<TResult>, IInlineSignal<TResult>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="RangeSignal"/> class.
+    /// Stores state for the signal implementation.
     /// </summary>
-    /// <param name="start">The start value.</param>
-    /// <param name="count">The count value.</param>
-    public RangeSignal(int start, int count)
+    private readonly int _leftStart;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
+    private readonly int _rightStart;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
+    private readonly int _count;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
+    private readonly Func<int, int, TResult> _selector;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RangeZipSignal{TResult}"/> class.
+    /// </summary>
+    /// <param name="left">The left range source.</param>
+    /// <param name="right">The right range source.</param>
+    /// <param name="selector">The projection function.</param>
+    public RangeZipSignal(RangeSignal left, RangeSignal right, Func<int, int, TResult> selector)
     {
-        Start = start;
-        Count = count;
+        _leftStart = left.Start;
+        _rightStart = right.Start;
+        _count = Math.Min(left.Count, right.Count);
+        _selector = selector;
     }
-
-    /// <summary>
-    /// Gets the first value emitted by the range.
-    /// </summary>
-    internal int Start { get; }
-
-    /// <summary>
-    /// Gets the number of values emitted by the range.
-    /// </summary>
-    internal int Count { get; }
 
     /// <summary>
     /// Executes the IsRequiredSubscribeOnCurrentThread operation.
@@ -44,16 +58,16 @@ internal sealed class RangeSignal : IRequireCurrentThread<int>, IInlineSignal<in
     /// </summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
-    public IDisposable Subscribe(IObserver<int> observer)
+    public IDisposable Subscribe(IObserver<TResult> observer)
     {
         if (observer == null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
 
-        for (var i = 0; i < Count; i++)
+        for (var i = 0; i < _count; i++)
         {
-            observer.OnNext(Start + i);
+            observer.OnNext(_selector(_leftStart + i, _rightStart + i));
         }
 
         observer.OnCompleted();
@@ -67,16 +81,16 @@ internal sealed class RangeSignal : IRequireCurrentThread<int>, IInlineSignal<in
     /// <param name="onError">The onError value.</param>
     /// <param name="onCompleted">The onCompleted value.</param>
     /// <returns>The result.</returns>
-    public IDisposable Subscribe(Action<int> onNext, Action<Exception> onError, Action onCompleted)
+    public IDisposable Subscribe(Action<TResult> onNext, Action<Exception> onError, Action onCompleted)
     {
         if (onNext == null)
         {
             throw new ArgumentNullException(nameof(onNext));
         }
 
-        for (var i = 0; i < Count; i++)
+        for (var i = 0; i < _count; i++)
         {
-            onNext(Start + i);
+            onNext(_selector(_leftStart + i, _rightStart + i));
         }
 
         onCompleted();

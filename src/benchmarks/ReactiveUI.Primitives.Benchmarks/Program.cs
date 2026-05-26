@@ -114,6 +114,47 @@ internal static class Program
         Console.WriteLine($"PrimitivesCompletedTaskBridge={taskBridge.PrimitivesCompletedTaskBridge()}");
         Console.WriteLine($"SystemReactiveCompletedTaskBridge={taskBridge.SystemReactiveCompletedTaskBridge()}");
 
+        await RunExpansionSmokeBenchmarksAsync();
+
+        RunCoreRuntimeSmokeBenchmarks();
+    }
+
+    private static async Task RunExpansionSmokeBenchmarksAsync()
+    {
+        var factoryAdapters = new FactoryAdapterExpansionBenchmarks();
+        Console.WriteLine($"PrimitivesCreateSubscribe={factoryAdapters.PrimitivesCreateSubscribe()}");
+        Console.WriteLine($"PrimitivesDeferSubscribe={factoryAdapters.PrimitivesDeferSubscribe()}");
+        Console.WriteLine(
+            $"PrimitivesFromAsyncEnumerableSubscribe={await factoryAdapters.PrimitivesFromAsyncEnumerableSubscribeAsync()}");
+
+        var timeSchedulers = new OperatorTimeSchedulerBenchmarks();
+        Console.WriteLine($"PrimitivesDelayRange={timeSchedulers.PrimitivesDelayRange()}");
+        Console.WriteLine($"PrimitivesThrottleBurst={timeSchedulers.PrimitivesThrottleBurst()}");
+        Console.WriteLine($"PrimitivesTimeoutNever={timeSchedulers.PrimitivesTimeoutNever()}");
+
+        var higherOrder = new OperatorHigherOrderBenchmarks();
+        Console.WriteLine($"PrimitivesConcatRanges={higherOrder.PrimitivesConcatRanges()}");
+        Console.WriteLine($"PrimitivesCombineLatestRanges={higherOrder.PrimitivesCombineLatestRanges()}");
+        Console.WriteLine($"PrimitivesForkJoinRanges={higherOrder.PrimitivesForkJoinRanges()}");
+
+        var terminalCollections = new TerminalCollectionBenchmarks();
+        Console.WriteLine($"PrimitivesCollectList={terminalCollections.PrimitivesCollectList()}");
+        Console.WriteLine($"PrimitivesFirstAsync={await terminalCollections.PrimitivesFirstAsync()}");
+        Console.WriteLine($"PrimitivesAllContains={terminalCollections.PrimitivesAllContains()}");
+
+        var connectableShare = new ConnectableShareBenchmarks();
+        Console.WriteLine($"PrimitivesPublishLiveConnect={connectableShare.PrimitivesPublishLiveConnect()}");
+        Console.WriteLine($"PrimitivesShareLiveSubscribe={connectableShare.PrimitivesShareLiveSubscribe()}");
+        Console.WriteLine($"PrimitivesReplayLiveLateSubscribe={connectableShare.PrimitivesReplayLiveLateSubscribe()}");
+
+        var stateTaskCommand = new StateTaskCommandBenchmarks();
+        Console.WriteLine($"PrimitivesStateSignalUpdates={stateTaskCommand.PrimitivesStateSignalUpdates()}");
+        Console.WriteLine($"PrimitivesTaskSignalSubscribe={stateTaskCommand.PrimitivesTaskSignalSubscribe()}");
+        Console.WriteLine($"PrimitivesCommandExecute={await stateTaskCommand.PrimitivesCommandExecuteAsync()}");
+    }
+
+    private static void RunCoreRuntimeSmokeBenchmarks()
+    {
         var coreRuntime = new CoreRuntimeBenchmarks();
         Console.WriteLine($"PrimitivesPocketDispose={coreRuntime.PrimitivesPocketDispose()}");
         Console.WriteLine($"SystemReactiveCompositeDispose={coreRuntime.SystemReactiveCompositeDispose()}");

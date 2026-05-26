@@ -290,6 +290,36 @@ public class SignalTests
     }
 
     /// <summary>
+    /// Verifies the single observer fast path emits, terminates, and detaches cleanly.
+    /// </summary>
+    [Test]
+    public void SingleObserverSubscriptionReceivesLifecycleAndDetaches()
+    {
+        var subject = new Signal<int>();
+        var observer = new RecordingObserver();
+
+        var subscription = subject.Subscribe(observer);
+        subject.OnNext(1);
+        subject.OnCompleted();
+        subject.OnNext(ValueTwo);
+
+        Assert.Equal(1, observer.Total);
+        Assert.Equal(1, observer.Completed);
+        Assert.Equal(0, observer.Errors);
+        Assert.False(subject.HasObservers);
+
+        subscription.Dispose();
+
+        var faulted = new Signal<int>();
+        var faultObserver = new RecordingObserver();
+        using var faultSubscription = faulted.Subscribe(faultObserver);
+        faulted.OnError(new InvalidOperationException());
+
+        Assert.Equal(1, faultObserver.Errors);
+        Assert.False(faulted.HasObservers);
+    }
+
+    /// <summary>
     /// Called when [error rethrows by default].
     /// </summary>
     [Test]
@@ -478,5 +508,43 @@ public class SignalTests
         subject.OnNext(RxVoid.Default);
         Assert.Equal(DoubleRxVoid, result);
         subject.Dispose();
+    }
+
+    /// <summary>
+    /// Records integer observer lifecycle calls.
+    /// </summary>
+    private sealed class RecordingObserver : IObserver<int>
+    {
+        /// <summary>
+        /// Gets the total of observed values.
+        /// </summary>
+        public int Total { get; private set; }
+
+        /// <summary>
+        /// Gets the number of completion calls.
+        /// </summary>
+        public int Completed { get; private set; }
+
+        /// <summary>
+        /// Gets the number of error calls.
+        /// </summary>
+        public int Errors { get; private set; }
+
+        /// <summary>
+        /// Receives the next value.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        public void OnNext(int value) => Total += value;
+
+        /// <summary>
+        /// Receives an error.
+        /// </summary>
+        /// <param name="error">The error.</param>
+        public void OnError(Exception error) => Errors++;
+
+        /// <summary>
+        /// Receives completion.
+        /// </summary>
+        public void OnCompleted() => Completed++;
     }
 }
