@@ -74,6 +74,11 @@ internal sealed class IntR3Observer : Observer<int>
     public int NextCount { get; private set; }
 
     /// <summary>
+    /// Gets the last value observed.
+    /// </summary>
+    public int LastValue { get; private set; }
+
+    /// <summary>
     /// Gets the number of terminal completions observed.
     /// </summary>
     public int CompletionCount { get; private set; }
@@ -91,6 +96,7 @@ internal sealed class IntR3Observer : Observer<int>
     {
         NextCount++;
         Total += value;
+        LastValue = value;
     }
 
     /// <summary>
@@ -108,6 +114,67 @@ internal sealed class IntR3Observer : Observer<int>
     /// <param name="result">The completion result.</param>
     protected override void OnCompletedCore(Result result)
     {
+        if (result.IsFailure)
+        {
+            ErrorCount++;
+            return;
+        }
+
+        CompletionCount++;
+    }
+}
+
+/// <summary>
+/// Observer used by R3 benchmark cases that only need an item count.
+/// </summary>
+/// <typeparam name="T">The observed value type.</typeparam>
+internal sealed class CountingR3Observer<T> : Observer<T>
+{
+    /// <summary>
+    /// Gets the number of onNext calls.
+    /// </summary>
+    public int Count { get; private set; }
+
+    /// <summary>
+    /// Gets the number of terminal completions observed.
+    /// </summary>
+    public int CompletionCount { get; private set; }
+
+    /// <summary>
+    /// Gets the number of errors observed.
+    /// </summary>
+    public int ErrorCount { get; private set; }
+
+    /// <summary>
+    /// Called for each emitted value.
+    /// </summary>
+    /// <param name="value">The emitted value.</param>
+    protected override void OnNextCore(T value)
+    {
+        Count++;
+    }
+
+    /// <summary>
+    /// Called when an error is observed.
+    /// </summary>
+    /// <param name="error">The observed exception.</param>
+    protected override void OnErrorResumeCore(Exception error)
+    {
+        ErrorCount++;
+    }
+
+    /// <summary>
+    /// Called when sequence completed.
+    /// </summary>
+    /// <param name="result">The completion result.</param>
+    protected override void OnCompletedCore(Result result)
+    {
+        if (result.IsFailure)
+        {
+            ErrorCount++;
+            return;
+        }
+
         CompletionCount++;
     }
 }

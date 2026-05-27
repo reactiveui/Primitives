@@ -57,6 +57,23 @@ public class CoreRuntimeBenchmarks
     }
 
     /// <summary>
+    /// Composite disposable dispose path in R3.
+    /// </summary>
+    /// <returns>The number of disposal callbacks executed.</returns>
+    [Benchmark]
+    public int R3CompositeDispose()
+    {
+        var disposed = 0;
+        var pocket = new R3.CompositeDisposable(
+            R3.Disposable.Create(() => disposed++),
+            R3.Disposable.Create(() => disposed++),
+            R3.Disposable.Create(() => disposed++));
+
+        pocket.Dispose();
+        return disposed;
+    }
+
+    /// <summary>
     /// Schedule and execute one action on current-thread sequencer.
     /// </summary>
     /// <returns>The executed marker value.</returns>
@@ -81,6 +98,18 @@ public class CoreRuntimeBenchmarks
     }
 
     /// <summary>
+    /// Immediate dispatch through R3 return subscription.
+    /// </summary>
+    /// <returns>The executed marker value.</returns>
+    [Benchmark]
+    public int R3CurrentThreadSchedule()
+    {
+        var observer = new IntR3Observer();
+        using var subscription = R3.Observable.Return(1).Subscribe(observer);
+        return observer.LastValue;
+    }
+
+    /// <summary>
     /// Wrap a witness with the safe witness helper.
     /// </summary>
     /// <returns>The forwarded value.</returns>
@@ -95,6 +124,33 @@ public class CoreRuntimeBenchmarks
     }
 
     /// <summary>
+    /// Notify a System.Reactive observer created from delegates.
+    /// </summary>
+    /// <returns>The forwarded value.</returns>
+    [Benchmark]
+    public int SystemReactiveSafeWitness()
+    {
+        var value = 0;
+        var observer = System.Reactive.Observer.Create<int>(x => value = x, _ => { }, () => { });
+        observer.OnNext(42);
+        observer.OnCompleted();
+        return value;
+    }
+
+    /// <summary>
+    /// Notify an R3 observer.
+    /// </summary>
+    /// <returns>The forwarded value.</returns>
+    [Benchmark]
+    public int R3SafeWitness()
+    {
+        var observer = new IntR3Observer();
+        observer.OnNext(42);
+        observer.OnCompleted(R3.Result.Success);
+        return observer.LastValue;
+    }
+
+    /// <summary>
     /// Allocating a completed spark should remain allocation efficient.
     /// </summary>
     /// <returns>An integer marker extracted from kind.</returns>
@@ -103,5 +159,27 @@ public class CoreRuntimeBenchmarks
     {
         var spark = Spark.CreateOnCompleted<int>();
         return (int)spark.Kind;
+    }
+
+    /// <summary>
+    /// Allocating a completed notification with System.Reactive.
+    /// </summary>
+    /// <returns>An integer marker extracted from kind.</returns>
+    [Benchmark]
+    public int SystemReactiveCompletedSpark()
+    {
+        var notification = System.Reactive.Notification.CreateOnCompleted<int>();
+        return (int)notification.Kind;
+    }
+
+    /// <summary>
+    /// Allocating a completed notification with R3.
+    /// </summary>
+    /// <returns>An integer marker extracted from kind.</returns>
+    [Benchmark]
+    public int R3CompletedSpark()
+    {
+        var notification = new R3.Notification<int>(R3.Result.Success);
+        return (int)notification.Kind;
     }
 }

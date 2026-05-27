@@ -7,6 +7,7 @@ using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
 using R3;
 
+using R3ReplaySubject = R3.ReplaySubject<int>;
 using RxReplaySubject = System.Reactive.Subjects.ReplaySubject<int>;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -45,6 +46,20 @@ public class ReplaySignalBenchmarks
         return observer.Total;
     }
 
+    /// <summary>
+    /// Bounded replay subscription benchmark for R3.
+    /// </summary>
+    /// <returns>The sum replayed to a late subscriber.</returns>
+    [Benchmark]
+    public int R3ReplaySubscribe()
+    {
+        var observer = new IntR3Observer();
+        using var subject = new R3ReplaySubject(16);
+        PopulateReplaySubject(subject);
+        using var subscription = subject.Subscribe(observer);
+        return observer.Total;
+    }
+
     private static void PopulateReplaySubject(ReplaySignal<int> subject)
     {
         for (var i = 0; i < 16; i++)
@@ -60,5 +75,12 @@ public class ReplaySignalBenchmarks
             subject.OnNext(i);
         }
     }
-}
 
+    private static void PopulateReplaySubject(R3ReplaySubject subject)
+    {
+        for (var i = 0; i < 16; i++)
+        {
+            subject.OnNext(i);
+        }
+    }
+}

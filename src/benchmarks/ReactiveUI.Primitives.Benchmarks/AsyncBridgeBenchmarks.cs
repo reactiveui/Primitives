@@ -43,4 +43,16 @@ public class AsyncBridgeBenchmarks
         using var subscription = RxObservable.FromAsync(() => CompletedTask).Subscribe(observer);
         return observer.LastValue;
     }
+
+    /// <summary>
+    /// Completed task conversion in R3.
+    /// </summary>
+    /// <returns>The emitted value.</returns>
+    [Benchmark]
+    public int R3CompletedTaskBridge()
+    {
+        var observer = new IntR3Observer();
+        using var subscription = R3.Observable.ToObservable(CompletedTask, configureAwait: false).Subscribe(observer);
+        return observer.LastValue;
+    }
 }

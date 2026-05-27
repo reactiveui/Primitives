@@ -618,73 +618,73 @@ dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.
 
 Short local jobs are useful for fast regression checks; rerun with a longer BenchmarkDotNet job before making release claims. Current local test coverage after this pass is 82.80% line coverage and 75.50% branch coverage from `coverage-local.cobertura.xml`; the 100% coverage target remains an active work item.
 
-`N/A` means the current benchmark harness does not contain a matching measured row for that library.
+The table below is generated from the joined BenchmarkDotNet CSV and uses `Mean / Allocated` for each cell.
 
 | Scenario | ReactiveUI.Primitives | System.Reactive | R3 |
 |---|---:|---:|---:|
-| Return subscribe | 0.2089 ns / 0 B | 45.7505 ns / 120 B | 28.1108 ns / 72 B |
-| Empty subscribe | 2.6805 ns / 40 B | 40.1536 ns / 96 B | 25.8399 ns / 48 B |
-| Range subscribe | 46.0466 ns / 96 B | 2,452.1549 ns / 2,472 B | 63.6342 ns / 72 B |
-| Repeat subscribe | 6.7455 ns / 0 B | 2,275.7650 ns / 2,408 B | 64.8692 ns / 72 B |
-| Throw subscribe | 54.9685 ns / 120 B | 106.8594 ns / 240 B | 85.8239 ns / 192 B |
-| FromEnumerable subscribe | 49.3764 ns / 40 B | 2,171.2470 ns / 2,504 B | 70.3934 ns / 80 B |
-| Completed task bridge | 8.7892 ns / 88 B | 769.1087 ns / 793 B | N/A |
-| Create subscribe | 43.7376 ns / 248 B | N/A | N/A |
-| CreateSafe subscribe | 44.1792 ns / 248 B | N/A | N/A |
-| Defer subscribe | 66.0839 ns / 240 B | N/A | N/A |
-| Start subscribe | 51.7062 ns / 376 B | N/A | N/A |
-| Unfold subscribe | 167.5562 ns / 736 B | N/A | N/A |
-| Use subscribe | 67.7116 ns / 432 B | N/A | N/A |
-| FromAsyncEnumerable subscribe | 1,921.1208 ns / 2,052 B | N/A | N/A |
-| Never subscribe/dispose | 0.2163 ns / 0 B | N/A | N/A |
-| Map + Keep over range | 130.0149 ns / 208 B | 2,461.1312 ns / 2,616 B | 256.9470 ns / 264 B |
-| Aggregate + Any + Count | 229.9964 ns / 992 B | 5,073.0502 ns / 5,896 B | 529.5892 ns / 1,280 B |
-| StartWith + Append + DefaultIfEmpty | 45.2433 ns / 184 B | 869.3671 ns / 1,257 B | 128.0685 ns / 280 B |
-| SelectMany over ranges | 939.2041 ns / 712 B | 3,357.9581 ns / 3,872 B | 965.1100 ns / 1,032 B |
-| Zip over ranges | 38.8399 ns / 232 B | 2,903.8925 ns / 2,976 B | 658.2362 ns / 648 B |
-| Concat ranges | 67.0788 ns / 256 B | N/A | N/A |
-| Merge ranges | 66.9464 ns / 256 B | N/A | N/A |
-| Race ranges | 37.7646 ns / 192 B | N/A | N/A |
-| Switch ranges | 797.3144 ns / 1,376 B | N/A | N/A |
-| CombineLatest ranges | 95.0119 ns / 504 B | N/A | N/A |
-| WithLatest ranges | 104.8306 ns / 504 B | N/A | N/A |
-| ForkJoin ranges | 67.7277 ns / 480 B | N/A | N/A |
-| Delay range | 3,132.9781 ns / 38,816 B | N/A | N/A |
-| DelayStart range | 874.3075 ns / 25,520 B | N/A | N/A |
-| Throttle burst | 2,504.3725 ns / 38,384 B | N/A | N/A |
-| Sample latest | 1,045.5780 ns / 26,072 B | N/A | N/A |
-| Timestamp range | 394.0507 ns / 312 B | N/A | N/A |
-| TimeInterval range | 478.5383 ns / 736 B | N/A | N/A |
-| Timeout never | 976.3098 ns / 25,816 B | N/A | N/A |
-| ObserveOn immediate | 21.8563 ns / 96 B | N/A | N/A |
-| Replay subscribe | 324.2733 ns / 320 B | 665.7033 ns / 696 B | N/A |
-| BehaviorSignal 32 values | 554.5077 ns / 176 B | 581.5846 ns / 200 B | 594.3121 ns / 184 B |
-| BehaviorSignal 1024 values | 15,698.1415 ns / 176 B | 15,826.6246 ns / 200 B | 15,702.7802 ns / 184 B |
-| Signal emit, 32 values | 65.8803 ns / 136 B | 90.0502 ns / 136 B | 116.1177 ns / 152 B |
-| Signal emit, 1024 values | 1,650.9938 ns / 136 B | 1,676.8777 ns / 136 B | 1,984.4349 ns / 152 B |
-| Signal subscribe/dispose, 8 observers | 240.6380 ns / 592 B | 284.9100 ns / 1,288 B | 450.5067 ns / 840 B |
-| Signal subscribe/dispose, 64 observers | 2,599.1562 ns / 3,800 B | 3,600.1331 ns / 38,472 B | 3,401.7292 ns / 6,216 B |
-| Publish live connect | 125.5809 ns / 384 B | N/A | N/A |
-| Share live subscribe | 225.6140 ns / 848 B | N/A | N/A |
-| Replay live late subscribe | 595.9243 ns / 568 B | N/A | N/A |
-| RefCount subscribe | 222.4420 ns / 848 B | N/A | N/A |
-| AutoConnect subscribe | 167.9847 ns / 728 B | N/A | N/A |
-| StateSignal updates | 552.4185 ns / 176 B | N/A | N/A |
-| ReadOnlyState projection | 123.5420 ns / 248 B | N/A | N/A |
-| TaskSignal subscribe | 2,384.2121 ns / 3,875 B | N/A | N/A |
-| Command execute | 114.0456 ns / 600 B | N/A | N/A |
-| Command result subscribe | 137.9245 ns / 672 B | N/A | N/A |
-| CollectList range | 115.9544 ns / 688 B | N/A | N/A |
-| CollectArray range | 83.1385 ns / 656 B | N/A | N/A |
-| CollectArrayAsync range | 33.8094 ns / 384 B | N/A | N/A |
-| FirstAsync range | 5.9320 ns / 56 B | N/A | N/A |
-| ToTask range | 13.9715 ns / 192 B | N/A | N/A |
-| Count(predicate) range | 55.0441 ns / 144 B | N/A | N/A |
-| All + Contains range | 204.1768 ns / 1,024 B | N/A | N/A |
-| Pocket dispose | 60.2873 ns / 408 B | 93.1830 ns / 512 B | N/A |
-| CurrentThread schedule | 12.4912 ns / 88 B | 14.7694 ns / 88 B | N/A |
-| Safe witness | 21.7079 ns / 168 B | N/A | N/A |
-| Completed Spark | 0.0006 ns / 0 B | N/A | N/A |
+| Return subscribe | 0.2924 ns / 0 B | 57.3971 ns / 120 B | 36.4736 ns / 80 B |
+| Empty subscribe | 2.6250 ns / 40 B | 49.4400 ns / 96 B | 31.7660 ns / 56 B |
+| Range subscribe | 53.4814 ns / 96 B | 2,661.3499 ns / 2,472 B | 74.1203 ns / 80 B |
+| Repeat subscribe | 7.4801 ns / 0 B | 2,561.7627 ns / 2,408 B | 72.9776 ns / 80 B |
+| Throw subscribe | 65.5047 ns / 120 B | 121.8558 ns / 240 B | 101.9381 ns / 200 B |
+| FromEnumerable subscribe | 53.8412 ns / 40 B | 2,463.3475 ns / 2,504 B | 79.5410 ns / 88 B |
+| Completed task bridge | 14.7929 ns / 88 B | 1,069.5220 ns / 793 B | 42.9666 ns / 88 B |
+| Create subscribe | 71.6670 ns / 248 B | 50.1209 ns / 168 B | 64.3239 ns / 128 B |
+| CreateSafe subscribe | 58.6071 ns / 248 B | 50.7736 ns / 168 B | 64.0586 ns / 128 B |
+| Defer subscribe | 80.2183 ns / 240 B | 1,494.6925 ns / 1,512 B | 120.5173 ns / 152 B |
+| Start subscribe | 68.4794 ns / 376 B | 884.6336 ns / 751 B | 67.0051 ns / 160 B |
+| Unfold subscribe | 205.0502 ns / 736 B | 2,413.8472 ns / 2,768 B | 106.4548 ns / 128 B |
+| Use subscribe | 78.5460 ns / 432 B | 90.4731 ns / 168 B | 62.4567 ns / 128 B |
+| FromAsyncEnumerable subscribe | 2,572.9176 ns / 2,065 B | 2,042.2704 ns / 2,445 B | 1,375.5498 ns / 1,023 B |
+| Never subscribe/dispose | 0.2897 ns / 0 B | 5.9221 ns / 40 B | 21.0021 ns / 56 B |
+| Map + Keep over range | 144.9399 ns / 208 B | 2,858.9877 ns / 2,616 B | 306.8607 ns / 272 B |
+| Aggregate + Any + Count | 269.0177 ns / 992 B | 5,698.2445 ns / 5,896 B | 625.4828 ns / 1,280 B |
+| StartWith + Append + DefaultIfEmpty | 56.9262 ns / 184 B | 1,055.3664 ns / 1,257 B | 157.0466 ns / 288 B |
+| SelectMany over ranges | 1,054.3650 ns / 712 B | 3,870.5592 ns / 3,872 B | 1,152.8382 ns / 1,040 B |
+| Zip over ranges | 45.4963 ns / 232 B | 3,656.1999 ns / 2,976 B | 747.8750 ns / 656 B |
+| Concat ranges | 77.7447 ns / 256 B | 2,961.9928 ns / 2,856 B | 277.4494 ns / 360 B |
+| Merge ranges | 81.1404 ns / 256 B | 4,211.2274 ns / 3,952 B | 722.6829 ns / 352 B |
+| Race ranges | 42.3265 ns / 192 B | 1,643.5506 ns / 1,760 B | 295.8642 ns / 360 B |
+| Switch ranges | 931.0946 ns / 1,376 B | 2,259.5812 ns / 2,336 B | 789.2157 ns / 392 B |
+| CombineLatest ranges | 118.2750 ns / 504 B | 3,395.1528 ns / 2,824 B | 714.2596 ns / 344 B |
+| WithLatest ranges | 112.4741 ns / 504 B | 3,630.0810 ns / 2,824 B | 409.9192 ns / 248 B |
+| ForkJoin ranges | 82.2519 ns / 480 B | 3,726.2327 ns / 3,136 B | 1,016.8916 ns / 504 B |
+| Delay range | 3,509.9035 ns / 38,816 B | 6,600.1541 ns / 39,584 B | 2,118.7826 ns / 2,200 B |
+| DelayStart range | 1,029.2875 ns / 25,520 B | 2,440.2833 ns / 26,456 B | 349.4229 ns / 552 B |
+| Throttle burst | 3,351.9829 ns / 38,384 B | 2,843.6348 ns / 36,480 B | 1,729.4249 ns / 1,512 B |
+| Sample latest | 1,192.1561 ns / 26,072 B | 2,187.4022 ns / 26,264 B | 388.9601 ns / 664 B |
+| Timestamp range | 452.1057 ns / 312 B | 1,870.3018 ns / 1,608 B | 373.1253 ns / 152 B |
+| TimeInterval range | 542.5902 ns / 736 B | 1,853.5918 ns / 1,712 B | 479.2913 ns / 160 B |
+| Timeout idle | 1,157.1993 ns / 25,912 B | 1,463.0736 ns / 29,776 B | 486.4943 ns / 784 B |
+| ObserveOn immediate | 27.0202 ns / 96 B | 18,308.8684 ns / 11,309 B | 998.1707 ns / 432 B |
+| Replay subscribe | 369.7292 ns / 320 B | 766.3089 ns / 696 B | 461.5158 ns / 688 B |
+| BehaviorSignal 32 values | 613.2438 ns / 176 B | 618.4676 ns / 200 B | 669.5095 ns / 192 B |
+| BehaviorSignal 1024 values | 17,167.4906 ns / 176 B | 16,983.8969 ns / 200 B | 16,967.7836 ns / 192 B |
+| Signal emit, 32 values | 79.8202 ns / 136 B | 105.0434 ns / 136 B | 168.7808 ns / 160 B |
+| Signal emit, 1024 values | 2,512.2955 ns / 136 B | 1,973.1489 ns / 136 B | 2,166.3308 ns / 160 B |
+| Signal subscribe/dispose, 8 observers | 271.5037 ns / 592 B | 340.2902 ns / 1,288 B | 522.6329 ns / 840 B |
+| Signal subscribe/dispose, 64 observers | 3,011.0357 ns / 3,800 B | 4,617.4255 ns / 38,472 B | 4,091.2084 ns / 6,216 B |
+| Publish live connect | 173.3073 ns / 384 B | 3,236.7963 ns / 2,696 B | 561.8089 ns / 368 B |
+| Share live subscribe | 276.6871 ns / 848 B | 3,461.6713 ns / 2,880 B | 548.8631 ns / 488 B |
+| Replay live late subscribe | 712.4733 ns / 568 B | 4,472.9059 ns / 3,408 B | 1,132.5459 ns / 1,360 B |
+| RefCount subscribe | 280.1471 ns / 848 B | 3,155.4108 ns / 2,880 B | 529.4785 ns / 488 B |
+| AutoConnect subscribe | 245.5960 ns / 728 B | 3,474.4862 ns / 2,736 B | 466.0376 ns / 368 B |
+| StateSignal updates | 609.7935 ns / 176 B | 609.6959 ns / 200 B | 662.1553 ns / 192 B |
+| ReadOnlyState projection | 150.0491 ns / 248 B | 106.9365 ns / 328 B | 199.0058 ns / 312 B |
+| TaskSignal subscribe | 6,126.1940 ns / 3,853 B | 874.2303 ns / 886 B | 47.2969 ns / 160 B |
+| Command execute | 144.2864 ns / 600 B | 809.1453 ns / 1,089 B | 123.6877 ns / 296 B |
+| Command result subscribe | 184.0972 ns / 672 B | 46.0881 ns / 136 B | 76.0079 ns / 160 B |
+| CollectList range | 138.5013 ns / 688 B | 2,916.3119 ns / 3,488 B | 189.9245 ns / 632 B |
+| CollectArray range | 114.7686 ns / 656 B | 4,302.7507 ns / 3,640 B | 231.4877 ns / 784 B |
+| CollectArrayAsync range | 37.9519 ns / 384 B | 3,070.6184 ns / 3,984 B | 189.4382 ns / 784 B |
+| FirstAsync range | 7.4257 ns / 56 B | 2,679.5795 ns / 2,792 B | 89.9454 ns / 208 B |
+| ToTask range | 16.8438 ns / 192 B | 2,778.4730 ns / 2,824 B | 104.4256 ns / 208 B |
+| Count(predicate) range | 64.3218 ns / 144 B | 2,804.5286 ns / 2,520 B | 111.1174 ns / 200 B |
+| All + Contains range | 250.2919 ns / 1,024 B | 5,723.2875 ns / 5,816 B | 257.2693 ns / 392 B |
+| Pocket dispose | 85.2006 ns / 408 B | 107.9840 ns / 512 B | 102.8140 ns / 480 B |
+| CurrentThread schedule | 15.6813 ns / 88 B | 18.6513 ns / 88 B | 34.4560 ns / 56 B |
+| Safe witness | 32.4502 ns / 168 B | 16.2257 ns / 136 B | 22.0434 ns / 56 B |
+| Completed Spark | 0.0000 ns / 0 B | 0.0000 ns / 0 B | 0.2869 ns / 0 B |
 
 Performance constraints used by the project:
 
