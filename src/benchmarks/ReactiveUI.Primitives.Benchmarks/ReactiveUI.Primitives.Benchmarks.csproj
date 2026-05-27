@@ -10,11 +10,12 @@
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <RunAnalyzers>true</RunAnalyzers>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <NoWarn>$(NoWarn);SA1600;SA1649;SA1402;SA1518;SA1208;SA1210;SA1211;S109;S3257;CA1822;S1128;SA1200</NoWarn>
+    <NoWarn>$(NoWarn);SA1600;SA1649;SA1402;SA1518;SA1208;SA1210;SA1211;S109;S3257;CA1822;S1128;SA1200;S4144;S6966;IDE0300;S138;CA1849</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <PackageReference Include="System.Reactive" />
     <PackageReference Include="R3" />
   </ItemGroup>
