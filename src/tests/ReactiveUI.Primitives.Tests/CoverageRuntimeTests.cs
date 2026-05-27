@@ -501,6 +501,30 @@ public class CoverageRuntimeTests
     }
 
     /// <summary>
+    /// Covers virtual-time extension validation and action scheduling.
+    /// </summary>
+    [Test]
+    public void VirtualTimeSequencerExtensionsValidateAndRunActions()
+    {
+        var clock = new TestClock(DateTimeOffset.UnixEpoch);
+        var invoked = 0;
+
+        Assert.Throws<ArgumentNullException>(() => VirtualTimeSequencerExtensions.ScheduleRelative<DateTimeOffset, TimeSpan>(null!, TimeSpan.Zero, () => { }));
+        Assert.Throws<ArgumentNullException>(() => clock.ScheduleRelative(TimeSpan.Zero, null!));
+        Assert.Throws<ArgumentNullException>(() => VirtualTimeSequencerExtensions.ScheduleAbsolute<DateTimeOffset, TimeSpan>(null!, DateTimeOffset.UnixEpoch, () => { }));
+        Assert.Throws<ArgumentNullException>(() => clock.ScheduleAbsolute(DateTimeOffset.UnixEpoch, null!));
+
+        clock.ScheduleRelative(TimeSpan.FromTicks(One), () => invoked += One);
+        clock.ScheduleAbsolute(DateTimeOffset.UnixEpoch.AddTicks(Two), () => invoked += Two);
+
+        clock.AdvanceBy(TimeSpan.FromTicks(One));
+        Assert.Equal(One, invoked);
+
+        clock.AdvanceBy(TimeSpan.FromTicks(One));
+        Assert.Equal(Three, invoked);
+    }
+
+    /// <summary>
     /// Creates an iterator-backed enumerable for the non-indexable enumerable path.
     /// </summary>
     /// <returns>The yielded values.</returns>
