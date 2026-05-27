@@ -386,6 +386,7 @@ public class FactoryOperatorContractTests
         var rangeConcatenated = new List<int>();
         var rangeMerged = new List<int>();
         var rangeRace = new List<int>();
+        var rangeAmb = new List<int>();
         var rangeLatest = new List<int>();
         var rangeWithLatest = new List<int>();
         var rangeForkJoin = new List<int>();
@@ -400,6 +401,7 @@ public class FactoryOperatorContractTests
         rangeConcatSignal.Subscribe(rangeObserver);
         Signal.Merge(Signal.Range(FirstValue, SecondValue), Signal.Range(RetrySuccessAttempt, SecondValue)).Subscribe(rangeMerged.Add);
         Signal.Race(Signal.Range(FirstValue, SecondValue), Signal.Range(RetrySuccessAttempt, SecondValue)).Subscribe(rangeRace.Add);
+        Signal.Amb(Signal.Range(FirstValue, SecondValue), Signal.Range(RetrySuccessAttempt, SecondValue)).Subscribe(rangeAmb.Add);
         Signal.CombineLatest(Signal.Range(FirstValue, SecondValue), Signal.Range(ProjectionMultiplier, SecondValue), static (left, right) => left + right).Subscribe(rangeLatest.Add);
         Signal.Range(FirstValue, SecondValue).WithLatest(Signal.Range(ProjectionMultiplier, SecondValue), static (left, right) => left + right).Subscribe(rangeWithLatest.Add);
         Signal.ForkJoin(Signal.Range(FirstValue, SecondValue), Signal.Range(ProjectionMultiplier, SecondValue), static (left, right) => left + right).Subscribe(rangeForkJoin.Add);
@@ -416,6 +418,7 @@ public class FactoryOperatorContractTests
         Assert.Equal(1, rangeObserver.Completed);
         Assert.Equal(FourItemExpected, rangeMerged);
         Assert.Equal(TakeWhileExpected, rangeRace);
+        Assert.Equal(TakeWhileExpected, rangeAmb);
         Assert.Equal(new[] { ProjectedSecondBucketPeerValue, RangeZipShorterSecondResult }, rangeLatest);
         Assert.Equal(new[] { ProjectedSecondBucketPeerValue, RangeZipShorterSecondResult }, rangeWithLatest);
         Assert.Equal(new[] { RangeZipShorterSecondResult }, rangeForkJoin);
@@ -494,6 +497,25 @@ public class FactoryOperatorContractTests
     }
 
     /// <summary>
+    /// Verifies completed async enumerable subscriptions can be disposed without racing a disposed token source.
+    /// </summary>
+    /// <returns>A task that completes when asynchronous assertions have run.</returns>
+    [Test]
+    public async Task AsyncEnumerableFactoryCanDisposeAfterCompletion()
+    {
+        static async IAsyncEnumerable<int> Values()
+        {
+            yield return FirstValue;
+            await Task.Yield();
+            yield return SecondValue;
+        }
+
+        var values = await Signal.FromAsyncEnumerable(Values()).CollectArrayAsync();
+
+        Assert.Equal(TakeWhileExpected, (IEnumerable<int>)values);
+    }
+
+    /// <summary>
     /// Verifies timer factories use an injected virtual sequencer.
     /// </summary>
     [Test]
@@ -501,9 +523,11 @@ public class FactoryOperatorContractTests
     {
         var clock = new TestClock();
         var after = new List<long>();
+        var absoluteTimer = new List<long>();
         var every = new List<long>();
 
         Signal.After(TimeSpan.FromTicks(AfterTicks), clock).Subscribe(after.Add);
+        Signal.Timer(clock.Now.AddTicks(AfterTicks), clock).Subscribe(absoluteTimer.Add);
         var subscription = Signal.Every(TimeSpan.FromTicks(EveryTicks), clock).Subscribe(every.Add);
 
         clock.AdvanceBy(TimeSpan.FromTicks(InitialAdvanceTicks));
@@ -512,6 +536,7 @@ public class FactoryOperatorContractTests
 
         clock.AdvanceBy(TimeSpan.FromTicks(FirstValue));
         Assert.Equal(OneShotTimerExpected, after);
+        Assert.Equal(OneShotTimerExpected, absoluteTimer);
 
         clock.AdvanceBy(TimeSpan.FromTicks(InitialAdvanceTicks));
         subscription.Dispose();
@@ -663,6 +688,7 @@ public class FactoryOperatorContractTests
         Assert.Throws<ArgumentNullException>(() => Signal.Start(static () => FirstValue, null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Start((Action)null!));
         Assert.Throws<ArgumentNullException>(() => Signal.After(TimeSpan.Zero, null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Timer(DateTimeOffset.UnixEpoch, null!));
         Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Every(TimeSpan.FromTicks(-1)));
         Assert.Throws<ArgumentNullException>(() => Signal.Timer(TimeSpan.Zero, TimeSpan.Zero, null!));
         Assert.Throws<ArgumentNullException>(() => Signal.FromAsync<int>((Func<Task<int>>)null!));
