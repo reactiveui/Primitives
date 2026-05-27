@@ -55,6 +55,14 @@
     <!-- Library projects: net8.0, net9.0, net10.0, net462, net472, net481 -->
     <LibraryTargetFrameworks>$(NetCoreTargetFrameworks);$(NetFrameworkTargetFrameworks)</LibraryTargetFrameworks>
 
+    <!-- Windows UI integration projects: modern Windows TFMs plus supported .NET Framework TFMs -->
+    <WindowsNetCoreTargetFrameworks>net8.0-windows;net9.0-windows;net10.0-windows</WindowsNetCoreTargetFrameworks>
+    <WindowsLibraryTargetFrameworks>$(WindowsNetCoreTargetFrameworks);$(NetFrameworkTargetFrameworks)</WindowsLibraryTargetFrameworks>
+
+    <!-- Focused platform integration projects. -->
+    <BlazorTargetFrameworks>$(NetCoreTargetFrameworks)</BlazorTargetFrameworks>
+    <MauiTargetFrameworks>net9.0;net10.0</MauiTargetFrameworks>
+
     <!-- Test projects: net8.0, net9.0, net10.0 only -->
     <TestTargetFrameworks>$(NetCoreTargetFrameworks)</TestTargetFrameworks>
   </PropertyGroup>

@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
@@ -439,6 +440,40 @@ public class CoverageRuntimeTests
 
         Assert.Throws<ArgumentNullException>(() => ThreadPoolSequencer.Instance.Schedule(One, null!));
         Assert.Throws<ArgumentNullException>(() => ThreadPoolSequencer.Instance.Schedule(One, TimeSpan.Zero, null!));
+
+        var synchronizationContext = new ImmediateSynchronizationContext();
+        Assert.Throws<ArgumentNullException>(CreateSynchronizationContextSequencerWithoutContext);
+        var previousContext = SynchronizationContext.Current;
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(synchronizationContext);
+            Assert.Same(synchronizationContext, SynchronizationContextSequencer.Current.Context);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previousContext);
+        }
+
+        var synchronizationSequencer = new SynchronizationContextSequencer(synchronizationContext);
+        Assert.True(synchronizationSequencer.Now > DateTimeOffset.MinValue);
+        Assert.Throws<ArgumentNullException>(() => synchronizationSequencer.Schedule(One, null!));
+        Assert.Throws<ArgumentNullException>(() => synchronizationSequencer.Schedule(One, TimeSpan.Zero, null!));
+
+        var synchronizationValues = new List<int>();
+        using var synchronizationSubscription = synchronizationSequencer.Schedule(One, (_, state) =>
+        {
+            synchronizationValues.Add(state);
+            return Disposable.Empty;
+        });
+
+        var delayedSynchronizationCompletion = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var delayedSynchronizationSubscription = synchronizationSequencer.Schedule(Two, TimeSpan.Zero, (_, state) =>
+        {
+            delayedSynchronizationCompletion.TrySetResult(state);
+            return Disposable.Empty;
+        });
+        var delayedValue = await delayedSynchronizationCompletion.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
+        Assert.Equal(ExpectedOneTwo, (IEnumerable<int>)[.. synchronizationValues, delayedValue]);
     }
 
     /// <summary>
@@ -497,6 +532,12 @@ public class CoverageRuntimeTests
     /// </summary>
     private static void CreateScheduledItemWithoutComparer() =>
         _ = new ScheduledItem<int, string>(Sequencer.Immediate, "x", (_, _) => Disposable.Empty, One, null!);
+
+    /// <summary>
+    /// Creates a synchronization-context sequencer without a context.
+    /// </summary>
+    private static void CreateSynchronizationContextSequencerWithoutContext() =>
+        _ = new SynchronizationContextSequencer(null!);
 
     /// <summary>
     /// Compares a scheduled item through the non-generic comparable interface.
@@ -580,6 +621,15 @@ public class CoverageRuntimeTests
         /// Invokes the protected dispose path with <see langword="false"/>.
         /// </summary>
         public void DisposeFalse() => Dispose(false);
+    }
+
+    /// <summary>
+    /// Synchronization context that runs posted work immediately.
+    /// </summary>
+    private sealed class ImmediateSynchronizationContext : SynchronizationContext
+    {
+        /// <inheritdoc/>
+        public override void Post(SendOrPostCallback d, object? state) => d(state);
     }
 
     /// <summary>

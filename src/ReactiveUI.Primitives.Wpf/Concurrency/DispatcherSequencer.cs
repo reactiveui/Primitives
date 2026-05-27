@@ -2,12 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-#if WINDOWS
-
 using System;
 using System.Windows.Threading;
 using ReactiveUI.Primitives.Disposables;
-using static ReactiveUI.Primitives.Disposables.Disposable;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
@@ -16,7 +13,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// </summary>
 /// <seealso cref="ReactiveUI.Primitives.Concurrency.ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public partial class DispatcherSequencer : ISequencer
+public class DispatcherSequencer : ISequencer
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DispatcherSequencer"/> class.
@@ -37,7 +34,25 @@ public partial class DispatcherSequencer : ISequencer
     /// <summary>
     /// Gets the scheduler's notion of current time.
     /// </summary>
-    public DateTimeOffset Now => Sequencer.Now;
+    public DateTimeOffset Now
+    {
+        get
+        {
+#if NET8_0_OR_GREATER
+            return TimeProvider.System.GetUtcNow();
+#else
+#pragma warning disable S6354 // TimeProvider is not available on supported .NET Framework target frameworks.
+            return DateTimeOffset.UtcNow;
+#pragma warning restore S6354
+#endif
+        }
+    }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Schedules an action to be executed.
@@ -97,7 +112,7 @@ public partial class DispatcherSequencer : ISequencer
         };
         timer.Interval = timeSpan;
         timer.Start();
-        return new AnonymousDisposable(() =>
+        return Disposable.Create(() =>
         {
             timer?.Stop();
             timer = null;
@@ -117,4 +132,3 @@ public partial class DispatcherSequencer : ISequencer
     public IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action) =>
         Schedule(state, Sequencer.Normalize(dueTime - Now), action);
 }
-#endif

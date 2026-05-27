@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals.Core;
 
@@ -129,6 +130,16 @@ public static partial class Signal
     }
 
     /// <summary>
+    /// Generates a finite signal from state. Alias of <see cref="Unfold{TState, TResult}(TState, Func{TState, bool}, Func{TState, TState}, Func{TState, TResult})"/>.
+    /// </summary>
+    public static IObservable<TResult> Generate<TState, TResult>(
+        TState initialState,
+        Func<TState, bool> condition,
+        Func<TState, TState> iterate,
+        Func<TState, TResult> resultSelector) =>
+        Unfold(initialState, condition, iterate, resultSelector);
+
+    /// <summary>
     /// Creates a signal whose subscription lifetime owns a resource.
     /// </summary>
     public static IObservable<T> Use<TResource, T>(Func<TResource> resourceFactory, Func<TResource, IObservable<T>> signalFactory)
@@ -170,6 +181,61 @@ public static partial class Signal
     public static IObservable<T> Using<TResource, T>(Func<TResource> resourceFactory, Func<TResource, IObservable<T>> signalFactory)
         where TResource : IDisposable =>
         Use(resourceFactory, signalFactory);
+
+    /// <summary>
+    /// Converts an event into a signal of event pattern values.
+    /// </summary>
+    public static IObservable<EventPattern<EventArgs>> FromEventPattern(
+        Action<EventHandler> addHandler,
+        Action<EventHandler> removeHandler)
+    {
+        if (addHandler == null)
+        {
+            throw new ArgumentNullException(nameof(addHandler));
+        }
+
+        if (removeHandler == null)
+        {
+            throw new ArgumentNullException(nameof(removeHandler));
+        }
+
+        return Create<EventPattern<EventArgs>>(observer =>
+        {
+            void Handler(object? sender, EventArgs eventArgs) =>
+                observer.OnNext(new EventPattern<EventArgs>(sender, eventArgs));
+
+            addHandler(Handler);
+            return Disposable.Create(() => removeHandler(Handler));
+        });
+    }
+
+    /// <summary>
+    /// Converts an event into a signal of event pattern values.
+    /// </summary>
+    public static IObservable<EventPattern<TEventArgs>> FromEventPattern<TEventArgs>(
+        Action<EventHandler<TEventArgs>> addHandler,
+        Action<EventHandler<TEventArgs>> removeHandler)
+        where TEventArgs : EventArgs
+    {
+        if (addHandler == null)
+        {
+            throw new ArgumentNullException(nameof(addHandler));
+        }
+
+        if (removeHandler == null)
+        {
+            throw new ArgumentNullException(nameof(removeHandler));
+        }
+
+        return Create<EventPattern<TEventArgs>>(observer =>
+        {
+            void Handler(object? sender, TEventArgs eventArgs) =>
+                observer.OnNext(new EventPattern<TEventArgs>(sender, eventArgs));
+
+            addHandler(Handler);
+            return Disposable.Create(() => removeHandler(Handler));
+        });
+    }
 
     /// <summary>
     /// Creates a signal from an enumerable sequence.
@@ -475,6 +541,25 @@ public static partial class Signal
     public static IObservable<long> Timer(TimeSpan dueTime, ISequencer scheduler) => After(dueTime, scheduler);
 
     /// <summary>
+    /// Emits a single zero tick at the specified absolute due time.
+    /// </summary>
+    public static IObservable<long> Timer(DateTimeOffset dueTime) =>
+        Timer(dueTime, ThreadPoolSequencer.Instance);
+
+    /// <summary>
+    /// Emits a single zero tick at the specified absolute due time.
+    /// </summary>
+    public static IObservable<long> Timer(DateTimeOffset dueTime, ISequencer scheduler)
+    {
+        if (scheduler == null)
+        {
+            throw new ArgumentNullException(nameof(scheduler));
+        }
+
+        return After(Sequencer.Normalize(dueTime - scheduler.Now), scheduler);
+    }
+
+    /// <summary>
     /// Creates a timer that emits first after <paramref name="dueTime"/> and then at <paramref name="period"/>.
     /// </summary>
     public static IObservable<long> Timer(TimeSpan dueTime, TimeSpan period) =>
@@ -542,6 +627,11 @@ public static partial class Signal
 
         return FromEnumerable(validated).Race();
     }
+
+    /// <summary>
+    /// Mirrors the first supplied signal to produce a value or terminal signal.
+    /// </summary>
+    public static IObservable<T> Amb<T>(params IObservable<T>[] sources) => Race(sources);
 
     /// <summary>
     /// Zips two signals with a result selector.
@@ -631,14 +721,39 @@ public static partial class Signal
     private static IDisposable SubscribeAsyncEnumerable<T>(IAsyncEnumerable<T> values, IObserver<T> observer, CancellationToken cancellationToken)
     {
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var disposed = 0;
         IAsyncEnumerator<T>? enumerator = null;
         _ = Task.Run(
-            async () => await PumpAsyncEnumerable(values, observer, cts, enumeratorReference => enumerator = enumeratorReference).ConfigureAwait(false),
+            async () =>
+            {
+                try
+                {
+                    await PumpAsyncEnumerable(values, observer, cts, enumeratorReference => enumerator = enumeratorReference).ConfigureAwait(false);
+                }
+                finally
+                {
+                    Volatile.Write(ref disposed, 1);
+                }
+            },
             CancellationToken.None);
 
         return Disposable.Create(() =>
         {
-            cts.Cancel();
+            if (Interlocked.Exchange(ref disposed, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // The async enumerable completed and released its linked token before disposal reached this callback.
+                return;
+            }
+
             var current = Volatile.Read(ref enumerator);
             if (current == null)
             {
