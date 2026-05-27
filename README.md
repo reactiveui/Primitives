@@ -163,8 +163,9 @@ Creation APIs live on `ReactiveUI.Primitives.Signals.Signal`.
 | `Signal.Throw<T>(Exception)` | Terminate with an error. |
 | `Signal.Range(int start, int count)` | Emit an integer range and complete. |
 | `Signal.Repeat<T>(T value)` / `Repeat<T>(T value, int count)` | Repeat indefinitely or a fixed number of times. |
-| `Signal.Unfold<TState,TResult>(...)` | Generate a finite sequence from state. |
+| `Signal.Unfold<TState,TResult>(...)` / `Signal.Generate<TState,TResult>(...)` | Generate a finite sequence from state. |
 | `Signal.Use<TResource,T>(...)` | Tie a resource lifetime to a subscription. |
+| `Signal.FromEventPattern(...)` | Convert .NET events to `EventPattern<TEventArgs>` values. |
 | `Signal.FromEnumerable<T>(IEnumerable<T>)` | Convert an enumerable. |
 | `Signal.FromEnumerable<T>(IEnumerable<T>, CancellationToken)` | Convert an enumerable and stop synchronous enumeration when cancelled. |
 | `Signal.FromAsyncEnumerable<T>(IAsyncEnumerable<T>, CancellationToken)` | Convert an async enumerable on modern TFMs. |
@@ -300,12 +301,13 @@ height.Value = 600;
 | quiet-period sampling | `Throttle` |
 | periodic sampling | `Sample` |
 | timeout | `Timeout` |
+| schedule subscription | `SubscribeOn` |
 | timestamp values | `Timestamp` |
 | measure intervals | `TimeInterval` |
 | fixed-size buffers | `Buffer(count)`, `Buffer(count, skip)` |
-| collect to list/array signal | `CollectList`, `CollectArray` |
-| collect asynchronously | `CollectListAsync`, `CollectArrayAsync` |
-| first value task | `FirstAsync`, `FirstOrDefaultAsync` |
+| collect to list/array signal | `CollectList`, `CollectArray`, `ToList`, `ToArray` |
+| collect asynchronously | `CollectListAsync`, `CollectArrayAsync`, `ToListAsync`, `ToArrayAsync` |
+| first/last value task | `FirstAsync`, `FirstOrDefaultAsync`, `LastAsync`, `LastOrDefaultAsync` |
 
 Timer example:
 
@@ -396,7 +398,7 @@ using var subscription = failed.Subscribe(
 
 ## Sequencers
 
-Sequencers live in `ReactiveUI.Primitives.Concurrency` and implement `ISequencer`.
+Sequencers live in `ReactiveUI.Primitives.Concurrency` and implement `ISequencer`. The core `ReactiveUI.Primitives` package does not reference WPF or Windows Forms; UI-thread sequencers are provided by the optional `ReactiveUI.Primitives.Wpf` and `ReactiveUI.Primitives.WinForms` packages.
 
 | Sequencer | Purpose |
 |---|---|
@@ -404,7 +406,9 @@ Sequencers live in `ReactiveUI.Primitives.Concurrency` and implement `ISequencer
 | `Sequencer.CurrentThread` / `CurrentThreadSequencer.Instance` | Queue recursive/current-thread work deterministically. |
 | `ThreadPoolSequencer.Instance` | Schedule work through the thread pool. |
 | `TaskPoolSequencer.Instance` | Schedule work through tasks. |
-| `DispatcherSequencer` | Schedule onto a WPF dispatcher on Windows TFMs. |
+| `SynchronizationContextSequencer` | Schedule through a `SynchronizationContext`. |
+| `DispatcherSequencer` | Schedule onto a WPF dispatcher from `ReactiveUI.Primitives.Wpf`. |
+| `ControlSequencer` | Schedule onto a Windows Forms control from `ReactiveUI.Primitives.WinForms`. |
 | `VirtualClock` / `TestClock` | Virtual-time scheduling for deterministic tests. |
 
 Scheduling APIs include absolute, relative, recursive, and action-based overloads:
@@ -548,8 +552,9 @@ ReactiveUI.Primitives is not a byte-for-byte clone of System.Reactive. It keeps 
 | `DelaySubscription` | `DelayStart` | Delay source subscription. |
 | `Timeout` | `Timeout` | Error on missing value before due time. |
 | `Buffer(count)` | `Buffer(count)` | Fixed-size buffers. |
-| `ToList` / `ToArray` | `CollectList` / `CollectArray` | Signal results. |
-| `FirstAsync` | `FirstAsync` | Task result. |
+| `SubscribeOn` | `SubscribeOn` | Schedule source subscription. |
+| `ToList` / `ToArray` | `ToList` / `ToArray` or `CollectList` / `CollectArray` | Signal results. |
+| `FirstAsync` / `LastAsync` | `FirstAsync` / `LastAsync` | Task result. |
 | `CountAsync` / `AnyAsync` | `CountAsync` / `AnyAsync` | Task-shaped terminal helpers, including cancellation overloads. |
 
 ### Disposable mapping
@@ -573,7 +578,9 @@ ReactiveUI.Primitives is not a byte-for-byte clone of System.Reactive. It keeps 
 | `CurrentThreadSequencer.Instance` | `Sequencer.CurrentThread` or `CurrentThreadSequencer.Instance` |
 | `ThreadPoolSequencer.Instance` | `ThreadPoolSequencer.Instance` |
 | task-pool scheduling | `TaskPoolSequencer.Instance` |
-| dispatcher scheduling | `DispatcherSequencer` |
+| synchronization-context scheduling | `SynchronizationContextSequencer` |
+| WPF dispatcher scheduling | `DispatcherSequencer` from `ReactiveUI.Primitives.Wpf` |
+| Windows Forms control scheduling | `ControlSequencer` from `ReactiveUI.Primitives.WinForms` |
 | `TestScheduler` / virtual time | `VirtualClock` or `TestClock` |
 
 ### Testing migration
@@ -603,41 +610,81 @@ Use the generated bridge only at boundaries. Prefer native ReactiveUI.Primitives
 
 Benchmarks live in `src/benchmarks/ReactiveUI.Primitives.Benchmarks`. The benchmark project may reference System.Reactive and R3 to compare throughput and allocation behavior; the production package must not.
 
-The latest joined BenchmarkDotNet ShortRun was captured on 2026-05-25 with .NET SDK 10.0.300 on Windows 11, using:
+Full BenchmarkDotNet runs were captured on 2026-05-27 with .NET SDK 10.0.300 on Windows 11:
 
 ```powershell
-dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- -f '*' -j Short --join
+dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter "*" --join --launchCount 1 --warmupCount 1 --iterationCount 3
 ```
 
-Raw artifacts for the joined run are under `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-25-21-12-14-report.*`. The focused `FromEnumerable` row was captured in `src/BenchmarkDotNet.Artifacts/results/ReactiveUI.Primitives.Benchmarks.FactoryFromEnumerableBenchmarks-report.*` after the dedicated inline fast path was added. ShortRun is useful for fast regression checks; rerun with a longer BenchmarkDotNet job before making release claims.
+Short local jobs are useful for fast regression checks; rerun with a longer BenchmarkDotNet job before making release claims. Current local test coverage after this pass is 82.80% line coverage and 75.50% branch coverage from `coverage-local.cobertura.xml`; the 100% coverage target remains an active work item.
+
+`N/A` means the current benchmark harness does not contain a matching measured row for that library.
 
 | Scenario | ReactiveUI.Primitives | System.Reactive | R3 |
 |---|---:|---:|---:|
-| Completed task bridge | 17.6833 ns / 88 B | 1,348.2890 ns / 793 B | n/a |
-| Pocket / composite dispose | 90.8799 ns / 408 B | 138.6110 ns / 512 B | n/a |
-| Current-thread schedule | 22.8205 ns / 88 B | 28.3162 ns / 88 B | n/a |
-| Safe witness wrapper | 40.2300 ns / 168 B | n/a | n/a |
-| Completed spark | 0.3007 ns / 0 B | n/a | n/a |
-| Return subscribe | 0.4417 ns / 0 B | 91.5187 ns / 120 B | 49.3844 ns / 72 B |
-| Empty subscribe | 7.3897 ns / 40 B | 79.6293 ns / 96 B | 43.8897 ns / 48 B |
-| Range subscribe | 55.9990 ns / 96 B | 4,153.4012 ns / 2,472 B | 119.9919 ns / 72 B |
-| Repeat subscribe | 10.3262 ns / 0 B | 3,951.5395 ns / 2,408 B | 116.7110 ns / 72 B |
-| FromEnumerable subscribe | 48.9910 ns / 40 B | 3,740.3600 ns / 2,504 B | 131.3610 ns / 80 B |
-| Throw subscribe | 100.3490 ns / 120 B | 190.9367 ns / 240 B | 158.5640 ns / 192 B |
-| Map + Keep | 213.9322 ns / 208 B | 4,463.8969 ns / 2,616 B | 423.8154 ns / 264 B |
-| DistinctBy + Count + Any | 427.3704 ns / 992 B | 8,842.7094 ns / 5,896 B | 932.2863 ns / 1,280 B |
-| StartWith + Append + DefaultIfEmpty | 79.0351 ns / 184 B | 1,511.0960 ns / 1,257 B | 226.6506 ns / 280 B |
-| SelectMany over ranges | 1,174.3683 ns / 712 B | 5,989.3754 ns / 3,872 B | 1,530.4454 ns / 1,032 B |
-| Zip over ranges | 1,920.5231 ns / 1,320 B | 5,434.1159 ns / 2,976 B | 1,103.3186 ns / 648 B |
-| Replay subscribe | 491.2126 ns / 320 B | 944.9225 ns / 696 B | n/a |
-| Behaviour signal, 32 values | 717.1898 ns / 176 B | 735.4731 ns / 200 B | 831.3793 ns / 184 B |
-| Behaviour signal, 1024 values | 19,587.6333 ns / 176 B | 18,925.1658 ns / 200 B | 21,464.7502 ns / 184 B |
-| Signal subscribe/dispose, 8 subscribers | 415.4351 ns / 1,176 B | 506.4101 ns / 1,288 B | 719.0130 ns / 840 B |
-| Signal subscribe/dispose, 64 subscribers | 4,503.8029 ns / 8,864 B | 8,526.7609 ns / 38,472 B | 5,480.4075 ns / 6,216 B |
-| Signal emit, 32 values | 108.2371 ns / 160 B | 122.6897 ns / 136 B | 213.9175 ns / 152 B |
-| Signal emit, 1024 values | 2,130.8298 ns / 160 B | 1,994.6875 ns / 136 B | 3,677.6208 ns / 152 B |
-
-Current benchmark coverage is intentionally visible rather than overstated. The next benchmark expansion areas are factory/adapters (`Never`, `Create`, `Defer`, `FromEnumerable`, `FromAsyncEnumerable`, `Start`, `Unfold`, `Use`), time/scheduler operators (`Delay`, `DelayStart`, `Throttle`, `Sample`, `Timestamp`, `TimeInterval`, `Timeout`, `ObserveOn`), higher-order combinators (`Concat`, `Merge`, `Race`, `Switch`, `CombineLatest`, `WithLatest`, `ForkJoin`), terminal/collection APIs, connectable/share APIs, and state/task command surfaces.
+| Return subscribe | 0.2089 ns / 0 B | 45.7505 ns / 120 B | 28.1108 ns / 72 B |
+| Empty subscribe | 2.6805 ns / 40 B | 40.1536 ns / 96 B | 25.8399 ns / 48 B |
+| Range subscribe | 46.0466 ns / 96 B | 2,452.1549 ns / 2,472 B | 63.6342 ns / 72 B |
+| Repeat subscribe | 6.7455 ns / 0 B | 2,275.7650 ns / 2,408 B | 64.8692 ns / 72 B |
+| Throw subscribe | 54.9685 ns / 120 B | 106.8594 ns / 240 B | 85.8239 ns / 192 B |
+| FromEnumerable subscribe | 49.3764 ns / 40 B | 2,171.2470 ns / 2,504 B | 70.3934 ns / 80 B |
+| Completed task bridge | 8.7892 ns / 88 B | 769.1087 ns / 793 B | N/A |
+| Create subscribe | 43.7376 ns / 248 B | N/A | N/A |
+| CreateSafe subscribe | 44.1792 ns / 248 B | N/A | N/A |
+| Defer subscribe | 66.0839 ns / 240 B | N/A | N/A |
+| Start subscribe | 51.7062 ns / 376 B | N/A | N/A |
+| Unfold subscribe | 167.5562 ns / 736 B | N/A | N/A |
+| Use subscribe | 67.7116 ns / 432 B | N/A | N/A |
+| FromAsyncEnumerable subscribe | 1,921.1208 ns / 2,052 B | N/A | N/A |
+| Never subscribe/dispose | 0.2163 ns / 0 B | N/A | N/A |
+| Map + Keep over range | 130.0149 ns / 208 B | 2,461.1312 ns / 2,616 B | 256.9470 ns / 264 B |
+| Aggregate + Any + Count | 229.9964 ns / 992 B | 5,073.0502 ns / 5,896 B | 529.5892 ns / 1,280 B |
+| StartWith + Append + DefaultIfEmpty | 45.2433 ns / 184 B | 869.3671 ns / 1,257 B | 128.0685 ns / 280 B |
+| SelectMany over ranges | 939.2041 ns / 712 B | 3,357.9581 ns / 3,872 B | 965.1100 ns / 1,032 B |
+| Zip over ranges | 38.8399 ns / 232 B | 2,903.8925 ns / 2,976 B | 658.2362 ns / 648 B |
+| Concat ranges | 67.0788 ns / 256 B | N/A | N/A |
+| Merge ranges | 66.9464 ns / 256 B | N/A | N/A |
+| Race ranges | 37.7646 ns / 192 B | N/A | N/A |
+| Switch ranges | 797.3144 ns / 1,376 B | N/A | N/A |
+| CombineLatest ranges | 95.0119 ns / 504 B | N/A | N/A |
+| WithLatest ranges | 104.8306 ns / 504 B | N/A | N/A |
+| ForkJoin ranges | 67.7277 ns / 480 B | N/A | N/A |
+| Delay range | 3,132.9781 ns / 38,816 B | N/A | N/A |
+| DelayStart range | 874.3075 ns / 25,520 B | N/A | N/A |
+| Throttle burst | 2,504.3725 ns / 38,384 B | N/A | N/A |
+| Sample latest | 1,045.5780 ns / 26,072 B | N/A | N/A |
+| Timestamp range | 394.0507 ns / 312 B | N/A | N/A |
+| TimeInterval range | 478.5383 ns / 736 B | N/A | N/A |
+| Timeout never | 976.3098 ns / 25,816 B | N/A | N/A |
+| ObserveOn immediate | 21.8563 ns / 96 B | N/A | N/A |
+| Replay subscribe | 324.2733 ns / 320 B | 665.7033 ns / 696 B | N/A |
+| BehaviorSignal 32 values | 554.5077 ns / 176 B | 581.5846 ns / 200 B | 594.3121 ns / 184 B |
+| BehaviorSignal 1024 values | 15,698.1415 ns / 176 B | 15,826.6246 ns / 200 B | 15,702.7802 ns / 184 B |
+| Signal emit, 32 values | 65.8803 ns / 136 B | 90.0502 ns / 136 B | 116.1177 ns / 152 B |
+| Signal emit, 1024 values | 1,650.9938 ns / 136 B | 1,676.8777 ns / 136 B | 1,984.4349 ns / 152 B |
+| Signal subscribe/dispose, 8 observers | 240.6380 ns / 592 B | 284.9100 ns / 1,288 B | 450.5067 ns / 840 B |
+| Signal subscribe/dispose, 64 observers | 2,599.1562 ns / 3,800 B | 3,600.1331 ns / 38,472 B | 3,401.7292 ns / 6,216 B |
+| Publish live connect | 125.5809 ns / 384 B | N/A | N/A |
+| Share live subscribe | 225.6140 ns / 848 B | N/A | N/A |
+| Replay live late subscribe | 595.9243 ns / 568 B | N/A | N/A |
+| RefCount subscribe | 222.4420 ns / 848 B | N/A | N/A |
+| AutoConnect subscribe | 167.9847 ns / 728 B | N/A | N/A |
+| StateSignal updates | 552.4185 ns / 176 B | N/A | N/A |
+| ReadOnlyState projection | 123.5420 ns / 248 B | N/A | N/A |
+| TaskSignal subscribe | 2,384.2121 ns / 3,875 B | N/A | N/A |
+| Command execute | 114.0456 ns / 600 B | N/A | N/A |
+| Command result subscribe | 137.9245 ns / 672 B | N/A | N/A |
+| CollectList range | 115.9544 ns / 688 B | N/A | N/A |
+| CollectArray range | 83.1385 ns / 656 B | N/A | N/A |
+| CollectArrayAsync range | 33.8094 ns / 384 B | N/A | N/A |
+| FirstAsync range | 5.9320 ns / 56 B | N/A | N/A |
+| ToTask range | 13.9715 ns / 192 B | N/A | N/A |
+| Count(predicate) range | 55.0441 ns / 144 B | N/A | N/A |
+| All + Contains range | 204.1768 ns / 1,024 B | N/A | N/A |
+| Pocket dispose | 60.2873 ns / 408 B | 93.1830 ns / 512 B | N/A |
+| CurrentThread schedule | 12.4912 ns / 88 B | 14.7694 ns / 88 B | N/A |
+| Safe witness | 21.7079 ns / 168 B | N/A | N/A |
+| Completed Spark | 0.0006 ns / 0 B | N/A | N/A |
 
 Performance constraints used by the project:
 
@@ -652,6 +699,8 @@ Performance constraints used by the project:
 | Path | Purpose |
 |---|---|
 | `src/ReactiveUI.Primitives` | Production runtime library. |
+| `src/ReactiveUI.Primitives.Wpf` | Optional WPF dispatcher integration library. |
+| `src/ReactiveUI.Primitives.WinForms` | Optional Windows Forms control integration library. |
 | `src/ReactiveUI.Primitives.SystemReactiveBridge.Generator` | Source generator for System.Reactive bridge adapters. |
 | `src/ReactiveUI.Primitives.R3Bridge.Generator` | Source generator for R3 bridge adapters. |
 | `src/ReactiveUI.Primitives.Tests` | Test project using Microsoft Testing Platform/TUnit-style validation. |
@@ -665,6 +714,7 @@ For NuGet package verification, inspect the generated `.nupkg` and confirm:
 - The nuspec contains `<readme>README.md</readme>`.
 - Bridge generator DLLs are present under `analyzers/dotnet/cs`.
 - Production runtime dependencies do not include System.Reactive or R3.
+- The core `ReactiveUI.Primitives` package does not reference WPF or Windows Forms assemblies; those integrations ship from `ReactiveUI.Primitives.Wpf` and `ReactiveUI.Primitives.WinForms`.
 
 ## Practical migration checklist
 
