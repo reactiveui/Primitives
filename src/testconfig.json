@@ -17,6 +17,25 @@
                         ".*Benchmarks\\.dll$",
                         ".*TestRunner.*"
                     ]
+                },
+                "Attributes": {
+                    "Exclude": [
+                        "^System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute$",
+                        "^System.Runtime.CompilerServices.CompilerGeneratedAttribute$",
+                        "^System.CodeDom.Compiler.GeneratedCodeAttribute$"
+                    ]
+                },
+                "Functions": {
+                    "Exclude": [
+                        ".*<>.*",
+                        ".*<HandleCancellation>.*",
+                        ".*<WhenCancelled>.*"
+                    ]
+                },
+                "Sources": {
+                    "Exclude": [
+                        ".*DebuggerDisplay\\.Partials\\.cs$"
+                    ]
                 }
             }
         }

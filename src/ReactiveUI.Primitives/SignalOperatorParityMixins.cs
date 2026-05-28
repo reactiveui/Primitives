@@ -58,6 +58,11 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
+        if (source is PrependSignal<T> prepended)
+        {
+            return new PrependAppendSignal<T>(prepended.GetSource(), prepended.GetValue(), value);
+        }
+
         return new AppendSignal<T>(source, value);
     }
 
@@ -89,6 +94,16 @@ public static partial class LinqMixins
         if (values == null)
         {
             throw new ArgumentNullException(nameof(values));
+        }
+
+        if (values.Length == 0)
+        {
+            return source;
+        }
+
+        if (values.Length == 1)
+        {
+            return source.Prepend(values[0]);
         }
 
         return new StartWithEnumerableSignal<T>(source, values);
@@ -338,6 +353,16 @@ public static partial class LinqMixins
         if (source == null)
         {
             throw new ArgumentNullException(nameof(source));
+        }
+
+        if (source is ImmutableEmptySignal<T>)
+        {
+            return Signal.Return(defaultValue);
+        }
+
+        if (source is RangeSignal { Count: > 0 })
+        {
+            return source;
         }
 
         return new DefaultIfEmptySignal<T>(source, defaultValue);
@@ -726,33 +751,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(predicate));
         }
 
-        return Signal.CreateSafe<bool>(observer =>
-        {
-            var failed = false;
-            return source.Subscribe(
-                value =>
-                {
-                    if (failed || predicate(value))
-                    {
-                        return;
-                    }
-
-                    failed = true;
-                    observer.OnNext(false);
-                    observer.OnCompleted();
-                },
-                observer.OnError,
-                () =>
-                {
-                    if (failed)
-                    {
-                        return;
-                    }
-
-                    observer.OnNext(true);
-                    observer.OnCompleted();
-                });
-        });
+        return new AllPredicateSignal<T>(source, predicate);
     }
 
     /// <summary>
@@ -777,8 +776,13 @@ public static partial class LinqMixins
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     public static IObservable<bool> Contains<T>(this IObservable<T> source, T value, IEqualityComparer<T>? comparer)
     {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
         comparer ??= EqualityComparer<T>.Default;
-        return source.Any(candidate => comparer.Equals(candidate, value));
+        return new ContainsSignal<T>(source, value, comparer);
     }
 
     /// <summary>

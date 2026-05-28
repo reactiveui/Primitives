@@ -3,6 +3,9 @@
 // See the LICENSE file in the project root for full license information.
 
 using System;
+using System.Globalization;
+using System.IO;
+using System.Text;
 using BenchmarkDotNet.Running;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -21,7 +24,20 @@ internal static class Program
     {
         if (args.Contains("--smoke", StringComparer.OrdinalIgnoreCase))
         {
-            await RunSmokeBenchmarksAsync();
+            var originalOutput = Console.Out;
+            var capturedOutput = new StringWriter(CultureInfo.InvariantCulture);
+            var teeOutput = new SmokeTeeTextWriter(originalOutput, capturedOutput);
+            Console.SetOut(teeOutput);
+            try
+            {
+                await RunSmokeBenchmarksAsync();
+            }
+            finally
+            {
+                Console.SetOut(originalOutput);
+            }
+
+            ValidateSmokeOutput(capturedOutput.ToString());
             return;
         }
 
@@ -69,6 +85,9 @@ internal static class Program
             $"SystemReactiveStartWithAppendDefaultIfEmpty={startWith.SystemReactiveStartWithAppendDefaultIfEmpty()}");
         Console.WriteLine(
             $"R3PrependAppendDefaultIfEmpty={startWith.R3PrependAppendDefaultIfEmpty()}");
+        Console.WriteLine($"PrimitivesDefaultIfEmptyEmpty={startWith.PrimitivesDefaultIfEmptyEmpty()}");
+        Console.WriteLine($"SystemReactiveDefaultIfEmptyEmpty={startWith.SystemReactiveDefaultIfEmptyEmpty()}");
+        Console.WriteLine($"R3DefaultIfEmptyEmpty={startWith.R3DefaultIfEmptyEmpty()}");
 
         var selectMany = new OperatorSelectManyRangeBenchmarks();
         Console.WriteLine($"PrimitivesSelectManyRange={selectMany.PrimitivesSelectManyRange()}");
@@ -220,6 +239,15 @@ internal static class Program
         Console.WriteLine($"PrimitivesCountPredicate={terminalCollections.PrimitivesCountPredicate()}");
         Console.WriteLine($"SystemReactiveCountPredicate={terminalCollections.SystemReactiveCountPredicate()}");
         Console.WriteLine($"R3CountPredicate={await terminalCollections.R3CountPredicate()}");
+        Console.WriteLine($"PrimitivesLongCountPredicate={terminalCollections.PrimitivesLongCountPredicate()}");
+        Console.WriteLine($"SystemReactiveLongCountPredicate={terminalCollections.SystemReactiveLongCountPredicate()}");
+        Console.WriteLine($"R3LongCountPredicate={await terminalCollections.R3LongCountPredicate()}");
+        Console.WriteLine($"PrimitivesAllRange={terminalCollections.PrimitivesAllRange()}");
+        Console.WriteLine($"SystemReactiveAllRange={terminalCollections.SystemReactiveAllRange()}");
+        Console.WriteLine($"R3AllRange={await terminalCollections.R3AllRange()}");
+        Console.WriteLine($"PrimitivesContainsRange={terminalCollections.PrimitivesContainsRange()}");
+        Console.WriteLine($"SystemReactiveContainsRange={terminalCollections.SystemReactiveContainsRange()}");
+        Console.WriteLine($"R3ContainsRange={await terminalCollections.R3ContainsRange()}");
         Console.WriteLine($"PrimitivesAllContains={terminalCollections.PrimitivesAllContains()}");
         Console.WriteLine($"SystemReactiveAllContains={terminalCollections.SystemReactiveAllContains()}");
         Console.WriteLine($"R3AllContains={await terminalCollections.R3AllContains()}");
@@ -277,5 +305,190 @@ internal static class Program
         Console.WriteLine($"PrimitivesCompletedSpark={coreRuntime.PrimitivesCompletedSpark()}");
         Console.WriteLine($"SystemReactiveCompletedSpark={coreRuntime.SystemReactiveCompletedSpark()}");
         Console.WriteLine($"R3CompletedSpark={coreRuntime.R3CompletedSpark()}");
+    }
+
+    private static void ValidateSmokeOutput(string output)
+    {
+        var results = output.Split([Environment.NewLine], StringSplitOptions.RemoveEmptyEntries);
+        if (results.Length % 3 != 0)
+        {
+            throw new InvalidOperationException(
+                $"Smoke rows must be emitted in Primitives/System.Reactive/R3 triples; found {results.Length} rows.");
+        }
+
+        var failures = new List<string>();
+        for (var i = 0; i < results.Length; i += 3)
+        {
+            var (primitivesName, primitivesValue) = ParseSmokeResult(results[i]);
+            var (systemReactiveName, systemReactiveValue) = ParseSmokeResult(results[i + 1]);
+            var (r3Name, r3Value) = ParseSmokeResult(results[i + 2]);
+
+            var failure = ValidateSmokeTriple(
+                i + 1,
+                primitivesName,
+                primitivesValue,
+                systemReactiveName,
+                systemReactiveValue,
+                r3Name,
+                r3Value);
+            if (failure is not null)
+            {
+                failures.Add(failure);
+            }
+        }
+
+        if (failures.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "Benchmark smoke parity validation failed:" + Environment.NewLine + string.Join(Environment.NewLine, failures));
+        }
+
+        Console.WriteLine($"Smoke parity validation passed for {results.Length / 3} benchmark groups.");
+    }
+
+    private static string? ValidateSmokeTriple(
+        int firstRowNumber,
+        string primitivesName,
+        int primitivesValue,
+        string systemReactiveName,
+        int systemReactiveValue,
+        string r3Name,
+        int r3Value)
+    {
+        if (!primitivesName.StartsWith("Primitives", StringComparison.Ordinal) ||
+            !systemReactiveName.StartsWith("SystemReactive", StringComparison.Ordinal) ||
+            !r3Name.StartsWith("R3", StringComparison.Ordinal))
+        {
+            return $"Rows {firstRowNumber}-{firstRowNumber + 2} are not ordered as Primitives/System.Reactive/R3.";
+        }
+
+        var primitivesScenario = NormalizeSmokeScenarioName(primitivesName);
+        var systemReactiveScenario = NormalizeSmokeScenarioName(systemReactiveName);
+        var r3Scenario = NormalizeSmokeScenarioName(r3Name);
+        if (primitivesScenario != systemReactiveScenario || primitivesScenario != r3Scenario)
+        {
+            return $"Rows {firstRowNumber}-{firstRowNumber + 2} are not the same smoke scenario: " +
+                   $"{primitivesName}, {systemReactiveName}, {r3Name}.";
+        }
+
+        if (IsDocumentedSmokeDifference(primitivesName))
+        {
+            return ValidateDocumentedSmokeDifference(primitivesName, primitivesValue, systemReactiveValue, r3Value);
+        }
+
+        return ValidateExpectedSmokeParity(primitivesName, primitivesValue, systemReactiveValue, r3Value);
+    }
+
+    private static string NormalizeSmokeScenarioName(string name)
+    {
+        string scenario;
+        if (name.StartsWith("SystemReactive", StringComparison.Ordinal))
+        {
+            scenario = name["SystemReactive".Length..];
+        }
+        else if (name.StartsWith("Primitives", StringComparison.Ordinal))
+        {
+            scenario = name["Primitives".Length..];
+        }
+        else
+        {
+            scenario = name["R3".Length..];
+        }
+
+        return scenario switch
+        {
+            "ToObservableSubscribe" => "FromEnumerableSubscribe",
+            "RangeSelectWhere" => "RangeMapKeep",
+            "PrependAppendDefaultIfEmpty" => "StartWithAppendDefaultIfEmpty",
+            "BehaviorSubject32" => "BehaviourSignal32",
+            "BehaviorSubject1024" => "BehaviourSignal1024",
+            "CompositeDispose" => "PocketDispose",
+            _ => scenario,
+        };
+    }
+
+    private static string? ValidateExpectedSmokeParity(
+        string primitivesName,
+        int primitivesValue,
+        int systemReactiveValue,
+        int r3Value)
+    {
+        if (primitivesValue == systemReactiveValue && primitivesValue == r3Value)
+        {
+            return null;
+        }
+
+        return $"{primitivesName}: expected parity but got Primitives={primitivesValue}, " +
+               $"System.Reactive={systemReactiveValue}, R3={r3Value}.";
+    }
+
+    private static bool IsDocumentedSmokeDifference(string primitivesName)
+    {
+        return primitivesName is "PrimitivesSwitchRanges" or
+            "PrimitivesCombineLatestRanges" or
+            "PrimitivesWithLatestRanges";
+    }
+
+    private static string? ValidateDocumentedSmokeDifference(
+        string primitivesName,
+        int primitivesValue,
+        int systemReactiveValue,
+        int r3Value)
+    {
+        var expected = primitivesName switch
+        {
+            "PrimitivesSwitchRanges" => (Primitives: 1856, SystemReactive: 1721, R3: 1856),
+            "PrimitivesCombineLatestRanges" => (Primitives: 536, SystemReactive: 806, R3: 536),
+            "PrimitivesWithLatestRanges" => (Primitives: 536, SystemReactive: 416, R3: 536),
+            _ => default,
+        };
+
+        if (expected == default)
+        {
+            return null;
+        }
+
+        return primitivesValue == expected.Primitives &&
+               systemReactiveValue == expected.SystemReactive &&
+               r3Value == expected.R3
+            ? null
+            : $"{primitivesName}: documented scheduling difference changed; expected " +
+              $"Primitives={expected.Primitives}, System.Reactive={expected.SystemReactive}, R3={expected.R3}, " +
+              $"but got Primitives={primitivesValue}, System.Reactive={systemReactiveValue}, R3={r3Value}.";
+    }
+
+    private static (string Name, int Value) ParseSmokeResult(string line)
+    {
+        var separator = line.IndexOf('=', StringComparison.Ordinal);
+        if (separator <= 0 || separator == line.Length - 1)
+        {
+            throw new InvalidOperationException($"Smoke output row is not key=value: {line}");
+        }
+
+        var value = int.Parse(line[(separator + 1)..], CultureInfo.InvariantCulture);
+        return (line[..separator], value);
+    }
+
+    private sealed class SmokeTeeTextWriter(TextWriter primary, TextWriter secondary) : TextWriter
+    {
+        public override Encoding Encoding => primary.Encoding;
+
+        public override void Write(char value)
+        {
+            primary.Write(value);
+            secondary.Write(value);
+        }
+
+        public override void Write(string? value)
+        {
+            primary.Write(value);
+            secondary.Write(value);
+        }
+
+        public override void WriteLine(string? value)
+        {
+            primary.WriteLine(value);
+            secondary.WriteLine(value);
+        }
     }
 }

@@ -35,6 +35,20 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
     }
 
     /// <summary>
+    /// Default-if-empty over an immediate empty primitives source.
+    /// </summary>
+    /// <returns>The emitted default value.</returns>
+    [Benchmark]
+    public int PrimitivesDefaultIfEmptyEmpty()
+    {
+        var observer = new IntSignalObserver();
+        using var subscription = Signal.Empty<int>()
+            .DefaultIfEmpty(2)
+            .Subscribe(observer);
+        return observer.Total;
+    }
+
+    /// <summary>
     /// Equivalent composition using System.Reactive.
     /// </summary>
     /// <returns>The sum of emitted values.</returns>
@@ -47,6 +61,19 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
                     RxObservable.DefaultIfEmpty(RxObservable.Empty<int>(), 2),
                     1),
                 3)
+            .Subscribe(observer);
+        return observer.Total;
+    }
+
+    /// <summary>
+    /// Default-if-empty over an immediate empty System.Reactive source.
+    /// </summary>
+    /// <returns>The emitted default value.</returns>
+    [Benchmark]
+    public int SystemReactiveDefaultIfEmptyEmpty()
+    {
+        var observer = new IntSignalObserver();
+        using var subscription = RxObservable.DefaultIfEmpty(RxObservable.Empty<int>(), 2)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -66,6 +93,19 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
                         2),
                     1),
                 3)
+            .Subscribe(observer);
+        return observer.Total;
+    }
+
+    /// <summary>
+    /// Default-if-empty over an immediate empty R3 source.
+    /// </summary>
+    /// <returns>The emitted default value.</returns>
+    [Benchmark]
+    public int R3DefaultIfEmptyEmpty()
+    {
+        var observer = new IntR3Observer();
+        using var subscription = R3.ObservableExtensions.DefaultIfEmpty(R3.Observable.Empty<int>(), 2)
             .Subscribe(observer);
         return observer.Total;
     }

@@ -42,6 +42,11 @@ internal sealed class ImmutableEmptySignal<T> : IRequireCurrentThread<T>, IInlin
     /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
+        if (observer == null)
+        {
+            throw new ArgumentNullException(nameof(observer));
+        }
+
         observer.OnCompleted();
         return Disposable.Empty;
     }
