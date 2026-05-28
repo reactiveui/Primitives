@@ -466,6 +466,231 @@ public sealed class CoverageTopUpTests
         Assert.Equal(new[] { "inner-subscribe" }, subscribeErrors);
     }
 
+    [Test]
+    public async Task OptimizedCoordinatorAndAsyncEnumerableBranchesCoverPrNineGaps()
+    {
+        Assert.Throws<ArgumentNullException>(() => Signal.FromAsyncEnumerable(AsyncValues(One)).Subscribe(null!));
+
+        var asyncValues = new List<int>();
+        var asyncCompleted = new TaskCompletionSource<object?>();
+        using var asyncToken = new CancellationTokenSource();
+        Signal.FromAsyncEnumerable(AsyncValues(Three), asyncToken.Token).Subscribe(
+            asyncValues.Add,
+            ex => asyncCompleted.TrySetException(ex),
+            () => asyncCompleted.TrySetResult(null));
+        await asyncCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        Assert.Equal(new[] { 0, One, Two }, asyncValues);
+
+        var exact = await Signal.FromAsyncEnumerable(AsyncValues(16)).CollectArrayAsync().ConfigureAwait(false);
+        var grown = await Signal.FromAsyncEnumerable(AsyncValues(17)).CollectArrayAsync().ConfigureAwait(false);
+        Assert.Equal(16, exact.Length);
+        Assert.Equal(15, exact[15]);
+        Assert.Equal(17, grown.Length);
+        Assert.Equal(16, grown[16]);
+
+        var shiftedClock = new TestClock(DateTimeOffset.UnixEpoch);
+        var shifted = new List<int>();
+        Signal.Sequence(Three, Three).Shift(TimeSpan.FromTicks(Two), shiftedClock).Subscribe(shifted.Add);
+        Assert.Equal(0, shifted.Count);
+        shiftedClock.AdvanceBy(TimeSpan.FromTicks(Two));
+        Assert.Equal(new[] { Three, Four, Five }, shifted);
+
+        Assert.Throws<ArgumentNullException>(() => Signal.Silent<int>().Expire(TimeSpan.Zero).Subscribe(null!));
+
+        var timeoutClock = new TestClock(DateTimeOffset.UnixEpoch);
+        var timeout = new RecordingObserver<int>();
+        Signal.Silent<int>().Expire(TimeSpan.FromTicks(One), timeoutClock).Subscribe(timeout);
+        timeoutClock.AdvanceBy(TimeSpan.FromTicks(One));
+        Assert.True(timeout.Errors[0] is TimeoutException);
+
+        var expireCompleted = new RecordingObserver<int>();
+        new ScriptedObservable<int>(observer =>
+        {
+            observer.OnNext(One);
+            observer.OnCompleted();
+            observer.OnNext(Two);
+            observer.OnError(new InvalidOperationException("late-expire"));
+            observer.OnCompleted();
+        }).Expire(TimeSpan.FromTicks(Ten), new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(expireCompleted);
+        Assert.Equal(new[] { One }, expireCompleted.Values);
+        Assert.Equal(1, expireCompleted.Completed);
+        Assert.Equal(0, expireCompleted.Errors.Count);
+
+        var expireError = new RecordingObserver<int>();
+        Signal.Fail<int>(new InvalidOperationException("expire-error")).Expire(TimeSpan.FromTicks(Ten), new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(expireError);
+        Assert.Equal("expire-error", expireError.Errors[0].Message);
+
+        var raceOuter = new Signal<IObservable<int>>();
+        var raceWinner = new Signal<int>();
+        var raceLoser = new Signal<int>();
+        var race = new RecordingObserver<int>();
+        using (raceOuter.Race().Subscribe(race))
+        {
+            raceOuter.OnNext(raceWinner);
+            raceOuter.OnNext(raceLoser);
+            raceWinner.OnNext(One);
+            raceLoser.OnError(new InvalidOperationException("late-race"));
+            raceLoser.OnCompleted();
+        }
+
+        Assert.Equal(new[] { One }, race.Values);
+        Assert.Equal(0, race.Errors.Count);
+
+        var raceCompletionOuter = new Signal<IObservable<int>>();
+        var raceCompletionWinner = new Signal<int>();
+        var raceCompletionLoser = new CapturingObservable<int>();
+        var raceCompletion = new RecordingObserver<int>();
+        using (raceCompletionOuter.Race().Subscribe(raceCompletion))
+        {
+            raceCompletionOuter.OnNext(raceCompletionWinner);
+            raceCompletionOuter.OnNext(raceCompletionLoser);
+            raceCompletionWinner.OnNext(Two);
+            raceCompletionLoser.Observer!.OnCompleted();
+        }
+
+        Assert.Equal(new[] { Two }, raceCompletion.Values);
+        Assert.Equal(0, raceCompletion.Completed);
+
+        var combineLeft = new Signal<int>();
+        var combineRight = new Signal<int>();
+        var combined = new RecordingObserver<int>();
+        using (combineLeft.SyncLatest(combineRight, (left, right) => left + right).Subscribe(combined))
+        {
+            combineRight.OnNext(Two);
+            combineLeft.OnNext(One);
+            combineRight.OnCompleted();
+            combineLeft.OnCompleted();
+        }
+
+        Assert.Equal(new[] { Three }, combined.Values);
+        Assert.Equal(1, combined.Completed);
+
+        var switchOuter = new Signal<IObservable<int>>();
+        var staleInner = new CapturingObservable<int>();
+        var currentInner = new CapturingObservable<int>();
+        var switched = new RecordingObserver<int>();
+        using (switchOuter.SwitchTo().Subscribe(switched))
+        {
+            switchOuter.OnNext(staleInner);
+            switchOuter.OnNext(currentInner);
+            staleInner.Observer!.OnNext(One);
+            staleInner.Observer.OnError(new InvalidOperationException("stale-switch"));
+            currentInner.Observer!.OnError(new InvalidOperationException("current-switch"));
+        }
+
+        Assert.Equal(0, switched.Values.Count);
+        Assert.Equal("current-switch", switched.Errors[0].Message);
+
+        Assert.Throws<ArgumentNullException>(() => Signal.Silent<int>().Probe(TimeSpan.Zero).Subscribe(null!));
+
+        var probeError = new RecordingObserver<int>();
+        Signal.Fail<int>(new InvalidOperationException("probe-error")).Probe(TimeSpan.FromTicks(One), new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(probeError);
+        Assert.Equal("probe-error", probeError.Errors[0].Message);
+
+        var probeSource = new Signal<int>();
+        var probeSubscription = probeSource.Probe(TimeSpan.FromTicks(One), new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(new RecordingObserver<int>());
+        probeSubscription.Dispose();
+        probeSubscription.Dispose();
+
+        var completedProbe = new RecordingObserver<int>();
+        new ScriptedObservable<int>(observer =>
+        {
+            observer.OnCompleted();
+            observer.OnNext(One);
+        }).Probe(TimeSpan.FromTicks(One), new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(completedProbe);
+        Assert.Equal(1, completedProbe.Completed);
+        Assert.Equal(0, completedProbe.Values.Count);
+
+        var directCurrentThreadExpire = new RecordingObserver<int>();
+        var directCurrentThreadProbe = new RecordingObserver<int>();
+        Signal.Emit(One).Expire(TimeSpan.Zero, Sequencer.CurrentThread).Subscribe(directCurrentThreadExpire);
+        Signal.Emit(Two).Probe(TimeSpan.Zero, Sequencer.CurrentThread).Subscribe(directCurrentThreadProbe);
+        Assert.Equal(new[] { One }, directCurrentThreadExpire.Values);
+        Assert.Equal(1, directCurrentThreadExpire.Completed);
+        Assert.Equal(0, directCurrentThreadProbe.Values.Count);
+        Assert.Equal(1, directCurrentThreadProbe.Completed);
+
+        var currentThreadExpire = new RecordingObserver<int>();
+        var currentThreadProbe = new RecordingObserver<int>();
+        Sequencer.CurrentThread.Schedule(() =>
+        {
+            Signal.Emit(One).Expire(TimeSpan.Zero, Sequencer.CurrentThread).Subscribe(currentThreadExpire);
+            Signal.Emit(Two).Probe(TimeSpan.Zero, Sequencer.CurrentThread).Subscribe(currentThreadProbe);
+        });
+        Assert.Equal(new[] { One }, currentThreadExpire.Values);
+        Assert.Equal(1, currentThreadExpire.Completed);
+        Assert.Equal(0, currentThreadProbe.Values.Count);
+        Assert.Equal(1, currentThreadProbe.Completed);
+
+        var calmError = new RecordingObserver<int>();
+        Signal.Fail<int>(new InvalidOperationException("calm-error")).Calm(TimeSpan.FromTicks(One), new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(calmError);
+        Assert.Equal("calm-error", calmError.Errors[0].Message);
+
+        var calmClock = new TestClock(DateTimeOffset.UnixEpoch);
+        var calmSource = new Signal<int>();
+        var calmValues = new List<int>();
+        calmSource.Calm(TimeSpan.FromTicks(Five), calmClock).Subscribe(calmValues.Add);
+        calmSource.OnNext(One);
+        calmClock.AdvanceBy(TimeSpan.FromTicks(Four));
+        calmSource.OnNext(Two);
+        calmClock.AdvanceBy(TimeSpan.FromTicks(One));
+        Assert.Equal(0, calmValues.Count);
+        calmClock.AdvanceBy(TimeSpan.FromTicks(Four));
+        Assert.Equal(new[] { Two }, calmValues);
+
+        Assert.Throws<InvalidOperationException>(() => Signal.Emit(One).Prepend(0).Append(Two).Subscribe(
+            value =>
+            {
+                if (value == One)
+                {
+                    throw new InvalidOperationException("append-next");
+                }
+            },
+            _ => { },
+            () => { }).Dispose());
+
+        var appendError = new RecordingObserver<int>();
+        Signal.Fail<int>(new InvalidOperationException("append-error")).Append(One).Subscribe(appendError);
+        Assert.Equal("append-error", appendError.Errors[0].Message);
+
+        var forkLeftFirst = new RecordingObserver<int>();
+        var forkLeft = new Signal<int>();
+        var forkRight = new Signal<int>();
+        using (forkLeft.ForkJoin(forkRight, (left, right) => left + right).Subscribe(forkLeftFirst))
+        {
+            forkLeft.OnNext(One);
+            forkLeft.OnCompleted();
+            forkRight.OnNext(Two);
+            forkRight.OnCompleted();
+        }
+
+        Assert.Equal(new[] { Three }, forkLeftFirst.Values);
+        Assert.Equal(1, forkLeftFirst.Completed);
+
+        var forkRightFirst = new RecordingObserver<int>();
+        var forkOtherLeft = new Signal<int>();
+        var forkOtherRight = new Signal<int>();
+        using (forkOtherLeft.ForkJoin(forkOtherRight, (left, right) => left + right).Subscribe(forkRightFirst))
+        {
+            forkOtherRight.OnNext(Two);
+            forkOtherRight.OnCompleted();
+            forkOtherLeft.OnNext(One);
+            forkOtherLeft.OnCompleted();
+        }
+
+        Assert.Equal(new[] { Three }, forkRightFirst.Values);
+        Assert.Equal(1, forkRightFirst.Completed);
+    }
+
+    private static async IAsyncEnumerable<int> AsyncValues(int count)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            await Task.Yield();
+            yield return i;
+        }
+    }
+
     private sealed class ThrowOnSubscribeObservable<T> : IObservable<T>
     {
         private readonly Exception _error;
@@ -491,6 +716,17 @@ public sealed class CoverageTopUpTests
         public IDisposable Subscribe(IObserver<T> observer)
         {
             _script(observer);
+            return Disposable.Empty;
+        }
+    }
+
+    private sealed class CapturingObservable<T> : IObservable<T>
+    {
+        public IObserver<T>? Observer { get; private set; }
+
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            Observer = observer;
             return Disposable.Empty;
         }
     }

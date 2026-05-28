@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives;
@@ -571,10 +572,10 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Coordinates a sampled observable sequence.
+    /// Sample signal with a direct subscription path.
     /// </summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class SampleCoordinator<T> : IDisposable
+    private sealed class ProbeSignal<T> : IRequireCurrentThread<T>
     {
         /// <summary>
         /// The source observable.
@@ -592,24 +593,90 @@ public static partial class LinqMixins
         private readonly ISequencer _sequencer;
 
         /// <summary>
-        /// The synchronization gate.
+        /// Initializes a new instance of the <see cref="ProbeSignal{T}"/> class.
         /// </summary>
-        private readonly OperatorGate _gate = new();
+        /// <param name="source">The source observable.</param>
+        /// <param name="period">The sample period.</param>
+        /// <param name="sequencer">The sequencer used to schedule ticks.</param>
+        internal ProbeSignal(IObservable<T> source, TimeSpan period, ISequencer sequencer)
+        {
+            _source = source;
+            _period = period;
+            _sequencer = sequencer;
+        }
+
+        /// <inheritdoc/>
+        public bool IsRequiredSubscribeOnCurrentThread() => _sequencer == Sequencer.CurrentThread;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            var coordinator = new ProbeCoordinator<T>(_source, _period, _sequencer, observer);
+            if (!IsRequiredSubscribeOnCurrentThread() || !Sequencer.CurrentThread.IsScheduleRequired)
+            {
+                return coordinator.Run();
+            }
+
+            var subscription = new SingleDisposable();
+            Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run()));
+            return subscription;
+        }
+    }
+
+    /// <summary>
+    /// Coordinates a sampled observable sequence without the anonymous signal wrapper.
+    /// </summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Usage",
+        "CA2213:Disposable fields should be disposed",
+        Justification = "Disposable fields are released through interlocked exchange in Dispose.")]
+    private sealed class ProbeCoordinator<T> : IObserver<T>, IDisposable
+    {
+        /// <summary>
+        /// The source observable.
+        /// </summary>
+        private readonly IObservable<T> _source;
 
         /// <summary>
-        /// The active subscriptions.
+        /// The sample period.
         /// </summary>
-        private readonly MultipleDisposable _subscriptions = new();
+        private readonly TimeSpan _period;
 
         /// <summary>
-        /// The timer slot.
+        /// The sequencer used to schedule ticks.
         /// </summary>
-        private readonly SingleReplaceableDisposable _timer = new();
+        private readonly ISequencer _sequencer;
 
         /// <summary>
         /// The downstream observer.
         /// </summary>
-        private IObserver<T>? _observer;
+        private readonly IObserver<T> _observer;
+
+        /// <summary>
+        /// The synchronization gate.
+        /// </summary>
+        private SpinLock _gate = new(false);
+
+        /// <summary>
+        /// The active source subscription.
+        /// </summary>
+        private IDisposable? _subscription;
+
+        /// <summary>
+        /// The active timer.
+        /// </summary>
+        private IDisposable? _timer;
+
+        /// <summary>
+        /// A value indicating whether a sample timer is active.
+        /// </summary>
+        private bool _timerActive;
 
         /// <summary>
         /// A value indicating whether a latest value is available.
@@ -627,90 +694,148 @@ public static partial class LinqMixins
         private bool _done;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SampleCoordinator{T}"/> class.
+        /// A value indicating whether the coordinator has been disposed.
+        /// </summary>
+        private int _disposed;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ProbeCoordinator{T}"/> class.
         /// </summary>
         /// <param name="source">The source observable.</param>
         /// <param name="period">The sample period.</param>
         /// <param name="sequencer">The sequencer used to schedule ticks.</param>
-        internal SampleCoordinator(IObservable<T> source, TimeSpan period, ISequencer sequencer)
+        /// <param name="observer">The downstream observer.</param>
+        internal ProbeCoordinator(IObservable<T> source, TimeSpan period, ISequencer sequencer, IObserver<T> observer)
         {
             _source = source;
             _period = period;
             _sequencer = sequencer;
+            _observer = observer;
         }
 
-        /// <summary>
-        /// Releases the active subscriptions.
-        /// </summary>
+        /// <inheritdoc/>
         public void Dispose()
         {
-            _timer.Dispose();
-            _subscriptions.Dispose();
-        }
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
 
-        /// <summary>
-        /// Starts sampling the source.
-        /// </summary>
-        /// <param name="observer">The downstream observer.</param>
-        /// <returns>The coordinator that owns the subscription cleanup.</returns>
-        internal SampleCoordinator<T> Run(IObserver<T> observer)
-        {
-            _observer = observer;
-            _subscriptions.Add(_timer);
-            _subscriptions.Add(_source.Subscribe(OnNext, observer.OnError, OnCompleted));
-            ScheduleNext();
-            return this;
+            var timer = Interlocked.Exchange(ref _timer, null);
+            timer?.Dispose();
+
+            var subscription = Interlocked.Exchange(ref _subscription, null);
+            subscription?.Dispose();
         }
 
         /// <summary>
         /// Records the latest source value.
         /// </summary>
         /// <param name="value">The source value.</param>
-        private void OnNext(T value)
+        public void OnNext(T value)
         {
-            lock (_gate.SyncRoot)
+            var shouldSchedule = false;
+            var lockTaken = false;
+            try
             {
+                _gate.Enter(ref lockTaken);
+                if (_done)
+                {
+                    return;
+                }
+
                 _hasLatest = true;
                 _latest = value;
+                shouldSchedule = !_timerActive;
+                _timerActive = true;
             }
-        }
-
-        /// <summary>
-        /// Marks the source as completed.
-        /// </summary>
-        private void OnCompleted()
-        {
-            lock (_gate.SyncRoot)
+            finally
             {
-                _done = true;
+                if (lockTaken)
+                {
+                    _gate.Exit();
+                }
             }
 
-            _observer!.OnCompleted();
-        }
-
-        /// <summary>
-        /// Schedules the next sample tick.
-        /// </summary>
-        private void ScheduleNext() =>
-            _timer.Create(_sequencer.Schedule(_period, Tick));
-
-        /// <summary>
-        /// Handles a sample tick.
-        /// </summary>
-        private void Tick()
-        {
-            if (!TryTake(out var value))
-            {
-                return;
-            }
-
-            _observer!.OnNext(value);
-            if (_timer.IsDisposed)
+            if (!shouldSchedule)
             {
                 return;
             }
 
             ScheduleNext();
+        }
+
+        /// <summary>
+        /// Forwards source errors and releases active resources.
+        /// </summary>
+        /// <param name="error">The source error.</param>
+        public void OnError(Exception error)
+        {
+            _observer.OnError(error);
+            Dispose();
+        }
+
+        /// <summary>
+        /// Forwards completion and releases active resources.
+        /// </summary>
+        public void OnCompleted()
+        {
+            var lockTaken = false;
+            try
+            {
+                _gate.Enter(ref lockTaken);
+                _done = true;
+            }
+            finally
+            {
+                if (lockTaken)
+                {
+                    _gate.Exit();
+                }
+            }
+
+            _observer.OnCompleted();
+            Dispose();
+        }
+
+        /// <summary>
+        /// Starts sampling the source.
+        /// </summary>
+        /// <returns>The coordinator that owns the subscription cleanup.</returns>
+        internal ProbeCoordinator<T> Run()
+        {
+            _subscription = _source.Subscribe(this);
+            return this;
+        }
+
+        /// <summary>
+        /// Schedules the next sample tick.
+        /// </summary>
+        private void ScheduleNext()
+        {
+            var timer = _sequencer.Schedule(this, _period, static (_, coordinator) => coordinator.Tick());
+            if (Volatile.Read(ref _disposed) == 0)
+            {
+                Volatile.Write(ref _timer, timer);
+                return;
+            }
+
+            timer.Dispose();
+        }
+
+        /// <summary>
+        /// Handles a sample tick.
+        /// </summary>
+        /// <returns>An empty disposable.</returns>
+        private IDisposable Tick()
+        {
+            if (!TryTake(out var value))
+            {
+                return Disposable.Empty;
+            }
+
+            _observer.OnNext(value);
+            return Disposable.Empty;
         }
 
         /// <summary>
@@ -720,17 +845,249 @@ public static partial class LinqMixins
         /// <returns><c>true</c> when a value should be emitted; otherwise, <c>false</c>.</returns>
         private bool TryTake(out T value)
         {
-            lock (_gate.SyncRoot)
+            var lockTaken = false;
+            try
             {
+                _gate.Enter(ref lockTaken);
                 if (_done || !_hasLatest)
                 {
+                    _timerActive = false;
                     value = default!;
                     return false;
                 }
 
                 value = _latest!;
                 _hasLatest = false;
+                _timerActive = false;
                 return true;
+            }
+            finally
+            {
+                if (lockTaken)
+                {
+                    _gate.Exit();
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Coordinates quiet-period emission with one active timer.
+    /// </summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    private sealed class CalmCoordinator<T> : IDisposable
+    {
+        /// <summary>
+        /// The source observable.
+        /// </summary>
+        private readonly IObservable<T> _source;
+
+        /// <summary>
+        /// The normalized quiet period.
+        /// </summary>
+        private readonly TimeSpan _dueTime;
+
+        /// <summary>
+        /// The sequencer used to schedule quiet-period timers.
+        /// </summary>
+        private readonly ISequencer _sequencer;
+
+        /// <summary>
+        /// The synchronization gate.
+        /// </summary>
+        private readonly OperatorGate _gate = new();
+
+        /// <summary>
+        /// Active subscription and timer resources.
+        /// </summary>
+        private readonly MultipleDisposable _subscriptions = new();
+
+        /// <summary>
+        /// The active timer slot.
+        /// </summary>
+        private readonly SingleReplaceableDisposable _timer = new();
+
+        /// <summary>
+        /// The downstream observer.
+        /// </summary>
+        private IObserver<T>? _observer;
+
+        /// <summary>
+        /// The latest source value.
+        /// </summary>
+        private T? _latest;
+
+        /// <summary>
+        /// A value indicating whether a latest source value is waiting to be emitted.
+        /// </summary>
+        private bool _hasLatest;
+
+        /// <summary>
+        /// A value indicating whether the timer is active.
+        /// </summary>
+        private bool _timerActive;
+
+        /// <summary>
+        /// The virtual due time for the current quiet period.
+        /// </summary>
+        private DateTimeOffset _dueAt;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CalmCoordinator{T}"/> class.
+        /// </summary>
+        /// <param name="source">The source observable.</param>
+        /// <param name="dueTime">The quiet period.</param>
+        /// <param name="sequencer">The sequencer used to schedule timers.</param>
+        internal CalmCoordinator(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer)
+        {
+            _source = source;
+            _dueTime = Sequencer.Normalize(dueTime);
+            _sequencer = sequencer;
+            _dueAt = sequencer.Now;
+        }
+
+        /// <summary>
+        /// The action to take when a timer fires.
+        /// </summary>
+        private enum TimerAction
+        {
+            /// <summary>
+            /// No value is available.
+            /// </summary>
+            None,
+
+            /// <summary>
+            /// Emit the captured value.
+            /// </summary>
+            Emit,
+
+            /// <summary>
+            /// Reschedule for the remaining quiet period.
+            /// </summary>
+            Reschedule
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            _timer.Dispose();
+            _subscriptions.Dispose();
+        }
+
+        /// <summary>
+        /// Starts quiet-period coordination.
+        /// </summary>
+        /// <param name="observer">The downstream observer.</param>
+        /// <returns>The coordinator that owns the subscription cleanup.</returns>
+        internal CalmCoordinator<T> Run(IObserver<T> observer)
+        {
+            _observer = observer;
+            _subscriptions.Add(_timer);
+            _subscriptions.Add(_source.Subscribe(OnNext, OnError, OnCompleted));
+            return this;
+        }
+
+        /// <summary>
+        /// Records a source value and schedules a timer when needed.
+        /// </summary>
+        /// <param name="value">The source value.</param>
+        private void OnNext(T value)
+        {
+            var shouldSchedule = false;
+            lock (_gate.SyncRoot)
+            {
+                _latest = value;
+                _hasLatest = true;
+                _dueAt = _sequencer.Now + _dueTime;
+                if (!_timerActive)
+                {
+                    _timerActive = true;
+                    shouldSchedule = true;
+                }
+            }
+
+            if (!shouldSchedule)
+            {
+                return;
+            }
+
+            Schedule(_dueTime);
+        }
+
+        /// <summary>
+        /// Forwards a terminal error and releases active resources.
+        /// </summary>
+        /// <param name="error">The terminal error.</param>
+        private void OnError(Exception error)
+        {
+            _observer!.OnError(error);
+            Dispose();
+        }
+
+        /// <summary>
+        /// Forwards completion and releases active resources.
+        /// </summary>
+        private void OnCompleted()
+        {
+            _observer!.OnCompleted();
+            Dispose();
+        }
+
+        /// <summary>
+        /// Schedules the active timer.
+        /// </summary>
+        /// <param name="delay">The timer delay.</param>
+        private void Schedule(TimeSpan delay) => _timer.Create(_sequencer.Schedule(delay, Tick));
+
+        /// <summary>
+        /// Handles a timer tick.
+        /// </summary>
+        private void Tick()
+        {
+            var action = GetTimerAction(out var delay, out var value);
+            if (action == TimerAction.Reschedule)
+            {
+                Schedule(delay);
+                return;
+            }
+
+            if (action != TimerAction.Emit)
+            {
+                return;
+            }
+
+            _observer!.OnNext(value);
+        }
+
+        /// <summary>
+        /// Determines what the active timer should do.
+        /// </summary>
+        /// <param name="delay">The remaining delay when rescheduling is needed.</param>
+        /// <param name="value">The value to emit.</param>
+        /// <returns>The timer action.</returns>
+        private TimerAction GetTimerAction(out TimeSpan delay, out T value)
+        {
+            lock (_gate.SyncRoot)
+            {
+                var remaining = _dueAt - _sequencer.Now;
+                if (remaining > TimeSpan.Zero)
+                {
+                    delay = remaining;
+                    value = default!;
+                    return TimerAction.Reschedule;
+                }
+
+                _timerActive = false;
+                delay = default;
+                if (!_hasLatest)
+                {
+                    value = default!;
+                    return TimerAction.None;
+                }
+
+                value = _latest!;
+                _hasLatest = false;
+                return TimerAction.Emit;
             }
         }
     }

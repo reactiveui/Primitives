@@ -16,6 +16,22 @@ namespace ReactiveUI.Primitives.Benchmarks;
 internal static class Program
 {
     /// <summary>
+    /// Maps comparator benchmark method suffixes onto the matching Primitives smoke scenario.
+    /// </summary>
+    private static readonly Dictionary<string, string> SmokeScenarioAliases =
+        new(StringComparer.Ordinal)
+        {
+            ["ToObservableSubscribe"] = "FromEnumerableSubscribe",
+            ["RangeSelectWhere"] = "RangeMapKeep",
+            ["SelectManyRange"] = "FlatMapRange",
+            ["PrependAppendDefaultIfEmpty"] = "StartWithAppendDefaultIfEmpty",
+            ["BehaviorSubject32"] = "StateSignal32",
+            ["BehaviorSubject1024"] = "StateSignal1024",
+            ["ReplaySubscribe"] = "HistorySubscribe",
+            ["CompositeDispose"] = "PocketDispose",
+        };
+
+    /// <summary>
     /// Executes benchmarks, or runs a deterministic smoke check with <c>--smoke</c>.
     /// </summary>
     /// <param name="args">BenchmarkDotNet command-line arguments.</param>
@@ -395,16 +411,7 @@ internal static class Program
             scenario = name["R3".Length..];
         }
 
-        return scenario switch
-        {
-            "ToObservableSubscribe" => "FromEnumerableSubscribe",
-            "RangeSelectWhere" => "RangeMapKeep",
-            "PrependAppendDefaultIfEmpty" => "StartWithAppendDefaultIfEmpty",
-            "BehaviorSubject32" => "BehaviourSignal32",
-            "BehaviorSubject1024" => "BehaviourSignal1024",
-            "CompositeDispose" => "PocketDispose",
-            _ => scenario,
-        };
+        return SmokeScenarioAliases.TryGetValue(scenario, out var normalized) ? normalized : scenario;
     }
 
     private static string? ValidateExpectedSmokeParity(
