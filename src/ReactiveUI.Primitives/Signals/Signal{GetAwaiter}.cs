@@ -15,7 +15,7 @@ public static partial class Signal
     /// </summary>
     /// <typeparam name="TSource">The type of the source.</typeparam>
     /// <param name="source">Source sequence to await.</param>
-    /// <returns>An AsyncSignal.</returns>
+    /// <returns>A final signal awaiter.</returns>
     /// <exception cref="ArgumentNullException">source.</exception>
     public static IAwaitSignal<TSource> GetAwaiter<TSource>(this IObservable<TSource> source)
     {
@@ -35,7 +35,7 @@ public static partial class Signal
     /// <param name="source">Source sequence to await.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>
-    /// An AsyncSignal.
+    /// A final signal awaiter.
     /// </returns>
     /// <exception cref="ArgumentNullException">source.</exception>
     public static IAwaitSignal<TSource> GetAwaiter<TSource>(this IObservable<TSource> source, CancellationToken cancellationToken)
@@ -60,7 +60,7 @@ public static partial class Signal
     private static IAwaitSignal<TSource> RunAsync<TSource>(IObservable<TSource> source, CancellationToken cancellationToken)
 #pragma warning restore RCS1047 // Non-asynchronous method name should not end with 'Async'.
     {
-        var s = new AsyncSignal<TSource>();
+        var s = new FinalSignal<TSource>();
 
         if (cancellationToken.IsCancellationRequested)
         {

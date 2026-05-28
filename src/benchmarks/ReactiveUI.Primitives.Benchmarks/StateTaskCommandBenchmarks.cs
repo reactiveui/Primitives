@@ -97,7 +97,7 @@ public class StateTaskCommandBenchmarks
     {
         var current = 0;
         using var state = new System.Reactive.Subjects.BehaviorSubject<int>(Value);
-        using var subscription = state.Select(static value => value + 1).Subscribe(value => current = value);
+        using var subscription = state.Map(static value => value + 1).Subscribe(value => current = value);
         state.OnNext(Value + 1);
         return current;
     }

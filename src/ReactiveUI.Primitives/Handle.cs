@@ -32,5 +32,5 @@ internal static class Handle
         "S4018:Generic methods should provide type parameters",
         Justification = "The type parameter determines the empty sequence value type.")]
     public static IObservable<TSource> CatchIgnore<TSource>(Exception ex) =>
-        Signal.Empty<TSource>();
+        Signal.None<TSource>();
 }

@@ -35,22 +35,22 @@ public static class ConnectableSignalMixins
     }
 
     /// <summary>
-    /// Publishes source values through a live signal hub.
+    /// Shares source values through a live signal hub.
     /// </summary>
     /// <typeparam name="T">The value type.</typeparam>
-    /// <param name="source">Source sequence to publish.</param>
+    /// <param name="source">Source sequence to share.</param>
     /// <returns>A connectable live signal.</returns>
-    public static ConnectableSignal<T> PublishLive<T>(this IObservable<T> source) =>
+    public static ConnectableSignal<T> ShareLive<T>(this IObservable<T> source) =>
         source.Multicast(new Signal<T>());
 
     /// <summary>
-    /// Publishes source values through a live signal hub.
+    /// Shares source values through a live signal hub.
     /// </summary>
     /// <typeparam name="T">The value type.</typeparam>
-    /// <param name="source">Source sequence to publish.</param>
+    /// <param name="source">Source sequence to share.</param>
     /// <returns>A connectable live signal.</returns>
-    public static ConnectableSignal<T> Publish<T>(this IObservable<T> source) =>
-        source.PublishLive();
+    public static ConnectableSignal<T> Share<T>(this IObservable<T> source) =>
+        source.ShareLive();
 
     /// <summary>
     /// Replays source values through a bounded replay hub.
@@ -60,7 +60,7 @@ public static class ConnectableSignalMixins
     /// <param name="bufferSize">Maximum number of values to replay.</param>
     /// <returns>A connectable replay signal.</returns>
     public static ConnectableSignal<T> ReplayLive<T>(this IObservable<T> source, int bufferSize) =>
-        source.Multicast(new ReplaySignal<T>(bufferSize));
+        source.Multicast(new HistorySignal<T>(bufferSize));
 
     /// <summary>
     /// Replays source values through a replay hub constrained by count and time.
@@ -71,7 +71,7 @@ public static class ConnectableSignalMixins
     /// <param name="window">Maximum replay window.</param>
     /// <returns>A connectable replay signal.</returns>
     public static ConnectableSignal<T> ReplayLive<T>(this IObservable<T> source, int bufferSize, TimeSpan window) =>
-        source.Multicast(new ReplaySignal<T>(bufferSize, window));
+        source.Multicast(new HistorySignal<T>(bufferSize, window));
 
     /// <summary>
     /// Replays source values through a bounded replay hub.
@@ -100,15 +100,7 @@ public static class ConnectableSignalMixins
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="source">Source sequence to share.</param>
     /// <returns>A reference-counted live sequence.</returns>
-    public static IObservable<T> ShareLive<T>(this IObservable<T> source) => source.PublishLive().RefCount();
-
-    /// <summary>
-    /// Shares one live source subscription while at least one observer is subscribed.
-    /// </summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    /// <param name="source">Source sequence to share.</param>
-    /// <returns>A reference-counted live sequence.</returns>
-    public static IObservable<T> Share<T>(this IObservable<T> source) => source.ShareLive();
+    public static IObservable<T> ShareLatest<T>(this IObservable<T> source) => source.ShareLive().AutoShare();
 
     /// <summary>
     /// Connects on first subscriber and disconnects when the last subscriber disposes.
@@ -116,14 +108,14 @@ public static class ConnectableSignalMixins
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="source">Connectable signal to reference count.</param>
     /// <returns>A reference-counted sequence.</returns>
-    public static IObservable<T> RefCount<T>(this ConnectableSignal<T> source)
+    public static IObservable<T> AutoShare<T>(this ConnectableSignal<T> source)
     {
         if (source == null)
         {
             throw new ArgumentNullException(nameof(source));
         }
 
-        var gate = RefCountGate<T>.For(source);
+        var gate = AutoShareGate<T>.For(source);
         return Signal.Create<T>(gate.Subscribe);
     }
 
@@ -163,7 +155,7 @@ public static class ConnectableSignalMixins
     /// Tracks reference-counted connection state.
     /// </summary>
     /// <typeparam name="TValue">The value type.</typeparam>
-    private sealed class RefCountGate<TValue>
+    private sealed class AutoShareGate<TValue>
     {
         /// <summary>
         /// Synchronizes reference-count state.
@@ -186,17 +178,17 @@ public static class ConnectableSignalMixins
         private IDisposable? _connection;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RefCountGate{TValue}"/> class.
+        /// Initializes a new instance of the <see cref="AutoShareGate{TValue}"/> class.
         /// </summary>
         /// <param name="source">Connectable signal being reference-counted.</param>
-        private RefCountGate(ConnectableSignal<TValue> source) => _source = source;
+        private AutoShareGate(ConnectableSignal<TValue> source) => _source = source;
 
         /// <summary>
         /// Creates a reference-count gate for a connectable signal.
         /// </summary>
         /// <param name="source">Connectable signal being reference-counted.</param>
         /// <returns>A reference-count gate.</returns>
-        public static RefCountGate<TValue> For(ConnectableSignal<TValue> source) => new(source);
+        public static AutoShareGate<TValue> For(ConnectableSignal<TValue> source) => new(source);
 
         /// <summary>
         /// Subscribes an observer and manages the shared connection lifetime.

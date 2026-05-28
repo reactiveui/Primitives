@@ -26,7 +26,7 @@ public class ConnectableShareBenchmarks
     public int PrimitivesPublishLiveConnect()
     {
         var observer = new IntSignalObserver();
-        var connectable = Signal.Range(1, Count).PublishLive();
+        var connectable = Signal.Sequence(1, Count).ShareLive();
         using var subscription = connectable.Subscribe(observer);
         using var connection = connectable.Connect();
         return observer.Total;
@@ -68,7 +68,7 @@ public class ConnectableShareBenchmarks
     public int PrimitivesShareLiveSubscribe()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Range(1, Count).ShareLive().Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).ShareLatest().Subscribe(observer);
         return observer.Total;
     }
 
@@ -105,7 +105,7 @@ public class ConnectableShareBenchmarks
     public int PrimitivesReplayLiveLateSubscribe()
     {
         var observer = new IntSignalObserver();
-        var connectable = Signal.Range(1, Count).ReplayLive(Count);
+        var connectable = Signal.Sequence(1, Count).ReplayLive(Count);
         using var connection = connectable.Connect();
         using var subscription = connectable.Subscribe(observer);
         return observer.Total;
@@ -147,7 +147,7 @@ public class ConnectableShareBenchmarks
     public int PrimitivesRefCountSubscribe()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Range(1, Count).PublishLive().RefCount().Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).ShareLive().AutoShare().Subscribe(observer);
         return observer.Total;
     }
 
@@ -186,7 +186,7 @@ public class ConnectableShareBenchmarks
     public int PrimitivesAutoConnectSubscribe()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Range(1, Count).PublishLive().AutoConnect().Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).ShareLive().AutoConnect().Subscribe(observer);
         return observer.Total;
     }
 

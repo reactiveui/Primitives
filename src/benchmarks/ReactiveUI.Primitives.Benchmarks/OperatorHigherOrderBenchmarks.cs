@@ -27,7 +27,7 @@ public class OperatorHigherOrderBenchmarks
     public int PrimitivesConcatRanges()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Concat(Signal.Range(1, Count), Signal.Range(1, Count)).Subscribe(observer);
+        using var subscription = Signal.Chain(Signal.Sequence(1, Count), Signal.Sequence(1, Count)).Subscribe(observer);
         return observer.Total;
     }
 
@@ -65,7 +65,7 @@ public class OperatorHigherOrderBenchmarks
     public int PrimitivesMergeRanges()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Merge(Signal.Range(1, Count), Signal.Range(1, Count)).Subscribe(observer);
+        using var subscription = Signal.Blend(Signal.Sequence(1, Count), Signal.Sequence(1, Count)).Subscribe(observer);
         return observer.Total;
     }
 
@@ -103,7 +103,7 @@ public class OperatorHigherOrderBenchmarks
     public int PrimitivesRaceRanges()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Race(Signal.Range(1, Count), Signal.Range(100, Count)).Subscribe(observer);
+        using var subscription = Signal.Race(Signal.Sequence(1, Count), Signal.Sequence(100, Count)).Subscribe(observer);
         return observer.Total;
     }
 
@@ -141,8 +141,8 @@ public class OperatorHigherOrderBenchmarks
     public int PrimitivesSwitchRanges()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.FromEnumerable([Signal.Range(1, Count), Signal.Range(100, Count)])
-            .Switch()
+        using var subscription = Signal.FromEnumerable([Signal.Sequence(1, Count), Signal.Sequence(100, Count)])
+            .SwitchTo()
             .Subscribe(observer);
         return observer.Total;
     }
@@ -185,9 +185,9 @@ public class OperatorHigherOrderBenchmarks
     public int PrimitivesCombineLatestRanges()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.CombineLatest(
-            Signal.Range(1, Count),
-            Signal.Range(10, Count),
+        using var subscription = Signal.SyncLatest(
+            Signal.Sequence(1, Count),
+            Signal.Sequence(10, Count),
             static (left, right) => left + right).Subscribe(observer);
         return observer.Total;
     }
@@ -230,8 +230,8 @@ public class OperatorHigherOrderBenchmarks
     public int PrimitivesWithLatestRanges()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Range(1, Count)
-            .WithLatest(Signal.Range(10, Count), static (left, right) => left + right)
+        using var subscription = Signal.Sequence(1, Count)
+            .Latch(Signal.Sequence(10, Count), static (left, right) => left + right)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -275,8 +275,8 @@ public class OperatorHigherOrderBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = Signal.ForkJoin(
-            Signal.Range(1, Count),
-            Signal.Range(10, Count),
+            Signal.Sequence(1, Count),
+            Signal.Sequence(10, Count),
             static (left, right) => left + right).Subscribe(observer);
         return observer.Total;
     }

@@ -30,7 +30,7 @@ public class OperatorMapKeepBenchmarks
     public int PrimitivesRangeMapKeep()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Range(StartValue, RangeCount)
+        using var subscription = Signal.Sequence(StartValue, RangeCount)
             .Map(static x => x + 1)
             .Keep(static x => (x & 1) == 0)
             .Subscribe(observer);
@@ -45,9 +45,9 @@ public class OperatorMapKeepBenchmarks
     public int SystemReactiveRangeSelectWhere()
     {
         var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Where(
-                RxObservable.Select(RxObservable.Range(StartValue, RangeCount), static x => x + 1),
-                static x => (x & 1) == 0)
+        using var subscription = RxObservable.Range(StartValue, RangeCount)
+            .Select(static x => x + 1)
+            .Where(static x => (x & 1) == 0)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -78,11 +78,11 @@ public class OperatorMapKeepBenchmarks
     {
         var count = new IntSignalObserver();
         var any = new BooleanSignalObserver();
-        using var countSubscription = Signal.Range(StartValue, RangeCount)
+        using var countSubscription = Signal.Sequence(StartValue, RangeCount)
             .DistinctBy(static x => x / 2)
             .Count()
             .Subscribe(count);
-        using var anySubscription = Signal.Range(StartValue, RangeCount)
+        using var anySubscription = Signal.Sequence(StartValue, RangeCount)
             .Any(static x => x == 31)
             .Subscribe(any);
         return any.Value ? count.Total : -count.Total;
@@ -97,9 +97,10 @@ public class OperatorMapKeepBenchmarks
     {
         var count = new IntSignalObserver();
         var any = new BooleanSignalObserver();
-        using var countSubscription = RxObservable.Count(
-                RxObservable.Distinct(
-                    RxObservable.Select(RxObservable.Range(StartValue, RangeCount), static x => x / 2)))
+        using var countSubscription = RxObservable.Range(StartValue, RangeCount)
+            .Select(static x => x / 2)
+            .Distinct()
+            .Count()
             .Subscribe(count);
         using var anySubscription = RxObservable.Any(RxObservable.Range(StartValue, RangeCount), static x => x == 31)
             .Subscribe(any);

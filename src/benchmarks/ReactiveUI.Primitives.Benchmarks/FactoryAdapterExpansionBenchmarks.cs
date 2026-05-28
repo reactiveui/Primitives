@@ -136,7 +136,7 @@ public class FactoryAdapterExpansionBenchmarks
     public int PrimitivesDeferSubscribe()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Defer(() => Signal.Range(1, Count)).Subscribe(observer);
+        using var subscription = Signal.Lazy(() => Signal.Sequence(1, Count)).Subscribe(observer);
         return observer.Total;
     }
 
@@ -260,7 +260,7 @@ public class FactoryAdapterExpansionBenchmarks
     public int PrimitivesUseSubscribe()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Use(static () => Disposable.Empty, static _ => Signal.Return(Value)).Subscribe(observer);
+        using var subscription = Signal.Use(static () => Disposable.Empty, static _ => Signal.Emit(Value)).Subscribe(observer);
         return observer.Total;
     }
 
@@ -348,7 +348,7 @@ public class FactoryAdapterExpansionBenchmarks
     public int PrimitivesNeverSubscribeDispose()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Never<int>().Subscribe(observer);
+        using var subscription = Signal.Silent<int>().Subscribe(observer);
         return observer.NextCount + observer.CompletionCount + observer.ErrorCount;
     }
 

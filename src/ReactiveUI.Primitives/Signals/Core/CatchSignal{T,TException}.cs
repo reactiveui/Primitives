@@ -98,7 +98,7 @@ internal sealed class CatchSignal<T, TException> : SignalsBase<T>
                 IObservable<T> next;
                 try
                 {
-                    next = _parent._errorHandler == Handle.CatchIgnore<T> ? Signal.Empty<T>() : _parent._errorHandler(e);
+                    next = _parent._errorHandler == Handle.CatchIgnore<T> ? Signal.None<T>() : _parent._errorHandler(e);
                 }
                 catch (Exception ex)
                 {

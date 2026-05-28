@@ -11,8 +11,7 @@ using ReactiveUI.Primitives.Signals.Core;
 namespace ReactiveUI.Primitives;
 
 /// <summary>
-/// Additional ReactiveUI.Primitives operator surface. Canonical LINQ names are kept where idiomatic;
-/// Primitives aliases (`Map`, `Keep`, `Sparkify`, `Unspark`) make the public surface distinct.
+/// Additional ReactiveUI.Primitives operator surface using distinct Primitives vocabulary.
 /// </summary>
 public static partial class LinqMixins
 {
@@ -148,8 +147,8 @@ public static partial class LinqMixins
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "LINQ-style OfType requires the caller to provide the result type.")]
-    public static IObservable<TResult> OfType<TResult>(this IObservable<object?> source)
+        Justification = "KeepType requires the caller to provide the result type.")]
+    public static IObservable<TResult> KeepType<TResult>(this IObservable<object?> source)
     {
         if (source == null)
         {
@@ -180,8 +179,8 @@ public static partial class LinqMixins
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "LINQ-style Cast requires the caller to provide the result type.")]
-    public static IObservable<TResult> Cast<TResult>(this IObservable<object?> source)
+        Justification = "CastTo requires the caller to provide the result type.")]
+    public static IObservable<TResult> CastTo<TResult>(this IObservable<object?> source)
     {
         if (source == null)
         {
@@ -243,7 +242,7 @@ public static partial class LinqMixins
     /// <param name="accumulator">The function that combines the current state with the next source value.</param>
     /// <returns>A sequence of intermediate accumulated values.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="accumulator"/> is <see langword="null"/>.</exception>
-    public static IObservable<TAccumulate> Scan<TSource, TAccumulate>(this IObservable<TSource> source, TAccumulate seed, Func<TAccumulate, TSource, TAccumulate> accumulator)
+    public static IObservable<TAccumulate> Fold<TSource, TAccumulate>(this IObservable<TSource> source, TAccumulate seed, Func<TAccumulate, TSource, TAccumulate> accumulator)
     {
         if (source == null)
         {
@@ -279,7 +278,7 @@ public static partial class LinqMixins
     /// <param name="accumulator">The function that combines the current state with the next source value.</param>
     /// <returns>A sequence that emits one accumulated value on completion.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="accumulator"/> is <see langword="null"/>.</exception>
-    public static IObservable<TAccumulate> Fold<TSource, TAccumulate>(this IObservable<TSource> source, TAccumulate seed, Func<TAccumulate, TSource, TAccumulate> accumulator)
+    public static IObservable<TAccumulate> Reduce<TSource, TAccumulate>(this IObservable<TSource> source, TAccumulate seed, Func<TAccumulate, TSource, TAccumulate> accumulator)
     {
         if (source == null)
         {
@@ -447,8 +446,8 @@ public static partial class LinqMixins
     /// <param name="source">The source sequence.</param>
     /// <returns>A sequence with adjacent duplicates removed.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
-    public static IObservable<T> DistinctUntilChanged<T>(this IObservable<T> source) =>
-        source.DistinctUntilChanged(null);
+    public static IObservable<T> Unique<T>(this IObservable<T> source) =>
+        source.Unique(null);
 
     /// <summary>
     /// Suppresses adjacent duplicate values using the supplied comparer.
@@ -458,7 +457,7 @@ public static partial class LinqMixins
     /// <param name="comparer">The comparer used to compare adjacent values.</param>
     /// <returns>A sequence with adjacent duplicates removed.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
-    public static IObservable<T> DistinctUntilChanged<T>(this IObservable<T> source, IEqualityComparer<T>? comparer)
+    public static IObservable<T> Unique<T>(this IObservable<T> source, IEqualityComparer<T>? comparer)
     {
         if (source == null)
         {
@@ -494,7 +493,7 @@ public static partial class LinqMixins
     /// <param name="source">The source sequence.</param>
     /// <returns>A sequence of spark values representing source notifications; terminal sparks are followed by completion.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
-    public static IObservable<Spark<T>> Sparkify<T>(this IObservable<T> source)
+    public static IObservable<Spark<T>> Spark<T>(this IObservable<T> source)
     {
         if (source == null)
         {
@@ -502,15 +501,15 @@ public static partial class LinqMixins
         }
 
         return Signal.CreateSafe<Spark<T>>(observer => source.Subscribe(
-            value => observer.OnNext(Spark.CreateOnNext(value)),
+            value => observer.OnNext(ReactiveUI.Primitives.Core.Spark.CreateOnNext(value)),
             error =>
             {
-                observer.OnNext(Spark.CreateOnError<T>(error));
+                observer.OnNext(ReactiveUI.Primitives.Core.Spark.CreateOnError<T>(error));
                 observer.OnCompleted();
             },
             () =>
             {
-                observer.OnNext(Spark.CreateOnCompleted<T>());
+                observer.OnNext(ReactiveUI.Primitives.Core.Spark.CreateOnCompleted<T>());
                 observer.OnCompleted();
             }));
     }
@@ -542,7 +541,7 @@ public static partial class LinqMixins
     /// <param name="sources">The outer sequence of inner sequences.</param>
     /// <returns>A sequence that emits each inner sequence after the previous one completes.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
-    public static IObservable<T> Concat<T>(this IObservable<IObservable<T>> sources)
+    public static IObservable<T> Chain<T>(this IObservable<IObservable<T>> sources)
     {
         if (sources == null)
         {
@@ -603,7 +602,7 @@ public static partial class LinqMixins
                 {
                     if (source == null)
                     {
-                        observer.OnError(new InvalidOperationException("Concat source contained null."));
+                        observer.OnError(new InvalidOperationException("Chain source contained null."));
                         return;
                     }
 
@@ -636,8 +635,8 @@ public static partial class LinqMixins
     /// <param name="first">The first sequence.</param>
     /// <param name="second">The second sequence.</param>
     /// <returns>A sequence that emits <paramref name="second"/> after <paramref name="first"/> completes.</returns>
-    public static IObservable<T> Concat<T>(this IObservable<T> first, IObservable<T> second) =>
-        Signal.Concat(first, second);
+    public static IObservable<T> Chain<T>(this IObservable<T> first, IObservable<T> second) =>
+        Signal.Chain(first, second);
 
     /// <summary>
     /// Subscribes to all inner sequences and forwards their values as they arrive.
@@ -646,7 +645,7 @@ public static partial class LinqMixins
     /// <param name="sources">The outer sequence of inner sequences.</param>
     /// <returns>A sequence containing values from all inner sequences.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
-    public static IObservable<T> Merge<T>(this IObservable<IObservable<T>> sources)
+    public static IObservable<T> Blend<T>(this IObservable<IObservable<T>> sources)
     {
         if (sources == null)
         {
@@ -676,7 +675,7 @@ public static partial class LinqMixins
                 {
                     if (source == null)
                     {
-                        observer.OnError(new InvalidOperationException("Merge source contained null."));
+                        observer.OnError(new InvalidOperationException("Blend source contained null."));
                         return;
                     }
 
@@ -741,7 +740,7 @@ public static partial class LinqMixins
     /// <param name="selector">The function that combines paired values.</param>
     /// <returns>A sequence containing one result for each available value pair.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="left"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
-    public static IObservable<TResult> Zip<TLeft, TRight, TResult>(this IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
+    public static IObservable<TResult> Pair<TLeft, TRight, TResult>(this IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
     {
         if (left == null)
         {
@@ -777,7 +776,7 @@ public static partial class LinqMixins
     /// <param name="selector">The function that combines the latest values.</param>
     /// <returns>A sequence containing selected latest-value combinations.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="left"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
-    public static IObservable<TResult> CombineLatest<TLeft, TRight, TResult>(this IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
+    public static IObservable<TResult> SyncLatest<TLeft, TRight, TResult>(this IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
     {
         if (left == null)
         {
@@ -814,7 +813,7 @@ public static partial class LinqMixins
     /// <returns>A sequence containing selected left/latest-right combinations.</returns>
     /// <remarks>Left values produced before the first right value are ignored.</remarks>
     /// <exception cref="ArgumentNullException"><paramref name="left"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
-    public static IObservable<TResult> WithLatest<TLeft, TRight, TResult>(this IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
+    public static IObservable<TResult> Latch<TLeft, TRight, TResult>(this IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
     {
         if (left == null)
         {
@@ -881,7 +880,7 @@ public static partial class LinqMixins
     /// <param name="sources">The outer sequence of inner sequences.</param>
     /// <returns>A sequence that mirrors only the latest inner sequence.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
-    public static IObservable<T> Switch<T>(this IObservable<IObservable<T>> sources)
+    public static IObservable<T> SwitchTo<T>(this IObservable<IObservable<T>> sources)
     {
         if (sources == null)
         {
@@ -900,7 +899,7 @@ public static partial class LinqMixins
     /// <returns>A sequence that retries the source before forwarding the final error.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="retryCount"/> is less than zero.</exception>
-    public static IObservable<T> Retry<T>(this IObservable<T> source, int retryCount)
+    public static IObservable<T> Reattempt<T>(this IObservable<T> source, int retryCount)
     {
         if (source == null)
         {
@@ -949,8 +948,19 @@ public static partial class LinqMixins
     /// <param name="handler">The function that creates the recovery sequence for an error.</param>
     /// <returns>A sequence that continues with the handler result after an error.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="handler"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Recover<T>(this IObservable<T> source, Func<Exception, IObservable<T>> handler) =>
+        source.Recover<T, Exception>(handler);
+
+    /// <summary>
+    /// Recovers from errors by switching to a handler-provided sequence.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="handler">The function that creates the recovery sequence for an error.</param>
+    /// <returns>A sequence that continues with the handler result after an error.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="handler"/> is <see langword="null"/>.</exception>
     public static IObservable<T> Rescue<T>(this IObservable<T> source, Func<Exception, IObservable<T>> handler) =>
-        source.Catch<T, Exception>(handler);
+        source.Recover(handler);
 
     /// <summary>
     /// Continues with a fallback sequence after an error.
@@ -967,7 +977,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(fallback));
         }
 
-        return source.Catch<T, Exception>(_ => fallback);
+        return source.Recover<T, Exception>(_ => fallback);
     }
 
     /// <summary>
@@ -977,8 +987,8 @@ public static partial class LinqMixins
     /// <param name="source">The source sequence.</param>
     /// <param name="dueTime">The delay applied to each notification.</param>
     /// <returns>A sequence that forwards source notifications after the delay.</returns>
-    public static IObservable<T> Delay<T>(this IObservable<T> source, TimeSpan dueTime) =>
-        source.Delay(dueTime, null);
+    public static IObservable<T> Shift<T>(this IObservable<T> source, TimeSpan dueTime) =>
+        source.Shift(dueTime, null);
 
     /// <summary>
     /// Delays source notifications by the specified duration on a sequencer.
@@ -988,7 +998,7 @@ public static partial class LinqMixins
     /// <param name="dueTime">The delay applied to each notification.</param>
     /// <param name="scheduler">The sequencer used to schedule delayed notifications.</param>
     /// <returns>A sequence that forwards source notifications after the delay.</returns>
-    public static IObservable<T> Delay<T>(this IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler)
+    public static IObservable<T> Shift<T>(this IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler)
     {
         if (source == null)
         {
@@ -1016,8 +1026,8 @@ public static partial class LinqMixins
     /// <param name="source">The source sequence.</param>
     /// <param name="dueTime">The timeout duration.</param>
     /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
-    public static IObservable<T> Timeout<T>(this IObservable<T> source, TimeSpan dueTime) =>
-        source.Timeout(dueTime, null);
+    public static IObservable<T> Expire<T>(this IObservable<T> source, TimeSpan dueTime) =>
+        source.Expire(dueTime, null);
 
     /// <summary>
     /// Fails the sequence if it does not terminate before the sequencer timeout.
@@ -1027,7 +1037,7 @@ public static partial class LinqMixins
     /// <param name="dueTime">The timeout duration.</param>
     /// <param name="scheduler">The sequencer used to schedule the timeout.</param>
     /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
-    public static IObservable<T> Timeout<T>(this IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler)
+    public static IObservable<T> Expire<T>(this IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler)
     {
         if (source == null)
         {

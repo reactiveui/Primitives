@@ -17,7 +17,7 @@ public static partial class Signal
     /// <typeparam name="T">The type.</typeparam>
     /// <returns>An Signals.</returns>
 #pragma warning disable S4018 // Result type is intentionally explicit for Rx-style factory APIs.
-    public static IObservable<T> Never<T>() => ImmutableNeverSignal<T>.Instance;
+    public static IObservable<T> Silent<T>() => ImmutableNeverSignal<T>.Instance;
 #pragma warning restore S4018
 
     /// <summary>
@@ -27,6 +27,6 @@ public static partial class Signal
     /// <param name="witness">The witness.</param>
     /// <returns>An Signals.</returns>
 #pragma warning disable RCS1163 // Unused parameter.
-    public static IObservable<T> Never<T>(T witness) => ImmutableNeverSignal<T>.Instance;
+    public static IObservable<T> Silent<T>(T witness) => ImmutableNeverSignal<T>.Instance;
 #pragma warning restore RCS1163 // Unused parameter.
 }

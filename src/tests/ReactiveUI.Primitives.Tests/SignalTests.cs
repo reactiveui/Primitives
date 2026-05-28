@@ -430,7 +430,7 @@ public class SignalTests
     public void SubjectWhere()
     {
         var subject = new Signal<int>();
-        subject.Where(i => i % EvenDivisor == 0).Subscribe(i => Assert.Equal(ValueTwo, i));
+        subject.Keep(i => i % EvenDivisor == 0).Subscribe(i => Assert.Equal(ValueTwo, i));
         subject.OnNext(1);
         subject.OnNext(ValueTwo);
         subject.OnNext(ValueThree);
@@ -444,7 +444,7 @@ public class SignalTests
     public void SubjectSelect()
     {
         var subject = new Signal<int>();
-        subject.Select(i => i * SelectMultiplier).Subscribe(i => Assert.Equal(ValueFour, i));
+        subject.Map(i => i * SelectMultiplier).Subscribe(i => Assert.Equal(ValueFour, i));
         subject.OnNext(ValueTwo);
         subject.Dispose();
     }

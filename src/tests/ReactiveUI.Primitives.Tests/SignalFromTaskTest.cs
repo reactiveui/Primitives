@@ -109,12 +109,12 @@ public class SignalFromTaskTest
                  }
 
                  throw new InvalidOperationException(BreakExecutionMessage);
-             }).Catch<RxVoid, Exception>(
+             }).Recover<RxVoid, Exception>(
             ex =>
             {
                 RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Throw<RxVoid>(ex);
-            }).Finally(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+                return Signal.Fail<RxVoid>(ex);
+            }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
 
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);
@@ -158,12 +158,12 @@ public class SignalFromTaskTest
                  }
 
                  return RxVoid.Default;
-             }).Catch<RxVoid, Exception>(
+             }).Recover<RxVoid, Exception>(
             ex =>
             {
                 RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Throw<RxVoid>(ex);
-            }).Finally(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+                return Signal.Fail<RxVoid>(ex);
+            }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
 
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);
@@ -214,12 +214,12 @@ public class SignalFromTaskTest
                  }
 
                  return RxVoid.Default;
-             }).Catch<RxVoid, Exception>(
+             }).Recover<RxVoid, Exception>(
             ex =>
             {
                 RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Throw<RxVoid>(ex);
-            }).Finally(() =>
+                return Signal.Fail<RxVoid>(ex);
+            }).OnCleanup(() =>
             {
                 RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere);
                 finallyCompleted.TrySetResult();
@@ -262,12 +262,12 @@ public class SignalFromTaskTest
                  }
 
                  return RxVoid.Default;
-             }).Catch<RxVoid, Exception>(
+             }).Recover<RxVoid, Exception>(
             ex =>
             {
                 RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Throw<RxVoid>(ex);
-            }).Finally(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+                return Signal.Fail<RxVoid>(ex);
+            }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
 
         using var subscription = fixture.Subscribe();
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
@@ -303,12 +303,12 @@ public class SignalFromTaskTest
                  }
 
                  return RxVoid.Default;
-             }).Catch<RxVoid, Exception>(
+             }).Recover<RxVoid, Exception>(
             ex =>
             {
                 RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Throw<RxVoid>(ex);
-            }).Finally(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+                return Signal.Fail<RxVoid>(ex);
+            }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
 
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);
@@ -348,12 +348,12 @@ public class SignalFromTaskTest
                  }
 
                  throw new InvalidOperationException(BreakExecutionMessage);
-             }).Catch<RxVoid, Exception>(
+             }).Recover<RxVoid, Exception>(
             ex =>
             {
                 RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Throw<RxVoid>(ex);
-            }).Finally(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+                return Signal.Fail<RxVoid>(ex);
+            }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
 
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);
@@ -397,12 +397,12 @@ public class SignalFromTaskTest
                  }
 
                  return RxVoid.Default;
-             }).Catch<RxVoid, Exception>(
+             }).Recover<RxVoid, Exception>(
             ex =>
             {
                 RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Throw<RxVoid>(ex);
-            }).Finally(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+                return Signal.Fail<RxVoid>(ex);
+            }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
 
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);
@@ -453,12 +453,12 @@ public class SignalFromTaskTest
                  }
 
                  return RxVoid.Default;
-             }).Catch<RxVoid, Exception>(
+             }).Recover<RxVoid, Exception>(
             ex =>
             {
                 RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Throw<RxVoid>(ex);
-            }).Finally(() =>
+                return Signal.Fail<RxVoid>(ex);
+            }).OnCleanup(() =>
             {
                 RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere);
                 finallyCompleted.TrySetResult();
@@ -501,12 +501,12 @@ public class SignalFromTaskTest
                  }
 
                  return RxVoid.Default;
-             }).Catch<RxVoid, Exception>(
+             }).Recover<RxVoid, Exception>(
             ex =>
             {
                 RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Throw<RxVoid>(ex);
-            }).Finally(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+                return Signal.Fail<RxVoid>(ex);
+            }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
 
         using var subscription = fixture.Subscribe();
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
@@ -542,12 +542,12 @@ public class SignalFromTaskTest
                  }
 
                  return RxVoid.Default;
-             }).Catch<RxVoid, Exception>(
+             }).Recover<RxVoid, Exception>(
             ex =>
             {
                 RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Throw<RxVoid>(ex);
-            }).Finally(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+                return Signal.Fail<RxVoid>(ex);
+            }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
 
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);

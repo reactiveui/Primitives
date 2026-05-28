@@ -28,7 +28,7 @@ public class ScalarSignalBenchmarks
     public int PrimitivesReturnSubscribe()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Return(ScalarValue).Subscribe(observer);
+        using var subscription = Signal.Emit(ScalarValue).Subscribe(observer);
         return observer.LastValue;
     }
 

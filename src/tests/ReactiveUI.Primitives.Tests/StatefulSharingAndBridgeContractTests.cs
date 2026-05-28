@@ -148,7 +148,7 @@ public class StatefulSharingAndBridgeContractTests
             return source.Subscribe(observer);
         });
 
-        var shared = cold.ShareLive();
+        var shared = cold.ShareLatest();
         var first = new List<int>();
         var second = new List<int>();
 
@@ -233,7 +233,7 @@ public class StatefulSharingAndBridgeContractTests
             return source.Subscribe(observer);
         });
 
-        var auto = cold.Publish().AutoConnect(2);
+        var auto = cold.Share().AutoConnect(2);
         var first = new List<int>();
         var second = new List<int>();
         using var firstSubscription = auto.Subscribe(first.Add);
@@ -245,10 +245,10 @@ public class StatefulSharingAndBridgeContractTests
         Assert.Equal(ExpectedSecondSharedValues[1..], first);
         Assert.Equal(ExpectedSecondSharedValues[1..], second);
         Assert.Throws<ArgumentNullException>(() => ConnectableSignalMixins.Multicast(null!, new Signal<int>()));
-        Assert.Throws<ArgumentNullException>(() => Signal.Never<int>().Multicast(null!));
-        Assert.Throws<ArgumentNullException>(() => ConnectableSignalMixins.RefCount<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Silent<int>().Multicast(null!));
+        Assert.Throws<ArgumentNullException>(() => ConnectableSignalMixins.AutoShare<int>(null!));
         Assert.Throws<ArgumentNullException>(() => ConnectableSignalMixins.AutoConnect<int>(null!));
-        Assert.Throws<ArgumentOutOfRangeException>(() => cold.PublishLive().AutoConnect(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => cold.ShareLive().AutoConnect(-1));
 
         var replayed = cold.Replay(1, TimeSpan.FromSeconds(1));
         using var connection = replayed.Connect();
@@ -410,7 +410,7 @@ using ReactiveUI.Primitives.Signals;
 
 public static class CoreOnlySmoke
 {
-    public static IObservable<int> Use() => Signal.Return(1);
+    public static IObservable<int> Use() => Signal.Emit(1);
 }
 """;
 

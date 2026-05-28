@@ -22,7 +22,7 @@ public static partial class Signal
     /// An observable sequence containing the source sequence's elements, followed by the handler sequence's elements when an exception occurs.
     /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="handler"/> is null.</exception>
-    public static IObservable<TSource> Catch<TSource, TException>(this IObservable<TSource> source, Func<TException, IObservable<TSource>> handler)
+    public static IObservable<TSource> Recover<TSource, TException>(this IObservable<TSource> source, Func<TException, IObservable<TSource>> handler)
         where TException : Exception
     {
         if (source == null)
@@ -45,7 +45,7 @@ public static partial class Signal
     /// <param name="sources">Observable sequences to catch exceptions for.</param>
     /// <returns>An observable sequence containing elements from consecutive source sequences until a source sequence terminates successfully.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="sources"/> is null.</exception>
-    public static IObservable<TSource> Catch<TSource>(params IObservable<TSource>[] sources)
+    public static IObservable<TSource> Recover<TSource>(params IObservable<TSource>[] sources)
     {
         if (sources == null)
         {
@@ -62,7 +62,7 @@ public static partial class Signal
     /// <param name="sources">Observable sequences to catch exceptions for.</param>
     /// <returns>An observable sequence containing elements from consecutive source sequences until a source sequence terminates successfully.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="sources"/> is null.</exception>
-    public static IObservable<TSource> Catch<TSource>(this IEnumerable<IObservable<TSource>> sources)
+    public static IObservable<TSource> Recover<TSource>(this IEnumerable<IObservable<TSource>> sources)
     {
         if (sources == null)
         {
@@ -79,6 +79,6 @@ public static partial class Signal
     /// <param name="source">The source.</param>
     /// <param name="finallyAction">The finally action.</param>
     /// <returns>An observable sequence containing elements from consecutive source sequences until a source sequence terminates successfully.</returns>
-    public static IObservable<T> Finally<T>(this IObservable<T> source, Action finallyAction) =>
+    public static IObservable<T> OnCleanup<T>(this IObservable<T> source, Action finallyAction) =>
         new FinallySignal<T>(source, finallyAction);
 }

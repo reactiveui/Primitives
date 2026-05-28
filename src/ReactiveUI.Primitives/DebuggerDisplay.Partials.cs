@@ -251,6 +251,15 @@ namespace ReactiveUI.Primitives.Signals
         private string DebuggerDisplay => ToString() ?? string.Empty;
     }
 
+    public partial class FinalSignal<T>
+    {
+        /// <summary>
+        /// Gets the debugger display text.
+        /// </summary>
+        [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+        private string DebuggerDisplay => ToString() ?? string.Empty;
+    }
+
     public sealed partial class CommandSignal<TResult>
     {
         /// <summary>
@@ -270,6 +279,15 @@ namespace ReactiveUI.Primitives.Signals
     }
 
     public partial class ReplaySignal<T>
+    {
+        /// <summary>
+        /// Gets the debugger display text.
+        /// </summary>
+        [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+        private string DebuggerDisplay => ToString() ?? string.Empty;
+    }
+
+    public partial class HistorySignal<T>
     {
         /// <summary>
         /// Gets the debugger display text.

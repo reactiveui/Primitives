@@ -41,48 +41,48 @@ public sealed class CoverageTopUpTests
     {
         IObservable<int> source = Signal.FromEnumerable([Three, Four]);
         var values = new List<int>();
-        source.StartWith(Two).Subscribe(values.Add);
+        source.Prepend(Two).Subscribe(values.Add);
         Assert.Equal(new[] { Two, Three, Four }, values);
 
         var delayedStart = source.DelayStart(TimeSpan.Zero);
         Assert.NotNull(delayedStart);
 
         var fused = new List<int>();
-        Signal.Return(One).FuseLatest(Signal.FromEnumerable([Two, Three]), (left, right) => left + right).Subscribe(fused.Add);
+        Signal.Emit(One).FuseLatest(Signal.FromEnumerable([Two, Three]), (left, right) => left + right).Subscribe(fused.Add);
         Assert.Equal(new[] { Three, Four }, fused);
 
         var rangeArray = new List<int[]>();
         var rangeList = new List<IList<int>>();
-        Signal.Range(Five, Three).CollectArray().Subscribe(rangeArray.Add);
-        Signal.Range(Five, Three).CollectList().Subscribe(rangeList.Add);
+        Signal.Sequence(Five, Three).CollectArray().Subscribe(rangeArray.Add);
+        Signal.Sequence(Five, Three).CollectList().Subscribe(rangeList.Add);
         Assert.Equal<int>([Five, Six, Seven], rangeArray[0]);
         Assert.Equal<int>([Five, Six, Seven], rangeList[0]);
 
-        Assert.Equal(Ten, await Signal.Range(Ten, Three).FirstAsync().ConfigureAwait(false));
-        Assert.Equal(Ten, await Signal.Range(Ten, Three).FirstOrDefaultAsync().ConfigureAwait(false));
-        Assert.Equal(Ten, await Signal.Range(Ten, Three).FirstOrDefaultAsync(Nine).ConfigureAwait(false));
-        Assert.Equal(Twelve, await Signal.Range(Ten, Three).LastAsync().ConfigureAwait(false));
-        Assert.Equal(Twelve, await Signal.Range(Ten, Three).LastOrDefaultAsync().ConfigureAwait(false));
-        Assert.Equal(Nine, await Signal.Empty<int>().LastOrDefaultAsync(Nine).ConfigureAwait(false));
-        Assert.Equal(Three, await Signal.Range(One, Three).CountAsync(CancellationToken.None).ConfigureAwait(false));
-        Assert.Equal(Two, await Signal.Range(One, Three).CountAsync(value => value > One, CancellationToken.None).ConfigureAwait(false));
-        Assert.Equal(3L, await Signal.Range(One, Three).LongCount().ToTask(CancellationToken.None).ConfigureAwait(false));
-        Assert.Equal(2L, await Signal.Range(One, Three).LongCount(value => value > One).ToTask(CancellationToken.None).ConfigureAwait(false));
-        Assert.True(await Signal.Range(One, Three).AnyAsync(CancellationToken.None).ConfigureAwait(false));
-        Assert.True(await Signal.Range(One, Three).AnyAsync(value => value == Two, CancellationToken.None).ConfigureAwait(false));
-        Assert.True(await Signal.Range(One, Three).All(value => value < Four).ToTask(CancellationToken.None).ConfigureAwait(false));
-        Assert.True(await Signal.Range(One, Three).Contains(Three).ToTask(CancellationToken.None).ConfigureAwait(false));
-        Assert.Equal<int>([Five, Six, Seven], await Signal.Range(Five, Three).CollectArrayAsync().ConfigureAwait(false));
-        Assert.Equal<int>([Five, Six, Seven], await Signal.Range(Five, Three).CollectListAsync().ConfigureAwait(false));
+        Assert.Equal(Ten, await Signal.Sequence(Ten, Three).FirstAsync().ConfigureAwait(false));
+        Assert.Equal(Ten, await Signal.Sequence(Ten, Three).FirstOrDefaultAsync().ConfigureAwait(false));
+        Assert.Equal(Ten, await Signal.Sequence(Ten, Three).FirstOrDefaultAsync(Nine).ConfigureAwait(false));
+        Assert.Equal(Twelve, await Signal.Sequence(Ten, Three).LastAsync().ConfigureAwait(false));
+        Assert.Equal(Twelve, await Signal.Sequence(Ten, Three).LastOrDefaultAsync().ConfigureAwait(false));
+        Assert.Equal(Nine, await Signal.None<int>().LastOrDefaultAsync(Nine).ConfigureAwait(false));
+        Assert.Equal(Three, await Signal.Sequence(One, Three).CountAsync(CancellationToken.None).ConfigureAwait(false));
+        Assert.Equal(Two, await Signal.Sequence(One, Three).CountAsync(value => value > One, CancellationToken.None).ConfigureAwait(false));
+        Assert.Equal(3L, await Signal.Sequence(One, Three).LongCount().ToTask(CancellationToken.None).ConfigureAwait(false));
+        Assert.Equal(2L, await Signal.Sequence(One, Three).LongCount(value => value > One).ToTask(CancellationToken.None).ConfigureAwait(false));
+        Assert.True(await Signal.Sequence(One, Three).AnyAsync(CancellationToken.None).ConfigureAwait(false));
+        Assert.True(await Signal.Sequence(One, Three).AnyAsync(value => value == Two, CancellationToken.None).ConfigureAwait(false));
+        Assert.True(await Signal.Sequence(One, Three).All(value => value < Four).ToTask(CancellationToken.None).ConfigureAwait(false));
+        Assert.True(await Signal.Sequence(One, Three).Contains(Three).ToTask(CancellationToken.None).ConfigureAwait(false));
+        Assert.Equal<int>([Five, Six, Seven], await Signal.Sequence(Five, Three).CollectArrayAsync().ConfigureAwait(false));
+        Assert.Equal<int>([Five, Six, Seven], await Signal.Sequence(Five, Three).CollectListAsync().ConfigureAwait(false));
 
         using var canceled = new CancellationTokenSource();
         await canceled.CancelAsync().ConfigureAwait(false);
-        var canceledTask = Signal.Never<int>().ToTask(canceled.Token);
+        var canceledTask = Signal.Silent<int>().ToTask(canceled.Token);
         Assert.True(canceledTask.IsCanceled);
 
         Assert.Throws<ArgumentNullException>(() => LinqMixins.Count<int>(null!, value => value > 0));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.LongCount<int>(null!, value => value > 0));
-        Assert.Throws<ArgumentNullException>(() => LinqMixins.Merge<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => LinqMixins.Blend<int>(null!));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.Race<int>(null!));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.CollectArray<int>(null!));
         Assert.Throws<ArgumentNullException>(() => SubscribeMixins.Subscribe<int>(null!, _ => { }));
@@ -90,8 +90,8 @@ public sealed class CoverageTopUpTests
         Assert.Throws<ArgumentNullException>(() => SubscribeMixins.Subscribe<int>(null!, _ => { }, _ => { }));
         Assert.Throws<ArgumentNullException>(() => source.Subscribe(null!, _ => { }));
         Assert.Throws<ArgumentNullException>(() => source.Subscribe(_ => { }, (Action<Exception>)null!));
-        Assert.Throws<ArgumentNullException>(() => ReactiveUI.Primitives.Signals.Signal.Catch<int, InvalidOperationException>(Signal.Empty<int>(), null!));
-        Assert.Throws<ArgumentNullException>(() => ReactiveUI.Primitives.Signals.Signal.Catch<int>((IEnumerable<IObservable<int>>)null!));
+        Assert.Throws<ArgumentNullException>(() => ReactiveUI.Primitives.Signals.Signal.Recover<int, InvalidOperationException>(Signal.None<int>(), null!));
+        Assert.Throws<ArgumentNullException>(() => ReactiveUI.Primitives.Signals.Signal.Recover<int>((IEnumerable<IObservable<int>>)null!));
         Assert.Throws<ArgumentNullException>(() => ReactiveUI.Primitives.Signals.Signal.CreateSafe<int>(null!));
         Assert.Throws<ArgumentNullException>(() => StateSignalMixins.ToReadOnlyState<int, int>(null!, One, value => value));
         Assert.Throws<ArgumentNullException>(() => source.ToReadOnlyState(One, null!));
@@ -102,22 +102,22 @@ public sealed class CoverageTopUpTests
     public void ImmediateCoreSignalsRangeZipRepeatAndObserverFailuresCoverRemainders()
     {
         var completed = 0;
-        Signal.Empty<int>(Sequencer.Immediate).Subscribe(_ => { }, ex => throw ex, () => completed++);
-        Signal.Empty<int>(default(int)).Subscribe(_ => { }, ex => throw ex, () => completed++);
+        Signal.None<int>(Sequencer.Immediate).Subscribe(_ => { }, ex => throw ex, () => completed++);
+        Signal.None<int>(default(int)).Subscribe(_ => { }, ex => throw ex, () => completed++);
         Assert.Equal(Two, completed);
 
         var returnValues = new List<int>();
-        Signal.Return(FortyTwo, Sequencer.Immediate).Subscribe(returnValues.Add);
+        Signal.Emit(FortyTwo, Sequencer.Immediate).Subscribe(returnValues.Add);
         Assert.Equal(new[] { FortyTwo }, returnValues);
 
         var throwErrors = new List<string>();
-        Signal.Throw<int>(new InvalidOperationException("immediate"), Sequencer.Immediate).Subscribe(_ => { }, ex => throwErrors.Add(ex.Message));
-        Signal.Throw(new InvalidOperationException("witness"), Sequencer.Immediate, default(int)).Subscribe(_ => { }, ex => throwErrors.Add(ex.Message));
+        Signal.Fail<int>(new InvalidOperationException("immediate"), Sequencer.Immediate).Subscribe(_ => { }, ex => throwErrors.Add(ex.Message));
+        Signal.Fail(new InvalidOperationException("witness"), Sequencer.Immediate, default(int)).Subscribe(_ => { }, ex => throwErrors.Add(ex.Message));
         Assert.Equal(new[] { "immediate", "witness" }, throwErrors);
 
-        var never = Signal.Never<int>(default(int));
+        var never = Signal.Silent<int>(default(int));
         Assert.False(((IRequireCurrentThread<int>)never).IsRequiredSubscribeOnCurrentThread());
-        Assert.False(((IRequireCurrentThread<RxVoid>)Signal.ReturnRxVoid()).IsRequiredSubscribeOnCurrentThread());
+        Assert.False(((IRequireCurrentThread<RxVoid>)Signal.EmitRxVoid()).IsRequiredSubscribeOnCurrentThread());
         Assert.True(new RxVoid() == new RxVoid());
         Assert.False(new RxVoid() != new RxVoid());
 
@@ -156,9 +156,9 @@ public sealed class CoverageTopUpTests
         Assert.False(new RangeConcatSignal([new RangeSignal(One, Two), new RangeSignal(Three, Two)]).IsRequiredSubscribeOnCurrentThread());
         Assert.False(new SignalsBaseProbe<int>(false).IsRequiredSubscribeOnCurrentThread());
 
-        Assert.Throws<InvalidOperationException>(() => Signal.Return(One, Sequencer.Immediate).Subscribe(new ThrowingObserver<int>(throwOnNext: true)).Dispose());
-        Assert.Throws<InvalidOperationException>(() => Signal.Empty<int>(Sequencer.Immediate).Subscribe(new ThrowingObserver<int>(throwOnCompleted: true)).Dispose());
-        Assert.Throws<InvalidOperationException>(() => Signal.Throw<int>(new InvalidOperationException("observer"), Sequencer.Immediate).Subscribe(new ThrowingObserver<int>(throwOnError: true)).Dispose());
+        Assert.Throws<InvalidOperationException>(() => Signal.Emit(One, Sequencer.Immediate).Subscribe(new ThrowingObserver<int>(throwOnNext: true)).Dispose());
+        Assert.Throws<InvalidOperationException>(() => Signal.None<int>(Sequencer.Immediate).Subscribe(new ThrowingObserver<int>(throwOnCompleted: true)).Dispose());
+        Assert.Throws<InvalidOperationException>(() => Signal.Fail<int>(new InvalidOperationException("observer"), Sequencer.Immediate).Subscribe(new ThrowingObserver<int>(throwOnError: true)).Dispose());
         Assert.Throws<ArgumentNullException>(() => new ImmediateThrowSignal<int>(new InvalidOperationException("null-observer")).Subscribe((IObserver<int>)null!));
     }
 
@@ -220,8 +220,8 @@ public sealed class CoverageTopUpTests
         windowedReplay.Subscribe(windowedLate).Dispose();
         Assert.Equal(new[] { Two }, windowedLate.Values);
 
-        var shared = Signal.Range(One, Three).Share();
-        var replayed = Signal.Range(One, Three).Replay(2);
+        var shared = Signal.Sequence(One, Three).Share();
+        var replayed = Signal.Sequence(One, Three).Replay(2);
         Assert.NotNull(shared);
         Assert.NotNull(replayed);
 
@@ -297,19 +297,19 @@ public sealed class CoverageTopUpTests
         var scheduledRangeClock = new TestClock(DateTimeOffset.UnixEpoch);
         var scheduledRange = new List<int>();
         var scheduledRangeCompleted = 0;
-        Signal.Range(Three, Three, scheduledRangeClock).Subscribe(scheduledRange.Add, ex => throw ex, () => scheduledRangeCompleted++);
+        Signal.Sequence(Three, Three, scheduledRangeClock).Subscribe(scheduledRange.Add, ex => throw ex, () => scheduledRangeCompleted++);
         scheduledRangeClock.Start();
         Assert.Equal<int>([Three, Four, Five], scheduledRange);
         Assert.Equal(1, scheduledRangeCompleted);
 
         Assert.NotNull(Signal.After(TimeSpan.FromTicks(One)));
         Assert.NotNull(Signal.Pulse(TimeSpan.FromTicks(One)));
-        Assert.NotNull(Signal.Interval(TimeSpan.FromTicks(One)));
-        Assert.NotNull(Signal.Interval(TimeSpan.FromTicks(One), new TestClock(DateTimeOffset.UnixEpoch)));
-        Assert.NotNull(Signal.Timer(TimeSpan.FromTicks(One)));
-        Assert.NotNull(Signal.Timer(DateTimeOffset.UtcNow.AddMilliseconds(1)));
-        Assert.NotNull(Signal.Timer(TimeSpan.FromTicks(One), TimeSpan.FromTicks(One)));
-        Assert.NotNull(Signal.ZipLatest(Signal.Range(One, Two), Signal.Range(Three, Two), (left, right) => left + right));
+        Assert.NotNull(Signal.Pulse(TimeSpan.FromTicks(One)));
+        Assert.NotNull(Signal.Pulse(TimeSpan.FromTicks(One), new TestClock(DateTimeOffset.UnixEpoch)));
+        Assert.NotNull(Signal.After(TimeSpan.FromTicks(One)));
+        Assert.NotNull(Signal.After(DateTimeOffset.UtcNow.AddMilliseconds(1)));
+        Assert.NotNull(Signal.After(TimeSpan.FromTicks(One), TimeSpan.FromTicks(One)));
+        Assert.NotNull(Signal.PairLatest(Signal.Sequence(One, Two), Signal.Sequence(Three, Two), (left, right) => left + right));
 
         var toSignalValues = new List<int>();
         new[] { One, Two }.ToSignal().Subscribe(toSignalValues.Add);
@@ -324,27 +324,27 @@ public sealed class CoverageTopUpTests
         Assert.Equal(default(int), await Task.FromCanceled<int>(new CancellationToken(true)).HandleCancellation().ConfigureAwait(false));
 
         var longCount = new List<long>();
-        Signal.Range(One, Four).LongCount(value => value % 2 == 0).Subscribe(longCount.Add);
+        Signal.Sequence(One, Four).LongCount(value => value % 2 == 0).Subscribe(longCount.Add);
         Assert.Equal(new long[] { 2L }, longCount);
 
         var containsWithComparer = new List<bool>();
-        Signal.Range(One, Three).Contains(Three, EqualityComparer<int>.Default).Subscribe(containsWithComparer.Add);
-        Signal.Range(One, Three).Contains(Nine, EqualityComparer<int>.Default).Subscribe(containsWithComparer.Add);
-        Signal.Range(One, Three).Contains(Three, new PassthroughComparer()).Subscribe(containsWithComparer.Add);
-        Signal.Range(One, Three).Contains(Nine, new PassthroughComparer()).Subscribe(containsWithComparer.Add);
+        Signal.Sequence(One, Three).Contains(Three, EqualityComparer<int>.Default).Subscribe(containsWithComparer.Add);
+        Signal.Sequence(One, Three).Contains(Nine, EqualityComparer<int>.Default).Subscribe(containsWithComparer.Add);
+        Signal.Sequence(One, Three).Contains(Three, new PassthroughComparer()).Subscribe(containsWithComparer.Add);
+        Signal.Sequence(One, Three).Contains(Nine, new PassthroughComparer()).Subscribe(containsWithComparer.Add);
         Assert.Equal(new[] { true, false, true, false }, containsWithComparer);
 
         var startWithAlias = new List<int>();
-        LinqMixins.StartWith(Signal.Return(Two), One).Subscribe(startWithAlias.Add);
+        LinqMixins.Prepend(Signal.Emit(Two), One).Subscribe(startWithAlias.Add);
         Assert.Equal(new[] { One, Two }, startWithAlias);
-        Assert.NotNull(LinqMixins.DelayStart(Signal.Return(One), TimeSpan.Zero));
-        Assert.Equal(0, await Signal.Empty<int>().FirstOrDefaultAsync().ConfigureAwait(false));
+        Assert.NotNull(LinqMixins.DelayStart(Signal.Emit(One), TimeSpan.Zero));
+        Assert.Equal(0, await Signal.None<int>().FirstOrDefaultAsync().ConfigureAwait(false));
 
         Assert.Throws<ArgumentNullException>(() => LinqMixins.Buffer<int>(null!, One));
-        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Return(One).Buffer(0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Emit(One).Buffer(0));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.Buffer<int>(null!, One, One));
-        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Return(One).Buffer(0, One));
-        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Return(One).Buffer(One, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Emit(One).Buffer(0, One));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Emit(One).Buffer(One, 0));
 
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).FirstAsync());
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).FirstOrDefaultAsync());
@@ -405,7 +405,7 @@ public sealed class CoverageTopUpTests
         var secondInner = new Signal<int>();
         var selectManyValues = new List<int>();
         var selectManyCompleted = 0;
-        using (outer.SelectMany(inner => inner).Subscribe(selectManyValues.Add, ex => throw ex, () => selectManyCompleted++))
+        using (outer.FlatMap(inner => inner).Subscribe(selectManyValues.Add, ex => throw ex, () => selectManyCompleted++))
         {
             outer.OnNext(firstInner);
             outer.OnNext(secondInner);
@@ -422,7 +422,7 @@ public sealed class CoverageTopUpTests
         var disposedOuter = new Signal<IObservable<int>>();
         var disposedInner = new Signal<int>();
         var disposedValues = new List<int>();
-        var disposedSubscription = disposedOuter.SelectMany(inner => inner).Subscribe(disposedValues.Add);
+        var disposedSubscription = disposedOuter.FlatMap(inner => inner).Subscribe(disposedValues.Add);
         disposedOuter.OnNext(disposedInner);
         disposedSubscription.Dispose();
         disposedSubscription.Dispose();
@@ -430,8 +430,8 @@ public sealed class CoverageTopUpTests
         Assert.Equal(0, disposedValues.Count);
 
         var subscribeErrors = new List<string>();
-        Signal.Return(One)
-            .SelectMany(_ => new ThrowOnSubscribeObservable<int>(new InvalidOperationException("inner-subscribe")))
+        Signal.Emit(One)
+            .FlatMap(_ => new ThrowOnSubscribeObservable<int>(new InvalidOperationException("inner-subscribe")))
             .Subscribe(_ => { }, ex => subscribeErrors.Add(ex.Message));
         Assert.Equal(new[] { "inner-subscribe" }, subscribeErrors);
     }
