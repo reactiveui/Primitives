@@ -366,13 +366,13 @@ public sealed class CoverageTopUpTests
         Assert.Throws<InvalidOperationException>(() => new EmptySignal<int>(Sequencer.Immediate).Subscribe(new ThrowingObserver<int>(throwOnCompleted: true)).Dispose());
         Assert.Throws<InvalidOperationException>(() => new ThrowSignal<int>(new InvalidOperationException("throw-signal"), Sequencer.Immediate).Subscribe(new ThrowingObserver<int>(throwOnError: true)).Dispose());
 
-#pragma warning disable S3011
+#pragma warning disable S3011, IL3050
         var returnWitnessType = typeof(ReturnSignal<int>).GetNestedType("Return", BindingFlags.NonPublic)!.MakeGenericType(typeof(int));
         var returnWitness = (IObserver<int>)Activator.CreateInstance(returnWitnessType, new RecordingObserver<int>(), Disposable.Empty)!;
         returnWitness.OnError(new InvalidOperationException("return-inner"));
         var emptyWitnessType = typeof(EmptySignal<int>).GetNestedType("Empty", BindingFlags.NonPublic)!.MakeGenericType(typeof(int));
         var emptyWitness = (IObserver<int>)Activator.CreateInstance(emptyWitnessType, new RecordingObserver<int>(), Disposable.Empty)!;
-#pragma warning restore S3011
+#pragma warning restore S3011, IL3050
         emptyWitness.OnNext(One);
         emptyWitness.OnError(new InvalidOperationException("empty-inner"));
 

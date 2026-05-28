@@ -196,10 +196,10 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Observer for detecting whether all values match a predicate.
+    /// Base observer for boolean terminal operators that emit a single result or error.
     /// </summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class AllPredicateObserver<T> : SingleSourceObserver<T>
+    private abstract class BooleanTerminalObserver<T> : SingleSourceObserver<T>
     {
         /// <summary>
         /// The downstream observer.
@@ -207,14 +207,74 @@ public static partial class LinqMixins
         private readonly IObserver<bool> _observer;
 
         /// <summary>
-        /// The predicate.
-        /// </summary>
-        private readonly Func<T, bool> _predicate;
-
-        /// <summary>
         /// A value indicating whether the observer has terminated.
         /// </summary>
         private bool _done;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BooleanTerminalObserver{T}"/> class.
+        /// </summary>
+        /// <param name="observer">The downstream observer.</param>
+        protected BooleanTerminalObserver(IObserver<bool> observer) => _observer = observer;
+
+        /// <summary>
+        /// Gets a value indicating whether the observer has terminated.
+        /// </summary>
+        protected bool IsDone => _done;
+
+        /// <inheritdoc/>
+        public override void OnError(Exception error)
+        {
+            if (_done)
+            {
+                return;
+            }
+
+            _done = true;
+            try
+            {
+                _observer.OnError(error);
+            }
+            finally
+            {
+                Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Emits the terminal boolean value and completes the observer.
+        /// </summary>
+        /// <param name="value">The terminal result.</param>
+        protected void EmitCompleted(bool value)
+        {
+            if (_done)
+            {
+                return;
+            }
+
+            _done = true;
+            try
+            {
+                _observer.OnNext(value);
+                _observer.OnCompleted();
+            }
+            finally
+            {
+                Dispose();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Observer for detecting whether all values match a predicate.
+    /// </summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    private sealed class AllPredicateObserver<T> : BooleanTerminalObserver<T>
+    {
+        /// <summary>
+        /// The predicate.
+        /// </summary>
+        private readonly Func<T, bool> _predicate;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AllPredicateObserver{T}"/> class.
@@ -222,15 +282,15 @@ public static partial class LinqMixins
         /// <param name="observer">The downstream observer.</param>
         /// <param name="predicate">The predicate.</param>
         internal AllPredicateObserver(IObserver<bool> observer, Func<T, bool> predicate)
+            : base(observer)
         {
-            _observer = observer;
             _predicate = predicate;
         }
 
         /// <inheritdoc/>
         public override void OnNext(T value)
         {
-            if (_done)
+            if (IsDone)
             {
                 return;
             }
@@ -251,69 +311,19 @@ public static partial class LinqMixins
                 return;
             }
 
-            _done = true;
-            try
-            {
-                _observer.OnNext(false);
-                _observer.OnCompleted();
-            }
-            finally
-            {
-                Dispose();
-            }
+            EmitCompleted(false);
         }
 
         /// <inheritdoc/>
-        public override void OnError(Exception error)
-        {
-            if (_done)
-            {
-                return;
-            }
-
-            _done = true;
-            try
-            {
-                _observer.OnError(error);
-            }
-            finally
-            {
-                Dispose();
-            }
-        }
-
-        /// <inheritdoc/>
-        public override void OnCompleted()
-        {
-            if (_done)
-            {
-                return;
-            }
-
-            _done = true;
-            try
-            {
-                _observer.OnNext(true);
-                _observer.OnCompleted();
-            }
-            finally
-            {
-                Dispose();
-            }
-        }
+        public override void OnCompleted() => EmitCompleted(true);
     }
 
     /// <summary>
     /// Observer for detecting whether a value is contained in a sequence.
     /// </summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class ContainsObserver<T> : SingleSourceObserver<T>
+    private sealed class ContainsObserver<T> : BooleanTerminalObserver<T>
     {
-        /// <summary>
-        /// The downstream observer.
-        /// </summary>
-        private readonly IObserver<bool> _observer;
-
         /// <summary>
         /// The value to locate.
         /// </summary>
@@ -325,19 +335,14 @@ public static partial class LinqMixins
         private readonly IEqualityComparer<T> _comparer;
 
         /// <summary>
-        /// A value indicating whether the observer has terminated.
-        /// </summary>
-        private bool _done;
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="ContainsObserver{T}"/> class.
         /// </summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="value">The value to locate.</param>
         /// <param name="comparer">The comparer used for equality checks.</param>
         internal ContainsObserver(IObserver<bool> observer, T value, IEqualityComparer<T> comparer)
+            : base(observer)
         {
-            _observer = observer;
             _value = value;
             _comparer = comparer;
         }
@@ -345,7 +350,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public override void OnNext(T value)
         {
-            if (_done)
+            if (IsDone)
             {
                 return;
             }
@@ -366,55 +371,10 @@ public static partial class LinqMixins
                 return;
             }
 
-            _done = true;
-            try
-            {
-                _observer.OnNext(true);
-                _observer.OnCompleted();
-            }
-            finally
-            {
-                Dispose();
-            }
+            EmitCompleted(true);
         }
 
         /// <inheritdoc/>
-        public override void OnError(Exception error)
-        {
-            if (_done)
-            {
-                return;
-            }
-
-            _done = true;
-            try
-            {
-                _observer.OnError(error);
-            }
-            finally
-            {
-                Dispose();
-            }
-        }
-
-        /// <inheritdoc/>
-        public override void OnCompleted()
-        {
-            if (_done)
-            {
-                return;
-            }
-
-            _done = true;
-            try
-            {
-                _observer.OnNext(false);
-                _observer.OnCompleted();
-            }
-            finally
-            {
-                Dispose();
-            }
-        }
+        public override void OnCompleted() => EmitCompleted(false);
     }
 }

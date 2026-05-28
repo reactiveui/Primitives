@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
@@ -640,27 +641,43 @@ public class CoverageRemainderTests
     [Test]
     public async Task TaskFactoryContinuationsCoverPendingTaskBranches()
     {
-        var values = new List<int>();
-        var errors = new List<string>();
+        var values = new ConcurrentQueue<int>();
+        var errors = new ConcurrentQueue<string>();
+        void AddValue(int value) => values.Enqueue(value);
+
+        void AddError(Exception error) => errors.Enqueue(error.GetType().Name);
+
+        bool ObservedPendingBranches()
+        {
+            var observedValues = values.ToArray();
+            var observedErrors = errors.ToArray();
+            return Array.IndexOf(observedValues, Seven) >= 0
+                && Array.IndexOf(observedErrors, nameof(InvalidOperationException)) >= 0
+                && Array.IndexOf(observedErrors, nameof(TaskCanceledException)) >= 0;
+        }
+
         var success = new TaskCompletionSource<int>();
         var fault = new TaskCompletionSource<int>();
         var canceled = new TaskCompletionSource<int>();
         var disposed = new TaskCompletionSource<int>();
-        var disposedSubscription = Signal.FromTask(disposed.Task).Subscribe(_ => values.Add(NinetyNine), ex => errors.Add(ex.GetType().Name));
+        var disposedSubscription = Signal.FromTask(disposed.Task).Subscribe(_ => AddValue(NinetyNine), AddError);
         disposedSubscription.Dispose();
 
-        Signal.FromTask(success.Task).Subscribe(values.Add, ex => errors.Add(ex.GetType().Name));
-        Signal.FromTask(fault.Task).Subscribe(values.Add, ex => errors.Add(ex.GetType().Name));
-        Signal.FromTask(canceled.Task).Subscribe(values.Add, ex => errors.Add(ex.GetType().Name));
+        Signal.FromTask(success.Task).Subscribe(AddValue, AddError);
+        Signal.FromTask(fault.Task).Subscribe(AddValue, AddError);
+        Signal.FromTask(canceled.Task).Subscribe(AddValue, AddError);
         success.SetResult(Seven);
         fault.SetException(new InvalidOperationException("pending-fault"));
         canceled.SetCanceled(new CancellationToken(true));
         disposed.SetResult(NinetyNine);
 
-        await SpinUntil(() => values.Contains(Seven) && errors.Contains(nameof(InvalidOperationException)) && errors.Contains(nameof(TaskCanceledException)), TimeSpan.FromSeconds(TimeoutSeconds)).ConfigureAwait(false);
-        Assert.Equal(new[] { Seven }, values);
-        Assert.Contains(nameof(InvalidOperationException), errors);
-        Assert.Contains(nameof(TaskCanceledException), errors);
+        await SpinUntil(ObservedPendingBranches, TimeSpan.FromSeconds(TimeoutSeconds)).ConfigureAwait(false);
+        var finalValues = values.ToArray();
+        var finalErrors = errors.ToArray();
+        Assert.Equal(1, finalValues.Length);
+        Assert.Equal(Seven, finalValues[0]);
+        Assert.Contains(nameof(InvalidOperationException), finalErrors);
+        Assert.Contains(nameof(TaskCanceledException), finalErrors);
     }
 
     /// <summary>
@@ -874,7 +891,9 @@ public class CoverageRemainderTests
     [Test]
     public void LowLevelReflectionAndSchedulingPathsCoverRemainingBranches()
     {
+#pragma warning disable IL3050
         var priorityItemType = typeof(PriorityQueue<int>).GetNestedType("IndexedItem", BindingFlags.NonPublic)!.MakeGenericType(typeof(int));
+#pragma warning restore IL3050
         var left = Activator.CreateInstance(priorityItemType)!;
         var right = Activator.CreateInstance(priorityItemType)!;
         priorityItemType.GetField("Id")!.SetValue(left, 1L);
@@ -899,7 +918,9 @@ public class CoverageRemainderTests
         Assert.True(scheduledDisposed);
 
         var cancelDisposed = false;
+#pragma warning disable IL3050
         var safeType = typeof(Witness).GetNestedType("SafeWitness`1", BindingFlags.NonPublic)!.MakeGenericType(typeof(int));
+#pragma warning restore IL3050
         var safe = (IObserver<int>)Activator.CreateInstance(
             safeType,
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
