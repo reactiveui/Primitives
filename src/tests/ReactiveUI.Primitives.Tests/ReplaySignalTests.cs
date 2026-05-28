@@ -47,6 +47,15 @@ public class ReplaySignalTests
         CreateAndDispose(() => new ReplaySignal<int>(0, EmptySequencer.Instance));
         CreateAndDispose(() => new ReplaySignal<int>(TimeSpan.Zero, EmptySequencer.Instance));
         CreateAndDispose(() => new ReplaySignal<int>(0, TimeSpan.Zero, EmptySequencer.Instance));
+
+        CreateAndDispose(() => new HistorySignal<int>());
+        CreateAndDispose(() => new HistorySignal<int>(EmptySequencer.Instance));
+        CreateAndDispose(() => new HistorySignal<int>(0));
+        CreateAndDispose(() => new HistorySignal<int>(0, EmptySequencer.Instance));
+        CreateAndDispose(() => new HistorySignal<int>(TimeSpan.Zero));
+        CreateAndDispose(() => new HistorySignal<int>(TimeSpan.Zero, EmptySequencer.Instance));
+        CreateAndDispose(() => new HistorySignal<int>(0, TimeSpan.Zero));
+        CreateAndDispose(() => new HistorySignal<int>(0, TimeSpan.Zero, EmptySequencer.Instance));
     }
 
     /// <summary>

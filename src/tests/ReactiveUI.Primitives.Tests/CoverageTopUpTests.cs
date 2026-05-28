@@ -46,10 +46,22 @@ public sealed class CoverageTopUpTests
 
         var delayedStart = source.DelayStart(TimeSpan.Zero);
         Assert.NotNull(delayedStart);
+        Assert.NotNull(source.DelaySubscription(TimeSpan.Zero));
+        Assert.NotNull(source.DelaySubscription(TimeSpan.Zero, Sequencer.Immediate));
+        Assert.NotNull(source.Stabilize(TimeSpan.Zero));
+        Assert.NotNull(source.Stabilize(TimeSpan.Zero, Sequencer.Immediate));
 
         var fused = new List<int>();
         Signal.Emit(One).FuseLatest(Signal.FromEnumerable([Two, Three]), (left, right) => left + right).Subscribe(fused.Add);
         Assert.Equal(new[] { Three, Four }, fused);
+
+        var chainedStrings = new List<string>();
+        Signal.Chain(Signal.Emit("value")).Subscribe(chainedStrings.Add);
+        Assert.Equal(new[] { "value" }, chainedStrings);
+
+        var ignoredCatchCompleted = 0;
+        Signal.Fail<int>(new InvalidOperationException("ignored")).Recover<int, Exception>(Handle.CatchIgnore<int>).Subscribe(_ => { }, ex => throw ex, () => ignoredCatchCompleted++);
+        Assert.Equal(1, ignoredCatchCompleted);
 
         var rangeArray = new List<int[]>();
         var rangeList = new List<IList<int>>();
@@ -339,6 +351,9 @@ public sealed class CoverageTopUpTests
         Assert.Equal(new[] { One, Two }, startWithAlias);
         Assert.NotNull(LinqMixins.DelayStart(Signal.Emit(One), TimeSpan.Zero));
         Assert.Equal(0, await Signal.None<int>().FirstOrDefaultAsync().ConfigureAwait(false));
+        var noneWitnessCompleted = 0;
+        Signal.None(Sequencer.Immediate, One).Subscribe(_ => { }, ex => throw ex, () => noneWitnessCompleted++);
+        Assert.Equal(1, noneWitnessCompleted);
 
         Assert.Throws<ArgumentNullException>(() => LinqMixins.Buffer<int>(null!, One));
         Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Emit(One).Buffer(0));
@@ -428,6 +443,21 @@ public sealed class CoverageTopUpTests
         disposedSubscription.Dispose();
         disposedInner.OnNext(Three);
         Assert.Equal(0, disposedValues.Count);
+
+        Assert.Throws<ArgumentNullException>(() => outer.FlatMap(inner => inner).Subscribe(null!));
+        Assert.Throws<ArgumentNullException>(() => outer.FlatMap(inner => inner, (left, right) => right).Subscribe(null!));
+
+        var nullSelectorErrors = new List<string>();
+        Signal.Emit(One).FlatMap<int, int>(_ => null!).Subscribe(_ => { }, ex => nullSelectorErrors.Add(ex.Message));
+        Assert.Equal(new[] { "The FlatMap selector returned null." }, nullSelectorErrors);
+
+        var nullCollectionErrors = new List<string>();
+        Signal.Emit(One).FlatMap<int, int, int>(_ => null!, (left, right) => left + right).Subscribe(_ => { }, ex => nullCollectionErrors.Add(ex.Message));
+        Assert.Equal(new[] { "The FlatMap collection selector returned null." }, nullCollectionErrors);
+
+        var resultInnerErrors = new List<string>();
+        Signal.Emit(One).FlatMap(_ => Signal.Fail<int>(new InvalidOperationException("result-inner")), (left, right) => left + right).Subscribe(_ => { }, ex => resultInnerErrors.Add(ex.Message));
+        Assert.Equal(new[] { "result-inner" }, resultInnerErrors);
 
         var subscribeErrors = new List<string>();
         Signal.Emit(One)
