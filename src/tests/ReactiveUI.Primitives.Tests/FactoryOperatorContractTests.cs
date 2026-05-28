@@ -300,10 +300,10 @@ public class FactoryOperatorContractTests
         var completed = 0;
         var disposed = 0;
 
-        Signal.Range(SecondValue, RetrySuccessAttempt)
-            .Concat(Signal.Repeat(RepeatValue, SecondValue))
-            .Concat(Signal.Unfold(FirstValue, state => state <= RetrySuccessAttempt, state => state + FirstValue, state => state * ProjectionMultiplier))
-            .Concat(Signal.Use(
+        Signal.Sequence(SecondValue, RetrySuccessAttempt)
+            .Chain(Signal.Loop(RepeatValue, SecondValue))
+            .Chain(Signal.Unfold(FirstValue, state => state <= RetrySuccessAttempt, state => state + FirstValue, state => state * ProjectionMultiplier))
+            .Chain(Signal.Use(
                 () => Disposable.Create(() => disposed++),
                 _ => Signal.FromEnumerable([ResourceFirstValue, ResourceSecondValue])))
             .Subscribe(values.Add, ex => throw ex, () => completed++);
@@ -327,15 +327,15 @@ public class FactoryOperatorContractTests
         Signal.FromEnumerable([FirstValue, SecondValue, SecondValue, RetrySuccessAttempt, FourthValue])
             .Map(value => value * SecondValue)
             .Keep(value => value >= FourthValue)
-            .DistinctUntilChanged()
+            .Unique()
             .Tap(_ => taps++)
-            .Scan(0, (sum, value) => sum + value)
+            .Fold(0, (sum, value) => sum + value)
             .Take(RetrySuccessAttempt)
-            .Sparkify()
+            .Spark()
             .Subscribe(sparks.Add);
 
         Signal.FromEnumerable(sparks).Unspark().Subscribe(values.Add);
-        Signal.FromEnumerable(FourItemExpected).Fold(0, (sum, value) => sum + value).Subscribe(terminal.Add);
+        Signal.FromEnumerable(FourItemExpected).Reduce(0, (sum, value) => sum + value).Subscribe(terminal.Add);
 
         Assert.Equal(UnaryExpected, values);
         Assert.Equal(new[] { ProjectedFirstValue }, terminal);
@@ -344,14 +344,14 @@ public class FactoryOperatorContractTests
     }
 
     /// <summary>
-    /// Verifies cold select and where operators detach from their source when disposed.
+    /// Verifies cold map and keep operators detach from their source when disposed.
     /// </summary>
     [Test]
-    public void SelectAndWhereStayColdUntilSubscribedAndDetachOnDispose()
+    public void MapAndKeepStayColdUntilSubscribedAndDetachOnDispose()
     {
         var source = new Signal<int>();
-        var selected = source.Select(static value => value + 1);
-        var filtered = source.Where(static value => value > 1);
+        var selected = source.Map(static value => value + 1);
+        var filtered = source.Keep(static value => value > 1);
 
         Assert.False(source.HasObservers);
 
@@ -392,19 +392,19 @@ public class FactoryOperatorContractTests
         var rangeForkJoin = new List<int>();
         var rangeObserver = new RecordingObserver<int>();
 
-        var rangeConcatSignal = Signal.Concat(Signal.Range(FirstValue, SecondValue), Signal.Range(RetrySuccessAttempt, SecondValue));
-        Signal.Merge(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable([RetrySuccessAttempt, FourthValue])).Subscribe(merged.Add);
-        Signal.Concat(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable([RetrySuccessAttempt, FourthValue])).Subscribe(concatenated.Add);
-        Signal.Zip(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable([ProjectedFirstValue, ProjectedThirdValue]), (left, right) => left + right).Subscribe(zipped.Add);
-        Signal.CombineLatest(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable(["a", "b"]), (left, right) => left + right).Subscribe(latest.Add);
+        var rangeConcatSignal = Signal.Chain(Signal.Sequence(FirstValue, SecondValue), Signal.Sequence(RetrySuccessAttempt, SecondValue));
+        Signal.Blend(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable([RetrySuccessAttempt, FourthValue])).Subscribe(merged.Add);
+        Signal.Chain(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable([RetrySuccessAttempt, FourthValue])).Subscribe(concatenated.Add);
+        Signal.Pair(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable([ProjectedFirstValue, ProjectedThirdValue]), (left, right) => left + right).Subscribe(zipped.Add);
+        Signal.SyncLatest(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable(["a", "b"]), (left, right) => left + right).Subscribe(latest.Add);
         rangeConcatSignal.Subscribe(rangeConcatenated.Add);
         rangeConcatSignal.Subscribe(rangeObserver);
-        Signal.Merge(Signal.Range(FirstValue, SecondValue), Signal.Range(RetrySuccessAttempt, SecondValue)).Subscribe(rangeMerged.Add);
-        Signal.Race(Signal.Range(FirstValue, SecondValue), Signal.Range(RetrySuccessAttempt, SecondValue)).Subscribe(rangeRace.Add);
-        Signal.Amb(Signal.Range(FirstValue, SecondValue), Signal.Range(RetrySuccessAttempt, SecondValue)).Subscribe(rangeAmb.Add);
-        Signal.CombineLatest(Signal.Range(FirstValue, SecondValue), Signal.Range(ProjectionMultiplier, SecondValue), static (left, right) => left + right).Subscribe(rangeLatest.Add);
-        Signal.Range(FirstValue, SecondValue).WithLatest(Signal.Range(ProjectionMultiplier, SecondValue), static (left, right) => left + right).Subscribe(rangeWithLatest.Add);
-        Signal.ForkJoin(Signal.Range(FirstValue, SecondValue), Signal.Range(ProjectionMultiplier, SecondValue), static (left, right) => left + right).Subscribe(rangeForkJoin.Add);
+        Signal.Blend(Signal.Sequence(FirstValue, SecondValue), Signal.Sequence(RetrySuccessAttempt, SecondValue)).Subscribe(rangeMerged.Add);
+        Signal.Race(Signal.Sequence(FirstValue, SecondValue), Signal.Sequence(RetrySuccessAttempt, SecondValue)).Subscribe(rangeRace.Add);
+        Signal.Race(Signal.Sequence(FirstValue, SecondValue), Signal.Sequence(RetrySuccessAttempt, SecondValue)).Subscribe(rangeAmb.Add);
+        Signal.SyncLatest(Signal.Sequence(FirstValue, SecondValue), Signal.Sequence(ProjectionMultiplier, SecondValue), static (left, right) => left + right).Subscribe(rangeLatest.Add);
+        Signal.Sequence(FirstValue, SecondValue).Latch(Signal.Sequence(ProjectionMultiplier, SecondValue), static (left, right) => left + right).Subscribe(rangeWithLatest.Add);
+        Signal.ForkJoin(Signal.Sequence(FirstValue, SecondValue), Signal.Sequence(ProjectionMultiplier, SecondValue), static (left, right) => left + right).Subscribe(rangeForkJoin.Add);
         Assert.Throws<ArgumentNullException>(() => rangeConcatSignal.Subscribe((IObserver<int>)null!));
         Assert.Throws<ArgumentNullException>(() => ((IInlineSignal<int>)rangeConcatSignal).Subscribe(null!, _ => { }, () => { }));
         Assert.Throws<ArgumentNullException>(() => ((IInlineSignal<int>)rangeConcatSignal).Subscribe(_ => { }, _ => { }, null!));
@@ -433,7 +433,7 @@ public class FactoryOperatorContractTests
         var values = new List<int>();
         var completed = 0;
 
-        Signal.Zip(Signal.Range(FirstValue, FourthValue), Signal.Range(ProjectionMultiplier, SecondValue), static (left, right) => left + right)
+        Signal.Pair(Signal.Sequence(FirstValue, FourthValue), Signal.Sequence(ProjectionMultiplier, SecondValue), static (left, right) => left + right)
             .Subscribe(values.Add, _ => { }, () => completed++);
 
         Assert.Equal(RangeZipShorterExpected, values);
@@ -449,14 +449,14 @@ public class FactoryOperatorContractTests
         var attempts = 0;
         var values = new List<int>();
 
-        Signal.Defer(() =>
+        Signal.Lazy(() =>
             {
                 attempts++;
                 return attempts < RetrySuccessAttempt
-                    ? Signal.Throw<int>(new InvalidOperationException("try again"))
-                    : Signal.Return(RetryResult);
+                    ? Signal.Fail<int>(new InvalidOperationException("try again"))
+                    : Signal.Emit(RetryResult);
             })
-            .Retry(RetrySuccessAttempt)
+            .Reattempt(RetrySuccessAttempt)
             .Subscribe(values.Add);
 
         Assert.Equal(RetrySuccessAttempt, attempts);
@@ -527,7 +527,7 @@ public class FactoryOperatorContractTests
         var every = new List<long>();
 
         Signal.After(TimeSpan.FromTicks(AfterTicks), clock).Subscribe(after.Add);
-        Signal.Timer(clock.Now.AddTicks(AfterTicks), clock).Subscribe(absoluteTimer.Add);
+        Signal.After(clock.Now.AddTicks(AfterTicks), clock).Subscribe(absoluteTimer.Add);
         var subscription = Signal.Every(TimeSpan.FromTicks(EveryTicks), clock).Subscribe(every.Add);
 
         clock.AdvanceBy(TimeSpan.FromTicks(InitialAdvanceTicks));
@@ -570,13 +570,13 @@ public class FactoryOperatorContractTests
         var source = new Signal<int>();
 
         Signal.FromEnumerable([SecondValue, RetrySuccessAttempt])
-            .StartWith(0, FirstValue)
-            .Do(sideEffects.Add)
+            .Prepend(0, FirstValue)
+            .Tap(sideEffects.Add)
             .AsObservable()
             .Subscribe(values.Add);
 
-        Signal.Throw<int>(new InvalidOperationException("recover"))
-            .Catch(_ => Signal.Return(RetryResult))
+        Signal.Fail<int>(new InvalidOperationException("recover"))
+            .Recover(_ => Signal.Emit(RetryResult))
             .Subscribe(recovered.Add);
 
         source.ObserveOn(clock).Subscribe(observed.Add);
@@ -608,8 +608,8 @@ public class FactoryOperatorContractTests
         var latest = new List<string>();
         var forkJoined = new List<int>();
 
-        source.Throttle(TimeSpan.FromTicks(AfterTicks), clock).Subscribe(throttled.Add);
-        source.Sample(TimeSpan.FromTicks(InitialAdvanceTicks), clock).Subscribe(sampled.Add);
+        source.Calm(TimeSpan.FromTicks(AfterTicks), clock).Subscribe(throttled.Add);
+        source.Probe(TimeSpan.FromTicks(InitialAdvanceTicks), clock).Subscribe(sampled.Add);
         source.TimeInterval(clock).Subscribe(intervals.Add);
 
         source.OnNext(FirstValue);
@@ -621,7 +621,7 @@ public class FactoryOperatorContractTests
         source.OnCompleted();
         clock.AdvanceBy(TimeSpan.FromTicks(InitialAdvanceTicks));
 
-        Signal.FromEnumerable(TakeWhileExpected).ZipLatest(Signal.FromEnumerable(["a", "b"]), (left, right) => left + right).Subscribe(latest.Add);
+        Signal.FromEnumerable(TakeWhileExpected).PairLatest(Signal.FromEnumerable(["a", "b"]), (left, right) => left + right).Subscribe(latest.Add);
         Signal.ForkJoin(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable([ProjectedFirstValue, ProjectedThirdValue]), (left, right) => left + right).Subscribe(forkJoined.Add);
 
         Assert.Equal(ThrottleExpected, throttled);
@@ -642,13 +642,13 @@ public class FactoryOperatorContractTests
     {
         var first = await Signal.FromEnumerable([RetrySuccessAttempt, FourthValue]).FirstAsync();
         var collected = await Signal.FromEnumerable([FirstValue, SecondValue, RetrySuccessAttempt]).CollectArrayAsync();
-        var none = await Signal.Empty<int>().FirstOrDefaultAsync(RetryResult);
-        var rangeFirst = await Signal.Range(FirstValue, FourthValue).FirstAsync();
-        var rangeLast = await Signal.Range(FirstValue, FourthValue).ToTask();
-        var rangeCollected = await Signal.Range(FirstValue, RetrySuccessAttempt).CollectListAsync();
-        var count = await Signal.Range(FirstValue, FourthValue).CountAsync();
-        var countEven = await Signal.Range(FirstValue, FourthValue).CountAsync(static value => value % 2 == 0);
-        var any = await Signal.Range(FirstValue, FourthValue).AnyAsync(static value => value == FourthValue);
+        var none = await Signal.None<int>().FirstOrDefaultAsync(RetryResult);
+        var rangeFirst = await Signal.Sequence(FirstValue, FourthValue).FirstAsync();
+        var rangeLast = await Signal.Sequence(FirstValue, FourthValue).ToTask();
+        var rangeCollected = await Signal.Sequence(FirstValue, RetrySuccessAttempt).CollectListAsync();
+        var count = await Signal.Sequence(FirstValue, FourthValue).CountAsync();
+        var countEven = await Signal.Sequence(FirstValue, FourthValue).CountAsync(static value => value % 2 == 0);
+        var any = await Signal.Sequence(FirstValue, FourthValue).AnyAsync(static value => value == FourthValue);
 
         Assert.Equal(RetrySuccessAttempt, first);
         Assert.Equal(CollectedExpected, (IEnumerable<int>)collected);
@@ -674,9 +674,9 @@ public class FactoryOperatorContractTests
         using var cancelled = new CancellationTokenSource();
         await cancelled.CancelAsync();
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Range(FirstValue, -1));
-        Assert.Throws<ArgumentNullException>(() => Signal.Range(FirstValue, SecondValue, null!));
-        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Repeat(FirstValue, -1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Sequence(FirstValue, -1));
+        Assert.Throws<ArgumentNullException>(() => Signal.Sequence(FirstValue, SecondValue, null!));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Loop(FirstValue, -1));
         Assert.Throws<ArgumentNullException>(() => Signal.Unfold<int, int>(0, null!, static state => state, static state => state));
         Assert.Throws<ArgumentNullException>(() => Signal.Unfold<int, int>(0, static _ => true, null!, static state => state));
         Assert.Throws<ArgumentNullException>(() => Signal.Unfold<int, int>(0, static _ => true, static state => state, null!));
@@ -688,18 +688,18 @@ public class FactoryOperatorContractTests
         Assert.Throws<ArgumentNullException>(() => Signal.Start(static () => FirstValue, null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Start((Action)null!));
         Assert.Throws<ArgumentNullException>(() => Signal.After(TimeSpan.Zero, null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Timer(DateTimeOffset.UnixEpoch, null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.After(DateTimeOffset.UnixEpoch, null!));
         Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Every(TimeSpan.FromTicks(-1)));
-        Assert.Throws<ArgumentNullException>(() => Signal.Timer(TimeSpan.Zero, TimeSpan.Zero, null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.After(TimeSpan.Zero, TimeSpan.Zero, null!));
         Assert.Throws<ArgumentNullException>(() => Signal.FromAsync<int>((Func<Task<int>>)null!));
         Assert.Throws<ArgumentNullException>(() => Signal.FromAsync<int>((Func<CancellationToken, Task<int>>)null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).SubscribeOn(Sequencer.Immediate));
-        Assert.Throws<ArgumentNullException>(() => Signal.Empty<int>().SubscribeOn(null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.None<int>().SubscribeOn(null!));
 
-        Signal.Range(FirstValue, 0).Subscribe(values.Add, errors.Add, () => completed++);
-        Signal.Repeat(FirstValue, 0).Subscribe(values.Add, errors.Add, () => completed++);
-        Signal.Generate(FirstValue, value => value <= SecondValue, value => value + 1, value => value).Subscribe(values.Add);
-        Signal.Range(FirstValue, SecondValue).SubscribeOn(Sequencer.Immediate).Subscribe(values.Add);
+        Signal.Sequence(FirstValue, 0).Subscribe(values.Add, errors.Add, () => completed++);
+        Signal.Loop(FirstValue, 0).Subscribe(values.Add, errors.Add, () => completed++);
+        Signal.Iterate(FirstValue, value => value <= SecondValue, value => value + 1, value => value).Subscribe(values.Add);
+        Signal.Sequence(FirstValue, SecondValue).SubscribeOn(Sequencer.Immediate).Subscribe(values.Add);
         new[] { FirstValue, SecondValue }.ToObservable(cancelled.Token).Subscribe(values.Add, errors.Add, () => completed++);
         Signal.Start<int>(() => throw new InvalidOperationException("start failed"), Sequencer.Immediate).Subscribe(values.Add, errors.Add, () => completed++);
 
@@ -742,7 +742,7 @@ public class FactoryOperatorContractTests
             .Subscribe(distinctBy.Add);
         Signal.FromEnumerable([FirstValue, SecondValue, RetrySuccessAttempt, FirstValue]).TakeWhile(value => value < RetrySuccessAttempt).Subscribe(takeWhile.Add);
         Signal.FromEnumerable([FirstValue, SecondValue, RetrySuccessAttempt, FirstValue]).SkipWhile(value => value < RetrySuccessAttempt).Subscribe(skipWhile.Add);
-        Signal.Empty<int>().DefaultIfEmpty(RetryResult).Subscribe(defaulted.Add);
+        Signal.None<int>().DefaultIfEmpty(RetryResult).Subscribe(defaulted.Add);
 
         Assert.Equal(LeadAppendExpected, leadAppend);
         Assert.Equal(0, ignored.Count);
@@ -767,7 +767,7 @@ public class FactoryOperatorContractTests
         Signal.FromEnumerable([FirstValue, SecondValue, RetrySuccessAttempt]).Any(value => value == SecondValue).Subscribe(any.Add);
         Signal.FromEnumerable([SecondValue, FourthValue, SixthValue]).All(value => value % SecondValue == 0).Subscribe(all.Add);
         Signal.FromEnumerable([SecondValue, FourthValue, SixthValue]).Contains(FourthValue).Subscribe(contains.Add);
-        Signal.Empty<int>().IsEmpty().Subscribe(isEmpty.Add);
+        Signal.None<int>().IsEmpty().Subscribe(isEmpty.Add);
 
         Assert.Equal(new[] { RetrySuccessAttempt }, count);
         Assert.Equal(TrueExpected, any);
@@ -783,7 +783,7 @@ public class FactoryOperatorContractTests
     {
         var selected = new List<int>();
 
-        Signal.FromEnumerable(TakeWhileExpected).Bind(value => Signal.Range(value * ProjectionMultiplier, SecondValue)).Subscribe(selected.Add);
+        Signal.FromEnumerable(TakeWhileExpected).Bind(value => Signal.Sequence(value * ProjectionMultiplier, SecondValue)).Subscribe(selected.Add);
 
         Assert.Equal(SelectedProjectionExpected, selected);
     }
@@ -797,12 +797,12 @@ public class FactoryOperatorContractTests
         var converted = new[] { 4, AfterTicks }.ToObservable();
         var last = await converted.ToTask();
         var lastAlias = await converted.LastAsync();
-        var lastDefault = await Signal.Empty<int>().LastOrDefaultAsync(RetryResult);
-        var array = await Signal.Range(FirstValue, FourthValue).ToArrayAsync();
-        var list = await Signal.Range(FirstValue, FourthValue).ToListAsync();
+        var lastDefault = await Signal.None<int>().LastOrDefaultAsync(RetryResult);
+        var array = await Signal.Sequence(FirstValue, FourthValue).ToArrayAsync();
+        var list = await Signal.Sequence(FirstValue, FourthValue).ToListAsync();
 #pragma warning disable S6966 // This verifies the observable ToArray/ToList aliases, not async enumerable materialization.
-        var observedArray = await Signal.Range(FirstValue, SecondValue).ToArray().ToTask();
-        var observedList = await Signal.Range(FirstValue, SecondValue).ToList().ToTask();
+        var observedArray = await Signal.Sequence(FirstValue, SecondValue).ToArray().ToTask();
+        var observedList = await Signal.Sequence(FirstValue, SecondValue).ToList().ToTask();
 #pragma warning restore S6966
         var first = await Signal.FromEnumerable([RepeatValue, ProjectionMultiplier]).FirstAsync().ToTask();
         var started = await Signal.Start(() => ProjectedSecondValue, Sequencer.CurrentThread).ToTask();

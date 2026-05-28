@@ -13,13 +13,13 @@ namespace ReactiveUI.Primitives.Signals;
 public static partial class Signal
 {
     /// <summary>
-    /// Return single sequence on specified scheduler.
+    /// Emit a single value on the specified scheduler.
     /// </summary>
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="value">The value.</param>
     /// <param name="scheduler">The scheduler.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<T> Return<T>(T value, ISequencer scheduler)
+    public static IObservable<T> Emit<T>(T value, ISequencer scheduler)
     {
         if (scheduler == Sequencer.Immediate)
         {
@@ -30,45 +30,45 @@ public static partial class Signal
     }
 
     /// <summary>
-    /// Return single sequence Immediately.
+    /// Emit a single value immediately.
     /// </summary>
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="value">The value.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<T> Return<T>(T value) =>
-        Return(value, Sequencer.Immediate);
+    public static IObservable<T> Emit<T>(T value) =>
+        Emit(value, Sequencer.Immediate);
 
     /// <summary>
-    /// Return single sequence Immediately, optimized for RxVoid(no allocate memory).
+    /// Emit a single RxVoid value immediately, optimized for no allocation.
     /// </summary>
     /// <param name="value">The value.</param>
     /// <returns>An Signals.</returns>
 #pragma warning disable RCS1163 // Unused parameter.
-    public static IObservable<RxVoid> Return(RxVoid value) =>
+    public static IObservable<RxVoid> Emit(RxVoid value) =>
         ImmutableReturnRxVoidSignal.Instance;
 #pragma warning restore RCS1163 // Unused parameter.
 
     /// <summary>
-    /// Return single sequence Immediately, optimized for Boolean(no allocate memory).
+    /// Emit a single Boolean value immediately, optimized for no allocation.
     /// </summary>
     /// <param name="value">if set to <c>true</c> [value].</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<bool> Return(bool value) => value
+    public static IObservable<bool> Emit(bool value) => value
             ? ImmutableReturnTrueSignal.Instance
             : ImmutableReturnFalseSignal.Instance;
 
     /// <summary>
-    /// Return single sequence Immediately, optimized for Int32.
+    /// Emit a single Int32 value immediately, optimized for cached values.
     /// </summary>
     /// <param name="value">The value.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<int> Return(int value) =>
+    public static IObservable<int> Emit(int value) =>
         ImmutableReturnInt32Signal.GetInt32Signals(value);
 
     /// <summary>
-    /// Same as Signals.Return(RxVoid.Default); but no allocate memory.
+    /// Same as Signals.Emit(RxVoid.Default); but no allocate memory.
     /// </summary>
     /// <returns>An Signals.</returns>
-    public static IObservable<RxVoid> ReturnRxVoid() =>
+    public static IObservable<RxVoid> EmitRxVoid() =>
         ImmutableReturnRxVoidSignal.Instance;
 }

@@ -89,10 +89,10 @@ internal static class Program
         Console.WriteLine($"SystemReactiveDefaultIfEmptyEmpty={startWith.SystemReactiveDefaultIfEmptyEmpty()}");
         Console.WriteLine($"R3DefaultIfEmptyEmpty={startWith.R3DefaultIfEmptyEmpty()}");
 
-        var selectMany = new OperatorSelectManyRangeBenchmarks();
-        Console.WriteLine($"PrimitivesSelectManyRange={selectMany.PrimitivesSelectManyRange()}");
-        Console.WriteLine($"SystemReactiveSelectManyRange={selectMany.SystemReactiveSelectManyRange()}");
-        Console.WriteLine($"R3SelectManyRange={selectMany.R3SelectManyRange()}");
+        var flatMap = new OperatorFlatMapRangeBenchmarks();
+        Console.WriteLine($"PrimitivesFlatMapRange={flatMap.PrimitivesFlatMapRange()}");
+        Console.WriteLine($"SystemReactiveSelectManyRange={flatMap.SystemReactiveSelectManyRange()}");
+        Console.WriteLine($"R3SelectManyRange={flatMap.R3SelectManyRange()}");
 
         var zip = new OperatorZipBenchmarks();
         Console.WriteLine($"PrimitivesZip={zip.PrimitivesZip()}");
@@ -118,17 +118,17 @@ internal static class Program
         Console.WriteLine($"R3SubjectSubscribeDispose64={subscriptions.R3SubjectSubscribeDispose64()}");
 
         var stateful = new StatefulSignalBenchmarks();
-        Console.WriteLine($"PrimitivesBehaviourSignal32={stateful.PrimitivesBehaviourSignal32()}");
+        Console.WriteLine($"PrimitivesStateSignal32={stateful.PrimitivesStateSignal32()}");
         Console.WriteLine($"SystemReactiveBehaviorSubject32={stateful.SystemReactiveBehaviorSubject32()}");
         Console.WriteLine($"R3BehaviorSubject32={stateful.R3BehaviorSubject32()}");
-        Console.WriteLine($"PrimitivesBehaviourSignal1024={stateful.PrimitivesBehaviourSignal1024()}");
+        Console.WriteLine($"PrimitivesStateSignal1024={stateful.PrimitivesStateSignal1024()}");
         Console.WriteLine($"SystemReactiveBehaviorSubject1024={stateful.SystemReactiveBehaviorSubject1024()}");
         Console.WriteLine($"R3BehaviorSubject1024={stateful.R3BehaviorSubject1024()}");
 
-        var replay = new ReplaySignalBenchmarks();
-        Console.WriteLine($"PrimitivesReplaySubscribe={replay.PrimitivesReplaySubscribe()}");
-        Console.WriteLine($"SystemReactiveReplaySubscribe={replay.SystemReactiveReplaySubscribe()}");
-        Console.WriteLine($"R3ReplaySubscribe={replay.R3ReplaySubscribe()}");
+        var history = new HistorySignalBenchmarks();
+        Console.WriteLine($"PrimitivesHistorySubscribe={history.PrimitivesHistorySubscribe()}");
+        Console.WriteLine($"SystemReactiveReplaySubscribe={history.SystemReactiveReplaySubscribe()}");
+        Console.WriteLine($"R3ReplaySubscribe={history.R3ReplaySubscribe()}");
 
         var taskBridge = new AsyncBridgeBenchmarks();
         Console.WriteLine($"PrimitivesCompletedTaskBridge={taskBridge.PrimitivesCompletedTaskBridge()}");

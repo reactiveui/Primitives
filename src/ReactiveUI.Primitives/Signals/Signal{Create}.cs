@@ -134,12 +134,12 @@ public static partial class Signal
     }
 
     /// <summary>
-    /// Defers the specified observable factory.
+    /// Lazily creates the source sequence for each subscription.
     /// </summary>
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="observableFactory">The observable factory.</param>
     /// <returns>An Observable.</returns>
-    public static IObservable<T> Defer<T>(Func<IObservable<T>> observableFactory)
+    public static IObservable<T> Lazy<T>(Func<IObservable<T>> observableFactory)
     {
         if (observableFactory == null)
         {

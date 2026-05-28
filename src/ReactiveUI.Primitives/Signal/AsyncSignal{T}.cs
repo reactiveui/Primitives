@@ -55,7 +55,7 @@ public partial class AsyncSignal<T> : IAwaitSignal<T>
     /// <value>
     /// The value.
     /// </value>
-    /// <exception cref="InvalidOperationException">AsyncSubject is not completed yet.</exception>
+    /// <exception cref="InvalidOperationException">The final signal is not completed yet.</exception>
     public T Value
     {
         get
@@ -63,7 +63,7 @@ public partial class AsyncSignal<T> : IAwaitSignal<T>
             ThrowIfDisposed();
             if (!IsCompleted)
             {
-                throw new InvalidOperationException("AsyncSubject is not completed yet");
+                throw new InvalidOperationException("FinalSignal is not completed yet");
             }
 
             _lastError.Rethrow();
@@ -261,7 +261,7 @@ public partial class AsyncSignal<T> : IAwaitSignal<T>
     }
 
     /// <summary>
-    /// Gets an awaitable object for the current AsyncSubject.
+    /// Gets an awaitable object for the current final signal.
     /// </summary>
     /// <returns>Object that can be awaited.</returns>
     public IAwaitSignal<T> GetAwaiter() => this;

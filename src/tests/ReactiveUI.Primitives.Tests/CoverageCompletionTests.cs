@@ -270,8 +270,8 @@ public class CoverageCompletionTests
     [Test]
     public void NullGuardsCoverPublicFactoryOperatorAndObserverContracts()
     {
-        IObservable<int> source = Signal.Return(1);
-        IObservable<object?> objects = Signal.Return<object?>("value");
+        IObservable<int> source = Signal.Emit(1);
+        IObservable<object?> objects = Signal.Emit<object?>("value");
 
         CoverUnaryOperatorNullGuards(source);
         CoverHigherOrderOperatorNullGuards(source);
@@ -290,14 +290,14 @@ public class CoverageCompletionTests
         var terminal = 0;
 
         Signal.FromEnumerable(new object?[] { "a", null, Two, "bbb", "cc", Three })
-            .OfType<string>()
+            .KeepType<string>()
             .MapWith("!", (suffix, value) => value + suffix)
             .KeepWith(Two, (min, value) => value.Length >= min)
             .TapWith(sideEffects, (sink, value) => sink.Add(value))
-            .Cast<string>()
+            .CastTo<string>()
             .Skip(1)
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .DistinctUntilChanged(StringComparer.OrdinalIgnoreCase)
+            .Unique(StringComparer.OrdinalIgnoreCase)
             .Subscribe(values.Add, ex => throw ex, () => terminal++);
 
         Assert.Equal(ExpectedOperatorValues, values);
@@ -310,12 +310,12 @@ public class CoverageCompletionTests
 
         var emptyTake = new List<int>();
         var emptyTakeCompleted = 0;
-        Signal.Range(1, Three).Take(0).Subscribe(emptyTake.Add, ex => throw ex, () => emptyTakeCompleted++);
+        Signal.Sequence(1, Three).Take(0).Subscribe(emptyTake.Add, ex => throw ex, () => emptyTakeCompleted++);
         Assert.Equal(0, emptyTake.Count);
         Assert.Equal(1, emptyTakeCompleted);
 
         var skipAll = new List<int>();
-        Signal.Range(1, Three).Skip(Ten).Subscribe(skipAll.Add);
+        Signal.Sequence(1, Three).Skip(Ten).Subscribe(skipAll.Add);
         Assert.Equal(0, skipAll.Count);
 
         var anyFalse = new List<bool>();
@@ -333,7 +333,7 @@ public class CoverageCompletionTests
 
         var selectMany = new List<string>();
         Signal.FromEnumerable([1, Two])
-            .SelectMany(value => Signal.FromEnumerable([value, value + Ten]), (outer, inner) => outer + ":" + inner)
+            .FlatMap(value => Signal.FromEnumerable([value, value + Ten]), (outer, inner) => outer + ":" + inner)
             .Subscribe(selectMany.Add);
         Assert.Equal(ExpectedSelectMany, selectMany);
     }
@@ -352,8 +352,8 @@ public class CoverageCompletionTests
         var resumeValues = new List<int>();
         var finalErrors = new List<string>();
 
-        Signal.Throw<int>(new InvalidOperationException("spark"))
-            .Sparkify()
+        Signal.Fail<int>(new InvalidOperationException("spark"))
+            .Spark()
             .Subscribe(spark =>
             {
                 sparkKinds.Add(spark.Kind);
@@ -374,16 +374,16 @@ public class CoverageCompletionTests
             .Unspark()
             .Subscribe(unsparkValues.Add, ex => unsparkErrors.Add(ex.Message));
 
-        Signal.Throw<int>(new InvalidOperationException("recover"))
-            .Rescue(error => Signal.Return(error.Message.Length))
+        Signal.Fail<int>(new InvalidOperationException("recover"))
+            .Rescue(error => Signal.Emit(error.Message.Length))
             .Subscribe(rescueValues.Add);
 
-        Signal.Throw<int>(new InvalidOperationException("resume"))
+        Signal.Fail<int>(new InvalidOperationException("resume"))
             .Resume(Signal.FromEnumerable([Four, Five]))
             .Subscribe(resumeValues.Add);
 
-        Signal.Defer(() => Signal.Throw<int>(new InvalidOperationException("stop")))
-            .Retry(1)
+        Signal.Lazy(() => Signal.Fail<int>(new InvalidOperationException("stop")))
+            .Reattempt(1)
             .Subscribe(_ => { }, ex => finalErrors.Add(ex.Message));
 
         Assert.Equal(ExpectedSparkKinds, sparkKinds);
@@ -413,7 +413,7 @@ public class CoverageCompletionTests
         var forkJoinEmpty = new List<int>();
         var completed = new Dictionary<string, int>();
 
-        outer.Concat().Subscribe(concatValues.Add, ex => throw ex, () => completed["concat"] = 1);
+        outer.Chain().Subscribe(concatValues.Add, ex => throw ex, () => completed["concat"] = 1);
         outer.OnNext(first);
         outer.OnNext(second);
         first.OnNext(1);
@@ -424,7 +424,7 @@ public class CoverageCompletionTests
         second.OnCompleted();
         outer.OnCompleted();
 
-        Signal.Merge(Signal.FromEnumerable([1, Two]), Signal.FromEnumerable([Three]))
+        Signal.Blend(Signal.FromEnumerable([1, Two]), Signal.FromEnumerable([Three]))
             .Subscribe(mergeValues.Add, ex => throw ex, () => completed["merge"] = 1);
 
         var raceLoser = new Signal<int>();
@@ -437,7 +437,7 @@ public class CoverageCompletionTests
         var switchOuter = new Signal<IObservable<int>>();
         var oldInner = new Signal<int>();
         var newInner = new Signal<int>();
-        switchOuter.Switch().Subscribe(switchValues.Add, ex => throw ex, () => completed["switch"] = 1);
+        switchOuter.SwitchTo().Subscribe(switchValues.Add, ex => throw ex, () => completed["switch"] = 1);
         switchOuter.OnNext(oldInner);
         oldInner.OnNext(1);
         switchOuter.OnNext(newInner);
@@ -448,7 +448,7 @@ public class CoverageCompletionTests
 
         var left = new Signal<int>();
         var right = new Signal<string>();
-        left.WithLatest(right, (l, r) => l + r).Subscribe(withLatestValues.Add);
+        left.Latch(right, (l, r) => l + r).Subscribe(withLatestValues.Add);
         left.OnNext(1);
         right.OnNext("a");
         left.OnNext(Two);
@@ -457,10 +457,10 @@ public class CoverageCompletionTests
         left.OnCompleted();
 
         Signal.FromEnumerable([1, Two, Three])
-            .Zip(Signal.Return(Ten), (l, r) => l + r)
+            .Pair(Signal.Emit(Ten), (l, r) => l + r)
             .Subscribe(zipShortValues.Add, ex => throw ex, () => completed["zip"] = 1);
-        Signal.Empty<int>()
-            .ForkJoin(Signal.Return(1), (l, r) => l + r)
+        Signal.None<int>()
+            .ForkJoin(Signal.Emit(1), (l, r) => l + r)
             .Subscribe(forkJoinEmpty.Add, ex => throw ex, () => completed["forkJoinEmpty"] = 1);
 
         Assert.Equal(ExpectedConcatValues, concatValues);
@@ -502,21 +502,21 @@ public class CoverageCompletionTests
         manual.OnNext(Two);
         Assert.Equal(ExpectedDelayStartValues, delayStartValues);
 
-        Signal.FromEnumerable([Three, Four]).Delay(TimeSpan.FromTicks(Three), clock).Subscribe(delayedValues.Add);
+        Signal.FromEnumerable([Three, Four]).Shift(TimeSpan.FromTicks(Three), clock).Subscribe(delayedValues.Add);
         clock.AdvanceBy(TimeSpan.FromTicks(Two));
         Assert.Equal(0, delayedValues.Count);
         clock.AdvanceBy(TimeSpan.FromTicks(1));
         Assert.Equal(ExpectedDelayedValues, delayedValues);
 
         var never = new Signal<int>();
-        never.Timeout(TimeSpan.FromTicks(Four), clock).Subscribe(timeoutValues.Add, ex => timeoutErrors.Add(ex.GetType().Name));
+        never.Expire(TimeSpan.FromTicks(Four), clock).Subscribe(timeoutValues.Add, ex => timeoutErrors.Add(ex.GetType().Name));
         clock.AdvanceBy(TimeSpan.FromTicks(Four));
         never.OnNext(FortyTwo);
         Assert.Equal(0, timeoutValues.Count);
         Assert.Equal(ExpectedTimeoutErrors, timeoutErrors);
 
         var completed = new Signal<int>();
-        completed.Timeout(TimeSpan.FromTicks(Ten), clock).Subscribe(timeoutValues.Add);
+        completed.Expire(TimeSpan.FromTicks(Ten), clock).Subscribe(timeoutValues.Add);
         completed.OnNext(Seven);
         completed.OnCompleted();
         clock.AdvanceBy(TimeSpan.FromTicks(Ten));
@@ -527,7 +527,7 @@ public class CoverageCompletionTests
         pulse.Dispose();
         Assert.Equal(ExpectedTimerValues, pulseValues);
 
-        var timer = Signal.Timer(TimeSpan.FromTicks(Three), TimeSpan.FromTicks(Two), clock).Subscribe(timerValues.Add);
+        var timer = Signal.After(TimeSpan.FromTicks(Three), TimeSpan.FromTicks(Two), clock).Subscribe(timerValues.Add);
         clock.AdvanceBy(TimeSpan.FromTicks(Three));
         clock.AdvanceBy(TimeSpan.FromTicks(Four));
         timer.Dispose();
@@ -551,7 +551,7 @@ public class CoverageCompletionTests
         var asyncErrors = new List<string>();
 
         Signal.Use(() => Disposable.Empty, _ => (IObservable<int>)null!).Subscribe(_ => { }, ex => useErrors.Add(ex.Message));
-        Signal.Use<IDisposable, int>(() => throw new InvalidOperationException("resource"), _ => Signal.Return(1)).Subscribe(_ => { }, ex => useErrors.Add(ex.Message));
+        Signal.Use<IDisposable, int>(() => throw new InvalidOperationException("resource"), _ => Signal.Emit(1)).Subscribe(_ => { }, ex => useErrors.Add(ex.Message));
 
         await ObserveTaskError(Task.FromCanceled<int>(new CancellationToken(true)), taskErrors);
         await ObserveTaskError(Task.FromException<int>(new InvalidOperationException("faulted")), taskErrors);
@@ -566,12 +566,12 @@ public class CoverageCompletionTests
         Signal.FromAsyncEnumerable(ThrowingAsyncEnumerable()).Subscribe(asyncValues.Add, ex => asyncErrors.Add(ex.Message));
         await SpinUntil(() => asyncErrors.Count == 1, TimeSpan.FromSeconds(2));
 
-        var firstFailure = await AssertTaskFault(() => Signal.Empty<int>().FirstAsync(), typeof(InvalidOperationException));
+        var firstFailure = await AssertTaskFault(() => Signal.None<int>().FirstAsync(), typeof(InvalidOperationException));
         var collectFailure = await AssertTaskFault(
-            () => Signal.Throw<int>(new InvalidOperationException("collect")).CollectArrayAsync(),
+            () => Signal.Fail<int>(new InvalidOperationException("collect")).CollectArrayAsync(),
             typeof(InvalidOperationException));
         var listFailure = await AssertTaskFault(
-            () => Signal.Throw<int>(new InvalidOperationException("list")).CollectListAsync(),
+            () => Signal.Fail<int>(new InvalidOperationException("list")).CollectListAsync(),
             typeof(InvalidOperationException));
 
         Assert.Equal(ExpectedUseErrors, useErrors);
@@ -764,24 +764,24 @@ public class CoverageCompletionTests
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).KeepWith(1, (_, _) => true));
         Assert.Throws<ArgumentNullException>(() => source.KeepWith<int, int>(1, null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<string?>)null!).KeepNotNull());
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<object>)null!).OfType<string>());
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<object>)null!).Cast<string>());
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<object>)null!).KeepType<string>());
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<object>)null!).CastTo<string>());
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Tap(value => { }));
         Assert.Throws<ArgumentNullException>(() => source.Tap<int>(null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).TapWith(1, (_, _) => { }));
         Assert.Throws<ArgumentNullException>(() => source.TapWith<int, int>(1, null!));
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Scan(0, (left, right) => left + right));
-        Assert.Throws<ArgumentNullException>(() => source.Scan(0, null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Fold(0, (left, right) => left + right));
         Assert.Throws<ArgumentNullException>(() => source.Fold(0, null!));
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Reduce(0, (left, right) => left + right));
+        Assert.Throws<ArgumentNullException>(() => source.Reduce(0, null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Take(1));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Skip(1));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Distinct());
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).DistinctUntilChanged());
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Sparkify());
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Unique());
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Spark());
         Assert.Throws<ArgumentNullException>(() => ((IObservable<Spark<int>>)null!).Unspark());
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Delay(TimeSpan.Zero, Sequencer.Immediate));
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Timeout(TimeSpan.Zero, Sequencer.Immediate));
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Shift(TimeSpan.Zero, Sequencer.Immediate));
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Expire(TimeSpan.Zero, Sequencer.Immediate));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).CollectList());
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).ToSignal());
     }
@@ -792,24 +792,24 @@ public class CoverageCompletionTests
     /// <param name="source">The non-null source used for null argument checks.</param>
     private static void CoverHigherOrderOperatorNullGuards(IObservable<int> source)
     {
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<IObservable<int>>)null!).Concat());
-        Assert.Throws<ArgumentNullException>(() => Signal.Concat<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Concat(source, null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Merge<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Merge(source, null!));
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<IObservable<int>>)null!).Chain());
+        Assert.Throws<ArgumentNullException>(() => Signal.Chain<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Chain(source, null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Blend<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Blend(source, null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Race<int>(null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Race(source, null!));
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Zip(source, (left, _) => left));
-        Assert.Throws<ArgumentNullException>(() => source.Zip<int, int, int>(null!, (left, _) => left));
-        Assert.Throws<ArgumentNullException>(() => source.Zip<int, int, int>(source, null!));
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).CombineLatest(source, (left, _) => left));
-        Assert.Throws<ArgumentNullException>(() => source.CombineLatest<int, int, int>(null!, (left, _) => left));
-        Assert.Throws<ArgumentNullException>(() => source.CombineLatest<int, int, int>(source, null!));
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).WithLatest(source, (left, _) => left));
-        Assert.Throws<ArgumentNullException>(() => source.WithLatest<int, int, int>(null!, (left, _) => left));
-        Assert.Throws<ArgumentNullException>(() => source.WithLatest<int, int, int>(source, null!));
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<IObservable<int>>)null!).Switch());
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Retry(1));
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Pair(source, (left, _) => left));
+        Assert.Throws<ArgumentNullException>(() => source.Pair<int, int, int>(null!, (left, _) => left));
+        Assert.Throws<ArgumentNullException>(() => source.Pair<int, int, int>(source, null!));
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).SyncLatest(source, (left, _) => left));
+        Assert.Throws<ArgumentNullException>(() => source.SyncLatest<int, int, int>(null!, (left, _) => left));
+        Assert.Throws<ArgumentNullException>(() => source.SyncLatest<int, int, int>(source, null!));
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Latch(source, (left, _) => left));
+        Assert.Throws<ArgumentNullException>(() => source.Latch<int, int, int>(null!, (left, _) => left));
+        Assert.Throws<ArgumentNullException>(() => source.Latch<int, int, int>(source, null!));
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<IObservable<int>>)null!).SwitchTo());
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Reattempt(1));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Resume(source));
         Assert.Throws<ArgumentNullException>(() => source.Resume(null!));
     }
@@ -826,22 +826,22 @@ public class CoverageCompletionTests
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).DefaultIfEmpty());
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).DistinctBy(value => value));
         Assert.Throws<ArgumentNullException>(() => source.DistinctBy<int, int>(null!));
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).DistinctUntilChangedBy(value => value));
-        Assert.Throws<ArgumentNullException>(() => source.DistinctUntilChangedBy<int, int>(null!));
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).UniqueBy(value => value));
+        Assert.Throws<ArgumentNullException>(() => source.UniqueBy<int, int>(null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).TakeWhile(value => true));
         Assert.Throws<ArgumentNullException>(() => source.TakeWhile<int>(null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).SkipWhile(value => true));
         Assert.Throws<ArgumentNullException>(() => source.SkipWhile<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).SelectMany(value => source));
-        Assert.Throws<ArgumentNullException>(() => source.SelectMany<int, int>(null!));
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).FlatMap(value => source));
+        Assert.Throws<ArgumentNullException>(() => source.FlatMap<int, int>(null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Count());
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).LongCount());
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Any());
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).All(value => true));
         Assert.Throws<ArgumentNullException>(() => source.All<int>(null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).DelayStart(TimeSpan.Zero, Sequencer.Immediate));
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Throttle(TimeSpan.Zero, Sequencer.Immediate));
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Sample(TimeSpan.Zero, Sequencer.Immediate));
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Calm(TimeSpan.Zero, Sequencer.Immediate));
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Probe(TimeSpan.Zero, Sequencer.Immediate));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Timestamp(Sequencer.Immediate));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).TimeInterval(Sequencer.Immediate));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).ForkJoin(source, (left, _) => left));
@@ -858,19 +858,19 @@ public class CoverageCompletionTests
     private static void CoverFactoryAndObserverNullGuards(IObservable<object?> objects)
     {
         Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Defer<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Lazy<int>(null!));
         Assert.Throws<ArgumentNullException>(() => Signal.FromEnumerable<int>(null!));
         Assert.Throws<ArgumentNullException>(() => Signal.FromTask((Task<int>)null!));
         Assert.Throws<ArgumentNullException>(() => Signal.FromAsyncEnumerable<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Using<IDisposable, int>(null!, resource => Signal.Return(1)));
-        Assert.Throws<ArgumentNullException>(() => Signal.Using(() => Disposable.Empty, (Func<IDisposable, IObservable<int>>)null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Use<IDisposable, int>(null!, resource => Signal.Return(1)));
+        Assert.Throws<ArgumentNullException>(() => Signal.Use<IDisposable, int>(null!, resource => Signal.Emit(1)));
+        Assert.Throws<ArgumentNullException>(() => Signal.Use(() => Disposable.Empty, (Func<IDisposable, IObservable<int>>)null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Use<IDisposable, int>(null!, resource => Signal.Emit(1)));
         Assert.Throws<ArgumentNullException>(() => Signal.Use(() => Disposable.Empty, (Func<IDisposable, IObservable<int>>)null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Subscribe(value => { }));
-        Assert.Throws<ArgumentNullException>(() => Signal.Return(1).Subscribe((Action<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Return(1).Subscribe(value => { }, (Action<Exception>)null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Return(1).Subscribe(value => { }, ex => { }, null!));
-        Assert.Throws<ArgumentNullException>(() => objects.Cast<string>().Subscribe((IObserver<string>)null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Emit(1).Subscribe((Action<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Emit(1).Subscribe(value => { }, (Action<Exception>)null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Emit(1).Subscribe(value => { }, ex => { }, null!));
+        Assert.Throws<ArgumentNullException>(() => objects.CastTo<string>().Subscribe((IObserver<string>)null!));
     }
 
     /// <summary>

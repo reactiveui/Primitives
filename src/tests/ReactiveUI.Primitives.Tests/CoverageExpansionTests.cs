@@ -102,14 +102,14 @@ public class CoverageExpansionTests
     {
         var returned = new List<int>();
         var returnCompleted = 0;
-        Signal.Return(First, Sequencer.CurrentThread).Subscribe(returned.Add, ex => throw ex, () => returnCompleted++);
+        Signal.Emit(First, Sequencer.CurrentThread).Subscribe(returned.Add, ex => throw ex, () => returnCompleted++);
 
         var emptyCompleted = 0;
-        Signal.Empty<int>(Sequencer.CurrentThread).Subscribe(_ => { }, ex => throw ex, () => emptyCompleted++);
+        Signal.None<int>(Sequencer.CurrentThread).Subscribe(_ => { }, ex => throw ex, () => emptyCompleted++);
 
         var error = new InvalidOperationException("scheduled");
         var thrown = new List<Exception>();
-        Signal.Throw<int>(error, Sequencer.CurrentThread).Subscribe(_ => { }, thrown.Add, () => { });
+        Signal.Fail<int>(error, Sequencer.CurrentThread).Subscribe(_ => { }, thrown.Add, () => { });
 
         Assert.Equal(SingleFirstExpected, returned);
         Assert.Equal(1, returnCompleted);
@@ -155,7 +155,7 @@ public class CoverageExpansionTests
         Assert.Throws<ArgumentNullException>(() => Signal.CreateSafe<int>(null!, true));
         Assert.Throws<ArgumentNullException>(() => Signal.CreateWithState<int, int>(First, null!));
         Assert.Throws<ArgumentNullException>(() => Signal.CreateWithState<int, int>(First, null!, true));
-        Assert.Throws<ArgumentNullException>(() => Signal.Defer<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Lazy<int>(null!));
     }
 
     /// <summary>
@@ -170,7 +170,7 @@ public class CoverageExpansionTests
 
         using var canceledBeforeSubscribe = new CancellationTokenSource();
         canceledBeforeSubscribe.Cancel();
-        var alreadyCanceled = Signal.Never<int>().GetAwaiter(canceledBeforeSubscribe.Token);
+        var alreadyCanceled = Signal.Silent<int>().GetAwaiter(canceledBeforeSubscribe.Token);
         Assert.True(alreadyCanceled.IsCompleted);
         Assert.Throws<OperationCanceledException>(() => alreadyCanceled.GetResult());
 
@@ -191,42 +191,42 @@ public class CoverageExpansionTests
     public void CatchParamsFactoryCoversRecoveryAndFailureBranches()
     {
         var recovered = new List<int>();
-        Signal.Catch(
-                Signal.Throw<int>(new InvalidOperationException(FirstMessage)),
+        Signal.Recover(
+                Signal.Fail<int>(new InvalidOperationException(FirstMessage)),
                 Signal.FromEnumerable(CatchRecoveryExpected),
-                Signal.Throw<int>(new InvalidOperationException("unused")))
+                Signal.Fail<int>(new InvalidOperationException("unused")))
             .Subscribe(recovered.Add);
         Assert.Equal(CatchRecoveryExpected, recovered);
 
         var finalErrors = new List<Exception>();
         var finalError = new InvalidOperationException("last");
-        Signal.Catch(Signal.Throw<int>(new InvalidOperationException(FirstMessage)), Signal.Throw<int>(finalError))
+        Signal.Recover(Signal.Fail<int>(new InvalidOperationException(FirstMessage)), Signal.Fail<int>(finalError))
             .Subscribe(_ => { }, finalErrors.Add, () => { });
         Assert.Same(finalError, finalErrors[0]);
 
         var completed = 0;
-        var completedSubscription = Signal.Catch(Array.Empty<IObservable<int>>()).Subscribe(_ => { }, ex => throw ex, () => completed++);
+        var completedSubscription = Signal.Recover(Array.Empty<IObservable<int>>()).Subscribe(_ => { }, ex => throw ex, () => completed++);
         completedSubscription.Dispose();
         completedSubscription.Dispose();
         Assert.Equal(1, completed);
 
-        var activeSubscription = Signal.Catch(Signal.Never<int>()).Subscribe(_ => { }, ex => throw ex, () => { });
+        var activeSubscription = Signal.Recover(Signal.Silent<int>()).Subscribe(_ => { }, ex => throw ex, () => { });
         activeSubscription.Dispose();
 
         var nullSourceErrors = new List<Exception>();
-        Signal.Catch(new IObservable<int>?[] { null! }!)
+        Signal.Recover(new IObservable<int>?[] { null! }!)
             .Subscribe(_ => { }, nullSourceErrors.Add, () => { });
         Assert.True(nullSourceErrors[0] is InvalidOperationException);
 
         var moveNextErrors = new List<Exception>();
         var moveNextError = new InvalidOperationException("move-next");
-        new ThrowingMoveNextEnumerable<IObservable<int>>(moveNextError).Catch()
+        new ThrowingMoveNextEnumerable<IObservable<int>>(moveNextError).Recover()
             .Subscribe(_ => { }, moveNextErrors.Add, () => { });
         Assert.Same(moveNextError, moveNextErrors[0]);
 
         var getEnumeratorError = new InvalidOperationException("enumerator");
         Assert.Throws<InvalidOperationException>(() =>
-            new ThrowingEnumerable<IObservable<int>>(getEnumeratorError).Catch()
+            new ThrowingEnumerable<IObservable<int>>(getEnumeratorError).Recover()
                 .Subscribe(_ => { }, _ => { }, () => { }));
     }
 
@@ -250,7 +250,7 @@ public class CoverageExpansionTests
 
         var error = new InvalidOperationException("thread-pool");
         var observed = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using (Signal.Throw<int>(error)
+        using (Signal.Fail<int>(error)
                    .WitnessOn(ThreadPoolSequencer.Instance)
                    .Subscribe(_ => { }, observed.SetResult, () => { }))
         {

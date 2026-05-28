@@ -12,7 +12,7 @@ using RxBehaviorSubject = System.Reactive.Subjects.BehaviorSubject<int>;
 namespace ReactiveUI.Primitives.Benchmarks;
 
 /// <summary>
-/// Benchmarks for stateful behaviour/replay-like signal subscriptions.
+/// Benchmarks for stateful latest-value and replay-like signal subscriptions.
 /// </summary>
 [MemoryDiagnoser]
 public class StatefulSignalBenchmarks
@@ -21,13 +21,13 @@ public class StatefulSignalBenchmarks
     private const int Count1024 = 1024;
 
     /// <summary>
-    /// Baseline behavior-like stream updates with 32 notifications.
+    /// Baseline state signal updates with 32 notifications.
     /// </summary>
     /// <returns>The final sum plus latest value.</returns>
     [Benchmark(Baseline = true)]
-    public int PrimitivesBehaviourSignal32()
+    public int PrimitivesStateSignal32()
     {
-        return EmitAndReadBehaviourSignal(Count32);
+        return EmitAndReadStateSignal(Count32);
     }
 
     /// <summary>
@@ -51,13 +51,13 @@ public class StatefulSignalBenchmarks
     }
 
     /// <summary>
-    /// Baseline behavior-like stream updates with 1024 notifications.
+    /// Baseline state signal updates with 1024 notifications.
     /// </summary>
     /// <returns>The final sum plus latest value.</returns>
     [Benchmark]
-    public int PrimitivesBehaviourSignal1024()
+    public int PrimitivesStateSignal1024()
     {
-        return EmitAndReadBehaviourSignal(Count1024);
+        return EmitAndReadStateSignal(Count1024);
     }
 
     /// <summary>
@@ -80,10 +80,10 @@ public class StatefulSignalBenchmarks
         return EmitAndReadR3BehaviorSubject(Count1024);
     }
 
-    private static int EmitAndReadBehaviourSignal(int count)
+    private static int EmitAndReadStateSignal(int count)
     {
         var observer = new IntSignalObserver();
-        using var subject = new BehaviorSignal<int>(0);
+        using var subject = new StateSignal<int>(0);
         using var subscription = subject.Subscribe(observer);
         for (var i = 1; i <= count; i++)
         {

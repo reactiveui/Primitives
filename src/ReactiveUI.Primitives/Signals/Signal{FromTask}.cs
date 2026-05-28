@@ -203,7 +203,7 @@ public static partial class Signal
         ISequencer? scheduler,
         CancellationTokenSource? cancellationTokenSource) =>
         TaskSignal.Create<TResult>(
-            ao => Defer(() => Create<TResult>(observer => SubscribeTask(ao, execution, shouldEmit, observer))),
+            ao => Lazy(() => Create<TResult>(observer => SubscribeTask(ao, execution, shouldEmit, observer))),
             scheduler,
             cancellationTokenSource);
 

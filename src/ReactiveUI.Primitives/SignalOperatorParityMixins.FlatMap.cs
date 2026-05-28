@@ -7,16 +7,16 @@ using ReactiveUI.Primitives.Disposables;
 namespace ReactiveUI.Primitives;
 
 /// <content>
-/// SelectMany helper implementations.
+/// FlatMap helper implementations.
 /// </content>
 public static partial class LinqMixins
 {
     /// <summary>
-    /// Concatenating SelectMany signal that avoids the Map + Concat composition path.
+    /// Chaining FlatMap signal that avoids the Map + Chain composition path.
     /// </summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class SelectManySignal<TSource, TResult> : IObservable<TResult>
+    private sealed class FlatMapSignal<TSource, TResult> : IObservable<TResult>
     {
         /// <summary>
         /// The source observable.
@@ -29,11 +29,11 @@ public static partial class LinqMixins
         private readonly Func<TSource, IObservable<TResult>> _selector;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SelectManySignal{TSource, TResult}"/> class.
+        /// Initializes a new instance of the <see cref="FlatMapSignal{TSource, TResult}"/> class.
         /// </summary>
         /// <param name="source">The source observable.</param>
         /// <param name="selector">Projects source values to inner observables.</param>
-        internal SelectManySignal(IObservable<TSource> source, Func<TSource, IObservable<TResult>> selector)
+        internal FlatMapSignal(IObservable<TSource> source, Func<TSource, IObservable<TResult>> selector)
         {
             _source = source;
             _selector = selector;
@@ -47,17 +47,17 @@ public static partial class LinqMixins
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            return new SelectManyCoordinator<TSource, TResult>(_source, _selector, observer).Run();
+            return new FlatMapCoordinator<TSource, TResult>(_source, _selector, observer).Run();
         }
     }
 
     /// <summary>
-    /// Concatenating SelectMany signal with an outer/inner result selector.
+    /// Chaining FlatMap signal with an outer/inner result selector.
     /// </summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <typeparam name="TCollection">The inner value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class SelectManyResultSignal<TSource, TCollection, TResult> : IObservable<TResult>
+    private sealed class FlatMapResultSignal<TSource, TCollection, TResult> : IObservable<TResult>
     {
         /// <summary>
         /// The source observable.
@@ -75,12 +75,12 @@ public static partial class LinqMixins
         private readonly Func<TSource, TCollection, TResult> _resultSelector;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SelectManyResultSignal{TSource, TCollection, TResult}"/> class.
+        /// Initializes a new instance of the <see cref="FlatMapResultSignal{TSource, TCollection, TResult}"/> class.
         /// </summary>
         /// <param name="source">The source observable.</param>
         /// <param name="collectionSelector">Projects source values to inner observables.</param>
         /// <param name="resultSelector">Projects outer and inner values to result values.</param>
-        internal SelectManyResultSignal(
+        internal FlatMapResultSignal(
             IObservable<TSource> source,
             Func<TSource, IObservable<TCollection>> collectionSelector,
             Func<TSource, TCollection, TResult> resultSelector)
@@ -98,7 +98,7 @@ public static partial class LinqMixins
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            return new SelectManyResultCoordinator<TSource, TCollection, TResult>(
+            return new FlatMapResultCoordinator<TSource, TCollection, TResult>(
                 _source,
                 _collectionSelector,
                 _resultSelector,
@@ -107,11 +107,11 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Coordinates concat-style SelectMany subscriptions.
+    /// Coordinates chain-style FlatMap subscriptions.
     /// </summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class SelectManyCoordinator<TSource, TResult> : IDisposable
+    private sealed class FlatMapCoordinator<TSource, TResult> : IDisposable
     {
         /// <summary>
         /// Synchronizes subscription state.
@@ -184,12 +184,12 @@ public static partial class LinqMixins
         private bool _completedInnerWhileSubscribing;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SelectManyCoordinator{TSource, TResult}"/> class.
+        /// Initializes a new instance of the <see cref="FlatMapCoordinator{TSource, TResult}"/> class.
         /// </summary>
         /// <param name="source">The source observable.</param>
         /// <param name="selector">Projects source values to inner observables.</param>
         /// <param name="observer">The downstream observer.</param>
-        internal SelectManyCoordinator(
+        internal FlatMapCoordinator(
             IObservable<TSource> source,
             Func<TSource, IObservable<TResult>> selector,
             IObserver<TResult> observer)
@@ -254,7 +254,7 @@ public static partial class LinqMixins
             IObservable<TResult> inner;
             try
             {
-                inner = _selector(value) ?? throw new InvalidOperationException("The SelectMany selector returned null.");
+                inner = _selector(value) ?? throw new InvalidOperationException("The FlatMap selector returned null.");
             }
             catch (Exception error)
             {
@@ -511,13 +511,13 @@ public static partial class LinqMixins
             /// <summary>
             /// Owning coordinator.
             /// </summary>
-            private readonly SelectManyCoordinator<TSource, TResult> _parent;
+            private readonly FlatMapCoordinator<TSource, TResult> _parent;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="OuterObserver"/> class.
             /// </summary>
             /// <param name="parent">Owning coordinator.</param>
-            internal OuterObserver(SelectManyCoordinator<TSource, TResult> parent) => _parent = parent;
+            internal OuterObserver(FlatMapCoordinator<TSource, TResult> parent) => _parent = parent;
 
             /// <inheritdoc/>
             public void OnCompleted() => _parent.OnOuterCompleted();
@@ -537,13 +537,13 @@ public static partial class LinqMixins
             /// <summary>
             /// Owning coordinator.
             /// </summary>
-            private readonly SelectManyCoordinator<TSource, TResult> _parent;
+            private readonly FlatMapCoordinator<TSource, TResult> _parent;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="InnerObserver"/> class.
             /// </summary>
             /// <param name="parent">Owning coordinator.</param>
-            internal InnerObserver(SelectManyCoordinator<TSource, TResult> parent) => _parent = parent;
+            internal InnerObserver(FlatMapCoordinator<TSource, TResult> parent) => _parent = parent;
 
             /// <inheritdoc/>
             public void OnCompleted() => _parent.OnInnerCompleted();
@@ -557,33 +557,33 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Coordinates concat-style SelectMany subscriptions with a result selector.
+    /// Coordinates chain-style FlatMap subscriptions with a result selector.
     /// </summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <typeparam name="TCollection">The inner value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class SelectManyResultCoordinator<TSource, TCollection, TResult> : IDisposable
+    private sealed class FlatMapResultCoordinator<TSource, TCollection, TResult> : IDisposable
     {
         /// <summary>
-        /// The inner SelectMany coordinator.
+        /// The inner FlatMap coordinator.
         /// </summary>
-        private readonly SelectManyCoordinator<TSource, TResult> _inner;
+        private readonly FlatMapCoordinator<TSource, TResult> _inner;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SelectManyResultCoordinator{TSource, TCollection, TResult}"/> class.
+        /// Initializes a new instance of the <see cref="FlatMapResultCoordinator{TSource, TCollection, TResult}"/> class.
         /// </summary>
         /// <param name="source">The source observable.</param>
         /// <param name="collectionSelector">Projects source values to inner observables.</param>
         /// <param name="resultSelector">Projects outer and inner values to result values.</param>
         /// <param name="observer">The downstream observer.</param>
-        internal SelectManyResultCoordinator(
+        internal FlatMapResultCoordinator(
             IObservable<TSource> source,
             Func<TSource, IObservable<TCollection>> collectionSelector,
             Func<TSource, TCollection, TResult> resultSelector,
             IObserver<TResult> observer) =>
-            _inner = new SelectManyCoordinator<TSource, TResult>(
+            _inner = new FlatMapCoordinator<TSource, TResult>(
                 source,
-                value => new SelectManyResultInnerSignal<TSource, TCollection, TResult>(
+                value => new FlatMapResultInnerSignal<TSource, TCollection, TResult>(
                     value,
                     collectionSelector(value),
                     resultSelector),
@@ -605,7 +605,7 @@ public static partial class LinqMixins
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <typeparam name="TCollection">The inner value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class SelectManyResultInnerSignal<TSource, TCollection, TResult> : IObservable<TResult>
+    private sealed class FlatMapResultInnerSignal<TSource, TCollection, TResult> : IObservable<TResult>
     {
         /// <summary>
         /// Captured outer value.
@@ -623,18 +623,18 @@ public static partial class LinqMixins
         private readonly Func<TSource, TCollection, TResult> _selector;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SelectManyResultInnerSignal{TSource, TCollection, TResult}"/> class.
+        /// Initializes a new instance of the <see cref="FlatMapResultInnerSignal{TSource, TCollection, TResult}"/> class.
         /// </summary>
         /// <param name="sourceValue">Captured outer value.</param>
         /// <param name="source">Inner observable.</param>
         /// <param name="selector">Projects outer and inner values to result values.</param>
-        internal SelectManyResultInnerSignal(
+        internal FlatMapResultInnerSignal(
             TSource sourceValue,
             IObservable<TCollection> source,
             Func<TSource, TCollection, TResult> selector)
         {
             _sourceValue = sourceValue;
-            _source = source ?? throw new InvalidOperationException("The SelectMany collection selector returned null.");
+            _source = source ?? throw new InvalidOperationException("The FlatMap collection selector returned null.");
             _selector = selector;
         }
 

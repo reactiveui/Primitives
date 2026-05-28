@@ -13,21 +13,21 @@ using RxReplaySubject = System.Reactive.Subjects.ReplaySubject<int>;
 namespace ReactiveUI.Primitives.Benchmarks;
 
 /// <summary>
-/// Benchmarks replay/snapshot behavior for bounded replay buffers.
+/// Benchmarks history/snapshot behavior for bounded replay buffers.
 /// </summary>
 [MemoryDiagnoser]
-public class ReplaySignalBenchmarks
+public class HistorySignalBenchmarks
 {
     /// <summary>
     /// Baseline bounded replay subscription benchmark for primitives.
     /// </summary>
     /// <returns>The sum replayed to a late subscriber.</returns>
     [Benchmark(Baseline = true)]
-    public int PrimitivesReplaySubscribe()
+    public int PrimitivesHistorySubscribe()
     {
         var observer = new IntSignalObserver();
-        using var subject = new ReplaySignal<int>(16);
-        PopulateReplaySubject(subject);
+        using var subject = new HistorySignal<int>(16);
+        PopulateHistorySignal(subject);
         using var subscription = subject.Subscribe(observer);
         return observer.Total;
     }
@@ -60,7 +60,7 @@ public class ReplaySignalBenchmarks
         return observer.Total;
     }
 
-    private static void PopulateReplaySubject(ReplaySignal<int> subject)
+    private static void PopulateHistorySignal(HistorySignal<int> subject)
     {
         for (var i = 0; i < 16; i++)
         {

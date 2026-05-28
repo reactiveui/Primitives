@@ -59,29 +59,29 @@ public class CoverageRemainderTests
         var forkJoinRange = new List<int>();
 
         source
-            .Do(
+            .Tap(
                 value => sideEffects.Add("next:" + value),
                 error => sideEffects.Add("error:" + error.Message),
                 () => sideEffects.Add("completed"))
             .Subscribe(values.Add, ex => throw ex, () => completed++);
-        Signal.Throw<int>(new InvalidOperationException("do-error"))
-            .Do(value => sideEffects.Add(value.ToString()), error => sideEffects.Add("error:" + error.Message), () => sideEffects.Add("unused"))
+        Signal.Fail<int>(new InvalidOperationException("do-error"))
+            .Tap(value => sideEffects.Add(value.ToString()), error => sideEffects.Add("error:" + error.Message), () => sideEffects.Add("unused"))
             .Subscribe(_ => { }, _ => { }, () => { });
 
-        Signal.Empty<int?>().DefaultIfEmpty().Subscribe(defaultValue.Add);
+        Signal.None<int?>().DefaultIfEmpty().Subscribe(defaultValue.Add);
         source.IgnoreValues().Subscribe(_ => values.Add(NinetyNine), ex => throw ex, () => ignoreCompleted++);
         Signal.FromEnumerable([One, Two, Three, Four]).TakeWhile(value => value < Three).Subscribe(takeWhile.Add);
         Signal.FromEnumerable([One, Two, Three, Four]).SkipWhile(value => value < Three).Subscribe(skipWhile.Add);
         Signal.FromEnumerable(["aa", "bb", "ccc", "dd", "e"])
-            .DistinctUntilChangedBy(value => value.Length)
+            .UniqueBy(value => value.Length)
             .Subscribe(distinctKeys.Add);
-        Signal.Empty<int>().IsEmpty().Subscribe(isEmptyValues.Add);
-        Signal.Range(One, Three).IsEmpty().Subscribe(isEmptyValues.Add);
+        Signal.None<int>().IsEmpty().Subscribe(isEmptyValues.Add);
+        Signal.Sequence(One, Three).IsEmpty().Subscribe(isEmptyValues.Add);
         source.CollectList().Subscribe(listValues.Add);
         source.CollectArray().Subscribe(arrayValues.Add);
-        Signal.Range(Three, Three).CollectList().Subscribe(rangeListValues.Add);
-        Signal.Range(Three, Three).CollectArray().Subscribe(rangeArrayValues.Add);
-        Signal.Range(One, Four).ForkJoin(Signal.Range(Three, Three), (left, right) => left + right).Subscribe(forkJoinRange.Add);
+        Signal.Sequence(Three, Three).CollectList().Subscribe(rangeListValues.Add);
+        Signal.Sequence(Three, Three).CollectArray().Subscribe(rangeArrayValues.Add);
+        Signal.Sequence(One, Four).ForkJoin(Signal.Sequence(Three, Three), (left, right) => left + right).Subscribe(forkJoinRange.Add);
 
         Assert.Equal(new[] { One, Two, Three, Four }, values);
         Assert.Equal(new[] { "next:1", "next:2", "next:3", "next:4", "completed", "error:do-error" }, sideEffects);
@@ -98,31 +98,31 @@ public class CoverageRemainderTests
         Assert.Equal<int>([Three, Four, Five], rangeArrayValues[0]);
         Assert.Equal(new[] { Nine }, forkJoinRange);
 
-        Assert.Throws<ArgumentNullException>(() => LinqMixins.StartWith<int>(null!, One, Two));
-        Assert.Throws<ArgumentNullException>(() => source.StartWith((int[])null!));
-        Assert.Throws<ArgumentNullException>(() => LinqMixins.StartWith<int>(null!, (IEnumerable<int>)[One]));
-        Assert.Throws<ArgumentNullException>(() => source.StartWith((IEnumerable<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => LinqMixins.Prepend<int>(null!, One, Two));
+        Assert.Throws<ArgumentNullException>(() => source.Prepend((int[])null!));
+        Assert.Throws<ArgumentNullException>(() => LinqMixins.Prepend<int>(null!, (IEnumerable<int>)[One]));
+        Assert.Throws<ArgumentNullException>(() => source.Prepend((IEnumerable<int>)null!));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.ObserveOn<int>(null!, Sequencer.Immediate));
         Assert.Throws<ArgumentNullException>(() => source.ObserveOn(null!));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.SubscribeOn<int>(null!, Sequencer.Immediate));
         Assert.Throws<ArgumentNullException>(() => source.SubscribeOn(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqMixins.Do<int>(null!, _ => { }, _ => { }, () => { }));
-        Assert.Throws<ArgumentNullException>(() => source.Do(null!, _ => { }, () => { }));
-        Assert.Throws<ArgumentNullException>(() => source.Do(_ => { }, null!, () => { }));
-        Assert.Throws<ArgumentNullException>(() => source.Do(_ => { }, _ => { }, null!));
+        Assert.Throws<ArgumentNullException>(() => LinqMixins.Tap<int>(null!, _ => { }, _ => { }, () => { }));
+        Assert.Throws<ArgumentNullException>(() => source.Tap(null!, _ => { }, () => { }));
+        Assert.Throws<ArgumentNullException>(() => source.Tap(_ => { }, null!, () => { }));
+        Assert.Throws<ArgumentNullException>(() => source.Tap(_ => { }, _ => { }, null!));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.IgnoreValues<int>(null!));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.DistinctBy<int, int>(null!, value => value));
         Assert.Throws<ArgumentNullException>(() => source.DistinctBy<int, int>(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqMixins.DistinctUntilChangedBy<int, int>(null!, value => value));
-        Assert.Throws<ArgumentNullException>(() => source.DistinctUntilChangedBy<int, int>(null!));
+        Assert.Throws<ArgumentNullException>(() => LinqMixins.UniqueBy<int, int>(null!, value => value));
+        Assert.Throws<ArgumentNullException>(() => source.UniqueBy<int, int>(null!));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.TakeWhile<int>(null!, value => true));
         Assert.Throws<ArgumentNullException>(() => source.TakeWhile(null!));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.SkipWhile<int>(null!, value => true));
         Assert.Throws<ArgumentNullException>(() => source.SkipWhile(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqMixins.SelectMany<int, int>(null!, value => Signal.Return(value)));
-        Assert.Throws<ArgumentNullException>(() => source.SelectMany<int, int>(null!));
-        Assert.Throws<ArgumentNullException>(() => source.SelectMany<int, int, int>(null!, (outer, inner) => outer + inner));
-        Assert.Throws<ArgumentNullException>(() => source.SelectMany(value => Signal.Return(value), (Func<int, int, int>)null!));
+        Assert.Throws<ArgumentNullException>(() => LinqMixins.FlatMap<int, int>(null!, value => Signal.Emit(value)));
+        Assert.Throws<ArgumentNullException>(() => source.FlatMap<int, int>(null!));
+        Assert.Throws<ArgumentNullException>(() => source.FlatMap<int, int, int>(null!, (outer, inner) => outer + inner));
+        Assert.Throws<ArgumentNullException>(() => source.FlatMap(value => Signal.Emit(value), (Func<int, int, int>)null!));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.Count<int>(null!));
         Assert.Throws<ArgumentNullException>(() => source.Count(null!));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.LongCount<int>(null!));
@@ -134,19 +134,19 @@ public class CoverageRemainderTests
         Assert.Throws<ArgumentNullException>(() => source.All(null!));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.Contains<int>(null!, One));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.DelayStart<int>(null!, TimeSpan.Zero));
-        Assert.Throws<ArgumentNullException>(() => LinqMixins.Throttle<int>(null!, TimeSpan.Zero));
-        Assert.Throws<ArgumentOutOfRangeException>(() => source.Sample(TimeSpan.FromTicks(-1)));
+        Assert.Throws<ArgumentNullException>(() => LinqMixins.Calm<int>(null!, TimeSpan.Zero));
+        Assert.Throws<ArgumentOutOfRangeException>(() => source.Probe(TimeSpan.FromTicks(-1)));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.Timestamp<int>(null!));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.TimeInterval<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqMixins.ForkJoin<int, int, int>(null!, Signal.Return(One), (left, right) => left + right));
+        Assert.Throws<ArgumentNullException>(() => LinqMixins.ForkJoin<int, int, int>(null!, Signal.Emit(One), (left, right) => left + right));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.ForkJoin<int, int, int>(source, null!, (left, right) => left + right));
-        Assert.Throws<ArgumentNullException>(() => LinqMixins.ForkJoin<int, int, int>(source, Signal.Return(One), null!));
+        Assert.Throws<ArgumentNullException>(() => LinqMixins.ForkJoin<int, int, int>(source, Signal.Emit(One), null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).AsObservable());
         Assert.Throws<ArgumentNullException>(() => ((IEnumerable<int>)null!).ToObservable());
         Assert.Throws<ArgumentNullException>(() => ((IEnumerable<int>)null!).ToObservable(CancellationToken.None));
         Assert.Throws<ArgumentOutOfRangeException>(() => source.Take(-1));
         Assert.Throws<ArgumentOutOfRangeException>(() => source.Skip(-1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => source.Retry(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => source.Reattempt(-1));
     }
 
     /// <summary>
@@ -222,9 +222,9 @@ public class CoverageRemainderTests
         var timerPeriodicValues = new List<long>();
         var clock = new TestClock(DateTimeOffset.UnixEpoch);
 
-        Signal.Range(Three, Three, Sequencer.CurrentThread).Subscribe(rangeValues.Add);
-        Signal.Repeat("r").Take(Three).Subscribe(repeatValues.Add);
-        Signal.Repeat(Five, Two).Subscribe(repeatCountValues.Add);
+        Signal.Sequence(Three, Three, Sequencer.CurrentThread).Subscribe(rangeValues.Add);
+        Signal.Loop("r").Take(Three).Subscribe(repeatValues.Add);
+        Signal.Loop(Five, Two).Subscribe(repeatCountValues.Add);
         Signal.Start(() => Seven, Sequencer.CurrentThread).Subscribe(startValues.Add);
         Signal.Start(() => startActions++, Sequencer.CurrentThread).Subscribe(_ => { });
 
@@ -238,8 +238,8 @@ public class CoverageRemainderTests
 
         Signal.After(TimeSpan.FromTicks(Two), clock).Subscribe(afterValues.Add);
         Signal.Every(TimeSpan.FromTicks(Two), clock).Take(Three).Subscribe(everyValues.Add);
-        Signal.Timer(DateTimeOffset.UnixEpoch.AddTicks(Three), clock).Subscribe(timerDateValues.Add);
-        Signal.Timer(TimeSpan.FromTicks(Three), TimeSpan.FromTicks(Two), clock).Subscribe(timerPeriodicValues.Add);
+        Signal.After(DateTimeOffset.UnixEpoch.AddTicks(Three), clock).Subscribe(timerDateValues.Add);
+        Signal.After(TimeSpan.FromTicks(Three), TimeSpan.FromTicks(Two), clock).Subscribe(timerPeriodicValues.Add);
         clock.AdvanceBy(TimeSpan.FromTicks(Two));
         clock.AdvanceBy(TimeSpan.FromTicks(One));
         clock.AdvanceBy(TimeSpan.FromTicks(Four));
@@ -256,9 +256,9 @@ public class CoverageRemainderTests
         Assert.Equal(new long[] { 0L }, timerDateValues);
         Assert.Equal(new long[] { 0L, 1L, 2L }, timerPeriodicValues);
 
-        Assert.Throws<ArgumentNullException>(() => Signal.Range(One, Two, null!));
-        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Range(One, -1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Repeat(One, -1));
+        Assert.Throws<ArgumentNullException>(() => Signal.Sequence(One, Two, null!));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Sequence(One, -1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Loop(One, -1));
         Assert.Throws<ArgumentNullException>(() => Signal.FromEnumerable<int>(null!));
         Assert.Throws<ArgumentNullException>(() => Signal.FromEnumerable<int>(null!, CancellationToken.None));
         Assert.Throws<ArgumentNullException>(() => Signal.FromTask<int>((Task<int>)null!));
@@ -272,9 +272,9 @@ public class CoverageRemainderTests
         Assert.Throws<ArgumentNullException>(() => Signal.FromAsyncEnumerable<int>(null!, CancellationToken.None));
         Assert.Throws<ArgumentNullException>(() => Signal.After(TimeSpan.Zero, null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Every(TimeSpan.FromTicks(One), null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Timer(TimeSpan.Zero, null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Timer(DateTimeOffset.UnixEpoch, null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Timer(TimeSpan.Zero, TimeSpan.FromTicks(One), null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.After(TimeSpan.Zero, null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.After(DateTimeOffset.UnixEpoch, null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.After(TimeSpan.Zero, TimeSpan.FromTicks(One), null!));
     }
 
     /// <summary>
@@ -383,7 +383,7 @@ public class CoverageRemainderTests
     {
         var canceled = new List<Exception>();
         using var cts = new CancellationTokenSource();
-        var taskSignal = new TaskSignal<int>(_ => Signal.Never<int>(), Sequencer.CurrentThread, cts);
+        var taskSignal = new TaskSignal<int>(_ => Signal.Silent<int>(), Sequencer.CurrentThread, cts);
         taskSignal.GetOperationCanceled(Witness.Create<Exception>(canceled.Add));
         Assert.False(taskSignal.IsCancellationRequested);
         taskSignal.Dispose();
@@ -409,16 +409,16 @@ public class CoverageRemainderTests
         var timeoutErrors = new List<string>();
         var clock = new TestClock(DateTimeOffset.UnixEpoch);
 
-        source.StartWith(Two).Subscribe(startOne.Add);
-        source.StartWith((IEnumerable<int>)[One, Two]).Subscribe(startMany.Add);
+        source.Prepend(Two).Subscribe(startOne.Add);
+        source.Prepend((IEnumerable<int>)[One, Two]).Subscribe(startMany.Add);
         Assert.Same(source, source.ObserveOn(Sequencer.Immediate));
-        var range = Signal.Range(One, Three);
+        var range = Signal.Sequence(One, Three);
         Assert.Same(range, range.DefaultIfEmpty(NinetyNine));
-        Assert.NotNull(source.Delay(TimeSpan.Zero));
-        Assert.NotNull(source.Timeout(TimeSpan.FromTicks(One)));
-        source.DelaySubscription(TimeSpan.FromTicks(Two), clock).Subscribe(delayed.Add);
-        Signal.Throw<int>(new InvalidOperationException("delay-error")).Delay(TimeSpan.FromTicks(Two), clock).Subscribe(_ => { }, ex => delayErrors.Add(ex.Message));
-        Signal.Never<int>().Timeout(TimeSpan.FromTicks(Three), clock).Subscribe(_ => { }, ex => timeoutErrors.Add(ex.GetType().Name));
+        Assert.NotNull(source.Shift(TimeSpan.Zero));
+        Assert.NotNull(source.Expire(TimeSpan.FromTicks(One)));
+        source.DelayStart(TimeSpan.FromTicks(Two), clock).Subscribe(delayed.Add);
+        Signal.Fail<int>(new InvalidOperationException("delay-error")).Shift(TimeSpan.FromTicks(Two), clock).Subscribe(_ => { }, ex => delayErrors.Add(ex.Message));
+        Signal.Silent<int>().Expire(TimeSpan.FromTicks(Three), clock).Subscribe(_ => { }, ex => timeoutErrors.Add(ex.GetType().Name));
         clock.AdvanceBy(TimeSpan.FromTicks(Three));
 
         Assert.Equal(new[] { Two, Three, Four }, startOne);
@@ -431,9 +431,9 @@ public class CoverageRemainderTests
         var falseValues = new List<bool>();
         var rxVoidValues = new List<RxVoid>();
         var inlineCompleted = 0;
-        var trueSignal = Signal.Return(true);
-        var falseSignal = Signal.Return(false);
-        var rxVoidSignal = Signal.ReturnRxVoid();
+        var trueSignal = Signal.Emit(true);
+        var falseSignal = Signal.Emit(false);
+        var rxVoidSignal = Signal.EmitRxVoid();
         trueSignal.Subscribe(new RecordingObserver<bool>());
         falseSignal.Subscribe(new RecordingObserver<bool>());
         rxVoidSignal.Subscribe(new RecordingObserver<RxVoid>());
@@ -524,7 +524,7 @@ public class CoverageRemainderTests
         Assert.Equal(1, buffers.Count);
         Assert.Equal(new[] { One, Two }, buffers[0]);
 
-        var errorBuffer = new BufferSignal<int, List<int>>(Signal.Throw<int>(new InvalidOperationException("buffer-error")), Two, One);
+        var errorBuffer = new BufferSignal<int, List<int>>(Signal.Fail<int>(new InvalidOperationException("buffer-error")), Two, One);
         Assert.True(errorBuffer.IsDisposed || !errorBuffer.HasObservers);
     }
 
@@ -548,20 +548,20 @@ public class CoverageRemainderTests
         Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable(["a", "bb"])
             .DistinctBy(value => value.Length == 1 ? value.Length : throw new InvalidOperationException("distinct-key"))
             .Subscribe(_ => { }, ex => distinctErrors.Add(ex.Message)).Dispose());
-        ReactiveUI.Primitives.Signals.Signal.Catch<int, InvalidOperationException>(
-                Signal.Throw<int>(new InvalidOperationException("typed-catch")),
-                _ => Signal.Return(Five))
+        ReactiveUI.Primitives.Signals.Signal.Recover<int, InvalidOperationException>(
+                Signal.Fail<int>(new InvalidOperationException("typed-catch")),
+                _ => Signal.Emit(Five))
             .Subscribe(catchValues.Add, ex => catchErrors.Add(ex.Message));
-        ReactiveUI.Primitives.Signals.Signal.Catch<int, InvalidOperationException>(
-                Signal.Throw<int>(new InvalidOperationException("handler-fault")),
+        ReactiveUI.Primitives.Signals.Signal.Recover<int, InvalidOperationException>(
+                Signal.Fail<int>(new InvalidOperationException("handler-fault")),
                 _ => throw new FormatException("handler-threw"))
             .Subscribe(_ => { }, ex => catchErrors.Add(ex.Message));
-        ReactiveUI.Primitives.Signals.Signal.Catch<int, InvalidOperationException>(
-                Signal.Throw<int>(new ArgumentException("not-matched")),
-                _ => Signal.Return(Six))
+        ReactiveUI.Primitives.Signals.Signal.Recover<int, InvalidOperationException>(
+                Signal.Fail<int>(new ArgumentException("not-matched")),
+                _ => Signal.Emit(Six))
             .Subscribe(_ => { }, ex => catchErrors.Add(ex.Message));
-        Signal.Throw<int>(new InvalidOperationException("finally-error"))
-            .Finally(() => finallyCalls++)
+        Signal.Fail<int>(new InvalidOperationException("finally-error"))
+            .OnCleanup(() => finallyCalls++)
             .Subscribe(_ => { }, _ => { });
 
         Assert.Equal(new[] { "keep-predicate" }, keepErrors);
@@ -702,15 +702,15 @@ public class CoverageRemainderTests
         var emptyScheduled = new List<int>();
         var emptyCompleted = 0;
         var emptyClock = new TestClock(DateTimeOffset.UnixEpoch);
-        Signal.Empty<int>(emptyClock).Subscribe(emptyScheduled.Add, ex => throw ex, () => emptyCompleted++);
+        Signal.None<int>(emptyClock).Subscribe(emptyScheduled.Add, ex => throw ex, () => emptyCompleted++);
         Assert.Equal(0, emptyCompleted);
         emptyClock.Start();
         Assert.Equal(1, emptyCompleted);
-        Assert.Throws<ArgumentNullException>(() => Signal.Empty<int>().Subscribe((IObserver<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.None<int>().Subscribe((IObserver<int>)null!));
 
         var repeatValues = new List<int>();
         var repeatCompleted = 0;
-        var repeat = Signal.Repeat(Seven, Three);
+        var repeat = Signal.Loop(Seven, Three);
         Assert.False(((IRequireCurrentThread<int>)repeat).IsRequiredSubscribeOnCurrentThread());
         repeat.Subscribe(new RecordingObserver<int>()).Dispose();
         Assert.Throws<ArgumentNullException>(() => repeat.Subscribe((IObserver<int>)null!));
@@ -721,7 +721,7 @@ public class CoverageRemainderTests
 
         var zippedValues = new List<int>();
         var zippedCompleted = 0;
-        var zipped = Signal.Range(One, Three).Zip(Signal.Range(Four, Three), (left, right) => left + right);
+        var zipped = Signal.Sequence(One, Three).Pair(Signal.Sequence(Four, Three), (left, right) => left + right);
         Assert.False(((IRequireCurrentThread<int>)zipped).IsRequiredSubscribeOnCurrentThread());
         Assert.Throws<ArgumentNullException>(() => zipped.Subscribe((IObserver<int>)null!));
         Assert.Throws<ArgumentNullException>(() => ((IInlineSignal<int>)zipped).Subscribe(null!, _ => { }, () => { }));
@@ -732,12 +732,12 @@ public class CoverageRemainderTests
         var returned = new List<string>();
         var returnCompleted = 0;
         var returnClock = new TestClock(DateTimeOffset.UnixEpoch);
-        Signal.Return("scheduled", returnClock).Subscribe(returned.Add, ex => throw ex, () => returnCompleted++);
+        Signal.Emit("scheduled", returnClock).Subscribe(returned.Add, ex => throw ex, () => returnCompleted++);
         Assert.Equal(0, returnCompleted);
         returnClock.AdvanceBy(TimeSpan.FromTicks(One));
         Assert.Equal(new[] { "scheduled" }, returned);
         Assert.Equal(1, returnCompleted);
-        Assert.Throws<ArgumentNullException>(() => Signal.Return("immediate").Subscribe((IObserver<string>)null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Emit("immediate").Subscribe((IObserver<string>)null!));
 
         var mappedErrors = new List<string>();
         Signal.FromEnumerable([One, Two]).Map(value => value == One ? value : throw new InvalidOperationException("map-fault"))
@@ -752,35 +752,35 @@ public class CoverageRemainderTests
     public void InlineOperatorObserverAndErrorCleanupPathsCoverRemainingBranches()
     {
         var observerValues = new RecordingObserver<int>();
-        Signal.Return(Three).StartWith(Two).Subscribe(observerValues).Dispose();
+        Signal.Emit(Three).Prepend(Two).Subscribe(observerValues).Dispose();
         Assert.Equal(new[] { Two, Three }, observerValues.Values);
         Assert.Equal(1, observerValues.Completed);
 
         var enumerableValues = new RecordingObserver<int>();
-        LinqMixins.StartWith(Signal.Return(Three), (IEnumerable<int>)[One, Two]).Subscribe(enumerableValues).Dispose();
+        LinqMixins.Prepend(Signal.Emit(Three), (IEnumerable<int>)[One, Two]).Subscribe(enumerableValues).Dispose();
         Assert.Equal(new[] { One, Two, Three }, enumerableValues.Values);
         Assert.Equal(1, enumerableValues.Completed);
 
         var prependAppendValues = new RecordingObserver<int>();
-        Signal.Return(Two).Prepend(One).Append(Three).Subscribe(prependAppendValues).Dispose();
+        Signal.Emit(Two).Prepend(One).Append(Three).Subscribe(prependAppendValues).Dispose();
         Assert.Equal(new[] { One, Two, Three }, prependAppendValues.Values);
         Assert.Equal(1, prependAppendValues.Completed);
 
-        Assert.Throws<ArgumentNullException>(() => Signal.Return(One).Prepend(Two).Subscribe((IObserver<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => LinqMixins.StartWith(Signal.Return(One), (IEnumerable<int>)[Two]).Subscribe((IObserver<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Return(One).Prepend(Two).Append(Three).Subscribe((IObserver<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Return(One).Append(Two).Subscribe((IObserver<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Emit(One).Prepend(Two).Subscribe((IObserver<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => LinqMixins.Prepend(Signal.Emit(One), (IEnumerable<int>)[Two]).Subscribe((IObserver<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Emit(One).Prepend(Two).Append(Three).Subscribe((IObserver<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Emit(One).Append(Two).Subscribe((IObserver<int>)null!));
 
-        Assert.Throws<InvalidOperationException>(() => Signal.Return(One).Append(Two).Subscribe(new ThrowingObserver<int>(throwOnNext: true)).Dispose());
+        Assert.Throws<InvalidOperationException>(() => Signal.Emit(One).Append(Two).Subscribe(new ThrowingObserver<int>(throwOnNext: true)).Dispose());
         var appendErrorObserver = new ThrowingObserver<int>(throwOnError: true);
-        Assert.Throws<InvalidOperationException>(() => Signal.Throw<int>(new InvalidOperationException("append-error")).Append(Two).Subscribe(appendErrorObserver).Dispose());
+        Assert.Throws<InvalidOperationException>(() => Signal.Fail<int>(new InvalidOperationException("append-error")).Append(Two).Subscribe(appendErrorObserver).Dispose());
         Assert.True(appendErrorObserver.SeenError);
 
-        Assert.Throws<InvalidOperationException>(() => Signal.Return(One).DefaultIfEmpty(Two).Subscribe(new ThrowingObserver<int>(throwOnNext: true)).Dispose());
+        Assert.Throws<InvalidOperationException>(() => Signal.Emit(One).DefaultIfEmpty(Two).Subscribe(new ThrowingObserver<int>(throwOnNext: true)).Dispose());
 
         var delegateErrors = 0;
-        Assert.Throws<InvalidOperationException>(() => Signal.Return(Two).Prepend(One).Append(Three).Subscribe(_ => throw new InvalidOperationException("delegate-next"), _ => delegateErrors++, () => { }).Dispose());
-        Signal.Throw<int>(new InvalidOperationException("delegate-error")).Prepend(One).Append(Three).Subscribe(_ => { }, _ => delegateErrors++, () => { }).Dispose();
+        Assert.Throws<InvalidOperationException>(() => Signal.Emit(Two).Prepend(One).Append(Three).Subscribe(_ => throw new InvalidOperationException("delegate-next"), _ => delegateErrors++, () => { }).Dispose());
+        Signal.Fail<int>(new InvalidOperationException("delegate-error")).Prepend(One).Append(Three).Subscribe(_ => { }, _ => delegateErrors++, () => { }).Dispose();
         Assert.Equal(1, delegateErrors);
     }
 
@@ -799,8 +799,8 @@ public class CoverageRemainderTests
 
         var rangeDistinctCount = new RecordingObserver<int>();
         var rangeDistinctLongCount = new RecordingObserver<long>();
-        Signal.Range(One, Four).DistinctBy(value => value % Two, EqualityComparer<int>.Default).Count().Subscribe(rangeDistinctCount).Dispose();
-        Signal.Range(One, Four).DistinctBy(value => value % Two, EqualityComparer<int>.Default).LongCount().Subscribe(rangeDistinctLongCount).Dispose();
+        Signal.Sequence(One, Four).DistinctBy(value => value % Two, EqualityComparer<int>.Default).Count().Subscribe(rangeDistinctCount).Dispose();
+        Signal.Sequence(One, Four).DistinctBy(value => value % Two, EqualityComparer<int>.Default).LongCount().Subscribe(rangeDistinctLongCount).Dispose();
         Assert.Equal(new[] { Two }, rangeDistinctCount.Values);
         Assert.Equal(new long[] { 2L }, rangeDistinctLongCount.Values);
 
@@ -821,7 +821,7 @@ public class CoverageRemainderTests
         Assert.Equal(0, anyErrors.Values.Count);
 
         var containsRange = new RecordingObserver<bool>();
-        Signal.Range(One, Four).Contains(Three, EqualityComparer<int>.Default).Subscribe(containsRange).Dispose();
+        Signal.Sequence(One, Four).Contains(Three, EqualityComparer<int>.Default).Subscribe(containsRange).Dispose();
         Assert.Equal(new[] { true }, containsRange.Values);
     }
 
@@ -835,7 +835,7 @@ public class CoverageRemainderTests
         var raceLoser = new Signal<int>();
         var raceErrorOuter = new Signal<IObservable<int>>();
         var raceErrorSubscription = raceErrorOuter.Race().Subscribe(raceErrorWinner);
-        raceErrorOuter.OnNext(Signal.Throw<int>(new InvalidOperationException("race-error")));
+        raceErrorOuter.OnNext(Signal.Fail<int>(new InvalidOperationException("race-error")));
         raceErrorOuter.OnNext(raceLoser);
         raceLoser.OnCompleted();
         raceErrorSubscription.Dispose();
@@ -856,7 +856,7 @@ public class CoverageRemainderTests
         var left = new Signal<int>();
         var right = new Signal<int>();
         var combined = new RecordingObserver<int>();
-        var combineSubscription = left.CombineLatest(right, (l, r) => l + r).Subscribe(combined);
+        var combineSubscription = left.SyncLatest(right, (l, r) => l + r).Subscribe(combined);
         left.OnNext(One);
         right.OnNext(Two);
         left.OnNext(Three);
@@ -871,7 +871,7 @@ public class CoverageRemainderTests
         var firstInner = new Signal<int>();
         var secondInner = new Signal<int>();
         var switched = new RecordingObserver<int>();
-        var switchSubscription = switchOuter.Switch().Subscribe(switched);
+        var switchSubscription = switchOuter.SwitchTo().Subscribe(switched);
         switchOuter.OnNext(firstInner);
         switchOuter.OnNext(secondInner);
         firstInner.OnNext(One);
@@ -942,11 +942,11 @@ public class CoverageRemainderTests
         Assert.Equal("create-error", createErrors.Errors[0].Message);
 
         var deferErrors = new RecordingObserver<int>();
-        Signal.Defer<int>(() => throw new InvalidOperationException("defer-factory")).Subscribe(deferErrors).Dispose();
+        Signal.Lazy<int>(() => throw new InvalidOperationException("defer-factory")).Subscribe(deferErrors).Dispose();
         Assert.Equal("defer-factory", deferErrors.Errors[0].Message);
 
         var immediateThrow = new RecordingObserver<int>();
-        Signal.Throw<int>(new InvalidOperationException("immediate-throw"), Sequencer.Immediate).Subscribe(immediateThrow).Dispose();
+        Signal.Fail<int>(new InvalidOperationException("immediate-throw"), Sequencer.Immediate).Subscribe(immediateThrow).Dispose();
         Assert.Equal("immediate-throw", immediateThrow.Errors[0].Message);
     }
 

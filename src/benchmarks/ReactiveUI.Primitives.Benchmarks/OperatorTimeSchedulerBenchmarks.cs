@@ -32,7 +32,7 @@ public class OperatorTimeSchedulerBenchmarks
     {
         var clock = new TestClock();
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Range(1, Count).Delay(TimeSpan.FromTicks(1), clock).Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).Shift(TimeSpan.FromTicks(1), clock).Subscribe(observer);
         clock.AdvanceBy(TimeSpan.FromTicks(1));
         return observer.Total;
     }
@@ -78,7 +78,7 @@ public class OperatorTimeSchedulerBenchmarks
     {
         var clock = new TestClock();
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Range(1, Count).DelayStart(TimeSpan.FromTicks(1), clock).Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).DelayStart(TimeSpan.FromTicks(1), clock).Subscribe(observer);
         clock.AdvanceBy(TimeSpan.FromTicks(1));
         return observer.Total;
     }
@@ -127,7 +127,7 @@ public class OperatorTimeSchedulerBenchmarks
         var clock = new TestClock();
         var observer = new IntSignalObserver();
         using var source = new Signal<int>();
-        using var subscription = source.Throttle(TimeSpan.FromTicks(1), clock).Subscribe(observer);
+        using var subscription = source.Calm(TimeSpan.FromTicks(1), clock).Subscribe(observer);
         for (var i = 0; i < Count; i++)
         {
             source.OnNext(i);
@@ -188,7 +188,7 @@ public class OperatorTimeSchedulerBenchmarks
         var clock = new TestClock();
         var observer = new IntSignalObserver();
         using var source = new Signal<int>();
-        using var subscription = source.Sample(TimeSpan.FromTicks(1), clock).Subscribe(observer);
+        using var subscription = source.Probe(TimeSpan.FromTicks(1), clock).Subscribe(observer);
         source.OnNext(Count);
         clock.AdvanceBy(TimeSpan.FromTicks(1));
         return observer.Total;
@@ -235,7 +235,7 @@ public class OperatorTimeSchedulerBenchmarks
     public int PrimitivesTimestampRange()
     {
         var count = 0;
-        using var subscription = Signal.Range(1, Count).Timestamp(Sequencer.Immediate).Subscribe(_ => count++);
+        using var subscription = Signal.Sequence(1, Count).Timestamp(Sequencer.Immediate).Subscribe(_ => count++);
         return count;
     }
 
@@ -271,7 +271,7 @@ public class OperatorTimeSchedulerBenchmarks
     public int PrimitivesTimeIntervalRange()
     {
         var count = 0;
-        using var subscription = Signal.Range(1, Count).TimeInterval(Sequencer.Immediate).Subscribe(_ => count++);
+        using var subscription = Signal.Sequence(1, Count).TimeInterval(Sequencer.Immediate).Subscribe(_ => count++);
         return count;
     }
 
@@ -311,7 +311,7 @@ public class OperatorTimeSchedulerBenchmarks
         var clock = new TestClock();
         var observer = new IntSignalObserver();
         using var source = new Signal<int>();
-        using var subscription = source.Timeout(TimeSpan.FromTicks(1), clock).Subscribe(observer);
+        using var subscription = source.Expire(TimeSpan.FromTicks(1), clock).Subscribe(observer);
         source.OnNext(0);
         clock.AdvanceBy(TimeSpan.FromTicks(1));
         return observer.ErrorCount;
@@ -361,7 +361,7 @@ public class OperatorTimeSchedulerBenchmarks
     public int PrimitivesObserveOnImmediate()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Range(1, Count).ObserveOn(Sequencer.Immediate).Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).ObserveOn(Sequencer.Immediate).Subscribe(observer);
         return observer.Total;
     }
 

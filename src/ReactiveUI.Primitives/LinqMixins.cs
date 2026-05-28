@@ -8,26 +8,10 @@ using ReactiveUI.Primitives.Signals;
 namespace ReactiveUI.Primitives;
 
 /// <summary>
-/// SelectMixins.
+/// Miscellaneous Primitives extensions.
 /// </summary>
 public static partial class LinqMixins
 {
-    /// <summary>
-    /// Selects the specified selector.
-    /// </summary>
-    /// <typeparam name="TSource">The type of the source.</typeparam>
-    /// <typeparam name="TResult">The type of the result.</typeparam>
-    /// <param name="source">The source.</param>
-    /// <param name="selector">The selector.</param>
-    /// <returns>A ISignals.</returns>
-    /// <exception cref="ArgumentNullException">
-    /// source
-    /// or
-    /// selector.
-    /// </exception>
-    public static IObservable<TResult> Select<TSource, TResult>(this IObservable<TSource> source, Func<TSource, TResult> selector)
-        => (source ?? throw new ArgumentNullException(nameof(source))).Map(selector ?? throw new ArgumentNullException(nameof(selector)));
-
     /// <summary>
     /// Buffers the specified count.
     /// </summary>
@@ -114,19 +98,4 @@ public static partial class LinqMixins
     /// <returns>A SingleDisposable.</returns>
     public static SingleDisposable DisposeWith(this IDisposable disposable, Action? action) =>
         new(disposable, action);
-
-    /// <summary>
-    /// Wheres the specified predicate.
-    /// </summary>
-    /// <typeparam name="T">The Type.</typeparam>
-    /// <param name="source">The source.</param>
-    /// <param name="predicate">The predicate.</param>
-    /// <returns>An ISignals.</returns>
-    /// <exception cref="ArgumentNullException">
-    /// source
-    /// or
-    /// predicate.
-    /// </exception>
-    public static IObservable<T> Where<T>(this IObservable<T> source, Func<T, bool> predicate)
-        => (source ?? throw new ArgumentNullException(nameof(source))).Keep(predicate ?? throw new ArgumentNullException(nameof(predicate)));
 }

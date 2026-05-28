@@ -19,7 +19,7 @@ public static partial class Signal
     /// <param name="scheduler">The scheduler.</param>
     /// <returns>An Signals.</returns>
 #pragma warning disable S4018 // Result type is intentionally explicit for Rx-style factory APIs.
-    public static IObservable<T> Empty<T>(ISequencer scheduler)
+    public static IObservable<T> None<T>(ISequencer scheduler)
     {
         if (scheduler == Sequencer.Immediate)
         {
@@ -37,8 +37,8 @@ public static partial class Signal
     /// <param name="witness">The witness.</param>
     /// <returns>An Signals.</returns>
 #pragma warning disable RCS1163 // Unused parameter.
-    public static IObservable<T> Empty<T>(ISequencer scheduler, T witness) =>
-        Empty<T>(scheduler);
+    public static IObservable<T> None<T>(ISequencer scheduler, T witness) =>
+        None<T>(scheduler);
 #pragma warning restore RCS1163 // Unused parameter.
 
     /// <summary>
@@ -46,8 +46,8 @@ public static partial class Signal
     /// </summary>
     /// <typeparam name="T">The Type.</typeparam>
     /// <returns>An Signals.</returns>
-    public static IObservable<T> Empty<T>() =>
-        Empty<T>(Sequencer.Immediate);
+    public static IObservable<T> None<T>() =>
+        None<T>(Sequencer.Immediate);
 #pragma warning restore S4018
 
     /// <summary>
@@ -57,7 +57,7 @@ public static partial class Signal
     /// <param name="witness">The witness.</param>
     /// <returns>An Signals.</returns>
 #pragma warning disable RCS1163 // Unused parameter.
-    public static IObservable<T> Empty<T>(T witness) =>
-        Empty<T>(Sequencer.Immediate);
+    public static IObservable<T> None<T>(T witness) =>
+        None<T>(Sequencer.Immediate);
 #pragma warning restore RCS1163 // Unused parameter.
 }

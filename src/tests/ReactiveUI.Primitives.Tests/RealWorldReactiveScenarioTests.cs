@@ -178,7 +178,7 @@ public sealed class RealWorldReactiveScenarioTests
 
         var collectedArray = await source.CollectArrayAsync();
         var collectedList = await source.CollectListAsync();
-        var firstDefault = await Signal.Empty<Contact>().FirstOrDefaultAsync(new Contact("empty", null));
+        var firstDefault = await Signal.None<Contact>().FirstOrDefaultAsync(new Contact("empty", null));
         var last = await source.LastAsync();
         var anyNullLastName = await source.AnyAsync(contact => contact.LastName is null);
         var countWithLastName = await source.CountAsync(contact => contact.LastName is not null);

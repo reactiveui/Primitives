@@ -15,17 +15,17 @@ namespace ReactiveUI.Primitives.Benchmarks;
 /// Benchmarks for flattening selectors.
 /// </summary>
 [MemoryDiagnoser]
-public class OperatorSelectManyRangeBenchmarks
+public class OperatorFlatMapRangeBenchmarks
 {
     /// <summary>
     /// Baseline flatten and map chain using primitives.
     /// </summary>
     /// <returns>The sum of emitted values.</returns>
     [Benchmark(Baseline = true)]
-    public int PrimitivesSelectManyRange()
+    public int PrimitivesFlatMapRange()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Range(1, 8).SelectMany(static x => Signal.Range(x * 10, 2))
+        using var subscription = Signal.Sequence(1, 8).FlatMap(static x => Signal.Sequence(x * 10, 2))
             .Subscribe(observer);
         return observer.Total;
     }
@@ -38,9 +38,8 @@ public class OperatorSelectManyRangeBenchmarks
     public int SystemReactiveSelectManyRange()
     {
         var observer = new IntSignalObserver();
-        using var subscription = RxObservable.SelectMany(
-                RxObservable.Range(1, 8),
-                static x => RxObservable.Range(x * 10, 2))
+        using var subscription = RxObservable.Range(1, 8)
+            .SelectMany(static x => RxObservable.Range(x * 10, 2))
             .Subscribe(observer);
         return observer.Total;
     }

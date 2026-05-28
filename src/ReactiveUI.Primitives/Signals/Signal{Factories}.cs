@@ -19,13 +19,13 @@ public static partial class Signal
     /// <summary>
     /// Creates a finite integer signal from <paramref name="start"/> for <paramref name="count"/> values.
     /// </summary>
-    public static IObservable<int> Range(int start, int count) =>
-        Range(start, count, Sequencer.CurrentThread);
+    public static IObservable<int> Sequence(int start, int count) =>
+        Sequence(start, count, Sequencer.CurrentThread);
 
     /// <summary>
     /// Creates a finite integer signal from <paramref name="start"/> for <paramref name="count"/> values on <paramref name="scheduler"/>.
     /// </summary>
-    public static IObservable<int> Range(int start, int count, ISequencer scheduler)
+    public static IObservable<int> Sequence(int start, int count, ISequencer scheduler)
     {
         if (count < 0)
         {
@@ -39,7 +39,7 @@ public static partial class Signal
 
         if (count == 0)
         {
-            return Empty<int>();
+            return None<int>();
         }
 
         if (scheduler == Sequencer.Immediate || scheduler == Sequencer.CurrentThread)
@@ -63,7 +63,7 @@ public static partial class Signal
     /// <summary>
     /// Creates a signal that repeats a value forever.
     /// </summary>
-    public static IObservable<T> Repeat<T>(T value) =>
+    public static IObservable<T> Loop<T>(T value) =>
         Create<T>(
             observer => Sequencer.CurrentThread.Schedule(self =>
             {
@@ -75,7 +75,7 @@ public static partial class Signal
     /// <summary>
     /// Creates a signal that repeats a value <paramref name="count"/> times.
     /// </summary>
-    public static IObservable<T> Repeat<T>(T value, int count)
+    public static IObservable<T> Loop<T>(T value, int count)
     {
         if (count < 0)
         {
@@ -84,7 +84,7 @@ public static partial class Signal
 
         if (count == 0)
         {
-            return Empty<T>();
+            return None<T>();
         }
 
         return new RepeatSignal<T>(value, count);
@@ -132,12 +132,12 @@ public static partial class Signal
     /// <summary>
     /// Generates a finite signal from state. Alias of <see cref="Unfold{TState, TResult}(TState, Func{TState, bool}, Func{TState, TState}, Func{TState, TResult})"/>.
     /// </summary>
-    public static IObservable<TResult> Generate<TState, TResult>(
+    public static IObservable<TResult> Iterate<TState, TResult>(
         TState initialState,
         Func<TState, bool> condition,
-        Func<TState, TState> iterate,
+        Func<TState, TState> iterator,
         Func<TState, TResult> resultSelector) =>
-        Unfold(initialState, condition, iterate, resultSelector);
+        Unfold(initialState, condition, iterator, resultSelector);
 
     /// <summary>
     /// Creates a signal whose subscription lifetime owns a resource.
@@ -174,13 +174,6 @@ public static partial class Signal
             return MultipleDisposable.Create(sourceSubscription, resource);
         });
     }
-
-    /// <summary>
-    /// Creates a signal whose subscription lifetime owns a resource.
-    /// </summary>
-    public static IObservable<T> Using<TResource, T>(Func<TResource> resourceFactory, Func<TResource, IObservable<T>> signalFactory)
-        where TResource : IDisposable =>
-        Use(resourceFactory, signalFactory);
 
     /// <summary>
     /// Converts an event into a signal of event pattern values.
@@ -278,18 +271,18 @@ public static partial class Signal
         if (task.Status == TaskStatus.RanToCompletion)
         {
 #pragma warning disable S4462 // Completed-task fast path avoids async state machine allocation.
-            return Return(task.GetAwaiter().GetResult());
+            return Emit(task.GetAwaiter().GetResult());
 #pragma warning restore S4462
         }
 
         if (task.IsCanceled)
         {
-            return Throw<T>(new TaskCanceledException(task));
+            return Fail<T>(new TaskCanceledException(task));
         }
 
         if (task.IsFaulted)
         {
-            return Throw<T>(task.Exception!.InnerException ?? task.Exception);
+            return Fail<T>(task.Exception!.InnerException ?? task.Exception);
         }
 
         return CreateSafe<T>(observer =>
@@ -333,7 +326,7 @@ public static partial class Signal
             throw new ArgumentNullException(nameof(taskFactory));
         }
 
-        return Defer(() => FromTask(taskFactory()));
+        return Lazy(() => FromTask(taskFactory()));
     }
 
     /// <summary>
@@ -352,7 +345,7 @@ public static partial class Signal
             throw new ArgumentNullException(nameof(taskFactory));
         }
 
-        return Defer(() => FromTask(taskFactory(cancellationToken)));
+        return Lazy(() => FromTask(taskFactory(cancellationToken)));
     }
 
     /// <summary>
@@ -467,6 +460,60 @@ public static partial class Signal
     }
 
     /// <summary>
+    /// Emits a single zero tick at the specified absolute due time.
+    /// </summary>
+    public static IObservable<long> After(DateTimeOffset dueTime) =>
+        After(dueTime, ThreadPoolSequencer.Instance);
+
+    /// <summary>
+    /// Emits a single zero tick at the specified absolute due time.
+    /// </summary>
+    public static IObservable<long> After(DateTimeOffset dueTime, ISequencer scheduler)
+    {
+        if (scheduler == null)
+        {
+            throw new ArgumentNullException(nameof(scheduler));
+        }
+
+        return After(Sequencer.Normalize(dueTime - scheduler.Now), scheduler);
+    }
+
+    /// <summary>
+    /// Emits first after <paramref name="dueTime"/> and then at <paramref name="period"/>.
+    /// </summary>
+    public static IObservable<long> After(TimeSpan dueTime, TimeSpan period) =>
+        After(dueTime, period, ThreadPoolSequencer.Instance);
+
+    /// <summary>
+    /// Emits first after <paramref name="dueTime"/> and then at <paramref name="period"/>.
+    /// </summary>
+    public static IObservable<long> After(TimeSpan dueTime, TimeSpan period, ISequencer scheduler)
+    {
+        if (scheduler == null)
+        {
+            throw new ArgumentNullException(nameof(scheduler));
+        }
+
+        return CreateSafe<long>(
+            observer =>
+            {
+                var pocket = new MultipleDisposable();
+                var current = 0L;
+                pocket.Add(
+                    scheduler.Schedule(
+                        Sequencer.Normalize(dueTime),
+                        () =>
+                        {
+                            observer.OnNext(current++);
+                            pocket.Add(Every(period, scheduler).Subscribe(value => observer.OnNext(current + value), observer.OnError, observer.OnCompleted));
+                        }));
+
+                return pocket;
+            },
+            scheduler == Sequencer.CurrentThread);
+    }
+
+    /// <summary>
     /// Emits monotonically increasing ticks at the specified period.
     /// </summary>
     public static IObservable<long> Every(TimeSpan period) =>
@@ -521,97 +568,23 @@ public static partial class Signal
     public static IObservable<long> Pulse(TimeSpan period, ISequencer scheduler) => Every(period, scheduler);
 
     /// <summary>
-    /// Alias for <see cref="Every(TimeSpan, ISequencer?)"/>.
-    /// </summary>
-    public static IObservable<long> Interval(TimeSpan period) => Every(period);
-
-    /// <summary>
-    /// Alias for <see cref="Every(TimeSpan, ISequencer?)"/>.
-    /// </summary>
-    public static IObservable<long> Interval(TimeSpan period, ISequencer scheduler) => Every(period, scheduler);
-
-    /// <summary>
-    /// Alias for <see cref="After(TimeSpan, ISequencer?)"/>.
-    /// </summary>
-    public static IObservable<long> Timer(TimeSpan dueTime) => After(dueTime);
-
-    /// <summary>
-    /// Alias for <see cref="After(TimeSpan, ISequencer?)"/>.
-    /// </summary>
-    public static IObservable<long> Timer(TimeSpan dueTime, ISequencer scheduler) => After(dueTime, scheduler);
-
-    /// <summary>
-    /// Emits a single zero tick at the specified absolute due time.
-    /// </summary>
-    public static IObservable<long> Timer(DateTimeOffset dueTime) =>
-        Timer(dueTime, ThreadPoolSequencer.Instance);
-
-    /// <summary>
-    /// Emits a single zero tick at the specified absolute due time.
-    /// </summary>
-    public static IObservable<long> Timer(DateTimeOffset dueTime, ISequencer scheduler)
-    {
-        if (scheduler == null)
-        {
-            throw new ArgumentNullException(nameof(scheduler));
-        }
-
-        return After(Sequencer.Normalize(dueTime - scheduler.Now), scheduler);
-    }
-
-    /// <summary>
-    /// Creates a timer that emits first after <paramref name="dueTime"/> and then at <paramref name="period"/>.
-    /// </summary>
-    public static IObservable<long> Timer(TimeSpan dueTime, TimeSpan period) =>
-        Timer(dueTime, period, ThreadPoolSequencer.Instance);
-
-    /// <summary>
-    /// Creates a timer that emits first after <paramref name="dueTime"/> and then at <paramref name="period"/>.
-    /// </summary>
-    public static IObservable<long> Timer(TimeSpan dueTime, TimeSpan period, ISequencer scheduler)
-    {
-        if (scheduler == null)
-        {
-            throw new ArgumentNullException(nameof(scheduler));
-        }
-
-        return CreateSafe<long>(
-            observer =>
-            {
-                var pocket = new MultipleDisposable();
-                var current = 0L;
-                pocket.Add(
-                    scheduler.Schedule(
-                        Sequencer.Normalize(dueTime),
-                        () =>
-                        {
-                            observer.OnNext(current++);
-                            pocket.Add(Every(period, scheduler).Subscribe(value => observer.OnNext(current + value), observer.OnError, observer.OnCompleted));
-                        }));
-
-                return pocket;
-            },
-            scheduler == Sequencer.CurrentThread);
-    }
-
-    /// <summary>
     /// Concatenates the supplied signals.
     /// </summary>
-    public static IObservable<T> Concat<T>(params IObservable<T>[] sources)
+    public static IObservable<T> Chain<T>(params IObservable<T>[] sources)
     {
         var validated = ValidateSources(sources);
         var rangeConcat = TryCreateRangeConcat(validated);
-        return rangeConcat == null ? FromEnumerable(validated).Concat() : (IObservable<T>)(object)rangeConcat;
+        return rangeConcat == null ? FromEnumerable(validated).Chain() : (IObservable<T>)(object)rangeConcat;
     }
 
     /// <summary>
     /// Merges the supplied signals.
     /// </summary>
-    public static IObservable<T> Merge<T>(params IObservable<T>[] sources)
+    public static IObservable<T> Blend<T>(params IObservable<T>[] sources)
     {
         var validated = ValidateSources(sources);
         var rangeConcat = TryCreateRangeConcat(validated);
-        return rangeConcat == null ? FromEnumerable(validated).Merge() : (IObservable<T>)(object)rangeConcat;
+        return rangeConcat == null ? FromEnumerable(validated).Blend() : (IObservable<T>)(object)rangeConcat;
     }
 
     /// <summary>
@@ -631,25 +604,20 @@ public static partial class Signal
     /// <summary>
     /// Mirrors the first supplied signal to produce a value or terminal signal.
     /// </summary>
-    public static IObservable<T> Amb<T>(params IObservable<T>[] sources) => Race(sources);
-
-    /// <summary>
-    /// Zips two signals with a result selector.
-    /// </summary>
-    public static IObservable<TResult> Zip<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) =>
-        left.Zip(right, selector);
+    public static IObservable<TResult> Pair<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) =>
+        left.Pair(right, selector);
 
     /// <summary>
     /// Combines the latest values from two signals.
     /// </summary>
-    public static IObservable<TResult> CombineLatest<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) =>
-        left.CombineLatest(right, selector);
+    public static IObservable<TResult> SyncLatest<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) =>
+        left.SyncLatest(right, selector);
 
     /// <summary>
     /// Combines latest values from two signals using latest-fusion semantics.
     /// </summary>
-    public static IObservable<TResult> ZipLatest<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) =>
-        left.ZipLatest(right, selector);
+    public static IObservable<TResult> PairLatest<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) =>
+        left.PairLatest(right, selector);
 
     /// <summary>
     /// Waits for both signals to complete and emits one result from their last values.

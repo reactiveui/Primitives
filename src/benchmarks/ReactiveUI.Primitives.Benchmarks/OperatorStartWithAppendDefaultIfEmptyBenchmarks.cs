@@ -26,9 +26,9 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
     public int PrimitivesStartWithAppendDefaultIfEmpty()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Empty<int>()
+        using var subscription = Signal.None<int>()
             .DefaultIfEmpty(2)
-            .StartWith(1)
+            .Prepend(1)
             .Append(3)
             .Subscribe(observer);
         return observer.Total;
@@ -42,7 +42,7 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
     public int PrimitivesDefaultIfEmptyEmpty()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Empty<int>()
+        using var subscription = Signal.None<int>()
             .DefaultIfEmpty(2)
             .Subscribe(observer);
         return observer.Total;
@@ -56,11 +56,10 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
     public int SystemReactiveStartWithAppendDefaultIfEmpty()
     {
         var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Append(
-                RxObservable.StartWith(
-                    RxObservable.DefaultIfEmpty(RxObservable.Empty<int>(), 2),
-                    1),
-                3)
+        using var subscription = RxObservable.Empty<int>()
+            .DefaultIfEmpty(2)
+            .StartWith(1)
+            .Append(3)
             .Subscribe(observer);
         return observer.Total;
     }

@@ -39,7 +39,7 @@ internal sealed class DeferSignal<T> : SignalsBase<T>
         }
         catch (Exception ex)
         {
-            source = Signal.Throw<T>(ex);
+            source = Signal.Fail<T>(ex);
         }
 
         return source.Subscribe(observer);

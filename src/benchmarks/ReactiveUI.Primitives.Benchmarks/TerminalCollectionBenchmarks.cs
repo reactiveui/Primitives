@@ -29,7 +29,7 @@ public class TerminalCollectionBenchmarks
     public int PrimitivesCollectList()
     {
         var result = 0;
-        using var subscription = Signal.Range(1, Count).CollectList().Subscribe(values => result = values.Count);
+        using var subscription = Signal.Sequence(1, Count).CollectList().Subscribe(values => result = values.Count);
         return result;
     }
 
@@ -64,7 +64,7 @@ public class TerminalCollectionBenchmarks
     public int PrimitivesCollectArray()
     {
         var result = 0;
-        using var subscription = Signal.Range(1, Count).CollectArray().Subscribe(values => result = values.Length);
+        using var subscription = Signal.Sequence(1, Count).CollectArray().Subscribe(values => result = values.Length);
         return result;
     }
 
@@ -98,7 +98,7 @@ public class TerminalCollectionBenchmarks
     [Benchmark]
     public async Task<int> PrimitivesCollectArrayAsync()
     {
-        return (await Signal.Range(1, Count).CollectArrayAsync().ConfigureAwait(false)).Length;
+        return (await Signal.Sequence(1, Count).CollectArrayAsync().ConfigureAwait(false)).Length;
     }
 
     /// <summary>
@@ -128,7 +128,7 @@ public class TerminalCollectionBenchmarks
     /// <returns>The first value.</returns>
     [Benchmark]
     public Task<int> PrimitivesFirstAsync() =>
-        Signal.Range(1, Count).FirstAsync();
+        Signal.Sequence(1, Count).FirstAsync();
 
     /// <summary>
     /// Benchmarks first-value task conversion using System.Reactive.
@@ -152,7 +152,7 @@ public class TerminalCollectionBenchmarks
     /// <returns>The last value.</returns>
     [Benchmark]
     public Task<int> PrimitivesToTask() =>
-        Signal.Range(1, Count).ToTask();
+        Signal.Sequence(1, Count).ToTask();
 
     /// <summary>
     /// Benchmarks last-value task conversion using System.Reactive.
@@ -178,7 +178,7 @@ public class TerminalCollectionBenchmarks
     public int PrimitivesCountPredicate()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Range(1, Count).Count(static value => value % 2 == 0).Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).Count(static value => value % 2 == 0).Subscribe(observer);
         return observer.Total;
     }
 
@@ -213,7 +213,7 @@ public class TerminalCollectionBenchmarks
     public long PrimitivesLongCountPredicate()
     {
         var observer = new LongSignalObserver();
-        using var subscription = Signal.Range(1, Count).LongCount(static value => value % 2 == 0).Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).LongCount(static value => value % 2 == 0).Subscribe(observer);
         return observer.Total;
     }
 
@@ -248,7 +248,7 @@ public class TerminalCollectionBenchmarks
     public int PrimitivesAllRange()
     {
         var observer = new BoolSignalObserver();
-        using var subscription = Signal.Range(1, Count).All(static value => value > 0).Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).All(static value => value > 0).Subscribe(observer);
         return observer.Total;
     }
 
@@ -283,7 +283,7 @@ public class TerminalCollectionBenchmarks
     public int PrimitivesContainsRange()
     {
         var observer = new BoolSignalObserver();
-        using var subscription = Signal.Range(1, Count).Contains(Count).Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).Contains(Count).Subscribe(observer);
         return observer.Total;
     }
 
@@ -319,8 +319,8 @@ public class TerminalCollectionBenchmarks
     {
         var allObserver = new BoolSignalObserver();
         var containsObserver = new BoolSignalObserver();
-        using var all = Signal.Range(1, Count).All(static value => value > 0).Subscribe(allObserver);
-        using var contains = Signal.Range(1, Count).Contains(Count).Subscribe(containsObserver);
+        using var all = Signal.Sequence(1, Count).All(static value => value > 0).Subscribe(allObserver);
+        using var contains = Signal.Sequence(1, Count).Contains(Count).Subscribe(containsObserver);
         return allObserver.Total + containsObserver.Total;
     }
 

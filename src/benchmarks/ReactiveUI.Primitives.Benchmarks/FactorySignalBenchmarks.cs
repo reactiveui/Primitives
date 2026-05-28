@@ -32,7 +32,7 @@ public class FactorySignalBenchmarks
     public int PrimitivesEmptySubscribe()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Empty<int>().Subscribe(observer);
+        using var subscription = Signal.None<int>().Subscribe(observer);
         return observer.CompletionCount;
     }
 
@@ -68,7 +68,7 @@ public class FactorySignalBenchmarks
     public int PrimitivesRangeSubscribe()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Range(RangeStart, RangeCount).Subscribe(observer);
+        using var subscription = Signal.Sequence(RangeStart, RangeCount).Subscribe(observer);
         return observer.Total;
     }
 
@@ -104,7 +104,7 @@ public class FactorySignalBenchmarks
     public int PrimitivesRepeatSubscribe()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Repeat(ThrowValue, RepeatCount).Subscribe(observer);
+        using var subscription = Signal.Loop(ThrowValue, RepeatCount).Subscribe(observer);
         return observer.Total;
     }
 
@@ -140,7 +140,7 @@ public class FactorySignalBenchmarks
     public int PrimitivesThrowSubscribe()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Throw<int>(new InvalidOperationException()).Subscribe(observer);
+        using var subscription = Signal.Fail<int>(new InvalidOperationException()).Subscribe(observer);
         return observer.ErrorCount;
     }
 
