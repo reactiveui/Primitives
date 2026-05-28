@@ -828,37 +828,7 @@ public static partial class LinqMixins
 
         scheduler ??= ThreadPoolSequencer.Instance;
         return Signal.CreateSafe<T>(
-            observer =>
-            {
-                var gate = new OperatorGate();
-                var pocket = new MultipleDisposable();
-                var slot = new SingleReplaceableDisposable();
-                var version = 0;
-                pocket.Add(slot);
-                pocket.Add(source.Subscribe(
-                    value =>
-                    {
-                        int current;
-                        lock (gate.SyncRoot)
-                        {
-                            current = ++version;
-                        }
-
-                        slot.Create(scheduler.Schedule(Sequencer.Normalize(dueTime), () =>
-                        {
-                            lock (gate.SyncRoot)
-                            {
-                                if (current == version)
-                                {
-                                    observer.OnNext(value);
-                                }
-                            }
-                        }));
-                    },
-                    observer.OnError,
-                    observer.OnCompleted));
-                return pocket;
-            },
+            observer => new CalmCoordinator<T>(source, dueTime, scheduler).Run(observer),
             scheduler == Sequencer.CurrentThread);
     }
 
@@ -918,9 +888,7 @@ public static partial class LinqMixins
         }
 
         scheduler ??= ThreadPoolSequencer.Instance;
-        return Signal.CreateSafe<T>(
-            observer => new SampleCoordinator<T>(source, period, scheduler).Run(observer),
-            scheduler == Sequencer.CurrentThread);
+        return new ProbeSignal<T>(source, period, scheduler);
     }
 
     /// <summary>
@@ -1373,6 +1341,13 @@ public static partial class LinqMixins
             return Task.FromResult(CreateRangeArray<T>(range));
         }
 
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER
+        if (source is IAsyncEnumerableBackedSignal<T> asyncEnumerable)
+        {
+            return CollectAsyncEnumerableArrayAsync(asyncEnumerable.Values, asyncEnumerable.CancellationToken);
+        }
+
+#endif
         var completion = new TaskCompletionSource<T[]>();
         var values = new List<T>();
         source.Subscribe(values.Add, error => completion.TrySetException(error), () => completion.TrySetResult([.. values]));
@@ -1483,6 +1458,51 @@ public static partial class LinqMixins
         });
         return completion.Task;
     }
+
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER
+    /// <summary>
+    /// Collects an async enumerable directly into an array.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="values">The source async enumerable.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task containing the collected array.</returns>
+    private static async Task<T[]> CollectAsyncEnumerableArrayAsync<T>(IAsyncEnumerable<T> values, CancellationToken cancellationToken)
+    {
+        const int initialCapacity = 16;
+        const int growthFactor = 2;
+        var array = new T[initialCapacity];
+        var count = 0;
+        var enumerator = values.GetAsyncEnumerator(cancellationToken);
+        try
+        {
+            while (await enumerator.MoveNextAsync().ConfigureAwait(false))
+            {
+                if (count == array.Length)
+                {
+                    Array.Resize(ref array, array.Length * growthFactor);
+                }
+
+                array[count++] = enumerator.Current;
+            }
+        }
+        finally
+        {
+            await enumerator.DisposeAsync().ConfigureAwait(false);
+        }
+
+        if (count == array.Length)
+        {
+            return array;
+        }
+
+        var result = new T[count];
+        Array.Copy(array, result, count);
+
+        return result;
+    }
+
+#endif
 
     /// <summary>
     /// Converts an integer value to the specified numeric type.

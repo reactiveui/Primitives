@@ -1006,6 +1006,11 @@ public static partial class LinqMixins
         }
 
         scheduler ??= ThreadPoolSequencer.Instance;
+        if (source is RangeSignal range && CanReadRangeAs<T>())
+        {
+            return CreateShiftedRangeSignal<T>(range, dueTime, scheduler);
+        }
+
         return Signal.CreateSafe<T>(
             observer =>
             {
@@ -1045,50 +1050,7 @@ public static partial class LinqMixins
         }
 
         scheduler ??= ThreadPoolSequencer.Instance;
-        return Signal.Create<T>(observer =>
-        {
-            var pocket = new MultipleDisposable();
-            var done = 0;
-            pocket.Add(scheduler.Schedule(dueTime, () =>
-            {
-                if (Interlocked.Exchange(ref done, 1) != 0)
-                {
-                    return;
-                }
-
-                observer.OnError(new TimeoutException());
-                pocket.Dispose();
-            }));
-            pocket.Add(source.Subscribe(
-                value =>
-                {
-                    if (Volatile.Read(ref done) != 0)
-                    {
-                        return;
-                    }
-
-                    observer.OnNext(value);
-                },
-                error =>
-                {
-                    if (Interlocked.Exchange(ref done, 1) != 0)
-                    {
-                        return;
-                    }
-
-                    observer.OnError(error);
-                },
-                () =>
-                {
-                    if (Interlocked.Exchange(ref done, 1) != 0)
-                    {
-                        return;
-                    }
-
-                    observer.OnCompleted();
-                }));
-            return pocket;
-        });
+        return new ExpireSignal<T>(source, dueTime, scheduler);
     }
 
     /// <summary>
@@ -1323,4 +1285,42 @@ public static partial class LinqMixins
         "S4018:Generic methods should provide type parameters",
         Justification = "The method is a generic type test used by range fast paths.")]
     private static bool CanReadRangeAs<T>() => typeof(T).IsAssignableFrom(typeof(int));
+
+    /// <summary>
+    /// Creates a range-backed delayed sequence using one scheduled batch.
+    /// </summary>
+    /// <typeparam name="T">The observer value type.</typeparam>
+    /// <param name="range">The source range.</param>
+    /// <param name="dueTime">The delay applied to the range notification batch.</param>
+    /// <param name="scheduler">The sequencer used to schedule the batch.</param>
+    /// <returns>A delayed range signal.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4018:Generic methods should provide type parameters",
+        Justification = "The generic type is validated by the caller before creating a range-backed signal.")]
+    private static IObservable<T> CreateShiftedRangeSignal<T>(RangeSignal range, TimeSpan dueTime, ISequencer scheduler) =>
+        Signal.CreateSafe<T>(
+            observer => scheduler.Schedule(
+                (Observer: observer, Range: range),
+                Sequencer.Normalize(dueTime),
+                static (_, state) => EmitShiftedRange<T>(state.Observer, state.Range)),
+            scheduler == Sequencer.CurrentThread);
+
+    /// <summary>
+    /// Emits all range values and completion from a scheduled batch.
+    /// </summary>
+    /// <typeparam name="T">The observer value type.</typeparam>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="range">The source range.</param>
+    /// <returns>An empty disposable.</returns>
+    private static IDisposable EmitShiftedRange<T>(IObserver<T> observer, RangeSignal range)
+    {
+        for (var i = 0; i < range.Count; i++)
+        {
+            observer.OnNext(CreateRangeValue<T>(range.Start + i));
+        }
+
+        observer.OnCompleted();
+        return Disposable.Empty;
+    }
 }

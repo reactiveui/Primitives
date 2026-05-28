@@ -57,19 +57,7 @@ public abstract partial class VirtualTimeSequencer<TAbsolute, TRelative> : Virtu
             throw new ArgumentNullException(nameof(action));
         }
 
-        ScheduledItem<TAbsolute, TState>? si = null;
-
-        var run = new Func<ISequencer, TState, IDisposable>((scheduler, state1) =>
-        {
-            lock (_queue)
-            {
-                _queue.Remove(si!); // NB: Assigned before function is invoked.
-            }
-
-            return action(scheduler, state1);
-        });
-
-        si = new ScheduledItem<TAbsolute, TState>(this, state, run, dueTime, Comparer);
+        var si = new VirtualScheduledItem<TState>(this, state, action, dueTime, Comparer);
 
         lock (_queue)
         {
@@ -102,5 +90,67 @@ public abstract partial class VirtualTimeSequencer<TAbsolute, TRelative> : Virtu
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Removes an invoked scheduled item from the queue.
+    /// </summary>
+    /// <param name="scheduledItem">The item to remove.</param>
+    private void Remove(ScheduledItem<TAbsolute> scheduledItem)
+    {
+        lock (_queue)
+        {
+            _queue.Remove(scheduledItem);
+        }
+    }
+
+    /// <summary>
+    /// Virtual-time scheduled item that removes itself without a per-schedule wrapper closure.
+    /// </summary>
+    /// <typeparam name="TState">The scheduled state type.</typeparam>
+    private sealed class VirtualScheduledItem<TState> : ScheduledItem<TAbsolute>
+    {
+        /// <summary>
+        /// The scheduler that owns the item.
+        /// </summary>
+        private readonly VirtualTimeSequencer<TAbsolute, TRelative> _owner;
+
+        /// <summary>
+        /// The scheduled state.
+        /// </summary>
+        private readonly TState _state;
+
+        /// <summary>
+        /// The scheduled action.
+        /// </summary>
+        private readonly Func<ISequencer, TState, IDisposable> _action;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="VirtualScheduledItem{TState}"/> class.
+        /// </summary>
+        /// <param name="owner">The scheduler that owns the item.</param>
+        /// <param name="state">The scheduled state.</param>
+        /// <param name="action">The scheduled action.</param>
+        /// <param name="dueTime">The absolute due time.</param>
+        /// <param name="comparer">The due-time comparer.</param>
+        internal VirtualScheduledItem(
+            VirtualTimeSequencer<TAbsolute, TRelative> owner,
+            TState state,
+            Func<ISequencer, TState, IDisposable> action,
+            TAbsolute dueTime,
+            IComparer<TAbsolute> comparer)
+            : base(dueTime, comparer)
+        {
+            _owner = owner;
+            _state = state;
+            _action = action;
+        }
+
+        /// <inheritdoc/>
+        protected override IDisposable InvokeCore()
+        {
+            _owner.Remove(this);
+            return _action(_owner, _state);
+        }
     }
 }

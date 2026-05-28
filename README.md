@@ -630,7 +630,7 @@ Use the generated bridge only at boundaries. Prefer native ReactiveUI.Primitives
 
 Benchmarks live in `src/benchmarks/ReactiveUI.Primitives.Benchmarks`. The benchmark project may reference System.Reactive and R3 to compare throughput and allocation behavior; the production package must not.
 
-Full BenchmarkDotNet runs were captured on 2026-05-28 with .NET SDK/runtime 10.0.8 on Windows 11. The latest complete run executed 201 benchmarks with no skipped suites in 00:21:51:
+Full BenchmarkDotNet runs were captured on 2026-05-28 with .NET SDK/runtime 10.0.8 on Windows 11. The latest complete run executed 201 benchmarks with no skipped suites in 00:21:53:
 
 ```powershell
 dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter "*" --join --launchCount 1 --warmupCount 1 --iterationCount 3
@@ -638,10 +638,10 @@ dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.
 
 Latest artifact paths:
 
-- `BenchmarkDotNet.Artifacts/BenchmarkRun-20260528-101607.log`
-- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-28-10-38-00-report-github.md`
-- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-28-10-38-00-report.html`
-- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-28-10-38-00-report.csv`
+- `BenchmarkDotNet.Artifacts/BenchmarkRun-20260528-213342.log`
+- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-28-21-55-38-report-github.md`
+- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-28-21-55-38-report.html`
+- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-28-21-55-38-report.csv`
 
 Smoke validation for deterministic benchmark behavior passed for 67 benchmark groups with:
 
@@ -655,73 +655,73 @@ The table below is generated from the joined BenchmarkDotNet CSV and uses `Mean 
 
 | Scenario | ReactiveUI.Primitives | System.Reactive | R3 |
 |---|---:|---:|---:|
-| Emit subscribe | 0.2186 ns / 0 B | 53.2379 ns / 120 B | 30.0486 ns / 80 B |
-| None subscribe | 3.0541 ns / 40 B | 44.6828 ns / 96 B | 26.8593 ns / 56 B |
-| Sequence subscribe | 49.8325 ns / 96 B | 2,459.2019 ns / 2,472 B | 74.6073 ns / 80 B |
-| Loop subscribe | 7.0823 ns / 0 B | 2,324.1525 ns / 2,408 B | 75.9459 ns / 80 B |
-| Fail subscribe | 55.2666 ns / 120 B | 107.4731 ns / 240 B | 88.8770 ns / 200 B |
-| FromEnumerable subscribe | 50.5124 ns / 40 B | 2,369.0857 ns / 2,504 B | 78.1008 ns / 88 B |
-| Completed task bridge | 9.1928 ns / 88 B | 822.4185 ns / 793 B | 38.3042 ns / 88 B |
-| Create subscribe | 47.2199 ns / 248 B | 45.7875 ns / 168 B | 54.1915 ns / 128 B |
-| CreateSafe subscribe | 47.3391 ns / 248 B | 45.6351 ns / 168 B | 54.6268 ns / 128 B |
-| Lazy subscribe | 73.2374 ns / 240 B | 1,345.5338 ns / 1,512 B | 117.8853 ns / 152 B |
-| Start subscribe | 60.3452 ns / 376 B | 816.3317 ns / 751 B | 56.4896 ns / 160 B |
-| Unfold subscribe | 190.6104 ns / 736 B | 2,223.5963 ns / 2,768 B | 93.6088 ns / 128 B |
-| Use subscribe | 72.3636 ns / 432 B | 86.6686 ns / 168 B | 55.2117 ns / 128 B |
-| FromAsyncEnumerable subscribe | 1,881.6833 ns / 2,062 B | 1,532.8305 ns / 2,448 B | 1,060.5681 ns / 1,023 B |
-| Silent subscribe/dispose | 0.2485 ns / 0 B | 6.0823 ns / 40 B | 16.9295 ns / 56 B |
-| Map + Keep over range | 131.9449 ns / 208 B | 2,512.4803 ns / 2,616 B | 297.4630 ns / 272 B |
-| Reduce + Any + Count | 191.4086 ns / 824 B | 5,298.7536 ns / 5,896 B | 635.6714 ns / 1,280 B |
-| Prepend + Append + DefaultIfEmpty | 31.6353 ns / 168 B | 937.0711 ns / 1,257 B | 137.8890 ns / 288 B |
-| DefaultIfEmpty(empty) | 5.5567 ns / 64 B | 66.3831 ns / 144 B | 60.2487 ns / 136 B |
-| FlatMap over ranges | 906.9976 ns / 712 B | 3,489.8946 ns / 3,872 B | 973.1711 ns / 1,040 B |
-| Pair over ranges | 45.5839 ns / 232 B | 3,139.5301 ns / 2,976 B | 693.6180 ns / 656 B |
-| Chain ranges | 67.5521 ns / 256 B | 2,677.6141 ns / 2,856 B | 258.3191 ns / 360 B |
-| Blend ranges | 70.9983 ns / 256 B | 3,770.6044 ns / 3,953 B | 661.3140 ns / 352 B |
-| Race ranges | 39.1824 ns / 192 B | 1,442.9846 ns / 1,760 B | 254.1584 ns / 360 B |
-| SwitchTo ranges | 755.5194 ns / 1,376 B | 2,089.1303 ns / 2,336 B | 688.3416 ns / 392 B |
-| SyncLatest ranges | 98.9031 ns / 504 B | 3,028.5990 ns / 2,824 B | 611.6543 ns / 344 B |
-| Latch ranges | 100.5133 ns / 504 B | 3,193.1360 ns / 2,824 B | 377.9174 ns / 248 B |
-| ForkJoin ranges | 75.6980 ns / 480 B | 3,391.6289 ns / 3,136 B | 857.3522 ns / 504 B |
-| Shift range | 3,201.9485 ns / 38,816 B | 5,196.2072 ns / 39,584 B | 1,821.4245 ns / 2,200 B |
-| DelayStart range | 895.5792 ns / 25,520 B | 2,132.5495 ns / 26,456 B | 319.5858 ns / 552 B |
-| Calm burst | 2,677.1477 ns / 38,384 B | 2,383.1439 ns / 36,480 B | 1,496.8547 ns / 1,512 B |
-| Probe latest | 1,006.0773 ns / 26,072 B | 1,864.9357 ns / 26,264 B | 306.8848 ns / 664 B |
-| Timestamp range | 399.6629 ns / 312 B | 1,618.9009 ns / 1,608 B | 337.9970 ns / 152 B |
-| TimeInterval range | 488.7716 ns / 736 B | 1,651.9546 ns / 1,712 B | 426.0530 ns / 160 B |
-| Expire idle | 978.2797 ns / 25,912 B | 1,165.9814 ns / 29,776 B | 385.2929 ns / 784 B |
-| ObserveOn immediate | 24.7480 ns / 96 B | 16,606.7413 ns / 11,307 B | 887.0907 ns / 432 B |
-| History subscribe | 330.6935 ns / 320 B | 670.7762 ns / 696 B | 405.9421 ns / 688 B |
-| StateSignal 32 values | 536.3309 ns / 176 B | 548.6943 ns / 200 B | 587.0951 ns / 192 B |
-| StateSignal 1024 values | 14,775.5376 ns / 176 B | 14,855.1132 ns / 200 B | 15,217.1773 ns / 192 B |
-| Signal emit, 32 values | 69.9214 ns / 136 B | 98.0934 ns / 136 B | 127.8881 ns / 160 B |
-| Signal emit, 1024 values | 1,698.9894 ns / 136 B | 1,716.7062 ns / 136 B | 2,323.2927 ns / 160 B |
-| Signal subscribe/dispose, 8 observers | 235.0289 ns / 592 B | 313.7011 ns / 1,288 B | 440.8307 ns / 840 B |
-| Signal subscribe/dispose, 64 observers | 2,776.5985 ns / 3,800 B | 3,866.7501 ns / 38,472 B | 3,381.8103 ns / 6,216 B |
-| ShareLive connect | 124.6251 ns / 384 B | 2,647.5393 ns / 2,696 B | 428.5325 ns / 368 B |
-| Share live subscribe | 254.7125 ns / 848 B | 3,050.7448 ns / 2,880 B | 616.1204 ns / 488 B |
-| Replay live late subscribe | 662.7019 ns / 568 B | 3,683.1133 ns / 3,408 B | 923.3098 ns / 1,360 B |
-| AutoShare subscribe | 232.0945 ns / 848 B | 2,832.0310 ns / 2,880 B | 595.3431 ns / 488 B |
-| AutoConnect subscribe | 195.7574 ns / 728 B | 2,711.8025 ns / 2,736 B | 461.9903 ns / 368 B |
-| StateSignal updates | 526.8121 ns / 176 B | 526.5334 ns / 200 B | 575.4000 ns / 192 B |
-| ReadOnlyState projection | 125.7138 ns / 248 B | 89.6034 ns / 328 B | 166.5788 ns / 312 B |
-| TaskSignal subscribe | 3,301.5409 ns / 3,937 B | 716.5774 ns / 886 B | 39.6398 ns / 160 B |
-| Command execute | 124.0958 ns / 600 B | 673.8586 ns / 1,089 B | 104.3281 ns / 296 B |
-| Command result subscribe | 148.7583 ns / 672 B | 37.9774 ns / 136 B | 62.7556 ns / 160 B |
-| CollectList range | 125.1017 ns / 688 B | 2,691.0545 ns / 3,488 B | 193.8799 ns / 632 B |
-| CollectArray range | 92.5524 ns / 656 B | 2,733.9446 ns / 3,640 B | 192.5716 ns / 784 B |
-| CollectArrayAsync range | 34.7892 ns / 384 B | 2,752.4089 ns / 3,984 B | 188.2744 ns / 784 B |
-| FirstAsync range | 6.5547 ns / 56 B | 2,450.1984 ns / 2,792 B | 77.3095 ns / 208 B |
-| ToTask range | 14.1137 ns / 192 B | 2,446.6933 ns / 2,824 B | 96.6949 ns / 208 B |
-| Count(predicate) range | 24.7896 ns / 96 B | 2,408.8926 ns / 2,520 B | 103.4699 ns / 200 B |
-| LongCount(predicate) range | 24.6334 ns / 104 B | 2,423.2780 ns / 2,536 B | 106.1956 ns / 272 B |
-| All range | 18.2455 ns / 96 B | 2,406.3606 ns / 2,520 B | 89.9046 ns / 192 B |
-| Contains range | 10.0899 ns / 96 B | 2,453.9726 ns / 2,520 B | 90.3024 ns / 200 B |
-| All + Contains range | 28.8726 ns / 192 B | 5,046.7377 ns / 5,040 B | 218.5446 ns / 392 B |
-| Pocket dispose | 57.0307 ns / 408 B | 86.4195 ns / 512 B | 69.3605 ns / 480 B |
-| CurrentThread schedule | 13.4939 ns / 88 B | 16.8119 ns / 88 B | 28.4136 ns / 56 B |
-| Safe witness | 22.8934 ns / 168 B | 14.3072 ns / 136 B | 18.5158 ns / 56 B |
-| Completed Spark | 0.0000 ns / 0 B | 0.0000 ns / 0 B | 0.0027 ns / 0 B |
+| Emit subscribe | 0.2107 ns / 0 B | 45.9317 ns / 120 B | 29.7331 ns / 80 B |
+| None subscribe | 2.8561 ns / 40 B | 43.7379 ns / 96 B | 26.4604 ns / 56 B |
+| Sequence subscribe | 48.2494 ns / 96 B | 2,400.6602 ns / 2472 B | 69.5582 ns / 80 B |
+| Loop subscribe | 6.8179 ns / 0 B | 2,371.2236 ns / 2408 B | 69.2988 ns / 80 B |
+| Fail subscribe | 58.1512 ns / 120 B | 105.8387 ns / 240 B | 86.9365 ns / 200 B |
+| FromEnumerable subscribe | 50.4808 ns / 40 B | 2,252.9594 ns / 2504 B | 71.0029 ns / 88 B |
+| Completed task bridge | 10.5757 ns / 88 B | 815.3427 ns / 793 B | 38.5080 ns / 88 B |
+| Create subscribe | 45.5529 ns / 248 B | 41.2160 ns / 168 B | 61.4747 ns / 128 B |
+| CreateSafe subscribe | 44.8270 ns / 248 B | 42.1319 ns / 168 B | 53.2048 ns / 128 B |
+| Lazy subscribe | 78.2157 ns / 240 B | 1,400.9222 ns / 1512 B | 107.5722 ns / 152 B |
+| Start subscribe | 54.1090 ns / 376 B | 778.9965 ns / 751 B | 55.4001 ns / 160 B |
+| Unfold subscribe | 170.6483 ns / 736 B | 2,145.7577 ns / 2768 B | 93.9090 ns / 128 B |
+| Use subscribe | 68.1815 ns / 432 B | 83.7883 ns / 168 B | 53.1693 ns / 128 B |
+| FromAsyncEnumerable subscribe | 1,079.9192 ns / 600 B | 1,853.5239 ns / 2447 B | 1,242.9586 ns / 1023 B |
+| Silent subscribe/dispose | 0.2282 ns / 0 B | 5.1866 ns / 40 B | 17.3882 ns / 56 B |
+| Map + Keep over range | 120.5836 ns / 208 B | 2,493.7654 ns / 2616 B | 269.3660 ns / 272 B |
+| Reduce + Any + Count | 171.2013 ns / 824 B | 5,265.8732 ns / 6352 B | 579.6091 ns / 1280 B |
+| Prepend + Append + DefaultIfEmpty | 29.5067 ns / 168 B | 904.4517 ns / 1282 B | 133.1520 ns / 288 B |
+| DefaultIfEmpty(empty) | 5.7140 ns / 64 B | 61.8811 ns / 144 B | 60.2212 ns / 136 B |
+| FlatMap over ranges | 946.7710 ns / 712 B | 3,492.5273 ns / 3872 B | 971.0792 ns / 1040 B |
+| Pair over ranges | 38.1501 ns / 232 B | 2,942.2574 ns / 2976 B | 653.8256 ns / 656 B |
+| Chain ranges | 64.7018 ns / 256 B | 2,594.3629 ns / 2856 B | 240.7744 ns / 360 B |
+| Blend ranges | 71.2796 ns / 256 B | 3,658.6498 ns / 3953 B | 660.2883 ns / 352 B |
+| Race ranges | 34.3258 ns / 192 B | 1,419.1490 ns / 1760 B | 272.0822 ns / 360 B |
+| SwitchTo ranges | 794.3949 ns / 1376 B | 2,065.5574 ns / 2336 B | 718.6733 ns / 392 B |
+| SyncLatest ranges | 93.4823 ns / 504 B | 3,147.6649 ns / 2824 B | 649.7137 ns / 344 B |
+| Latch ranges | 98.6320 ns / 504 B | 3,192.3467 ns / 2824 B | 328.0823 ns / 248 B |
+| ForkJoin ranges | 65.8825 ns / 480 B | 3,265.4967 ns / 3136 B | 871.6126 ns / 504 B |
+| Shift range | 173.8715 ns / 736 B | 4,950.6053 ns / 39584 B | 1,793.8548 ns / 2200 B |
+| DelayStart range | 231.9739 ns / 936 B | 2,064.9857 ns / 26456 B | 292.6246 ns / 552 B |
+| Calm burst | 564.5905 ns / 1256 B | 2,385.1070 ns / 36480 B | 1,532.7904 ns / 1512 B |
+| Probe latest | 193.0785 ns / 640 B | 1,889.0841 ns / 26264 B | 316.8231 ns / 664 B |
+| Timestamp range | 402.4542 ns / 312 B | 1,595.8453 ns / 1608 B | 330.9149 ns / 152 B |
+| TimeInterval range | 471.3139 ns / 736 B | 1,624.6929 ns / 1712 B | 432.3715 ns / 160 B |
+| Expire idle | 232.3618 ns / 704 B | 1,162.7251 ns / 29776 B | 380.9954 ns / 784 B |
+| ObserveOn immediate | 21.7206 ns / 96 B | 15,066.6122 ns / 11312 B | 905.7257 ns / 432 B |
+| History subscribe | 333.8135 ns / 320 B | 683.3399 ns / 696 B | 402.9542 ns / 688 B |
+| StateSignal 32 values | 571.4088 ns / 176 B | 577.0790 ns / 200 B | 616.6069 ns / 192 B |
+| StateSignal 1024 values | 15,821.2891 ns / 176 B | 15,764.0411 ns / 200 B | 15,761.4075 ns / 192 B |
+| Signal emit, 32 values | 71.4549 ns / 136 B | 91.0168 ns / 136 B | 124.7691 ns / 160 B |
+| Signal emit, 1024 values | 1,751.1726 ns / 136 B | 1,774.9812 ns / 136 B | 1,987.6726 ns / 160 B |
+| Signal subscribe/dispose, 8 observers | 250.1112 ns / 592 B | 318.1184 ns / 1288 B | 454.5726 ns / 840 B |
+| Signal subscribe/dispose, 64 observers | 2,769.3523 ns / 3800 B | 3,958.7546 ns / 38472 B | 3,752.8739 ns / 6216 B |
+| ShareLive connect | 144.2458 ns / 384 B | 2,746.4123 ns / 2696 B | 383.6541 ns / 368 B |
+| Share live subscribe | 269.7706 ns / 848 B | 2,952.1750 ns / 2880 B | 515.8733 ns / 488 B |
+| Replay live late subscribe | 665.9020 ns / 568 B | 3,804.7574 ns / 3408 B | 918.6698 ns / 1360 B |
+| AutoShare subscribe | 254.7250 ns / 848 B | 2,955.6199 ns / 2880 B | 496.8710 ns / 488 B |
+| AutoConnect subscribe | 197.8330 ns / 728 B | 2,692.2591 ns / 2736 B | 387.4696 ns / 368 B |
+| StateSignal updates | 562.7767 ns / 176 B | 555.7740 ns / 200 B | 604.6401 ns / 192 B |
+| ReadOnlyState projection | 126.0058 ns / 248 B | 89.6705 ns / 328 B | 175.5553 ns / 312 B |
+| TaskSignal subscribe | 1,548.4924 ns / 3909 B | 674.1182 ns / 886 B | 38.3412 ns / 160 B |
+| Command execute | 117.6506 ns / 600 B | 687.1632 ns / 1089 B | 111.5248 ns / 296 B |
+| Command result subscribe | 142.9694 ns / 672 B | 37.2585 ns / 136 B | 65.7253 ns / 160 B |
+| CollectList range | 114.7333 ns / 688 B | 2,747.6410 ns / 3488 B | 164.1239 ns / 632 B |
+| CollectArray range | 84.6958 ns / 656 B | 2,867.7760 ns / 3640 B | 174.7426 ns / 784 B |
+| CollectArrayAsync range | 33.0375 ns / 384 B | 2,727.4354 ns / 3984 B | 157.4702 ns / 784 B |
+| FirstAsync range | 6.2257 ns / 56 B | 2,377.2078 ns / 2792 B | 79.4655 ns / 208 B |
+| ToTask range | 14.3367 ns / 192 B | 2,448.9990 ns / 2824 B | 89.9601 ns / 208 B |
+| Count(predicate) range | 23.4069 ns / 96 B | 2,407.0920 ns / 2520 B | 99.8359 ns / 200 B |
+| LongCount(predicate) range | 24.7771 ns / 104 B | 2,356.8338 ns / 2536 B | 106.6491 ns / 272 B |
+| All range | 17.3706 ns / 96 B | 2,505.6300 ns / 2520 B | 89.4448 ns / 192 B |
+| Contains range | 12.4464 ns / 96 B | 2,473.2698 ns / 2528 B | 98.0174 ns / 200 B |
+| All + Contains range | 29.1751 ns / 192 B | 5,089.9312 ns / 5048 B | 203.6477 ns / 392 B |
+| Pocket dispose | 66.1360 ns / 408 B | 100.0380 ns / 512 B | 83.8633 ns / 480 B |
+| CurrentThread schedule | 13.4777 ns / 88 B | 17.7795 ns / 88 B | 28.8444 ns / 56 B |
+| Safe witness | 21.6127 ns / 168 B | 12.1948 ns / 136 B | 17.6018 ns / 56 B |
+| Completed Spark | 0.0084 ns / 0 B | 0.0000 ns / 0 B | 0.0000 ns / 0 B |
 
 Interpretation notes:
 
@@ -735,40 +735,36 @@ Candidate/performance exception matrix:
 
 | Scenario | Observed gap | Decision and trade-off |
 |---|---|---|
-| `Sequence subscribe` | allocation > R3 (96 B vs 80 B). | Accepted exception: the range factory keeps the public `IObservable<int>`/current-thread subscription shape; the small R3 allocation delta is documented while throughput remains faster than both alternatives. |
-| `Completed task bridge` | allocation ties R3 (88 B vs 88 B). | Accepted exception: the bridge already matches the lowest allocation and preserves task-observer completion semantics; strict-lower allocation is impossible for a tie. |
-| `Create subscribe` | time >= System.Reactive (47.2199 ns vs 45.7875 ns); allocation > System.Reactive (248 B vs 168 B); allocation > R3 (248 B vs 128 B). | Accepted exception: `Signal.Create` exposes the BCL `IObserver<T>` callback shape and wraps subscription disposal for terminal safety; the adapter cost avoids adding a runtime System.Reactive/R3 dependency. |
-| `CreateSafe subscribe` | time >= System.Reactive (47.3391 ns vs 45.6351 ns); allocation > System.Reactive (248 B vs 168 B); allocation > R3 (248 B vs 128 B). | Accepted exception: `CreateSafe` adds guarded terminal notification behavior over the raw factory callback; the safety contract is retained instead of optimizing away the wrapper. |
-| `Lazy subscribe` | allocation > R3 (240 B vs 152 B). | Accepted exception: deferred construction allocates a factory subscription wrapper so disposal/errors route through the safe observer path; throughput remains ahead of both alternatives. |
-| `Start subscribe` | time >= R3 (60.3452 ns vs 56.4896 ns); allocation > R3 (376 B vs 160 B). | Accepted exception: `Start` uses the project `ISequencer` abstraction and preserves immediate/current-thread scheduling parity; R3’s specialized scheduler path is not interchangeable. |
-| `Unfold subscribe` | time >= R3 (190.6104 ns vs 93.6088 ns); allocation > R3 (736 B vs 128 B). | Accepted exception: the implementation keeps state-machine disposal and observer-safety guards for recursive generation; R3’s specialized observable shape is lower allocation. |
-| `Use subscribe` | time >= R3 (72.3636 ns vs 55.2117 ns); allocation > System.Reactive (432 B vs 168 B); allocation > R3 (432 B vs 128 B). | Accepted exception: `Use` owns resource lifetime and source subscription together so resources are released across completion, error, and unsubscribe; the extra allocation is the lifecycle trade-off. |
-| `FromAsyncEnumerable subscribe` | time >= System.Reactive (1,881.6833 ns vs 1,532.8305 ns); time >= R3 (1,881.6833 ns vs 1,060.5681 ns); allocation > R3 (2,062 B vs 1,023 B). | Accepted exception: the bridge preserves `IAsyncEnumerable<T>` cancellation/disposal and safe observer termination; the cost is isolated to async interop, not synchronous hot paths. |
-| `SwitchTo ranges` | time >= R3 (755.5194 ns vs 688.3416 ns); allocation > R3 (1,376 B vs 392 B). | Accepted exception: `SwitchTo` maintains an inner subscription slot and terminal arbitration for general `IObservable<IObservable<T>>`; R3's range-specialized path is cheaper. |
-| `SyncLatest ranges` | allocation > R3 (504 B vs 344 B). | Accepted exception: `SyncLatest` stores readiness/value state for both sides to preserve general `IObservable<T>` semantics; throughput remains well ahead of R3. |
-| `Latch ranges` | allocation > R3 (504 B vs 248 B). | Accepted exception: the operator keeps left/right state and subscription ownership explicit for safe unsubscription; allocation premium buys generic semantics. |
-| `Shift range` | time >= R3 (3,201.9485 ns vs 1,821.4245 ns); allocation > R3 (38,816 B vs 2,200 B). | Accepted exception: `Shift` uses deterministic `ISequencer` timer/scheduled-disposable handling for cancellation and ordering; R3's timer path is more allocation-efficient. |
-| `DelayStart range` | time >= R3 (895.5792 ns vs 319.5858 ns); allocation > R3 (25,520 B vs 552 B). | Accepted exception: start-delay creates scheduled work through `ISequencer` for deterministic virtual/current-thread behavior; R3 wins allocation with a specialized path. |
-| `Calm burst` | time >= System.Reactive (2,677.1477 ns vs 2,383.1439 ns); time >= R3 (2,677.1477 ns vs 1,496.8547 ns); allocation > System.Reactive (38,384 B vs 36,480 B); allocation > R3 (38,384 B vs 1,512 B). | Accepted exception: quiet-period scheduling keeps disposable timer slots and safe observer state per burst so cancellation races are explicit; this is documented as scheduler-heavy. |
-| `Probe latest` | time >= R3 (1,006.0773 ns vs 306.8848 ns); allocation > R3 (26,072 B vs 664 B). | Accepted exception: `Probe` uses a coordinator and `ISequencer` timer loop to preserve latest-value/completion ordering; R3's scheduler specialization is lower allocation. |
-| `Timestamp range` | time >= R3 (399.6629 ns vs 337.9970 ns); allocation > R3 (312 B vs 152 B). | Accepted exception: timestamps are produced through the project sequencer clock and `Moment<T>` path for deterministic scheduler injection; R3 is slightly cheaper natively. |
-| `TimeInterval range` | time >= R3 (488.7716 ns vs 426.0530 ns); allocation > R3 (736 B vs 160 B). | Accepted exception: interval measurement tracks prior timestamp state through `ISequencer`; allocation buys deterministic clock injection and System.Reactive-compatible semantics. |
-| `Expire idle` | time >= R3 (978.2797 ns vs 385.2929 ns); allocation > R3 (25,912 B vs 784 B). | Accepted exception: `Expire` owns a timer slot plus source subscription and routes timeout errors safely; the scheduler/disposal safety cost is retained. |
-| `Signal emit, 32 values` | allocation ties System.Reactive (136 B vs 136 B). | Accepted exception: allocation ties System.Reactive while ReactiveUI.Primitives wins throughput and beats R3 allocation; strict-lower cannot be satisfied for a tie. |
-| `Signal emit, 1024 values` | allocation ties System.Reactive (136 B vs 136 B). | Accepted exception: allocation is flat and tied with System.Reactive while throughput remains fastest; no extra optimization is justified for a strict tie. |
-| `ShareLive connect` | allocation > R3 (384 B vs 368 B). | Accepted exception: live sharing owns the `ConnectableSignal<T>` connection/disposal boundary; the small R3 allocation delta buys explicit lifecycle ownership. |
-| `Share live subscribe` | allocation > R3 (848 B vs 488 B). | Accepted exception: share/ref-count uses gate state to connect/disconnect the source safely across observers; R3’s lower allocation reflects a different specialized implementation. |
-| `AutoShare subscribe` | allocation > R3 (848 B vs 488 B). | Accepted exception: auto-share keeps connection gate state and a disposable cleanup path for safe last-subscriber disconnect; throughput remains ahead while allocation is documented. |
-| `AutoConnect subscribe` | allocation > R3 (728 B vs 368 B). | Accepted exception: auto-connect tracks subscriber thresholds and connection lifetime explicitly; allocation premium buys predictable connect ownership without R3 at runtime. |
-| `StateSignal updates` | time >= System.Reactive (526.8121 ns vs 526.5334 ns). | Accepted exception: state updates retain current-value/state-signal semantics and lower allocation than both alternatives; the latest run is within noise of System.Reactive time while still faster than R3. |
-| `ReadOnlyState projection` | time >= System.Reactive (125.7138 ns vs 89.6034 ns). | Accepted exception: projection preserves `ReadOnlyStateSignal<T>` current-value semantics; System.Reactive is faster in this microcase but allocates more and lacks the state-signal contract. |
-| `TaskSignal subscribe` | time >= System.Reactive (3,301.5409 ns vs 716.5774 ns); time >= R3 (3,301.5409 ns vs 39.6398 ns); allocation > System.Reactive (3,937 B vs 886 B); allocation > R3 (3,937 B vs 160 B). | Accepted exception: `TaskSignal<T>` exposes signal state, completion/error observation, and task lifecycle semantics, not just a completed-task observable; use the completed-task bridge for the scalar bridge case. |
-| `Command execute` | time >= R3 (124.0958 ns vs 104.3281 ns); allocation > R3 (600 B vs 296 B). | Accepted exception: command execution exposes busy/result/error state and async coordination; R3 is cheaper for the narrow command path, while ReactiveUI.Primitives keeps richer command semantics. |
-| `Command result subscribe` | time >= System.Reactive (148.7583 ns vs 37.9774 ns); time >= R3 (148.7583 ns vs 62.7556 ns); allocation > System.Reactive (672 B vs 136 B); allocation > R3 (672 B vs 160 B). | Accepted exception: result subscription attaches to the command stateful signal pipeline rather than a bare subject; allocation/time buys command result replay/state semantics. |
-| `CollectList range` | allocation > R3 (688 B vs 632 B). | Accepted exception: collection returns `IList<T>` through the general terminal observer path; the small R3 allocation delta is accepted because throughput remains faster. |
+| `Sequence subscribe` | allocation > R3 (96 B vs 80 B). | Accepted exception: ReactiveUI.Primitives preserves BCL `IObservable<T>` compatibility, deterministic scheduler/state ownership, and safe disposal semantics; the remaining strict gap is documented. |
+| `Completed task bridge` | allocation ties R3 (88 B vs 88 B). | Accepted exception: the completed-task bridge already has the lowest observed time and ties R3 allocation while preserving task-observer completion semantics. |
+| `Create subscribe` | time >= System.Reactive (45.5529 ns vs 41.2160 ns); allocation > System.Reactive (248 B vs 168 B); allocation > R3 (248 B vs 128 B). | Accepted exception: the create operators keep the BCL `IObserver<T>` callback shape and terminal/disposal safety wrappers; the adapter cost avoids a runtime dependency on either comparison library. |
+| `CreateSafe subscribe` | time >= System.Reactive (44.8270 ns vs 42.1319 ns); allocation > System.Reactive (248 B vs 168 B); allocation > R3 (248 B vs 128 B). | Accepted exception: the create operators keep the BCL `IObserver<T>` callback shape and terminal/disposal safety wrappers; the adapter cost avoids a runtime dependency on either comparison library. |
+| `Lazy subscribe` | allocation > R3 (240 B vs 152 B). | Accepted exception: ReactiveUI.Primitives preserves BCL `IObservable<T>` compatibility, deterministic scheduler/state ownership, and safe disposal semantics; the remaining strict gap is documented. |
+| `Start subscribe` | allocation > R3 (376 B vs 160 B). | Accepted exception: `Start` uses the project `ISequencer` abstraction and preserves scheduling parity; the remaining R3 allocation gap is documented. |
+| `Unfold subscribe` | time >= R3 (170.6483 ns vs 93.9090 ns); allocation > R3 (736 B vs 128 B). | Accepted exception: recursive generation keeps state-machine disposal and observer safety guards; the specialized R3 observable shape allocates less. |
+| `Use subscribe` | allocation > System.Reactive (432 B vs 168 B); time >= R3 (68.1815 ns vs 53.1693 ns); allocation > R3 (432 B vs 128 B). | Accepted exception: `Use` owns resource lifetime and source subscription across completion, error, and unsubscribe; the lifecycle ownership costs extra allocation. |
+| `SwitchTo ranges` | time >= R3 (794.3949 ns vs 718.6733 ns); allocation > R3 (1376 B vs 392 B). | Accepted exception: `SwitchTo` maintains an inner subscription slot and terminal arbitration for general `IObservable<IObservable<T>>`; the range-specialized R3 path is cheaper. |
+| `SyncLatest ranges` | allocation > R3 (504 B vs 344 B). | Accepted exception: the operator stores readiness/value state for both sides and owns subscriptions explicitly; throughput remains ahead while R3 allocates less. |
+| `Latch ranges` | allocation > R3 (504 B vs 248 B). | Accepted exception: the operator stores readiness/value state for both sides and owns subscriptions explicitly; throughput remains ahead while R3 allocates less. |
+| `DelayStart range` | allocation > R3 (936 B vs 552 B). | Accepted exception: the optimized direct scheduler path now beats both alternatives on throughput; R3 still uses a smaller scheduler allocation, so that allocation trade-off is documented. |
+| `Timestamp range` | time >= R3 (402.4542 ns vs 330.9149 ns); allocation > R3 (312 B vs 152 B). | Accepted exception: scheduler-derived timing values use the project sequencer clock for deterministic injection; R3 remains cheaper in this native timing microcase. |
+| `TimeInterval range` | time >= R3 (471.3139 ns vs 432.3715 ns); allocation > R3 (736 B vs 160 B). | Accepted exception: scheduler-derived timing values use the project sequencer clock for deterministic injection; R3 remains cheaper in this native timing microcase. |
+| `StateSignal 1024 values` | time >= System.Reactive (15,821.2891 ns vs 15,764.0411 ns); time >= R3 (15,821.2891 ns vs 15,761.4075 ns). | Accepted exception: the state signal keeps current-value semantics with lower allocation; the observed time gap is documented as a stateful-signal trade-off. |
+| `Signal emit, 32 values` | allocation ties System.Reactive (136 B vs 136 B). | Accepted exception: ReactiveUI.Primitives preserves BCL `IObservable<T>` compatibility, deterministic scheduler/state ownership, and safe disposal semantics; the remaining strict gap is documented. |
+| `Signal emit, 1024 values` | allocation ties System.Reactive (136 B vs 136 B). | Accepted exception: ReactiveUI.Primitives preserves BCL `IObservable<T>` compatibility, deterministic scheduler/state ownership, and safe disposal semantics; the remaining strict gap is documented. |
+| `ShareLive connect` | allocation > R3 (384 B vs 368 B). | Accepted exception: live sharing owns connection/ref-count lifecycle and safe disconnect state; the small R3 allocation gap is documented. |
+| `Share live subscribe` | allocation > R3 (848 B vs 488 B). | Accepted exception: live sharing owns connection/ref-count lifecycle and safe disconnect state; the small R3 allocation gap is documented. |
+| `AutoShare subscribe` | allocation > R3 (848 B vs 488 B). | Accepted exception: live sharing owns connection/ref-count lifecycle and safe disconnect state; the small R3 allocation gap is documented. |
+| `AutoConnect subscribe` | allocation > R3 (728 B vs 368 B). | Accepted exception: live sharing owns connection/ref-count lifecycle and safe disconnect state; the small R3 allocation gap is documented. |
+| `StateSignal updates` | time >= System.Reactive (562.7767 ns vs 555.7740 ns). | Accepted exception: the state signal keeps current-value semantics with lower allocation; the observed time gap is documented as a stateful-signal trade-off. |
+| `ReadOnlyState projection` | time >= System.Reactive (126.0058 ns vs 89.6705 ns). | Accepted exception: projection preserves `ReadOnlyStateSignal<T>` current-value semantics; System.Reactive is faster here but allocates more and lacks the state-signal contract. |
+| `TaskSignal subscribe` | time >= System.Reactive (1,548.4924 ns vs 674.1182 ns); allocation > System.Reactive (3909 B vs 886 B); time >= R3 (1,548.4924 ns vs 38.3412 ns); allocation > R3 (3909 B vs 160 B). | Accepted exception: `TaskSignal<T>` exposes signal state, completion/error observation, and task lifecycle semantics, not just a completed-task observable. |
+| `Command execute` | time >= R3 (117.6506 ns vs 111.5248 ns); allocation > R3 (600 B vs 296 B). | Accepted exception: command paths expose busy/result/error state and async coordination; the narrower comparison-library paths are cheaper in this microcase. |
+| `Command result subscribe` | time >= System.Reactive (142.9694 ns vs 37.2585 ns); allocation > System.Reactive (672 B vs 136 B); time >= R3 (142.9694 ns vs 65.7253 ns); allocation > R3 (672 B vs 160 B). | Accepted exception: command paths expose busy/result/error state and async coordination; the narrower comparison-library paths are cheaper in this microcase. |
+| `CollectList range` | allocation > R3 (688 B vs 632 B). | Accepted exception: collection returns `IList<T>` through the terminal helper path; the small R3 allocation delta is accepted because throughput remains faster. |
 | `CurrentThread schedule` | allocation ties System.Reactive (88 B vs 88 B); allocation > R3 (88 B vs 56 B). | Accepted exception: current-thread scheduling uses the project sequencer queue contract; strict-lower allocation is not required for a tied/faster scheduler primitive. |
-| `Safe witness` | time >= System.Reactive (22.8934 ns vs 14.3072 ns); time >= R3 (22.8934 ns vs 18.5158 ns); allocation > System.Reactive (168 B vs 136 B); allocation > R3 (168 B vs 56 B). | Accepted exception: `SafeWitness` intentionally wraps observer calls to enforce safe terminal/error behavior; the microbenchmark records this safety overhead. |
-| `Completed Spark` | time >= System.Reactive (0.0000 ns vs 0.0000 ns); allocation ties System.Reactive (0 B vs 0 B); allocation ties R3 (0 B vs 0 B). | Accepted exception: all alternatives allocate zero and measure near zero, so strict-lower allocation cannot apply; this is a singleton sanity check. |
+| `Safe witness` | time >= System.Reactive (21.6127 ns vs 12.1948 ns); allocation > System.Reactive (168 B vs 136 B); time >= R3 (21.6127 ns vs 17.6018 ns); allocation > R3 (168 B vs 56 B). | Accepted exception: `SafeWitness` intentionally wraps observer calls to enforce safe terminal/error behavior; the microbenchmark records this safety overhead. |
+| `Completed Spark` | time >= System.Reactive (0.0084 ns vs 0.0000 ns); allocation ties System.Reactive (0 B vs 0 B); time >= R3 (0.0084 ns vs 0.0000 ns); allocation ties R3 (0 B vs 0 B). | Accepted exception: all alternatives allocate zero and measure near zero, so strict-lower allocation cannot apply; this is a singleton sanity check. |
 
 Performance constraints used by the project:
 

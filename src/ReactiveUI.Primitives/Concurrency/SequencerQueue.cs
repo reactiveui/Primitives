@@ -18,7 +18,7 @@ public partial class SequencerQueue<TAbsolute>
     /// <summary>
     /// Default initial capacity for scheduler queues.
     /// </summary>
-    private const int DefaultCapacity = 1024;
+    private const int DefaultCapacity = 4;
 
     /// <summary>
     /// Priority queue storing scheduled work.

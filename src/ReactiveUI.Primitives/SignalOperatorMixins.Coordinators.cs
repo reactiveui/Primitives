@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives;
@@ -11,6 +13,223 @@ namespace ReactiveUI.Primitives;
 /// </summary>
 public static partial class LinqMixins
 {
+    /// <summary>
+    /// Timeout signal with a direct subscription path.
+    /// </summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    private sealed class ExpireSignal<T> : IRequireCurrentThread<T>
+    {
+        /// <summary>
+        /// The source observable.
+        /// </summary>
+        private readonly IObservable<T> _source;
+
+        /// <summary>
+        /// The timeout period.
+        /// </summary>
+        private readonly TimeSpan _dueTime;
+
+        /// <summary>
+        /// The sequencer used to schedule the timeout.
+        /// </summary>
+        private readonly ISequencer _sequencer;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ExpireSignal{T}"/> class.
+        /// </summary>
+        /// <param name="source">The source observable.</param>
+        /// <param name="dueTime">The timeout period.</param>
+        /// <param name="sequencer">The sequencer used to schedule the timeout.</param>
+        public ExpireSignal(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer)
+        {
+            _source = source;
+            _dueTime = dueTime;
+            _sequencer = sequencer;
+        }
+
+        /// <inheritdoc/>
+        public bool IsRequiredSubscribeOnCurrentThread() =>
+            _sequencer == Sequencer.CurrentThread ||
+            (_source is IRequireCurrentThread<T> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread());
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            var coordinator = new ExpireCoordinator<T>(_source, _dueTime, _sequencer, observer);
+            if (!IsRequiredSubscribeOnCurrentThread() || !Sequencer.CurrentThread.IsScheduleRequired)
+            {
+                return coordinator.Run();
+            }
+
+            var subscription = new SingleDisposable();
+            Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run()));
+            return subscription;
+        }
+    }
+
+    /// <summary>
+    /// Coordinates timeout delivery with one active timer.
+    /// </summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Usage",
+        "CA2213:Disposable fields should be disposed",
+        Justification = "Disposable fields are released through interlocked exchange in Dispose.")]
+    private sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
+    {
+        /// <summary>
+        /// The source observable.
+        /// </summary>
+        private readonly IObservable<T> _source;
+
+        /// <summary>
+        /// The timeout period.
+        /// </summary>
+        private readonly TimeSpan _dueTime;
+
+        /// <summary>
+        /// The sequencer used to schedule the timeout.
+        /// </summary>
+        private readonly ISequencer _sequencer;
+
+        /// <summary>
+        /// The downstream observer.
+        /// </summary>
+        private readonly IObserver<T> _observer;
+
+        /// <summary>
+        /// The active source subscription.
+        /// </summary>
+        private IDisposable? _subscription;
+
+        /// <summary>
+        /// The active timeout timer.
+        /// </summary>
+        private IDisposable? _timer;
+
+        /// <summary>
+        /// A value indicating whether the timeout or source has terminated.
+        /// </summary>
+        private int _done;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ExpireCoordinator{T}"/> class.
+        /// </summary>
+        /// <param name="source">The source observable.</param>
+        /// <param name="dueTime">The timeout period.</param>
+        /// <param name="sequencer">The sequencer used to schedule the timeout.</param>
+        /// <param name="observer">The downstream observer.</param>
+        public ExpireCoordinator(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer, IObserver<T> observer)
+        {
+            _source = source;
+            _dueTime = dueTime;
+            _sequencer = sequencer;
+            _observer = observer;
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            var timer = Interlocked.Exchange(ref _timer, null);
+            timer?.Dispose();
+
+            var subscription = Interlocked.Exchange(ref _subscription, null);
+            subscription?.Dispose();
+        }
+
+        /// <inheritdoc/>
+        public void OnCompleted()
+        {
+            if (Interlocked.Exchange(ref _done, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _observer.OnCompleted();
+            }
+            finally
+            {
+                Dispose();
+            }
+        }
+
+        /// <inheritdoc/>
+        public void OnError(Exception error)
+        {
+            if (Interlocked.Exchange(ref _done, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _observer.OnError(error);
+            }
+            finally
+            {
+                Dispose();
+            }
+        }
+
+        /// <inheritdoc/>
+        public void OnNext(T value)
+        {
+            if (Volatile.Read(ref _done) != 0)
+            {
+                return;
+            }
+
+            _observer.OnNext(value);
+        }
+
+        /// <summary>
+        /// Starts observing the source and timeout timer.
+        /// </summary>
+        /// <returns>The coordinator that owns the subscription cleanup.</returns>
+        internal ExpireCoordinator<T> Run()
+        {
+            _timer = _sequencer.Schedule(this, _dueTime, static (_, coordinator) => coordinator.Timeout());
+            _subscription = _source.Subscribe(this);
+            if (Volatile.Read(ref _done) == 0)
+            {
+                return this;
+            }
+
+            Dispose();
+            return this;
+        }
+
+        /// <summary>
+        /// Emits the timeout error.
+        /// </summary>
+        /// <returns>An empty disposable.</returns>
+        private IDisposable Timeout()
+        {
+            if (Interlocked.Exchange(ref _done, 1) != 0)
+            {
+                return Disposable.Empty;
+            }
+
+            try
+            {
+                _observer.OnError(new TimeoutException());
+            }
+            finally
+            {
+                Dispose();
+            }
+
+            return Disposable.Empty;
+        }
+    }
+
     /// <summary>
     /// Coordinates race subscriptions and forwards only the winning source.
     /// </summary>

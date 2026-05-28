@@ -427,7 +427,7 @@ public static partial class Signal
             throw new ArgumentNullException(nameof(values));
         }
 
-        return CreateSafe<T>(observer => SubscribeAsyncEnumerable(values, observer, cancellationToken));
+        return new AsyncEnumerableSignal<T>(values, cancellationToken);
     }
 
 #endif
@@ -675,117 +675,4 @@ public static partial class Signal
 
         return new RangeConcatSignal(ranges);
     }
-
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER
-
-    /// <summary>
-    /// Executes the SubscribeAsyncEnumerable operation.
-    /// </summary>
-    /// <typeparam name="T">The T type.</typeparam>
-    /// <param name="values">The values value.</param>
-    /// <param name="observer">The observer value.</param>
-    /// <param name="cancellationToken">The cancellationToken value.</param>
-    /// <returns>The result.</returns>
-    private static IDisposable SubscribeAsyncEnumerable<T>(IAsyncEnumerable<T> values, IObserver<T> observer, CancellationToken cancellationToken)
-    {
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var disposed = 0;
-        IAsyncEnumerator<T>? enumerator = null;
-        _ = Task.Run(
-            async () =>
-            {
-                try
-                {
-                    await PumpAsyncEnumerable(values, observer, cts, enumeratorReference => enumerator = enumeratorReference).ConfigureAwait(false);
-                }
-                finally
-                {
-                    Volatile.Write(ref disposed, 1);
-                }
-            },
-            CancellationToken.None);
-
-        return Disposable.Create(() =>
-        {
-            if (Interlocked.Exchange(ref disposed, 1) != 0)
-            {
-                return;
-            }
-
-            try
-            {
-                cts.Cancel();
-            }
-            catch (ObjectDisposedException)
-            {
-                // The async enumerable completed and released its linked token before disposal reached this callback.
-                return;
-            }
-
-            var current = Volatile.Read(ref enumerator);
-            if (current == null)
-            {
-                return;
-            }
-
-            try
-            {
-                _ = current.DisposeAsync().AsTask();
-            }
-            catch (NotSupportedException)
-            {
-                // Some enumerators only support disposal from the enumeration path.
-            }
-        });
-    }
-
-    /// <summary>
-    /// Executes the PumpAsyncEnumerable operation.
-    /// </summary>
-    /// <typeparam name="T">The T type.</typeparam>
-    /// <param name="values">The values value.</param>
-    /// <param name="observer">The observer value.</param>
-    /// <param name="cts">The cts value.</param>
-    /// <param name="setEnumerator">The setEnumerator value.</param>
-    /// <returns>The result.</returns>
-    private static async Task PumpAsyncEnumerable<T>(
-        IAsyncEnumerable<T> values,
-        IObserver<T> observer,
-        CancellationTokenSource cts,
-        Action<IAsyncEnumerator<T>> setEnumerator)
-    {
-        IAsyncEnumerator<T>? enumerator = null;
-        try
-        {
-            enumerator = values.GetAsyncEnumerator(cts.Token);
-            setEnumerator(enumerator);
-            while (!cts.IsCancellationRequested && await enumerator.MoveNextAsync().ConfigureAwait(false))
-            {
-                observer.OnNext(enumerator.Current);
-            }
-
-            if (!cts.IsCancellationRequested)
-            {
-                observer.OnCompleted();
-            }
-        }
-        catch (OperationCanceledException) when (cts.IsCancellationRequested)
-        {
-            // Disposal requested cancellation; observers should not receive a terminal signal.
-        }
-        catch (Exception error) when (!cts.IsCancellationRequested)
-        {
-            observer.OnError(error);
-        }
-        finally
-        {
-            if (enumerator != null)
-            {
-                await enumerator.DisposeAsync().ConfigureAwait(false);
-            }
-
-            cts.Dispose();
-        }
-    }
-#endif
 }
