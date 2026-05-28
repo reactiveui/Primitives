@@ -93,6 +93,13 @@ public static partial class LinqMixins
                 throw new ArgumentNullException(nameof(observer));
             }
 
+            if (_source is RangeSignal range && typeof(T) == typeof(int))
+            {
+                observer.OnNext(CountDistinctRange(range, _keySelector, _comparer));
+                observer.OnCompleted();
+                return Disposable.Empty;
+            }
+
             var sink = new DistinctByCountObserver<T, TKey>(observer, _keySelector, _comparer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
@@ -106,9 +113,35 @@ public static partial class LinqMixins
                 throw new ArgumentNullException(nameof(observer));
             }
 
+            if (_source is RangeSignal range && typeof(T) == typeof(int))
+            {
+                observer.OnNext(CountDistinctRange(range, _keySelector, _comparer));
+                observer.OnCompleted();
+                return Disposable.Empty;
+            }
+
             var sink = new DistinctByLongCountObserver<T, TKey>(observer, _keySelector, _comparer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
+        }
+
+        /// <summary>
+        /// Counts distinct selected keys directly over a range source.
+        /// </summary>
+        /// <param name="range">The range source.</param>
+        /// <param name="keySelector">The key selector.</param>
+        /// <param name="comparer">The key comparer.</param>
+        /// <returns>The number of distinct keys.</returns>
+        private static int CountDistinctRange(RangeSignal range, Func<T, TKey> keySelector, IEqualityComparer<TKey>? comparer)
+        {
+            HashSet<TKey> seen = comparer == null ? [] : new(comparer);
+            var typedSelector = (Func<int, TKey>)(object)keySelector;
+            for (var i = 0; i < range.Count; i++)
+            {
+                _ = seen.Add(typedSelector(range.Start + i));
+            }
+
+            return seen.Count;
         }
     }
 
@@ -198,9 +231,44 @@ public static partial class LinqMixins
                 throw new ArgumentNullException(nameof(observer));
             }
 
+            if (_source is RangeSignal range && typeof(T) == typeof(int))
+            {
+                EmitCountRange(range, _predicate, observer);
+                return Disposable.Empty;
+            }
+
             var sink = new CountPredicateObserver<T>(observer, _predicate);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
+        }
+
+        /// <summary>
+        /// Counts matching range values directly and emits the result.
+        /// </summary>
+        /// <param name="range">The range source.</param>
+        /// <param name="predicate">The predicate.</param>
+        /// <param name="observer">The downstream observer.</param>
+        private static void EmitCountRange(RangeSignal range, Func<T, bool> predicate, IObserver<int> observer)
+        {
+            try
+            {
+                var typedPredicate = (Func<int, bool>)(object)predicate;
+                var count = 0;
+                for (var i = 0; i < range.Count; i++)
+                {
+                    if (typedPredicate(range.Start + i))
+                    {
+                        count = checked(count + 1);
+                    }
+                }
+
+                observer.OnNext(count);
+                observer.OnCompleted();
+            }
+            catch (Exception error)
+            {
+                observer.OnError(error);
+            }
         }
     }
 
@@ -290,9 +358,44 @@ public static partial class LinqMixins
                 throw new ArgumentNullException(nameof(observer));
             }
 
+            if (_source is RangeSignal range && typeof(T) == typeof(int))
+            {
+                EmitLongCountRange(range, _predicate, observer);
+                return Disposable.Empty;
+            }
+
             var sink = new LongCountPredicateObserver<T>(observer, _predicate);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
+        }
+
+        /// <summary>
+        /// Counts matching range values directly and emits the long result.
+        /// </summary>
+        /// <param name="range">The range source.</param>
+        /// <param name="predicate">The predicate.</param>
+        /// <param name="observer">The downstream observer.</param>
+        private static void EmitLongCountRange(RangeSignal range, Func<T, bool> predicate, IObserver<long> observer)
+        {
+            try
+            {
+                var typedPredicate = (Func<int, bool>)(object)predicate;
+                long count = 0;
+                for (var i = 0; i < range.Count; i++)
+                {
+                    if (typedPredicate(range.Start + i))
+                    {
+                        count = checked(count + 1L);
+                    }
+                }
+
+                observer.OnNext(count);
+                observer.OnCompleted();
+            }
+            catch (Exception error)
+            {
+                observer.OnError(error);
+            }
         }
     }
 
@@ -377,9 +480,47 @@ public static partial class LinqMixins
                 throw new ArgumentNullException(nameof(observer));
             }
 
+            if (_source is RangeSignal range && typeof(T) == typeof(int))
+            {
+                EmitAnyRange(range, _predicate, observer);
+                return Disposable.Empty;
+            }
+
             var sink = new AnyPredicateObserver<T>(observer, _predicate);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
+        }
+
+        /// <summary>
+        /// Evaluates a predicate directly over a range source and emits the any result.
+        /// </summary>
+        /// <param name="range">The range source.</param>
+        /// <param name="predicate">The predicate.</param>
+        /// <param name="observer">The downstream observer.</param>
+        private static void EmitAnyRange(RangeSignal range, Func<T, bool> predicate, IObserver<bool> observer)
+        {
+            try
+            {
+                var typedPredicate = (Func<int, bool>)(object)predicate;
+                for (var i = 0; i < range.Count; i++)
+                {
+                    if (!typedPredicate(range.Start + i))
+                    {
+                        continue;
+                    }
+
+                    observer.OnNext(true);
+                    observer.OnCompleted();
+                    return;
+                }
+
+                observer.OnNext(false);
+                observer.OnCompleted();
+            }
+            catch (Exception error)
+            {
+                observer.OnError(error);
+            }
         }
     }
 

@@ -37,6 +37,11 @@ internal sealed class ImmediateReturnSignal<T> : IRequireCurrentThread<T>, IInli
     /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
+        if (observer == null)
+        {
+            throw new ArgumentNullException(nameof(observer));
+        }
+
         observer.OnNext(_value);
         observer.OnCompleted();
         return Disposable.Empty;

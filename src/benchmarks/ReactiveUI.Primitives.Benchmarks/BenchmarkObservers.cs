@@ -59,6 +59,112 @@ internal sealed class IntSignalObserver : IObserver<int>
 }
 
 /// <summary>
+/// Long observer used by Signal and System.Reactive benchmark cases.
+/// </summary>
+internal sealed class LongSignalObserver : IObserver<long>
+{
+    /// <summary>
+    /// Gets the total of received values.
+    /// </summary>
+    public long Total { get; private set; }
+
+    /// <summary>
+    /// Gets the number of onNext calls.
+    /// </summary>
+    public int NextCount { get; private set; }
+
+    /// <summary>
+    /// Gets the last value observed.
+    /// </summary>
+    public long LastValue { get; private set; }
+
+    /// <summary>
+    /// Gets the number of terminal completions observed.
+    /// </summary>
+    public int CompletionCount { get; private set; }
+
+    /// <summary>
+    /// Gets the number of errors observed.
+    /// </summary>
+    public int ErrorCount { get; private set; }
+
+    /// <inheritdoc/>
+    public void OnNext(long value)
+    {
+        NextCount++;
+        Total += value;
+        LastValue = value;
+    }
+
+    /// <inheritdoc/>
+    public void OnError(Exception error)
+    {
+        ErrorCount++;
+    }
+
+    /// <inheritdoc/>
+    public void OnCompleted()
+    {
+        CompletionCount++;
+    }
+}
+
+/// <summary>
+/// Boolean observer used by Signal and System.Reactive benchmark cases.
+/// </summary>
+internal sealed class BoolSignalObserver : IObserver<bool>
+{
+    /// <summary>
+    /// Gets the total of true values observed.
+    /// </summary>
+    public int Total { get; private set; }
+
+    /// <summary>
+    /// Gets the number of onNext calls.
+    /// </summary>
+    public int NextCount { get; private set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the last observed value was true.
+    /// </summary>
+    public bool LastValue { get; private set; }
+
+    /// <summary>
+    /// Gets the number of terminal completions observed.
+    /// </summary>
+    public int CompletionCount { get; private set; }
+
+    /// <summary>
+    /// Gets the number of errors observed.
+    /// </summary>
+    public int ErrorCount { get; private set; }
+
+    /// <inheritdoc/>
+    public void OnNext(bool value)
+    {
+        NextCount++;
+        if (value)
+        {
+            Total++;
+        }
+
+        LastValue = value;
+    }
+
+    /// <inheritdoc/>
+    public void OnError(Exception error)
+    {
+        ErrorCount++;
+    }
+
+    /// <inheritdoc/>
+    public void OnCompleted()
+    {
+        CompletionCount++;
+    }
+}
+
+/// <summary>
 /// Observer used by R3 benchmark cases.
 /// </summary>
 internal sealed class IntR3Observer : Observer<int>

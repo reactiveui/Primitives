@@ -57,6 +57,18 @@ public static partial class LinqMixins
             onNext(_value);
             return _source.Subscribe(onNext, onError, onCompleted);
         }
+
+        /// <summary>
+        /// Gets the source observable for operator fusion.
+        /// </summary>
+        /// <returns>The source observable.</returns>
+        internal IObservable<T> GetSource() => _source;
+
+        /// <summary>
+        /// Gets the prepended value for operator fusion.
+        /// </summary>
+        /// <returns>The prepended value.</returns>
+        internal T GetValue() => _value;
     }
 
     /// <summary>
@@ -115,6 +127,64 @@ public static partial class LinqMixins
     }
 
     /// <summary>
+    /// Fuses a single prepended value and a single appended value around a source subscription.
+    /// </summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    private sealed class PrependAppendSignal<T> : Signals.Core.IInlineSignal<T>
+    {
+        /// <summary>
+        /// The source observable.
+        /// </summary>
+        private readonly IObservable<T> _source;
+
+        /// <summary>
+        /// The value emitted before source subscription.
+        /// </summary>
+        private readonly T _prependValue;
+
+        /// <summary>
+        /// The value emitted after source completion.
+        /// </summary>
+        private readonly T _appendValue;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PrependAppendSignal{T}"/> class.
+        /// </summary>
+        /// <param name="source">The source observable.</param>
+        /// <param name="prependValue">The prepended value.</param>
+        /// <param name="appendValue">The appended value.</param>
+        internal PrependAppendSignal(IObservable<T> source, T prependValue, T appendValue)
+        {
+            _source = source;
+            _prependValue = prependValue;
+            _appendValue = appendValue;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            observer.OnNext(_prependValue);
+            var sink = new AppendObserver<T>(observer, _appendValue);
+            sink.SetSubscription(_source.Subscribe(sink));
+            return sink;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
+        {
+            onNext(_prependValue);
+            var sink = new AppendDelegateObserver<T>(onNext, onError, onCompleted, _appendValue);
+            sink.SetSubscription(_source.Subscribe(sink));
+            return sink;
+        }
+    }
+
+    /// <summary>
     /// Appends a single value after source completion.
     /// </summary>
     /// <typeparam name="T">The source value type.</typeparam>
@@ -152,6 +222,89 @@ public static partial class LinqMixins
             var sink = new AppendObserver<T>(observer, _value);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
+        }
+    }
+
+    /// <summary>
+    /// Delegate-backed observer for fused prepend/append inline subscriptions.
+    /// </summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    private sealed class AppendDelegateObserver<T> : SingleSourceObserver<T>
+    {
+        /// <summary>
+        /// The next callback.
+        /// </summary>
+        private readonly Action<T> _onNext;
+
+        /// <summary>
+        /// The error callback.
+        /// </summary>
+        private readonly Action<Exception> _onError;
+
+        /// <summary>
+        /// The completion callback.
+        /// </summary>
+        private readonly Action _onCompleted;
+
+        /// <summary>
+        /// The appended value.
+        /// </summary>
+        private readonly T _value;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AppendDelegateObserver{T}"/> class.
+        /// </summary>
+        /// <param name="onNext">The next callback.</param>
+        /// <param name="onError">The error callback.</param>
+        /// <param name="onCompleted">The completion callback.</param>
+        /// <param name="value">The appended value.</param>
+        internal AppendDelegateObserver(Action<T> onNext, Action<Exception> onError, Action onCompleted, T value)
+        {
+            _onNext = onNext;
+            _onError = onError;
+            _onCompleted = onCompleted;
+            _value = value;
+        }
+
+        /// <inheritdoc/>
+        public override void OnNext(T value)
+        {
+            try
+            {
+                _onNext(value);
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
+        }
+
+        /// <inheritdoc/>
+        public override void OnError(Exception error)
+        {
+            try
+            {
+                _onError(error);
+            }
+            finally
+            {
+                Dispose();
+            }
+        }
+
+        /// <inheritdoc/>
+        public override void OnCompleted()
+        {
+            try
+            {
+                _onNext(_value);
+                _onCompleted();
+            }
+            finally
+            {
+                Dispose();
+            }
         }
     }
 

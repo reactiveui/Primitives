@@ -206,16 +206,122 @@ public class TerminalCollectionBenchmarks
             CancellationToken.None);
 
     /// <summary>
+    /// Benchmarks predicate long-count over a range signal.
+    /// </summary>
+    /// <returns>The matching count.</returns>
+    [Benchmark]
+    public long PrimitivesLongCountPredicate()
+    {
+        var observer = new LongSignalObserver();
+        using var subscription = Signal.Range(1, Count).LongCount(static value => value % 2 == 0).Subscribe(observer);
+        return observer.Total;
+    }
+
+    /// <summary>
+    /// Benchmarks predicate long-count using System.Reactive.
+    /// </summary>
+    /// <returns>The matching count.</returns>
+    [Benchmark]
+    public long SystemReactiveLongCountPredicate()
+    {
+        var observer = new LongSignalObserver();
+        using var subscription = RxObservable.Range(1, Count).LongCount(static value => value % 2 == 0).Subscribe(observer);
+        return observer.Total;
+    }
+
+    /// <summary>
+    /// Benchmarks predicate long-count using R3.
+    /// </summary>
+    /// <returns>The matching count.</returns>
+    [Benchmark]
+    public async Task<long> R3LongCountPredicate() =>
+        await R3.ObservableExtensions.CountAsync(
+            R3.Observable.Range(1, Count),
+            static (int value) => value % 2 == 0,
+            CancellationToken.None).ConfigureAwait(false);
+
+    /// <summary>
+    /// Benchmarks all over a range signal.
+    /// </summary>
+    /// <returns>One when all values match.</returns>
+    [Benchmark]
+    public int PrimitivesAllRange()
+    {
+        var observer = new BoolSignalObserver();
+        using var subscription = Signal.Range(1, Count).All(static value => value > 0).Subscribe(observer);
+        return observer.Total;
+    }
+
+    /// <summary>
+    /// Benchmarks all over a range using System.Reactive.
+    /// </summary>
+    /// <returns>One when all values match.</returns>
+    [Benchmark]
+    public int SystemReactiveAllRange()
+    {
+        var observer = new BoolSignalObserver();
+        using var subscription = RxObservable.Range(1, Count).All(static value => value > 0).Subscribe(observer);
+        return observer.Total;
+    }
+
+    /// <summary>
+    /// Benchmarks all over a range using R3.
+    /// </summary>
+    /// <returns>One when all values match.</returns>
+    [Benchmark]
+    public async Task<int> R3AllRange() =>
+        await R3.ObservableExtensions.AllAsync(
+            R3.Observable.Range(1, Count),
+            static (int value) => value > 0,
+            CancellationToken.None).ConfigureAwait(false) ? 1 : 0;
+
+    /// <summary>
+    /// Benchmarks contains over a range signal.
+    /// </summary>
+    /// <returns>One when the value is present.</returns>
+    [Benchmark]
+    public int PrimitivesContainsRange()
+    {
+        var observer = new BoolSignalObserver();
+        using var subscription = Signal.Range(1, Count).Contains(Count).Subscribe(observer);
+        return observer.Total;
+    }
+
+    /// <summary>
+    /// Benchmarks contains over a range using System.Reactive.
+    /// </summary>
+    /// <returns>One when the value is present.</returns>
+    [Benchmark]
+    public int SystemReactiveContainsRange()
+    {
+        var observer = new BoolSignalObserver();
+        using var subscription = RxObservable.Range(1, Count).Contains(Count).Subscribe(observer);
+        return observer.Total;
+    }
+
+    /// <summary>
+    /// Benchmarks contains over a range using R3.
+    /// </summary>
+    /// <returns>One when the value is present.</returns>
+    [Benchmark]
+    public async Task<int> R3ContainsRange() =>
+        await R3.ObservableExtensions.ContainsAsync(
+            R3.Observable.Range(1, Count),
+            Count,
+            CancellationToken.None).ConfigureAwait(false) ? 1 : 0;
+
+    /// <summary>
     /// Benchmarks all and contains terminal predicates.
     /// </summary>
     /// <returns>The number of true results.</returns>
     [Benchmark]
     public int PrimitivesAllContains()
     {
-        var result = 0;
-        using var all = Signal.Range(1, Count).All(static value => value > 0).Subscribe(value => result += value ? 1 : 0);
-        using var contains = Signal.Range(1, Count).Contains(Count).Subscribe(value => result += value ? 1 : 0);
-        return result;
+        var allObserver = new BoolSignalObserver();
+        var containsObserver = new BoolSignalObserver();
+        using var all = Signal.Range(1, Count).All(static value => value > 0).Subscribe(allObserver);
+        using var contains = Signal.Range(1, Count).Contains(Count).Subscribe(containsObserver);
+        return allObserver.Total + containsObserver.Total;
     }
 
     /// <summary>
@@ -225,10 +331,11 @@ public class TerminalCollectionBenchmarks
     [Benchmark]
     public int SystemReactiveAllContains()
     {
-        var result = 0;
-        using var all = RxObservable.Range(1, Count).All(static value => value > 0).Subscribe(value => result += value ? 1 : 0);
-        using var contains = RxObservable.Range(1, Count).Contains(Count).Subscribe(value => result += value ? 1 : 0);
-        return result;
+        var allObserver = new BoolSignalObserver();
+        var containsObserver = new BoolSignalObserver();
+        using var all = RxObservable.Range(1, Count).All(static value => value > 0).Subscribe(allObserver);
+        using var contains = RxObservable.Range(1, Count).Contains(Count).Subscribe(containsObserver);
+        return allObserver.Total + containsObserver.Total;
     }
 
     /// <summary>

@@ -35,6 +35,11 @@ public class OperatorCoverageExpansionTests
     private const int Fourth = 4;
 
     /// <summary>
+    /// A value outside the tested ranges.
+    /// </summary>
+    private const int MissingRangeValue = 99;
+
+    /// <summary>
     /// Observed error index for the any error.
     /// </summary>
     private const int AnyErrorIndex = 2;
@@ -73,6 +78,11 @@ public class OperatorCoverageExpansionTests
     /// Outer failure message.
     /// </summary>
     private const string OuterMessage = "outer";
+
+    /// <summary>
+    /// All predicate failure message.
+    /// </summary>
+    private const string AllMessage = "all";
 
     /// <summary>
     /// Source values for aggregate operator tests.
@@ -157,6 +167,14 @@ public class OperatorCoverageExpansionTests
         var distinctLongCount = new List<long>();
         var anyTrue = new List<bool>();
         var anyFalse = new List<bool>();
+        var rangeDistinctCount = new List<int>();
+        var rangeDistinctLongCount = new List<long>();
+        var rangeAnyTrue = new List<bool>();
+        var rangeAnyFalse = new List<bool>();
+        var rangeAllTrue = new List<bool>();
+        var rangeAllFalse = new List<bool>();
+        var rangeContainsTrue = new List<bool>();
+        var rangeContainsFalse = new List<bool>();
 
         Signal.FromEnumerable(AggregateSource).Count(value => value % Second == 0).Subscribe(countPredicate.Add);
         Signal.FromEnumerable(DuplicateKeySource).DistinctBy(value => value).Count().Subscribe(distinctCount.Add);
@@ -165,6 +183,14 @@ public class OperatorCoverageExpansionTests
         Signal.FromEnumerable(DuplicateKeySource).DistinctBy(value => value).LongCount().Subscribe(distinctLongCount.Add);
         Signal.FromEnumerable(AggregateSource).Any().Subscribe(anyTrue.Add);
         Signal.Empty<int>().Any().Subscribe(anyFalse.Add);
+        Signal.Range(First, Fourth).DistinctBy(value => value / Second).Count().Subscribe(rangeDistinctCount.Add);
+        Signal.Range(First, Fourth).DistinctBy(value => value / Second).LongCount().Subscribe(rangeDistinctLongCount.Add);
+        Signal.Range(First, Fourth).Any(value => value == Third).Subscribe(rangeAnyTrue.Add);
+        Signal.Range(First, Fourth).Any(value => value == MissingRangeValue).Subscribe(rangeAnyFalse.Add);
+        Signal.Range(First, Fourth).All(value => value > 0).Subscribe(rangeAllTrue.Add);
+        Signal.Range(First, Fourth).All(value => value < Fourth).Subscribe(rangeAllFalse.Add);
+        Signal.Range(First, Fourth).Contains(Third).Subscribe(rangeContainsTrue.Add);
+        Signal.Range(First, Fourth).Contains(MissingRangeValue).Subscribe(rangeContainsFalse.Add);
 
         Assert.Equal(CountTwoExpected, countPredicate);
         Assert.Equal(DistinctCountExpected, distinctCount);
@@ -173,6 +199,14 @@ public class OperatorCoverageExpansionTests
         Assert.Equal(DistinctLongCountExpected, distinctLongCount);
         Assert.Equal(TrueExpected, anyTrue);
         Assert.Equal(FalseExpected, anyFalse);
+        Assert.Equal(new[] { Third }, rangeDistinctCount);
+        Assert.Equal(new long[] { Third }, rangeDistinctLongCount);
+        Assert.Equal(TrueExpected, rangeAnyTrue);
+        Assert.Equal(FalseExpected, rangeAnyFalse);
+        Assert.Equal(TrueExpected, rangeAllTrue);
+        Assert.Equal(FalseExpected, rangeAllFalse);
+        Assert.Equal(TrueExpected, rangeContainsTrue);
+        Assert.Equal(FalseExpected, rangeContainsFalse);
     }
 
     /// <summary>
@@ -196,6 +230,46 @@ public class OperatorCoverageExpansionTests
         Assert.Same(longCountError, observed[1]);
         Assert.Same(anyError, observed[AnyErrorIndex]);
         Assert.Same(distinctError, observed[DistinctErrorIndex]);
+    }
+
+    /// <summary>
+    /// Covers predicate exceptions for aggregate boolean terminals.
+    /// </summary>
+    [Test]
+    public void AggregateBooleanTerminalsForwardPredicateErrors()
+    {
+        var allError = new InvalidOperationException(AllMessage);
+        var observed = new List<Exception>();
+
+        Signal.Range(First, Fourth).All(_ => throw allError).Subscribe(_ => { }, observed.Add, () => { });
+
+        Assert.Same(allError, observed[0]);
+    }
+
+    /// <summary>
+    /// Covers fused prepend/default-if-empty/append and empty StartWith helpers.
+    /// </summary>
+    [Test]
+    public void StartWithAppendDefaultIfEmptyFusionPreservesOrderingAndTerminals()
+    {
+        var values = new List<int>();
+        var emptyStartWithValues = new List<int>();
+        var completed = 0;
+
+        Signal.Empty<int>()
+            .DefaultIfEmpty(Second)
+            .StartWith(First)
+            .Append(Third)
+            .Subscribe(values.Add, ex => throw ex, () => completed++);
+
+        Signal.FromEnumerable(AggregateSource)
+            .StartWith()
+            .Append(Fourth)
+            .Subscribe(emptyStartWithValues.Add);
+
+        Assert.Equal(new[] { First, Second, Third }, values);
+        Assert.Equal(1, completed);
+        Assert.Equal(new[] { First, Second, Third, Fourth, Fourth }, emptyStartWithValues);
     }
 
     /// <summary>
