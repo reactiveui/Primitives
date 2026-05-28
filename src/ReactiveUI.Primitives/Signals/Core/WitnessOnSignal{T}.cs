@@ -42,15 +42,8 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
     /// <param name="observer">The observer value.</param>
     /// <param name="cancel">The cancel value.</param>
     /// <returns>The result.</returns>
-    protected override IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel)
-    {
-        if (_scheduler is not ThreadPoolSequencer queueing)
-        {
-            return new WitnessOn(this, observer, cancel).Run();
-        }
-
-        return new ThreadPoolWitnessOn(this, queueing, observer, cancel).Run();
-    }
+    protected override IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
+        new WitnessOn(this, observer, cancel).Run();
 
     /// <summary>
     /// Represents the WitnessOn class.
@@ -266,137 +259,6 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
                 }
 
                 Node.List.Remove(Node);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Represents the ThreadPoolWitnessOn class.
-    /// </summary>
-    private sealed class ThreadPoolWitnessOn : WitnessBase<T, T>
-    {
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
-        private readonly WitnessOnSignal<T> _parent;
-
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
-        private readonly ThreadPoolSequencer _scheduler;
-
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
-        private readonly BooleanDisposable _isDisposed;
-
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
-        private readonly Action<T> _onNext;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ThreadPoolWitnessOn"/> class.
-        /// </summary>
-        /// <param name="parent">The parent value.</param>
-        /// <param name="scheduler">The scheduler value.</param>
-        /// <param name="observer">The observer value.</param>
-        /// <param name="cancel">The cancel value.</param>
-        public ThreadPoolWitnessOn(WitnessOnSignal<T> parent, ThreadPoolSequencer scheduler, IObserver<T> observer, IDisposable cancel)
-            : base(observer, cancel)
-        {
-            _parent = parent;
-            _scheduler = scheduler;
-            _isDisposed = new BooleanDisposable();
-            _onNext = OnNextCore;
-        }
-
-        /// <summary>
-        /// Executes the Run operation.
-        /// </summary>
-        /// <returns>The result.</returns>
-        public MultipleDisposable Run()
-        {
-            var sourceDisposable = _parent._source.Subscribe(this);
-            return new MultipleDisposable(sourceDisposable, _isDisposed);
-        }
-
-        /// <summary>
-        /// Executes the OnNext operation.
-        /// </summary>
-        /// <param name="value">The value.</param>
-        public override void OnNext(T value) =>
-            _scheduler.Schedule(value, (_, v) =>
-            {
-                _onNext(v);
-                return _isDisposed;
-            });
-
-        /// <summary>
-        /// Executes the OnError operation.
-        /// </summary>
-        /// <param name="error">The error value.</param>
-        public override void OnError(Exception error) =>
-            _scheduler.Schedule(error, (_, v) =>
-            {
-                OnErrorCore(v);
-                return _isDisposed;
-            });
-
-        /// <summary>
-        /// Executes the OnCompleted operation.
-        /// </summary>
-        public override void OnCompleted() =>
-            _scheduler.Schedule(OnCompletedCore);
-
-        /// <summary>
-        /// Executes the Dispose operation.
-        /// </summary>
-        /// <param name="disposing">The disposing value.</param>
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _isDisposed.Dispose();
-            }
-
-            base.Dispose(disposing);
-        }
-
-        /// <summary>
-        /// Executes the OnNextCore operation.
-        /// </summary>
-        /// <param name="value">The value.</param>
-        private void OnNextCore(T value) => Observer.OnNext(value);
-
-        /// <summary>
-        /// Executes the OnErrorCore operation.
-        /// </summary>
-        /// <param name="error">The error value.</param>
-        private void OnErrorCore(Exception error)
-        {
-            try
-            {
-                Observer.OnError(error);
-            }
-            finally
-            {
-                Dispose();
-            }
-        }
-
-        /// <summary>
-        /// Executes the OnCompletedCore operation.
-        /// </summary>
-        private void OnCompletedCore()
-        {
-            try
-            {
-                Observer.OnCompleted();
-            }
-            finally
-            {
-                Dispose();
             }
         }
     }

@@ -791,6 +791,11 @@ public static partial class LinqMixins
         }
 
         scheduler ??= ThreadPoolSequencer.Instance;
+        if (source is RangeSignal range && CanReadRangeAs<T>())
+        {
+            return CreateShiftedRangeSignal<T>(range, dueTime, scheduler);
+        }
+
         return Signal.Create<T>(observer =>
         {
             var pocket = new MultipleDisposable();
@@ -917,6 +922,11 @@ public static partial class LinqMixins
         }
 
         scheduler ??= Sequencer.Immediate;
+        if (source is RangeSignal range && CanReadRangeAs<T>())
+        {
+            return new TimestampRangeSignal<T>(range, scheduler);
+        }
+
         return source.Map(value => new Moment<T>(value, scheduler.Now));
     }
 
@@ -946,6 +956,11 @@ public static partial class LinqMixins
         }
 
         scheduler ??= Sequencer.Immediate;
+        if (source is RangeSignal range && CanReadRangeAs<T>())
+        {
+            return new TimeIntervalRangeSignal<T>(range, scheduler);
+        }
+
         return Signal.CreateSafe<TimeInterval<T>>(observer =>
         {
             var last = scheduler.Now;

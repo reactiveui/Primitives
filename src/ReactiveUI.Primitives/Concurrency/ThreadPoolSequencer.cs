@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using ReactiveUI.Primitives.Disposables;
-using static ReactiveUI.Primitives.Disposables.Disposable;
 using Timer = System.Threading.Timer;
 
 namespace ReactiveUI.Primitives.Concurrency
@@ -59,20 +58,9 @@ namespace ReactiveUI.Primitives.Concurrency
                 throw new ArgumentNullException(nameof(action));
             }
 
-            var cancelable = new BooleanDisposable();
-            ThreadPool.QueueUserWorkItem(
-                _ =>
-            {
-                if (cancelable.IsDisposed)
-                {
-                    return;
-                }
-
-                action(this, state);
-            },
-                null);
-
-            return cancelable;
+            var workItem = new ScheduledWorkItem<TState>(this, state, action);
+            workItem.Queue();
+            return workItem;
         }
 
         /// <summary>
@@ -94,52 +82,14 @@ namespace ReactiveUI.Primitives.Concurrency
             }
 
             var dueTime1 = Sequencer.Normalize(dueTime);
-            var hasAdded = false;
-            var hasRemoved = false;
-            Timer timer = null!;
-            timer = new(
-                _ =>
+            if (dueTime1 <= TimeSpan.Zero)
             {
-                lock (Gate)
-                {
-                    if (hasAdded && timer != null)
-                    {
-                        Timers.Remove(timer);
-                    }
-
-                    hasRemoved = true;
-                }
-
-                timer = null!;
-                action(this, state);
-            },
-                null,
-                dueTime1,
-                TimeSpan.FromMilliseconds(-1.0));
-            lock (Gate)
-            {
-                if (!hasRemoved)
-                {
-                    Timers.Add(timer, null!);
-                    hasAdded = true;
-                }
+                return Schedule(state, action);
             }
 
-            return new AnonymousDisposable(() =>
-            {
-                var key = timer;
-                if (key != null)
-                {
-                    key.Dispose();
-                    lock (Gate)
-                    {
-                        Timers.Remove(key);
-                        hasRemoved = true;
-                    }
-                }
-
-                timer = null!;
-            });
+            var workItem = new ScheduledWorkItem<TState>(this, state, action);
+            workItem.Queue(dueTime1);
+            return workItem;
         }
 
         /// <summary>
@@ -154,5 +104,182 @@ namespace ReactiveUI.Primitives.Concurrency
         /// </returns>
         public IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action) =>
             Schedule(state, Sequencer.Normalize(dueTime - Now), action);
+
+        /// <summary>
+        /// Thread-pool work item that doubles as the cancellation handle.
+        /// </summary>
+        /// <typeparam name="TState">The scheduled state type.</typeparam>
+        private sealed class ScheduledWorkItem<TState> : IDisposable
+        {
+            /// <summary>
+            /// Cached queue callback for immediate work.
+            /// </summary>
+            private static readonly WaitCallback ImmediateCallback = static state => ((ScheduledWorkItem<TState>)state!).Run();
+
+            /// <summary>
+            /// Cached timer callback for delayed work.
+            /// </summary>
+            private static readonly TimerCallback TimerCallback = static state => ((ScheduledWorkItem<TState>)state!).RunTimer();
+
+            /// <summary>
+            /// Owning sequencer.
+            /// </summary>
+            private readonly ThreadPoolSequencer _owner;
+
+            /// <summary>
+            /// Scheduled state.
+            /// </summary>
+            private readonly TState _state;
+
+            /// <summary>
+            /// Scheduled action.
+            /// </summary>
+            private readonly Func<ISequencer, TState, IDisposable> _action;
+
+            /// <summary>
+            /// Disposable returned by the scheduled action after it starts.
+            /// </summary>
+            private IDisposable? _disposable;
+
+            /// <summary>
+            /// Timer for delayed work.
+            /// </summary>
+#pragma warning disable CA2213 // Timer is disposed through RemoveTimer after an atomic exchange.
+            private Timer? _timer;
+#pragma warning restore CA2213
+
+            /// <summary>
+            /// Tracks cancellation.
+            /// </summary>
+            private int _isDisposed;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ScheduledWorkItem{TState}"/> class.
+            /// </summary>
+            /// <param name="owner">The owning sequencer.</param>
+            /// <param name="state">The scheduled state.</param>
+            /// <param name="action">The scheduled action.</param>
+            internal ScheduledWorkItem(ThreadPoolSequencer owner, TState state, Func<ISequencer, TState, IDisposable> action)
+            {
+                _owner = owner;
+                _state = state;
+                _action = action;
+            }
+
+            /// <summary>
+            /// Gets a value indicating whether the work item has been cancelled.
+            /// </summary>
+            private bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
+
+            /// <summary>
+            /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            /// </summary>
+            public void Dispose()
+            {
+                if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
+                {
+                    return;
+                }
+
+                Interlocked.Exchange(ref _disposable, Disposable.Empty)?.Dispose();
+                RemoveTimer();
+            }
+
+            /// <summary>
+            /// Queues the work item for immediate execution.
+            /// </summary>
+            internal void Queue() => ThreadPool.UnsafeQueueUserWorkItem(ImmediateCallback, this);
+
+            /// <summary>
+            /// Queues the work item for delayed execution.
+            /// </summary>
+            /// <param name="dueTime">The normalized due time.</param>
+            internal void Queue(TimeSpan dueTime)
+            {
+                var timer = new Timer(TimerCallback, this, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+                _timer = timer;
+                var disposeTimer = false;
+
+                lock (Gate)
+                {
+                    if (IsDisposed)
+                    {
+                        disposeTimer = true;
+                    }
+                    else
+                    {
+                        Timers.Add(timer, this);
+                    }
+                }
+
+                if (disposeTimer)
+                {
+                    Interlocked.CompareExchange(ref _timer, null, timer);
+                    timer.Dispose();
+                    return;
+                }
+
+                if (timer.Change(dueTime, Timeout.InfiniteTimeSpan))
+                {
+                    return;
+                }
+
+                Dispose();
+            }
+
+            /// <summary>
+            /// Runs immediate work.
+            /// </summary>
+            private void Run()
+            {
+                if (IsDisposed)
+                {
+                    return;
+                }
+
+                var disposable = _action(_owner, _state) ?? Disposable.Empty;
+                var previous = Interlocked.CompareExchange(ref _disposable, disposable, null);
+                if (previous != null)
+                {
+                    disposable.Dispose();
+                    return;
+                }
+
+                if (!IsDisposed)
+                {
+                    return;
+                }
+
+                disposable.Dispose();
+            }
+
+            /// <summary>
+            /// Runs delayed work.
+            /// </summary>
+            private void RunTimer()
+            {
+                RemoveTimer();
+                Run();
+            }
+
+            /// <summary>
+            /// Unroots and disposes the delayed timer if present.
+            /// </summary>
+            private void RemoveTimer()
+            {
+                var timer = Interlocked.Exchange(ref _timer, null);
+                if (timer == null)
+                {
+                    return;
+                }
+
+                lock (Gate)
+                {
+                    Timers.Remove(timer);
+                }
+
+                timer.Dispose();
+            }
+        }
     }
 }

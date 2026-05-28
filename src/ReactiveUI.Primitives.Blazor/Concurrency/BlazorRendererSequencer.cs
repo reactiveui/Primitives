@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Threading;
 using ReactiveUI.Primitives.Concurrency;
-using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Blazor.Concurrency;
 
@@ -53,17 +53,9 @@ public sealed class BlazorRendererSequencer : ISequencer
             throw new ArgumentNullException(nameof(action));
         }
 
-        var cancelable = new BooleanDisposable();
-        _ = _invokeAsync(() =>
-        {
-            if (cancelable.IsDisposed)
-            {
-                return;
-            }
-
-            action(this, state);
-        });
-        return cancelable;
+        var workItem = new RendererWorkItem<TState>(this, state, action);
+        _ = _invokeAsync(workItem.Invoke);
+        return workItem;
     }
 
     /// <summary>
@@ -82,9 +74,15 @@ public sealed class BlazorRendererSequencer : ISequencer
             throw new ArgumentNullException(nameof(action));
         }
 
-        var cancellation = new CancellationDisposable();
-        _ = DelayThenDispatchAsync(state, Sequencer.Normalize(dueTime), action, cancellation.Token);
-        return cancellation;
+        var normalized = Sequencer.Normalize(dueTime);
+        if (normalized == TimeSpan.Zero)
+        {
+            return Schedule(state, action);
+        }
+
+        var workItem = new DelayedRendererWorkItem<TState>(this, state, action, normalized);
+        _ = workItem.DelayThenDispatchAsync();
+        return workItem;
     }
 
     /// <summary>
@@ -99,41 +97,167 @@ public sealed class BlazorRendererSequencer : ISequencer
         Schedule(state, Sequencer.Normalize(dueTime - Now), action);
 
     /// <summary>
-    /// Delays work and then dispatches it through the renderer.
+    /// Disposable renderer work item.
     /// </summary>
     /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
-    /// <param name="state">State passed to the action to be executed.</param>
-    /// <param name="dueTime">The normalized due time.</param>
-    /// <param name="action">Action to be executed.</param>
-    /// <param name="cancellationToken">Token used to cancel delayed work.</param>
-    /// <returns>A task representing the asynchronous delay and dispatch.</returns>
-    private async Task DelayThenDispatchAsync<TState>(
-        TState state,
-        TimeSpan dueTime,
-        Func<ISequencer, TState, IDisposable> action,
-        CancellationToken cancellationToken)
+    private sealed class RendererWorkItem<TState> : IDisposable
     {
-        try
+        /// <summary>
+        /// Sequencer passed to the scheduled action.
+        /// </summary>
+        private readonly BlazorRendererSequencer _sequencer;
+
+        /// <summary>
+        /// State passed to the scheduled action.
+        /// </summary>
+        private readonly TState _state;
+
+        /// <summary>
+        /// Action invoked when the scheduled item runs.
+        /// </summary>
+        private readonly Func<ISequencer, TState, IDisposable> _action;
+
+        /// <summary>
+        /// Tracks cancellation.
+        /// </summary>
+        private int _isDisposed;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RendererWorkItem{TState}"/> class.
+        /// </summary>
+        /// <param name="sequencer">Sequencer passed to the action.</param>
+        /// <param name="state">State passed to the action.</param>
+        /// <param name="action">Action to invoke.</param>
+        public RendererWorkItem(BlazorRendererSequencer sequencer, TState state, Func<ISequencer, TState, IDisposable> action)
         {
-            await Task.Delay(dueTime, cancellationToken).ConfigureAwait(false);
-            if (cancellationToken.IsCancellationRequested)
+            _sequencer = sequencer;
+            _state = state;
+            _action = action;
+        }
+
+        /// <summary>
+        /// Cancels the work item.
+        /// </summary>
+        public void Dispose() => Interlocked.Exchange(ref _isDisposed, 1);
+
+        /// <summary>
+        /// Invokes the scheduled action if it has not been cancelled.
+        /// </summary>
+        public void Invoke()
+        {
+            if (Volatile.Read(ref _isDisposed) != 0)
             {
                 return;
             }
 
-            await _invokeAsync(() =>
+            _action(_sequencer, _state);
+        }
+    }
+
+    /// <summary>
+    /// Disposable delayed renderer work item.
+    /// </summary>
+    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
+    private sealed class DelayedRendererWorkItem<TState> : IDisposable
+    {
+        /// <summary>
+        /// Sequencer passed to the scheduled action.
+        /// </summary>
+        private readonly BlazorRendererSequencer _sequencer;
+
+        /// <summary>
+        /// State passed to the scheduled action.
+        /// </summary>
+        private readonly TState _state;
+
+        /// <summary>
+        /// Action invoked when the scheduled item runs.
+        /// </summary>
+        private readonly Func<ISequencer, TState, IDisposable> _action;
+
+        /// <summary>
+        /// Relative time after which to dispatch the action.
+        /// </summary>
+        private readonly TimeSpan _dueTime;
+
+        /// <summary>
+        /// Cancellation source for the delayed work.
+        /// </summary>
+        private readonly CancellationTokenSource _cancellation = new();
+
+        /// <summary>
+        /// Cancellation token for the delayed work.
+        /// </summary>
+        private readonly CancellationToken _token;
+
+        /// <summary>
+        /// Tracks cancellation.
+        /// </summary>
+        private int _isDisposed;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DelayedRendererWorkItem{TState}"/> class.
+        /// </summary>
+        /// <param name="sequencer">Sequencer passed to the action.</param>
+        /// <param name="state">State passed to the action.</param>
+        /// <param name="action">Action to invoke.</param>
+        /// <param name="dueTime">Relative time after which to execute the action.</param>
+        public DelayedRendererWorkItem(BlazorRendererSequencer sequencer, TState state, Func<ISequencer, TState, IDisposable> action, TimeSpan dueTime)
+        {
+            _sequencer = sequencer;
+            _state = state;
+            _action = action;
+            _dueTime = dueTime;
+            _token = _cancellation.Token;
+        }
+
+        /// <summary>
+        /// Cancels the delayed work item.
+        /// </summary>
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
             {
-                if (cancellationToken.IsCancellationRequested)
+                return;
+            }
+
+            _cancellation.Cancel();
+            _cancellation.Dispose();
+        }
+
+        /// <summary>
+        /// Delays work and then dispatches it through the renderer.
+        /// </summary>
+        /// <returns>A task representing the asynchronous delay and dispatch.</returns>
+        public async Task DelayThenDispatchAsync()
+        {
+            try
+            {
+                await Task.Delay(_dueTime, _token).ConfigureAwait(false);
+                if (Volatile.Read(ref _isDisposed) != 0)
                 {
                     return;
                 }
 
-                action(this, state);
-            }).ConfigureAwait(false);
+                await _sequencer._invokeAsync(Invoke).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (_token.IsCancellationRequested)
+            {
+                // Cancellation is the expected disposal path for delayed renderer work.
+            }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+
+        /// <summary>
+        /// Invokes the scheduled action if it has not been cancelled.
+        /// </summary>
+        private void Invoke()
         {
-            // Cancellation is the expected disposal path for delayed renderer work.
+            if (Volatile.Read(ref _isDisposed) != 0)
+            {
+                return;
+            }
+
+            _action(_sequencer, _state);
         }
     }
 }

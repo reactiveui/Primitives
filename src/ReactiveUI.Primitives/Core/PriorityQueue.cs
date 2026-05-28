@@ -60,7 +60,12 @@ internal sealed class PriorityQueue<T>
     /// <param name="capacity">Initial queue capacity.</param>
     public PriorityQueue(int capacity)
     {
-        _items = new IndexedItem[capacity];
+        if (capacity < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(capacity));
+        }
+
+        _items = new IndexedItem[Math.Max(1, capacity)];
         Count = 0;
     }
 
@@ -89,7 +94,7 @@ internal sealed class PriorityQueue<T>
         if (Count >= _items.Length)
         {
             var temp = _items;
-            _items = new IndexedItem[_items.Length * HeapBranchingFactor];
+            _items = new IndexedItem[Math.Max(DefaultCapacity, _items.Length * HeapBranchingFactor)];
             Array.Copy(temp, _items, temp.Length);
         }
 
@@ -215,13 +220,13 @@ internal sealed class PriorityQueue<T>
             Heapify(index);
         }
 
-        if (Count >= _items.Length / ShrinkDivisor)
+        if (_items.Length <= DefaultCapacity || Count >= _items.Length / ShrinkDivisor)
         {
             return;
         }
 
         var temp = _items;
-        _items = new IndexedItem[_items.Length / HeapBranchingFactor];
+        _items = new IndexedItem[Math.Max(DefaultCapacity, _items.Length / HeapBranchingFactor)];
         Array.Copy(temp, 0, _items, 0, Count);
     }
 

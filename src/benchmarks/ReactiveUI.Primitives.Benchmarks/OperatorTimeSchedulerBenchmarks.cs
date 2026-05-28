@@ -6,6 +6,7 @@ using BenchmarkDotNet.Attributes;
 using Microsoft.Extensions.Time.Testing;
 using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Signals;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
@@ -234,9 +235,9 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int PrimitivesTimestampRange()
     {
-        var count = 0;
-        using var subscription = Signal.Sequence(1, Count).Timestamp(Sequencer.Immediate).Subscribe(_ => count++);
-        return count;
+        var observer = new CountingSignalObserver<Moment<int>>();
+        using var subscription = Signal.Sequence(1, Count).Timestamp(Sequencer.Immediate).Subscribe(observer);
+        return observer.Count;
     }
 
     /// <summary>
@@ -246,9 +247,9 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int SystemReactiveTimestampRange()
     {
-        var count = 0;
-        using var subscription = RxObservable.Range(1, Count).Timestamp(ImmediateScheduler.Instance).Subscribe(_ => count++);
-        return count;
+        var observer = new CountingSignalObserver<System.Reactive.Timestamped<int>>();
+        using var subscription = RxObservable.Range(1, Count).Timestamp(ImmediateScheduler.Instance).Subscribe(observer);
+        return observer.Count;
     }
 
     /// <summary>
@@ -270,9 +271,9 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int PrimitivesTimeIntervalRange()
     {
-        var count = 0;
-        using var subscription = Signal.Sequence(1, Count).TimeInterval(Sequencer.Immediate).Subscribe(_ => count++);
-        return count;
+        var observer = new CountingSignalObserver<ReactiveUI.Primitives.Core.TimeInterval<int>>();
+        using var subscription = Signal.Sequence(1, Count).TimeInterval(Sequencer.Immediate).Subscribe(observer);
+        return observer.Count;
     }
 
     /// <summary>
@@ -282,11 +283,11 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int SystemReactiveTimeIntervalRange()
     {
-        var count = 0;
+        var observer = new CountingSignalObserver<System.Reactive.TimeInterval<int>>();
         using var subscription = RxObservable.Range(1, Count)
             .TimeInterval(ImmediateScheduler.Instance)
-            .Subscribe(_ => count++);
-        return count;
+            .Subscribe(observer);
+        return observer.Count;
     }
 
     /// <summary>
