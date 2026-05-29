@@ -6,6 +6,9 @@
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
     <UseWinUI>true</UseWinUI>
+    <AppxGeneratePriEnabled Condition="'$(OS)' != 'Windows_NT'">false</AppxGeneratePriEnabled>
+    <IncludePriFilesOutputGroup Condition="'$(OS)' != 'Windows_NT'">false</IncludePriFilesOutputGroup>
+    <IncludeProjectPriFile Condition="'$(OS)' != 'Windows_NT'">false</IncludeProjectPriFile>
     <PackageDescription>WinUI dispatcher queue integration sequencers for ReactiveUI.Primitives.</PackageDescription>
     <PackageTags>system.reactive;rx;reactive;primitives;winui;dispatcher-queue;scheduler;sequencer</PackageTags>
   </PropertyGroup>
