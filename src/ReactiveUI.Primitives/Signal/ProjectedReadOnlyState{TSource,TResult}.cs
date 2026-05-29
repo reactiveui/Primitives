@@ -28,17 +28,17 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     /// </summary>
     private readonly IDisposable _subscription;
 
+    /// <summary>
+    /// Protects mutable state and subscriptions.
+    /// </summary>
+    private readonly Lock _gate = new();
+
 #pragma warning disable S3459 // Broadcaster<T> is a mutable struct whose default value is the empty broadcaster.
     /// <summary>
     /// Current subscribers.
     /// </summary>
     private Broadcaster<TResult> _broadcaster;
 #pragma warning restore S3459
-
-    /// <summary>
-    /// Protects mutable state and subscriptions.
-    /// </summary>
-    private SpinLock _gate = new(false);
 
     /// <summary>
     /// Last projected value.
@@ -110,10 +110,8 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     /// <inheritdoc/>
     public void OnCompleted()
     {
-        var lockTaken = false;
-        try
+        lock (_gate)
         {
-            _gate.Enter(ref lockTaken);
             ThrowIfDisposed();
             if (_isStopped)
             {
@@ -121,13 +119,6 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
             }
 
             _isStopped = true;
-        }
-        finally
-        {
-            if (lockTaken)
-            {
-                _gate.Exit(false);
-            }
         }
 
         _broadcaster.Completed();
@@ -142,10 +133,8 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
             throw new ArgumentNullException(nameof(error));
         }
 
-        var lockTaken = false;
-        try
+        lock (_gate)
         {
-            _gate.Enter(ref lockTaken);
             ThrowIfDisposed();
             if (_isStopped)
             {
@@ -154,13 +143,6 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
 
             _isStopped = true;
             _lastError = error;
-        }
-        finally
-        {
-            if (lockTaken)
-            {
-                _gate.Exit(false);
-            }
         }
 
         _broadcaster.Error(error);
@@ -201,11 +183,9 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
 
         Exception? error;
         TResult? value;
-        var stopped = false;
-        var lockTaken = false;
-        try
+        bool stopped;
+        lock (_gate)
         {
-            _gate.Enter(ref lockTaken);
             ThrowIfDisposed();
             error = _lastError;
             value = _lastValue;
@@ -213,13 +193,6 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
             if (!stopped)
             {
                 _broadcaster.Add(observer);
-            }
-        }
-        finally
-        {
-            if (lockTaken)
-            {
-                _gate.Exit(false);
             }
         }
 
@@ -248,22 +221,13 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
         }
 
         _subscription.Dispose();
-        var lockTaken = false;
-        try
+        lock (_gate)
         {
-            _gate.Enter(ref lockTaken);
             _broadcaster.Clear();
             _lastError = null;
             _lastValue = default;
             _isStopped = true;
             _isDisposed = true;
-        }
-        finally
-        {
-            if (lockTaken)
-            {
-                _gate.Exit(false);
-            }
         }
     }
 
@@ -273,18 +237,9 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     /// <param name="observer">Observer to remove.</param>
     private void Remove(IObserver<TResult> observer)
     {
-        var lockTaken = false;
-        try
+        lock (_gate)
         {
-            _gate.Enter(ref lockTaken);
             _broadcaster.Remove(observer);
-        }
-        finally
-        {
-            if (lockTaken)
-            {
-                _gate.Exit(false);
-            }
         }
     }
 
