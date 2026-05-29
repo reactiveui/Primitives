@@ -19,7 +19,7 @@ public partial class AsyncSignal<T> : IAwaitSignal<T>
     /// Executes the new operation.
     /// </summary>
     /// <returns>The result.</returns>
-    private readonly object _observerLock = new();
+    private readonly Lock _observerLock = new();
 
     /// <summary>
     /// Stores state for the signal implementation.
@@ -409,7 +409,7 @@ public partial class AsyncSignal<T> : IAwaitSignal<T>
         /// Executes the new operation.
         /// </summary>
         /// <returns>The result.</returns>
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// Stores state for the signal implementation.

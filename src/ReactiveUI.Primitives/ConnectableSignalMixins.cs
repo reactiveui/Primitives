@@ -160,7 +160,7 @@ public static class ConnectableSignalMixins
         /// <summary>
         /// Synchronizes reference-count state.
         /// </summary>
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// Connectable signal being reference-counted.
@@ -230,7 +230,7 @@ public static class ConnectableSignalMixins
         /// <summary>
         /// Synchronizes auto-connect state.
         /// </summary>
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// Connectable signal being auto-connected.

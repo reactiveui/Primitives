@@ -646,13 +646,42 @@ public static partial class LinqMixins
             var pocket = new MultipleDisposable();
             var outerCompleted = false;
             var active = 0;
+            var done = false;
+
+            // Blend runs inner sources concurrently, so every downstream callback must be
+            // serialized under the gate (the Rx contract) and suppressed once terminated.
+            void OnInnerNext(T value)
+            {
+                lock (gate.SyncRoot)
+                {
+                    if (!done)
+                    {
+                        observer.OnNext(value);
+                    }
+                }
+            }
+
+            void OnAnyError(Exception error)
+            {
+                lock (gate.SyncRoot)
+                {
+                    if (done)
+                    {
+                        return;
+                    }
+
+                    done = true;
+                    observer.OnError(error);
+                }
+            }
 
             void TryComplete()
             {
                 lock (gate.SyncRoot)
                 {
-                    if (outerCompleted && active == 0)
+                    if (!done && outerCompleted && active == 0)
                     {
+                        done = true;
                         observer.OnCompleted();
                     }
                 }
@@ -663,7 +692,7 @@ public static partial class LinqMixins
                 {
                     if (source == null)
                     {
-                        observer.OnError(new InvalidOperationException("Blend source contained null."));
+                        OnAnyError(new InvalidOperationException("Blend source contained null."));
                         return;
                     }
 
@@ -673,8 +702,8 @@ public static partial class LinqMixins
                     }
 
                     pocket.Add(source.Subscribe(
-                        observer.OnNext,
-                        observer.OnError,
+                        OnInnerNext,
+                        OnAnyError,
                         () =>
                         {
                             lock (gate.SyncRoot)
@@ -685,7 +714,7 @@ public static partial class LinqMixins
                             TryComplete();
                         }));
                 },
-                observer.OnError,
+                OnAnyError,
                 () =>
                 {
                     lock (gate.SyncRoot)

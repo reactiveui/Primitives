@@ -23,7 +23,7 @@ public partial class MultipleDisposable : IsDisposed
     /// <summary>
     /// Synchronizes mutations to the disposable set.
     /// </summary>
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
 
     /// <summary>
     /// First inline disposable slot.

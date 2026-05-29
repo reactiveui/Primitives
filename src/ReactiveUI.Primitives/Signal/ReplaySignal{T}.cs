@@ -44,7 +44,7 @@ public partial class ReplaySignal<T> : ISignal<T>
     /// Executes the new operation.
     /// </summary>
     /// <returns>The result.</returns>
-    private readonly object _observerLock = new();
+    private readonly Lock _observerLock = new();
 #pragma warning disable S3459 // Broadcaster<T> is a mutable struct whose default value is the empty broadcaster.
 
     /// <summary>
@@ -480,7 +480,7 @@ public partial class ReplaySignal<T> : ISignal<T>
         /// Executes the new operation.
         /// </summary>
         /// <returns>The result.</returns>
-        private readonly object _lock = new();
+        private readonly Lock _lock = new();
 
         /// <summary>
         /// Stores state for the signal implementation.

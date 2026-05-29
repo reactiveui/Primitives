@@ -116,7 +116,7 @@ public static partial class LinqMixins
         /// <summary>
         /// Synchronizes subscription state.
         /// </summary>
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// The source observable.
@@ -294,12 +294,12 @@ public static partial class LinqMixins
         /// <param name="value">The inner value.</param>
         private void OnInnerNext(TResult value)
         {
-            lock (_gate)
+            // Hot path: only one inner is active at a time (sequential concat semantics), so the
+            // forward is already serialized. A lock-free volatile read of the disposed flag avoids
+            // a monitor acquire on every value; the lock releases elsewhere publish the write.
+            if (Volatile.Read(ref _disposed))
             {
-                if (_disposed)
-                {
-                    return;
-                }
+                return;
             }
 
             _observer.OnNext(value);

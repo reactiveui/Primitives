@@ -695,7 +695,7 @@ public static partial class Sequencer
         /// <summary>
         /// Guards handoff between scheduling and execution.
         /// </summary>
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// Cached delegate used to avoid recreating the recursive action.

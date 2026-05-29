@@ -15,8 +15,9 @@ public static partial class LinqMixins
     private sealed class OperatorGate
     {
         /// <summary>
-        /// Gets the stable synchronization object for the subscription.
+        /// Gets the stable synchronization gate for the subscription. Typed as <c>Lock</c> so the
+        /// lock statement uses <c>System.Threading.Lock</c> on .NET 9+ and a plain monitor elsewhere.
         /// </summary>
-        internal object SyncRoot => this;
+        internal Lock SyncRoot { get; } = new();
     }
 }

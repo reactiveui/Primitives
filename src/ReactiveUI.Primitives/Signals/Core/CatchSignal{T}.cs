@@ -48,7 +48,7 @@ internal sealed class CatchSignal<T> : SignalsBase<T>
         /// Executes the new operation.
         /// </summary>
         /// <returns>The result.</returns>
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// Stores state for the signal implementation.

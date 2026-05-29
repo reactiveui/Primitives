@@ -19,6 +19,11 @@ public abstract partial class VirtualTimeSequencer<TAbsolute, TRelative> : Virtu
     private readonly SequencerQueue<TAbsolute> _queue = new();
 
     /// <summary>
+    /// Synchronization gate guarding the scheduled-work queue.
+    /// </summary>
+    private readonly Lock _gate = new();
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="VirtualTimeSequencer{TAbsolute, TRelative}"/> class.
     /// Creates a new virtual time scheduler with the default value of TAbsolute as the initial clock value.
     /// </summary>
@@ -59,7 +64,7 @@ public abstract partial class VirtualTimeSequencer<TAbsolute, TRelative> : Virtu
 
         var si = new VirtualScheduledItem<TState>(this, state, action, dueTime, Comparer);
 
-        lock (_queue)
+        lock (_gate)
         {
             _queue.Enqueue(si);
         }
@@ -73,7 +78,7 @@ public abstract partial class VirtualTimeSequencer<TAbsolute, TRelative> : Virtu
     /// <returns>The next scheduled item.</returns>
     protected override IScheduledItem<TAbsolute>? GetNext()
     {
-        lock (_queue)
+        lock (_gate)
         {
             while (_queue.Count > 0)
             {
@@ -98,7 +103,7 @@ public abstract partial class VirtualTimeSequencer<TAbsolute, TRelative> : Virtu
     /// <param name="scheduledItem">The item to remove.</param>
     private void Remove(ScheduledItem<TAbsolute> scheduledItem)
     {
-        lock (_queue)
+        lock (_gate)
         {
             _queue.Remove(scheduledItem);
         }

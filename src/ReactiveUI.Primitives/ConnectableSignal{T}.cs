@@ -17,7 +17,7 @@ public sealed partial class ConnectableSignal<T> : IObservable<T>
     /// <summary>
     /// Synchronizes connection state.
     /// </summary>
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
 
     /// <summary>
     /// Source sequence to connect.

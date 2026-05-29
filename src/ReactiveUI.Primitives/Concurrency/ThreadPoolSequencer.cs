@@ -38,7 +38,7 @@ public sealed partial class ThreadPoolSequencer : ISequencer
     /// <summary>
     /// Guards access to delayed work.
     /// </summary>
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
 
     /// <summary>
     /// Pending delayed work, ordered by monotonic due timestamp.

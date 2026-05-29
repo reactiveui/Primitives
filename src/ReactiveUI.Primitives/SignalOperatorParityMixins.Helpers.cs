@@ -937,9 +937,10 @@ public static partial class LinqMixins
         private readonly IObserver<T> _observer;
 
         /// <summary>
-        /// The synchronization gate.
+        /// The synchronization gate. A reentrant monitor is used because emissions are serialized
+        /// while the gate is held, which a non-reentrant spin lock cannot do safely.
         /// </summary>
-        private SpinLock _gate = new(false);
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// The active source subscription.
@@ -1012,11 +1013,9 @@ public static partial class LinqMixins
         /// <param name="value">The source value.</param>
         public void OnNext(T value)
         {
-            var shouldSchedule = false;
-            var lockTaken = false;
-            try
+            bool shouldSchedule;
+            lock (_gate)
             {
-                _gate.Enter(ref lockTaken);
                 if (_done)
                 {
                     return;
@@ -1026,13 +1025,6 @@ public static partial class LinqMixins
                 _latest = value;
                 shouldSchedule = !_timerActive;
                 _timerActive = true;
-            }
-            finally
-            {
-                if (lockTaken)
-                {
-                    _gate.Exit();
-                }
             }
 
             if (!shouldSchedule)
@@ -1049,7 +1041,17 @@ public static partial class LinqMixins
         /// <param name="error">The source error.</param>
         public void OnError(Exception error)
         {
-            _observer.OnError(error);
+            lock (_gate)
+            {
+                if (_done)
+                {
+                    return;
+                }
+
+                _done = true;
+                _observer.OnError(error);
+            }
+
             Dispose();
         }
 
@@ -1058,21 +1060,17 @@ public static partial class LinqMixins
         /// </summary>
         public void OnCompleted()
         {
-            var lockTaken = false;
-            try
+            lock (_gate)
             {
-                _gate.Enter(ref lockTaken);
-                _done = true;
-            }
-            finally
-            {
-                if (lockTaken)
+                if (_done)
                 {
-                    _gate.Exit();
+                    return;
                 }
+
+                _done = true;
+                _observer.OnCompleted();
             }
 
-            _observer.OnCompleted();
             Dispose();
         }
 
@@ -1107,45 +1105,22 @@ public static partial class LinqMixins
         /// <returns>An empty disposable.</returns>
         private IDisposable Tick()
         {
-            if (!TryTake(out var value))
+            // Hold the gate across the emission so the sample cannot interleave with a terminal.
+            lock (_gate)
             {
-                return Disposable.Empty;
-            }
-
-            _observer.OnNext(value);
-            return Disposable.Empty;
-        }
-
-        /// <summary>
-        /// Attempts to take the latest value.
-        /// </summary>
-        /// <param name="value">The latest value.</param>
-        /// <returns><c>true</c> when a value should be emitted; otherwise, <c>false</c>.</returns>
-        private bool TryTake(out T value)
-        {
-            var lockTaken = false;
-            try
-            {
-                _gate.Enter(ref lockTaken);
                 if (_done || !_hasLatest)
                 {
                     _timerActive = false;
-                    value = default!;
-                    return false;
+                    return Disposable.Empty;
                 }
 
-                value = _latest!;
+                var value = _latest!;
                 _hasLatest = false;
                 _timerActive = false;
-                return true;
+                _observer.OnNext(value);
             }
-            finally
-            {
-                if (lockTaken)
-                {
-                    _gate.Exit();
-                }
-            }
+
+            return Disposable.Empty;
         }
     }
 
@@ -1209,6 +1184,11 @@ public static partial class LinqMixins
         /// The virtual due time for the current quiet period.
         /// </summary>
         private DateTimeOffset _dueAt;
+
+        /// <summary>
+        /// A value indicating whether a terminal notification has been emitted.
+        /// </summary>
+        private bool _done;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CalmCoordinator{T}"/> class.
@@ -1298,7 +1278,17 @@ public static partial class LinqMixins
         /// <param name="error">The terminal error.</param>
         private void OnError(Exception error)
         {
-            _observer!.OnError(error);
+            lock (_gate.SyncRoot)
+            {
+                if (_done)
+                {
+                    return;
+                }
+
+                _done = true;
+                _observer!.OnError(error);
+            }
+
             Dispose();
         }
 
@@ -1307,7 +1297,17 @@ public static partial class LinqMixins
         /// </summary>
         private void OnCompleted()
         {
-            _observer!.OnCompleted();
+            lock (_gate.SyncRoot)
+            {
+                if (_done)
+                {
+                    return;
+                }
+
+                _done = true;
+                _observer!.OnCompleted();
+            }
+
             Dispose();
         }
 
@@ -1334,7 +1334,16 @@ public static partial class LinqMixins
                 return;
             }
 
-            _observer!.OnNext(value);
+            // Serialize the timer emission against a concurrent terminal notification.
+            lock (_gate.SyncRoot)
+            {
+                if (_done)
+                {
+                    return;
+                }
+
+                _observer!.OnNext(value);
+            }
         }
 
         /// <summary>

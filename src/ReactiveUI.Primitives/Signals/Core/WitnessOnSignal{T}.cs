@@ -56,6 +56,11 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
         private readonly WitnessOnSignal<T> _parent;
 
         /// <summary>
+        /// Synchronization gate guarding the queued actions and scheduling state.
+        /// </summary>
+        private readonly Lock _gate = new();
+
+        /// <summary>
         /// Executes the new operation.
         /// </summary>
         /// <returns>The result.</returns>
@@ -85,7 +90,7 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
         {
             get
             {
-                lock (_actions)
+                lock (_gate)
                 {
                     return _isDisposed;
                 }
@@ -130,7 +135,7 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
             while (true)
             {
                 Spark<T> action;
-                lock (_actions)
+                lock (_gate)
                 {
                     if (_isDisposed)
                     {
@@ -164,7 +169,7 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
         /// <param name="disposing">The disposing value.</param>
         protected override void Dispose(bool disposing)
         {
-            lock (_actions)
+            lock (_gate)
             {
                 _isDisposed = true;
                 _actions.Clear();
@@ -179,7 +184,7 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
         /// <param name="data">The data value.</param>
         private void QueueAction(Spark<T> data)
         {
-            lock (_actions)
+            lock (_gate)
             {
                 if (_isDisposed)
                 {

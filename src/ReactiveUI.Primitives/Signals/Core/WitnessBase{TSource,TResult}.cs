@@ -27,9 +27,9 @@ namespace ReactiveUI.Primitives.Signals.Core
         private IDisposable? _cancel;
 
         /// <summary>
-        /// Stores state for the signal implementation.
+        /// Disposed latch; 0 when alive, 1 once disposed.
         /// </summary>
-        private bool _disposed;
+        private int _disposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="WitnessBase{TSource,TResult}"/> class.
@@ -75,18 +75,20 @@ namespace ReactiveUI.Primitives.Signals.Core
         protected virtual void Dispose(bool disposing)
         {
             Observer = EmptyWitness<TResult>.Instance;
-            if (_disposed)
+
+            // Atomic run-once latch so concurrent disposal cannot double-tear-down.
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
             {
                 return;
             }
 
-            if (disposing)
+            if (!disposing)
             {
-                var target = Interlocked.Exchange(ref _cancel, null);
-                target?.Dispose();
+                return;
             }
 
-            _disposed = true;
+            var target = Interlocked.Exchange(ref _cancel, null);
+            target?.Dispose();
         }
     }
 }

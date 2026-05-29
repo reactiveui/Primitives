@@ -409,6 +409,11 @@ public static partial class LinqMixins
         private bool _rightCompleted;
 
         /// <summary>
+        /// A value indicating whether completion has been emitted downstream.
+        /// </summary>
+        private bool _completed;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ZipCoordinator{TLeft, TRight, TResult}"/> class.
         /// </summary>
         /// <param name="observer">The downstream observer.</param>
@@ -485,41 +490,31 @@ public static partial class LinqMixins
         }
 
         /// <summary>
-        /// Emits all currently available pairs.
+        /// Emits all currently available pairs. The gate is held across the projection and the
+        /// downstream callbacks so left and right threads cannot interleave emissions (the Rx
+        /// serialization contract) and completion is delivered at most once.
         /// </summary>
         private void Drain()
         {
-            while (TryTake(out var left, out var right))
-            {
-                _observer.OnNext(_selector(left, right));
-            }
-        }
-
-        /// <summary>
-        /// Attempts to remove the next available pair from the queues.
-        /// </summary>
-        /// <param name="left">The left value.</param>
-        /// <param name="right">The right value.</param>
-        /// <returns><c>true</c> when a pair was available; otherwise, <c>false</c>.</returns>
-        private bool TryTake(out TLeft left, out TRight right)
-        {
             lock (_gate.SyncRoot)
             {
-                if (_leftQueue.Count != 0 && _rightQueue.Count != 0)
+                if (_completed)
                 {
-                    left = _leftQueue.Dequeue();
-                    right = _rightQueue.Dequeue();
-                    return true;
+                    return;
+                }
+
+                while (_leftQueue.Count != 0 && _rightQueue.Count != 0)
+                {
+                    var left = _leftQueue.Dequeue();
+                    var right = _rightQueue.Dequeue();
+                    _observer.OnNext(_selector(left, right));
                 }
 
                 if ((_leftCompleted && _leftQueue.Count == 0) || (_rightCompleted && _rightQueue.Count == 0))
                 {
+                    _completed = true;
                     _observer.OnCompleted();
                 }
-
-                left = default!;
-                right = default!;
-                return false;
             }
         }
     }
@@ -578,6 +573,11 @@ public static partial class LinqMixins
         private TRight? _latestRight;
 
         /// <summary>
+        /// A value indicating whether completion has been emitted downstream.
+        /// </summary>
+        private bool _completed;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="CombineLatestCoordinator{TLeft, TRight, TResult}"/> class.
         /// </summary>
         /// <param name="observer">The downstream observer.</param>
@@ -600,17 +600,22 @@ public static partial class LinqMixins
                 right.Subscribe(OnRightNext, _observer.OnError, OnRightCompleted));
 
         /// <summary>
-        /// Handles a left value.
+        /// Handles a left value. The gate is held across the projection and the downstream
+        /// callback so left and right threads cannot interleave emissions (the Rx serialization
+        /// contract).
         /// </summary>
         /// <param name="value">The left value.</param>
         private void OnLeftNext(TLeft value)
         {
-            if (!TryUpdateLeft(value, out var projected))
+            lock (_gate.SyncRoot)
             {
-                return;
+                _latestLeft = value;
+                _hasLeft = true;
+                if (!_completed && TryProject(out var projected))
+                {
+                    _observer.OnNext(projected);
+                }
             }
-
-            _observer.OnNext(projected);
         }
 
         /// <summary>
@@ -619,12 +624,15 @@ public static partial class LinqMixins
         /// <param name="value">The right value.</param>
         private void OnRightNext(TRight value)
         {
-            if (!TryUpdateRight(value, out var projected))
+            lock (_gate.SyncRoot)
             {
-                return;
+                _latestRight = value;
+                _hasRight = true;
+                if (!_completed && TryProject(out var projected))
+                {
+                    _observer.OnNext(projected);
+                }
             }
-
-            _observer.OnNext(projected);
         }
 
         /// <summary>
@@ -632,12 +640,15 @@ public static partial class LinqMixins
         /// </summary>
         private void OnLeftCompleted()
         {
-            if (!CompleteLeft())
+            lock (_gate.SyncRoot)
             {
-                return;
+                _leftDone = true;
+                if (!_completed && _rightDone)
+                {
+                    _completed = true;
+                    _observer.OnCompleted();
+                }
             }
-
-            _observer.OnCompleted();
         }
 
         /// <summary>
@@ -645,69 +656,14 @@ public static partial class LinqMixins
         /// </summary>
         private void OnRightCompleted()
         {
-            if (!CompleteRight())
-            {
-                return;
-            }
-
-            _observer.OnCompleted();
-        }
-
-        /// <summary>
-        /// Updates the latest left value.
-        /// </summary>
-        /// <param name="value">The new value.</param>
-        /// <param name="result">The projected result.</param>
-        /// <returns><c>true</c> when a result is available; otherwise, <c>false</c>.</returns>
-        private bool TryUpdateLeft(TLeft value, out TResult result)
-        {
-            lock (_gate.SyncRoot)
-            {
-                _latestLeft = value;
-                _hasLeft = true;
-                return TryProject(out result);
-            }
-        }
-
-        /// <summary>
-        /// Updates the latest right value.
-        /// </summary>
-        /// <param name="value">The new value.</param>
-        /// <param name="result">The projected result.</param>
-        /// <returns><c>true</c> when a result is available; otherwise, <c>false</c>.</returns>
-        private bool TryUpdateRight(TRight value, out TResult result)
-        {
-            lock (_gate.SyncRoot)
-            {
-                _latestRight = value;
-                _hasRight = true;
-                return TryProject(out result);
-            }
-        }
-
-        /// <summary>
-        /// Marks the left source as complete.
-        /// </summary>
-        /// <returns><c>true</c> when both sources are complete; otherwise, <c>false</c>.</returns>
-        private bool CompleteLeft()
-        {
-            lock (_gate.SyncRoot)
-            {
-                _leftDone = true;
-                return _rightDone;
-            }
-        }
-
-        /// <summary>
-        /// Marks the right source as complete.
-        /// </summary>
-        /// <returns><c>true</c> when both sources are complete; otherwise, <c>false</c>.</returns>
-        private bool CompleteRight()
-        {
             lock (_gate.SyncRoot)
             {
                 _rightDone = true;
-                return _leftDone;
+                if (!_completed && _leftDone)
+                {
+                    _completed = true;
+                    _observer.OnCompleted();
+                }
             }
         }
 
@@ -806,7 +762,10 @@ public static partial class LinqMixins
             int current;
             lock (_gate.SyncRoot)
             {
-                current = ++_version;
+                current = _version + 1;
+
+                // Publish the new version so the lock-free reader in IsCurrent observes it.
+                Volatile.Write(ref _version, current);
                 _innerActive = true;
             }
 
@@ -881,13 +840,7 @@ public static partial class LinqMixins
         /// </summary>
         /// <param name="version">The candidate version.</param>
         /// <returns><c>true</c> if the version is current; otherwise, <c>false</c>.</returns>
-        private bool IsCurrent(int version)
-        {
-            lock (_gate.SyncRoot)
-            {
-                return version == _version;
-            }
-        }
+        private bool IsCurrent(int version) => version == Volatile.Read(ref _version);
 
         /// <summary>
         /// Completes the observer when both outer and inner sources are complete.
