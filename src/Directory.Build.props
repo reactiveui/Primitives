@@ -130,6 +130,20 @@
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" Link="stylecop.json"/>
   </ItemGroup>
 
+  <!-- Ban LINQ-to-objects (System.Linq) in shipping code so allocation-heavy LINQ cannot creep
+       into the runtime library or platform adapters. Tests, benchmarks, and the build-time source
+       generators are exempt. -->
+  <PropertyGroup>
+    <BanLinqInShippingCode Condition="'$(BanLinqInShippingCode)' == ''">true</BanLinqInShippingCode>
+    <BanLinqInShippingCode Condition="$(MSBuildProjectDirectory.Contains('tests'))">false</BanLinqInShippingCode>
+    <BanLinqInShippingCode Condition="$(MSBuildProjectDirectory.Contains('benchmarks'))">false</BanLinqInShippingCode>
+    <BanLinqInShippingCode Condition="$(MSBuildProjectName.EndsWith('.Generator'))">false</BanLinqInShippingCode>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(BanLinqInShippingCode)' == 'true'">
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all"/>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" Link="BannedSymbols.txt"/>
+  </ItemGroup>
+
   <!--
     The .NET SDK + transitive packages auto-load several source generators that
     have nothing to do in this codebase. Each one still scans the full compilation

@@ -1,0 +1,2 @@
+T:System.Linq.Enumerable;LINQ-to-objects is banned in shipping code; use reactive operators, explicit loops, or spans instead.
+T:System.Linq.Queryable;LINQ is banned in shipping code; use reactive operators or explicit loops instead.
