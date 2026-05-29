@@ -18,7 +18,7 @@ internal sealed class ImmutableReturnRxVoidSignal : IRequireCurrentThread<RxVoid
     /// Executes the new operation.
     /// </summary>
     /// <returns>The result.</returns>
-    internal static ImmutableReturnRxVoidSignal Instance = new();
+    internal static readonly ImmutableReturnRxVoidSignal Instance = new();
 #pragma warning restore SA1401 // Fields should be private
 
     /// <summary>

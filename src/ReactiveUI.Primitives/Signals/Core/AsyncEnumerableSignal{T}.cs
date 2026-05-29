@@ -81,7 +81,7 @@ internal sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
         {
             try
             {
-                await PumpAsync(observer, cts, current => enumerator = current).ConfigureAwait(false);
+                await PumpAsync(observer, cts, current => Volatile.Write(ref enumerator, current)).ConfigureAwait(false);
             }
             finally
             {

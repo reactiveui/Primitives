@@ -19,7 +19,7 @@ internal sealed class ImmutableNeverSignal<T> : IRequireCurrentThread<T>
     /// Executes the new operation.
     /// </summary>
     /// <returns>The result.</returns>
-    internal static ImmutableNeverSignal<T> Instance = new();
+    internal static readonly ImmutableNeverSignal<T> Instance = new();
 #pragma warning restore SA1401 // Fields should be private
 
     /// <summary>

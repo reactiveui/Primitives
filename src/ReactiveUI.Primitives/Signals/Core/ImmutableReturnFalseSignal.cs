@@ -18,7 +18,7 @@ internal sealed class ImmutableReturnFalseSignal : IRequireCurrentThread<bool>, 
     /// Executes the new operation.
     /// </summary>
     /// <returns>The result.</returns>
-    internal static ImmutableReturnFalseSignal Instance = new();
+    internal static readonly ImmutableReturnFalseSignal Instance = new();
 #pragma warning restore SA1401 // Fields should be private
 
     /// <summary>

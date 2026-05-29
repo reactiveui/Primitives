@@ -19,7 +19,7 @@ internal sealed class ImmutableEmptySignal<T> : IRequireCurrentThread<T>, IInlin
     /// Executes the new operation.
     /// </summary>
     /// <returns>The result.</returns>
-    internal static ImmutableEmptySignal<T> Instance = new();
+    internal static readonly ImmutableEmptySignal<T> Instance = new();
 #pragma warning restore SA1401 // Fields should be private
 
     /// <summary>

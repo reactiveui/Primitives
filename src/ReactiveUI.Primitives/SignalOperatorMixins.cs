@@ -256,15 +256,9 @@ public static partial class LinqMixins
 
         return Signal.CreateSafe<TAccumulate>(observer =>
         {
-            var current = seed;
-            return source.Subscribe(
-                value =>
-                {
-                    current = accumulator(current, value);
-                    observer.OnNext(current);
-                },
-                observer.OnError,
-                observer.OnCompleted);
+            var sink = new FoldObserver<TSource, TAccumulate>(observer, seed, accumulator);
+            sink.SetSubscription(source.Subscribe(sink));
+            return sink;
         });
     }
 
@@ -292,15 +286,9 @@ public static partial class LinqMixins
 
         return Signal.CreateSafe<TAccumulate>(observer =>
         {
-            var current = seed;
-            return source.Subscribe(
-                value => current = accumulator(current, value),
-                observer.OnError,
-                () =>
-                {
-                    observer.OnNext(current);
-                    observer.OnCompleted();
-                });
+            var sink = new ReduceObserver<TSource, TAccumulate>(observer, seed, accumulator);
+            sink.SetSubscription(source.Subscribe(sink));
+            return sink;
         });
     }
 
@@ -367,20 +355,9 @@ public static partial class LinqMixins
 
         return Signal.CreateSafe<T>(observer =>
         {
-            var remaining = count;
-            return source.Subscribe(
-                value =>
-                {
-                    if (remaining > 0)
-                    {
-                        remaining--;
-                        return;
-                    }
-
-                    observer.OnNext(value);
-                },
-                observer.OnError,
-                observer.OnCompleted);
+            var sink = new SkipObserver<T>(observer, count);
+            sink.SetSubscription(source.Subscribe(sink));
+            return sink;
         });
     }
 
@@ -411,19 +388,9 @@ public static partial class LinqMixins
 
         return Signal.CreateSafe<T>(observer =>
         {
-            var seen = new HashSet<T>(comparer);
-            return source.Subscribe(
-                value =>
-                {
-                    if (!seen.Add(value))
-                    {
-                        return;
-                    }
-
-                    observer.OnNext(value);
-                },
-                observer.OnError,
-                observer.OnCompleted);
+            var sink = new DistinctObserver<T>(observer, comparer);
+            sink.SetSubscription(source.Subscribe(sink));
+            return sink;
         });
     }
 
@@ -455,22 +422,9 @@ public static partial class LinqMixins
         comparer ??= EqualityComparer<T>.Default;
         return Signal.CreateSafe<T>(observer =>
         {
-            var hasLast = false;
-            var last = default(T);
-            return source.Subscribe(
-                value =>
-                {
-                    if (hasLast && comparer.Equals(last!, value))
-                    {
-                        return;
-                    }
-
-                    hasLast = true;
-                    last = value;
-                    observer.OnNext(value);
-                },
-                observer.OnError,
-                observer.OnCompleted);
+            var sink = new UniqueObserver<T>(observer, comparer);
+            sink.SetSubscription(source.Subscribe(sink));
+            return sink;
         });
     }
 
