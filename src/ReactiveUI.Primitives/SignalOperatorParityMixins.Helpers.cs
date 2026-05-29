@@ -1148,7 +1148,7 @@ public static partial class LinqMixins
         /// <summary>
         /// The synchronization gate.
         /// </summary>
-        private readonly OperatorGate _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// Active subscription and timer resources.
@@ -1252,7 +1252,7 @@ public static partial class LinqMixins
         private void OnNext(T value)
         {
             var shouldSchedule = false;
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _latest = value;
                 _hasLatest = true;
@@ -1278,7 +1278,7 @@ public static partial class LinqMixins
         /// <param name="error">The terminal error.</param>
         private void OnError(Exception error)
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 if (_done)
                 {
@@ -1297,7 +1297,7 @@ public static partial class LinqMixins
         /// </summary>
         private void OnCompleted()
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 if (_done)
                 {
@@ -1335,7 +1335,7 @@ public static partial class LinqMixins
             }
 
             // Serialize the timer emission against a concurrent terminal notification.
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 if (_done)
                 {
@@ -1354,7 +1354,7 @@ public static partial class LinqMixins
         /// <returns>The timer action.</returns>
         private TimerAction GetTimerAction(out TimeSpan delay, out T value)
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 var remaining = _dueAt - _sequencer.Now;
                 if (remaining > TimeSpan.Zero)
@@ -1390,7 +1390,7 @@ public static partial class LinqMixins
         /// <summary>
         /// The synchronization gate.
         /// </summary>
-        private readonly OperatorGate _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// The downstream observer.
@@ -1460,7 +1460,7 @@ public static partial class LinqMixins
         /// <param name="value">The left value.</param>
         private void OnLeftNext(TLeft value)
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _hasLeft = true;
                 _latestLeft = value;
@@ -1473,7 +1473,7 @@ public static partial class LinqMixins
         /// <param name="value">The right value.</param>
         private void OnRightNext(TRight value)
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _hasRight = true;
                 _latestRight = value;
@@ -1514,7 +1514,7 @@ public static partial class LinqMixins
         /// <returns><c>true</c> when fork-join is ready to finish; otherwise, <c>false</c>.</returns>
         private bool CompleteLeft(out TResult result, out bool emit)
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _leftDone = true;
                 return TryFinish(out result, out emit);
@@ -1529,7 +1529,7 @@ public static partial class LinqMixins
         /// <returns><c>true</c> when fork-join is ready to finish; otherwise, <c>false</c>.</returns>
         private bool CompleteRight(out TResult result, out bool emit)
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _rightDone = true;
                 return TryFinish(out result, out emit);

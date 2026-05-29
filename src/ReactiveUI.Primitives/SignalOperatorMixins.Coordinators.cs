@@ -376,7 +376,7 @@ public static partial class LinqMixins
         /// <summary>
         /// The synchronization gate.
         /// </summary>
-        private readonly OperatorGate _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// The downstream observer.
@@ -441,7 +441,7 @@ public static partial class LinqMixins
         /// <param name="value">The value to queue.</param>
         private void OnLeftNext(TLeft value)
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _leftQueue.Enqueue(value);
             }
@@ -455,7 +455,7 @@ public static partial class LinqMixins
         /// <param name="value">The value to queue.</param>
         private void OnRightNext(TRight value)
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _rightQueue.Enqueue(value);
             }
@@ -468,7 +468,7 @@ public static partial class LinqMixins
         /// </summary>
         private void OnLeftCompleted()
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _leftCompleted = true;
             }
@@ -481,7 +481,7 @@ public static partial class LinqMixins
         /// </summary>
         private void OnRightCompleted()
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _rightCompleted = true;
             }
@@ -496,7 +496,7 @@ public static partial class LinqMixins
         /// </summary>
         private void Drain()
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 if (_completed)
                 {
@@ -530,7 +530,7 @@ public static partial class LinqMixins
         /// <summary>
         /// The synchronization gate.
         /// </summary>
-        private readonly OperatorGate _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// The downstream observer.
@@ -607,7 +607,7 @@ public static partial class LinqMixins
         /// <param name="value">The left value.</param>
         private void OnLeftNext(TLeft value)
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _latestLeft = value;
                 _hasLeft = true;
@@ -624,7 +624,7 @@ public static partial class LinqMixins
         /// <param name="value">The right value.</param>
         private void OnRightNext(TRight value)
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _latestRight = value;
                 _hasRight = true;
@@ -640,7 +640,7 @@ public static partial class LinqMixins
         /// </summary>
         private void OnLeftCompleted()
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _leftDone = true;
                 if (!_completed && _rightDone)
@@ -656,7 +656,7 @@ public static partial class LinqMixins
         /// </summary>
         private void OnRightCompleted()
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _rightDone = true;
                 if (!_completed && _leftDone)
@@ -694,7 +694,7 @@ public static partial class LinqMixins
         /// <summary>
         /// The synchronization gate.
         /// </summary>
-        private readonly OperatorGate _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// The downstream observer.
@@ -760,7 +760,7 @@ public static partial class LinqMixins
         private void OnSource(IObservable<T> source)
         {
             int current;
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 current = _version + 1;
 
@@ -780,7 +780,7 @@ public static partial class LinqMixins
         /// </summary>
         private void OnOuterCompleted()
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _outerCompleted = true;
             }
@@ -824,7 +824,7 @@ public static partial class LinqMixins
         /// <param name="version">The inner version.</param>
         private void OnCompleted(int version)
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 if (version == _version)
                 {
@@ -847,7 +847,7 @@ public static partial class LinqMixins
         /// </summary>
         private void TryComplete()
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 if (_outerCompleted && !_innerActive)
                 {
