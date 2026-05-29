@@ -204,6 +204,28 @@ public class CoreRuntimeContractTests
     }
 
     /// <summary>
+    /// Verifies virtual-clock timestamp scheduling converts monotonic ticks back to virtual time.
+    /// </summary>
+    [Test]
+    public void VirtualClockConvertsMonotonicTimestampDeltasToVirtualTime()
+    {
+        const long dueTicks = 10;
+        const long beforeDueTicks = 9;
+        var clock = new VirtualClock();
+        var calls = new List<long>();
+        var dueTimestamp = Sequencer.AddTimestamp(clock.Timestamp, TimeSpan.FromTicks(dueTicks));
+
+        clock.Schedule(new CallbackWorkItem(() => calls.Add(clock.Clock.Ticks)), dueTimestamp);
+
+        clock.AdvanceBy(TimeSpan.FromTicks(beforeDueTicks));
+        Assert.Equal(0, calls.Count);
+
+        clock.AdvanceBy(TimeSpan.FromTicks(1));
+        var expected = new[] { dueTicks };
+        Assert.Equal(expected, calls);
+    }
+
+    /// <summary>
     /// Verifies default sequencer aliases expose migration-friendly names.
     /// </summary>
     [Test]
@@ -249,5 +271,25 @@ public class CoreRuntimeContractTests
             int state,
             Func<ISequencer, int, IDisposable> action) =>
             GC.KeepAlive(new ScheduledItem<DateTimeOffset, int>(scheduler, state, action, DateTimeOffset.UnixEpoch));
+    }
+
+    /// <summary>
+    /// Test work item that invokes a supplied callback.
+    /// </summary>
+    private sealed class CallbackWorkItem : IWorkItem
+    {
+        /// <summary>
+        /// Callback invoked by the work item.
+        /// </summary>
+        private readonly Action _callback;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CallbackWorkItem"/> class.
+        /// </summary>
+        /// <param name="callback">Callback invoked by the work item.</param>
+        public CallbackWorkItem(Action callback) => _callback = callback;
+
+        /// <inheritdoc/>
+        public void Execute() => _callback();
     }
 }

@@ -24,6 +24,7 @@
     <Project Path="ReactiveUI.Primitives/ReactiveUI.Primitives.csproj" />
     <Project Path="ReactiveUI.Primitives.Blazor/ReactiveUI.Primitives.Blazor.csproj" />
     <Project Path="ReactiveUI.Primitives.Maui/ReactiveUI.Primitives.Maui.csproj" />
+    <Project Path="ReactiveUI.Primitives.WinUI/ReactiveUI.Primitives.WinUI.csproj" />
     <Project Path="ReactiveUI.Primitives.WinForms/ReactiveUI.Primitives.WinForms.csproj" />
     <Project Path="ReactiveUI.Primitives.Wpf/ReactiveUI.Primitives.Wpf.csproj" />
 </Solution>

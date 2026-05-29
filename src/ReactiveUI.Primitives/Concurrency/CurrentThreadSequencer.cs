@@ -4,6 +4,7 @@
 
 using System.ComponentModel;
 using System.Diagnostics;
+using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
@@ -29,13 +30,7 @@ public sealed partial class CurrentThreadSequencer : ISequencer
     /// Holds recursive work queued for the current thread.
     /// </summary>
     [ThreadStatic]
-    private static SequencerQueue<TimeSpan>? _threadLocalQueue;
-
-    /// <summary>
-    /// Measures relative due times for the current thread.
-    /// </summary>
-    [ThreadStatic]
-    private static Stopwatch? clock;
+    private static SequencerQueue<long>? _threadLocalQueue;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CurrentThreadSequencer"/> class.
@@ -63,73 +58,97 @@ public sealed partial class CurrentThreadSequencer : ISequencer
     public DateTimeOffset Now => Sequencer.Now;
 
     /// <summary>
-    /// Gets elapsed time on the current thread.
+    /// Gets the scheduler's monotonic timestamp.
     /// </summary>
-    private static TimeSpan Time
-    {
-        get
-        {
-            clock ??= Stopwatch.StartNew();
-
-            return clock.Elapsed;
-        }
-    }
+    public long Timestamp => Sequencer.Timestamp;
 
     /// <summary>
-    /// Schedules an action to be executed.
+    /// Schedules an action to be executed on the current-thread trampoline.
     /// </summary>
-    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
-    /// <param name="state">State passed to the action to be executed.</param>
-    /// <param name="action">Action to be executed.</param>
-    /// <returns>
-    /// The disposable object used to cancel the scheduled action (best effort).
-    /// </returns>
-    public IDisposable Schedule<TState>(TState state, Func<ISequencer, TState, IDisposable> action)
+    /// <param name="action">Action to execute.</param>
+    /// <returns>The disposable object used to cancel queued work, or an empty disposable when the action has already run.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
+    public IDisposable Schedule(Action action)
     {
         if (action == null)
         {
             throw new ArgumentNullException(nameof(action));
         }
 
-        return Schedule(state, TimeSpan.Zero, action);
+        if (!_running)
+        {
+            SetRunning(true);
+            try
+            {
+                action();
+                var queue = GetQueue();
+                if (queue != null)
+                {
+                    Trampoline.Run(queue);
+                }
+            }
+            finally
+            {
+                SetQueue(null);
+                SetRunning(false);
+            }
+
+            return Disposable.Empty;
+        }
+
+        var item = new ActionWorkItem(action);
+        Schedule(item);
+        return item;
     }
 
     /// <summary>
-    /// Schedules an action to be executed after dueTime.
+    /// Schedules a work item to be executed.
     /// </summary>
-    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
-    /// <param name="state">State passed to the action to be executed.</param>
-    /// <param name="dueTime">Relative time after which to execute the action.</param>
-    /// <param name="action">Action to be executed.</param>
-    /// <returns>
-    /// The disposable object used to cancel the scheduled action (best effort).
-    /// </returns>
-    /// <exception cref="ArgumentNullException">action.</exception>
-    /// <exception cref="ArgumentNullException"><paramref name="action" /> is <c>null</c>.</exception>
-    public IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<ISequencer, TState, IDisposable> action)
+    /// <param name="item">Work item to execute.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    public void Schedule(IWorkItem item)
     {
-        if (action == null)
+        if (item == null)
         {
-            throw new ArgumentNullException(nameof(action));
+            throw new ArgumentNullException(nameof(item));
         }
 
-        SequencerQueue<TimeSpan>? queue;
+        Schedule(item, Timestamp);
+    }
+
+    /// <summary>
+    /// Schedules a work item to be executed at the specified monotonic timestamp.
+    /// </summary>
+    /// <param name="item">Work item to execute.</param>
+    /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    public void Schedule(IWorkItem item, long dueTimestamp)
+    {
+        if (item == null)
+        {
+            throw new ArgumentNullException(nameof(item));
+        }
+
+        SequencerQueue<long>? queue;
 
         // There is no timed task and no task is currently running
         if (!_running)
         {
             SetRunning(true);
 
+            var dueTime = Sequencer.TimeUntil(dueTimestamp);
             if (dueTime > TimeSpan.Zero)
             {
                 Thread.Sleep(dueTime);
             }
 
             // execute directly without queueing
-            IDisposable d;
             try
             {
-                d = action(this, state);
+                if (!Sequencer.IsCancelled(item))
+                {
+                    item.Execute();
+                }
             }
             catch
             {
@@ -159,7 +178,7 @@ public sealed partial class CurrentThreadSequencer : ISequencer
                 SetRunning(false);
             }
 
-            return d;
+            return;
         }
 
         queue = GetQueue();
@@ -167,45 +186,26 @@ public sealed partial class CurrentThreadSequencer : ISequencer
         // if there is a task running or there is a queue
         if (queue == null)
         {
-            queue = new SequencerQueue<TimeSpan>(4);
+            queue = new SequencerQueue<long>(4);
             SetQueue(queue);
         }
 
-        var dt = Time + Sequencer.Normalize(dueTime);
-
         // queue up more work
-        var si = new ScheduledItem<TimeSpan, TState>(this, state, action, dt);
+        var si = new CurrentThreadScheduledItem(item, dueTimestamp);
         queue.Enqueue(si);
-        return si;
-    }
-
-    /// <summary>
-    /// Schedules an action to be executed at dueTime.
-    /// </summary>
-    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
-    /// <param name="state">State passed to the action to be executed.</param>
-    /// <param name="dueTime">Absolute time at which to execute the action.</param>
-    /// <param name="action">Action to be executed.</param>
-    /// <returns>
-    /// The disposable object used to cancel the scheduled action (best effort).
-    /// </returns>
-    public IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action)
-    {
-        var due = Sequencer.Normalize(dueTime - Now);
-        return Schedule(state, due, action);
     }
 
     /// <summary>
     /// Gets the queued recursive work for the current thread.
     /// </summary>
     /// <returns>The current thread queue, if one exists.</returns>
-    private static SequencerQueue<TimeSpan>? GetQueue() => _threadLocalQueue;
+    private static SequencerQueue<long>? GetQueue() => _threadLocalQueue;
 
     /// <summary>
     /// Sets the queued recursive work for the current thread.
     /// </summary>
     /// <param name="newQueue">The queue to assign.</param>
-    private static void SetQueue(SequencerQueue<TimeSpan>? newQueue) => _threadLocalQueue = newQueue;
+    private static void SetQueue(SequencerQueue<long>? newQueue) => _threadLocalQueue = newQueue;
 
     /// <summary>
     /// Sets the current-thread running marker.
@@ -222,15 +222,15 @@ public sealed partial class CurrentThreadSequencer : ISequencer
         /// Runs all work currently in the queue.
         /// </summary>
         /// <param name="queue">Queue to drain.</param>
-        public static void Run(SequencerQueue<TimeSpan> queue)
+        public static void Run(SequencerQueue<long> queue)
         {
             while (queue.Count > 0)
             {
                 var item = queue.Dequeue();
                 if (!item.IsDisposed)
                 {
-                    var wait = item.DueTime - Time;
-                    if (wait.Ticks > 0)
+                    var wait = Sequencer.TimeUntil(item.DueTime);
+                    if (wait > TimeSpan.Zero)
                     {
                         Thread.Sleep(wait);
                     }
@@ -241,6 +241,76 @@ public sealed partial class CurrentThreadSequencer : ISequencer
                     }
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Cancellable action work item.
+    /// </summary>
+    private sealed class ActionWorkItem : IWorkItem, IsDisposed
+    {
+        /// <summary>
+        /// Action to execute.
+        /// </summary>
+        private readonly Action _action;
+
+        /// <summary>
+        /// Tracks cancellation.
+        /// </summary>
+        private int _isDisposed;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ActionWorkItem"/> class.
+        /// </summary>
+        /// <param name="action">Action to execute.</param>
+        public ActionWorkItem(Action action) => _action = action;
+
+        /// <inheritdoc/>
+        public bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
+
+        /// <inheritdoc/>
+        public void Dispose() => Interlocked.Exchange(ref _isDisposed, 1);
+
+        /// <inheritdoc/>
+        public void Execute()
+        {
+            if (IsDisposed)
+            {
+                return;
+            }
+
+            _action();
+        }
+    }
+
+    /// <summary>
+    /// Current-thread queued work item.
+    /// </summary>
+    private sealed class CurrentThreadScheduledItem : ScheduledItem<long>
+    {
+        /// <summary>
+        /// Scheduled work item.
+        /// </summary>
+        private readonly IWorkItem _item;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CurrentThreadScheduledItem"/> class.
+        /// </summary>
+        /// <param name="item">Scheduled work item.</param>
+        /// <param name="dueTimestamp">Absolute monotonic due timestamp.</param>
+        public CurrentThreadScheduledItem(IWorkItem item, long dueTimestamp)
+            : base(dueTimestamp, Comparer<long>.Default) =>
+            _item = item;
+
+        /// <inheritdoc/>
+        protected override IDisposable InvokeCore()
+        {
+            if (!Sequencer.IsCancelled(_item))
+            {
+                _item.Execute();
+            }
+
+            return Disposable.Empty;
         }
     }
 }

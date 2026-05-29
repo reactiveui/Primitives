@@ -48,7 +48,7 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
     /// <summary>
     /// Represents the WitnessOn class.
     /// </summary>
-    private sealed class WitnessOn : WitnessBase<T, T>
+    private sealed class WitnessOn : WitnessBase<T, T>, IWorkItem, IsDisposed
     {
         /// <summary>
         /// Stores state for the signal implementation.
@@ -59,12 +59,17 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
         /// Executes the new operation.
         /// </summary>
         /// <returns>The result.</returns>
-        private readonly LinkedList<SchedulableAction> _actions = new();
+        private readonly Queue<Spark<T>> _actions = new();
 
         /// <summary>
         /// Stores state for the signal implementation.
         /// </summary>
         private bool _isDisposed;
+
+        /// <summary>
+        /// Tracks whether a drain has been scheduled.
+        /// </summary>
+        private bool _isScheduled;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="WitnessOn"/> class.
@@ -74,6 +79,18 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
         /// <param name="cancel">The cancel value.</param>
         public WitnessOn(WitnessOnSignal<T> parent, IObserver<T> observer, IDisposable cancel)
             : base(observer, cancel) => _parent = parent;
+
+        /// <inheritdoc/>
+        public bool IsDisposed
+        {
+            get
+            {
+                lock (_actions)
+                {
+                    return _isDisposed;
+                }
+            }
+        }
 
         /// <summary>
         /// Executes the Run operation.
@@ -85,20 +102,7 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
 
             var sourceDisposable = _parent._source.Subscribe(this);
 
-            return new MultipleDisposable(sourceDisposable, Disposable.Create(() =>
-            {
-                lock (_actions)
-                {
-                    _isDisposed = true;
-
-                    while (_actions.Count > 0)
-                    {
-                        // Dispose will both cancel the action (if not already running)
-                        // and remove it from 'actions'
-                        _actions.First?.Value.Dispose();
-                    }
-                }
-            }));
+            return new MultipleDisposable(sourceDisposable, this);
         }
 
         /// <summary>
@@ -119,12 +123,62 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
         public override void OnCompleted() => QueueAction(new Spark<T>.OnCompletedSpark());
 
         /// <summary>
+        /// Executes the scheduled queue drain.
+        /// </summary>
+        public void Execute()
+        {
+            while (true)
+            {
+                Spark<T> action;
+                lock (_actions)
+                {
+                    if (_isDisposed)
+                    {
+                        _isScheduled = false;
+                        return;
+                    }
+
+                    if (_actions.Count == 0)
+                    {
+                        _isScheduled = false;
+                        return;
+                    }
+
+                    action = _actions.Dequeue();
+                }
+
+                Dispatch(action);
+                if (action.Kind == SparkKind.OnNext)
+                {
+                    continue;
+                }
+
+                Dispose();
+                return;
+            }
+        }
+
+        /// <summary>
+        /// Executes the Dispose operation.
+        /// </summary>
+        /// <param name="disposing">The disposing value.</param>
+        protected override void Dispose(bool disposing)
+        {
+            lock (_actions)
+            {
+                _isDisposed = true;
+                _actions.Clear();
+            }
+
+            base.Dispose(disposing);
+        }
+
+        /// <summary>
         /// Executes the QueueAction operation.
         /// </summary>
         /// <param name="data">The data value.</param>
         private void QueueAction(Spark<T> data)
         {
-            var action = new SchedulableAction(data);
             lock (_actions)
             {
                 if (_isDisposed)
@@ -132,73 +186,35 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
                     return;
                 }
 
-                action.Node = _actions.AddLast(action);
-                ProcessNext();
-            }
-        }
-
-        /// <summary>
-        /// Executes the ProcessNext operation.
-        /// </summary>
-        private void ProcessNext()
-        {
-            lock (_actions)
-            {
-                if (_actions.Count == 0 || _isDisposed)
+                _actions.Enqueue(data);
+                if (_isScheduled)
                 {
                     return;
                 }
 
-                var action = _actions.First?.Value;
-
-                if (action?.IsScheduled == true)
-                {
-                    return;
-                }
-
-                action!.Schedule = _parent._scheduler.Schedule(() =>
-                {
-                    try
-                    {
-                        Dispatch(action);
-                    }
-                    finally
-                    {
-                        lock (_actions)
-                        {
-                            action.Dispose();
-                        }
-
-                        if (action.Data?.Kind == SparkKind.OnNext)
-                        {
-                            ProcessNext();
-                        }
-                        else
-                        {
-                            Dispose();
-                        }
-                    }
-                });
+                _isScheduled = true;
             }
+
+            _parent._scheduler.Schedule(this);
         }
 
         /// <summary>
         /// Executes the Dispatch operation.
         /// </summary>
         /// <param name="action">The action value.</param>
-        private void Dispatch(SchedulableAction action)
+        private void Dispatch(Spark<T> action)
         {
-            switch (action.Data.Kind)
+            switch (action.Kind)
             {
                 case SparkKind.OnNext:
                     {
-                        Observer.OnNext(action.Data.Value);
+                        Observer.OnNext(action.Value);
                         break;
                     }
 
                 case SparkKind.OnError:
                     {
-                        Observer.OnError(action.Data.Exception);
+                        Observer.OnError(action.Exception);
                         break;
                     }
 
@@ -207,58 +223,6 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
                         Observer.OnCompleted();
                         break;
                     }
-            }
-        }
-
-        /// <summary>
-        /// Represents the SchedulableAction class.
-        /// </summary>
-        private sealed class SchedulableAction : IDisposable
-        {
-            /// <summary>
-            /// Initializes a new instance of the <see cref="SchedulableAction"/> class.
-            /// </summary>
-            /// <param name="data">The data value.</param>
-            public SchedulableAction(Spark<T> data)
-            {
-                Data = data;
-            }
-
-            /// <summary>
-            /// Gets the value.
-            /// </summary>
-            public Spark<T> Data { get; }
-
-            /// <summary>
-            /// Gets or sets the value.
-            /// </summary>
-            public LinkedListNode<SchedulableAction>? Node { get; set; }
-
-            /// <summary>
-            /// Gets or sets the value.
-            /// </summary>
-            public IDisposable? Schedule { get; set; }
-
-            /// <summary>
-            /// Gets a value indicating whether the condition is met.
-            /// </summary>
-            public bool IsScheduled => Schedule != null;
-
-            /// <summary>
-            /// Executes the Dispose operation.
-            /// </summary>
-            public void Dispose()
-            {
-                Schedule?.Dispose();
-
-                Schedule = null;
-
-                if (Node?.List == null)
-                {
-                    return;
-                }
-
-                Node.List.Remove(Node);
             }
         }
     }

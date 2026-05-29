@@ -47,13 +47,13 @@ public partial class StateSignal<T> : BehaviorSignal<T>
     /// <typeparam name="TResult">The projected value type.</typeparam>
     /// <param name="selector">The projection to apply to each current value.</param>
     /// <returns>A read-only state view.</returns>
-    public ReadOnlyState<TResult> ToReadOnlyState<TResult>(Func<T, TResult> selector)
+    public ProjectedReadOnlyState<T, TResult> ToReadOnlyState<TResult>(Func<T, TResult> selector)
     {
         if (selector == null)
         {
             throw new ArgumentNullException(nameof(selector));
         }
 
-        return new ReadOnlyState<TResult>(this.Map(selector), selector(Value));
+        return new ProjectedReadOnlyState<T, TResult>(this, selector);
     }
 }

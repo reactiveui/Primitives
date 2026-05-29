@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
@@ -22,7 +23,7 @@ internal sealed class CreateSafeSignal<T> : SignalsBase<T>
     /// </summary>
     /// <param name="subscribe">The subscribe value.</param>
     public CreateSafeSignal(Func<IObserver<T>, IDisposable> subscribe)
-        : base(true) => _subscribe = subscribe; // fail safe
+        : base(false) => _subscribe = subscribe;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CreateSafeSignal{T}"/> class.
@@ -32,6 +33,24 @@ internal sealed class CreateSafeSignal<T> : SignalsBase<T>
     public CreateSafeSignal(Func<IObserver<T>, IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread)
         : base(isRequiredSubscribeOnCurrentThread) => _subscribe = subscribe;
 
+    /// <inheritdoc/>
+    public override IDisposable Subscribe(IObserver<T> observer)
+    {
+        if (observer == null)
+        {
+            throw new ArgumentNullException(nameof(observer));
+        }
+
+        if (IsCurrentThreadSubscriptionRequired)
+        {
+            return base.Subscribe(observer);
+        }
+
+        var sink = new CreateSafe(observer);
+        sink.SetCancel(_subscribe(sink) ?? Disposable.Empty);
+        return sink;
+    }
+
     /// <summary>
     /// Executes the SubscribeCore operation.
     /// </summary>
@@ -40,34 +59,86 @@ internal sealed class CreateSafeSignal<T> : SignalsBase<T>
     /// <returns>The result.</returns>
     protected override IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel)
     {
-        observer = new CreateSafe(observer, cancel);
-        return _subscribe(observer) ?? Disposable.Empty;
+        var sink = new CreateSafe(observer, cancel);
+        return _subscribe(sink) ?? Disposable.Empty;
     }
 
     /// <summary>
     /// Represents the CreateSafe class.
     /// </summary>
-    private sealed class CreateSafe : WitnessBase<T, T>
+    private sealed class CreateSafe : IDisposable, IObserver<T>
     {
+        /// <summary>
+        /// Wrapped observer.
+        /// </summary>
+        private IObserver<T> _observer;
+
+        /// <summary>
+        /// Cancellation resource.
+        /// </summary>
+        private IDisposable? _cancel;
+
+        /// <summary>
+        /// Non-zero after disposal or termination.
+        /// </summary>
+        private int _stopped;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CreateSafe"/> class.
+        /// </summary>
+        /// <param name="observer">The observer value.</param>
+        public CreateSafe(IObserver<T> observer) => _observer = observer;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="CreateSafe"/> class.
         /// </summary>
         /// <param name="observer">The observer value.</param>
         /// <param name="cancel">The cancel value.</param>
         public CreateSafe(IObserver<T> observer, IDisposable cancel)
-            : base(observer, cancel)
         {
+            _observer = observer;
+            _cancel = cancel;
+        }
+
+        /// <summary>
+        /// Assigns the cancellation resource.
+        /// </summary>
+        /// <param name="cancel">Cancellation resource.</param>
+        public void SetCancel(IDisposable cancel)
+        {
+            if (cancel == null)
+            {
+                throw new ArgumentNullException(nameof(cancel));
+            }
+
+            if (Interlocked.CompareExchange(ref _cancel, cancel, null) != null)
+            {
+                cancel.Dispose();
+                return;
+            }
+
+            if (Volatile.Read(ref _stopped) == 0)
+            {
+                return;
+            }
+
+            Interlocked.Exchange(ref _cancel, null)?.Dispose();
         }
 
         /// <summary>
         /// Executes the OnNext operation.
         /// </summary>
         /// <param name="value">The value.</param>
-        public override void OnNext(T value)
+        public void OnNext(T value)
         {
+            if (Volatile.Read(ref _stopped) != 0)
+            {
+                return;
+            }
+
             try
             {
-                Observer.OnNext(value);
+                _observer.OnNext(value);
             }
             catch
             {
@@ -80,11 +151,16 @@ internal sealed class CreateSafeSignal<T> : SignalsBase<T>
         /// Executes the OnError operation.
         /// </summary>
         /// <param name="error">The error value.</param>
-        public override void OnError(Exception error)
+        public void OnError(Exception error)
         {
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
             try
             {
-                Observer.OnError(error);
+                _observer.OnError(error);
             }
             finally
             {
@@ -95,16 +171,29 @@ internal sealed class CreateSafeSignal<T> : SignalsBase<T>
         /// <summary>
         /// Executes the OnCompleted operation.
         /// </summary>
-        public override void OnCompleted()
+        public void OnCompleted()
         {
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
             try
             {
-                Observer.OnCompleted();
+                _observer.OnCompleted();
             }
             finally
             {
                 Dispose();
             }
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            _observer = EmptyWitness<T>.Instance;
+            Interlocked.Exchange(ref _cancel, null)?.Dispose();
+            Volatile.Write(ref _stopped, 1);
         }
     }
 }

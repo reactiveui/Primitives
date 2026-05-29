@@ -153,4 +153,27 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
         onCompleted();
         return Disposable.Empty;
     }
+
+    /// <summary>
+    /// Attempts to expose the backing sequence when it is already indexable and cannot be cancelled.
+    /// </summary>
+    /// <param name="values">The indexable values.</param>
+    /// <returns><see langword="true"/> when values can be read without enumeration allocations.</returns>
+    internal bool TryGetReadOnlyValues(out IReadOnlyList<T> values)
+    {
+        if (_cancellationToken.CanBeCanceled)
+        {
+            values = [];
+            return false;
+        }
+
+        if (_values is IReadOnlyList<T> readOnlyList)
+        {
+            values = readOnlyList;
+            return true;
+        }
+
+        values = [];
+        return false;
+    }
 }

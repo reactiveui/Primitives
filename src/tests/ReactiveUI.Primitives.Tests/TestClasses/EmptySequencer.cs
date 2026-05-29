@@ -20,14 +20,13 @@ internal sealed class EmptySequencer : ISequencer
     public DateTimeOffset Now => DateTimeOffset.UnixEpoch;
 
     /// <inheritdoc/>
-    public IDisposable Schedule<TState>(TState state, Func<ISequencer, TState, IDisposable> action) =>
+    public long Timestamp => 0;
+
+    /// <inheritdoc/>
+    public void Schedule(IWorkItem item) =>
         throw new NotSupportedException();
 
     /// <inheritdoc/>
-    public IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<ISequencer, TState, IDisposable> action) =>
-        throw new NotSupportedException();
-
-    /// <inheritdoc/>
-    public IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action) =>
+    public void Schedule(IWorkItem item, long dueTimestamp) =>
         throw new NotSupportedException();
 }

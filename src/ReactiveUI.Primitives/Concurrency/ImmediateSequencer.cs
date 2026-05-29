@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Threading;
+using ReactiveUI.Primitives.Disposables;
+
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>
@@ -34,57 +37,73 @@ public sealed partial class ImmediateSequencer : ISequencer
     public DateTimeOffset Now => Sequencer.Now;
 
     /// <summary>
-    /// Schedules the specified state.
+    /// Gets the scheduler's monotonic timestamp.
     /// </summary>
-    /// <typeparam name="TState">The type of the state.</typeparam>
-    /// <param name="state">The state.</param>
-    /// <param name="action">The action.</param>
-    /// <returns>An IDisposable.</returns>
-    public IDisposable Schedule<TState>(TState state, Func<ISequencer, TState, IDisposable> action)
+    public long Timestamp => Sequencer.Timestamp;
+
+    /// <summary>
+    /// Schedules an action to run immediately.
+    /// </summary>
+    /// <param name="action">Action to execute.</param>
+    /// <returns>An empty disposable because the action has already run.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
+    #pragma warning disable CA1822 // Mark members as static
+    public IDisposable Schedule(Action action)
+    #pragma warning restore CA1822 // Mark members as static
     {
-        if (action is null)
+        if (action == null)
         {
             throw new ArgumentNullException(nameof(action));
         }
 
-        return action(this, state);
+        action();
+        return Disposable.Empty;
     }
 
     /// <summary>
-    /// Schedules the specified state.
+    /// Schedules the specified work item.
     /// </summary>
-    /// <typeparam name="TState">The type of the state.</typeparam>
-    /// <param name="state">The state.</param>
-    /// <param name="dueTime">The due time.</param>
-    /// <param name="action">The action.</param>
-    /// <returns>An IDisposable.</returns>
-    public IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<ISequencer, TState, IDisposable> action)
+    /// <param name="item">Work item to execute.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    public void Schedule(IWorkItem item)
     {
-        if (action is null)
+        if (item is null)
         {
-            throw new ArgumentNullException(nameof(action));
+            throw new ArgumentNullException(nameof(item));
         }
 
-        var dt = Sequencer.Normalize(dueTime);
-        if (dt.Ticks > 0)
+        if (Sequencer.IsCancelled(item))
         {
-            Thread.Sleep(dt);
+            return;
         }
 
-        return action(this, state);
+        item.Execute();
     }
 
     /// <summary>
-    /// Schedules the specified state.
+    /// Schedules the specified work item.
     /// </summary>
-    /// <typeparam name="TState">The type of the state.</typeparam>
-    /// <param name="state">The state.</param>
-    /// <param name="dueTime">The due time.</param>
-    /// <param name="action">The action.</param>
-    /// <returns>An IDisposable.</returns>
-    public IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action)
+    /// <param name="item">Work item to execute.</param>
+    /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    public void Schedule(IWorkItem item, long dueTimestamp)
     {
-        var due = Sequencer.Normalize(dueTime - Now);
-        return Schedule(state, due, action);
+        if (item is null)
+        {
+            throw new ArgumentNullException(nameof(item));
+        }
+
+        var dueTime = Sequencer.TimeUntil(dueTimestamp);
+        if (dueTime.Ticks > 0)
+        {
+            Thread.Sleep(dueTime);
+        }
+
+        if (Sequencer.IsCancelled(item))
+        {
+            return;
+        }
+
+        item.Execute();
     }
 }

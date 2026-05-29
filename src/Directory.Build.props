@@ -62,6 +62,7 @@
     <!-- Focused platform integration projects. -->
     <BlazorTargetFrameworks>$(NetCoreTargetFrameworks)</BlazorTargetFrameworks>
     <MauiTargetFrameworks>net9.0;net10.0</MauiTargetFrameworks>
+    <WinUITargetFrameworks>net8.0-windows10.0.19041.0;net9.0-windows10.0.19041.0;net10.0-windows10.0.19041.0</WinUITargetFrameworks>
 
     <!-- Test projects: net8.0, net9.0, net10.0 only -->
     <TestTargetFrameworks>$(NetCoreTargetFrameworks)</TestTargetFrameworks>

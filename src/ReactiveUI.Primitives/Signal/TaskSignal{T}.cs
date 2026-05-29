@@ -83,8 +83,14 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
     /// </summary>
     /// <param name="observer">The observer.</param>
     /// <returns>A Disposable.</returns>
-    public IDisposable Subscribe(IObserver<T> observer) =>
-        Source!.WitnessOn(_sequencer).Subscribe(observer).DisposeWith(_cleanUp!);
+    public IDisposable Subscribe(IObserver<T> observer)
+    {
+        var subscription = ReferenceEquals(_sequencer, Sequencer.Immediate)
+            ? Source!.Subscribe(observer)
+            : Source!.WitnessOn(_sequencer).Subscribe(observer);
+
+        return subscription.DisposeWith(_cleanUp!);
+    }
 
     /// <summary>
     /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.

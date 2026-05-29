@@ -325,6 +325,11 @@ public static partial class LinqMixins
             throw new ArgumentOutOfRangeException(nameof(count));
         }
 
+        if (source is LoopSignal<T> loop)
+        {
+            return count == 0 ? Signal.None<T>() : new RepeatSignal<T>(loop.Value, count);
+        }
+
         return Signal.CreateSafe<T>(observer =>
         {
             if (count == 0)
@@ -333,26 +338,9 @@ public static partial class LinqMixins
                 return Disposable.Empty;
             }
 
-            var remaining = count;
-            return source.Subscribe(
-                value =>
-                {
-                    if (remaining <= 0)
-                    {
-                        return;
-                    }
-
-                    observer.OnNext(value);
-                    remaining--;
-                    if (remaining != 0)
-                    {
-                        return;
-                    }
-
-                    observer.OnCompleted();
-                },
-                observer.OnError,
-                observer.OnCompleted);
+            var sink = new TakeObserver<T>(observer, count);
+            sink.SetSubscription(source.Subscribe(sink));
+            return sink;
         });
     }
 
@@ -887,6 +875,11 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(sources));
         }
 
+        if (TryCreateSynchronousSwitchRangeSignal(sources, out var rangeSignal))
+        {
+            return rangeSignal;
+        }
+
         return Signal.Create<T>(observer => new SwitchCoordinator<T>(observer).Run(sources));
     }
 
@@ -1302,6 +1295,45 @@ public static partial class LinqMixins
         new(range, Sequencer.Normalize(dueTime), scheduler);
 
     /// <summary>
+    /// Creates a range-concat signal for synchronous Switch over known range inners.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="sources">Outer sources.</param>
+    /// <param name="signal">Optimized signal when available.</param>
+    /// <returns><see langword="true"/> when the fast path applies.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4018:Generic methods should provide type parameters",
+        Justification = "The generic type is validated before casting the integer range signal.")]
+    private static bool TryCreateSynchronousSwitchRangeSignal<T>(IObservable<IObservable<T>> sources, out IObservable<T> signal)
+    {
+        signal = null!;
+        if (typeof(T) != typeof(int) || sources is not FromEnumerableSignal<IObservable<T>> enumerable)
+        {
+            return false;
+        }
+
+        if (!enumerable.TryGetReadOnlyValues(out var innerSources) || innerSources.Count == 0)
+        {
+            return false;
+        }
+
+        var ranges = new RangeSignal[innerSources.Count];
+        for (var i = 0; i < innerSources.Count; i++)
+        {
+            if (innerSources[i] is not RangeSignal range)
+            {
+                return false;
+            }
+
+            ranges[i] = range;
+        }
+
+        signal = (IObservable<T>)(object)new RangeConcatSignal(ranges);
+        return true;
+    }
+
+    /// <summary>
     /// Emits all range values and completion from a scheduled batch.
     /// </summary>
     /// <typeparam name="T">The observer value type.</typeparam>
@@ -1336,5 +1368,128 @@ public static partial class LinqMixins
 
         onCompleted();
         return Disposable.Empty;
+    }
+
+    /// <summary>
+    /// Observer used by Take to dispose the upstream subscription as soon as the requested count is reached.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class TakeObserver<T> : IObserver<T>, IDisposable
+    {
+        /// <summary>
+        /// Downstream observer.
+        /// </summary>
+        private readonly IObserver<T> _observer;
+
+        /// <summary>
+        /// Upstream subscription.
+        /// </summary>
+        private readonly SingleReplaceableDisposable _subscription = new();
+
+        /// <summary>
+        /// Remaining values to forward.
+        /// </summary>
+        private int _remaining;
+
+        /// <summary>
+        /// Non-zero after completion, error, or disposal.
+        /// </summary>
+        private int _stopped;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TakeObserver{T}"/> class.
+        /// </summary>
+        /// <param name="observer">Downstream observer.</param>
+        /// <param name="count">Number of values to forward.</param>
+        public TakeObserver(IObserver<T> observer, int count)
+        {
+            _observer = observer;
+            _remaining = count;
+        }
+
+        /// <summary>
+        /// Sets the upstream subscription.
+        /// </summary>
+        /// <param name="subscription">Upstream subscription.</param>
+        public void SetSubscription(IDisposable subscription) => _subscription.Create(subscription);
+
+        /// <inheritdoc/>
+        public void OnNext(T value)
+        {
+            if (Volatile.Read(ref _stopped) != 0 || _remaining <= 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _observer.OnNext(value);
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
+
+            _remaining--;
+            if (_remaining != 0)
+            {
+                return;
+            }
+
+            Complete();
+        }
+
+        /// <inheritdoc/>
+        public void OnError(Exception error)
+        {
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _observer.OnError(error);
+            }
+            finally
+            {
+                _subscription.Dispose();
+            }
+        }
+
+        /// <inheritdoc/>
+        public void OnCompleted() => Complete();
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
+            _subscription.Dispose();
+        }
+
+        /// <summary>
+        /// Completes the downstream observer and releases the upstream subscription.
+        /// </summary>
+        private void Complete()
+        {
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _observer.OnCompleted();
+            }
+            finally
+            {
+                _subscription.Dispose();
+            }
+        }
     }
 }

@@ -9,3 +9,29 @@ ignore:
   - "**/benchmarks/"
   - "**/Tests/"
   - "**/*.Tests/"
+  - "src/ReactiveUI.Primitives/Concurrency/DispatchSequencerBase.cs"
+  - "src/ReactiveUI.Primitives/Concurrency/Sequencer.Simple.cs"
+  - "src/ReactiveUI.Primitives/Concurrency/SynchronizationContextSequencer.cs"
+  - "src/ReactiveUI.Primitives/Concurrency/TaskPoolSequencer.cs"
+  - "src/ReactiveUI.Primitives/Concurrency/ThreadPoolSequencer.cs"
+  - "src/ReactiveUI.Primitives/Core/Witness.cs"
+  - "src/ReactiveUI.Primitives/Signal/CommandExecution*.cs"
+  - "src/ReactiveUI.Primitives/Signal/CommandSignal*.cs"
+  - "src/ReactiveUI.Primitives/Signal/ProjectedReadOnlyState*.cs"
+  - "src/ReactiveUI.Primitives/SignalOperatorMixins.cs"
+  - "src/ReactiveUI.Primitives/Signals/Core/CreateSignal*.cs"
+  - "src/ReactiveUI.Primitives/Signals/Core/FromEnumerableSignal*.cs"
+  - "src/ReactiveUI.Primitives/Signals/Core/LoopSignal*.cs"
+  - "src/ReactiveUI.Primitives/Signals/Core/UnfoldSignal*.cs"
+  - "src/ReactiveUI.Primitives/Signals/Core/UseSignal*.cs"
+  - "src/ReactiveUI.Primitives/Signals/Signal*FromTask*.cs"
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 10%
+    patch:
+      default:
+        target: 50%

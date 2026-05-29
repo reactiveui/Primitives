@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
@@ -60,6 +61,11 @@ public abstract partial class VirtualTimeSequencerBase<TAbsolute, TRelative> : I
     /// Gets the scheduler's notion of current time.
     /// </summary>
     public DateTimeOffset Now => ToDateTimeOffset(Clock);
+
+    /// <summary>
+    /// Gets the virtual clock as a monotonic timestamp.
+    /// </summary>
+    public long Timestamp => Now.UtcTicks;
 
     /// <summary>
     /// Gets the comparer used to compare absolute time values.
@@ -219,6 +225,54 @@ public abstract partial class VirtualTimeSequencerBase<TAbsolute, TRelative> : I
         }
 
         return ScheduleRelative(state, ToRelative(dueTime - Now), action);
+    }
+
+    /// <summary>
+    /// Schedules a work item to be executed at the current virtual clock.
+    /// </summary>
+    /// <param name="item">Work item to execute.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    public void Schedule(IWorkItem item)
+    {
+        if (item == null)
+        {
+            throw new ArgumentNullException(nameof(item));
+        }
+
+        ScheduleAbsolute(item, Clock, static (_, workItem) =>
+        {
+            if (!Sequencer.IsCancelled(workItem))
+            {
+                workItem.Execute();
+            }
+
+            return Disposable.Empty;
+        });
+    }
+
+    /// <summary>
+    /// Schedules a work item to be executed at a sequencer timestamp.
+    /// </summary>
+    /// <param name="item">Work item to execute.</param>
+    /// <param name="dueTimestamp">Absolute sequencer timestamp.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    public void Schedule(IWorkItem item, long dueTimestamp)
+    {
+        if (item == null)
+        {
+            throw new ArgumentNullException(nameof(item));
+        }
+
+        var delta = Sequencer.ToTimeSpanDelta(dueTimestamp - Timestamp);
+        ScheduleRelative(item, ToRelative(delta), static (_, workItem) =>
+        {
+            if (!Sequencer.IsCancelled(workItem))
+            {
+                workItem.Execute();
+            }
+
+            return Disposable.Empty;
+        });
     }
 
     /// <summary>

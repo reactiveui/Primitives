@@ -29,7 +29,7 @@ internal sealed class CreateSignal<T, TState> : SignalsBase<T>
     /// <param name="state">The state value.</param>
     /// <param name="subscribe">The subscribe value.</param>
     public CreateSignal(TState state, Func<TState, IObserver<T>, IDisposable> subscribe)
-        : base(true) // fail safe
+        : base(false)
     {
         _state = state;
         _subscribe = subscribe;

@@ -15,31 +15,20 @@ public interface ISequencer
     DateTimeOffset Now { get; }
 
     /// <summary>
-    /// Schedules an action to be executed.
+    /// Gets the sequencer's monotonic timestamp.
     /// </summary>
-    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
-    /// <param name="state">State passed to the action to be executed.</param>
-    /// <param name="action">Action to be executed.</param>
-    /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-    IDisposable Schedule<TState>(TState state, Func<ISequencer, TState, IDisposable> action);
+    long Timestamp { get; }
 
     /// <summary>
-    /// Schedules an action to be executed after dueTime.
+    /// Schedules a work item for execution as soon as possible.
     /// </summary>
-    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
-    /// <param name="state">State passed to the action to be executed.</param>
-    /// <param name="dueTime">Relative time after which to execute the action.</param>
-    /// <param name="action">Action to be executed.</param>
-    /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-    IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<ISequencer, TState, IDisposable> action);
+    /// <param name="item">Work item to execute.</param>
+    void Schedule(IWorkItem item);
 
     /// <summary>
-    /// Schedules an action to be executed at dueTime.
+    /// Schedules a work item for execution at an absolute monotonic timestamp.
     /// </summary>
-    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
-    /// <param name="state">State passed to the action to be executed.</param>
-    /// <param name="dueTime">Absolute time at which to execute the action.</param>
-    /// <param name="action">Action to be executed.</param>
-    /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-    IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action);
+    /// <param name="item">Work item to execute.</param>
+    /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    void Schedule(IWorkItem item, long dueTimestamp);
 }
