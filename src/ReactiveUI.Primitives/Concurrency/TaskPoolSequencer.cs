@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.Disposables;
+using System.Runtime.ExceptionServices;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
@@ -22,7 +22,7 @@ public sealed partial class TaskPoolSequencer : ISequencer
     /// Initializes a new instance of the <see cref="TaskPoolSequencer"/> class.
     /// </summary>
     /// <param name="taskFactory">The task factory.</param>
-    public TaskPoolSequencer(TaskFactory taskFactory) => _taskFactory = taskFactory;
+    public TaskPoolSequencer(TaskFactory taskFactory) => _taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
 
     /// <summary>
     /// Gets the instance.
@@ -38,81 +38,154 @@ public sealed partial class TaskPoolSequencer : ISequencer
     public static TaskPoolSequencer Default => Instance;
 
     /// <summary>
+    /// Gets or sets the unhandled exception handler used by task-pool work.
+    /// </summary>
+    public Action<Exception>? UnhandledExceptionHandler { get; set; }
+
+    /// <summary>
     /// Gets the scheduler's notion of current time.
     /// </summary>
     public DateTimeOffset Now => Sequencer.Now;
 
     /// <summary>
-    /// Schedules an action to be executed.
+    /// Gets the scheduler's monotonic timestamp.
     /// </summary>
-    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
-    /// <param name="state">State passed to the action to be executed.</param>
-    /// <param name="action">Action to be executed.</param>
-    /// <returns>
-    /// The disposable object used to cancel the scheduled action (best effort).
-    /// </returns>
-    public IDisposable Schedule<TState>(TState state, Func<ISequencer, TState, IDisposable> action)
+    public long Timestamp => Sequencer.Timestamp;
+
+    /// <summary>
+    /// Schedules a work item to be executed through the task factory.
+    /// </summary>
+    /// <param name="item">Work item to execute.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    public void Schedule(IWorkItem item)
     {
-        if (action == null)
+        if (item == null)
         {
-            throw new ArgumentNullException(nameof(action));
+            throw new ArgumentNullException(nameof(item));
         }
 
-        var cancellationDisposable = new CancellationDisposable();
-#pragma warning disable CA2008 // Do not create tasks without passing a TaskScheduler
-        _taskFactory.StartNew(
-             (_) =>
-         {
-             try
-             {
-                 return action(this, state);
-             }
-             catch (Exception ex)
-             {
-                 var thread = new Thread(() => ex.Rethrow());
-                 thread.Start();
-                 thread.Join();
-                 return Disposable.Empty;
-             }
-         },
-             cancellationDisposable.Token);
-#pragma warning restore CA2008 // Do not create tasks without passing a TaskScheduler
-
-        return cancellationDisposable;
+#pragma warning disable CA2008 // The caller supplied the factory; preserving its scheduler is intentional.
+        _taskFactory.StartNew(static state => ((DispatchState)state!).Run(), new DispatchState(this, item));
+#pragma warning restore CA2008
     }
 
     /// <summary>
-    /// Schedules an action to be executed after dueTime.
+    /// Schedules a work item to be executed through the task factory at a monotonic timestamp.
     /// </summary>
-    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
-    /// <param name="state">State passed to the action to be executed.</param>
-    /// <param name="dueTime">Relative time after which to execute the action.</param>
-    /// <param name="action">Action to be executed.</param>
-    /// <returns>
-    /// The disposable object used to cancel the scheduled action (best effort).
-    /// </returns>
-    public IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<ISequencer, TState, IDisposable> action)
+    /// <param name="item">Work item to execute.</param>
+    /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    public void Schedule(IWorkItem item, long dueTimestamp)
     {
-        if (action == null)
+        if (item == null)
         {
-            throw new ArgumentNullException(nameof(action));
+            throw new ArgumentNullException(nameof(item));
         }
 
-        var g = new MultipleDisposable();
-        g.Add(ThreadPoolSequencer.Instance.Schedule(state, Sequencer.Normalize(dueTime), action));
-        return g;
+        if (dueTimestamp <= Timestamp)
+        {
+            Schedule(item);
+            return;
+        }
+
+        ThreadPoolSequencer.Instance.Schedule(new DelayedDispatchWorkItem(this, item), dueTimestamp);
     }
 
     /// <summary>
-    /// Schedules an action to be executed at dueTime.
+    /// Executes a work item and routes unhandled exceptions.
     /// </summary>
-    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
-    /// <param name="state">State passed to the action to be executed.</param>
-    /// <param name="dueTime">Absolute time at which to execute the action.</param>
-    /// <param name="action">Action to be executed.</param>
-    /// <returns>
-    /// The disposable object used to cancel the scheduled action (best effort).
-    /// </returns>
-    public IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action) =>
-        Schedule(state, Sequencer.Normalize(dueTime - Now), action);
+    /// <param name="item">Work item to execute.</param>
+    private void Execute(IWorkItem item)
+    {
+        if (Sequencer.IsCancelled(item))
+        {
+            return;
+        }
+
+        try
+        {
+            item.Execute();
+        }
+        catch (Exception ex)
+        {
+            var handler = UnhandledExceptionHandler;
+            if (handler != null)
+            {
+                handler(ex);
+                return;
+            }
+
+            ExceptionDispatchInfo.Capture(ex).Throw();
+        }
+    }
+
+    /// <summary>
+    /// Task factory dispatch state.
+    /// </summary>
+    private sealed class DispatchState
+    {
+        /// <summary>
+        /// Owning sequencer.
+        /// </summary>
+        private readonly TaskPoolSequencer _owner;
+
+        /// <summary>
+        /// Work item to execute.
+        /// </summary>
+        private readonly IWorkItem _item;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DispatchState"/> class.
+        /// </summary>
+        /// <param name="owner">Owning sequencer.</param>
+        /// <param name="item">Work item to execute.</param>
+        public DispatchState(TaskPoolSequencer owner, IWorkItem item)
+        {
+            _owner = owner;
+            _item = item;
+        }
+
+        /// <summary>
+        /// Runs the work item.
+        /// </summary>
+        public void Run() => _owner.Execute(_item);
+    }
+
+    /// <summary>
+    /// Work item that switches delayed work from the thread pool onto the task factory.
+    /// </summary>
+    private sealed class DelayedDispatchWorkItem : IWorkItem
+    {
+        /// <summary>
+        /// Owning sequencer.
+        /// </summary>
+        private readonly TaskPoolSequencer _owner;
+
+        /// <summary>
+        /// Work item to execute.
+        /// </summary>
+        private readonly IWorkItem _item;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DelayedDispatchWorkItem"/> class.
+        /// </summary>
+        /// <param name="owner">Owning sequencer.</param>
+        /// <param name="item">Work item to execute.</param>
+        public DelayedDispatchWorkItem(TaskPoolSequencer owner, IWorkItem item)
+        {
+            _owner = owner;
+            _item = item;
+        }
+
+        /// <inheritdoc/>
+        public void Execute()
+        {
+            if (Sequencer.IsCancelled(_item))
+            {
+                return;
+            }
+
+            _owner.Schedule(_item);
+        }
+    }
 }

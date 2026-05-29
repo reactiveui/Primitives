@@ -2,9 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.Disposables;
-using Timer = System.Threading.Timer;
-
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>
@@ -40,77 +37,93 @@ public sealed class SynchronizationContextSequencer : ISequencer
     public DateTimeOffset Now => Sequencer.Now;
 
     /// <summary>
+    /// Gets the scheduler's monotonic timestamp.
+    /// </summary>
+    public long Timestamp => Sequencer.Timestamp;
+
+    /// <summary>
     /// Gets the debugger display text.
     /// </summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <inheritdoc/>
-    public IDisposable Schedule<TState>(TState state, Func<ISequencer, TState, IDisposable> action)
+    public void Schedule(IWorkItem item)
     {
-        if (action == null)
+        if (item == null)
         {
-            throw new ArgumentNullException(nameof(action));
+            throw new ArgumentNullException(nameof(item));
         }
 
-        var cancelable = new BooleanDisposable();
-        Context.Post(
-            _ =>
-            {
-                if (cancelable.IsDisposed)
-                {
-                    return;
-                }
-
-                action(this, state);
-            },
-            null);
-
-        return cancelable;
+        Context.Post(static state => ExecutePosted((IWorkItem)state!), item);
     }
 
     /// <inheritdoc/>
-    public IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<ISequencer, TState, IDisposable> action)
+    public void Schedule(IWorkItem item, long dueTimestamp)
     {
-        if (action == null)
+        if (item == null)
         {
-            throw new ArgumentNullException(nameof(action));
+            throw new ArgumentNullException(nameof(item));
         }
 
-        var cancelable = new BooleanDisposable();
-        Timer? timer = null;
-        timer = new Timer(
-            _ =>
-            {
-                if (cancelable.IsDisposed)
-                {
-                    return;
-                }
-
-                Context.Post(
-                    __ =>
-                    {
-                        if (!cancelable.IsDisposed)
-                        {
-                            action(this, state);
-                        }
-
-                        timer?.Dispose();
-                    },
-                    null);
-            },
-            null,
-            Sequencer.Normalize(dueTime),
-            Timeout.InfiniteTimeSpan);
-
-        return Disposable.Create(() =>
+        if (dueTimestamp <= Timestamp)
         {
-            cancelable.Dispose();
-            timer.Dispose();
-        });
+            Schedule(item);
+            return;
+        }
+
+        ThreadPoolSequencer.Instance.Schedule(new DelayedPostWorkItem(this, item), dueTimestamp);
     }
 
-    /// <inheritdoc/>
-    public IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action) =>
-        Schedule(state, Sequencer.Normalize(dueTime - Now), action);
+    /// <summary>
+    /// Executes work when it has not already been cancelled.
+    /// </summary>
+    /// <param name="item">Work item to execute.</param>
+    private static void ExecutePosted(IWorkItem item)
+    {
+        if (Sequencer.IsCancelled(item))
+        {
+            return;
+        }
+
+        item.Execute();
+    }
+
+    /// <summary>
+    /// Delayed post work item.
+    /// </summary>
+    private sealed class DelayedPostWorkItem : IWorkItem
+    {
+        /// <summary>
+        /// Owning sequencer.
+        /// </summary>
+        private readonly SynchronizationContextSequencer _owner;
+
+        /// <summary>
+        /// Scheduled item.
+        /// </summary>
+        private readonly IWorkItem _item;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DelayedPostWorkItem"/> class.
+        /// </summary>
+        /// <param name="owner">Owning sequencer.</param>
+        /// <param name="item">Scheduled item.</param>
+        public DelayedPostWorkItem(SynchronizationContextSequencer owner, IWorkItem item)
+        {
+            _owner = owner;
+            _item = item;
+        }
+
+        /// <inheritdoc/>
+        public void Execute()
+        {
+            if (Sequencer.IsCancelled(_item))
+            {
+                return;
+            }
+
+            _owner.Schedule(_item);
+        }
+    }
 }

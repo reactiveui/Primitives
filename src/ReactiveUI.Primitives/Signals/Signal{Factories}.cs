@@ -64,13 +64,7 @@ public static partial class Signal
     /// Creates a signal that repeats a value forever.
     /// </summary>
     public static IObservable<T> Loop<T>(T value) =>
-        Create<T>(
-            observer => Sequencer.CurrentThread.Schedule(self =>
-            {
-                observer.OnNext(value);
-                self();
-            }),
-            true);
+        new LoopSignal<T>(value);
 
     /// <summary>
     /// Creates a signal that repeats a value <paramref name="count"/> times.
@@ -114,19 +108,7 @@ public static partial class Signal
             throw new ArgumentNullException(nameof(resultSelector));
         }
 
-        return CreateSafe<TResult>(
-            observer => Sequencer.CurrentThread.Schedule(() =>
-            {
-                var state = initialState;
-                while (condition(state))
-                {
-                    observer.OnNext(resultSelector(state));
-                    state = iterate(state);
-                }
-
-                observer.OnCompleted();
-            }),
-            true);
+        return new UnfoldSignal<TState, TResult>(initialState, condition, iterate, resultSelector);
     }
 
     /// <summary>
@@ -155,24 +137,7 @@ public static partial class Signal
             throw new ArgumentNullException(nameof(signalFactory));
         }
 
-        return Create<T>(observer =>
-        {
-            TResource resource;
-            IObservable<T> source;
-            try
-            {
-                resource = resourceFactory();
-                source = signalFactory(resource) ?? throw new InvalidOperationException("The signal factory returned null.");
-            }
-            catch (Exception error)
-            {
-                observer.OnError(error);
-                return Disposable.Empty;
-            }
-
-            var sourceSubscription = source.Subscribe(observer);
-            return MultipleDisposable.Create(sourceSubscription, resource);
-        });
+        return new UseSignal<TResource, T>(resourceFactory, signalFactory);
     }
 
     /// <summary>
@@ -367,6 +332,25 @@ public static partial class Signal
         if (scheduler == null)
         {
             throw new ArgumentNullException(nameof(scheduler));
+        }
+
+        if (scheduler == Sequencer.Immediate)
+        {
+            return CreateSafe<T>(
+                observer =>
+                {
+                    try
+                    {
+                        observer.OnNext(function());
+                        observer.OnCompleted();
+                    }
+                    catch (Exception error)
+                    {
+                        observer.OnError(error);
+                    }
+
+                    return Disposable.Empty;
+                });
         }
 
         return CreateSafe<T>(

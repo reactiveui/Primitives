@@ -109,6 +109,17 @@ public static class Witness
             throw new ArgumentNullException(nameof(cancel));
         }
 
+        if (ReferenceEquals(cancel, Disposable.Empty))
+        {
+            if (observer is DelegateWitness<T> delegateWitness)
+            {
+                delegateWitness.MakeSafe();
+                return delegateWitness;
+            }
+
+            return new SafeNoCancelWitness<T>(observer);
+        }
+
         return new SafeWitness<T>(observer, cancel);
     }
 
@@ -134,6 +145,16 @@ public static class Witness
         private readonly Action _onCompleted;
 
         /// <summary>
+        /// Non-zero when terminal safety is enabled.
+        /// </summary>
+        private int _safe;
+
+        /// <summary>
+        /// Non-zero after the observer has stopped.
+        /// </summary>
+        private int _stopped;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="DelegateWitness{T}"/> class.
         /// </summary>
         /// <param name="onNext">Callback invoked for each value.</param>
@@ -147,13 +168,142 @@ public static class Witness
         }
 
         /// <inheritdoc/>
-        public void OnCompleted() => _onCompleted();
+        public void OnCompleted()
+        {
+            if (Volatile.Read(ref _safe) == 0)
+            {
+                _onCompleted();
+                return;
+            }
+
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
+            _onCompleted();
+        }
 
         /// <inheritdoc/>
-        public void OnError(Exception error) => _onError(error ?? throw new ArgumentNullException(nameof(error)));
+        public void OnError(Exception error)
+        {
+            if (error == null)
+            {
+                throw new ArgumentNullException(nameof(error));
+            }
+
+            if (Volatile.Read(ref _safe) == 0)
+            {
+                _onError(error);
+                return;
+            }
+
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
+            _onError(error);
+        }
 
         /// <inheritdoc/>
-        public void OnNext(T value) => _onNext(value);
+        public void OnNext(T value)
+        {
+            if (Volatile.Read(ref _safe) == 0)
+            {
+                _onNext(value);
+                return;
+            }
+
+            if (Volatile.Read(ref _stopped) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _onNext(value);
+            }
+            catch
+            {
+                Interlocked.Exchange(ref _stopped, 1);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Enables terminal safety in-place.
+        /// </summary>
+        public void MakeSafe() => Volatile.Write(ref _safe, 1);
+    }
+
+    /// <summary>
+    /// Observer wrapper that prevents notifications after termination without owning a cancellation resource.
+    /// </summary>
+    /// <typeparam name="T">The observed value type.</typeparam>
+    private sealed class SafeNoCancelWitness<T> : IObserver<T>
+    {
+        /// <summary>
+        /// Wrapped observer.
+        /// </summary>
+        private readonly IObserver<T> _observer;
+
+        /// <summary>
+        /// Non-zero after the observer has stopped.
+        /// </summary>
+        private int _stopped;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SafeNoCancelWitness{T}"/> class.
+        /// </summary>
+        /// <param name="observer">Wrapped observer.</param>
+        public SafeNoCancelWitness(IObserver<T> observer) => _observer = observer;
+
+        /// <inheritdoc/>
+        public void OnCompleted()
+        {
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
+            _observer.OnCompleted();
+        }
+
+        /// <inheritdoc/>
+        public void OnError(Exception error)
+        {
+            if (error == null)
+            {
+                throw new ArgumentNullException(nameof(error));
+            }
+
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
+            _observer.OnError(error);
+        }
+
+        /// <inheritdoc/>
+        public void OnNext(T value)
+        {
+            if (Volatile.Read(ref _stopped) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _observer.OnNext(value);
+            }
+            catch
+            {
+                Interlocked.Exchange(ref _stopped, 1);
+                throw;
+            }
+        }
     }
 
     /// <summary>

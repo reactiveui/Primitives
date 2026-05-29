@@ -15,29 +15,29 @@ namespace ReactiveUI.Primitives.Signals.Core;
 internal abstract class SignalsBase<T> : IRequireCurrentThread<T>
 {
     /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
-    private readonly bool _isRequiredSubscribeOnCurrentThread;
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="SignalsBase{T}"/> class.
     /// </summary>
     /// <param name="isRequiredSubscribeOnCurrentThread">The isRequiredSubscribeOnCurrentThread value.</param>
     private protected SignalsBase(bool isRequiredSubscribeOnCurrentThread) =>
-        _isRequiredSubscribeOnCurrentThread = isRequiredSubscribeOnCurrentThread;
+        IsCurrentThreadSubscriptionRequired = isRequiredSubscribeOnCurrentThread;
+
+    /// <summary>
+    /// Gets a value indicating whether subscription must be dispatched through the current-thread sequencer.
+    /// </summary>
+    public bool IsCurrentThreadSubscriptionRequired { get; }
 
     /// <summary>
     /// Executes the IsRequiredSubscribeOnCurrentThread operation.
     /// </summary>
     /// <returns>The result.</returns>
-    public bool IsRequiredSubscribeOnCurrentThread() => _isRequiredSubscribeOnCurrentThread;
+    public bool IsRequiredSubscribeOnCurrentThread() => IsCurrentThreadSubscriptionRequired;
 
     /// <summary>
     /// Executes the Subscribe operation.
     /// </summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
-    public IDisposable Subscribe(IObserver<T> observer)
+    public virtual IDisposable Subscribe(IObserver<T> observer)
     {
         if (observer == null)
         {
@@ -46,7 +46,7 @@ internal abstract class SignalsBase<T> : IRequireCurrentThread<T>
 
         var subscription = new SingleDisposable();
 
-        if (_isRequiredSubscribeOnCurrentThread && Sequencer.CurrentThread.IsScheduleRequired)
+        if (IsCurrentThreadSubscriptionRequired && Sequencer.CurrentThread.IsScheduleRequired)
         {
             Sequencer.CurrentThread.Schedule(() => subscription.Create(SubscribeCore(observer, subscription)));
         }
