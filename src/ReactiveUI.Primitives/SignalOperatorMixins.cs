@@ -123,18 +123,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        return Signal.CreateSafe<T>(observer => source.Subscribe(
-            value =>
-            {
-                if (value == null)
-                {
-                    return;
-                }
-
-                observer.OnNext(value);
-            },
-            observer.OnError,
-            observer.OnCompleted));
+        return new KeepNotNullSignal<T>(source);
     }
 
     /// <summary>
@@ -155,18 +144,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        return Signal.CreateSafe<TResult>(observer => source.Subscribe(
-            value =>
-            {
-                if (value is not TResult result)
-                {
-                    return;
-                }
-
-                observer.OnNext(result);
-            },
-            observer.OnError,
-            observer.OnCompleted));
+        return new KeepTypeSignal<TResult>(source);
     }
 
     /// <summary>
@@ -254,12 +232,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(accumulator));
         }
 
-        return Signal.CreateSafe<TAccumulate>(observer =>
-        {
-            var sink = new FoldObserver<TSource, TAccumulate>(observer, seed, accumulator);
-            sink.SetSubscription(source.Subscribe(sink));
-            return sink;
-        });
+        return new FoldSignal<TSource, TAccumulate>(source, seed, accumulator);
     }
 
     /// <summary>
@@ -284,12 +257,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(accumulator));
         }
 
-        return Signal.CreateSafe<TAccumulate>(observer =>
-        {
-            var sink = new ReduceObserver<TSource, TAccumulate>(observer, seed, accumulator);
-            sink.SetSubscription(source.Subscribe(sink));
-            return sink;
-        });
+        return new ReduceSignal<TSource, TAccumulate>(source, seed, accumulator);
     }
 
     /// <summary>
@@ -353,12 +321,7 @@ public static partial class LinqMixins
             throw new ArgumentOutOfRangeException(nameof(count));
         }
 
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var sink = new SkipObserver<T>(observer, count);
-            sink.SetSubscription(source.Subscribe(sink));
-            return sink;
-        });
+        return new SkipSignal<T>(source, count);
     }
 
     /// <summary>
@@ -386,12 +349,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var sink = new DistinctObserver<T>(observer, comparer);
-            sink.SetSubscription(source.Subscribe(sink));
-            return sink;
-        });
+        return new DistinctSignal<T>(source, comparer);
     }
 
     /// <summary>
@@ -420,12 +378,7 @@ public static partial class LinqMixins
         }
 
         comparer ??= EqualityComparer<T>.Default;
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var sink = new UniqueObserver<T>(observer, comparer);
-            sink.SetSubscription(source.Subscribe(sink));
-            return sink;
-        });
+        return new UniqueSignal<T>(source, comparer);
     }
 
     /// <summary>

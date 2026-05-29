@@ -409,12 +409,7 @@ public static partial class LinqMixins
         }
 
         comparer ??= EqualityComparer<TKey>.Default;
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var sink = new UniqueByObserver<T, TKey>(observer, keySelector, comparer);
-            sink.SetSubscription(source.Subscribe(sink));
-            return sink;
-        });
+        return new UniqueBySignal<T, TKey>(source, keySelector, comparer);
     }
 
     /// <summary>
@@ -437,12 +432,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(predicate));
         }
 
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var sink = new TakeWhileObserver<T>(observer, predicate);
-            sink.SetSubscription(source.Subscribe(sink));
-            return sink;
-        });
+        return new TakeWhileSignal<T>(source, predicate);
     }
 
     /// <summary>
@@ -465,12 +455,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(predicate));
         }
 
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var sink = new SkipWhileObserver<T>(observer, predicate);
-            sink.SetSubscription(source.Subscribe(sink));
-            return sink;
-        });
+        return new SkipWhileSignal<T>(source, predicate);
     }
 
     /// <summary>

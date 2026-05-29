@@ -20,6 +20,15 @@ public partial class Signal<T> : ISignal<T>
     /// published with <c>Interlocked.CompareExchange</c>; observers read a stable snapshot with
     /// <c>Volatile.Read</c>.
     /// </summary>
+    /// <remarks>
+    /// This is a deliberate trade-off. Emission (<see cref="OnNext"/>) is allocation-free and
+    /// lock-free for any observer count, and the single-subscriber case stores the subscription
+    /// directly with no array. The cost is that each subscribe/unsubscribe copies the observer
+    /// array, so rapid churn of a large multi-subscriber set allocates O(n) per change. That cost
+    /// is not paid by a stable subscriber set (the common case); reintroducing a mutable, locked
+    /// list to avoid it would put a lock back on the hot emission path, which is the opposite of
+    /// the goal here.
+    /// </remarks>
     private SubjectState _state = SubjectState.Empty;
 
     /// <summary>
