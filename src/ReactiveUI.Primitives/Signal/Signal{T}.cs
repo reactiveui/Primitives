@@ -16,48 +16,67 @@ namespace ReactiveUI.Primitives.Signals;
 public partial class Signal<T> : ISignal<T>
 {
     /// <summary>
-    /// Holds the current observer set as a lock-free copy-on-write reference. Transitions are
-    /// published with <c>Interlocked.CompareExchange</c>; observers read a stable snapshot with
-    /// <c>Volatile.Read</c>.
+    /// Stores state for the signal implementation.
     /// </summary>
-    /// <remarks>
-    /// This is a deliberate trade-off. Emission (<see cref="OnNext"/>) is allocation-free and
-    /// lock-free for any observer count, and the single-subscriber case stores the subscription
-    /// directly with no array. The cost is that each subscribe/unsubscribe copies the observer
-    /// array, so rapid churn of a large multi-subscriber set allocates O(n) per change. That cost
-    /// is not paid by a stable subscriber set (the common case); reintroducing a mutable, locked
-    /// list to avoid it would put a lock back on the hot emission path, which is the opposite of
-    /// the goal here.
-    /// </remarks>
-    private SubjectState _state = SubjectState.Empty;
+    private const int InitialSubscriptionCapacity = 4;
 
     /// <summary>
-    /// Identifies the lifecycle phase of a <see cref="SubjectState"/>.
+    /// Guards observer-set and terminal-state mutations. Dispatch (OnNext) reads the observer
+    /// slots lock-free via Volatile; only subscribe/remove/terminal take the lock, and they mutate
+    /// reusable array slots in place rather than copying, so subscribe/unsubscribe churn does not
+    /// allocate a new array per change.
     /// </summary>
-    private enum SubjectStatus
-    {
-        /// <summary>The subject is accepting values and subscriptions.</summary>
-        Live,
+    private readonly Lock _observerLock = new();
 
-        /// <summary>The subject has completed.</summary>
-        Completed,
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
+    private Exception? _exception;
 
-        /// <summary>The subject has terminated with an error.</summary>
-        Errored,
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
+    private SignalSubscription? _singleActionSubscription;
 
-        /// <summary>The subject has been disposed.</summary>
-        Disposed,
-    }
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
+    private SignalSubscription? _singleObserverSubscription;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
+    private SignalSubscription?[]? _subscriptions;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
+    private int _subscriptionCount;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
+    private int _subscriptionTail;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
+    private bool _isDisposed;
+
+    /// <summary>
+    /// Stores state for the signal implementation.
+    /// </summary>
+    private bool _isStopped;
 
     /// <summary>
     /// Gets a value indicating whether indicates whether the subject has observers subscribed to it.
     /// </summary>
-    public virtual bool HasObservers => Volatile.Read(ref _state).HasObservers;
+    public virtual bool HasObservers => (_singleActionSubscription != null || _singleObserverSubscription != null || _subscriptionCount != 0) && !_isStopped;
 
     /// <summary>
     /// Gets a value indicating whether indicates whether the subject has been disposed.
     /// </summary>
-    public virtual bool IsDisposed => Volatile.Read(ref _state).Status == SubjectStatus.Disposed;
+    public virtual bool IsDisposed => _isDisposed;
 
     /// <summary>
     /// Releases unmanaged and - optionally - managed resources.
@@ -73,23 +92,23 @@ public partial class Signal<T> : ISignal<T>
     /// </summary>
     public void OnCompleted()
     {
-        SubjectState state;
-        do
-        {
-            state = Volatile.Read(ref _state);
-            if (state.Status == SubjectStatus.Disposed)
-            {
-                ThrowDisposed();
-            }
+        SignalSubscription? singleObserver;
+        SignalSubscription?[]? subscriptions;
 
-            if (state.IsTerminal)
+        lock (_observerLock)
+        {
+            ThrowIfDisposed();
+            if (_isStopped)
             {
                 return;
             }
-        }
-        while (!ReferenceEquals(Interlocked.CompareExchange(ref _state, SubjectState.Completed, state), state));
 
-        SubjectState.Complete(state);
+            singleObserver = _singleObserverSubscription;
+            subscriptions = ClearObserversLocked();
+            _isStopped = true;
+        }
+
+        Completed(singleObserver, subscriptions);
     }
 
     /// <summary>
@@ -103,24 +122,27 @@ public partial class Signal<T> : ISignal<T>
             throw new ArgumentNullException(nameof(error));
         }
 
-        var errored = SubjectState.Errored(error);
-        SubjectState state;
-        do
-        {
-            state = Volatile.Read(ref _state);
-            if (state.Status == SubjectStatus.Disposed)
-            {
-                ThrowDisposed();
-            }
+        SignalSubscription? singleObserver;
+        SignalSubscription?[]? subscriptions;
+        var hasActionSubscribers = false;
 
-            if (state.IsTerminal)
+        lock (_observerLock)
+        {
+            ThrowIfDisposed();
+            if (_isStopped)
             {
                 return;
             }
-        }
-        while (!ReferenceEquals(Interlocked.CompareExchange(ref _state, errored, state), state));
 
-        if (!SubjectState.DispatchError(state, error))
+            _exception = error;
+            hasActionSubscribers = _singleActionSubscription != null || HasActionSubscribers(_subscriptions);
+            singleObserver = _singleObserverSubscription;
+            subscriptions = ClearObserversLocked();
+            _isStopped = true;
+        }
+
+        Error(singleObserver, subscriptions, error);
+        if (!hasActionSubscribers)
         {
             return;
         }
@@ -134,26 +156,22 @@ public partial class Signal<T> : ISignal<T>
     /// <param name="value">The value.</param>
     public void OnNext(T value)
     {
-        var state = Volatile.Read(ref _state);
-        var single = state.Single;
-        if (single != null)
+        var singleObserver = Volatile.Read(ref _singleObserverSubscription);
+        if (singleObserver != null)
         {
-            single.OnNext(value);
+            singleObserver.Observer.OnNext(value);
             return;
         }
 
-        var many = state.Many;
-        if (many != null)
+        var singleAction = Volatile.Read(ref _singleActionSubscription);
+        if (singleAction != null)
         {
-            for (var i = 0; i < many.Length; i++)
-            {
-                many[i].OnNext(value);
-            }
-
+            singleAction.Action(value);
             return;
         }
 
-        if (state.Status != SubjectStatus.Disposed)
+        DispatchSubscriptions(value);
+        if (!Volatile.Read(ref _isDisposed))
         {
             return;
         }
@@ -175,21 +193,40 @@ public partial class Signal<T> : ISignal<T>
             throw new ArgumentNullException(nameof(observer));
         }
 
-        var subscription = new SignalSubscription(this, observer);
-        var blocked = TryAdd(subscription);
-        if (blocked == null)
+        Exception? ex;
+        bool stopped;
+        SignalSubscription? subscription = null;
+
+        lock (_observerLock)
+        {
+            ThrowIfDisposed();
+            stopped = _isStopped;
+            ex = _exception;
+            if (!stopped)
+            {
+                if (_singleActionSubscription == null && _singleObserverSubscription == null && _subscriptionCount == 0)
+                {
+                    subscription = new SignalSubscription(this, observer);
+                    _singleObserverSubscription = subscription;
+                }
+                else
+                {
+                    PromoteSingleObserverLocked();
+                    PromoteSingleActionObserverLocked();
+                    subscription = new SignalSubscription(this, observer);
+                    AddSubscriptionLocked(subscription);
+                }
+            }
+        }
+
+        if (subscription != null)
         {
             return subscription;
         }
 
-        if (blocked.Status == SubjectStatus.Disposed)
+        if (ex != null)
         {
-            ThrowDisposed();
-        }
-
-        if (blocked.Error != null)
-        {
-            observer.OnError(blocked.Error);
+            observer.OnError(ex);
         }
         else
         {
@@ -211,21 +248,39 @@ public partial class Signal<T> : ISignal<T>
             throw new ArgumentNullException(nameof(onNext));
         }
 
-        var subscription = new SignalSubscription(this, onNext);
-        var blocked = TryAdd(subscription);
-        if (blocked == null)
+        Exception? ex;
+        bool stopped;
+        SignalSubscription? subscription = null;
+
+        lock (_observerLock)
+        {
+            ThrowIfDisposed();
+            stopped = _isStopped;
+            ex = _exception;
+            if (!stopped)
+            {
+                subscription = new SignalSubscription(this, onNext);
+                if (_singleActionSubscription == null && _singleObserverSubscription == null && _subscriptionCount == 0)
+                {
+                    _singleActionSubscription = subscription;
+                }
+                else
+                {
+                    PromoteSingleObserverLocked();
+                    PromoteSingleActionObserverLocked();
+                    AddSubscriptionLocked(subscription);
+                }
+            }
+        }
+
+        if (subscription != null)
         {
             return subscription;
         }
 
-        if (blocked.Status == SubjectStatus.Disposed)
+        if (ex != null)
         {
-            ThrowDisposed();
-        }
-
-        if (blocked.Error != null)
-        {
-            ExceptionDispatchInfo.Capture(blocked.Error).Throw();
+            ExceptionDispatchInfo.Capture(ex).Throw();
         }
 
         return Disposable.Empty;
@@ -237,13 +292,32 @@ public partial class Signal<T> : ISignal<T>
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
     protected virtual void Dispose(bool disposing)
     {
+        if (IsDisposed)
+        {
+            return;
+        }
+
         if (!disposing)
         {
             return;
         }
 
-        var state = Interlocked.Exchange(ref _state, SubjectState.Disposed);
-        SubjectState.DisposeAll(state);
+        SignalSubscription? singleActionSubscription;
+        SignalSubscription? singleObserverSubscription;
+        SignalSubscription?[]? subscriptions;
+
+        lock (_observerLock)
+        {
+            singleActionSubscription = _singleActionSubscription;
+            singleObserverSubscription = _singleObserverSubscription;
+            subscriptions = ClearObserversLocked();
+            _exception = null;
+            _isDisposed = true;
+        }
+
+        singleActionSubscription?.Dispose();
+        singleObserverSubscription?.Dispose();
+        DisposeSubscriptions(subscriptions);
     }
 
     /// <summary>
@@ -252,269 +326,271 @@ public partial class Signal<T> : ISignal<T>
     private static void ThrowDisposed() => throw new ObjectDisposedException(string.Empty);
 
     /// <summary>
-    /// Adds a subscription using a lock-free copy-on-write update.
+    /// Executes the Completed operation.
     /// </summary>
-    /// <param name="subscription">The subscription to add.</param>
-    /// <returns><see langword="null"/> when added; otherwise the terminal or disposed state that blocked the add.</returns>
-    private SubjectState? TryAdd(SignalSubscription subscription)
+    /// <param name="singleObserver">The single observer fast-path subscription.</param>
+    /// <param name="subscriptions">The subscriptions value.</param>
+    private static void Completed(SignalSubscription? singleObserver, SignalSubscription?[]? subscriptions)
     {
-        while (true)
+        singleObserver?.OnCompleted();
+        if (subscriptions == null)
         {
-            var current = Volatile.Read(ref _state);
-            if (current.Status != SubjectStatus.Live)
-            {
-                return current;
-            }
+            return;
+        }
 
-            var next = SubjectState.Add(current, subscription);
-            if (ReferenceEquals(Interlocked.CompareExchange(ref _state, next, current), current))
-            {
-                return null;
-            }
+        for (var i = 0; i < subscriptions.Length; i++)
+        {
+            subscriptions[i]?.OnCompleted();
         }
     }
 
     /// <summary>
-    /// Removes a subscription using a lock-free copy-on-write update.
+    /// Executes the Error operation.
+    /// </summary>
+    /// <param name="singleObserver">The single observer fast-path subscription.</param>
+    /// <param name="subscriptions">The subscriptions value.</param>
+    /// <param name="exception">The exception value.</param>
+    private static void Error(SignalSubscription? singleObserver, SignalSubscription?[]? subscriptions, Exception exception)
+    {
+        singleObserver?.OnError(exception);
+        if (subscriptions == null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < subscriptions.Length; i++)
+        {
+            subscriptions[i]?.OnError(exception);
+        }
+    }
+
+    /// <summary>
+    /// Executes the HasActionSubscribers operation.
+    /// </summary>
+    /// <param name="subscriptions">The subscriptions value.</param>
+    /// <returns>The result.</returns>
+    private static bool HasActionSubscribers(SignalSubscription?[]? subscriptions)
+    {
+        if (subscriptions == null)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < subscriptions.Length; i++)
+        {
+            if (subscriptions[i]?.IsAction == true)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Executes the DisposeSubscriptions operation.
+    /// </summary>
+    /// <param name="subscriptions">The subscriptions value.</param>
+    private static void DisposeSubscriptions(SignalSubscription?[]? subscriptions)
+    {
+        if (subscriptions == null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < subscriptions.Length; i++)
+        {
+            subscriptions[i]?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Executes the ThrowIfDisposed operation.
+    /// </summary>
+    private void ThrowIfDisposed()
+    {
+        if (!IsDisposed)
+        {
+            return;
+        }
+
+        ThrowDisposed();
+    }
+
+    /// <summary>
+    /// Executes the AddSubscriptionLocked operation.
+    /// </summary>
+    /// <param name="subscription">The subscription value.</param>
+    private void AddSubscriptionLocked(SignalSubscription subscription)
+    {
+        var subscriptions = _subscriptions;
+        if (subscriptions == null)
+        {
+            subscriptions = new SignalSubscription[InitialSubscriptionCapacity];
+            Volatile.Write(ref _subscriptions, subscriptions);
+        }
+
+        for (var i = 0; i < _subscriptionTail; i++)
+        {
+            if (subscriptions[i] != null)
+            {
+                continue;
+            }
+
+            Volatile.Write(ref subscriptions[i], subscription);
+            _subscriptionCount++;
+            return;
+        }
+
+        if (_subscriptionTail == subscriptions.Length)
+        {
+            var copy = new SignalSubscription[subscriptions.Length * 2];
+            Array.Copy(subscriptions, copy, subscriptions.Length);
+            subscriptions = copy;
+            Volatile.Write(ref _subscriptions, subscriptions);
+        }
+
+        Volatile.Write(ref subscriptions[_subscriptionTail], subscription);
+        _subscriptionTail++;
+        _subscriptionCount++;
+    }
+
+    /// <summary>
+    /// Executes the ClearObserversLocked operation.
+    /// </summary>
+    /// <returns>The result.</returns>
+    private SignalSubscription?[]? ClearObserversLocked()
+    {
+        _singleActionSubscription = null;
+        _singleObserverSubscription = null;
+        var subscriptions = _subscriptions;
+        Volatile.Write(ref _subscriptions, null);
+        _subscriptionCount = 0;
+        _subscriptionTail = 0;
+        return subscriptions;
+    }
+
+    /// <summary>
+    /// Executes the PromoteSingleActionObserverLocked operation.
+    /// </summary>
+    private void PromoteSingleActionObserverLocked()
+    {
+        var single = _singleActionSubscription;
+        if (single == null)
+        {
+            return;
+        }
+
+        _singleActionSubscription = null;
+        AddSubscriptionLocked(single);
+    }
+
+    /// <summary>
+    /// Executes the PromoteSingleObserverLocked operation.
+    /// </summary>
+    private void PromoteSingleObserverLocked()
+    {
+        var single = _singleObserverSubscription;
+        if (single == null)
+        {
+            return;
+        }
+
+        _singleObserverSubscription = null;
+        AddSubscriptionLocked(single);
+    }
+
+    /// <summary>
+    /// Executes the Remove operation.
     /// </summary>
     /// <param name="subscription">The subscription value.</param>
     private void Remove(SignalSubscription subscription)
     {
-        while (true)
+        lock (_observerLock)
         {
-            var current = Volatile.Read(ref _state);
-            var next = SubjectState.Remove(current, subscription);
-            if (next == null)
+            if (RemoveSingleSubscriptionLocked(subscription))
             {
                 return;
             }
 
-            if (ReferenceEquals(Interlocked.CompareExchange(ref _state, next, current), current))
-            {
-                return;
-            }
+            RemoveArraySubscriptionLocked(subscription);
         }
     }
 
     /// <summary>
-    /// Immutable, lock-free observer set. A live state holds either a single subscription (the
-    /// common case, allocation-free of any array) or an array; terminal and disposed states are
-    /// shared singletons, except <see cref="Errored"/> which carries the terminating exception.
+    /// Removes a single-subscription fast path entry.
     /// </summary>
-    private sealed class SubjectState
+    /// <param name="subscription">The subscription value.</param>
+    /// <returns><c>true</c> when a single subscription was removed; otherwise, <c>false</c>.</returns>
+    private bool RemoveSingleSubscriptionLocked(SignalSubscription subscription)
     {
-        /// <summary>The shared live state with no observers.</summary>
-        public static readonly SubjectState Empty = new(null, null, SubjectStatus.Live, null);
-
-        /// <summary>The shared completed state.</summary>
-        public static readonly SubjectState Completed = new(null, null, SubjectStatus.Completed, null);
-
-        /// <summary>The shared disposed state.</summary>
-        public static readonly SubjectState Disposed = new(null, null, SubjectStatus.Disposed, null);
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SubjectState"/> class.
-        /// </summary>
-        /// <param name="single">The lone subscription, when exactly one is present.</param>
-        /// <param name="many">The subscription array, when more than one is present.</param>
-        /// <param name="status">The lifecycle phase.</param>
-        /// <param name="error">The terminating exception, when errored.</param>
-        private SubjectState(SignalSubscription? single, SignalSubscription[]? many, SubjectStatus status, Exception? error)
+        if (ReferenceEquals(_singleActionSubscription, subscription))
         {
-            Single = single;
-            Many = many;
-            Status = status;
-            Error = error;
+            _singleActionSubscription = null;
+            return true;
         }
 
-        /// <summary>
-        /// Gets the lone subscription, or <see langword="null"/> when zero or more than one are present.
-        /// </summary>
-        public SignalSubscription? Single { get; }
-
-        /// <summary>
-        /// Gets the subscription array, or <see langword="null"/> when fewer than two are present.
-        /// </summary>
-        public SignalSubscription[]? Many { get; }
-
-        /// <summary>
-        /// Gets the lifecycle phase.
-        /// </summary>
-        public SubjectStatus Status { get; }
-
-        /// <summary>
-        /// Gets the terminating exception, or <see langword="null"/> unless the state is errored.
-        /// </summary>
-        public Exception? Error { get; }
-
-        /// <summary>
-        /// Gets a value indicating whether the state has at least one observer.
-        /// </summary>
-        public bool HasObservers => Single != null || (Many != null && Many.Length != 0);
-
-        /// <summary>
-        /// Gets a value indicating whether the state is terminal (completed or errored).
-        /// </summary>
-        public bool IsTerminal => Status is SubjectStatus.Completed or SubjectStatus.Errored;
-
-        /// <summary>
-        /// Creates an errored state carrying the terminating exception.
-        /// </summary>
-        /// <param name="error">The terminating exception.</param>
-        /// <returns>The errored state.</returns>
-        public static SubjectState Errored(Exception error) => new(null, null, SubjectStatus.Errored, error);
-
-        /// <summary>
-        /// Produces the live state that results from adding a subscription.
-        /// </summary>
-        /// <param name="state">The current live state.</param>
-        /// <param name="subscription">The subscription to add.</param>
-        /// <returns>The new live state.</returns>
-        public static SubjectState Add(SubjectState state, SignalSubscription subscription)
+        if (!ReferenceEquals(_singleObserverSubscription, subscription))
         {
-            var single = state.Single;
-            if (single != null)
-            {
-                var pair = new SignalSubscription[2];
-                pair[0] = single;
-                pair[1] = subscription;
-                return new SubjectState(null, pair, SubjectStatus.Live, null);
-            }
-
-            var many = state.Many;
-            if (many == null)
-            {
-                return new SubjectState(subscription, null, SubjectStatus.Live, null);
-            }
-
-            var copy = new SignalSubscription[many.Length + 1];
-            Array.Copy(many, copy, many.Length);
-            copy[many.Length] = subscription;
-            return new SubjectState(null, copy, SubjectStatus.Live, null);
+            return false;
         }
 
-        /// <summary>
-        /// Produces the live state that results from removing a subscription.
-        /// </summary>
-        /// <param name="state">The current state.</param>
-        /// <param name="subscription">The subscription to remove.</param>
-        /// <returns>The new state, or <see langword="null"/> when the subscription is absent.</returns>
-        public static SubjectState? Remove(SubjectState state, SignalSubscription subscription)
+        _singleObserverSubscription = null;
+        return true;
+    }
+
+    /// <summary>
+    /// Removes an array-backed subscription.
+    /// </summary>
+    /// <param name="subscription">The subscription value.</param>
+    private void RemoveArraySubscriptionLocked(SignalSubscription subscription)
+    {
+        var subscriptions = _subscriptions;
+        if (subscriptions == null)
         {
-            if (state.Single != null)
-            {
-                return ReferenceEquals(state.Single, subscription) ? Empty : null;
-            }
-
-            var many = state.Many;
-            if (many == null)
-            {
-                return null;
-            }
-
-            var index = Array.IndexOf(many, subscription);
-            return index < 0 ? null : RemoveAt(many, index);
+            return;
         }
 
-        /// <summary>
-        /// Dispatches completion to every observer in the state.
-        /// </summary>
-        /// <param name="state">The captured state.</param>
-        public static void Complete(SubjectState state)
+        for (var i = 0; i < subscriptions.Length; i++)
         {
-            var single = state.Single;
-            if (single != null)
+            if (!ReferenceEquals(subscriptions[i], subscription))
             {
-                single.OnCompleted();
-                return;
+                continue;
             }
 
-            var many = state.Many;
-            if (many == null)
+            Volatile.Write(ref subscriptions[i], null);
+            _subscriptionCount--;
+            if (_subscriptionCount != 0)
             {
                 return;
             }
 
-            for (var i = 0; i < many.Length; i++)
-            {
-                many[i].OnCompleted();
-            }
+            _subscriptionTail = 0;
+            return;
+        }
+    }
+
+    /// <summary>
+    /// Executes the DispatchSubscriptions operation.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    private void DispatchSubscriptions(T value)
+    {
+        var subscriptions = Volatile.Read(ref _subscriptions);
+        if (subscriptions == null)
+        {
+            return;
         }
 
-        /// <summary>
-        /// Dispatches an error to every observer in the state.
-        /// </summary>
-        /// <param name="state">The captured state.</param>
-        /// <param name="error">The terminating exception.</param>
-        /// <returns><c>true</c> when at least one action subscriber was present; otherwise, <c>false</c>.</returns>
-        public static bool DispatchError(SubjectState state, Exception error)
+        for (var i = 0; i < subscriptions.Length; i++)
         {
-            var single = state.Single;
-            if (single != null)
+            var subscription = Volatile.Read(ref subscriptions[i]);
+            if (subscription == null)
             {
-                single.OnError(error);
-                return single.IsAction;
+                continue;
             }
 
-            var many = state.Many;
-            if (many == null)
-            {
-                return false;
-            }
-
-            var hasActionSubscribers = false;
-            for (var i = 0; i < many.Length; i++)
-            {
-                hasActionSubscribers |= many[i].IsAction;
-                many[i].OnError(error);
-            }
-
-            return hasActionSubscribers;
-        }
-
-        /// <summary>
-        /// Disposes every subscription in the state.
-        /// </summary>
-        /// <param name="state">The captured state.</param>
-        public static void DisposeAll(SubjectState state)
-        {
-            var single = state.Single;
-            if (single != null)
-            {
-                single.Dispose();
-                return;
-            }
-
-            var many = state.Many;
-            if (many == null)
-            {
-                return;
-            }
-
-            for (var i = 0; i < many.Length; i++)
-            {
-                many[i].Dispose();
-            }
-        }
-
-        /// <summary>
-        /// Produces the live state with the entry at the supplied index removed, collapsing a
-        /// two-element array to a single subscription.
-        /// </summary>
-        /// <param name="many">The source observer array.</param>
-        /// <param name="index">The index to remove.</param>
-        /// <returns>The new live state.</returns>
-        private static SubjectState RemoveAt(SignalSubscription[] many, int index)
-        {
-            if (many.Length == 2)
-            {
-                return new SubjectState(many[index == 0 ? 1 : 0], null, SubjectStatus.Live, null);
-            }
-
-            var copy = new SignalSubscription[many.Length - 1];
-            Array.Copy(many, 0, copy, 0, index);
-            Array.Copy(many, index + 1, copy, index, many.Length - index - 1);
-            return new SubjectState(null, copy, SubjectStatus.Live, null);
+            subscription.OnNext(value);
         }
     }
 
