@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.Core;
-
 namespace ReactiveUI.Primitives.Signals.Core
 {
     /// <summary>
@@ -16,9 +14,11 @@ namespace ReactiveUI.Primitives.Signals.Core
 #pragma warning disable SA1401 // Fields should be private
 
         /// <summary>
-        /// Stores state for the signal implementation.
+        /// The downstream observer. Set once in the constructor and read without a memory barrier
+        /// on the per-value path; teardown is handled by disposing the upstream subscription rather
+        /// than by swapping this reference.
         /// </summary>
-        protected internal volatile IObserver<TResult> Observer;
+        protected internal readonly IObserver<TResult> Observer;
 #pragma warning restore SA1401 // Fields should be private
 
         /// <summary>
@@ -74,8 +74,6 @@ namespace ReactiveUI.Primitives.Signals.Core
         /// <param name="disposing">The disposing value.</param>
         protected virtual void Dispose(bool disposing)
         {
-            Observer = EmptyWitness<TResult>.Instance;
-
             // Atomic run-once latch so concurrent disposal cannot double-tear-down.
             if (Interlocked.Exchange(ref _disposed, 1) != 0)
             {
