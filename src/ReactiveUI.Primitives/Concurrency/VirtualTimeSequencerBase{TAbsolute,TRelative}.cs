@@ -251,10 +251,10 @@ public abstract partial class VirtualTimeSequencerBase<TAbsolute, TRelative> : I
     }
 
     /// <summary>
-    /// Schedules a work item to be executed at a virtual timestamp.
+    /// Schedules a work item to be executed at a sequencer timestamp.
     /// </summary>
     /// <param name="item">Work item to execute.</param>
-    /// <param name="dueTimestamp">Absolute virtual timestamp.</param>
+    /// <param name="dueTimestamp">Absolute sequencer timestamp.</param>
     /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item, long dueTimestamp)
     {
@@ -263,8 +263,8 @@ public abstract partial class VirtualTimeSequencerBase<TAbsolute, TRelative> : I
             throw new ArgumentNullException(nameof(item));
         }
 
-        var deltaTicks = Math.Max(0, dueTimestamp - Timestamp);
-        ScheduleRelative(item, ToRelative(TimeSpan.FromTicks(deltaTicks)), static (_, workItem) =>
+        var delta = Sequencer.ToTimeSpanDelta(dueTimestamp - Timestamp);
+        ScheduleRelative(item, ToRelative(delta), static (_, workItem) =>
         {
             if (!Sequencer.IsCancelled(workItem))
             {

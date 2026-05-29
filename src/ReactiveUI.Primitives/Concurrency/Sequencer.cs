@@ -76,6 +76,27 @@ public static partial class Sequencer
     }
 
     /// <summary>
+    /// Converts a monotonic timestamp delta to a relative duration.
+    /// </summary>
+    /// <param name="timestampDelta">Monotonic timestamp delta.</param>
+    /// <returns>The duration represented by <paramref name="timestampDelta"/>.</returns>
+    internal static TimeSpan ToTimeSpanDelta(long timestampDelta)
+    {
+        if (timestampDelta <= 0)
+        {
+            return TimeSpan.Zero;
+        }
+
+        var ticks = timestampDelta * (double)TimeSpan.TicksPerSecond / System.Diagnostics.Stopwatch.Frequency;
+        if (ticks >= TimeSpan.MaxValue.Ticks)
+        {
+            return TimeSpan.MaxValue;
+        }
+
+        return TimeSpan.FromTicks(Math.Max(1, (long)Math.Ceiling(ticks)));
+    }
+
+    /// <summary>
     /// Converts a relative duration to monotonic timestamp ticks.
     /// </summary>
     /// <param name="dueTime">Relative duration.</param>
