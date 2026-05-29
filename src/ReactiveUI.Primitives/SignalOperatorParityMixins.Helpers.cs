@@ -5,6 +5,7 @@
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives;
 
@@ -568,6 +569,283 @@ public static partial class LinqMixins
             {
                 Dispose();
             }
+        }
+    }
+
+    /// <summary>
+    /// Range timestamp projection with no intermediate map observer.
+    /// </summary>
+    /// <typeparam name="T">The range value type.</typeparam>
+    private sealed class TimestampRangeSignal<T> : IInlineSignal<Moment<T>>
+    {
+        /// <summary>
+        /// The range source.
+        /// </summary>
+        private readonly RangeSignal _range;
+
+        /// <summary>
+        /// The sequencer used to read timestamps.
+        /// </summary>
+        private readonly ISequencer _sequencer;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TimestampRangeSignal{T}"/> class.
+        /// </summary>
+        /// <param name="range">The range source.</param>
+        /// <param name="sequencer">The sequencer used to read timestamps.</param>
+        internal TimestampRangeSignal(RangeSignal range, ISequencer sequencer)
+        {
+            _range = range;
+            _sequencer = sequencer;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<Moment<T>> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            Emit(observer);
+            observer.OnCompleted();
+            return Disposable.Empty;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(Action<Moment<T>> onNext, Action<Exception> onError, Action onCompleted)
+        {
+            if (onNext == null)
+            {
+                throw new ArgumentNullException(nameof(onNext));
+            }
+
+            Emit(onNext);
+            onCompleted();
+            return Disposable.Empty;
+        }
+
+        /// <summary>
+        /// Emits timestamped range values.
+        /// </summary>
+        /// <param name="onNext">The next callback.</param>
+        private void Emit(Action<Moment<T>> onNext)
+        {
+            if (_sequencer == Sequencer.Immediate)
+            {
+                var timestamp = _sequencer.Now;
+                for (var i = 0; i < _range.Count; i++)
+                {
+                    onNext(new Moment<T>(CreateRangeValue<T>(_range.Start + i), timestamp));
+                }
+
+                return;
+            }
+
+            for (var i = 0; i < _range.Count; i++)
+            {
+                onNext(new Moment<T>(CreateRangeValue<T>(_range.Start + i), _sequencer.Now));
+            }
+        }
+
+        /// <summary>
+        /// Emits timestamped range values to an observer without allocating a delegate wrapper.
+        /// </summary>
+        /// <param name="observer">The downstream observer.</param>
+        private void Emit(IObserver<Moment<T>> observer)
+        {
+            if (_sequencer == Sequencer.Immediate)
+            {
+                var timestamp = _sequencer.Now;
+                for (var i = 0; i < _range.Count; i++)
+                {
+                    observer.OnNext(new Moment<T>(CreateRangeValue<T>(_range.Start + i), timestamp));
+                }
+
+                return;
+            }
+
+            for (var i = 0; i < _range.Count; i++)
+            {
+                observer.OnNext(new Moment<T>(CreateRangeValue<T>(_range.Start + i), _sequencer.Now));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Range time-interval projection with no intermediate safe signal closure.
+    /// </summary>
+    /// <typeparam name="T">The range value type.</typeparam>
+    private sealed class TimeIntervalRangeSignal<T> : IInlineSignal<TimeInterval<T>>
+    {
+        /// <summary>
+        /// The range source.
+        /// </summary>
+        private readonly RangeSignal _range;
+
+        /// <summary>
+        /// The sequencer used to read timestamps.
+        /// </summary>
+        private readonly ISequencer _sequencer;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TimeIntervalRangeSignal{T}"/> class.
+        /// </summary>
+        /// <param name="range">The range source.</param>
+        /// <param name="sequencer">The sequencer used to read timestamps.</param>
+        internal TimeIntervalRangeSignal(RangeSignal range, ISequencer sequencer)
+        {
+            _range = range;
+            _sequencer = sequencer;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<TimeInterval<T>> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            Emit(observer);
+            observer.OnCompleted();
+            return Disposable.Empty;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(Action<TimeInterval<T>> onNext, Action<Exception> onError, Action onCompleted)
+        {
+            if (onNext == null)
+            {
+                throw new ArgumentNullException(nameof(onNext));
+            }
+
+            Emit(onNext);
+            onCompleted();
+            return Disposable.Empty;
+        }
+
+        /// <summary>
+        /// Emits interval-tagged range values.
+        /// </summary>
+        /// <param name="onNext">The next callback.</param>
+        private void Emit(Action<TimeInterval<T>> onNext)
+        {
+            if (_sequencer == Sequencer.Immediate)
+            {
+                for (var i = 0; i < _range.Count; i++)
+                {
+                    onNext(new TimeInterval<T>(CreateRangeValue<T>(_range.Start + i), TimeSpan.Zero));
+                }
+
+                return;
+            }
+
+            var last = _sequencer.Now;
+            for (var i = 0; i < _range.Count; i++)
+            {
+                var now = _sequencer.Now;
+                var interval = i == 0 ? TimeSpan.Zero : now - last;
+                last = now;
+                onNext(new TimeInterval<T>(CreateRangeValue<T>(_range.Start + i), interval));
+            }
+        }
+
+        /// <summary>
+        /// Emits interval-tagged range values to an observer without allocating a delegate wrapper.
+        /// </summary>
+        /// <param name="observer">The downstream observer.</param>
+        private void Emit(IObserver<TimeInterval<T>> observer)
+        {
+            if (_sequencer == Sequencer.Immediate)
+            {
+                for (var i = 0; i < _range.Count; i++)
+                {
+                    observer.OnNext(new TimeInterval<T>(CreateRangeValue<T>(_range.Start + i), TimeSpan.Zero));
+                }
+
+                return;
+            }
+
+            var last = _sequencer.Now;
+            for (var i = 0; i < _range.Count; i++)
+            {
+                var now = _sequencer.Now;
+                var interval = i == 0 ? TimeSpan.Zero : now - last;
+                last = now;
+                observer.OnNext(new TimeInterval<T>(CreateRangeValue<T>(_range.Start + i), interval));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Range delay projection with no safe-signal wrapper allocation.
+    /// </summary>
+    /// <typeparam name="T">The range value type.</typeparam>
+    private sealed class ShiftedRangeSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
+    {
+        /// <summary>
+        /// The range source.
+        /// </summary>
+        private readonly RangeSignal _range;
+
+        /// <summary>
+        /// The normalized due time.
+        /// </summary>
+        private readonly TimeSpan _dueTime;
+
+        /// <summary>
+        /// The sequencer used to schedule the range batch.
+        /// </summary>
+        private readonly ISequencer _sequencer;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ShiftedRangeSignal{T}"/> class.
+        /// </summary>
+        /// <param name="range">The range source.</param>
+        /// <param name="dueTime">The normalized due time.</param>
+        /// <param name="sequencer">The sequencer used to schedule the range batch.</param>
+        internal ShiftedRangeSignal(RangeSignal range, TimeSpan dueTime, ISequencer sequencer)
+        {
+            _range = range;
+            _dueTime = dueTime;
+            _sequencer = sequencer;
+        }
+
+        /// <inheritdoc/>
+        public bool IsRequiredSubscribeOnCurrentThread() => _sequencer == Sequencer.CurrentThread;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            return _sequencer.Schedule(
+                (Observer: observer, Range: _range),
+                _dueTime,
+                static (_, state) => EmitShiftedRange<T>(state.Observer, state.Range));
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
+        {
+            if (onNext == null)
+            {
+                throw new ArgumentNullException(nameof(onNext));
+            }
+
+            if (onCompleted == null)
+            {
+                throw new ArgumentNullException(nameof(onCompleted));
+            }
+
+            return _sequencer.Schedule(
+                (OnNext: onNext, OnCompleted: onCompleted, Range: _range),
+                _dueTime,
+                static (_, state) => EmitShiftedRange<T>(state.OnNext, state.OnCompleted, state.Range));
         }
     }
 

@@ -2,8 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Threading;
 using System.Windows.Forms;
-using ReactiveUI.Primitives.Disposables;
 using FormsTimer = System.Windows.Forms.Timer;
 
 namespace ReactiveUI.Primitives.Concurrency;
@@ -66,18 +66,9 @@ public sealed class ControlSequencer : ISequencer
             throw new ArgumentNullException(nameof(action));
         }
 
-        var cancelable = new BooleanDisposable();
-        Control.BeginInvoke((MethodInvoker)(() =>
-        {
-            if (cancelable.IsDisposed)
-            {
-                return;
-            }
-
-            action(this, state);
-        }));
-
-        return cancelable;
+        var workItem = new SequencerWorkItem<ControlSequencer, TState>(this, state, action);
+        Control.BeginInvoke((MethodInvoker)workItem.Invoke);
+        return workItem;
     }
 
     /// <summary>
@@ -96,24 +87,15 @@ public sealed class ControlSequencer : ISequencer
             throw new ArgumentNullException(nameof(action));
         }
 
-        var timer = new FormsTimer
+        var normalized = Sequencer.Normalize(dueTime);
+        if (normalized == TimeSpan.Zero)
         {
-            Interval = ToTimerInterval(Sequencer.Normalize(dueTime)),
-        };
+            return Schedule(state, action);
+        }
 
-        timer.Tick += (_, _) =>
-        {
-            timer.Stop();
-            timer.Dispose();
-            action(this, state);
-        };
-        timer.Start();
-
-        return Disposable.Create(() =>
-        {
-            timer.Stop();
-            timer.Dispose();
-        });
+        var workItem = new ControlTimerWorkItem<TState>(this, state, action, normalized);
+        workItem.Start();
+        return workItem;
     }
 
     /// <summary>
@@ -128,23 +110,108 @@ public sealed class ControlSequencer : ISequencer
         Schedule(state, Sequencer.Normalize(dueTime - Now), action);
 
     /// <summary>
-    /// Converts the due time to a Windows Forms timer interval.
+    /// Disposable Windows Forms timer work item.
     /// </summary>
-    /// <param name="dueTime">The normalized due time.</param>
-    /// <returns>The timer interval in milliseconds.</returns>
-    private static int ToTimerInterval(TimeSpan dueTime)
+    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
+    private sealed class ControlTimerWorkItem<TState> : IDisposable
     {
-        var totalMilliseconds = dueTime.TotalMilliseconds;
-        if (totalMilliseconds <= 1)
+        /// <summary>
+        /// Sequencer passed to the scheduled action.
+        /// </summary>
+        private readonly ControlSequencer _sequencer;
+
+        /// <summary>
+        /// State passed to the scheduled action.
+        /// </summary>
+        private readonly TState _state;
+
+        /// <summary>
+        /// Action invoked when the scheduled item runs.
+        /// </summary>
+        private readonly Func<ISequencer, TState, IDisposable> _action;
+
+        /// <summary>
+        /// Windows Forms timer used for delayed execution.
+        /// </summary>
+        private readonly FormsTimer _timer;
+
+        /// <summary>
+        /// Tracks cancellation.
+        /// </summary>
+        private int _isDisposed;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ControlTimerWorkItem{TState}"/> class.
+        /// </summary>
+        /// <param name="sequencer">Sequencer passed to the action.</param>
+        /// <param name="state">State passed to the action.</param>
+        /// <param name="action">Action to invoke.</param>
+        /// <param name="dueTime">Relative time after which to execute the action.</param>
+        public ControlTimerWorkItem(ControlSequencer sequencer, TState state, Func<ISequencer, TState, IDisposable> action, TimeSpan dueTime)
         {
-            return 1;
+            _sequencer = sequencer;
+            _state = state;
+            _action = action;
+            _timer = new FormsTimer
+            {
+                Interval = ToTimerInterval(dueTime),
+            };
+
+            _timer.Tick += OnTick;
+
+            static int ToTimerInterval(TimeSpan normalizedDueTime)
+            {
+                var totalMilliseconds = normalizedDueTime.TotalMilliseconds;
+                if (totalMilliseconds <= 1)
+                {
+                    return 1;
+                }
+
+                if (totalMilliseconds >= int.MaxValue)
+                {
+                    return int.MaxValue;
+                }
+
+                return (int)Math.Ceiling(totalMilliseconds);
+            }
         }
 
-        if (totalMilliseconds >= int.MaxValue)
+        /// <summary>
+        /// Cancels the timer work item.
+        /// </summary>
+        public void Dispose()
         {
-            return int.MaxValue;
+            if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
+            {
+                return;
+            }
+
+            _timer.Stop();
+            _timer.Tick -= OnTick;
+            _timer.Dispose();
         }
 
-        return (int)Math.Ceiling(totalMilliseconds);
+        /// <summary>
+        /// Starts the Windows Forms timer.
+        /// </summary>
+        public void Start() => _timer.Start();
+
+        /// <summary>
+        /// Handles the timer tick.
+        /// </summary>
+        /// <param name="sender">The event source.</param>
+        /// <param name="e">The event arguments.</param>
+        private void OnTick(object? sender, EventArgs e)
+        {
+            if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
+            {
+                return;
+            }
+
+            _timer.Stop();
+            _timer.Tick -= OnTick;
+            _timer.Dispose();
+            _action(_sequencer, _state);
+        }
     }
 }

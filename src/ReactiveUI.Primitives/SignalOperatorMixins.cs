@@ -1298,13 +1298,8 @@ public static partial class LinqMixins
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
         Justification = "The generic type is validated by the caller before creating a range-backed signal.")]
-    private static IObservable<T> CreateShiftedRangeSignal<T>(RangeSignal range, TimeSpan dueTime, ISequencer scheduler) =>
-        Signal.CreateSafe<T>(
-            observer => scheduler.Schedule(
-                (Observer: observer, Range: range),
-                Sequencer.Normalize(dueTime),
-                static (_, state) => EmitShiftedRange<T>(state.Observer, state.Range)),
-            scheduler == Sequencer.CurrentThread);
+    private static ShiftedRangeSignal<T> CreateShiftedRangeSignal<T>(RangeSignal range, TimeSpan dueTime, ISequencer scheduler) =>
+        new(range, Sequencer.Normalize(dueTime), scheduler);
 
     /// <summary>
     /// Emits all range values and completion from a scheduled batch.
@@ -1321,6 +1316,25 @@ public static partial class LinqMixins
         }
 
         observer.OnCompleted();
+        return Disposable.Empty;
+    }
+
+    /// <summary>
+    /// Emits all range values and completion from a scheduled batch.
+    /// </summary>
+    /// <typeparam name="T">The observer value type.</typeparam>
+    /// <param name="onNext">The next callback.</param>
+    /// <param name="onCompleted">The completion callback.</param>
+    /// <param name="range">The source range.</param>
+    /// <returns>An empty disposable.</returns>
+    private static IDisposable EmitShiftedRange<T>(Action<T> onNext, Action onCompleted, RangeSignal range)
+    {
+        for (var i = 0; i < range.Count; i++)
+        {
+            onNext(CreateRangeValue<T>(range.Start + i));
+        }
+
+        onCompleted();
         return Disposable.Empty;
     }
 }

@@ -66,7 +66,21 @@ public partial class SequencerQueue<TAbsolute>
     /// </summary>
     /// <param name="scheduledItem">Work item to be removed from the scheduler queue.</param>
     /// <returns><c>true</c> if the item was found; <c>false</c> otherwise.</returns>
-    public bool Remove(ScheduledItem<TAbsolute> scheduledItem) => _queue.Remove(scheduledItem);
+    public bool Remove(ScheduledItem<TAbsolute> scheduledItem)
+    {
+        if (_queue.Count == 0)
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(_queue.Peek(), scheduledItem))
+        {
+            _queue.Dequeue();
+            return true;
+        }
+
+        return _queue.Remove(scheduledItem);
+    }
 
     /// <summary>
     /// Dequeues the next work item from the scheduler queue.

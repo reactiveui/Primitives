@@ -165,6 +165,46 @@ internal sealed class BoolSignalObserver : IObserver<bool>
 }
 
 /// <summary>
+/// Observer used by Signal and System.Reactive benchmark cases that only need an item count.
+/// </summary>
+/// <typeparam name="T">The observed value type.</typeparam>
+internal sealed class CountingSignalObserver<T> : IObserver<T>
+{
+    /// <summary>
+    /// Gets the number of onNext calls.
+    /// </summary>
+    public int Count { get; private set; }
+
+    /// <summary>
+    /// Gets the number of terminal completions observed.
+    /// </summary>
+    public int CompletionCount { get; private set; }
+
+    /// <summary>
+    /// Gets the number of errors observed.
+    /// </summary>
+    public int ErrorCount { get; private set; }
+
+    /// <inheritdoc/>
+    public void OnNext(T value)
+    {
+        Count++;
+    }
+
+    /// <inheritdoc/>
+    public void OnError(Exception error)
+    {
+        ErrorCount++;
+    }
+
+    /// <inheritdoc/>
+    public void OnCompleted()
+    {
+        CompletionCount++;
+    }
+}
+
+/// <summary>
 /// Observer used by R3 benchmark cases.
 /// </summary>
 internal sealed class IntR3Observer : Observer<int>

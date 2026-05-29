@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for full license information.
 
 using System;
+using System.Threading;
 using System.Windows.Threading;
-using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
@@ -71,17 +71,9 @@ public class DispatcherSequencer : ISequencer
             throw new ArgumentNullException(nameof(action));
         }
 
-        var cancelable = new BooleanDisposable();
-        Dispatcher.BeginInvoke(() =>
-        {
-            if (cancelable.IsDisposed)
-            {
-                return;
-            }
-
-            action(this, state);
-        });
-        return cancelable;
+        var workItem = new SequencerWorkItem<DispatcherSequencer, TState>(this, state, action);
+        Dispatcher.BeginInvoke((Action)workItem.Invoke);
+        return workItem;
     }
 
     /// <summary>
@@ -103,20 +95,14 @@ public class DispatcherSequencer : ISequencer
         }
 
         var timeSpan = Sequencer.Normalize(dueTime);
-        var timer = new DispatcherTimer();
-        timer.Tick += (_, _) =>
+        if (timeSpan == TimeSpan.Zero)
         {
-            timer?.Stop();
-            timer = null;
-            action(this, state);
-        };
-        timer.Interval = timeSpan;
-        timer.Start();
-        return Disposable.Create(() =>
-        {
-            timer?.Stop();
-            timer = null;
-        });
+            return Schedule(state, action);
+        }
+
+        var workItem = new DispatcherTimerWorkItem<TState>(this, state, action, timeSpan);
+        workItem.Start();
+        return workItem;
     }
 
     /// <summary>
@@ -131,4 +117,88 @@ public class DispatcherSequencer : ISequencer
     /// </returns>
     public IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action) =>
         Schedule(state, Sequencer.Normalize(dueTime - Now), action);
+
+    /// <summary>
+    /// Disposable dispatcher timer work item.
+    /// </summary>
+    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
+    private sealed class DispatcherTimerWorkItem<TState> : IDisposable
+    {
+        /// <summary>
+        /// Sequencer passed to the scheduled action.
+        /// </summary>
+        private readonly DispatcherSequencer _sequencer;
+
+        /// <summary>
+        /// State passed to the scheduled action.
+        /// </summary>
+        private readonly TState _state;
+
+        /// <summary>
+        /// Action invoked when the scheduled item runs.
+        /// </summary>
+        private readonly Func<ISequencer, TState, IDisposable> _action;
+
+        /// <summary>
+        /// Dispatcher timer used for delayed execution.
+        /// </summary>
+        private readonly DispatcherTimer _timer;
+
+        /// <summary>
+        /// Tracks cancellation.
+        /// </summary>
+        private int _isDisposed;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DispatcherTimerWorkItem{TState}"/> class.
+        /// </summary>
+        /// <param name="sequencer">Sequencer passed to the action.</param>
+        /// <param name="state">State passed to the action.</param>
+        /// <param name="action">Action to invoke.</param>
+        /// <param name="dueTime">Relative time after which to execute the action.</param>
+        public DispatcherTimerWorkItem(DispatcherSequencer sequencer, TState state, Func<ISequencer, TState, IDisposable> action, TimeSpan dueTime)
+        {
+            _sequencer = sequencer;
+            _state = state;
+            _action = action;
+            _timer = new DispatcherTimer { Interval = dueTime };
+            _timer.Tick += OnTick;
+        }
+
+        /// <summary>
+        /// Cancels the timer work item.
+        /// </summary>
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
+            {
+                return;
+            }
+
+            _timer.Stop();
+            _timer.Tick -= OnTick;
+        }
+
+        /// <summary>
+        /// Starts the dispatcher timer.
+        /// </summary>
+        public void Start() => _timer.Start();
+
+        /// <summary>
+        /// Handles the timer tick.
+        /// </summary>
+        /// <param name="sender">The event source.</param>
+        /// <param name="e">The event arguments.</param>
+        private void OnTick(object? sender, EventArgs e)
+        {
+            if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
+            {
+                return;
+            }
+
+            _timer.Stop();
+            _timer.Tick -= OnTick;
+            _action(_sequencer, _state);
+        }
+    }
 }

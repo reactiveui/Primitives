@@ -37,6 +37,15 @@ When the package is available on your configured NuGet feed:
 dotnet add package ReactiveUI.Primitives
 ```
 
+Optional UI/platform integration packages are split out so the base package stays free of UI framework references:
+
+```bash
+dotnet add package ReactiveUI.Primitives.Wpf
+dotnet add package ReactiveUI.Primitives.WinForms
+dotnet add package ReactiveUI.Primitives.Blazor
+dotnet add package ReactiveUI.Primitives.Maui
+```
+
 Then import the namespaces you need:
 
 ```csharp
@@ -66,7 +75,14 @@ The base production `ReactiveUI.Primitives` library uses `$(LibraryTargetFramewo
 
 Windows UI and platform-integration projects in this repository use their own TFM properties (for example `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, or MAUI/platform-focused TFMs where applicable). Those platform TFMs are not target frameworks of the base `ReactiveUI.Primitives` package.
 
-Runtime package dependencies are intentionally small. The production package does not depend on System.Reactive or R3. The only runtime package reference declared directly by `src/ReactiveUI.Primitives/ReactiveUI.Primitives.csproj` is `System.ValueTuple` for `net462`; the remaining listed packages are analyzer, SourceLink, versioning, ILLink, reference-assembly, or build-time support packages such as Blazor.Common.Analyzers, Microsoft.SourceLink.GitHub, MinVer, Roslynator.Analyzers, SonarAnalyzer.CSharp, stylecop.analyzers, Microsoft.NET.ILLink.Tasks, and Microsoft.NETFramework.ReferenceAssemblies. Benchmark projects may reference System.Reactive and R3 as comparison baselines, but those references are not production dependencies.
+The optional package TFMs are:
+
+- `ReactiveUI.Primitives.Wpf`: `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net462`, `net472`, `net481`
+- `ReactiveUI.Primitives.WinForms`: `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net462`, `net472`, `net481`
+- `ReactiveUI.Primitives.Blazor`: `net8.0`, `net9.0`, `net10.0`
+- `ReactiveUI.Primitives.Maui`: `net9.0`, `net10.0`
+
+Runtime package dependencies are intentionally small. The base production package does not depend on System.Reactive or R3. The only runtime package reference declared directly by `src/ReactiveUI.Primitives/ReactiveUI.Primitives.csproj` is `System.ValueTuple` for `net462`; the bridge source generators are packed as analyzers in the base package rather than shipped as separate NuGet packages. `ReactiveUI.Primitives.Blazor` references `Microsoft.AspNetCore.Components`, and `ReactiveUI.Primitives.Maui` references `Microsoft.Maui.Core`. The remaining shared package references are analyzer, SourceLink, versioning, ILLink, reference-assembly, or build-time support packages such as Blazor.Common.Analyzers, Microsoft.SourceLink.GitHub, MinVer, Roslynator.Analyzers, SonarAnalyzer.CSharp, stylecop.analyzers, Microsoft.NET.ILLink.Tasks, and Microsoft.NETFramework.ReferenceAssemblies. Benchmark projects may reference System.Reactive and R3 as comparison baselines, but those references are not production dependencies.
 
 ## Core model
 
@@ -406,7 +422,7 @@ using var subscription = failed.Subscribe(
 
 ## Sequencers
 
-Sequencers live in `ReactiveUI.Primitives.Concurrency` and implement `ISequencer`. The core `ReactiveUI.Primitives` package does not reference WPF or Windows Forms; UI-thread sequencers are provided by the optional `ReactiveUI.Primitives.Wpf` and `ReactiveUI.Primitives.WinForms` packages.
+Sequencers live in `ReactiveUI.Primitives.Concurrency` and implement `ISequencer`. The core `ReactiveUI.Primitives` package does not reference WPF, Windows Forms, Blazor, or MAUI; UI-thread sequencers are provided by optional integration packages.
 
 | Sequencer | Purpose |
 |---|---|
@@ -417,6 +433,8 @@ Sequencers live in `ReactiveUI.Primitives.Concurrency` and implement `ISequencer
 | `SynchronizationContextSequencer` | Schedule through a `SynchronizationContext`. |
 | `DispatcherSequencer` | Schedule onto a WPF dispatcher from `ReactiveUI.Primitives.Wpf`. |
 | `ControlSequencer` | Schedule onto a Windows Forms control from `ReactiveUI.Primitives.WinForms`. |
+| `BlazorRendererSequencer` | Schedule component work through Blazor's renderer from `ReactiveUI.Primitives.Blazor`. |
+| `MauiDispatcherSequencer` | Schedule onto an MAUI dispatcher from `ReactiveUI.Primitives.Maui`. |
 | `VirtualClock` / `TestClock` | Virtual-time scheduling for deterministic tests. |
 
 Scheduling APIs include absolute, relative, recursive, and action-based overloads:
@@ -601,6 +619,8 @@ ReactiveUI.Primitives is not a byte-for-byte clone of System.Reactive. It keeps 
 | synchronization-context scheduling | `SynchronizationContextSequencer` |
 | WPF dispatcher scheduling | `DispatcherSequencer` from `ReactiveUI.Primitives.Wpf` |
 | Windows Forms control scheduling | `ControlSequencer` from `ReactiveUI.Primitives.WinForms` |
+| Blazor renderer scheduling | `BlazorRendererSequencer` from `ReactiveUI.Primitives.Blazor` |
+| MAUI dispatcher scheduling | `MauiDispatcherSequencer` from `ReactiveUI.Primitives.Maui` |
 | `TestScheduler` / virtual time | `VirtualClock` or `TestClock` |
 
 ### Testing migration
@@ -630,7 +650,7 @@ Use the generated bridge only at boundaries. Prefer native ReactiveUI.Primitives
 
 Benchmarks live in `src/benchmarks/ReactiveUI.Primitives.Benchmarks`. The benchmark project may reference System.Reactive and R3 to compare throughput and allocation behavior; the production package must not.
 
-Full BenchmarkDotNet runs were captured on 2026-05-28 with .NET SDK/runtime 10.0.8 on Windows 11. The latest complete run executed 201 benchmarks with no skipped suites in 00:21:53:
+The latest complete BenchmarkDotNet run finished on 2026-05-29 at 00:04:23 Europe/London with .NET SDK/runtime 10.0.8 on Windows 11. It executed 201 benchmarks with no skipped suites in 00:21:18:
 
 ```powershell
 dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter "*" --join --launchCount 1 --warmupCount 1 --iterationCount 3
@@ -638,10 +658,10 @@ dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.
 
 Latest artifact paths:
 
-- `BenchmarkDotNet.Artifacts/BenchmarkRun-20260528-213342.log`
-- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-28-21-55-38-report-github.md`
-- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-28-21-55-38-report.html`
-- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-28-21-55-38-report.csv`
+- `BenchmarkDotNet.Artifacts/BenchmarkRun-20260528-234302.log`
+- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-29-00-04-23-report-github.md`
+- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-29-00-04-23-report.html`
+- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-29-00-04-23-report.csv`
 
 Smoke validation for deterministic benchmark behavior passed for 67 benchmark groups with:
 
@@ -649,83 +669,85 @@ Smoke validation for deterministic benchmark behavior passed for 67 benchmark gr
 dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --smoke
 ```
 
-Current direct test/coverage validation after the benchmark pass is 96.02% line coverage and 91.46% branch coverage from `src/tests/ReactiveUI.Primitives.Tests/TestResults/coverage-kanban-t_f3f3db71-20260528-final/coverage.cobertura.xml`. The original final-review target was 100% line and branch coverage; the remaining gap is a signed-off release exception rather than a passing 100% coverage result.
+The latest available direct test/coverage validation is 96.02% line coverage and 91.46% branch coverage from `src/tests/ReactiveUI.Primitives.Tests/TestResults/coverage-kanban-t_f3f3db71-20260528-final/coverage.cobertura.xml`. The original final-review target was 100% line and branch coverage; the remaining gap is a signed-off release exception rather than a passing 100% coverage result.
 
 The table below is generated from the joined BenchmarkDotNet CSV and uses `Mean / Allocated` for each cell.
 
 | Scenario | ReactiveUI.Primitives | System.Reactive | R3 |
 |---|---:|---:|---:|
-| Emit subscribe | 0.2107 ns / 0 B | 45.9317 ns / 120 B | 29.7331 ns / 80 B |
-| None subscribe | 2.8561 ns / 40 B | 43.7379 ns / 96 B | 26.4604 ns / 56 B |
-| Sequence subscribe | 48.2494 ns / 96 B | 2,400.6602 ns / 2472 B | 69.5582 ns / 80 B |
-| Loop subscribe | 6.8179 ns / 0 B | 2,371.2236 ns / 2408 B | 69.2988 ns / 80 B |
-| Fail subscribe | 58.1512 ns / 120 B | 105.8387 ns / 240 B | 86.9365 ns / 200 B |
-| FromEnumerable subscribe | 50.4808 ns / 40 B | 2,252.9594 ns / 2504 B | 71.0029 ns / 88 B |
-| Completed task bridge | 10.5757 ns / 88 B | 815.3427 ns / 793 B | 38.5080 ns / 88 B |
-| Create subscribe | 45.5529 ns / 248 B | 41.2160 ns / 168 B | 61.4747 ns / 128 B |
-| CreateSafe subscribe | 44.8270 ns / 248 B | 42.1319 ns / 168 B | 53.2048 ns / 128 B |
-| Lazy subscribe | 78.2157 ns / 240 B | 1,400.9222 ns / 1512 B | 107.5722 ns / 152 B |
-| Start subscribe | 54.1090 ns / 376 B | 778.9965 ns / 751 B | 55.4001 ns / 160 B |
-| Unfold subscribe | 170.6483 ns / 736 B | 2,145.7577 ns / 2768 B | 93.9090 ns / 128 B |
-| Use subscribe | 68.1815 ns / 432 B | 83.7883 ns / 168 B | 53.1693 ns / 128 B |
-| FromAsyncEnumerable subscribe | 1,079.9192 ns / 600 B | 1,853.5239 ns / 2447 B | 1,242.9586 ns / 1023 B |
-| Silent subscribe/dispose | 0.2282 ns / 0 B | 5.1866 ns / 40 B | 17.3882 ns / 56 B |
-| Map + Keep over range | 120.5836 ns / 208 B | 2,493.7654 ns / 2616 B | 269.3660 ns / 272 B |
-| Reduce + Any + Count | 171.2013 ns / 824 B | 5,265.8732 ns / 6352 B | 579.6091 ns / 1280 B |
-| Prepend + Append + DefaultIfEmpty | 29.5067 ns / 168 B | 904.4517 ns / 1282 B | 133.1520 ns / 288 B |
-| DefaultIfEmpty(empty) | 5.7140 ns / 64 B | 61.8811 ns / 144 B | 60.2212 ns / 136 B |
-| FlatMap over ranges | 946.7710 ns / 712 B | 3,492.5273 ns / 3872 B | 971.0792 ns / 1040 B |
-| Pair over ranges | 38.1501 ns / 232 B | 2,942.2574 ns / 2976 B | 653.8256 ns / 656 B |
-| Chain ranges | 64.7018 ns / 256 B | 2,594.3629 ns / 2856 B | 240.7744 ns / 360 B |
-| Blend ranges | 71.2796 ns / 256 B | 3,658.6498 ns / 3953 B | 660.2883 ns / 352 B |
-| Race ranges | 34.3258 ns / 192 B | 1,419.1490 ns / 1760 B | 272.0822 ns / 360 B |
-| SwitchTo ranges | 794.3949 ns / 1376 B | 2,065.5574 ns / 2336 B | 718.6733 ns / 392 B |
-| SyncLatest ranges | 93.4823 ns / 504 B | 3,147.6649 ns / 2824 B | 649.7137 ns / 344 B |
-| Latch ranges | 98.6320 ns / 504 B | 3,192.3467 ns / 2824 B | 328.0823 ns / 248 B |
-| ForkJoin ranges | 65.8825 ns / 480 B | 3,265.4967 ns / 3136 B | 871.6126 ns / 504 B |
-| Shift range | 173.8715 ns / 736 B | 4,950.6053 ns / 39584 B | 1,793.8548 ns / 2200 B |
-| DelayStart range | 231.9739 ns / 936 B | 2,064.9857 ns / 26456 B | 292.6246 ns / 552 B |
-| Calm burst | 564.5905 ns / 1256 B | 2,385.1070 ns / 36480 B | 1,532.7904 ns / 1512 B |
-| Probe latest | 193.0785 ns / 640 B | 1,889.0841 ns / 26264 B | 316.8231 ns / 664 B |
-| Timestamp range | 402.4542 ns / 312 B | 1,595.8453 ns / 1608 B | 330.9149 ns / 152 B |
-| TimeInterval range | 471.3139 ns / 736 B | 1,624.6929 ns / 1712 B | 432.3715 ns / 160 B |
-| Expire idle | 232.3618 ns / 704 B | 1,162.7251 ns / 29776 B | 380.9954 ns / 784 B |
-| ObserveOn immediate | 21.7206 ns / 96 B | 15,066.6122 ns / 11312 B | 905.7257 ns / 432 B |
-| History subscribe | 333.8135 ns / 320 B | 683.3399 ns / 696 B | 402.9542 ns / 688 B |
-| StateSignal 32 values | 571.4088 ns / 176 B | 577.0790 ns / 200 B | 616.6069 ns / 192 B |
-| StateSignal 1024 values | 15,821.2891 ns / 176 B | 15,764.0411 ns / 200 B | 15,761.4075 ns / 192 B |
-| Signal emit, 32 values | 71.4549 ns / 136 B | 91.0168 ns / 136 B | 124.7691 ns / 160 B |
-| Signal emit, 1024 values | 1,751.1726 ns / 136 B | 1,774.9812 ns / 136 B | 1,987.6726 ns / 160 B |
-| Signal subscribe/dispose, 8 observers | 250.1112 ns / 592 B | 318.1184 ns / 1288 B | 454.5726 ns / 840 B |
-| Signal subscribe/dispose, 64 observers | 2,769.3523 ns / 3800 B | 3,958.7546 ns / 38472 B | 3,752.8739 ns / 6216 B |
-| ShareLive connect | 144.2458 ns / 384 B | 2,746.4123 ns / 2696 B | 383.6541 ns / 368 B |
-| Share live subscribe | 269.7706 ns / 848 B | 2,952.1750 ns / 2880 B | 515.8733 ns / 488 B |
-| Replay live late subscribe | 665.9020 ns / 568 B | 3,804.7574 ns / 3408 B | 918.6698 ns / 1360 B |
-| AutoShare subscribe | 254.7250 ns / 848 B | 2,955.6199 ns / 2880 B | 496.8710 ns / 488 B |
-| AutoConnect subscribe | 197.8330 ns / 728 B | 2,692.2591 ns / 2736 B | 387.4696 ns / 368 B |
-| StateSignal updates | 562.7767 ns / 176 B | 555.7740 ns / 200 B | 604.6401 ns / 192 B |
-| ReadOnlyState projection | 126.0058 ns / 248 B | 89.6705 ns / 328 B | 175.5553 ns / 312 B |
-| TaskSignal subscribe | 1,548.4924 ns / 3909 B | 674.1182 ns / 886 B | 38.3412 ns / 160 B |
-| Command execute | 117.6506 ns / 600 B | 687.1632 ns / 1089 B | 111.5248 ns / 296 B |
-| Command result subscribe | 142.9694 ns / 672 B | 37.2585 ns / 136 B | 65.7253 ns / 160 B |
-| CollectList range | 114.7333 ns / 688 B | 2,747.6410 ns / 3488 B | 164.1239 ns / 632 B |
-| CollectArray range | 84.6958 ns / 656 B | 2,867.7760 ns / 3640 B | 174.7426 ns / 784 B |
-| CollectArrayAsync range | 33.0375 ns / 384 B | 2,727.4354 ns / 3984 B | 157.4702 ns / 784 B |
-| FirstAsync range | 6.2257 ns / 56 B | 2,377.2078 ns / 2792 B | 79.4655 ns / 208 B |
-| ToTask range | 14.3367 ns / 192 B | 2,448.9990 ns / 2824 B | 89.9601 ns / 208 B |
-| Count(predicate) range | 23.4069 ns / 96 B | 2,407.0920 ns / 2520 B | 99.8359 ns / 200 B |
-| LongCount(predicate) range | 24.7771 ns / 104 B | 2,356.8338 ns / 2536 B | 106.6491 ns / 272 B |
-| All range | 17.3706 ns / 96 B | 2,505.6300 ns / 2520 B | 89.4448 ns / 192 B |
-| Contains range | 12.4464 ns / 96 B | 2,473.2698 ns / 2528 B | 98.0174 ns / 200 B |
-| All + Contains range | 29.1751 ns / 192 B | 5,089.9312 ns / 5048 B | 203.6477 ns / 392 B |
-| Pocket dispose | 66.1360 ns / 408 B | 100.0380 ns / 512 B | 83.8633 ns / 480 B |
-| CurrentThread schedule | 13.4777 ns / 88 B | 17.7795 ns / 88 B | 28.8444 ns / 56 B |
-| Safe witness | 21.6127 ns / 168 B | 12.1948 ns / 136 B | 17.6018 ns / 56 B |
-| Completed Spark | 0.0084 ns / 0 B | 0.0000 ns / 0 B | 0.0000 ns / 0 B |
+| Emit subscribe | 0.0057 ns / 0 B | 46.9118 ns / 120 B | 29.9493 ns / 80 B |
+| None subscribe | 2.7336 ns / 40 B | 42.2124 ns / 96 B | 26.3975 ns / 56 B |
+| Sequence subscribe | 46.1797 ns / 96 B | 2,422.0697 ns / 2472 B | 69.1228 ns / 80 B |
+| Loop subscribe | 6.7699 ns / 0 B | 2,408.7297 ns / 2408 B | 69.0206 ns / 80 B |
+| Fail subscribe | 54.1509 ns / 120 B | 102.8304 ns / 240 B | 87.5483 ns / 200 B |
+| FromEnumerable subscribe | 51.2591 ns / 40 B | 2,275.3497 ns / 2504 B | 72.6697 ns / 88 B |
+| Completed task bridge | 10.0635 ns / 88 B | 740.5938 ns / 793 B | 33.1432 ns / 88 B |
+| Create subscribe | 48.6427 ns / 248 B | 43.5512 ns / 168 B | 53.1627 ns / 128 B |
+| CreateSafe subscribe | 48.7596 ns / 248 B | 43.4466 ns / 168 B | 56.0799 ns / 128 B |
+| Lazy subscribe | 71.4885 ns / 240 B | 1,357.2984 ns / 1512 B | 107.0656 ns / 152 B |
+| Start subscribe | 52.2960 ns / 376 B | 791.8958 ns / 751 B | 53.1907 ns / 160 B |
+| Unfold subscribe | 167.6973 ns / 680 B | 2,138.4558 ns / 2768 B | 85.8050 ns / 128 B |
+| Use subscribe | 67.8147 ns / 432 B | 77.0960 ns / 168 B | 54.1505 ns / 128 B |
+| FromAsyncEnumerable subscribe | 1,043.0716 ns / 600 B | 1,753.0905 ns / 2447 B | 1,234.0619 ns / 1023 B |
+| Silent subscribe/dispose | 0.2325 ns / 0 B | 5.1319 ns / 40 B | 16.5168 ns / 56 B |
+| Map + Keep over range | 123.8707 ns / 208 B | 2,428.8466 ns / 2616 B | 273.2223 ns / 272 B |
+| Reduce + Any + Count | 179.4248 ns / 824 B | 5,336.3782 ns / 6352 B | 521.8730 ns / 1280 B |
+| Prepend + Append + DefaultIfEmpty | 34.4296 ns / 168 B | 863.5180 ns / 1282 B | 131.1020 ns / 288 B |
+| DefaultIfEmpty(empty) | 6.2632 ns / 64 B | 63.0172 ns / 144 B | 61.9132 ns / 136 B |
+| FlatMap over ranges | 992.7952 ns / 712 B | 3,479.3261 ns / 3872 B | 1,017.6085 ns / 1040 B |
+| Pair over ranges | 43.0110 ns / 232 B | 3,072.1161 ns / 2976 B | 664.5803 ns / 656 B |
+| Chain ranges | 68.8759 ns / 256 B | 2,697.8110 ns / 2856 B | 259.8491 ns / 360 B |
+| Blend ranges | 64.7049 ns / 256 B | 3,553.1522 ns / 3953 B | 651.8224 ns / 352 B |
+| Race ranges | 39.1994 ns / 192 B | 1,468.6431 ns / 1760 B | 263.5987 ns / 360 B |
+| SwitchTo ranges | 826.2645 ns / 1376 B | 2,078.3363 ns / 2336 B | 709.2868 ns / 392 B |
+| SyncLatest ranges | 106.3367 ns / 504 B | 2,940.6474 ns / 2824 B | 627.6091 ns / 344 B |
+| Latch ranges | 100.8010 ns / 504 B | 3,277.1620 ns / 2824 B | 339.8355 ns / 248 B |
+| ForkJoin ranges | 77.9202 ns / 480 B | 3,322.5338 ns / 3136 B | 888.1171 ns / 504 B |
+| Shift range | 135.2277 ns / 472 B | 5,406.6544 ns / 39584 B | 1,841.9540 ns / 2200 B |
+| DelayStart range | 128.0190 ns / 472 B | 2,101.8070 ns / 26456 B | 286.8118 ns / 552 B |
+| Calm burst | 573.9559 ns / 1200 B | 2,237.3107 ns / 36480 B | 1,511.0511 ns / 1512 B |
+| Probe latest | 200.6871 ns / 584 B | 1,899.5578 ns / 26264 B | 339.7303 ns / 664 B |
+| Timestamp range | 37.0613 ns / 144 B | 1,614.2007 ns / 1512 B | 331.7774 ns / 152 B |
+| TimeInterval range | 27.9223 ns / 152 B | 1,693.1128 ns / 1616 B | 421.0940 ns / 160 B |
+| Expire idle | 238.2700 ns / 648 B | 1,284.2471 ns / 29776 B | 403.0234 ns / 784 B |
+| ObserveOn immediate | 23.3238 ns / 96 B | 15,659.1095 ns / 11307 B | 900.4654 ns / 432 B |
+| History subscribe | 343.3323 ns / 320 B | 713.3733 ns / 696 B | 407.9522 ns / 688 B |
+| StateSignal 32 values | 556.9331 ns / 176 B | 592.0564 ns / 200 B | 630.1859 ns / 192 B |
+| StateSignal 1024 values | 15,802.3885 ns / 176 B | 15,678.0589 ns / 200 B | 16,769.1864 ns / 192 B |
+| Signal emit, 32 values | 73.1036 ns / 136 B | 90.1915 ns / 136 B | 113.2880 ns / 160 B |
+| Signal emit, 1024 values | 1,660.0302 ns / 136 B | 1,872.2655 ns / 136 B | 1,945.5030 ns / 160 B |
+| Signal subscribe/dispose, 8 observers | 242.0847 ns / 592 B | 283.6230 ns / 1288 B | 447.5004 ns / 840 B |
+| Signal subscribe/dispose, 64 observers | 3,168.8057 ns / 3800 B | 3,773.8536 ns / 38472 B | 3,517.6727 ns / 6216 B |
+| ShareLive connect | 125.9119 ns / 384 B | 2,517.3733 ns / 2696 B | 382.2815 ns / 368 B |
+| Share live subscribe | 217.9249 ns / 848 B | 2,680.1589 ns / 2880 B | 477.0529 ns / 488 B |
+| Replay live late subscribe | 620.7328 ns / 568 B | 3,491.4185 ns / 3408 B | 806.9012 ns / 1360 B |
+| AutoShare subscribe | 251.3467 ns / 848 B | 2,805.1629 ns / 2880 B | 444.0351 ns / 488 B |
+| AutoConnect subscribe | 169.8557 ns / 728 B | 2,546.2257 ns / 2736 B | 369.0084 ns / 368 B |
+| StateSignal updates | 584.5012 ns / 176 B | 568.2254 ns / 200 B | 615.4063 ns / 192 B |
+| ReadOnlyState projection | 136.4027 ns / 248 B | 86.8555 ns / 328 B | 173.5577 ns / 312 B |
+| TaskSignal subscribe | 2,737.5769 ns / 3878 B | 707.6171 ns / 886 B | 39.8419 ns / 160 B |
+| Command execute | 127.2999 ns / 600 B | 677.8387 ns / 1089 B | 98.3740 ns / 296 B |
+| Command result subscribe | 144.8945 ns / 672 B | 36.4350 ns / 136 B | 61.9539 ns / 160 B |
+| CollectList range | 112.6690 ns / 688 B | 2,586.5353 ns / 3488 B | 148.3569 ns / 632 B |
+| CollectArray range | 82.7140 ns / 656 B | 2,557.7999 ns / 3640 B | 157.9993 ns / 784 B |
+| CollectArrayAsync range | 32.7851 ns / 384 B | 2,661.9972 ns / 3984 B | 159.1573 ns / 784 B |
+| FirstAsync range | 5.6597 ns / 56 B | 2,361.3532 ns / 2792 B | 70.1823 ns / 208 B |
+| ToTask range | 14.5996 ns / 192 B | 2,372.8129 ns / 2824 B | 88.6755 ns / 208 B |
+| Count(predicate) range | 18.9800 ns / 96 B | 2,386.6117 ns / 2520 B | 96.0697 ns / 200 B |
+| LongCount(predicate) range | 18.7174 ns / 104 B | 2,357.4243 ns / 2536 B | 99.2778 ns / 272 B |
+| All range | 17.0749 ns / 96 B | 2,371.7189 ns / 2520 B | 81.2336 ns / 192 B |
+| Contains range | 9.4992 ns / 96 B | 2,446.4642 ns / 2528 B | 89.9842 ns / 200 B |
+| All + Contains range | 27.2560 ns / 192 B | 5,141.4378 ns / 5048 B | 209.5712 ns / 392 B |
+| Pocket dispose | 59.5054 ns / 408 B | 80.7846 ns / 512 B | 77.7838 ns / 480 B |
+| CurrentThread schedule | 13.0715 ns / 88 B | 15.7599 ns / 88 B | 28.5282 ns / 56 B |
+| Safe witness | 21.8713 ns / 168 B | 12.3352 ns / 136 B | 18.2902 ns / 56 B |
+| Completed Spark | 0.0000 ns / 0 B | 0.0162 ns / 0 B | 0.0000 ns / 0 B |
+
+The five rows selected from the improvement review as the main time/scheduler optimization gate were `Shift range`, `DelayStart range`, `Calm burst`, `Probe latest`, and `Expire idle`. In the complete run all five beat both System.Reactive and R3 on mean time and allocation. The same optimization pass also brought `Timestamp range`, `TimeInterval range`, and `ObserveOn immediate` below both alternatives on mean time and allocation.
 
 Interpretation notes:
 
-- ReactiveUI.Primitives remains substantially faster and lower allocation in most factory, range, terminal collection, composition, sharing, and subject subscription scenarios.
+- ReactiveUI.Primitives remains substantially faster and lower allocation in most factory, range, terminal collection, composition, sharing, time/scheduler, and subject subscription scenarios.
 - The public API/operator matrix above is backed by deterministic smoke coverage in `Program.RunSmokeBenchmarksAsync`: every row has matching ReactiveUI.Primitives, System.Reactive, and R3 calls where alternatives exist, and the smoke run validates each benchmark path returns the same observable result before BenchmarkDotNet measures throughput and allocation unless the row is one of the documented scheduling-total exceptions below.
 - The only intentional smoke output differences are `SwitchTo ranges`, `SyncLatest ranges`, and `Latch ranges`: System.Reactive produces different synchronous range totals for those coordinator operators, while ReactiveUI.Primitives and R3 agree on the emitted totals. `--smoke` permits only those System.Reactive differences and still fails if ReactiveUI.Primitives diverges from R3 or if any other benchmark group loses parity.
 - Candidate scenarios where ReactiveUI.Primitives is not strictly both faster and lower-allocation than both alternatives are tracked explicitly below. Rows marked as exceptions are retained because the extra cost buys ReactiveUI.Primitives semantics (safe terminal/disposal behavior, `IObservable<T>`/`IObserver<T>` compatibility, deterministic `ISequencer` scheduling, or live-signal lifecycle ownership) while preserving the project rule that System.Reactive/R3 are benchmark-only dependencies.
@@ -735,36 +757,33 @@ Candidate/performance exception matrix:
 
 | Scenario | Observed gap | Decision and trade-off |
 |---|---|---|
-| `Sequence subscribe` | allocation > R3 (96 B vs 80 B). | Accepted exception: ReactiveUI.Primitives preserves BCL `IObservable<T>` compatibility, deterministic scheduler/state ownership, and safe disposal semantics; the remaining strict gap is documented. |
-| `Completed task bridge` | allocation ties R3 (88 B vs 88 B). | Accepted exception: the completed-task bridge already has the lowest observed time and ties R3 allocation while preserving task-observer completion semantics. |
-| `Create subscribe` | time >= System.Reactive (45.5529 ns vs 41.2160 ns); allocation > System.Reactive (248 B vs 168 B); allocation > R3 (248 B vs 128 B). | Accepted exception: the create operators keep the BCL `IObserver<T>` callback shape and terminal/disposal safety wrappers; the adapter cost avoids a runtime dependency on either comparison library. |
-| `CreateSafe subscribe` | time >= System.Reactive (44.8270 ns vs 42.1319 ns); allocation > System.Reactive (248 B vs 168 B); allocation > R3 (248 B vs 128 B). | Accepted exception: the create operators keep the BCL `IObserver<T>` callback shape and terminal/disposal safety wrappers; the adapter cost avoids a runtime dependency on either comparison library. |
-| `Lazy subscribe` | allocation > R3 (240 B vs 152 B). | Accepted exception: ReactiveUI.Primitives preserves BCL `IObservable<T>` compatibility, deterministic scheduler/state ownership, and safe disposal semantics; the remaining strict gap is documented. |
-| `Start subscribe` | allocation > R3 (376 B vs 160 B). | Accepted exception: `Start` uses the project `ISequencer` abstraction and preserves scheduling parity; the remaining R3 allocation gap is documented. |
-| `Unfold subscribe` | time >= R3 (170.6483 ns vs 93.9090 ns); allocation > R3 (736 B vs 128 B). | Accepted exception: recursive generation keeps state-machine disposal and observer safety guards; the specialized R3 observable shape allocates less. |
-| `Use subscribe` | allocation > System.Reactive (432 B vs 168 B); time >= R3 (68.1815 ns vs 53.1693 ns); allocation > R3 (432 B vs 128 B). | Accepted exception: `Use` owns resource lifetime and source subscription across completion, error, and unsubscribe; the lifecycle ownership costs extra allocation. |
-| `SwitchTo ranges` | time >= R3 (794.3949 ns vs 718.6733 ns); allocation > R3 (1376 B vs 392 B). | Accepted exception: `SwitchTo` maintains an inner subscription slot and terminal arbitration for general `IObservable<IObservable<T>>`; the range-specialized R3 path is cheaper. |
-| `SyncLatest ranges` | allocation > R3 (504 B vs 344 B). | Accepted exception: the operator stores readiness/value state for both sides and owns subscriptions explicitly; throughput remains ahead while R3 allocates less. |
-| `Latch ranges` | allocation > R3 (504 B vs 248 B). | Accepted exception: the operator stores readiness/value state for both sides and owns subscriptions explicitly; throughput remains ahead while R3 allocates less. |
-| `DelayStart range` | allocation > R3 (936 B vs 552 B). | Accepted exception: the optimized direct scheduler path now beats both alternatives on throughput; R3 still uses a smaller scheduler allocation, so that allocation trade-off is documented. |
-| `Timestamp range` | time >= R3 (402.4542 ns vs 330.9149 ns); allocation > R3 (312 B vs 152 B). | Accepted exception: scheduler-derived timing values use the project sequencer clock for deterministic injection; R3 remains cheaper in this native timing microcase. |
-| `TimeInterval range` | time >= R3 (471.3139 ns vs 432.3715 ns); allocation > R3 (736 B vs 160 B). | Accepted exception: scheduler-derived timing values use the project sequencer clock for deterministic injection; R3 remains cheaper in this native timing microcase. |
-| `StateSignal 1024 values` | time >= System.Reactive (15,821.2891 ns vs 15,764.0411 ns); time >= R3 (15,821.2891 ns vs 15,761.4075 ns). | Accepted exception: the state signal keeps current-value semantics with lower allocation; the observed time gap is documented as a stateful-signal trade-off. |
-| `Signal emit, 32 values` | allocation ties System.Reactive (136 B vs 136 B). | Accepted exception: ReactiveUI.Primitives preserves BCL `IObservable<T>` compatibility, deterministic scheduler/state ownership, and safe disposal semantics; the remaining strict gap is documented. |
-| `Signal emit, 1024 values` | allocation ties System.Reactive (136 B vs 136 B). | Accepted exception: ReactiveUI.Primitives preserves BCL `IObservable<T>` compatibility, deterministic scheduler/state ownership, and safe disposal semantics; the remaining strict gap is documented. |
-| `ShareLive connect` | allocation > R3 (384 B vs 368 B). | Accepted exception: live sharing owns connection/ref-count lifecycle and safe disconnect state; the small R3 allocation gap is documented. |
-| `Share live subscribe` | allocation > R3 (848 B vs 488 B). | Accepted exception: live sharing owns connection/ref-count lifecycle and safe disconnect state; the small R3 allocation gap is documented. |
-| `AutoShare subscribe` | allocation > R3 (848 B vs 488 B). | Accepted exception: live sharing owns connection/ref-count lifecycle and safe disconnect state; the small R3 allocation gap is documented. |
-| `AutoConnect subscribe` | allocation > R3 (728 B vs 368 B). | Accepted exception: live sharing owns connection/ref-count lifecycle and safe disconnect state; the small R3 allocation gap is documented. |
-| `StateSignal updates` | time >= System.Reactive (562.7767 ns vs 555.7740 ns). | Accepted exception: the state signal keeps current-value semantics with lower allocation; the observed time gap is documented as a stateful-signal trade-off. |
-| `ReadOnlyState projection` | time >= System.Reactive (126.0058 ns vs 89.6705 ns). | Accepted exception: projection preserves `ReadOnlyStateSignal<T>` current-value semantics; System.Reactive is faster here but allocates more and lacks the state-signal contract. |
-| `TaskSignal subscribe` | time >= System.Reactive (1,548.4924 ns vs 674.1182 ns); allocation > System.Reactive (3909 B vs 886 B); time >= R3 (1,548.4924 ns vs 38.3412 ns); allocation > R3 (3909 B vs 160 B). | Accepted exception: `TaskSignal<T>` exposes signal state, completion/error observation, and task lifecycle semantics, not just a completed-task observable. |
-| `Command execute` | time >= R3 (117.6506 ns vs 111.5248 ns); allocation > R3 (600 B vs 296 B). | Accepted exception: command paths expose busy/result/error state and async coordination; the narrower comparison-library paths are cheaper in this microcase. |
-| `Command result subscribe` | time >= System.Reactive (142.9694 ns vs 37.2585 ns); allocation > System.Reactive (672 B vs 136 B); time >= R3 (142.9694 ns vs 65.7253 ns); allocation > R3 (672 B vs 160 B). | Accepted exception: command paths expose busy/result/error state and async coordination; the narrower comparison-library paths are cheaper in this microcase. |
-| `CollectList range` | allocation > R3 (688 B vs 632 B). | Accepted exception: collection returns `IList<T>` through the terminal helper path; the small R3 allocation delta is accepted because throughput remains faster. |
-| `CurrentThread schedule` | allocation ties System.Reactive (88 B vs 88 B); allocation > R3 (88 B vs 56 B). | Accepted exception: current-thread scheduling uses the project sequencer queue contract; strict-lower allocation is not required for a tied/faster scheduler primitive. |
-| `Safe witness` | time >= System.Reactive (21.6127 ns vs 12.1948 ns); allocation > System.Reactive (168 B vs 136 B); time >= R3 (21.6127 ns vs 17.6018 ns); allocation > R3 (168 B vs 56 B). | Accepted exception: `SafeWitness` intentionally wraps observer calls to enforce safe terminal/error behavior; the microbenchmark records this safety overhead. |
-| `Completed Spark` | time >= System.Reactive (0.0084 ns vs 0.0000 ns); allocation ties System.Reactive (0 B vs 0 B); time >= R3 (0.0084 ns vs 0.0000 ns); allocation ties R3 (0 B vs 0 B). | Accepted exception: all alternatives allocate zero and measure near zero, so strict-lower allocation cannot apply; this is a singleton sanity check. |
+| `Sequence subscribe` | allocation > R3 (96 B vs 80 B). | Accepted exception: ReactiveUI.Primitives keeps BCL observable compatibility, safe disposal, and explicit scheduler/resource ownership; the remaining narrow allocation/time gap is documented. |
+| `Completed task bridge` | allocation ties R3 (88 B vs 88 B). | Accepted exception: the bridge already has the lowest mean and ties R3 allocation while preserving task-observer completion semantics. |
+| `Create subscribe` | time >= System.Reactive (48.6427 ns vs 43.5512 ns); allocation > System.Reactive (248 B vs 168 B); allocation > R3 (248 B vs 128 B). | Accepted exception: callback-based factories preserve the BCL `IObserver<T>` shape plus terminal/disposal guards; the adapter cost avoids production dependencies on either comparison library. |
+| `CreateSafe subscribe` | time >= System.Reactive (48.7596 ns vs 43.4466 ns); allocation > System.Reactive (248 B vs 168 B); allocation > R3 (248 B vs 128 B). | Accepted exception: callback-based factories preserve the BCL `IObserver<T>` shape plus terminal/disposal guards; the adapter cost avoids production dependencies on either comparison library. |
+| `Lazy subscribe` | allocation > R3 (240 B vs 152 B). | Accepted exception: ReactiveUI.Primitives keeps BCL observable compatibility, safe disposal, and explicit scheduler/resource ownership; the remaining narrow allocation/time gap is documented. |
+| `Start subscribe` | allocation > R3 (376 B vs 160 B). | Accepted exception: ReactiveUI.Primitives keeps BCL observable compatibility, safe disposal, and explicit scheduler/resource ownership; the remaining narrow allocation/time gap is documented. |
+| `Unfold subscribe` | time >= R3 (167.6973 ns vs 85.8050 ns); allocation > R3 (680 B vs 128 B). | Accepted exception: ReactiveUI.Primitives keeps BCL observable compatibility, safe disposal, and explicit scheduler/resource ownership; the remaining narrow allocation/time gap is documented. |
+| `Use subscribe` | allocation > System.Reactive (432 B vs 168 B); time >= R3 (67.8147 ns vs 54.1505 ns); allocation > R3 (432 B vs 128 B). | Accepted exception: ReactiveUI.Primitives keeps BCL observable compatibility, safe disposal, and explicit scheduler/resource ownership; the remaining narrow allocation/time gap is documented. |
+| `SwitchTo ranges` | time >= R3 (826.2645 ns vs 709.2868 ns); allocation > R3 (1376 B vs 392 B). | Accepted exception: coordinator operators keep general `IObservable<T>` subscription ownership and terminal arbitration; R3 has cheaper specialized observable paths in these microcases. |
+| `SyncLatest ranges` | allocation > R3 (504 B vs 344 B). | Accepted exception: coordinator operators keep general `IObservable<T>` subscription ownership and terminal arbitration; R3 has cheaper specialized observable paths in these microcases. |
+| `Latch ranges` | allocation > R3 (504 B vs 248 B). | Accepted exception: coordinator operators keep general `IObservable<T>` subscription ownership and terminal arbitration; R3 has cheaper specialized observable paths in these microcases. |
+| `StateSignal 1024 values` | time >= System.Reactive (15,802.3885 ns vs 15,678.0589 ns). | Accepted exception: state primitives preserve current-value/state-signal semantics; the row records the small remaining gap against narrower comparison paths. |
+| `Signal emit, 32 values` | allocation ties System.Reactive (136 B vs 136 B). | Accepted exception: emit loops now lead on throughput and tie System.Reactive allocation; strict lower allocation is not possible for this BCL-compatible shape in the measured path. |
+| `Signal emit, 1024 values` | allocation ties System.Reactive (136 B vs 136 B). | Accepted exception: emit loops now lead on throughput and tie System.Reactive allocation; strict lower allocation is not possible for this BCL-compatible shape in the measured path. |
+| `ShareLive connect` | allocation > R3 (384 B vs 368 B). | Accepted exception: live sharing owns connection/ref-count lifecycle and safe disconnect state; R3 remains lower allocation in this microcase. |
+| `Share live subscribe` | allocation > R3 (848 B vs 488 B). | Accepted exception: live sharing owns connection/ref-count lifecycle and safe disconnect state; R3 remains lower allocation in this microcase. |
+| `AutoShare subscribe` | allocation > R3 (848 B vs 488 B). | Accepted exception: live sharing owns connection/ref-count lifecycle and safe disconnect state; R3 remains lower allocation in this microcase. |
+| `AutoConnect subscribe` | allocation > R3 (728 B vs 368 B). | Accepted exception: live sharing owns connection/ref-count lifecycle and safe disconnect state; R3 remains lower allocation in this microcase. |
+| `StateSignal updates` | time >= System.Reactive (584.5012 ns vs 568.2254 ns). | Accepted exception: state primitives preserve current-value/state-signal semantics; the row records the small remaining gap against narrower comparison paths. |
+| `ReadOnlyState projection` | time >= System.Reactive (136.4027 ns vs 86.8555 ns). | Accepted exception: state primitives preserve current-value/state-signal semantics; the row records the small remaining gap against narrower comparison paths. |
+| `TaskSignal subscribe` | time >= System.Reactive (2,737.5769 ns vs 707.6171 ns); allocation > System.Reactive (3878 B vs 886 B); time >= R3 (2,737.5769 ns vs 39.8419 ns); allocation > R3 (3878 B vs 160 B). | Accepted exception: these primitives expose signal state, busy/result/error state, and async lifecycle coordination rather than only adapting a completed observable path. |
+| `Command execute` | time >= R3 (127.2999 ns vs 98.3740 ns); allocation > R3 (600 B vs 296 B). | Accepted exception: these primitives expose signal state, busy/result/error state, and async lifecycle coordination rather than only adapting a completed observable path. |
+| `Command result subscribe` | time >= System.Reactive (144.8945 ns vs 36.4350 ns); allocation > System.Reactive (672 B vs 136 B); time >= R3 (144.8945 ns vs 61.9539 ns); allocation > R3 (672 B vs 160 B). | Accepted exception: these primitives expose signal state, busy/result/error state, and async lifecycle coordination rather than only adapting a completed observable path. |
+| `CollectList range` | allocation > R3 (688 B vs 632 B). | Accepted exception: the terminal collection helper returns through the BCL-compatible result path; throughput is ahead while R3 allocates slightly less. |
+| `CurrentThread schedule` | allocation ties System.Reactive (88 B vs 88 B); allocation > R3 (88 B vs 56 B). | Accepted exception: current-thread scheduling uses the project sequencer queue contract; throughput is ahead of System.Reactive while R3 allocates less. |
+| `Safe witness` | time >= System.Reactive (21.8713 ns vs 12.3352 ns); allocation > System.Reactive (168 B vs 136 B); time >= R3 (21.8713 ns vs 18.2902 ns); allocation > R3 (168 B vs 56 B). | Accepted exception: the wrapper enforces safe observer/terminal behavior; the row records that deliberate safety overhead. |
+| `Completed Spark` | allocation ties System.Reactive (0 B vs 0 B); time >= R3 (0.0000 ns vs 0.0000 ns); allocation ties R3 (0 B vs 0 B). | Accepted exception: all implementations allocate zero and measure at empty-method scale, so a strict lower-allocation win is not meaningful. |
 
 Performance constraints used by the project:
 
@@ -781,6 +800,8 @@ Performance constraints used by the project:
 | `src/ReactiveUI.Primitives` | Production runtime library. |
 | `src/ReactiveUI.Primitives.Wpf` | Optional WPF dispatcher integration library. |
 | `src/ReactiveUI.Primitives.WinForms` | Optional Windows Forms control integration library. |
+| `src/ReactiveUI.Primitives.Blazor` | Optional Blazor renderer integration library. |
+| `src/ReactiveUI.Primitives.Maui` | Optional MAUI dispatcher integration library. |
 | `src/ReactiveUI.Primitives.SystemReactiveBridge.Generator` | Source generator for System.Reactive bridge adapters. |
 | `src/ReactiveUI.Primitives.R3Bridge.Generator` | Source generator for R3 bridge adapters. |
 | `src/ReactiveUI.Primitives.Tests` | Test project using Microsoft Testing Platform/TUnit-style validation. |
@@ -792,15 +813,18 @@ Performance constraints used by the project:
 
 ```powershell
 # Build solution
-dotnet build src/ReactiveUI.Primitives.slnx --no-restore -v:minimal
+dotnet build src/ReactiveUI.Primitives.slnx --no-restore -c Release -v:minimal
 
 # Test with the Microsoft Testing Platform runner from the src directory.
 Push-Location src
-dotnet test .\ReactiveUI.Primitives.slnx --no-build -v:minimal
+dotnet test .\ReactiveUI.Primitives.slnx --no-build -c Release -v:minimal
 Pop-Location
+
+# Pack NuGet packages.
+dotnet pack src\ReactiveUI.Primitives.slnx --no-build -c Release -v:minimal
 ```
 
-Results: build passed with 0 warnings/0 errors; `dotnet test` passed 537/537 tests across net8.0, net9.0, and net10.0. The latest coverage snapshot passed tests and reported 96.02% line (5285/5504) and 91.46% branch (1820/1990) coverage. That coverage remains below the original 100% line/branch final-review target and is documented as a signed-off release exception rather than represented as a 100% gate pass.
+Results: build passed with 0 warnings/0 errors; `dotnet test` passed 540/540 tests across net8.0, net9.0, and net10.0; `dotnet pack` produced `ReactiveUI.Primitives`, `ReactiveUI.Primitives.Wpf`, `ReactiveUI.Primitives.WinForms`, `ReactiveUI.Primitives.Blazor`, and `ReactiveUI.Primitives.Maui` packages. The latest coverage snapshot passed tests and reported 96.02% line (5285/5504) and 91.46% branch (1820/1990) coverage. That coverage remains below the original 100% line/branch final-review target and is documented as a signed-off release exception rather than represented as a 100% gate pass.
 
 ### Package verification
 
@@ -810,7 +834,7 @@ For NuGet package verification, inspect the generated `.nupkg` and confirm:
 - The nuspec contains `<readme>README.md</readme>`.
 - Bridge generator DLLs are present under `analyzers/dotnet/cs`.
 - Production runtime dependencies do not include System.Reactive or R3.
-- The core `ReactiveUI.Primitives` package does not reference WPF or Windows Forms assemblies; those integrations ship from `ReactiveUI.Primitives.Wpf` and `ReactiveUI.Primitives.WinForms`.
+- The core `ReactiveUI.Primitives` package does not reference WPF, Windows Forms, Blazor, or MAUI assemblies; those integrations ship from `ReactiveUI.Primitives.Wpf`, `ReactiveUI.Primitives.WinForms`, `ReactiveUI.Primitives.Blazor`, and `ReactiveUI.Primitives.Maui`.
 
 ## Practical migration checklist
 
