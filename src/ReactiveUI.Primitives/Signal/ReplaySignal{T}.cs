@@ -273,6 +273,8 @@ public partial class ReplaySignal<T> : ISignal<T>
     /// <param name="value">The value.</param>
     public void OnNext(T value)
     {
+        // Read the scheduler clock outside the lock; the window inputs are immutable.
+        var interval = _usesWindow ? _scheduler.Now - _startTime : TimeSpan.Zero;
         lock (_observerLock)
         {
             ThrowIfDisposed();
@@ -287,7 +289,6 @@ public partial class ReplaySignal<T> : ISignal<T>
             }
             else
             {
-                var interval = _usesWindow ? _scheduler.Now - _startTime : TimeSpan.Zero;
                 _queue!.Enqueue(new TimeInterval<T>(value, interval));
                 Trim();
             }
