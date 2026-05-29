@@ -39,8 +39,8 @@ jobs:
             sonarProjectKey: reactiveui_Primitives
             sonarOrganization: reactiveui
             sonarExclusions: '**/tests/**,**/tools/**,**/benchmarks/**,**/TestResults/**'
-            sonarCoverageExclusions: '**/tests/**,**/tools/**,**/benchmarks/**,**/*Tests/**,**/*Tests.cs,**/Generated/**'
-            sonarCpdExclusions: '**/tests/**,**/tools/**,**/benchmarks/**,**/CombineLatest?.cs,**/CombineLatest??.cs'
+            sonarCoverageExclusions: '**/tests/**,**/tools/**,**/benchmarks/**,**/*Tests/**,**/*Tests.cs,**/Generated/**,**/ReactiveUI.Primitives.Blazor/**,**/ReactiveUI.Primitives.Maui/**,**/ReactiveUI.Primitives.WinForms/**,**/ReactiveUI.Primitives.Wpf/**'
+            sonarCpdExclusions: '**/tests/**,**/tools/**,**/benchmarks/**,**/CombineLatest?.cs,**/CombineLatest??.cs,**/ReactiveUI.Primitives.Blazor/**,**/ReactiveUI.Primitives.Maui/**,**/ReactiveUI.Primitives.WinForms/**,**/ReactiveUI.Primitives.Wpf/**'
             sonarTestExclusions: '**/tests/**,**/tools/**,**/benchmarks/**'
             testTimeout: '15m'
         secrets:

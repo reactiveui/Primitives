@@ -71,7 +71,7 @@ public class DispatcherSequencer : ISequencer
             throw new ArgumentNullException(nameof(action));
         }
 
-        var workItem = new DispatcherWorkItem<TState>(this, state, action);
+        var workItem = new SequencerWorkItem<DispatcherSequencer, TState>(this, state, action);
         Dispatcher.BeginInvoke((Action)workItem.Invoke);
         return workItem;
     }
@@ -117,64 +117,6 @@ public class DispatcherSequencer : ISequencer
     /// </returns>
     public IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action) =>
         Schedule(state, Sequencer.Normalize(dueTime - Now), action);
-
-    /// <summary>
-    /// Disposable dispatcher work item.
-    /// </summary>
-    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
-    private sealed class DispatcherWorkItem<TState> : IDisposable
-    {
-        /// <summary>
-        /// Sequencer passed to the scheduled action.
-        /// </summary>
-        private readonly DispatcherSequencer _sequencer;
-
-        /// <summary>
-        /// State passed to the scheduled action.
-        /// </summary>
-        private readonly TState _state;
-
-        /// <summary>
-        /// Action invoked when the scheduled item runs.
-        /// </summary>
-        private readonly Func<ISequencer, TState, IDisposable> _action;
-
-        /// <summary>
-        /// Tracks cancellation.
-        /// </summary>
-        private int _isDisposed;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DispatcherWorkItem{TState}"/> class.
-        /// </summary>
-        /// <param name="sequencer">Sequencer passed to the action.</param>
-        /// <param name="state">State passed to the action.</param>
-        /// <param name="action">Action to invoke.</param>
-        public DispatcherWorkItem(DispatcherSequencer sequencer, TState state, Func<ISequencer, TState, IDisposable> action)
-        {
-            _sequencer = sequencer;
-            _state = state;
-            _action = action;
-        }
-
-        /// <summary>
-        /// Cancels the work item.
-        /// </summary>
-        public void Dispose() => Interlocked.Exchange(ref _isDisposed, 1);
-
-        /// <summary>
-        /// Invokes the scheduled action if it has not been cancelled.
-        /// </summary>
-        public void Invoke()
-        {
-            if (Volatile.Read(ref _isDisposed) != 0)
-            {
-                return;
-            }
-
-            _action(_sequencer, _state);
-        }
-    }
 
     /// <summary>
     /// Disposable dispatcher timer work item.

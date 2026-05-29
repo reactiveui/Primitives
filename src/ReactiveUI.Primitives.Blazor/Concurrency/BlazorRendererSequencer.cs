@@ -53,7 +53,7 @@ public sealed class BlazorRendererSequencer : ISequencer
             throw new ArgumentNullException(nameof(action));
         }
 
-        var workItem = new RendererWorkItem<TState>(this, state, action);
+        var workItem = new SequencerWorkItem<BlazorRendererSequencer, TState>(this, state, action);
         _ = _invokeAsync(workItem.Invoke);
         return workItem;
     }
@@ -95,64 +95,6 @@ public sealed class BlazorRendererSequencer : ISequencer
     /// <returns>The disposable object used to cancel the scheduled action on a best-effort basis.</returns>
     public IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action) =>
         Schedule(state, Sequencer.Normalize(dueTime - Now), action);
-
-    /// <summary>
-    /// Disposable renderer work item.
-    /// </summary>
-    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
-    private sealed class RendererWorkItem<TState> : IDisposable
-    {
-        /// <summary>
-        /// Sequencer passed to the scheduled action.
-        /// </summary>
-        private readonly BlazorRendererSequencer _sequencer;
-
-        /// <summary>
-        /// State passed to the scheduled action.
-        /// </summary>
-        private readonly TState _state;
-
-        /// <summary>
-        /// Action invoked when the scheduled item runs.
-        /// </summary>
-        private readonly Func<ISequencer, TState, IDisposable> _action;
-
-        /// <summary>
-        /// Tracks cancellation.
-        /// </summary>
-        private int _isDisposed;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RendererWorkItem{TState}"/> class.
-        /// </summary>
-        /// <param name="sequencer">Sequencer passed to the action.</param>
-        /// <param name="state">State passed to the action.</param>
-        /// <param name="action">Action to invoke.</param>
-        public RendererWorkItem(BlazorRendererSequencer sequencer, TState state, Func<ISequencer, TState, IDisposable> action)
-        {
-            _sequencer = sequencer;
-            _state = state;
-            _action = action;
-        }
-
-        /// <summary>
-        /// Cancels the work item.
-        /// </summary>
-        public void Dispose() => Interlocked.Exchange(ref _isDisposed, 1);
-
-        /// <summary>
-        /// Invokes the scheduled action if it has not been cancelled.
-        /// </summary>
-        public void Invoke()
-        {
-            if (Volatile.Read(ref _isDisposed) != 0)
-            {
-                return;
-            }
-
-            _action(_sequencer, _state);
-        }
-    }
 
     /// <summary>
     /// Disposable delayed renderer work item.

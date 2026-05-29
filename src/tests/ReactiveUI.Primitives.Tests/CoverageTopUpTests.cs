@@ -16,7 +16,10 @@ using TUnit.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
-#pragma warning disable SA1600, S109, S3400, S6354, CA1806, S3257, CA1861, IDE0300, RCS1196, S6966, S103, CA1065, S138, IDE0034, RCS1151, S1764, S1944, RCS1208, RCS1215, S3981, CA1849, SA1129, CA1823
+#pragma warning disable RCS1222
+#pragma warning disable SA1600, S109, S3400, S6354, CA1806, S3257, CA1861, IDE0300, RCS1196, S6966
+#pragma warning disable S103, CA1065, S138, IDE0034, RCS1151, S1764, S1944, RCS1208, RCS1215
+#pragma warning disable S3981, CA1849, SA1129, CA1823
 
 /// <summary>
 /// Targeted deterministic top-up tests for remaining production coverage gaps.
@@ -681,6 +684,193 @@ public sealed class CoverageTopUpTests
         Assert.Equal(new[] { Three }, forkRightFirst.Values);
         Assert.Equal(1, forkRightFirst.Completed);
     }
+
+    [Test]
+    public async Task RangeTimingQueuesAndThreadPoolCoverPrTenCoverageGaps()
+    {
+        var immediateMoments = new RecordingObserver<Moment<int>>();
+        Signal.Sequence(One, Three).Timestamp(Sequencer.Immediate).Subscribe(immediateMoments).Dispose();
+        Assert.Equal<int>([One, Two, Three], [immediateMoments.Values[0].Value, immediateMoments.Values[1].Value, immediateMoments.Values[2].Value]);
+        Assert.Equal(1, immediateMoments.Completed);
+
+        var clockMoments = new List<Moment<int>>();
+        var clockMomentCompleted = 0;
+        Signal.Sequence(Four, Two).Timestamp(new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(clockMoments.Add, ex => throw ex, () => clockMomentCompleted++);
+        Assert.Equal<int>([Four, Five], [clockMoments[0].Value, clockMoments[1].Value]);
+        Assert.Equal(1, clockMomentCompleted);
+
+        var immediateMomentActions = new List<Moment<int>>();
+        var immediateMomentCompleted = 0;
+        var immediateTimestampSignal = (IInlineSignal<Moment<int>>)Signal.Sequence(Two, Two).Timestamp(Sequencer.Immediate);
+        immediateTimestampSignal.Subscribe(immediateMomentActions.Add, ex => throw ex, () => immediateMomentCompleted++).Dispose();
+        Assert.Equal<int>([Two, Three], [immediateMomentActions[0].Value, immediateMomentActions[1].Value]);
+        Assert.Equal(1, immediateMomentCompleted);
+
+        var clockMomentObserver = new RecordingObserver<Moment<int>>();
+        var clockTimestampSignal = (IInlineSignal<Moment<int>>)Signal.Sequence(Two, Two).Timestamp(new TestClock(DateTimeOffset.UnixEpoch));
+        clockTimestampSignal.Subscribe(clockMomentObserver).Dispose();
+        Assert.Equal<int>([Two, Three], [clockMomentObserver.Values[0].Value, clockMomentObserver.Values[1].Value]);
+        Assert.Equal(1, clockMomentObserver.Completed);
+
+        Assert.Throws<ArgumentNullException>(() => immediateTimestampSignal.Subscribe((IObserver<Moment<int>>)null!));
+        Assert.Throws<ArgumentNullException>(() => immediateTimestampSignal.Subscribe((Action<Moment<int>>)null!, _ => { }, () => { }));
+
+        var immediateIntervals = new RecordingObserver<TimeInterval<int>>();
+        Signal.Sequence(One, Three).TimeInterval(Sequencer.Immediate).Subscribe(immediateIntervals).Dispose();
+        Assert.Equal<int>([One, Two, Three], [immediateIntervals.Values[0].Value, immediateIntervals.Values[1].Value, immediateIntervals.Values[2].Value]);
+        Assert.Equal(TimeSpan.Zero, immediateIntervals.Values[0].Interval);
+        Assert.Equal(TimeSpan.Zero, immediateIntervals.Values[1].Interval);
+        Assert.Equal(TimeSpan.Zero, immediateIntervals.Values[2].Interval);
+        Assert.Equal(1, immediateIntervals.Completed);
+
+        var clockIntervals = new List<TimeInterval<int>>();
+        var clockIntervalCompleted = 0;
+        Signal.Sequence(Four, Three).TimeInterval(new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(clockIntervals.Add, ex => throw ex, () => clockIntervalCompleted++);
+        Assert.Equal<int>([Four, Five, Six], [clockIntervals[0].Value, clockIntervals[1].Value, clockIntervals[2].Value]);
+        Assert.Equal(TimeSpan.Zero, clockIntervals[0].Interval);
+        Assert.Equal(TimeSpan.Zero, clockIntervals[1].Interval);
+        Assert.Equal(TimeSpan.Zero, clockIntervals[2].Interval);
+        Assert.Equal(1, clockIntervalCompleted);
+
+        var immediateIntervalActions = new List<TimeInterval<int>>();
+        var immediateIntervalCompleted = 0;
+        var immediateIntervalSignal = (IInlineSignal<TimeInterval<int>>)Signal.Sequence(Two, Two).TimeInterval(Sequencer.Immediate);
+        immediateIntervalSignal.Subscribe(immediateIntervalActions.Add, ex => throw ex, () => immediateIntervalCompleted++).Dispose();
+        Assert.Equal<int>([Two, Three], [immediateIntervalActions[0].Value, immediateIntervalActions[1].Value]);
+        Assert.Equal(1, immediateIntervalCompleted);
+
+        var clockIntervalObserver = new RecordingObserver<TimeInterval<int>>();
+        var clockIntervalSignal = (IInlineSignal<TimeInterval<int>>)Signal.Sequence(Two, Three).TimeInterval(new TestClock(DateTimeOffset.UnixEpoch));
+        clockIntervalSignal.Subscribe(clockIntervalObserver).Dispose();
+        Assert.Equal<int>([Two, Three, Four], [clockIntervalObserver.Values[0].Value, clockIntervalObserver.Values[1].Value, clockIntervalObserver.Values[2].Value]);
+        Assert.Equal(TimeSpan.Zero, clockIntervalObserver.Values[0].Interval);
+        Assert.Equal(TimeSpan.Zero, clockIntervalObserver.Values[1].Interval);
+        Assert.Equal(TimeSpan.Zero, clockIntervalObserver.Values[2].Interval);
+        Assert.Equal(1, clockIntervalObserver.Completed);
+
+        Assert.Throws<ArgumentNullException>(() => immediateIntervalSignal.Subscribe((IObserver<TimeInterval<int>>)null!));
+        Assert.Throws<ArgumentNullException>(() => immediateIntervalSignal.Subscribe((Action<TimeInterval<int>>)null!, _ => { }, () => { }));
+
+        var shiftedObserver = new RecordingObserver<int>();
+        Signal.Sequence(One, Two).DelayStart(TimeSpan.Zero, Sequencer.Immediate).Subscribe(shiftedObserver).Dispose();
+        Assert.Equal(new[] { One, Two }, shiftedObserver.Values);
+        Assert.Equal(1, shiftedObserver.Completed);
+
+        var shiftedActions = new List<int>();
+        var shiftedActionCompleted = 0;
+        Signal.Sequence(Three, Two).DelayStart(TimeSpan.Zero, Sequencer.Immediate).Subscribe(shiftedActions.Add, ex => throw ex, () => shiftedActionCompleted++);
+        Assert.Equal(new[] { Three, Four }, shiftedActions);
+        Assert.Equal(1, shiftedActionCompleted);
+
+        var currentThreadShift = (IRequireCurrentThread<int>)Signal.Sequence(One, One).DelayStart(TimeSpan.Zero, Sequencer.CurrentThread);
+        Assert.True(currentThreadShift.IsRequiredSubscribeOnCurrentThread());
+        var inlineShift = (IInlineSignal<int>)Signal.Sequence(One, One).DelayStart(TimeSpan.Zero, Sequencer.Immediate);
+        Assert.Throws<ArgumentNullException>(() => Signal.Sequence(One, One).DelayStart(TimeSpan.Zero, Sequencer.Immediate).Subscribe((IObserver<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => inlineShift.Subscribe((Action<int>)null!, _ => { }, () => { }));
+        Assert.Throws<ArgumentNullException>(() => inlineShift.Subscribe(_ => { }, _ => { }, null!));
+
+        var helperValues = new List<int>();
+        var helper = new SequencerWorkItem<ISequencer, int>(
+            Sequencer.Immediate,
+            One,
+            (_, state) =>
+            {
+                helperValues.Add(state);
+                return Disposable.Empty;
+            });
+        helper.Invoke();
+        helper.Dispose();
+        helper.Invoke();
+        Assert.Equal(new[] { One }, helperValues);
+
+        var unusedScheduled = new ScheduledItem<int, string>(Sequencer.Immediate, "unused", (_, _) => Disposable.Empty, One);
+        Assert.False(new SequencerQueue<int>().Remove(unusedScheduled));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PriorityQueue<int>(-1));
+
+        var shrink = new PriorityQueue<int>(32);
+        for (var i = 0; i < 32; i++)
+        {
+            shrink.Enqueue(i);
+        }
+
+        for (var i = 0; i < 26; i++)
+        {
+            Assert.Equal(i, shrink.Dequeue());
+        }
+
+        var absoluteRan = new TaskCompletionSource<int>();
+        var absolute = ThreadPoolSequencer.Instance.Schedule(Five, DateTimeOffset.UtcNow, (_, state) =>
+        {
+            absoluteRan.TrySetResult(state);
+            return Disposable.Empty;
+        });
+        Assert.Equal(Five, await absoluteRan.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false));
+        absolute.Dispose();
+        absolute.Dispose();
+
+        var delayedDisposed = CreateThreadPoolWorkItem(One, (_, _) => Disposable.Empty);
+        delayedDisposed.Dispose();
+        QueueThreadPoolWorkItem(delayedDisposed, typeof(int), TimeSpan.FromMilliseconds(10));
+
+        var skipped = false;
+        var skippedItem = CreateThreadPoolWorkItem(Two, (_, _) =>
+        {
+            skipped = true;
+            return Disposable.Empty;
+        });
+        skippedItem.Dispose();
+        InvokeThreadPoolWorkItem(skippedItem, typeof(int));
+        Assert.False(skipped);
+
+        var disposedReturned = 0;
+        object?[] holder = [null];
+        var selfDisposing = CreateThreadPoolWorkItem(holder, (_, state) =>
+        {
+            ((IDisposable)state[0]!).Dispose();
+            return Disposable.Create(() => disposedReturned++);
+        });
+        holder[0] = selfDisposing;
+        InvokeThreadPoolWorkItem(selfDisposing, typeof(object?[]));
+        Assert.Equal(1, disposedReturned);
+
+        var rawDisposedReturned = 0;
+        object?[] rawHolder = [null];
+        var rawDisposing = CreateThreadPoolWorkItem(rawHolder, (_, state) =>
+        {
+            MarkThreadPoolWorkItemDisposed(state[0]!);
+            return Disposable.Create(() => rawDisposedReturned++);
+        });
+        rawHolder[0] = rawDisposing;
+        InvokeThreadPoolWorkItem(rawDisposing, typeof(object?[]));
+        Assert.Equal(1, rawDisposedReturned);
+    }
+
+#pragma warning disable S3011, IL2072, IL2075, IL3050
+    private static IDisposable CreateThreadPoolWorkItem<TState>(TState state, Func<ISequencer, TState, IDisposable> action)
+    {
+        var type = ThreadPoolWorkItemType(typeof(TState));
+        return (IDisposable)Activator.CreateInstance(
+            type,
+            BindingFlags.Instance | BindingFlags.NonPublic,
+            binder: null,
+            args: [ThreadPoolSequencer.Instance, state, action],
+            culture: null)!;
+    }
+
+    private static void InvokeThreadPoolWorkItem(IDisposable item, Type stateType) =>
+        ThreadPoolWorkItemType(stateType).GetMethod("Run", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(item, null);
+
+    private static void QueueThreadPoolWorkItem(IDisposable item, Type stateType, TimeSpan dueTime) =>
+        ThreadPoolWorkItemType(stateType)
+            .GetMethod("Queue", BindingFlags.Instance | BindingFlags.NonPublic, binder: null, types: [typeof(TimeSpan)], modifiers: null)!
+            .Invoke(item, [dueTime]);
+
+    private static void MarkThreadPoolWorkItemDisposed(object item) =>
+        item.GetType().GetField("_isDisposed", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(item, 1);
+
+    private static Type ThreadPoolWorkItemType(Type stateType) =>
+        typeof(ThreadPoolSequencer).GetNestedType("ScheduledWorkItem`1", BindingFlags.NonPublic)!.MakeGenericType(stateType);
+#pragma warning restore S3011, IL2072, IL2075, IL3050
 
     private static async IAsyncEnumerable<int> AsyncValues(int count)
     {
