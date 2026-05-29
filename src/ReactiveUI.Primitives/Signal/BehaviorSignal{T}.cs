@@ -14,6 +14,11 @@ namespace ReactiveUI.Primitives.Signals;
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class BehaviorSignal<T> : ISignal<T>
 {
+    /// <summary>
+    /// Protects observer and terminal-state mutations.
+    /// </summary>
+    private readonly Lock _gate = new();
+
 #pragma warning disable S3459 // Broadcaster<T> is a mutable struct whose default value is the empty broadcaster.
 
     /// <summary>
@@ -21,11 +26,6 @@ public class BehaviorSignal<T> : ISignal<T>
     /// </summary>
     private Broadcaster<T> _broadcaster;
 #pragma warning restore S3459
-
-    /// <summary>
-    /// Protects observer and terminal-state mutations.
-    /// </summary>
-    private int _gate;
 
     /// <summary>
     /// Stores state for the signal implementation.
@@ -118,8 +118,7 @@ public class BehaviorSignal<T> : ISignal<T>
     /// </remarks>
     public bool TryGetValue(out T? value)
     {
-        EnterGate();
-        try
+        lock (_gate)
         {
             if (IsDisposed)
             {
@@ -132,10 +131,6 @@ public class BehaviorSignal<T> : ISignal<T>
             value = _lastValue!;
             return true;
         }
-        finally
-        {
-            ExitGate();
-        }
     }
 
     /// <summary>
@@ -143,8 +138,7 @@ public class BehaviorSignal<T> : ISignal<T>
     /// </summary>
     public void OnCompleted()
     {
-        EnterGate();
-        try
+        lock (_gate)
         {
             ThrowIfDisposed();
             if (_isStopped)
@@ -153,10 +147,6 @@ public class BehaviorSignal<T> : ISignal<T>
             }
 
             _isStopped = true;
-        }
-        finally
-        {
-            ExitGate();
         }
 
         _broadcaster.Completed();
@@ -175,8 +165,7 @@ public class BehaviorSignal<T> : ISignal<T>
             throw new ArgumentNullException(nameof(error));
         }
 
-        EnterGate();
-        try
+        lock (_gate)
         {
             ThrowIfDisposed();
             if (_isStopped)
@@ -186,10 +175,6 @@ public class BehaviorSignal<T> : ISignal<T>
 
             _isStopped = true;
             _lastError = error;
-        }
-        finally
-        {
-            ExitGate();
         }
 
         _broadcaster.Error(error);
@@ -202,8 +187,7 @@ public class BehaviorSignal<T> : ISignal<T>
     /// <param name="value">The value to send to all observers.</param>
     public void OnNext(T value)
     {
-        EnterGate();
-        try
+        lock (_gate)
         {
             if (_isStopped)
             {
@@ -211,10 +195,6 @@ public class BehaviorSignal<T> : ISignal<T>
             }
 
             _lastValue = value;
-        }
-        finally
-        {
-            ExitGate();
         }
 
         _broadcaster.Next(value);
@@ -237,8 +217,7 @@ public class BehaviorSignal<T> : ISignal<T>
         var v = default(T);
         var subscription = default(ObserverHandler);
 
-        EnterGate();
-        try
+        lock (_gate)
         {
             ThrowIfDisposed();
             if (!_isStopped)
@@ -251,10 +230,6 @@ public class BehaviorSignal<T> : ISignal<T>
             {
                 ex = _lastError;
             }
-        }
-        finally
-        {
-            ExitGate();
         }
 
         if (subscription != null)
@@ -297,16 +272,11 @@ public class BehaviorSignal<T> : ISignal<T>
 
         if (disposing)
         {
-            EnterGate();
-            try
+            lock (_gate)
             {
                 _broadcaster.Clear();
                 _lastError = null;
                 _lastValue = default;
-            }
-            finally
-            {
-                ExitGate();
             }
         }
 
@@ -325,29 +295,6 @@ public class BehaviorSignal<T> : ISignal<T>
 
         throw new ObjectDisposedException(string.Empty);
     }
-
-    /// <summary>
-    /// Enters the mutation gate.
-    /// </summary>
-    private void EnterGate()
-    {
-        if (Interlocked.CompareExchange(ref _gate, 1, 0) == 0)
-        {
-            return;
-        }
-
-        var spinner = default(SpinWait);
-        do
-        {
-            spinner.SpinOnce();
-        }
-        while (Interlocked.CompareExchange(ref _gate, 1, 0) != 0);
-    }
-
-    /// <summary>
-    /// Exits the mutation gate.
-    /// </summary>
-    private void ExitGate() => Volatile.Write(ref _gate, 0);
 
     /// <summary>
     /// Represents the ObserverHandler class.
@@ -387,14 +334,9 @@ public class BehaviorSignal<T> : ISignal<T>
                 return;
             }
 
-            subject.EnterGate();
-            try
+            lock (subject._gate)
             {
                 subject._broadcaster.Remove(observer);
-            }
-            finally
-            {
-                subject.ExitGate();
             }
         }
     }
