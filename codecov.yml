@@ -20,6 +20,7 @@ ignore:
   - "src/ReactiveUI.Primitives/Signal/ProjectedReadOnlyState*.cs"
   - "src/ReactiveUI.Primitives/SignalOperatorMixins.cs"
   - "src/ReactiveUI.Primitives/Signals/Core/CreateSignal*.cs"
+  - "src/ReactiveUI.Primitives/Signals/Core/FromEnumerableSignal*.cs"
   - "src/ReactiveUI.Primitives/Signals/Core/LoopSignal*.cs"
   - "src/ReactiveUI.Primitives/Signals/Core/UnfoldSignal*.cs"
   - "src/ReactiveUI.Primitives/Signals/Core/UseSignal*.cs"
