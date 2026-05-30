@@ -351,8 +351,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableThrowsDuringIteration_ThenRoutesToUnhandled()
     {
-        Exception? unhandledException = null;
-        UnhandledExceptionHandler.Register(ex => unhandledException = ex);
+        using var unhandled = new UnhandledExceptionCapture();
 
         // Use an enumerable whose GetEnumerator throws, triggering the error path
         // inside StartAsync's inner try block.
@@ -363,12 +362,10 @@ public partial class CombiningOperatorTests
                 (_, _) => default,
                 null);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => unhandledException is not null,
-            TimeSpan.FromSeconds(5));
+        var exception = await unhandled.WaitForAsync("enumerable boom", TimeSpan.FromSeconds(5));
 
-        await Assert.That(unhandledException).IsNotNull();
-        await Assert.That(unhandledException!.Message).Contains("enumerable boom");
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!.Message).Contains("enumerable boom");
     }
 
     /// <summary>

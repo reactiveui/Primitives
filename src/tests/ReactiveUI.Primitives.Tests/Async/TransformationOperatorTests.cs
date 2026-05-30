@@ -443,10 +443,8 @@ public class TransformationOperatorTests
     [SuppressMessage("Microsoft.Design", "CA2201", Justification = "Deliberately uses a generic exception type to verify operator error-handling pathways with arbitrary exception kinds.")]
     public async Task WhenPrependSourceThrowsAndCompletionAlsoThrows_ThenRoutedToHandler()
     {
-        var handlerExceptions = new List<Exception>();
+        using var unhandled = new UnhandledExceptionCapture();
         var completionException = new InvalidOperationException("completion failed");
-
-        UnhandledExceptionHandler.Register(handlerExceptions.Add);
 
         var source = ObservableAsync.Create<int>((_, _) =>
             ValueTask.FromException<IAsyncDisposable>(new ApplicationException("source error")));
@@ -458,13 +456,11 @@ public class TransformationOperatorTests
             null,
             _ => throw completionException);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => handlerExceptions.Count >= 1,
-            TimeSpan.FromSeconds(5));
+        var exception = await unhandled.WaitForAsync("completion failed", TimeSpan.FromSeconds(5));
 
-        await Assert.That(handlerExceptions.Count).IsGreaterThanOrEqualTo(1);
-        await Assert.That(handlerExceptions[0]).IsTypeOf<InvalidOperationException>();
-        await Assert.That(handlerExceptions[0].Message).IsEqualTo("completion failed");
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!).IsTypeOf<InvalidOperationException>();
+        await Assert.That(exception!.Message).IsEqualTo("completion failed");
     }
 
     /// <summary>
@@ -729,10 +725,8 @@ public class TransformationOperatorTests
     [SuppressMessage("Microsoft.Design", "CA2201", Justification = "Deliberately uses a generic exception type to verify operator error-handling pathways with arbitrary exception kinds.")]
     public async Task WhenPrependSourceThrowsAndOnCompletedThrows_ThenSecondaryExceptionRoutedToHandler()
     {
-        var handlerExceptions = new List<Exception>();
+        using var unhandled = new UnhandledExceptionCapture();
         var secondaryException = new InvalidOperationException("onCompleted blew up");
-
-        UnhandledExceptionHandler.Register(handlerExceptions.Add);
 
         var source = ObservableAsync.Create<int>((_, _) =>
             ValueTask.FromException<IAsyncDisposable>(new ApplicationException("source failure")));
@@ -747,13 +741,11 @@ public class TransformationOperatorTests
             null,
             _ => throw secondaryException);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => handlerExceptions.Count >= 1,
-            TimeSpan.FromSeconds(5));
+        var exception = await unhandled.WaitForAsync("onCompleted blew up", TimeSpan.FromSeconds(5));
 
-        await Assert.That(handlerExceptions).Count().IsGreaterThanOrEqualTo(1);
-        await Assert.That(handlerExceptions[0]).IsTypeOf<InvalidOperationException>();
-        await Assert.That(handlerExceptions[0].Message).IsEqualTo("onCompleted blew up");
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!).IsTypeOf<InvalidOperationException>();
+        await Assert.That(exception!.Message).IsEqualTo("onCompleted blew up");
     }
 
     /// <summary>
@@ -993,33 +985,22 @@ public class TransformationOperatorTests
     [SuppressMessage("Microsoft.Design", "CA2201", Justification = "Deliberately uses a generic exception type to verify operator error-handling pathways with arbitrary exception kinds.")]
     public async Task WhenPrependSourceThrowsAndRawObserverCompletionThrows_ThenRoutedToUnhandledHandler()
     {
-        var handlerExceptions = new List<Exception>();
+        using var unhandled = new UnhandledExceptionCapture();
         var completionException = new InvalidOperationException("raw observer completion failed");
-        var previousHandler = UnhandledExceptionHandler.CurrentHandler;
 
-        UnhandledExceptionHandler.Register(handlerExceptions.Add);
-        try
-        {
-            var source = ObservableAsync.Create<int>((_, _) =>
-                ValueTask.FromException<IAsyncDisposable>(new ApplicationException("source subscribe error")));
+        var source = ObservableAsync.Create<int>((_, _) =>
+            ValueTask.FromException<IAsyncDisposable>(new ApplicationException("source subscribe error")));
 
-            var pipeline = source.Prepend(1);
+        var pipeline = source.Prepend(1);
 
-            var rawObserver = new ThrowingOnCompletedObserver<int>(completionException);
-            await using var sub = await pipeline.SubscribeAsync(rawObserver, CancellationToken.None);
+        var rawObserver = new ThrowingOnCompletedObserver<int>(completionException);
+        await using var sub = await pipeline.SubscribeAsync(rawObserver, CancellationToken.None);
 
-            await AsyncTestHelpers.WaitForConditionAsync(
-                () => handlerExceptions.Count >= 1,
-                TimeSpan.FromSeconds(5));
+        var exception = await unhandled.WaitForAsync("raw observer completion failed", TimeSpan.FromSeconds(5));
 
-            await Assert.That(handlerExceptions).Count().IsGreaterThanOrEqualTo(1);
-            await Assert.That(handlerExceptions[0]).IsTypeOf<InvalidOperationException>();
-            await Assert.That(handlerExceptions[0].Message).IsEqualTo("raw observer completion failed");
-        }
-        finally
-        {
-            UnhandledExceptionHandler.Register(previousHandler);
-        }
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!).IsTypeOf<InvalidOperationException>();
+        await Assert.That(exception!.Message).IsEqualTo("raw observer completion failed");
     }
 
     /// <summary>Tests Do with onErrorResume callback invokes callback on error.</summary>

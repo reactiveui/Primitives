@@ -12,13 +12,16 @@ using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
 
+[assembly: TUnit.Core.Executors.TestExecutorAttribute<ReactiveUI.Primitives.Async.Tests.UnhandledExceptionTestExecutor>]
+[assembly: TUnit.Core.NotInParallelAttribute]
+
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>
 /// Test executor that saves and restores the <see cref="UnhandledExceptionHandler"/> global state
 /// around each test, ensuring test isolation for tests that register custom handlers.
 /// </summary>
-internal sealed class UnhandledExceptionTestExecutor : ITestExecutor
+public sealed class UnhandledExceptionTestExecutor : ITestExecutor
 {
     /// <inheritdoc/>
     public async ValueTask ExecuteTest(TestContext context, Func<ValueTask> action)

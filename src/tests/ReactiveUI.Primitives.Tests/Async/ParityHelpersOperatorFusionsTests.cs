@@ -540,34 +540,20 @@ public class ParityHelpersOperatorFusionsTests
     [Test]
     public async Task WhenThrottleDistinctDownstreamThrowsInDelay_ThenRoutedToUnhandled()
     {
-        var previousHandler = UnhandledExceptionHandler.CurrentHandler;
-        try
-        {
-            Exception? unhandled = null;
-            var unhandledTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            UnhandledExceptionHandler.Register(ex =>
-            {
-                unhandled = ex;
-                unhandledTcs.TrySetResult();
-            });
+        using var unhandled = new UnhandledExceptionCapture();
 
-            var subject = SubjectAsync.Create<int>();
-            var throwingObserver = new ThrowingAsyncObserver<int>(new InvalidOperationException("downstream-throws"));
+        var subject = SubjectAsync.Create<int>();
+        var throwingObserver = new ThrowingAsyncObserver<int>(new InvalidOperationException("downstream-throws"));
 
-            await using var sub = await subject.Values
-                .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds))
-                .SubscribeAsync(throwingObserver, CancellationToken.None);
+        await using var sub = await subject.Values
+            .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds))
+            .SubscribeAsync(throwingObserver, CancellationToken.None);
 
-            await subject.OnNextAsync(One, CancellationToken.None);
-            await unhandledTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await subject.OnNextAsync(One, CancellationToken.None);
+        var exception = await unhandled.WaitForAsync("downstream-throws", TimeSpan.FromSeconds(5));
 
-            await Assert.That(unhandled).IsNotNull();
-            await Assert.That(unhandled!.Message).IsEqualTo("downstream-throws");
-        }
-        finally
-        {
-            UnhandledExceptionHandler.Register(previousHandler);
-        }
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!.Message).IsEqualTo("downstream-throws");
     }
 
     /// <summary>Verifies that an exception thrown by the downstream observer inside <c>Throttle</c>'s
@@ -577,34 +563,20 @@ public class ParityHelpersOperatorFusionsTests
     [Test]
     public async Task WhenThrottleDownstreamThrowsInDelay_ThenRoutedToUnhandled()
     {
-        var previousHandler = UnhandledExceptionHandler.CurrentHandler;
-        try
-        {
-            Exception? unhandled = null;
-            var unhandledTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            UnhandledExceptionHandler.Register(ex =>
-            {
-                unhandled = ex;
-                unhandledTcs.TrySetResult();
-            });
+        using var unhandled = new UnhandledExceptionCapture();
 
-            var subject = SubjectAsync.Create<int>();
-            var throwingObserver = new ThrowingAsyncObserver<int>(new InvalidOperationException("throttle-downstream-throws"));
+        var subject = SubjectAsync.Create<int>();
+        var throwingObserver = new ThrowingAsyncObserver<int>(new InvalidOperationException("throttle-downstream-throws"));
 
-            await using var sub = await subject.Values
-                .Throttle(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds))
-                .SubscribeAsync(throwingObserver, CancellationToken.None);
+        await using var sub = await subject.Values
+            .Throttle(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds))
+            .SubscribeAsync(throwingObserver, CancellationToken.None);
 
-            await subject.OnNextAsync(One, CancellationToken.None);
-            await unhandledTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await subject.OnNextAsync(One, CancellationToken.None);
+        var exception = await unhandled.WaitForAsync("throttle-downstream-throws", TimeSpan.FromSeconds(5));
 
-            await Assert.That(unhandled).IsNotNull();
-            await Assert.That(unhandled!.Message).IsEqualTo("throttle-downstream-throws");
-        }
-        finally
-        {
-            UnhandledExceptionHandler.Register(previousHandler);
-        }
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!.Message).IsEqualTo("throttle-downstream-throws");
     }
 
     /// <summary>Exercises the <c>!IsCurrentEmission(id)</c> guard inside <c>DebounceUntil</c>'s
@@ -644,34 +616,20 @@ public class ParityHelpersOperatorFusionsTests
     [Test]
     public async Task WhenDebounceUntilDownstreamThrowsInDelay_ThenRoutedToUnhandled()
     {
-        var previousHandler = UnhandledExceptionHandler.CurrentHandler;
-        try
-        {
-            Exception? unhandled = null;
-            var unhandledTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            UnhandledExceptionHandler.Register(ex =>
-            {
-                unhandled = ex;
-                unhandledTcs.TrySetResult();
-            });
+        using var unhandled = new UnhandledExceptionCapture();
 
-            var subject = SubjectAsync.Create<int>();
-            var throwingObserver = new ThrowingAsyncObserver<int>(new InvalidOperationException("debounce-downstream-throws"));
+        var subject = SubjectAsync.Create<int>();
+        var throwingObserver = new ThrowingAsyncObserver<int>(new InvalidOperationException("debounce-downstream-throws"));
 
-            await using var sub = await subject.Values
-                .DebounceUntil(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), static _ => false)
-                .SubscribeAsync(throwingObserver, CancellationToken.None);
+        await using var sub = await subject.Values
+            .DebounceUntil(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), static _ => false)
+            .SubscribeAsync(throwingObserver, CancellationToken.None);
 
-            await subject.OnNextAsync(One, CancellationToken.None);
-            await unhandledTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await subject.OnNextAsync(One, CancellationToken.None);
+        var exception = await unhandled.WaitForAsync("debounce-downstream-throws", TimeSpan.FromSeconds(5));
 
-            await Assert.That(unhandled).IsNotNull();
-            await Assert.That(unhandled!.Message).IsEqualTo("debounce-downstream-throws");
-        }
-        finally
-        {
-            UnhandledExceptionHandler.Register(previousHandler);
-        }
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!.Message).IsEqualTo("debounce-downstream-throws");
     }
 
     /// <summary>Verifies that <c>Partition</c> drops upstream values whose predicate matches a

@@ -225,8 +225,7 @@ public class TimeBasedOperatorTests
     [Test]
     public async Task WhenThrottleOnNextThrows_ThenRoutedToUnhandledExceptionHandler()
     {
-        var caught = new List<Exception>();
-        UnhandledExceptionHandler.Register(caught.Add);
+        using var unhandled = new UnhandledExceptionCapture();
 
         var subject = SubjectAsync.Create<int>();
 
@@ -238,12 +237,10 @@ public class TimeBasedOperatorTests
 
         await subject.OnNextAsync(ExpectedValue42, CancellationToken.None);
 
-        var handlerCalled = await AsyncTestHelpers.WaitForConditionAsync(
-            () => caught.Count >= 1,
-            TimeSpan.FromSeconds(10));
+        var exception = await unhandled.WaitForAsync("observer exploded", TimeSpan.FromSeconds(10));
 
-        await Assert.That(handlerCalled).IsTrue();
-        await Assert.That(caught[0]).IsTypeOf<InvalidOperationException>();
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!).IsTypeOf<InvalidOperationException>();
     }
 
     /// <summary>
@@ -256,8 +253,7 @@ public class TimeBasedOperatorTests
     [Test]
     public async Task WhenTimeoutOnCompletedThrows_ThenRoutedToUnhandledExceptionHandler()
     {
-        var caught = new List<Exception>();
-        UnhandledExceptionHandler.Register(caught.Add);
+        using var unhandled = new UnhandledExceptionCapture();
 
         var source = ObservableAsync.Never<int>()
             .Timeout(TimeSpan.FromMilliseconds(50));
@@ -267,12 +263,10 @@ public class TimeBasedOperatorTests
             null,
             _ => throw new InvalidOperationException("completion handler exploded"));
 
-        var handlerCalled = await AsyncTestHelpers.WaitForConditionAsync(
-            () => caught.Count >= 1,
-            TimeSpan.FromSeconds(10));
+        var exception = await unhandled.WaitForAsync("completion handler exploded", TimeSpan.FromSeconds(10));
 
-        await Assert.That(handlerCalled).IsTrue();
-        await Assert.That(caught[0]).IsTypeOf<InvalidOperationException>();
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!).IsTypeOf<InvalidOperationException>();
     }
 
     /// <summary>
@@ -433,8 +427,7 @@ public class TimeBasedOperatorTests
     [Test]
     public async Task WhenThrottleWithCustomTimeProviderOnNextThrows_ThenRoutedToUnhandledExceptionHandler()
     {
-        var caught = new List<Exception>();
-        UnhandledExceptionHandler.Register(caught.Add);
+        using var unhandled = new UnhandledExceptionCapture();
 
         var customProvider = new CustomTimeProvider();
         var subject = SubjectAsync.Create<int>();
@@ -447,12 +440,10 @@ public class TimeBasedOperatorTests
 
         await subject.OnNextAsync(1, CancellationToken.None);
 
-        var handlerCalled = await AsyncTestHelpers.WaitForConditionAsync(
-            () => caught.Count >= 1,
-            TimeSpan.FromSeconds(10));
+        var exception = await unhandled.WaitForAsync("custom provider observer exploded", TimeSpan.FromSeconds(10));
 
-        await Assert.That(handlerCalled).IsTrue();
-        await Assert.That(caught[0]).IsTypeOf<InvalidOperationException>();
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!).IsTypeOf<InvalidOperationException>();
     }
 
     /// <summary>
@@ -508,8 +499,7 @@ public class TimeBasedOperatorTests
     [Test]
     public async Task WhenTimeoutDelayThrowsNonCancellation_ThenRoutedToUnhandledExceptionHandler()
     {
-        var caught = new List<Exception>();
-        UnhandledExceptionHandler.Register(caught.Add);
+        using var unhandled = new UnhandledExceptionCapture();
 
         var throwingProvider = new ThrowingTimeProvider();
         var source = new DirectSource<int>();
@@ -520,12 +510,10 @@ public class TimeBasedOperatorTests
                 static (_, _) => default,
                 null);
 
-        var handlerCalled = await AsyncTestHelpers.WaitForConditionAsync(
-            () => caught.Count >= 1,
-            TimeSpan.FromSeconds(10));
+        var exception = await unhandled.WaitForAsync("timer creation failed", TimeSpan.FromSeconds(10));
 
-        await Assert.That(handlerCalled).IsTrue();
-        await Assert.That(caught[0]).IsTypeOf<InvalidOperationException>();
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!).IsTypeOf<InvalidOperationException>();
     }
 
     /// <summary>
@@ -652,8 +640,7 @@ public class TimeBasedOperatorTests
     [Test]
     public async Task WhenThrottleFireThrowsNonCancellation_ThenRoutedToUnhandledHandler()
     {
-        var handledErrors = new List<Exception>();
-        UnhandledExceptionHandler.Register(handledErrors.Add);
+        using var unhandled = new UnhandledExceptionCapture();
 
         var expectedError = new InvalidOperationException("downstream error");
         var source = new DirectSource<int>();
@@ -666,11 +653,9 @@ public class TimeBasedOperatorTests
 
         await source.EmitNext(1);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => handledErrors.Count >= 1,
-            TimeSpan.FromSeconds(5));
+        var exception = await unhandled.WaitForAsync("downstream error", TimeSpan.FromSeconds(5));
 
-        await Assert.That(handledErrors).Count().IsGreaterThanOrEqualTo(1);
+        await Assert.That(exception).IsNotNull();
     }
 
     /// <summary>
@@ -758,36 +743,24 @@ public class TimeBasedOperatorTests
     [Test]
     public async Task WhenThrottleImmediateFireOnNextThrows_ThenRoutedToUnhandledExceptionHandler()
     {
-        var previousHandler = UnhandledExceptionHandler.CurrentHandler;
-        var caught = new List<Exception>();
+        using var unhandled = new UnhandledExceptionCapture();
 
-        try
-        {
-            UnhandledExceptionHandler.Register(caught.Add);
+        var immediateProvider = new ImmediateFireTimeProvider();
+        var subject = SubjectAsync.Create<int>();
 
-            var immediateProvider = new ImmediateFireTimeProvider();
-            var subject = SubjectAsync.Create<int>();
+        await using var sub = await subject.Values
+            .Throttle(TimeSpan.FromMilliseconds(100), immediateProvider)
+            .SubscribeAsync(
+                (_, _) => throw new InvalidOperationException("immediate fire observer exploded"),
+                null);
 
-            await using var sub = await subject.Values
-                .Throttle(TimeSpan.FromMilliseconds(100), immediateProvider)
-                .SubscribeAsync(
-                    (_, _) => throw new InvalidOperationException("immediate fire observer exploded"),
-                    null);
+        await subject.OnNextAsync(1, CancellationToken.None);
 
-            await subject.OnNextAsync(1, CancellationToken.None);
+        var exception = await unhandled.WaitForAsync("immediate fire observer exploded", TimeSpan.FromSeconds(5));
 
-            var handlerCalled = await AsyncTestHelpers.WaitForConditionAsync(
-                () => caught.Count >= 1,
-                TimeSpan.FromSeconds(5));
-
-            await Assert.That(handlerCalled).IsTrue();
-            await Assert.That(caught[0]).IsTypeOf<InvalidOperationException>();
-            await Assert.That(caught[0].Message).IsEqualTo("immediate fire observer exploded");
-        }
-        finally
-        {
-            UnhandledExceptionHandler.Register(previousHandler);
-        }
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!).IsTypeOf<InvalidOperationException>();
+        await Assert.That(exception!.Message).IsEqualTo("immediate fire observer exploded");
     }
 
     /// <summary>Tests Interval stops when cancelled.</summary>
@@ -939,31 +912,18 @@ public class TimeBasedOperatorTests
     [Test]
     public async Task WhenTimeoutFiresAndDownstreamCompletionThrows_ThenRoutedToUnhandled()
     {
-        var previousHandler = UnhandledExceptionHandler.CurrentHandler;
-        try
-        {
-            Exception? unhandled = null;
-            var unhandledTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            UnhandledExceptionHandler.Register(ex =>
-            {
-                unhandled = ex;
-                unhandledTcs.TrySetResult();
-            });
+        using var unhandled = new UnhandledExceptionCapture();
 
-            var throwing = new TimeoutThrowingObserver<int>(new InvalidOperationException("completion-failed"));
+        var throwing = new TimeoutThrowingObserver<int>(new InvalidOperationException("completion-failed"));
 
-            await using var sub = await ObservableAsync.Never<int>()
-                .Timeout(TimeSpan.FromMilliseconds(1))
-                .SubscribeAsync(throwing, CancellationToken.None);
+        await using var sub = await ObservableAsync.Never<int>()
+            .Timeout(TimeSpan.FromMilliseconds(1))
+            .SubscribeAsync(throwing, CancellationToken.None);
 
-            await unhandledTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
-            await Assert.That(unhandled).IsNotNull();
-            await Assert.That(unhandled!.Message).IsEqualTo("completion-failed");
-        }
-        finally
-        {
-            UnhandledExceptionHandler.Register(previousHandler);
-        }
+        var exception = await unhandled.WaitForAsync("completion-failed", TimeSpan.FromSeconds(5));
+
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!.Message).IsEqualTo("completion-failed");
     }
 
     /// <summary>
