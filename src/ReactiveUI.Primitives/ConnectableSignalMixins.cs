@@ -261,11 +261,6 @@ public static class ConnectableSignalMixins
     private sealed class AutoConnectGate<TValue> : IObservable<TValue>
     {
         /// <summary>
-        /// Synchronizes auto-connect state.
-        /// </summary>
-        private readonly Lock _gate = new();
-
-        /// <summary>
         /// Connectable signal being auto-connected.
         /// </summary>
         private readonly ConnectableSignal<TValue> _source;
@@ -281,9 +276,9 @@ public static class ConnectableSignalMixins
         private int _count;
 
         /// <summary>
-        /// Value indicating whether the source has connected.
+        /// Connect-once latch; 0 before connecting, 1 once connected.
         /// </summary>
-        private bool _connected;
+        private int _connected;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AutoConnectGate{TValue}"/> class.
@@ -318,14 +313,13 @@ public static class ConnectableSignalMixins
             }
 
             var subscription = _source.Subscribe(observer);
-            lock (_gate)
+
+            // Auto-connect only ever counts up and connects once, so no lock is needed: a single
+            // CompareExchange latches the connect once the threshold is reached.
+            var count = Interlocked.Increment(ref _count);
+            if (count >= _subscriberCount && Interlocked.CompareExchange(ref _connected, 1, 0) == 0)
             {
-                _count++;
-                if (!_connected && _count >= _subscriberCount)
-                {
-                    _connected = true;
-                    _source.Connect();
-                }
+                _source.Connect();
             }
 
             return subscription;
