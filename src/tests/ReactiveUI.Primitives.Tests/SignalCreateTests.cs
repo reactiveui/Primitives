@@ -27,9 +27,9 @@ public class SignalCreateTests
     [Test]
     public void Create_ArgumentChecking()
     {
-        Assert.Throws<ArgumentNullException>(() => Signal.Create(default(Func<IObserver<int>, IDisposable>)));
+        Assert.Throws<ArgumentNullException>(() => Signal.Create(default(Func<IObserver<int>, IDisposable>)!));
 
-        Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(default).Subscribe(null));
+        Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(default!).Subscribe(null!));
     }
 
     /// <summary>
@@ -91,13 +91,13 @@ public class SignalCreateTests
     [Test]
     public void CreateWithDisposable_ArgumentChecking()
     {
-        Assert.Throws<ArgumentNullException>(() => Signal.Create(default(Func<IObserver<int>, IDisposable>)));
-        Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(_ => DummyDisposable.Instance).Subscribe(null));
+        Assert.Throws<ArgumentNullException>(() => Signal.Create(default(Func<IObserver<int>, IDisposable>)!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(_ => DummyDisposable.Instance).Subscribe(null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(o =>
         {
-            o.OnError(null);
+            o.OnError(null!);
             return DummyDisposable.Instance;
-        }).Subscribe(null));
+        }).Subscribe(null!));
     }
 
     /// <summary>

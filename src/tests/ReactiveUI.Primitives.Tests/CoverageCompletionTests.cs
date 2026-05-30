@@ -704,7 +704,7 @@ public class CoverageCompletionTests
         Assert.False(errorSpark.HasValue);
         Assert.Equal(error, errorSpark.Exception);
         Assert.Equal(SparkKind.OnError, errorSpark.Kind);
-        Assert.Throws<InvalidOperationException>(() => _ = errorSpark.Value);
+        Assert.Equal(default, errorSpark.Value);
         Assert.True(errorSpark.ToString().Contains(nameof(InvalidOperationException), StringComparison.Ordinal));
         Assert.Equal(errorSpark.GetHashCode(), sameError.GetHashCode());
         errorSpark.Accept((IObserver<int>)observer);
@@ -725,7 +725,7 @@ public class CoverageCompletionTests
         Assert.True(completed.Equals(completedAgain));
         Assert.False(completed.HasValue);
         Assert.Equal(SparkKind.OnCompleted, completed.Kind);
-        Assert.Throws<InvalidOperationException>(() => _ = completed.Value);
+        Assert.Equal(default, completed.Value);
         Assert.Equal("OnCompleted()", completed.ToString());
         completed.Accept((IObserver<int>)observer);
         Assert.Equal(CompletedText, completed.Accept<string>((IObserver<int, string>)observer));

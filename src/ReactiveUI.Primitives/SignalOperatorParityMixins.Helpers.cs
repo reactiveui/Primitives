@@ -636,7 +636,7 @@ public static partial class LinqMixins
                 var timestamp = _sequencer.Now;
                 for (var i = 0; i < _range.Count; i++)
                 {
-                    onNext(new Moment<T>(CreateRangeValue<T>(_range.Start + i), timestamp));
+                    onNext(new Moment<T>((T)(object)(_range.Start + i), timestamp));
                 }
 
                 return;
@@ -644,7 +644,7 @@ public static partial class LinqMixins
 
             for (var i = 0; i < _range.Count; i++)
             {
-                onNext(new Moment<T>(CreateRangeValue<T>(_range.Start + i), _sequencer.Now));
+                onNext(new Moment<T>((T)(object)(_range.Start + i), _sequencer.Now));
             }
         }
 
@@ -659,7 +659,7 @@ public static partial class LinqMixins
                 var timestamp = _sequencer.Now;
                 for (var i = 0; i < _range.Count; i++)
                 {
-                    observer.OnNext(new Moment<T>(CreateRangeValue<T>(_range.Start + i), timestamp));
+                    observer.OnNext(new Moment<T>((T)(object)(_range.Start + i), timestamp));
                 }
 
                 return;
@@ -667,7 +667,7 @@ public static partial class LinqMixins
 
             for (var i = 0; i < _range.Count; i++)
             {
-                observer.OnNext(new Moment<T>(CreateRangeValue<T>(_range.Start + i), _sequencer.Now));
+                observer.OnNext(new Moment<T>((T)(object)(_range.Start + i), _sequencer.Now));
             }
         }
     }
@@ -735,7 +735,7 @@ public static partial class LinqMixins
             {
                 for (var i = 0; i < _range.Count; i++)
                 {
-                    onNext(new TimeInterval<T>(CreateRangeValue<T>(_range.Start + i), TimeSpan.Zero));
+                    onNext(new TimeInterval<T>((T)(object)(_range.Start + i), TimeSpan.Zero));
                 }
 
                 return;
@@ -747,7 +747,7 @@ public static partial class LinqMixins
                 var now = _sequencer.Now;
                 var interval = i == 0 ? TimeSpan.Zero : now - last;
                 last = now;
-                onNext(new TimeInterval<T>(CreateRangeValue<T>(_range.Start + i), interval));
+                onNext(new TimeInterval<T>((T)(object)(_range.Start + i), interval));
             }
         }
 
@@ -761,7 +761,7 @@ public static partial class LinqMixins
             {
                 for (var i = 0; i < _range.Count; i++)
                 {
-                    observer.OnNext(new TimeInterval<T>(CreateRangeValue<T>(_range.Start + i), TimeSpan.Zero));
+                    observer.OnNext(new TimeInterval<T>((T)(object)(_range.Start + i), TimeSpan.Zero));
                 }
 
                 return;
@@ -773,7 +773,7 @@ public static partial class LinqMixins
                 var now = _sequencer.Now;
                 var interval = i == 0 ? TimeSpan.Zero : now - last;
                 last = now;
-                observer.OnNext(new TimeInterval<T>(CreateRangeValue<T>(_range.Start + i), interval));
+                observer.OnNext(new TimeInterval<T>((T)(object)(_range.Start + i), interval));
             }
         }
     }
@@ -895,7 +895,7 @@ public static partial class LinqMixins
             }
 
             var coordinator = new ProbeCoordinator<T>(_source, _period, _sequencer, observer);
-            if (!IsRequiredSubscribeOnCurrentThread() || !Sequencer.CurrentThread.IsScheduleRequired)
+            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return coordinator.Run();
             }
@@ -910,10 +910,6 @@ public static partial class LinqMixins
     /// Coordinates a sampled observable sequence without the anonymous signal wrapper.
     /// </summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Usage",
-        "CA2213:Disposable fields should be disposed",
-        Justification = "Disposable fields are released through interlocked exchange in Dispose.")]
     private sealed class ProbeCoordinator<T> : IObserver<T>, IDisposable
     {
         /// <summary>
@@ -945,6 +941,10 @@ public static partial class LinqMixins
         /// <summary>
         /// The active source subscription.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Usage",
+            "CA2213:Disposable fields should be disposed",
+            Justification = "Disposed via the thread-safe Interlocked.Exchange teardown in Dispose; CA2213 does not recognize disposal of a field through Interlocked.Exchange.")]
         private IDisposable? _subscription;
 
         /// <summary>
@@ -1000,11 +1000,9 @@ public static partial class LinqMixins
                 return;
             }
 
-            var timer = Interlocked.Exchange(ref _timer, null);
-            timer?.Dispose();
+            Interlocked.Exchange(ref _timer, null)?.Dispose();
 
-            var subscription = Interlocked.Exchange(ref _subscription, null);
-            subscription?.Dispose();
+            Interlocked.Exchange(ref _subscription, null)?.Dispose();
         }
 
         /// <summary>

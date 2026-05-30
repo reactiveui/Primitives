@@ -2,9 +2,6 @@
 
   <PropertyGroup>
     <TargetFrameworks>$(WindowsLibraryTargetFrameworks)</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
     <UseWPF>true</UseWPF>
     <PackageDescription>WPF integration sequencers for ReactiveUI.Primitives.</PackageDescription>
     <PackageTags>system.reactive;rx;reactive;primitives;wpf;dispatcher;scheduler;sequencer</PackageTags>

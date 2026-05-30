@@ -48,9 +48,7 @@ public sealed partial class CurrentThreadSequencer : ISequencer
     /// Gets a value indicating whether gets a value that indicates whether the caller must call a Schedule method.
     /// </summary>
     [EditorBrowsable(EditorBrowsableState.Advanced)]
-#pragma warning disable CA1822 // Mark members as static
-    public bool IsScheduleRequired => !_running;
-#pragma warning restore CA1822 // Mark members as static
+    public static bool IsScheduleRequired => !_running;
 
     /// <summary>
     /// Gets the scheduler's notion of current time.

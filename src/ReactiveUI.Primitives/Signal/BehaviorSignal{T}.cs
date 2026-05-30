@@ -19,13 +19,10 @@ public class BehaviorSignal<T> : ISignal<T>
     /// </summary>
     private readonly Lock _gate = new();
 
-#pragma warning disable S3459 // Broadcaster<T> is a mutable struct whose default value is the empty broadcaster.
-
     /// <summary>
     /// Stores state for the signal implementation.
     /// </summary>
     private Broadcaster<T> _broadcaster;
-#pragma warning restore S3459
 
     /// <summary>
     /// Stores state for the signal implementation.
@@ -49,6 +46,7 @@ public class BehaviorSignal<T> : ISignal<T>
     public BehaviorSignal(T defaultValue)
     {
         _lastValue = defaultValue;
+        _broadcaster = default;
     }
 
     /// <summary>

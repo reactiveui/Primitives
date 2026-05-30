@@ -12,7 +12,6 @@ namespace ReactiveUI.Primitives;
 /// <typeparam name="T3">The third value type.</typeparam>
 internal static class Handle<T1, T2, T3>
 {
-#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
     /// <summary>
     /// Callback that ignores all values.
     /// </summary>
@@ -22,5 +21,4 @@ internal static class Handle<T1, T2, T3>
     /// Error callback that throws the supplied exception.
     /// </summary>
     public static readonly Action<Exception, T1, T2, T3> Throw = (ex, _, _, _) => ex.Throw();
-#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 }

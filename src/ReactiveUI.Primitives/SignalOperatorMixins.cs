@@ -136,7 +136,7 @@ public static partial class LinqMixins
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "KeepType requires the caller to provide the result type.")]
+        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<TResult> KeepType<TResult>(this IObservable<object?> source)
     {
         if (source == null)
@@ -157,7 +157,7 @@ public static partial class LinqMixins
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "CastTo requires the caller to provide the result type.")]
+        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<TResult> CastTo<TResult>(this IObservable<object?> source)
     {
         if (source == null)
@@ -686,9 +686,9 @@ public static partial class LinqMixins
         }
 
         scheduler ??= ThreadPoolSequencer.Instance;
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return CreateShiftedRangeSignal<T>(range, dueTime, scheduler);
+            return new ShiftedRangeSignal<T>(range, Sequencer.Normalize(dueTime), scheduler);
         }
 
         return new ShiftSignal<T>(source, dueTime, scheduler);
@@ -736,9 +736,9 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return CreateRangeListSignal<T>(range);
+            return new RangeListSignal<T>(range);
         }
 
         return new CollectListSignal<T>(source);
@@ -757,9 +757,9 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return CreateRangeArraySignal<T>(range);
+            return new RangeArraySignal<T>(range);
         }
 
         return new CollectArraySignal<T>(source);
@@ -820,56 +820,11 @@ public static partial class LinqMixins
         new(left, right, selector);
 
     /// <summary>
-    /// Creates a range-backed list signal without per-value subscriptions.
-    /// </summary>
-    /// <typeparam name="T">The result element type.</typeparam>
-    /// <param name="range">The source range.</param>
-    /// <returns>The list signal.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The generic type is validated by the caller before creating a range-backed signal.")]
-    private static RangeListSignal<T> CreateRangeListSignal<T>(RangeSignal range) =>
-        new(range);
-
-    /// <summary>
-    /// Creates a range-backed array signal without per-value subscriptions.
-    /// </summary>
-    /// <typeparam name="T">The result element type.</typeparam>
-    /// <param name="range">The source range.</param>
-    /// <returns>The array signal.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The generic type is validated by the caller before creating a range-backed signal.")]
-    private static RangeArraySignal<T> CreateRangeArraySignal<T>(RangeSignal range) =>
-        new(range);
-
-    /// <summary>
     /// Determines whether a generic observer type can receive boxed range integers.
     /// </summary>
-    /// <typeparam name="T">The observer value type.</typeparam>
+    /// <param name="elementType">The observer value type.</param>
     /// <returns><see langword="true"/> when the cast is valid.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The method is a generic type test used by range fast paths.")]
-    private static bool CanReadRangeAs<T>() => typeof(T).IsAssignableFrom(typeof(int));
-
-    /// <summary>
-    /// Creates a range-backed delayed sequence using one scheduled batch.
-    /// </summary>
-    /// <typeparam name="T">The observer value type.</typeparam>
-    /// <param name="range">The source range.</param>
-    /// <param name="dueTime">The delay applied to the range notification batch.</param>
-    /// <param name="scheduler">The sequencer used to schedule the batch.</param>
-    /// <returns>A delayed range signal.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The generic type is validated by the caller before creating a range-backed signal.")]
-    private static ShiftedRangeSignal<T> CreateShiftedRangeSignal<T>(RangeSignal range, TimeSpan dueTime, ISequencer scheduler) =>
-        new(range, Sequencer.Normalize(dueTime), scheduler);
+    private static bool CanReadRangeAs(Type elementType) => elementType.IsAssignableFrom(typeof(int));
 
     /// <summary>
     /// Creates a range-concat signal for synchronous Switch over known range inners.
@@ -878,10 +833,6 @@ public static partial class LinqMixins
     /// <param name="sources">Outer sources.</param>
     /// <param name="signal">Optimized signal when available.</param>
     /// <returns><see langword="true"/> when the fast path applies.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The generic type is validated before casting the integer range signal.")]
     private static bool TryCreateSynchronousSwitchRangeSignal<T>(IObservable<IObservable<T>> sources, out IObservable<T> signal)
     {
         signal = null!;
@@ -921,7 +872,7 @@ public static partial class LinqMixins
     {
         for (var i = 0; i < range.Count; i++)
         {
-            observer.OnNext(CreateRangeValue<T>(range.Start + i));
+            observer.OnNext((T)(object)(range.Start + i));
         }
 
         observer.OnCompleted();
@@ -940,7 +891,7 @@ public static partial class LinqMixins
     {
         for (var i = 0; i < range.Count; i++)
         {
-            onNext(CreateRangeValue<T>(range.Start + i));
+            onNext((T)(object)(range.Start + i));
         }
 
         onCompleted();

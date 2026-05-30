@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>
@@ -54,6 +52,6 @@ public partial class StateSignal<T> : BehaviorSignal<T>
             throw new ArgumentNullException(nameof(selector));
         }
 
-        return new ProjectedReadOnlyState<T, TResult>(this, selector);
+        return ProjectedReadOnlyState<T, TResult>.Create(this, selector);
     }
 }

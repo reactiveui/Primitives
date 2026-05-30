@@ -102,10 +102,6 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
     /// <param name="onError">The onError value.</param>
     /// <param name="onCompleted">The onCompleted value.</param>
     /// <returns>The subscription.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S1541:Methods and properties should not be too complex",
-        Justification = "The method keeps array, read-only-list, iterator, and cancellation fast paths allocation-free.")]
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
         if (onNext == null)
@@ -118,26 +114,9 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
             throw new ArgumentNullException(nameof(onCompleted));
         }
 
-        if (!_cancellationToken.CanBeCanceled && _values is T[] array)
+        if (TryDrainIndexable(onNext, onCompleted, out var fast))
         {
-            for (var i = 0; i < array.Length; i++)
-            {
-                onNext(array[i]);
-            }
-
-            onCompleted();
-            return Disposable.Empty;
-        }
-
-        if (!_cancellationToken.CanBeCanceled && _values is IReadOnlyList<T> readOnlyList)
-        {
-            for (var i = 0; i < readOnlyList.Count; i++)
-            {
-                onNext(readOnlyList[i]);
-            }
-
-            onCompleted();
-            return Disposable.Empty;
+            return fast;
         }
 
         foreach (var value in _values)
@@ -174,6 +153,46 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
         }
 
         values = [];
+        return false;
+    }
+
+    /// <summary>
+    /// Drains an indexable, non-cancellable backing sequence without enumerator allocation.
+    /// </summary>
+    /// <param name="onNext">The value callback.</param>
+    /// <param name="onCompleted">The completion callback.</param>
+    /// <param name="result">The empty subscription when drained.</param>
+    /// <returns><see langword="true"/> when the sequence was drained here.</returns>
+    private bool TryDrainIndexable(Action<T> onNext, Action onCompleted, out IDisposable result)
+    {
+        result = Disposable.Empty;
+        if (_cancellationToken.CanBeCanceled)
+        {
+            return false;
+        }
+
+        if (_values is T[] array)
+        {
+            for (var i = 0; i < array.Length; i++)
+            {
+                onNext(array[i]);
+            }
+
+            onCompleted();
+            return true;
+        }
+
+        if (_values is IReadOnlyList<T> readOnlyList)
+        {
+            for (var i = 0; i < readOnlyList.Count; i++)
+            {
+                onNext(readOnlyList[i]);
+            }
+
+            onCompleted();
+            return true;
+        }
+
         return false;
     }
 }

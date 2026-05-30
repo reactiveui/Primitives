@@ -208,7 +208,6 @@ public static partial class LinqMixins
 
     /// <summary>Coordinates sequential concatenation of inner sources for <c>Chain</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "The pocket is released through Dispose.")]
     private sealed class ChainCoordinator<T> : IDisposable
     {
         /// <summary>Guards the queue and active/completed flags.</summary>
@@ -342,7 +341,6 @@ public static partial class LinqMixins
 
     /// <summary>Coordinates concurrent merging of inner sources for <c>Blend</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "The pocket is released through Dispose.")]
     private sealed class BlendCoordinator<T> : IDisposable
     {
         /// <summary>Serializes downstream callbacks and guards counters.</summary>
@@ -623,7 +621,7 @@ public static partial class LinqMixins
             }
 
             var coordinator = new ExpireCoordinator<T>(_source, _dueTime, _sequencer, observer);
-            if (!IsRequiredSubscribeOnCurrentThread() || !Sequencer.CurrentThread.IsScheduleRequired)
+            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return coordinator.Run();
             }
@@ -638,10 +636,6 @@ public static partial class LinqMixins
     /// Coordinates timeout delivery with one active timer.
     /// </summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Usage",
-        "CA2213:Disposable fields should be disposed",
-        Justification = "Disposable fields are released through interlocked exchange in Dispose.")]
     private sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
     {
         /// <summary>
@@ -667,11 +661,19 @@ public static partial class LinqMixins
         /// <summary>
         /// The active source subscription.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Usage",
+            "CA2213:Disposable fields should be disposed",
+            Justification = "Disposed via the thread-safe Interlocked.Exchange teardown in Dispose; CA2213 does not recognize disposal of a field through Interlocked.Exchange.")]
         private IDisposable? _subscription;
 
         /// <summary>
         /// The active timeout timer.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Usage",
+            "CA2213:Disposable fields should be disposed",
+            Justification = "Disposed via the thread-safe Interlocked.Exchange teardown in Dispose; CA2213 does not recognize disposal of a field through Interlocked.Exchange.")]
         private IDisposable? _timer;
 
         /// <summary>
@@ -697,11 +699,9 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public void Dispose()
         {
-            var timer = Interlocked.Exchange(ref _timer, null);
-            timer?.Dispose();
+            Interlocked.Exchange(ref _timer, null)?.Dispose();
 
-            var subscription = Interlocked.Exchange(ref _subscription, null);
-            subscription?.Dispose();
+            Interlocked.Exchange(ref _subscription, null)?.Dispose();
         }
 
         /// <inheritdoc/>
@@ -1205,11 +1205,13 @@ public static partial class LinqMixins
             lock (_gate)
             {
                 _leftDone = true;
-                if (!_completed && _rightDone)
+                if (_completed || !_rightDone)
                 {
-                    _completed = true;
-                    _observer.OnCompleted();
+                    return;
                 }
+
+                _completed = true;
+                _observer.OnCompleted();
             }
         }
 
@@ -1221,11 +1223,13 @@ public static partial class LinqMixins
             lock (_gate)
             {
                 _rightDone = true;
-                if (!_completed && _leftDone)
+                if (_completed || !_leftDone)
                 {
-                    _completed = true;
-                    _observer.OnCompleted();
+                    return;
                 }
+
+                _completed = true;
+                _observer.OnCompleted();
             }
         }
 

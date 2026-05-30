@@ -7,8 +7,6 @@ using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals.Core;
 
-#pragma warning disable SA1107, SA1116, SA1117, SA1501, SA1611, SA1615, SA1618
-
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>
@@ -19,12 +17,19 @@ public static partial class Signal
     /// <summary>
     /// Creates a finite integer signal from <paramref name="start"/> for <paramref name="count"/> values.
     /// </summary>
+    /// <param name="start">The first value to emit.</param>
+    /// <param name="count">The number of values to emit.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<int> Sequence(int start, int count) =>
         Sequence(start, count, Sequencer.CurrentThread);
 
     /// <summary>
     /// Creates a finite integer signal from <paramref name="start"/> for <paramref name="count"/> values on <paramref name="scheduler"/>.
     /// </summary>
+    /// <param name="start">The first value to emit.</param>
+    /// <param name="count">The number of values to emit.</param>
+    /// <param name="scheduler">The scheduler.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<int> Sequence(int start, int count, ISequencer scheduler)
     {
         if (count < 0)
@@ -63,12 +68,19 @@ public static partial class Signal
     /// <summary>
     /// Creates a signal that repeats a value forever.
     /// </summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="value">The value.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<T> Loop<T>(T value) =>
         new LoopSignal<T>(value);
 
     /// <summary>
     /// Creates a signal that repeats a value <paramref name="count"/> times.
     /// </summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="value">The value.</param>
+    /// <param name="count">The number of times to repeat the value.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<T> Loop<T>(T value, int count)
     {
         if (count < 0)
@@ -87,6 +99,13 @@ public static partial class Signal
     /// <summary>
     /// Unfolds state into a finite signal.
     /// </summary>
+    /// <typeparam name="TState">The type of the state.</typeparam>
+    /// <typeparam name="TResult">The type of the result.</typeparam>
+    /// <param name="initialState">The initial state.</param>
+    /// <param name="condition">The condition that determines whether to continue.</param>
+    /// <param name="iterate">The function that advances the state.</param>
+    /// <param name="resultSelector">The function that produces the result from the state.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<TResult> Unfold<TState, TResult>(
         TState initialState,
         Func<TState, bool> condition,
@@ -114,6 +133,13 @@ public static partial class Signal
     /// <summary>
     /// Generates a finite signal from state. Alias of <see cref="Unfold{TState, TResult}(TState, Func{TState, bool}, Func{TState, TState}, Func{TState, TResult})"/>.
     /// </summary>
+    /// <typeparam name="TState">The type of the state.</typeparam>
+    /// <typeparam name="TResult">The type of the result.</typeparam>
+    /// <param name="initialState">The initial state.</param>
+    /// <param name="condition">The condition that determines whether to continue.</param>
+    /// <param name="iterator">The function that advances the state.</param>
+    /// <param name="resultSelector">The function that produces the result from the state.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<TResult> Iterate<TState, TResult>(
         TState initialState,
         Func<TState, bool> condition,
@@ -124,6 +150,11 @@ public static partial class Signal
     /// <summary>
     /// Creates a signal whose subscription lifetime owns a resource.
     /// </summary>
+    /// <typeparam name="TResource">The type of the resource.</typeparam>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="resourceFactory">The factory that creates the resource.</param>
+    /// <param name="signalFactory">The factory that creates the signal from the resource.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<T> Use<TResource, T>(Func<TResource> resourceFactory, Func<TResource, IObservable<T>> signalFactory)
         where TResource : IDisposable
     {
@@ -143,6 +174,9 @@ public static partial class Signal
     /// <summary>
     /// Converts an event into a signal of event pattern values.
     /// </summary>
+    /// <param name="addHandler">The action that subscribes the event handler.</param>
+    /// <param name="removeHandler">The action that unsubscribes the event handler.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<EventPattern<EventArgs>> FromEventPattern(
         Action<EventHandler> addHandler,
         Action<EventHandler> removeHandler)
@@ -170,6 +204,10 @@ public static partial class Signal
     /// <summary>
     /// Converts an event into a signal of event pattern values.
     /// </summary>
+    /// <typeparam name="TEventArgs">The type of the event arguments.</typeparam>
+    /// <param name="addHandler">The action that subscribes the event handler.</param>
+    /// <param name="removeHandler">The action that unsubscribes the event handler.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<EventPattern<TEventArgs>> FromEventPattern<TEventArgs>(
         Action<EventHandler<TEventArgs>> addHandler,
         Action<EventHandler<TEventArgs>> removeHandler)
@@ -198,6 +236,9 @@ public static partial class Signal
     /// <summary>
     /// Creates a signal from an enumerable sequence.
     /// </summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="values">The values to emit.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<T> FromEnumerable<T>(IEnumerable<T> values)
     {
         if (values == null)
@@ -211,6 +252,10 @@ public static partial class Signal
     /// <summary>
     /// Creates a signal from an enumerable sequence and stops enumeration when the token is cancelled.
     /// </summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="values">The values to emit.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<T> FromEnumerable<T>(IEnumerable<T> values, CancellationToken cancellationToken)
     {
         if (values == null)
@@ -226,6 +271,13 @@ public static partial class Signal
     /// <summary>
     /// Creates a signal from a task instance.
     /// </summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="task">The task to convert.</param>
+    /// <returns>An Signals.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4462:Calls to \"async\" methods should not be blocking",
+        Justification = "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
     public static IObservable<T> FromTask<T>(Task<T> task)
     {
         if (task == null)
@@ -235,9 +287,7 @@ public static partial class Signal
 
         if (task.Status == TaskStatus.RanToCompletion)
         {
-#pragma warning disable S4462 // Completed-task fast path avoids async state machine allocation.
-            return Emit(task.GetAwaiter().GetResult());
-#pragma warning restore S4462
+            return Emit(task.Result);
         }
 
         if (task.IsCanceled)
@@ -284,6 +334,9 @@ public static partial class Signal
     /// <summary>
     /// Creates a signal by invoking an asynchronous factory at subscription time.
     /// </summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="taskFactory">The factory that creates the task.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<T> FromAsync<T>(Func<Task<T>> taskFactory)
     {
         if (taskFactory == null)
@@ -297,12 +350,19 @@ public static partial class Signal
     /// <summary>
     /// Creates a signal by invoking an asynchronous factory at subscription time.
     /// </summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="taskFactory">The factory that creates the task.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<T> FromAsync<T>(Func<CancellationToken, Task<T>> taskFactory) =>
         FromAsync(taskFactory, CancellationToken.None);
 
     /// <summary>
     /// Creates a signal by invoking an asynchronous factory at subscription time.
     /// </summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="taskFactory">The factory that creates the task.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<T> FromAsync<T>(Func<CancellationToken, Task<T>> taskFactory, CancellationToken cancellationToken)
     {
         if (taskFactory == null)
@@ -316,12 +376,19 @@ public static partial class Signal
     /// <summary>
     /// Runs a function on the supplied scheduler and emits its result.
     /// </summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="function">The function to run.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<T> Start<T>(Func<T> function) =>
         Start(function, Sequencer.Default);
 
     /// <summary>
     /// Runs a function on the supplied scheduler and emits its result.
     /// </summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="function">The function to run.</param>
+    /// <param name="scheduler">The scheduler.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<T> Start<T>(Func<T> function, ISequencer scheduler)
     {
         if (function == null)
@@ -372,12 +439,17 @@ public static partial class Signal
     /// <summary>
     /// Runs an action on the supplied scheduler and emits <see cref="RxVoid.Default"/> when it completes.
     /// </summary>
+    /// <param name="action">The action to run.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<RxVoid> Start(Action action) =>
         Start(action, Sequencer.Default);
 
     /// <summary>
     /// Runs an action on the supplied scheduler and emits <see cref="RxVoid.Default"/> when it completes.
     /// </summary>
+    /// <param name="action">The action to run.</param>
+    /// <param name="scheduler">The scheduler.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<RxVoid> Start(Action action, ISequencer scheduler)
     {
         if (action == null)
@@ -398,12 +470,19 @@ public static partial class Signal
     /// <summary>
     /// Creates a signal from an async enumerable sequence and cancels enumeration when disposed.
     /// </summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="values">The values to emit.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<T> FromAsyncEnumerable<T>(IAsyncEnumerable<T> values) =>
         FromAsyncEnumerable(values, CancellationToken.None);
 
     /// <summary>
     /// Creates a signal from an async enumerable sequence and cancels enumeration when disposed.
     /// </summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="values">The values to emit.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<T> FromAsyncEnumerable<T>(IAsyncEnumerable<T> values, CancellationToken cancellationToken)
     {
         if (values == null)
@@ -419,12 +498,17 @@ public static partial class Signal
     /// <summary>
     /// Emits a single zero tick after the due time.
     /// </summary>
+    /// <param name="dueTime">The relative time after which to emit the tick.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<long> After(TimeSpan dueTime) =>
         After(dueTime, ThreadPoolSequencer.Instance);
 
     /// <summary>
     /// Emits a single zero tick after the due time.
     /// </summary>
+    /// <param name="dueTime">The relative time after which to emit the tick.</param>
+    /// <param name="scheduler">The scheduler.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<long> After(TimeSpan dueTime, ISequencer scheduler)
     {
         if (scheduler == null)
@@ -438,12 +522,17 @@ public static partial class Signal
     /// <summary>
     /// Emits a single zero tick at the specified absolute due time.
     /// </summary>
+    /// <param name="dueTime">The absolute time at which to emit the tick.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<long> After(DateTimeOffset dueTime) =>
         After(dueTime, ThreadPoolSequencer.Instance);
 
     /// <summary>
     /// Emits a single zero tick at the specified absolute due time.
     /// </summary>
+    /// <param name="dueTime">The absolute time at which to emit the tick.</param>
+    /// <param name="scheduler">The scheduler.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<long> After(DateTimeOffset dueTime, ISequencer scheduler)
     {
         if (scheduler == null)
@@ -457,12 +546,19 @@ public static partial class Signal
     /// <summary>
     /// Emits first after <paramref name="dueTime"/> and then at <paramref name="period"/>.
     /// </summary>
+    /// <param name="dueTime">The relative time before the first tick.</param>
+    /// <param name="period">The period between subsequent ticks.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<long> After(TimeSpan dueTime, TimeSpan period) =>
         After(dueTime, period, ThreadPoolSequencer.Instance);
 
     /// <summary>
     /// Emits first after <paramref name="dueTime"/> and then at <paramref name="period"/>.
     /// </summary>
+    /// <param name="dueTime">The relative time before the first tick.</param>
+    /// <param name="period">The period between subsequent ticks.</param>
+    /// <param name="scheduler">The scheduler.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<long> After(TimeSpan dueTime, TimeSpan period, ISequencer scheduler)
     {
         if (scheduler == null)
@@ -492,12 +588,17 @@ public static partial class Signal
     /// <summary>
     /// Emits monotonically increasing ticks at the specified period.
     /// </summary>
+    /// <param name="period">The period between ticks.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<long> Every(TimeSpan period) =>
         Every(period, ThreadPoolSequencer.Instance);
 
     /// <summary>
     /// Emits monotonically increasing ticks at the specified period.
     /// </summary>
+    /// <param name="period">The period between ticks.</param>
+    /// <param name="scheduler">The scheduler.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<long> Every(TimeSpan period, ISequencer scheduler)
     {
         if (period < TimeSpan.Zero)
@@ -516,16 +617,24 @@ public static partial class Signal
     /// <summary>
     /// Alias for <see cref="Every(TimeSpan, ISequencer?)"/>.
     /// </summary>
+    /// <param name="period">The period between ticks.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<long> Pulse(TimeSpan period) => Every(period);
 
     /// <summary>
     /// Alias for <see cref="Every(TimeSpan, ISequencer?)"/>.
     /// </summary>
+    /// <param name="period">The period between ticks.</param>
+    /// <param name="scheduler">The scheduler.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<long> Pulse(TimeSpan period, ISequencer scheduler) => Every(period, scheduler);
 
     /// <summary>
     /// Concatenates the supplied signals.
     /// </summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="sources">The signals to concatenate.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<T> Chain<T>(params IObservable<T>[] sources)
     {
         var validated = ValidateSources(sources);
@@ -536,6 +645,9 @@ public static partial class Signal
     /// <summary>
     /// Merges the supplied signals.
     /// </summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="sources">The signals to merge.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<T> Blend<T>(params IObservable<T>[] sources)
     {
         var validated = ValidateSources(sources);
@@ -546,6 +658,9 @@ public static partial class Signal
     /// <summary>
     /// Races the supplied signals and mirrors the first one to produce a value or terminal signal.
     /// </summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="sources">The signals to race.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<T> Race<T>(params IObservable<T>[] sources)
     {
         var validated = ValidateSources(sources);
@@ -560,24 +675,52 @@ public static partial class Signal
     /// <summary>
     /// Mirrors the first supplied signal to produce a value or terminal signal.
     /// </summary>
+    /// <typeparam name="TLeft">The type of the left signal values.</typeparam>
+    /// <typeparam name="TRight">The type of the right signal values.</typeparam>
+    /// <typeparam name="TResult">The type of the result.</typeparam>
+    /// <param name="left">The left signal.</param>
+    /// <param name="right">The right signal.</param>
+    /// <param name="selector">The function that combines the paired values.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<TResult> Pair<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) =>
         left.Pair(right, selector);
 
     /// <summary>
     /// Combines the latest values from two signals.
     /// </summary>
+    /// <typeparam name="TLeft">The type of the left signal values.</typeparam>
+    /// <typeparam name="TRight">The type of the right signal values.</typeparam>
+    /// <typeparam name="TResult">The type of the result.</typeparam>
+    /// <param name="left">The left signal.</param>
+    /// <param name="right">The right signal.</param>
+    /// <param name="selector">The function that combines the latest values.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<TResult> SyncLatest<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) =>
         left.SyncLatest(right, selector);
 
     /// <summary>
     /// Combines latest values from two signals using latest-fusion semantics.
     /// </summary>
+    /// <typeparam name="TLeft">The type of the left signal values.</typeparam>
+    /// <typeparam name="TRight">The type of the right signal values.</typeparam>
+    /// <typeparam name="TResult">The type of the result.</typeparam>
+    /// <param name="left">The left signal.</param>
+    /// <param name="right">The right signal.</param>
+    /// <param name="selector">The function that combines the latest values.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<TResult> PairLatest<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) =>
         left.PairLatest(right, selector);
 
     /// <summary>
     /// Waits for both signals to complete and emits one result from their last values.
     /// </summary>
+    /// <typeparam name="TLeft">The type of the left signal values.</typeparam>
+    /// <typeparam name="TRight">The type of the right signal values.</typeparam>
+    /// <typeparam name="TResult">The type of the result.</typeparam>
+    /// <param name="left">The left signal.</param>
+    /// <param name="right">The right signal.</param>
+    /// <param name="selector">The function that combines the last values.</param>
+    /// <returns>An Signals.</returns>
     public static IObservable<TResult> ForkJoin<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) =>
         left.ForkJoin(right, selector);
 

@@ -41,7 +41,7 @@ internal sealed class EverySignal : IRequireCurrentThread<long>
         }
 
         var coordinator = new EveryCoordinator(observer, _scheduler, _period);
-        if (!IsRequiredSubscribeOnCurrentThread() || !Sequencer.CurrentThread.IsScheduleRequired)
+        if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
         {
             return coordinator.Run();
         }
@@ -52,11 +52,7 @@ internal sealed class EverySignal : IRequireCurrentThread<long>
     }
 
     /// <summary>Reschedules the recurring tick without a captured closure.</summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Design",
-        "CA1001:Types that own disposable fields should be disposable",
-        Justification = "The slot is the subscription returned from Run; its lifetime is owned by the subscriber.")]
-    private sealed class EveryCoordinator
+    private sealed class EveryCoordinator : IDisposable
     {
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<long> _observer;
@@ -88,12 +84,15 @@ internal sealed class EverySignal : IRequireCurrentThread<long>
             _tickAction = Tick;
         }
 
-        /// <summary>Schedules the first tick and returns the cancellation slot.</summary>
+        /// <inheritdoc/>
+        public void Dispose() => _slot.Dispose();
+
+        /// <summary>Schedules the first tick and returns the coordinator as the subscription.</summary>
         /// <returns>The disposable that cancels the recurring schedule.</returns>
-        internal SingleReplaceableDisposable Run()
+        internal EveryCoordinator Run()
         {
             ScheduleNext();
-            return _slot;
+            return this;
         }
 
         /// <summary>Schedules the next tick into the cancellation slot.</summary>

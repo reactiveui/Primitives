@@ -712,9 +712,9 @@ public static partial class LinqMixins
         }
 
         scheduler ??= ThreadPoolSequencer.Instance;
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return CreateShiftedRangeSignal<T>(range, dueTime, scheduler);
+            return new ShiftedRangeSignal<T>(range, Sequencer.Normalize(dueTime), scheduler);
         }
 
         return new DelayStartSignal<T>(source, dueTime, scheduler);
@@ -836,7 +836,7 @@ public static partial class LinqMixins
         }
 
         scheduler ??= Sequencer.Immediate;
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
             return new TimestampRangeSignal<T>(range, scheduler);
         }
@@ -870,7 +870,7 @@ public static partial class LinqMixins
         }
 
         scheduler ??= Sequencer.Immediate;
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
             return new TimeIntervalRangeSignal<T>(range, scheduler);
         }
@@ -957,9 +957,9 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return Task.FromResult(CreateRangeValue<T>(range.Start));
+            return Task.FromResult((T)(object)range.Start);
         }
 
         return source.FirstOrDefaultCoreAsync(false, default!);
@@ -979,9 +979,9 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return Task.FromResult(CreateRangeValue<T>(range.Start));
+            return Task.FromResult((T)(object)range.Start);
         }
 
         return source.FirstOrDefaultCoreAsync(true, default!);
@@ -1002,9 +1002,9 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return Task.FromResult(CreateRangeValue<T>(range.Start));
+            return Task.FromResult((T)(object)range.Start);
         }
 
         return source.FirstOrDefaultCoreAsync(true, defaultValue);
@@ -1029,10 +1029,6 @@ public static partial class LinqMixins
     /// <returns>A task that completes with the final source value.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The source completes without producing a value.</exception>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S1541:Methods and properties should not be too complex",
-        Justification = "ToTask keeps cancellation, terminal, and synchronous fast paths together to avoid extra allocations.")]
     public static Task<T> ToTask<T>(this IObservable<T> source, CancellationToken cancellationToken)
     {
         if (source == null)
@@ -1045,9 +1041,10 @@ public static partial class LinqMixins
             return Task.FromCanceled<T>(cancellationToken);
         }
 
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        var rangeTask = TryCompleteFromRange(source);
+        if (rangeTask is not null)
         {
-            return Task.FromResult(CreateRangeValue<T>(range.Start + range.Count - 1));
+            return rangeTask;
         }
 
         var completion = new TaskCompletionSource<T>();
@@ -1243,9 +1240,26 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return Task.FromResult(CreateRangeArray<T>(range));
+            if (typeof(T) == typeof(int))
+            {
+                var integers = new int[range.Count];
+                for (var i = 0; i < integers.Length; i++)
+                {
+                    integers[i] = range.Start + i;
+                }
+
+                return Task.FromResult((T[])(object)integers);
+            }
+
+            var boxed = new T[range.Count];
+            for (var i = 0; i < boxed.Length; i++)
+            {
+                boxed[i] = (T)(object)(range.Start + i);
+            }
+
+            return Task.FromResult(boxed);
         }
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER
@@ -1291,9 +1305,26 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return Task.FromResult((IList<T>)CreateRangeList<T>(range));
+            if (typeof(T) == typeof(int))
+            {
+                var integers = new List<int>(range.Count);
+                for (var i = 0; i < range.Count; i++)
+                {
+                    integers.Add(range.Start + i);
+                }
+
+                return Task.FromResult((IList<T>)(object)integers);
+            }
+
+            var rangeValues = new List<T>(range.Count);
+            for (var i = 0; i < range.Count; i++)
+            {
+                rangeValues.Add((T)(object)(range.Start + i));
+            }
+
+            return Task.FromResult((IList<T>)rangeValues);
         }
 
         var completion = new TaskCompletionSource<IList<T>>();
@@ -1412,84 +1443,15 @@ public static partial class LinqMixins
 #endif
 
     /// <summary>
-    /// Converts an integer value to the specified numeric type.
+    /// Returns the final value as a completed task when the source is a readable range, avoiding a subscription.
     /// </summary>
-    /// <remarks>Uses boxing and unboxing to perform the conversion. The generic type parameter is expected to
-    /// be validated by the caller.</remarks>
-    /// <typeparam name="T">The target numeric type.</typeparam>
-    /// <param name="value">The integer value to convert.</param>
-    /// <returns>The value converted to type <typeparamref name="T"/>.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The generic type is validated by the caller before reading range values.")]
-    private static T CreateRangeValue<T>(int value) => (T)(object)value;
-
-    /// <summary>
-    /// Creates an array of sequential values from the specified range signal.
-    /// </summary>
-    /// <typeparam name="T">The element type of the array.</typeparam>
-    /// <param name="range">The range signal specifying the start value and count.</param>
-    /// <returns>An array containing sequential values from the range start to start + count - 1.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The generic type is validated by the caller before reading range values.")]
-    private static T[] CreateRangeArray<T>(RangeSignal range)
-    {
-        if (typeof(T) == typeof(int))
-        {
-            var values = new int[range.Count];
-            for (var i = 0; i < values.Length; i++)
-            {
-                values[i] = range.Start + i;
-            }
-
-            return (T[])(object)values;
-        }
-
-        var boxed = new T[range.Count];
-        for (var i = 0; i < boxed.Length; i++)
-        {
-            boxed[i] = CreateRangeValue<T>(range.Start + i);
-        }
-
-        return boxed;
-    }
-
-    /// <summary>
-    /// Creates a list of values from the specified range signal.
-    /// </summary>
-    /// <remarks>Optimized for integer types by directly incrementing values. For other types, uses
-    /// <c>CreateRangeValue</c> to generate each element.</remarks>
-    /// <typeparam name="T">The type of elements to create in the list.</typeparam>
-    /// <param name="range">The range signal containing the start value and count.</param>
-    /// <returns>A list containing the generated range values.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The generic type is validated by the caller before reading range values.")]
-    private static List<T> CreateRangeList<T>(RangeSignal range)
-    {
-        if (typeof(T) == typeof(int))
-        {
-            var integers = new List<int>(range.Count);
-            for (var i = 0; i < range.Count; i++)
-            {
-                integers.Add(range.Start + i);
-            }
-
-            return (List<T>)(object)integers;
-        }
-
-        var values = new List<T>(range.Count);
-        for (var i = 0; i < range.Count; i++)
-        {
-            values.Add(CreateRangeValue<T>(range.Start + i));
-        }
-
-        return values;
-    }
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A completed task with the final range value, or <see langword="null"/> when not applicable.</returns>
+    private static Task<T>? TryCompleteFromRange<T>(IObservable<T> source) =>
+        source is RangeSignal range && CanReadRangeAs(typeof(T))
+            ? Task.FromResult((T)(object)(range.Start + range.Count - 1))
+            : null;
 
     /// <summary>
     /// Sink that suppresses adjacent values whose projected key matches the previous one.

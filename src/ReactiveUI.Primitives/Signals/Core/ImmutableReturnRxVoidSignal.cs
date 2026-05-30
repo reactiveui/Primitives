@@ -12,14 +12,11 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// </summary>
 internal sealed class ImmutableReturnRxVoidSignal : IRequireCurrentThread<RxVoid>, IInlineSignal<RxVoid>
 {
-#pragma warning disable SA1401 // Fields should be private
-
     /// <summary>
     /// Executes the new operation.
     /// </summary>
     /// <returns>The result.</returns>
     internal static readonly ImmutableReturnRxVoidSignal Instance = new();
-#pragma warning restore SA1401 // Fields should be private
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ImmutableReturnRxVoidSignal"/> class.

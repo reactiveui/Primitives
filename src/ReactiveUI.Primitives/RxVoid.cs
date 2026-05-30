@@ -22,9 +22,7 @@ public readonly partial struct RxVoid : IEquatable<RxVoid>
     /// <param name="first">The first <see cref="RxVoid"/> value to compare.</param>
     /// <param name="second">The second <see cref="RxVoid"/> value to compare.</param>
     /// <returns>Because <see cref="RxVoid"/> has a single value, this always returns <c>false</c>.</returns>
-#pragma warning disable RCS1163 // Unused parameter.
     public static bool operator !=(RxVoid first, RxVoid second) => false;
-#pragma warning restore RCS1163 // Unused parameter.
 
     /// <summary>
     /// Determines whether the two specified <see cref="RxVoid"/> values are equal. Because <see cref="RxVoid"/> has a single value, this always returns <c>true</c>.
@@ -32,9 +30,7 @@ public readonly partial struct RxVoid : IEquatable<RxVoid>
     /// <param name="first">The first <see cref="RxVoid"/> value to compare.</param>
     /// <param name="second">The second <see cref="RxVoid"/> value to compare.</param>
     /// <returns>Because <see cref="RxVoid"/> has a single value, this always returns <c>true</c>.</returns>
-#pragma warning disable RCS1163 // Unused parameter.
     public static bool operator ==(RxVoid first, RxVoid second) => true;
-#pragma warning restore RCS1163 // Unused parameter.
 
     /// <summary>
     /// Determines whether the specified <see cref="RxVoid"/> value is equal to the current <see cref="RxVoid"/>. Because <see cref="RxVoid"/> has a single value, this always returns <c>true</c>.

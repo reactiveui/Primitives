@@ -2,9 +2,6 @@
 
   <PropertyGroup>
     <TargetFrameworks>$(WinUITargetFrameworks)</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
     <UseWinUI>true</UseWinUI>
     <AppxGeneratePriEnabled Condition="'$(OS)' != 'Windows_NT'">false</AppxGeneratePriEnabled>
     <IncludePriFilesOutputGroup Condition="'$(OS)' != 'Windows_NT'">false</IncludePriFilesOutputGroup>

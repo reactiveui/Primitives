@@ -64,9 +64,12 @@ public sealed partial class TaskPoolSequencer : ISequencer
             throw new ArgumentNullException(nameof(item));
         }
 
-#pragma warning disable CA2008 // The caller supplied the factory; preserving its scheduler is intentional.
-        _taskFactory.StartNew(static state => ((DispatchState)state!).Run(), new DispatchState(this, item));
-#pragma warning restore CA2008
+        _taskFactory.StartNew(
+            static state => ((DispatchState)state!).Run(),
+            new DispatchState(this, item),
+            _taskFactory.CancellationToken,
+            _taskFactory.CreationOptions,
+            _taskFactory.Scheduler ?? TaskScheduler.Default);
     }
 
     /// <summary>

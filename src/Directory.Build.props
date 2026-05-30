@@ -14,6 +14,7 @@
     <RepositoryUrl>https://github.com/reactiveui/Primitives</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <NoWarn>$(NoWarn);1591</NoWarn>

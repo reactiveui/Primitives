@@ -2,9 +2,6 @@
 
   <PropertyGroup>
     <TargetFrameworks>$(MauiTargetFrameworks)</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
     <PackageDescription>MAUI dispatcher integration sequencers for ReactiveUI.Primitives.</PackageDescription>
     <PackageTags>system.reactive;rx;reactive;primitives;maui;dispatcher;scheduler;sequencer</PackageTags>
   </PropertyGroup>

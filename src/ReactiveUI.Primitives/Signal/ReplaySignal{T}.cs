@@ -45,13 +45,11 @@ public partial class ReplaySignal<T> : ISignal<T>
     /// </summary>
     /// <returns>The result.</returns>
     private readonly Lock _observerLock = new();
-#pragma warning disable S3459 // Broadcaster<T> is a mutable struct whose default value is the empty broadcaster.
 
     /// <summary>
     /// Stores state for the signal implementation.
     /// </summary>
     private Broadcaster<T> _broadcaster;
-#pragma warning restore S3459
 
     /// <summary>
     /// Stores state for the signal implementation.
@@ -112,6 +110,7 @@ public partial class ReplaySignal<T> : ISignal<T>
         _window = window;
         _usesWindow = window != TimeSpan.MaxValue;
         _startTime = _usesWindow ? scheduler.Now : DateTimeOffset.MinValue;
+        _broadcaster = default;
         if (_usesWindow || bufferSize == int.MaxValue)
         {
             _queue = new Queue<TimeInterval<T>>();

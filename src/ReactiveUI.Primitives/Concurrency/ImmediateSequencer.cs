@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Threading;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
@@ -47,9 +46,11 @@ public sealed partial class ImmediateSequencer : ISequencer
     /// <param name="action">Action to execute.</param>
     /// <returns>An empty disposable because the action has already run.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
-    #pragma warning disable CA1822 // Mark members as static
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Performance",
+        "CA1822:Mark members as static",
+        Justification = "Must remain an instance method so overload resolution selects it over the allocating ISequencer.Schedule(Action) extension, giving an allocation-free immediate path.")]
     public IDisposable Schedule(Action action)
-    #pragma warning restore CA1822 // Mark members as static
     {
         if (action == null)
         {

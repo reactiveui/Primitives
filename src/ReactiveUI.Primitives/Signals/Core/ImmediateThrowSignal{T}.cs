@@ -53,11 +53,9 @@ internal sealed class ImmediateThrowSignal<T> : IRequireCurrentThread<T>, IInlin
     /// <param name="onError">The onError value.</param>
     /// <param name="onCompleted">The onCompleted value.</param>
     /// <returns>The result.</returns>
-#pragma warning disable RCS1163 // Signature matches IInlineSignal contract.
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
         onError(_error);
         return Disposable.Empty;
     }
-#pragma warning restore RCS1163 // Signature matches IInlineSignal contract.
 }

@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Threading;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
@@ -45,7 +44,7 @@ internal sealed class RecoverSignal<T, TException> : IRequireCurrentThread<T>
             throw new ArgumentNullException(nameof(observer));
         }
 
-        if (!Sequencer.CurrentThread.IsScheduleRequired)
+        if (!CurrentThreadSequencer.IsScheduleRequired)
         {
             return Run(observer);
         }

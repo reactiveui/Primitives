@@ -43,10 +43,8 @@ public static partial class Signal
     /// </summary>
     /// <param name="value">The value.</param>
     /// <returns>An Signals.</returns>
-#pragma warning disable RCS1163 // Unused parameter.
     public static IObservable<RxVoid> Emit(RxVoid value) =>
         ImmutableReturnRxVoidSignal.Instance;
-#pragma warning restore RCS1163 // Unused parameter.
 
     /// <summary>
     /// Emit a single Boolean value immediately, optimized for no allocation.

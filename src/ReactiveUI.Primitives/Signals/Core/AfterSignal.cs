@@ -41,7 +41,7 @@ internal sealed class AfterSignal : IRequireCurrentThread<long>
             throw new ArgumentNullException(nameof(observer));
         }
 
-        if (!IsRequiredSubscribeOnCurrentThread() || !Sequencer.CurrentThread.IsScheduleRequired)
+        if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
         {
             return Run(observer);
         }

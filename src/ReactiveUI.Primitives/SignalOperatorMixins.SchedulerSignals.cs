@@ -51,7 +51,7 @@ public static partial class LinqMixins
             }
 
             var coordinator = new CalmCoordinator<T>(_source, _dueTime, _scheduler);
-            if (!IsRequiredSubscribeOnCurrentThread() || !Sequencer.CurrentThread.IsScheduleRequired)
+            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return coordinator.Run(observer);
             }
@@ -97,7 +97,7 @@ public static partial class LinqMixins
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            if (!IsRequiredSubscribeOnCurrentThread() || !Sequencer.CurrentThread.IsScheduleRequired)
+            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return RunCore(observer);
             }
@@ -225,7 +225,6 @@ public static partial class LinqMixins
 
     /// <summary>Coordinates retry-on-error resubscription for <c>Reattempt</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "The pocket is released through Dispose.")]
     private sealed class ReattemptCoordinator<T> : IDisposable
     {
         /// <summary>The source observable.</summary>

@@ -13,14 +13,11 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// <typeparam name="T">The T type.</typeparam>
 internal sealed class ImmutableNeverSignal<T> : IRequireCurrentThread<T>
 {
-#pragma warning disable SA1401 // Fields should be private
-
     /// <summary>
     /// Executes the new operation.
     /// </summary>
     /// <returns>The result.</returns>
     internal static readonly ImmutableNeverSignal<T> Instance = new();
-#pragma warning restore SA1401 // Fields should be private
 
     /// <summary>
     /// Executes the IsRequiredSubscribeOnCurrentThread operation.

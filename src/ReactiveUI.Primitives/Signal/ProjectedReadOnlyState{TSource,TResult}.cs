@@ -2,11 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
-
-#pragma warning disable S3366 // The source subscription synchronously replays into this fully initialized projection state.
 
 namespace ReactiveUI.Primitives.Signals;
 
@@ -24,21 +21,19 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     private readonly Func<TSource, TResult> _selector;
 
     /// <summary>
-    /// Source subscription.
-    /// </summary>
-    private readonly IDisposable _subscription;
-
-    /// <summary>
     /// Protects mutable state and subscriptions.
     /// </summary>
     private readonly Lock _gate = new();
 
-#pragma warning disable S3459 // Broadcaster<T> is a mutable struct whose default value is the empty broadcaster.
+    /// <summary>
+    /// Source subscription, assigned by the factory after construction.
+    /// </summary>
+    private IDisposable? _subscription;
+
     /// <summary>
     /// Current subscribers.
     /// </summary>
     private Broadcaster<TResult> _broadcaster;
-#pragma warning restore S3459
 
     /// <summary>
     /// Last projected value.
@@ -68,25 +63,11 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectedReadOnlyState{TSource,TResult}"/> class.
     /// </summary>
-    /// <param name="source">Source state.</param>
     /// <param name="selector">Projection function.</param>
-    public ProjectedReadOnlyState(StateSignal<TSource> source, Func<TSource, TResult> selector)
+    private ProjectedReadOnlyState(Func<TSource, TResult> selector)
     {
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
-
-        _selector = selector ?? throw new ArgumentNullException(nameof(selector));
-        _subscription = source.Subscribe(this);
-        _lastError.Rethrow();
-        if (_hasValue)
-        {
-            return;
-        }
-
-        _lastValue = _selector(source.Value);
-        _hasValue = true;
+        _selector = selector;
+        _broadcaster = default;
     }
 
     /// <summary>
@@ -106,6 +87,37 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     /// Gets the stream of current and subsequent values.
     /// </summary>
     public IObservable<TResult> Changed => this;
+
+    /// <summary>
+    /// Creates a projected read-only state and subscribes it to the source after construction, so the
+    /// instance is never exposed to the source while partially constructed.
+    /// </summary>
+    /// <param name="source">The source state signal.</param>
+    /// <param name="selector">The projection applied to each source value.</param>
+    /// <returns>The fully-initialized projected read-only state.</returns>
+    public static ProjectedReadOnlyState<TSource, TResult> Create(StateSignal<TSource> source, Func<TSource, TResult> selector)
+    {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        if (selector == null)
+        {
+            throw new ArgumentNullException(nameof(selector));
+        }
+
+        var state = new ProjectedReadOnlyState<TSource, TResult>(selector);
+        state._subscription = source.Subscribe(state);
+        state._lastError.Rethrow();
+        if (!state._hasValue)
+        {
+            state._lastValue = selector(source.Value);
+            state._hasValue = true;
+        }
+
+        return state;
+    }
 
     /// <inheritdoc/>
     public void OnCompleted()
@@ -220,7 +232,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
             return;
         }
 
-        _subscription.Dispose();
+        _subscription?.Dispose();
         lock (_gate)
         {
             _broadcaster.Clear();

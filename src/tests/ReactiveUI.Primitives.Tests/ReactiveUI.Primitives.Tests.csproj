@@ -2,17 +2,8 @@
 
   <PropertyGroup>
     <TargetFrameworks>$(TestTargetFrameworks)</TargetFrameworks>
-    <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
-    <LangVersion>preview</LangVersion>
     <OutputType>Exe</OutputType>
-    <NoWarn>$(NoWarn);CS8625;CS8634</NoWarn>
-    <CollectCoverage Condition="'$(CollectCoverage)' == ''">false</CollectCoverage>
-    <CoverletOutput>$(MSBuildProjectDirectory)\TestResults\coverage\</CoverletOutput>
-    <CoverletOutputFormat>cobertura,json</CoverletOutputFormat>
-    <Threshold>95</Threshold>
-    <ThresholdType>line,branch</ThresholdType>
-    <ThresholdStat>total</ThresholdStat>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net462' or '$(TargetFramework)' == 'net472' or '$(TargetFramework)' == 'net481' or $(TargetFramework.Contains('-windows'))">

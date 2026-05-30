@@ -719,7 +719,7 @@ public class FactoryOperatorContractTests
         Assert.Equal(SecondValue, completed);
         Assert.Equal(1, errors.Count);
         Assert.Equal(1, eventValues.Count);
-        Assert.Same(eventSource, eventValues[0].Sender);
+        Assert.Same(eventSource, eventValues[0].Sender!);
         Assert.Same(EventArgs.Empty, eventValues[0].EventArgs);
     }
 

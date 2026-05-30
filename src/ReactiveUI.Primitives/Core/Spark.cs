@@ -31,9 +31,9 @@ public static class Spark
     /// <returns>The OnError spark containing the exception.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="error"/> is null.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Sonar Code Smell",
+        "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter determines the returned spark value type.")]
+        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static Spark<T> CreateOnError<T>(Exception error)
     {
         if (error == null)
@@ -53,8 +53,8 @@ public static class Spark
     /// </typeparam>
     /// <returns>The OnCompleted spark.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Sonar Code Smell",
+        "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter determines the completed spark value type.")]
+        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static Spark<T> CreateOnCompleted<T>() => Spark<T>.OnCompleted();
 }

@@ -2,9 +2,6 @@
 
   <PropertyGroup>
     <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(TargetFramework.Contains('-ios'))">

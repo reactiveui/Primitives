@@ -5,16 +5,13 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 
-#pragma warning disable CA1815, S3898 // Awaitable structs are transient execution tokens, not value objects.
-#pragma warning disable S4462 // Awaiter.GetResult must synchronously retrieve the wrapped task result.
-
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>
 /// Awaitable command execution result that avoids allocating a completed task for synchronous commands.
 /// </summary>
 /// <typeparam name="TResult">The command result type.</typeparam>
-public readonly struct CommandExecution<TResult>
+public readonly record struct CommandExecution<TResult>
 {
     /// <summary>
     /// Asynchronous execution task, when execution did not complete synchronously.
@@ -104,7 +101,7 @@ public readonly struct CommandExecution<TResult>
     /// <summary>
     /// Awaiter for command execution.
     /// </summary>
-    public readonly struct Awaiter : ICriticalNotifyCompletion
+    public readonly record struct Awaiter : ICriticalNotifyCompletion
     {
         /// <summary>
         /// Asynchronous execution task.
@@ -150,6 +147,10 @@ public readonly struct CommandExecution<TResult>
         /// Gets the command result or rethrows the command exception.
         /// </summary>
         /// <returns>The command result.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Major Code Smell",
+            "S4462:Calls to \"async\" methods should not be blocking",
+            Justification = "Awaiter GetResult must be synchronous; it runs only after completion and unwraps exceptions without AggregateException wrapping.")]
         public TResult GetResult()
         {
             if (_task != null)

@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.ExceptionServices;
-using System.Threading;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
