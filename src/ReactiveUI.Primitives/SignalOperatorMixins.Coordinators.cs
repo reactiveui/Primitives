@@ -5,6 +5,7 @@
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives;
 
@@ -13,6 +14,53 @@ namespace ReactiveUI.Primitives;
 /// </summary>
 public static partial class LinqMixins
 {
+    /// <summary>
+    /// Range-specialized WithLatest (Latch): emits each left range value paired with the right
+    /// range's final value. A dedicated signal avoids the closure, delegate, CreateSafe wrapper,
+    /// and safe-guard sink that <c>Signal.CreateSafe(observer =&gt; ...)</c> would allocate.
+    /// </summary>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    private sealed class RangeWithLatestSignal<TResult> : IObservable<TResult>
+    {
+        /// <summary>The left source range.</summary>
+        private readonly RangeSignal _left;
+
+        /// <summary>The right source range (its final value is the latched value).</summary>
+        private readonly RangeSignal _right;
+
+        /// <summary>The result projection.</summary>
+        private readonly Func<int, int, TResult> _selector;
+
+        /// <summary>Initializes a new instance of the <see cref="RangeWithLatestSignal{TResult}"/> class.</summary>
+        /// <param name="left">The left source range.</param>
+        /// <param name="right">The right source range.</param>
+        /// <param name="selector">The result projection.</param>
+        internal RangeWithLatestSignal(RangeSignal left, RangeSignal right, Func<int, int, TResult> selector)
+        {
+            _left = left;
+            _right = right;
+            _selector = selector;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<TResult> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            var rightValue = _right.Start + _right.Count - 1;
+            for (var i = 0; i < _left.Count; i++)
+            {
+                observer.OnNext(_selector(_left.Start + i, rightValue));
+            }
+
+            observer.OnCompleted();
+            return Disposable.Empty;
+        }
+    }
+
     /// <summary>
     /// Timeout signal with a direct subscription path.
     /// </summary>

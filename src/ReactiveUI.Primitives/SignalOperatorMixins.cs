@@ -1104,21 +1104,11 @@ public static partial class LinqMixins
     /// <param name="right">The right range source.</param>
     /// <param name="selector">The function that combines range values.</param>
     /// <returns>The optimized with-latest sequence.</returns>
-    private static IObservable<TResult> CreateRangeWithLatestSignal<TResult>(
+    private static RangeWithLatestSignal<TResult> CreateRangeWithLatestSignal<TResult>(
         RangeSignal left,
         RangeSignal right,
         Func<int, int, TResult> selector) =>
-        Signal.CreateSafe<TResult>(observer =>
-        {
-            var rightValue = right.Start + right.Count - 1;
-            for (var i = 0; i < left.Count; i++)
-            {
-                observer.OnNext(selector(left.Start + i, rightValue));
-            }
-
-            observer.OnCompleted();
-            return Disposable.Empty;
-        });
+        new(left, right, selector);
 
     /// <summary>
     /// Creates a range-backed list signal without per-value subscriptions.
