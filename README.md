@@ -16,20 +16,21 @@ ReactiveUI.Primitives is designed to:
 ## Table of contents
 
 1. [Install](#install)
-2. [Target frameworks and dependencies](#target-frameworks-and-dependencies)
-3. [Core model](#core-model)
-4. [Creation factories](#creation-factories)
-5. [Operators](#operators)
-6. [ReactiveUI.Primitives.Async](#reactiveuiprimitivesasync)
-7. [ReactiveUI.Primitives.Extensions](#reactiveuiprimitivesextensions)
-8. [Stateful signals and subject-like types](#stateful-signals-and-subject-like-types)
-9. [Sequencers](#sequencers)
-10. [Threading, disposal, and error semantics](#threading-disposal-and-error-semantics)
-11. [Source-generator bridge behavior](#source-generator-bridge-behavior)
-12. [Migration guides](#systemreactive-to-reactiveuiprimitives-migration-guide)
-13. [Benchmarks and performance posture](#benchmarks-and-performance-posture)
-14. [Repository layout](#repository-layout)
-15. [Validation commands](#validation-commands)
+2. [Agent Skills](#agent-skills)
+3. [Target frameworks and dependencies](#target-frameworks-and-dependencies)
+4. [Core model](#core-model)
+5. [Creation factories](#creation-factories)
+6. [Operators](#operators)
+7. [ReactiveUI.Primitives.Async](#reactiveuiprimitivesasync)
+8. [ReactiveUI.Primitives.Extensions](#reactiveuiprimitivesextensions)
+9. [Stateful signals and subject-like types](#stateful-signals-and-subject-like-types)
+10. [Sequencers](#sequencers)
+11. [Threading, disposal, and error semantics](#threading-disposal-and-error-semantics)
+12. [Source-generator bridge behavior](#source-generator-bridge-behavior)
+13. [Migration guides](#systemreactive-to-reactiveuiprimitives-migration-guide)
+14. [Benchmarks and performance posture](#benchmarks-and-performance-posture)
+15. [Repository layout](#repository-layout)
+16. [Validation commands](#validation-commands)
 
 ## Install
 
@@ -70,6 +71,36 @@ The package metadata is configured to include this README in the NuGet package v
 
 Those generators are analyzers. They do not add runtime System.Reactive or R3 dependencies to ReactiveUI.Primitives. They emit bridge code only when the consuming compilation already references the relevant external library symbols.
 
+## Agent Skills
+
+The base `ReactiveUI.Primitives` NuGet package includes `Skills.md` at the package root. It is an agent-oriented guide for using ReactiveUI.Primitives, Async, Extensions, UI sequencers, bridge source generators, and migration from System.Reactive or R3 while assuming the libraries are consumed from NuGet packages.
+
+After package restore, locate the file in the local NuGet package cache:
+
+```powershell
+$version = "<version>"
+$skill = "$env:USERPROFILE\.nuget\packages\reactiveui.primitives\$version\Skills.md"
+```
+
+On macOS or Linux:
+
+```bash
+version="<version>"
+skill="$HOME/.nuget/packages/reactiveui.primitives/$version/Skills.md"
+```
+
+Install the skill by copying the contents of `Skills.md` into the instruction location supported by the agent. Agents that expect a `SKILL.md` file should use a `reactiveui-primitives` directory and rename the copied file to `SKILL.md`.
+
+| Agent | Recommended project-local install | Notes |
+|---|---|---|
+| [OpenAI Codex](https://developers.openai.com/codex/skills) | `.agents/skills/reactiveui-primitives/SKILL.md` | Codex also supports user-level skills under `$HOME/.agents/skills`. |
+| [Claude Code](https://code.claude.com/docs/en/skills) | `.claude/skills/reactiveui-primitives/SKILL.md` | Claude Code also supports personal skills under `~/.claude/skills`. |
+| [Cline](https://docs.cline.bot/customization/skills) | `.cline/skills/reactiveui-primitives/SKILL.md` | Cline skills must be enabled in Cline's feature settings. |
+| [GitHub Copilot](https://docs.github.com/en/copilot/concepts/prompting/response-customization) | `.github/instructions/reactiveui-primitives.instructions.md` | For repository-wide behavior, summarize or link the skill from `.github/copilot-instructions.md`. |
+| [Cursor](https://docs.cursor.com/en/context) | `.cursor/rules/reactiveui-primitives.mdc` | Cursor project rules are version-controlled under `.cursor/rules`; `AGENTS.md` is also supported. |
+| [Windsurf](https://docs.windsurf.com/windsurf/cascade/memories) | `.windsurf/rules/reactiveui-primitives.md` | Windsurf also reads `AGENTS.md` through the same rules engine. |
+| [Gemini CLI](https://google-gemini.github.io/gemini-cli/docs/cli/gemini-md.html) | `GEMINI.md` or an imported file referenced from `GEMINI.md` | Gemini CLI loads hierarchical context files and supports importing other markdown files with `@file.md`. |
+
 ## Target frameworks and dependencies
 
 The base production `ReactiveUI.Primitives` library uses `$(LibraryTargetFrameworks)` from `src/Directory.Build.props` and currently targets:
@@ -79,19 +110,20 @@ The base production `ReactiveUI.Primitives` library uses `$(LibraryTargetFramewo
 - `net10.0`
 - `net462`
 - `net472`
+- `net48`
 - `net481`
 
 Windows UI and platform-integration projects in this repository use their own TFM properties (for example `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, or MAUI/platform-focused TFMs where applicable). Those platform TFMs are not target frameworks of the base `ReactiveUI.Primitives` package.
 
 The optional package TFMs are:
 
-- `ReactiveUI.Primitives.Wpf`: `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net462`, `net472`, `net481`
-- `ReactiveUI.Primitives.WinForms`: `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net462`, `net472`, `net481`
+- `ReactiveUI.Primitives.Wpf`: `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net462`, `net472`, `net48`, `net481`
+- `ReactiveUI.Primitives.WinForms`: `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net462`, `net472`, `net48`, `net481`
 - `ReactiveUI.Primitives.WinUI`: `net8.0-windows10.0.19041.0`, `net9.0-windows10.0.19041.0`, `net10.0-windows10.0.19041.0`
 - `ReactiveUI.Primitives.Blazor`: `net8.0`, `net9.0`, `net10.0`
 - `ReactiveUI.Primitives.Maui`: `net9.0`, `net10.0`
-- `ReactiveUI.Primitives.Async`: `net8.0`, `net9.0`, `net10.0`, `net462`, `net472`, `net481`
-- `ReactiveUI.Primitives.Extensions`: `net8.0`, `net9.0`, `net10.0`, `net462`, `net472`, `net481`
+- `ReactiveUI.Primitives.Async`: `net8.0`, `net9.0`, `net10.0`, `net462`, `net472`, `net48`, `net481`
+- `ReactiveUI.Primitives.Extensions`: `net8.0`, `net9.0`, `net10.0`, `net462`, `net472`, `net48`, `net481`
 
 Runtime package dependencies are intentionally small. The base production package does not depend on System.Reactive or R3. The only runtime package reference declared directly by `src/ReactiveUI.Primitives/ReactiveUI.Primitives.csproj` is `System.ValueTuple` for `net462`; the bridge source generators are packed as analyzers in the base package rather than shipped as separate NuGet packages. `ReactiveUI.Primitives.Async` and `ReactiveUI.Primitives.Extensions` reference `ReactiveUI.Primitives`; their additional package references are limited to .NET Framework compatibility/support packages such as `System.ValueTuple`, Polyfill, Microsoft.Bcl.TimeProvider, System.Threading.Channels, System.Runtime.CompilerServices.Unsafe, System.ComponentModel.Annotations, System.Buffers, System.Memory, and System.Collections.Immutable for `net4x` targets. `ReactiveUI.Primitives.Async` also packs the bridge source generators as analyzers so async bridge methods are generated for consumers that reference System.Reactive or R3. `ReactiveUI.Primitives.Extensions` has no production System.Reactive or R3 dependency. `ReactiveUI.Primitives.Blazor` references `Microsoft.AspNetCore.Components`, `ReactiveUI.Primitives.Maui` references `Microsoft.Maui.Core`, and `ReactiveUI.Primitives.WinUI` references `Microsoft.WindowsAppSDK`. The remaining shared package references are analyzer, SourceLink, versioning, ILLink, reference-assembly, or build-time support packages such as Blazor.Common.Analyzers, Microsoft.SourceLink.GitHub, MinVer, Roslynator.Analyzers, SonarAnalyzer.CSharp, stylecop.analyzers, Microsoft.NET.ILLink.Tasks, and Microsoft.NETFramework.ReferenceAssemblies. Benchmark projects may reference System.Reactive, R3, and ReactiveUI.Extensions as comparison baselines, but those references are not production dependencies.
 

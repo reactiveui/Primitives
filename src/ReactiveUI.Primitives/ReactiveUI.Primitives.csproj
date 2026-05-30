@@ -32,6 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\Skills.md" Pack="true" PackagePath="Skills.md" Visible="false" />
     <None Include="..\ReactiveUI.Primitives.R3Bridge.Generator\bin\$(Configuration)\netstandard2.0\ReactiveUI.Primitives.R3Bridge.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     <None Include="..\ReactiveUI.Primitives.SystemReactiveBridge.Generator\bin\$(Configuration)\netstandard2.0\ReactiveUI.Primitives.SystemReactiveBridge.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
