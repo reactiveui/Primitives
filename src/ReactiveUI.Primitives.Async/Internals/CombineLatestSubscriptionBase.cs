@@ -30,11 +30,7 @@ internal abstract class CombineLatestSubscriptionBase<TResult> : IAsyncDisposabl
     /// <summary>Gets the lock protecting per-arity latest-values caches. Internal so the shared
     /// <see cref="CombineLatestIndexedObserver{TSource, TResult}"/> can lock on it without deriving
     /// from this base.</summary>
-#if NET9_0_OR_GREATER
     internal Lock ValuesLock { get; } = new();
-#else
-    internal object ValuesLock { get; } = new();
-#endif
 
     /// <summary>
     /// Subscribes to every source observable via <see cref="SubscribeAtAsync"/>. Renamed from the
