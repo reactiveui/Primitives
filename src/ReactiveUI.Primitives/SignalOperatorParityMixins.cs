@@ -4,7 +4,6 @@
 
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
-using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 using ReactiveUI.Primitives.Signals.Core;
 
@@ -199,12 +198,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(scheduler));
         }
 
-        return Signal.Create<T>(observer =>
-        {
-            var subscription = new SingleReplaceableDisposable();
-            var scheduled = scheduler.Schedule(() => subscription.Create(source.Subscribe(observer)));
-            return MultipleDisposable.Create(scheduled, subscription);
-        });
+        return new SubscribeOnSignal<T>(source, scheduler);
     }
 
     /// <summary>
@@ -264,22 +258,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(onCompleted));
         }
 
-        return Signal.CreateSafe<T>(observer => source.Subscribe(
-            value =>
-            {
-                onNext(value);
-                observer.OnNext(value);
-            },
-            error =>
-            {
-                onError(error);
-                observer.OnError(error);
-            },
-            () =>
-            {
-                onCompleted();
-                observer.OnCompleted();
-            }));
+        return new TapSignal<T>(source, onNext, onError, onCompleted);
     }
 
     /// <summary>
@@ -296,7 +275,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        return Signal.CreateSafe<T>(observer => source.Subscribe(_ => { }, observer.OnError, observer.OnCompleted));
+        return new IgnoreValuesSignal<T>(source);
     }
 
     /// <summary>
@@ -738,12 +717,7 @@ public static partial class LinqMixins
             return CreateShiftedRangeSignal<T>(range, dueTime, scheduler);
         }
 
-        return Signal.Create<T>(observer =>
-        {
-            var pocket = new MultipleDisposable();
-            pocket.Add(scheduler.Schedule(Sequencer.Normalize(dueTime), () => pocket.Add(source.Subscribe(observer))));
-            return pocket;
-        });
+        return new DelayStartSignal<T>(source, dueTime, scheduler);
     }
 
     /// <summary>
@@ -774,9 +748,7 @@ public static partial class LinqMixins
         }
 
         scheduler ??= ThreadPoolSequencer.Instance;
-        return Signal.CreateSafe<T>(
-            observer => new CalmCoordinator<T>(source, dueTime, scheduler).Run(observer),
-            scheduler == Sequencer.CurrentThread);
+        return new CalmSignal<T>(source, dueTime, scheduler);
     }
 
     /// <summary>
@@ -903,22 +875,7 @@ public static partial class LinqMixins
             return new TimeIntervalRangeSignal<T>(range, scheduler);
         }
 
-        return Signal.CreateSafe<TimeInterval<T>>(observer =>
-        {
-            var last = scheduler.Now;
-            var first = true;
-            return source.Subscribe(
-                value =>
-                {
-                    var now = scheduler.Now;
-                    var interval = first ? TimeSpan.Zero : now - last;
-                    first = false;
-                    last = now;
-                    observer.OnNext(new TimeInterval<T>(value, interval));
-                },
-                observer.OnError,
-                observer.OnCompleted);
-        });
+        return new TimeIntervalSignal<T>(source, scheduler);
     }
 
     /// <summary>
