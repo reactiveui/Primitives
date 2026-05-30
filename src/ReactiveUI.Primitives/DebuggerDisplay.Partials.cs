@@ -146,7 +146,7 @@ namespace ReactiveUI.Primitives.Core
         private string DebuggerDisplay => ToString() ?? string.Empty;
     }
 
-    public abstract partial class Spark<T>
+    public readonly partial struct Spark<T>
     {
         /// <summary>
         /// Gets the debugger display text.

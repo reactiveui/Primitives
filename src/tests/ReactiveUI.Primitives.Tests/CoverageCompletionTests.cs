@@ -721,7 +721,7 @@ public class CoverageCompletionTests
         Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(value => value.ToString(), null!, () => "done"));
         Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(value => value.ToString(), ex => ex.Message, null!));
 
-        Assert.Same(completed, completedAgain);
+        Assert.True(completed == completedAgain);
         Assert.True(completed.Equals(completedAgain));
         Assert.False(completed.HasValue);
         Assert.Equal(SparkKind.OnCompleted, completed.Kind);

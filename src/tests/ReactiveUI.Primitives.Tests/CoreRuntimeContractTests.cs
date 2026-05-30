@@ -18,16 +18,16 @@ namespace ReactiveUI.Primitives.Tests;
 public class CoreRuntimeContractTests
 {
     /// <summary>
-    /// Verifies completed spark instances are cached for each value type.
+    /// Verifies completed sparks compare equal by value for each value type.
     /// </summary>
     [Test]
-    public void CompletedSparksAreCachedPerValueType()
+    public void CompletedSparksAreEqualPerValueType()
     {
         var first = Spark.CreateOnCompleted<int>();
         var second = Spark.CreateOnCompleted<int>();
 
-        Assert.Same(first, second);
         Assert.True(first == second);
+        Assert.Equal(first, second);
     }
 
     /// <summary>
