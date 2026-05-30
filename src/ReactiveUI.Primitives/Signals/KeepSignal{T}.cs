@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// Represents the KeepSignal class.
 /// </summary>
 /// <typeparam name="T">The T type.</typeparam>
-internal sealed class KeepSignal<T> : IRequireCurrentThread<T>
+public sealed class KeepSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>
     /// Stores state for the signal implementation.

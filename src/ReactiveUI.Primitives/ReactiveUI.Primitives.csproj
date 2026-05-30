@@ -39,6 +39,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="ReactiveUI.Primitives.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Async.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor.Tests" />
     <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor" />
     <InternalsVisibleTo Include="ReactiveUI.Primitives.Maui" />
     <InternalsVisibleTo Include="ReactiveUI.Primitives.WinUI" />

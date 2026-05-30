@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- DispatcherSequencer wraps the concrete WPF System.Windows.Threading.Dispatcher, so this project
+       targets the Windows TFMs. It builds anywhere (EnableWindowsTargeting), but the tests only run on
+       Windows (the windows-latest CI leg, or locally under a Wine .NET-windows runtime); on other
+       platforms the [SkipIfNotWindows] conditional marks them skipped. -->
+  <PropertyGroup>
+    <TargetFrameworks>$(WindowsNetTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PublicApiGenerator" />
+    <Compile Include="..\Shared\ApiApprovalExtensions.cs" Link="ApiApprovalExtensions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Wpf\ReactiveUI.Primitives.Wpf.csproj" />
+  </ItemGroup>
+
+</Project>

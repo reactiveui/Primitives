@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- DispatcherQueueSequencer wraps the concrete WinUI Microsoft.UI.Dispatching.DispatcherQueue, so this
+       project targets the WinUI TFMs. It builds anywhere (EnableWindowsTargeting), but the tests only run
+       on Windows (the windows-latest CI leg); on other platforms the [SkipIfNotWindows] conditional marks
+       them skipped. -->
+  <PropertyGroup>
+    <TargetFrameworks>$(WinUITargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <UseWinUI>true</UseWinUI>
+
+    <!-- Run unpackaged so the Windows App SDK bootstrapper auto-initializes (no MSIX identity required). -->
+    <WindowsPackageType>None</WindowsPackageType>
+  </PropertyGroup>
+
+  <!-- Self-contained packaging makes the unpackaged test host carry + auto-bootstrap its own
+       WindowsAppRuntime, so DispatcherQueueController activation works on a bare CI runner without a
+       machine-wide runtime install. It runs mt.exe (a native Windows manifest tool), so it is only
+       enabled on real Windows. -->
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <!-- Off-Windows the native MSIX/PRI tooling cannot run; disable it so the managed assembly still
+       compiles for the cross-platform build leg. Mirrors the WinUI integration library. -->
+  <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+    <AppxGeneratePriEnabled>false</AppxGeneratePriEnabled>
+    <IncludePriFilesOutputGroup>false</IncludePriFilesOutputGroup>
+    <IncludeProjectPriFile>false</IncludeProjectPriFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PublicApiGenerator" />
+    <Compile Include="..\Shared\ApiApprovalExtensions.cs" Link="ApiApprovalExtensions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.WinUI\ReactiveUI.Primitives.WinUI.csproj" />
+  </ItemGroup>
+
+</Project>

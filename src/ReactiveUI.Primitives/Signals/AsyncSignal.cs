@@ -99,9 +99,9 @@ public class AsyncSignal<T> : IAwaitSignal<T>
     /// </summary>
     public void OnCompleted()
     {
-        IObserver<T> old;
-        T? v;
-        bool hv;
+        IObserver<T> observers;
+        T? completedValue;
+        bool hasCompletedValue;
         lock (_observerLock)
         {
             ThrowIfDisposed();
@@ -110,21 +110,21 @@ public class AsyncSignal<T> : IAwaitSignal<T>
                 return;
             }
 
-            old = _outObserver;
+            observers = _outObserver;
             _outObserver = EmptyWitness<T>.Instance;
             IsCompleted = true;
-            v = _lastValue;
-            hv = _hasValue;
+            completedValue = _lastValue;
+            hasCompletedValue = _hasValue;
         }
 
-        if (hv)
+        if (hasCompletedValue)
         {
-            old.OnNext(v!);
-            old.OnCompleted();
+            observers.OnNext(completedValue!);
+            observers.OnCompleted();
         }
         else
         {
-            old.OnCompleted();
+            observers.OnCompleted();
         }
     }
 
@@ -155,7 +155,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
             throw new ArgumentNullException(nameof(error));
         }
 
-        IObserver<T> old;
+        IObserver<T> observers;
         lock (_observerLock)
         {
             ThrowIfDisposed();
@@ -164,13 +164,13 @@ public class AsyncSignal<T> : IAwaitSignal<T>
                 return;
             }
 
-            old = _outObserver;
+            observers = _outObserver;
             _outObserver = EmptyWitness<T>.Instance;
             IsCompleted = true;
             _lastError = error;
         }
 
-        old.OnError(error);
+        observers.OnError(error);
     }
 
     /// <summary>
@@ -205,9 +205,9 @@ public class AsyncSignal<T> : IAwaitSignal<T>
             throw new ArgumentNullException(nameof(observer));
         }
 
-        Exception? ex;
-        T? v;
-        bool hv;
+        Exception? completionError;
+        T? terminalValue;
+        bool hasTerminalValue;
 
         lock (_observerLock)
         {
@@ -224,21 +224,21 @@ public class AsyncSignal<T> : IAwaitSignal<T>
                     _outObserver = current is EmptyWitness<T> ? new ListWitness<T>(new([observer])) : new ListWitness<T>(new([current, observer]));
                 }
 
-                return new ObserverHandler(this, observer);
+                return new ObserverHandler<T>(this, observer);
             }
 
-            ex = _lastError;
-            v = _lastValue;
-            hv = _hasValue;
+            completionError = _lastError;
+            terminalValue = _lastValue;
+            hasTerminalValue = _hasValue;
         }
 
-        if (ex != null)
+        if (completionError != null)
         {
-            observer.OnError(ex);
+            observer.OnError(completionError);
         }
-        else if (hv)
+        else if (hasTerminalValue)
         {
-            observer.OnNext(v!);
+            observer.OnNext(terminalValue!);
             observer.OnCompleted();
         }
         else
@@ -274,9 +274,9 @@ public class AsyncSignal<T> : IAwaitSignal<T>
     {
         if (!IsCompleted)
         {
-            var e = new ManualResetEvent(false);
-            SubscribeCompletion(() => e.Set(), false);
-            e.WaitOne();
+            var completionEvent = new ManualResetEvent(false);
+            SubscribeCompletion(() => completionEvent.Set(), false);
+            completionEvent.WaitOne();
         }
 
         _lastError.Rethrow();
@@ -287,6 +287,21 @@ public class AsyncSignal<T> : IAwaitSignal<T>
         }
 
         return _lastValue!;
+    }
+
+    /// <summary>
+    /// Removes an observer previously registered via <see cref="Subscribe"/>. Called by the observer's
+    /// subscription handle when it is disposed.
+    /// </summary>
+    /// <param name="observer">The observer to remove.</param>
+    internal void RemoveObserver(IObserver<T> observer)
+    {
+        lock (_observerLock)
+        {
+            _outObserver = _outObserver is ListWitness<T> listObserver
+                ? listObserver.Remove(observer)
+                : EmptyWitness<T>.Instance;
+        }
     }
 
     /// <summary>
@@ -332,123 +347,5 @@ public class AsyncSignal<T> : IAwaitSignal<T>
     /// <param name="continuation">The continuation value.</param>
     /// <param name="originalContext">The originalContext value.</param>
     private void SubscribeCompletion(Action continuation, bool originalContext) =>
-        Subscribe(new AwaitObserver(continuation, originalContext));
-
-    /// <summary>
-    /// Represents the AwaitObserver class.
-    /// </summary>
-    private sealed class AwaitObserver : IObserver<T>
-    {
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
-        private readonly SynchronizationContext? _context;
-
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
-        private readonly Action _callback;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AwaitObserver"/> class.
-        /// </summary>
-        /// <param name="callback">The callback value.</param>
-        /// <param name="originalContext">The originalContext value.</param>
-        public AwaitObserver(Action callback, bool originalContext)
-        {
-            if (originalContext)
-            {
-                _context = SynchronizationContext.Current;
-            }
-
-            _callback = callback;
-        }
-
-        /// <summary>
-        /// Executes the OnCompleted operation.
-        /// </summary>
-        public void OnCompleted() => InvokeOnOriginalContext();
-
-        /// <summary>
-        /// Executes the OnError operation.
-        /// </summary>
-        /// <param name="error">The error value.</param>
-        public void OnError(Exception error) => InvokeOnOriginalContext();
-
-        /// <summary>
-        /// Executes the OnNext operation.
-        /// </summary>
-        /// <param name="value">The value.</param>
-        public void OnNext(T value)
-        {
-        }
-
-        /// <summary>
-        /// Executes the InvokeOnOriginalContext operation.
-        /// </summary>
-        private void InvokeOnOriginalContext()
-        {
-            if (_context != null)
-            {
-                _context.Post(c => ((Action)c!)(), _callback);
-            }
-            else
-            {
-                _callback();
-            }
-        }
-    }
-
-    /// <summary>
-    /// Represents the ObserverHandler class.
-    /// </summary>
-    private sealed class ObserverHandler : IDisposable
-    {
-        /// <summary>
-        /// Executes the new operation.
-        /// </summary>
-        /// <returns>The result.</returns>
-        private readonly Lock _gate = new();
-
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
-        private AsyncSignal<T>? _subject;
-
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
-        private IObserver<T>? _observer;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ObserverHandler"/> class.
-        /// </summary>
-        /// <param name="subject">The subject value.</param>
-        /// <param name="observer">The observer value.</param>
-        public ObserverHandler(AsyncSignal<T> subject, IObserver<T> observer)
-        {
-            _subject = subject;
-            _observer = observer;
-        }
-
-        /// <summary>
-        /// Executes the Dispose operation.
-        /// </summary>
-        public void Dispose()
-        {
-            lock (_gate)
-            {
-                if (_subject != null)
-                {
-                    lock (_subject._observerLock)
-                    {
-                        _subject._outObserver = _subject._outObserver is ListWitness<T> listObserver ? listObserver.Remove(_observer!) : EmptyWitness<T>.Instance;
-
-                        _observer = null;
-                        _subject = null;
-                    }
-                }
-            }
-        }
-    }
+        Subscribe(new AwaitObserver<T>(continuation, originalContext));
 }

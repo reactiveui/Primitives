@@ -9,15 +9,22 @@
         <File Path="../.gitignore" />
         <File Path="../LICENSE" />
         <File Path="../README.md" />
-        <File Path="directory.build.props" />
-        <File Path="directory.build.targets" />
-        <File Path="directory.packages.props" />
+        <File Path="..\codecov.yml" />
+        <File Path="Directory.Build.props" />
+        <File Path="Directory.Build.targets" />
+        <File Path="Directory.Packages.props" />
         <File Path="global.json" />
         <File Path="stylecop.json" />
         <File Path="testconfig.json" />
     </Folder>
     <Folder Name="/tests/">
         <Project Path="tests/ReactiveUI.Primitives.Tests/ReactiveUI.Primitives.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.Async.Tests/ReactiveUI.Primitives.Async.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.Blazor.Tests/ReactiveUI.Primitives.Blazor.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.Maui.Tests/ReactiveUI.Primitives.Maui.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.Wpf.Tests/ReactiveUI.Primitives.Wpf.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.WinForms.Tests/ReactiveUI.Primitives.WinForms.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.WinUI.Tests/ReactiveUI.Primitives.WinUI.Tests.csproj" />
     </Folder>
     <Project Path="ReactiveUI.Primitives.R3Bridge.Generator/ReactiveUI.Primitives.R3Bridge.Generator.csproj" />
     <Project Path="ReactiveUI.Primitives.SystemReactiveBridge.Generator/ReactiveUI.Primitives.SystemReactiveBridge.Generator.csproj" />

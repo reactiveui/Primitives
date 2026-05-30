@@ -80,8 +80,41 @@ public abstract class DispatchSequencerBase : ISequencer
             return;
         }
 
-        ThreadPoolSequencer.Instance.Schedule(new MarshalOnDueWorkItem(this, item), dueTimestamp);
+        ScheduleDelayed(item, dueTimestamp);
     }
+
+    /// <summary>
+    /// Gets the delay from the sequencer's current time until the given monotonic timestamp.
+    /// </summary>
+    /// <param name="dueTimestamp">The absolute monotonic due timestamp.</param>
+    /// <returns>The remaining delay.</returns>
+    protected static TimeSpan DelayUntil(long dueTimestamp) => Sequencer.TimeUntil(dueTimestamp);
+
+    /// <summary>
+    /// Executes the work item on the current (dispatcher) thread unless it has already been cancelled.
+    /// </summary>
+    /// <param name="item">The work item to execute.</param>
+    protected static void RunIfActive(IWorkItem item)
+    {
+        if (Sequencer.IsCancelled(item))
+        {
+            return;
+        }
+
+        item.Execute();
+    }
+
+    /// <summary>
+    /// Schedules a work item to run at a future monotonic timestamp. The default implementation uses
+    /// the shared thread-pool timer and marshals the due item back through the dispatcher via
+    /// <see cref="Schedule(IWorkItem)"/>. UI dispatchers that expose a native timer (for example MAUI's
+    /// <c>DispatchDelayed</c> or the WPF/WinUI dispatcher timers) override this to run the due item
+    /// directly on the dispatcher thread, avoiding the thread-pool-to-UI marshal hop.
+    /// </summary>
+    /// <param name="item">Work item to execute at the due time.</param>
+    /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    protected virtual void ScheduleDelayed(IWorkItem item, long dueTimestamp) =>
+        ThreadPoolSequencer.Instance.Schedule(new MarshalOnDueWorkItem(this, item), dueTimestamp);
 
     /// <summary>
     /// Posts a drain request to the platform dispatcher.

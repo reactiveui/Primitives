@@ -64,10 +64,7 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
     /// <exception cref="ArgumentNullException"><paramref name="subscription"/> is <see langword="null"/>.</exception>
     protected IDisposable Track(IDisposable subscription)
     {
-        if (subscription == null)
-        {
-            throw new ArgumentNullException(nameof(subscription));
-        }
+        ArgumentNullException.ThrowIfNull(subscription);
 
         if (IsDisposed)
         {

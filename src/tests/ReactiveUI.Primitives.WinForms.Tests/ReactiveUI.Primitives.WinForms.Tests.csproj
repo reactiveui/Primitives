@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ControlSequencer wraps a concrete System.Windows.Forms.Control, so this project targets the Windows
+       TFMs. It builds anywhere (EnableWindowsTargeting), but the dispatcher tests only run on Windows (the
+       windows-latest CI leg, or locally under a Wine .NET-windows runtime); on other platforms the
+       [SkipIfNotWindows]-style guard marks them skipped. The API approval test runs everywhere the host
+       launches. -->
+  <PropertyGroup>
+    <TargetFrameworks>$(WindowsNetTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PublicApiGenerator" />
+    <Compile Include="..\Shared\ApiApprovalExtensions.cs" Link="ApiApprovalExtensions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.WinForms\ReactiveUI.Primitives.WinForms.csproj" />
+  </ItemGroup>
+
+</Project>

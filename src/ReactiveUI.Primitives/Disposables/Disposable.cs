@@ -22,39 +22,4 @@ public static class Disposable
     /// <remarks>A <see langword="null"/> action returns <see cref="Empty"/> for backward compatibility with existing ReactiveUI.Primitives create pipelines.</remarks>
     public static IDisposable Create(Action dispose) =>
         dispose == null ? Empty : new AnonymousDisposable(dispose);
-
-    /// <summary>
-    /// Disposable that performs no action.
-    /// </summary>
-    internal sealed class EmptyDisposable : IDisposable
-    {
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-        }
-    }
-
-    /// <summary>
-    /// Represents an Action-based disposable.
-    /// </summary>
-    internal sealed class AnonymousDisposable : IDisposable
-    {
-        /// <summary>
-        /// Disposal action, cleared after the first dispose call.
-        /// </summary>
-        private volatile Action? _dispose;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AnonymousDisposable"/> class.
-        /// </summary>
-        /// <param name="dispose">The dispose.</param>
-        public AnonymousDisposable(Action dispose) =>
-            _dispose = dispose;
-
-        /// <summary>
-        /// Calls the disposal action if and only if the current instance hasn't been disposed yet.
-        /// </summary>
-        public void Dispose() =>
-            Interlocked.Exchange(ref _dispose, null)?.Invoke();
-    }
 }
