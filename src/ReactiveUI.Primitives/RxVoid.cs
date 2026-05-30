@@ -9,12 +9,18 @@ namespace ReactiveUI.Primitives;
 /// </summary>
 [Serializable]
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public readonly partial struct RxVoid : IEquatable<RxVoid>
+public readonly struct RxVoid : IEquatable<RxVoid>
 {
     /// <summary>
     /// Gets the single <see cref="RxVoid"/> value.
     /// </summary>
     public static RxVoid Default => default;
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Determines whether the two specified <see cref="RxVoid"/> values are not equal. Because <see cref="RxVoid"/> has a single value, this always returns <c>false</c>.

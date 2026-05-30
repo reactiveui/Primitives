@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="TResult">The command result type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class CommandSignal<TResult> : IObservable<TResult>, IDisposable
+public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
 {
     /// <summary>
     /// Stores asynchronous command execution.
@@ -150,6 +150,12 @@ public sealed partial class CommandSignal<TResult> : IObservable<TResult>, IDisp
             return current;
         }
     }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Executes the command if allowed and publishes the result or fault.

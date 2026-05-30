@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// </summary>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class TaskPoolSequencer : ISequencer
+public sealed class TaskPoolSequencer : ISequencer
 {
     /// <summary>
     /// Task factory used to schedule asynchronous work.
@@ -51,6 +51,12 @@ public sealed partial class TaskPoolSequencer : ISequencer
     /// Gets the scheduler's monotonic timestamp.
     /// </summary>
     public long Timestamp => Sequencer.Timestamp;
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Schedules a work item to be executed through the task factory.

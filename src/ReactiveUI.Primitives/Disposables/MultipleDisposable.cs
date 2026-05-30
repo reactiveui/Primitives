@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Disposables;
 /// A disposable pocket that contains a set of disposables and disposes them together.
 /// </summary>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public partial class MultipleDisposable : IsDisposed
+public class MultipleDisposable : IsDisposed
 {
     /// <summary>
     /// Initial capacity for overflow disposable storage.
@@ -114,6 +114,12 @@ public partial class MultipleDisposable : IsDisposed
             return Volatile.Read(ref _disposed);
         }
     }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Creates a new group of disposable resources that are disposed together.

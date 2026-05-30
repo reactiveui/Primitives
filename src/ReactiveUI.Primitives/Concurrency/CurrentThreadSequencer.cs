@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// </summary>
 /// <seealso cref="ISequencer" />
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class CurrentThreadSequencer : ISequencer
+public sealed class CurrentThreadSequencer : ISequencer
 {
     /// <summary>
     /// Singleton holder for the current-thread sequencer.
@@ -59,6 +59,12 @@ public sealed partial class CurrentThreadSequencer : ISequencer
     /// Gets the scheduler's monotonic timestamp.
     /// </summary>
     public long Timestamp => Sequencer.Timestamp;
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Schedules an action to be executed on the current-thread trampoline.

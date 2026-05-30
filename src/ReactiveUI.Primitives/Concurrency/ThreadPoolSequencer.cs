@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// </summary>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class ThreadPoolSequencer : ISequencer, IDisposable
+public sealed class ThreadPoolSequencer : ISequencer, IDisposable
 {
     /// <summary>
     /// Gets the shared thread-pool scheduler instance.
@@ -56,6 +56,12 @@ public sealed partial class ThreadPoolSequencer : ISequencer, IDisposable
     /// Gets the scheduler's monotonic timestamp.
     /// </summary>
     public long Timestamp => Sequencer.Timestamp;
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Schedules a work item to be executed through the thread pool.

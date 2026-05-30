@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Core;
 /// <typeparam name="T">The captured value type.</typeparam>
 [Serializable]
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public readonly partial struct Moment<T> : IEquatable<Moment<T>>
+public readonly struct Moment<T> : IEquatable<Moment<T>>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="Moment{T}"/> struct.
@@ -34,6 +34,12 @@ public readonly partial struct Moment<T> : IEquatable<Moment<T>>
     /// Gets the scheduler timestamp.
     /// </summary>
     public DateTimeOffset Timestamp { get; }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Compares two timestamped values for equality.

@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 /// <typeparam name="TRelative">Relative time representation type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public abstract partial class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSequencerBase<TAbsolute, TRelative>
+public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSequencerBase<TAbsolute, TRelative>
     where TAbsolute : IComparable<TAbsolute>
 {
     /// <summary>
@@ -42,6 +42,12 @@ public abstract partial class VirtualTimeSequencer<TAbsolute, TRelative> : Virtu
         : base(initialClock, comparer)
     {
     }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Schedules an action to be executed at dueTime.

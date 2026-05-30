@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <typeparam name="T">The Type.</typeparam>
 /// <seealso cref="ISignal&lt;T&gt;" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public partial class AsyncSignal<T> : IAwaitSignal<T>
+public class AsyncSignal<T> : IAwaitSignal<T>
 {
     /// <summary>
     /// Executes the new operation.
@@ -87,6 +87,12 @@ public partial class AsyncSignal<T> : IAwaitSignal<T>
     ///   <c>true</c> if this instance is completed; otherwise, <c>false</c>.
     /// </value>
     public bool IsCompleted { get; private set; }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Called when [completed].

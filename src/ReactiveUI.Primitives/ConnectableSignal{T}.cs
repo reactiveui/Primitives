@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives;
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class ConnectableSignal<T> : IObservable<T>
+public sealed class ConnectableSignal<T> : IObservable<T>
 {
     /// <summary>
     /// Synchronizes connection state.
@@ -43,6 +43,12 @@ public sealed partial class ConnectableSignal<T> : IObservable<T>
         _source = source ?? throw new ArgumentNullException(nameof(source));
         _hub = hub ?? throw new ArgumentNullException(nameof(hub));
     }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Subscribes the hub to the source if it is not already connected.

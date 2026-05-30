@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Disposables;
 /// </summary>
 /// <seealso cref="Disposables.IsDisposed" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class BooleanDisposable : IsDisposed
+public sealed class BooleanDisposable : IsDisposed
 {
     /// <summary>
     /// Disposed latch; 0 when alive, 1 once disposed.
@@ -23,6 +23,12 @@ public sealed partial class BooleanDisposable : IsDisposed
     ///   <c>true</c> if this instance is disposed; otherwise, <c>false</c>.
     /// </value>
     public bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.

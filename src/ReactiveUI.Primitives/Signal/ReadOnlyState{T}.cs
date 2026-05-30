@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class ReadOnlyState<T> : IObservable<T>, IDisposable
+public sealed class ReadOnlyState<T> : IObservable<T>, IDisposable
 {
     /// <summary>
     /// Stores state for the signal implementation.
@@ -46,6 +46,12 @@ public sealed partial class ReadOnlyState<T> : IObservable<T>, IDisposable
     /// Gets the stream of current and subsequent values.
     /// </summary>
     public IObservable<T> Changed => _inner;
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Notifies the provider that an observer is to receive notifications.

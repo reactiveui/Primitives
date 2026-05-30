@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Disposables;
 /// Primitives alias for a single-assignment disposable slot.
 /// </summary>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class AssignmentSlot : SingleDisposable
+public sealed class AssignmentSlot : SingleDisposable
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="AssignmentSlot"/> class.
@@ -44,4 +44,10 @@ public sealed partial class AssignmentSlot : SingleDisposable
         : base(disposable, action)
     {
     }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 }

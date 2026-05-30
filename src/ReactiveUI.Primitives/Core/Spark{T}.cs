@@ -17,18 +17,8 @@ namespace ReactiveUI.Primitives.Core;
 /// <typeparam name="T">The type of the elements received by the observer.</typeparam>
 [Serializable]
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
-public readonly partial struct Spark<T> : IEquatable<Spark<T>>
+public readonly struct Spark<T> : IEquatable<Spark<T>>
 {
-    /// <summary>
-    /// The kind of spark represented.
-    /// </summary>
-    private readonly SparkKind _kind;
-
-    /// <summary>
-    /// The carried value for an OnNext spark; otherwise the default value.
-    /// </summary>
-    private readonly T _value;
-
     /// <summary>
     /// The carried exception for an OnError spark; otherwise <see langword="null"/>.
     /// </summary>
@@ -42,8 +32,8 @@ public readonly partial struct Spark<T> : IEquatable<Spark<T>>
     /// <param name="exception">The carried exception, when the kind is OnError.</param>
     private Spark(SparkKind kind, T value, Exception? exception)
     {
-        _kind = kind;
-        _value = value;
+        Kind = kind;
+        Value = value;
         _exception = exception;
     }
 
@@ -52,12 +42,12 @@ public readonly partial struct Spark<T> : IEquatable<Spark<T>>
     /// sparks. Check <see cref="HasValue"/> (or <see cref="Kind"/>) to determine whether the value is
     /// meaningful, and read <see cref="Exception"/> for the error carried by an OnError spark.
     /// </summary>
-    public T Value => _value;
+    public T Value { get; }
 
     /// <summary>
     /// Gets a value indicating whether the spark carries a value.
     /// </summary>
-    public bool HasValue => _kind == SparkKind.OnNext;
+    public bool HasValue => Kind == SparkKind.OnNext;
 
     /// <summary>
     /// Gets the exception of an OnError spark or returns null.
@@ -67,7 +57,13 @@ public readonly partial struct Spark<T> : IEquatable<Spark<T>>
     /// <summary>
     /// Gets the kind of Spark that is represented.
     /// </summary>
-    public SparkKind Kind => _kind;
+    public SparkKind Kind { get; }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Determines whether the two specified Spark&lt;T&gt; objects have a different observer message payload.
@@ -102,14 +98,14 @@ public readonly partial struct Spark<T> : IEquatable<Spark<T>>
     /// </remarks>
     public bool Equals(Spark<T> other)
     {
-        if (_kind != other._kind)
+        if (Kind != other.Kind)
         {
             return false;
         }
 
-        return _kind switch
+        return Kind switch
         {
-            SparkKind.OnNext => EqualityComparer<T>.Default.Equals(_value, other._value),
+            SparkKind.OnNext => EqualityComparer<T>.Default.Equals(Value, other.Value),
             SparkKind.OnError => Equals(_exception, other._exception),
             _ => true,
         };
@@ -126,9 +122,9 @@ public readonly partial struct Spark<T> : IEquatable<Spark<T>>
     /// Returns the hash code for this spark.
     /// </summary>
     /// <returns>A hash code for this spark.</returns>
-    public override int GetHashCode() => _kind switch
+    public override int GetHashCode() => Kind switch
     {
-        SparkKind.OnNext => EqualityComparer<T>.Default.GetHashCode(_value!),
+        SparkKind.OnNext => EqualityComparer<T>.Default.GetHashCode(Value!),
         SparkKind.OnError => _exception!.GetHashCode(),
         _ => typeof(T).GetHashCode() ^ 8510,
     };
@@ -137,9 +133,9 @@ public readonly partial struct Spark<T> : IEquatable<Spark<T>>
     /// Returns a string representation of this spark.
     /// </summary>
     /// <returns>A string representation of this spark.</returns>
-    public override string ToString() => _kind switch
+    public override string ToString() => Kind switch
     {
-        SparkKind.OnNext => string.Format(CultureInfo.CurrentCulture, "OnNext({0})", _value),
+        SparkKind.OnNext => string.Format(CultureInfo.CurrentCulture, "OnNext({0})", Value),
         SparkKind.OnError => string.Format(CultureInfo.CurrentCulture, "OnError({0})", _exception!.GetType().FullName),
         _ => "OnCompleted()",
     };
@@ -155,11 +151,11 @@ public readonly partial struct Spark<T> : IEquatable<Spark<T>>
             throw new ArgumentNullException(nameof(observer));
         }
 
-        if (_kind == SparkKind.OnNext)
+        if (Kind == SparkKind.OnNext)
         {
-            observer.OnNext(_value);
+            observer.OnNext(Value);
         }
-        else if (_kind == SparkKind.OnError)
+        else if (Kind == SparkKind.OnError)
         {
             observer.OnError(_exception!);
         }
@@ -182,9 +178,9 @@ public readonly partial struct Spark<T> : IEquatable<Spark<T>>
             throw new ArgumentNullException(nameof(observer));
         }
 
-        return _kind switch
+        return Kind switch
         {
-            SparkKind.OnNext => observer.OnNext(_value),
+            SparkKind.OnNext => observer.OnNext(Value),
             SparkKind.OnError => observer.OnError(_exception!),
             _ => observer.OnCompleted(),
         };
@@ -213,11 +209,11 @@ public readonly partial struct Spark<T> : IEquatable<Spark<T>>
             throw new ArgumentNullException(nameof(onCompleted));
         }
 
-        if (_kind == SparkKind.OnNext)
+        if (Kind == SparkKind.OnNext)
         {
-            onNext(_value);
+            onNext(Value);
         }
-        else if (_kind == SparkKind.OnError)
+        else if (Kind == SparkKind.OnError)
         {
             onError(_exception!);
         }
@@ -252,9 +248,9 @@ public readonly partial struct Spark<T> : IEquatable<Spark<T>>
             throw new ArgumentNullException(nameof(onCompleted));
         }
 
-        return _kind switch
+        return Kind switch
         {
-            SparkKind.OnNext => onNext(_value),
+            SparkKind.OnNext => onNext(Value),
             SparkKind.OnError => onError(_exception!),
             _ => onCompleted(),
         };

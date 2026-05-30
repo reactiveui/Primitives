@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public partial class StateSignal<T> : BehaviorSignal<T>
+public class StateSignal<T> : BehaviorSignal<T>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="StateSignal{T}"/> class.
@@ -33,6 +33,12 @@ public partial class StateSignal<T> : BehaviorSignal<T>
         get => base.Value;
         set => OnNext(value);
     }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Emits the current value again without changing it.

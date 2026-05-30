@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// </summary>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class ImmediateSequencer : ISequencer
+public sealed class ImmediateSequencer : ISequencer
 {
     /// <summary>
     /// Singleton holder for the immediate sequencer.
@@ -39,6 +39,12 @@ public sealed partial class ImmediateSequencer : ISequencer
     /// Gets the scheduler's monotonic timestamp.
     /// </summary>
     public long Timestamp => Sequencer.Timestamp;
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Schedules an action to run immediately.

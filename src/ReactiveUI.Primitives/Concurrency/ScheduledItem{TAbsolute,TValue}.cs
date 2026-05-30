@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 /// <typeparam name="TValue">Type of the state passed to the scheduled action.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class ScheduledItem<TAbsolute, TValue> : ScheduledItem<TAbsolute>
+public sealed class ScheduledItem<TAbsolute, TValue> : ScheduledItem<TAbsolute>
     where TAbsolute : IComparable<TAbsolute>
 {
     /// <summary>
@@ -59,6 +59,12 @@ public sealed partial class ScheduledItem<TAbsolute, TValue> : ScheduledItem<TAb
         : this(scheduler, state, action, dueTime, Comparer<TAbsolute>.Default)
     {
     }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Invokes the scheduled action with the supplied recursive scheduler and state.

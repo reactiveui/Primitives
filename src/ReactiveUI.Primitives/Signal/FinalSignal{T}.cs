@@ -9,4 +9,11 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public partial class FinalSignal<T> : AsyncSignal<T>;
+public class FinalSignal<T> : AsyncSignal<T>
+{
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
+}

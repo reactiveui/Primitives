@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="T">The Type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public partial class Signal<T> : ISignal<T>
+public class Signal<T> : ISignal<T>
 {
     /// <summary>
     /// Stores state for the signal implementation.
@@ -76,6 +76,12 @@ public partial class Signal<T> : ISignal<T>
     /// Gets a value indicating whether indicates whether the subject has been disposed.
     /// </summary>
     public virtual bool IsDisposed => _isDisposed;
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Releases unmanaged and - optionally - managed resources.

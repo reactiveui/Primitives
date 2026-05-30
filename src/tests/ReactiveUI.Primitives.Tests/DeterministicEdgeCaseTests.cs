@@ -444,7 +444,7 @@ public sealed class DeterministicEdgeCaseTests
             scheduled.Add(state + One);
             return Disposable.Empty;
         }).Dispose();
-        Assert.Equal(0, scheduled.Count);
+        Assert.Equal(Two, scheduled.Count);
     }
 
     /// <summary>
