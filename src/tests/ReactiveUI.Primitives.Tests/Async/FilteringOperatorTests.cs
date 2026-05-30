@@ -420,7 +420,7 @@ public class FilteringOperatorTests
     public async Task WhenSkipWhileAsyncWithSyncPredicate_ThenLatchesOnFalse()
     {
         var result = await SignalAsync.Range(1, 5)
-            .SkipWhile(static (x, _) => new ValueTask<bool>(x < 3))
+            .SkipWhile(static (x, _) => new(x < 3))
             .ToListAsync();
 
         await Assert.That(result).IsCollectionEqualTo([ThirdElement, FourthElement, FifthElement]);
@@ -433,7 +433,7 @@ public class FilteringOperatorTests
     public async Task WhenTakeWhileAsyncWithSyncPredicate_ThenTerminatesOnFalse()
     {
         var result = await SignalAsync.Range(1, 5)
-            .TakeWhile(static (x, _) => new ValueTask<bool>(x < 3))
+            .TakeWhile(static (x, _) => new(x < 3))
             .ToListAsync();
 
         await Assert.That(result).IsCollectionEqualTo([1, SecondElement]);
@@ -449,7 +449,7 @@ public class FilteringOperatorTests
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
-            .SkipWhile(static (_, _) => new ValueTask<bool>(true))
+            .SkipWhile(static (_, _) => new(true))
             .SubscribeAsync(
                 static (_, _) => default,
                 (ex, _) =>
@@ -476,7 +476,7 @@ public class FilteringOperatorTests
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
-            .TakeWhile(static (_, _) => new ValueTask<bool>(true))
+            .TakeWhile(static (_, _) => new(true))
             .SubscribeAsync(
                 static (_, _) => default,
                 (ex, _) =>
@@ -806,7 +806,7 @@ public class FilteringOperatorTests
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
-            .Where(static (_, _) => new ValueTask<bool>(true))
+            .Where(static (_, _) => new(true))
             .SubscribeAsync(
                 static (_, _) => default,
                 (ex, _) =>

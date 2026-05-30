@@ -33,7 +33,7 @@ public sealed class ReadOnlyState<T> : IObservable<T>, IDisposable
             throw new ArgumentNullException(nameof(source));
         }
 
-        _inner = new StateSignal<T>(initialValue);
+        _inner = new(initialValue);
         _subscription = source.Subscribe(_inner);
     }
 

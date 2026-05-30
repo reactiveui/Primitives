@@ -129,7 +129,7 @@ public class Signal<T> : ISignal<T>
 
         SignalSubscription? singleObserver;
         SignalSubscription?[]? subscriptions;
-        var hasActionSubscribers = false;
+        bool hasActionSubscribers;
 
         lock (_observerLock)
         {
@@ -211,14 +211,14 @@ public class Signal<T> : ISignal<T>
             {
                 if (_singleActionSubscription == null && _singleObserverSubscription == null && _subscriptionCount == 0)
                 {
-                    subscription = new SignalSubscription(this, observer);
+                    subscription = new(this, observer);
                     _singleObserverSubscription = subscription;
                 }
                 else
                 {
                     PromoteSingleObserverLocked();
                     PromoteSingleActionObserverLocked();
-                    subscription = new SignalSubscription(this, observer);
+                    subscription = new(this, observer);
                     AddSubscriptionLocked(subscription);
                 }
             }
@@ -264,7 +264,7 @@ public class Signal<T> : ISignal<T>
             ex = _exception;
             if (!stopped)
             {
-                subscription = new SignalSubscription(this, onNext);
+                subscription = new(this, onNext);
                 if (_singleActionSubscription == null && _singleObserverSubscription == null && _subscriptionCount == 0)
                 {
                     _singleActionSubscription = subscription;

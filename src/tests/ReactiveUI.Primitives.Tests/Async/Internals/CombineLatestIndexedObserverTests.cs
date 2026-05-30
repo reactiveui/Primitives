@@ -94,7 +94,7 @@ public class CombineLatestIndexedObserverTests
         {
             _ = index;
             _ = cancellationToken;
-            return new ValueTask<IAsyncDisposable>(NoopDisposable.Instance);
+            return new(NoopDisposable.Instance);
         }
     }
 

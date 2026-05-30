@@ -70,7 +70,7 @@ internal sealed class PooledDelaySource : IValueTaskSource
         var cached = _threadCached;
         if (cached is null)
         {
-            return new PooledDelaySource();
+            return new();
         }
 
         _threadCached = null;
@@ -92,7 +92,7 @@ internal sealed class PooledDelaySource : IValueTaskSource
         {
             _completed = StateClaimed;
             _core.SetException(new OperationCanceledException(cancellationToken));
-            return new ValueTask(this, _core.Version);
+            return new(this, _core.Version);
         }
 
         // CreateTimer may invoke the callback synchronously (the immediate-fire pattern used by
@@ -107,7 +107,7 @@ internal sealed class PooledDelaySource : IValueTaskSource
         if (Volatile.Read(ref _completed) == StateClaimed)
         {
             // Sync-fire fast path: no cancellation registration needed; the source is already done.
-            return new ValueTask(this, _core.Version);
+            return new(this, _core.Version);
         }
 
         if (cancellationToken.CanBeCanceled)
@@ -117,7 +117,7 @@ internal sealed class PooledDelaySource : IValueTaskSource
                 this);
         }
 
-        return new ValueTask(this, _core.Version);
+        return new(this, _core.Version);
     }
 
     /// <inheritdoc/>

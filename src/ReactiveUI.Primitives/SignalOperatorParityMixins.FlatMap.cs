@@ -197,8 +197,8 @@ public static partial class LinqMixins
             _source = source;
             _selector = selector;
             _observer = observer;
-            _outerObserver = new OuterObserver(this);
-            _innerObserver = new InnerObserver(this);
+            _outerObserver = new(this);
+            _innerObserver = new(this);
         }
 
         /// <inheritdoc/>
@@ -382,7 +382,7 @@ public static partial class LinqMixins
                     return true;
                 }
 
-                (_queue ??= new Queue<IObservable<TResult>>()).Enqueue(inner);
+                (_queue ??= new()).Enqueue(inner);
                 return false;
             }
         }
@@ -581,7 +581,7 @@ public static partial class LinqMixins
             Func<TSource, IObservable<TCollection>> collectionSelector,
             Func<TSource, TCollection, TResult> resultSelector,
             IObserver<TResult> observer) =>
-            _inner = new FlatMapCoordinator<TSource, TResult>(
+            _inner = new(
                 source,
                 value => new FlatMapResultInnerSignal<TSource, TCollection, TResult>(
                     value,

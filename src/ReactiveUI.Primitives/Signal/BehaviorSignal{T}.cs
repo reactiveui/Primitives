@@ -222,7 +222,7 @@ public class BehaviorSignal<T> : ISignal<T>
             {
                 _broadcaster.Add(observer);
                 v = _lastValue;
-                subscription = new ObserverHandler(this, observer);
+                subscription = new(this, observer);
             }
             else
             {

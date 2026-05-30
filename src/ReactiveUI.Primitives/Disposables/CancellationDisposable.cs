@@ -32,7 +32,7 @@ public sealed class CancellationDisposable : IsDisposed
     /// Initializes a new instance of the <see cref="CancellationDisposable"/> class.
     /// </summary>
     public CancellationDisposable()
-      : this(new CancellationTokenSource())
+      : this(new())
     {
     }
 

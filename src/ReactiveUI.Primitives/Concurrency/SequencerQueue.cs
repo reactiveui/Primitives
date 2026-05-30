@@ -47,7 +47,7 @@ public class SequencerQueue<TAbsolute>
             throw new ArgumentOutOfRangeException(nameof(capacity));
         }
 
-        _queue = new PriorityQueue<ScheduledItem<TAbsolute>>(capacity);
+        _queue = new(capacity);
     }
 
     /// <summary>

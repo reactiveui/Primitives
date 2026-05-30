@@ -230,7 +230,7 @@ public static class CoreOnlySmoke
             "AsyncBridgeGeneratorSmoke",
             [CSharpSyntaxTree.ParseText(source, parseOptions)],
             references,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            new(OutputKind.DynamicallyLinkedLibrary));
 
         var driver = CSharpGeneratorDriver.Create(
             [

@@ -176,7 +176,7 @@ public class CombineLatestSubscriptionBaseTests
         {
             _ = cancellationToken;
             SubscribedIndices.Add(index);
-            return new ValueTask<IAsyncDisposable>(NoopDisposable.Instance);
+            return new(NoopDisposable.Instance);
         }
     }
 

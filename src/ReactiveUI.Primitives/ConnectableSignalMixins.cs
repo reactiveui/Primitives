@@ -30,7 +30,7 @@ public static class ConnectableSignalMixins
             throw new ArgumentNullException(nameof(hub));
         }
 
-        return new ConnectableSignal<T>(source, hub);
+        return new(source, hub);
     }
 
     /// <summary>

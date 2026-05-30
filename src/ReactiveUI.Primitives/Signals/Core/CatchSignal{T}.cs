@@ -92,11 +92,11 @@ internal sealed class CatchSignal<T> : SignalsBase<T>
         {
             _isDisposed = false;
             _e = _parent._sources.GetEnumerator();
-            _subscription = new SingleReplaceableDisposable();
+            _subscription = new();
 
             var schedule = Sequencer.Immediate.Schedule(RecursiveRun);
 
-            return new MultipleDisposable(schedule, _subscription, Disposable.Create(() =>
+            return new(schedule, _subscription, Disposable.Create(() =>
             {
                 lock (_gate)
                 {

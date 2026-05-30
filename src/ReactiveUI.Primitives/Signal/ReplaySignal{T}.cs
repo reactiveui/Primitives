@@ -113,7 +113,7 @@ public class ReplaySignal<T> : ISignal<T>
         _broadcaster = default;
         if (_usesWindow || bufferSize == int.MaxValue)
         {
-            _queue = new Queue<TimeInterval<T>>();
+            _queue = new();
         }
         else
         {
@@ -294,7 +294,7 @@ public class ReplaySignal<T> : ISignal<T>
             }
             else
             {
-                _queue!.Enqueue(new TimeInterval<T>(value, interval));
+                _queue!.Enqueue(new(value, interval));
                 Trim();
             }
         }
@@ -315,7 +315,7 @@ public class ReplaySignal<T> : ISignal<T>
             throw new ArgumentNullException(nameof(observer));
         }
 
-        var ex = default(Exception);
+        Exception? ex;
         var subscription = default(ObserverHandler);
 
         lock (_observerLock)
@@ -324,7 +324,7 @@ public class ReplaySignal<T> : ISignal<T>
             if (!_isStopped)
             {
                 _broadcaster.Add(observer);
-                subscription = new ObserverHandler(this, observer);
+                subscription = new(this, observer);
             }
 
             ex = _lastError;

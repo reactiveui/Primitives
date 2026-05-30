@@ -636,7 +636,7 @@ public static partial class LinqMixins
                 var timestamp = _sequencer.Now;
                 for (var i = 0; i < _range.Count; i++)
                 {
-                    onNext(new Moment<T>((T)(object)(_range.Start + i), timestamp));
+                    onNext(new((T)(object)(_range.Start + i), timestamp));
                 }
 
                 return;
@@ -644,7 +644,7 @@ public static partial class LinqMixins
 
             for (var i = 0; i < _range.Count; i++)
             {
-                onNext(new Moment<T>((T)(object)(_range.Start + i), _sequencer.Now));
+                onNext(new((T)(object)(_range.Start + i), _sequencer.Now));
             }
         }
 
@@ -659,7 +659,7 @@ public static partial class LinqMixins
                 var timestamp = _sequencer.Now;
                 for (var i = 0; i < _range.Count; i++)
                 {
-                    observer.OnNext(new Moment<T>((T)(object)(_range.Start + i), timestamp));
+                    observer.OnNext(new((T)(object)(_range.Start + i), timestamp));
                 }
 
                 return;
@@ -667,7 +667,7 @@ public static partial class LinqMixins
 
             for (var i = 0; i < _range.Count; i++)
             {
-                observer.OnNext(new Moment<T>((T)(object)(_range.Start + i), _sequencer.Now));
+                observer.OnNext(new((T)(object)(_range.Start + i), _sequencer.Now));
             }
         }
     }
@@ -735,7 +735,7 @@ public static partial class LinqMixins
             {
                 for (var i = 0; i < _range.Count; i++)
                 {
-                    onNext(new TimeInterval<T>((T)(object)(_range.Start + i), TimeSpan.Zero));
+                    onNext(new((T)(object)(_range.Start + i), TimeSpan.Zero));
                 }
 
                 return;
@@ -747,7 +747,7 @@ public static partial class LinqMixins
                 var now = _sequencer.Now;
                 var interval = i == 0 ? TimeSpan.Zero : now - last;
                 last = now;
-                onNext(new TimeInterval<T>((T)(object)(_range.Start + i), interval));
+                onNext(new((T)(object)(_range.Start + i), interval));
             }
         }
 
@@ -761,7 +761,7 @@ public static partial class LinqMixins
             {
                 for (var i = 0; i < _range.Count; i++)
                 {
-                    observer.OnNext(new TimeInterval<T>((T)(object)(_range.Start + i), TimeSpan.Zero));
+                    observer.OnNext(new((T)(object)(_range.Start + i), TimeSpan.Zero));
                 }
 
                 return;
@@ -773,7 +773,7 @@ public static partial class LinqMixins
                 var now = _sequencer.Now;
                 var interval = i == 0 ? TimeSpan.Zero : now - last;
                 last = now;
-                observer.OnNext(new TimeInterval<T>((T)(object)(_range.Start + i), interval));
+                observer.OnNext(new((T)(object)(_range.Start + i), interval));
             }
         }
     }

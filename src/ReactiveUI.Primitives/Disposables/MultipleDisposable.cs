@@ -174,7 +174,7 @@ public class MultipleDisposable : IsDisposed
             throw new ArgumentNullException(nameof(item));
         }
 
-        var shouldDispose = false;
+        bool shouldDispose;
         lock (_gate)
         {
             shouldDispose = !_disposed && RemoveCore(item);

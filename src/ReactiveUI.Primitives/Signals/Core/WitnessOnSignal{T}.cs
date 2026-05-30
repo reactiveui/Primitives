@@ -107,7 +107,7 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
 
             var sourceDisposable = _parent._source.Subscribe(this);
 
-            return new MultipleDisposable(sourceDisposable, this);
+            return new(sourceDisposable, this);
         }
 
         /// <summary>

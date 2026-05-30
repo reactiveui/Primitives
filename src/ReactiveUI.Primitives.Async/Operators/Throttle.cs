@@ -77,7 +77,7 @@ public static partial class SignalAsync
     {
         if (timeProvider == TimeProvider.System)
         {
-            return new ValueTask(Task.Delay(delay, cancellationToken));
+            return new(Task.Delay(delay, cancellationToken));
         }
 
         return PooledDelaySource.Rent().BeginAsync(delay, timeProvider, cancellationToken);

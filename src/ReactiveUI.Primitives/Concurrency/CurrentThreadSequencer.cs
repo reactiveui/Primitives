@@ -18,7 +18,7 @@ public sealed class CurrentThreadSequencer : ISequencer
     /// <summary>
     /// Singleton holder for the current-thread sequencer.
     /// </summary>
-    private static readonly Lazy<CurrentThreadSequencer> StaticInstance = new(() => new CurrentThreadSequencer());
+    private static readonly Lazy<CurrentThreadSequencer> StaticInstance = new(() => new());
 
     /// <summary>
     /// Tracks whether the current thread is running scheduled work.
@@ -190,7 +190,7 @@ public sealed class CurrentThreadSequencer : ISequencer
         // if there is a task running or there is a queue
         if (queue == null)
         {
-            queue = new SequencerQueue<long>(4);
+            queue = new(4);
             SetQueue(queue);
         }
 

@@ -1071,7 +1071,7 @@ public class TransformationOperatorTests
         const int ThirdRunningTotal = 3;
         const int SixthRunningTotal = 6;
         var result = await SignalAsync.Range(1, ScanInputCount)
-            .Scan(0, static (acc, x, _) => new ValueTask<int>(acc + x))
+            .Scan(0, static (acc, x, _) => new(acc + x))
             .ToListAsync();
 
         await Assert.That(result).IsCollectionEqualTo([1, ThirdRunningTotal, SixthRunningTotal]);
@@ -1116,7 +1116,7 @@ public class TransformationOperatorTests
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
-            .Scan(0, static (acc, x, _) => new ValueTask<int>(acc + x))
+            .Scan(0, static (acc, x, _) => new(acc + x))
             .SubscribeAsync(
                 static (_, _) => default,
                 (ex, _) =>

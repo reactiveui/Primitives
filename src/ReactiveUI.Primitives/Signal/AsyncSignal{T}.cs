@@ -205,9 +205,9 @@ public class AsyncSignal<T> : IAwaitSignal<T>
             throw new ArgumentNullException(nameof(observer));
         }
 
-        var ex = default(Exception);
-        var v = default(T);
-        var hv = false;
+        Exception? ex;
+        T? v;
+        bool hv;
 
         lock (_observerLock)
         {
@@ -221,14 +221,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
                 else
                 {
                     var current = _outObserver;
-                    if (current is EmptyWitness<T>)
-                    {
-                        _outObserver = new ListWitness<T>(new ImmutableList<IObserver<T>>([observer]));
-                    }
-                    else
-                    {
-                        _outObserver = new ListWitness<T>(new ImmutableList<IObserver<T>>([current, observer]));
-                    }
+                    _outObserver = current is EmptyWitness<T> ? new ListWitness<T>(new([observer])) : new ListWitness<T>(new([current, observer]));
                 }
 
                 return new ObserverHandler(this, observer);

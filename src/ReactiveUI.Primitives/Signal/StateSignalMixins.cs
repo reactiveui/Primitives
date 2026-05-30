@@ -33,7 +33,7 @@ public static class StateSignalMixins
             throw new ArgumentNullException(nameof(selector));
         }
 
-        return new ReadOnlyState<TResult>(
+        return new(
             Signal.CreateSafe<TResult>(
                 observer => source.Subscribe(
                     value => observer.OnNext(selector(value)),

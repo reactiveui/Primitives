@@ -21,7 +21,7 @@ internal abstract class CombineLatestSubscriptionBase<TResult> : IAsyncDisposabl
     /// <param name="sourceCount">The number of upstream sources (e.g. 2 for arity-2).</param>
     protected CombineLatestSubscriptionBase(IObserverAsync<TResult> observer, int sourceCount)
     {
-        Lifecycle = new CombineLatestLifecycle<TResult>(observer, sourceCount);
+        Lifecycle = new(observer, sourceCount);
     }
 
     /// <summary>Gets the shared subscription lifecycle (gate / dispose CTS / external link / forwarders).</summary>

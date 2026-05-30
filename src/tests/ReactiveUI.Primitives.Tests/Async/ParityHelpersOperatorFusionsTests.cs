@@ -466,7 +466,7 @@ public class ParityHelpersOperatorFusionsTests
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
-            .ScanWithInitial(ScanSeed, static (acc, x, _) => new ValueTask<int>(acc + x))
+            .ScanWithInitial(ScanSeed, static (acc, x, _) => new(acc + x))
             .SubscribeAsync(
                 static (_, _) => default,
                 (ex, _) =>

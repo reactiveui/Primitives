@@ -194,7 +194,7 @@ public static partial class Signal
         return Create<EventPattern<EventArgs>>(observer =>
         {
             void Handler(object? sender, EventArgs eventArgs) =>
-                observer.OnNext(new EventPattern<EventArgs>(sender, eventArgs));
+                observer.OnNext(new(sender, eventArgs));
 
             addHandler(Handler);
             return Disposable.Create(() => removeHandler(Handler));
@@ -226,7 +226,7 @@ public static partial class Signal
         return Create<EventPattern<TEventArgs>>(observer =>
         {
             void Handler(object? sender, TEventArgs eventArgs) =>
-                observer.OnNext(new EventPattern<TEventArgs>(sender, eventArgs));
+                observer.OnNext(new(sender, eventArgs));
 
             addHandler(Handler);
             return Disposable.Create(() => removeHandler(Handler));
@@ -772,6 +772,6 @@ public static partial class Signal
             ranges[i] = range;
         }
 
-        return new RangeConcatSignal(ranges);
+        return new(ranges);
     }
 }

@@ -409,7 +409,7 @@ public class ErrorHandlingOperatorTests
             var handlerObservable = SignalAsync.Create<int>((_, _) =>
             {
                 handlerSubscribed.TrySetResult();
-                return new ValueTask<IAsyncDisposable>(new ThrowingDisposable(disposeFailure));
+                return new(new ThrowingDisposable(disposeFailure));
             });
 
             var sub = await source.Catch(_ => handlerObservable)

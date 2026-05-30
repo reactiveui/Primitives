@@ -45,7 +45,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     /// Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class.
     /// </summary>
     private ThreadPoolSequencer() =>
-        _timer = new Timer(static state => ((ThreadPoolSequencer)state!).RunDue(), this, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        _timer = new(static state => ((ThreadPoolSequencer)state!).RunDue(), this, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
 
     /// <summary>
     /// Gets the scheduler's notion of current time.
@@ -99,7 +99,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
 
         lock (_gate)
         {
-            _queue.Enqueue(new TimedWorkItem(item, dueTimestamp));
+            _queue.Enqueue(new(item, dueTimestamp));
             ArmTimerNoLock();
         }
     }

@@ -385,7 +385,7 @@ public static partial class SignalAsync
             public Subscription(TakeUntilCancellationToken<T> parent, IObserverAsync<T> observer)
             {
                 _parent = parent;
-                _lifecycle = new TakeUntilLifecycle<T>(observer);
+                _lifecycle = new(observer);
             }
 
             /// <summary>
@@ -490,7 +490,7 @@ public static partial class SignalAsync
             public Subscription(TakeUntilFromRawSignal<T> parent, IObserverAsync<T> observer)
             {
                 _parent = parent;
-                _lifecycle = new TakeUntilLifecycle<T>(observer);
+                _lifecycle = new(observer);
             }
 
             /// <summary>
@@ -633,7 +633,7 @@ public static partial class SignalAsync
             public Subscription(TakeUntilTask<T> parent, IObserverAsync<T> observer)
             {
                 _parent = parent;
-                _lifecycle = new TakeUntilLifecycle<T>(observer);
+                _lifecycle = new(observer);
             }
 
             /// <summary>
@@ -750,7 +750,7 @@ public static partial class SignalAsync
             public Subscription(TakeUntilAsyncSignal<T, TOther> parent, IObserverAsync<T> observer)
             {
                 _parent = parent;
-                _lifecycle = new TakeUntilLifecycle<T>(observer);
+                _lifecycle = new(observer);
             }
 
             /// <summary>

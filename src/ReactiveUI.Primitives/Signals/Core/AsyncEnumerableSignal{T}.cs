@@ -40,7 +40,7 @@ internal sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
 
         var cts = CancellationToken.CanBeCanceled
             ? CancellationTokenSource.CreateLinkedTokenSource(CancellationToken)
-            : new CancellationTokenSource();
+            : new();
         var disposed = 0;
         IAsyncEnumerator<T>? enumerator = null;
         _ = RunAsync();

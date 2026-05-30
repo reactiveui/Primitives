@@ -16,7 +16,7 @@ public sealed class ImmediateSequencer : ISequencer
     /// <summary>
     /// Singleton holder for the immediate sequencer.
     /// </summary>
-    private static readonly Lazy<ImmediateSequencer> StaticInstance = new(static () => new ImmediateSequencer());
+    private static readonly Lazy<ImmediateSequencer> StaticInstance = new(static () => new());
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ImmediateSequencer"/> class.

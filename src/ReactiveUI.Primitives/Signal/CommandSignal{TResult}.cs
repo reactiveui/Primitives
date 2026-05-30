@@ -139,7 +139,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
                 return signal;
             }
 
-            signal = new StateSignal<bool>(Volatile.Read(ref _isRunning));
+            signal = new(Volatile.Read(ref _isRunning));
             var current = Interlocked.CompareExchange(ref _isRunningState, signal, null);
             if (current == null)
             {
@@ -175,12 +175,12 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
             ThrowIfDisposed();
 
             return _executeSync != null
-                ? new CommandExecution<TResult>(ExecuteSync(cancellationToken))
+                ? new(ExecuteSync(cancellationToken))
                 : new CommandExecution<TResult>(ExecuteAsyncCore(cancellationToken));
         }
         catch (Exception error)
         {
-            return new CommandExecution<TResult>(error);
+            return new(error);
         }
     }
 
@@ -231,7 +231,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
             return signal;
         }
 
-        signal = new Signal<T>();
+        signal = new();
         var current = Interlocked.CompareExchange(ref field, signal, null);
         if (current == null)
         {

@@ -691,7 +691,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenReplayLatestOnNextWithCustomToken_ThenForwardsValue()
     {
-        var signal = Signal.CreateReplayLatest<int>(new ReplayLatestSignalCreationOptions
+        var signal = Signal.CreateReplayLatest<int>(new()
         {
             PublishingOption = PublishingOption.Concurrent,
             IsStateless = false,
@@ -719,7 +719,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenReplayLatestOnErrorResumeWithCustomToken_ThenForwardsError()
     {
-        var signal = Signal.CreateReplayLatest<int>(new ReplayLatestSignalCreationOptions
+        var signal = Signal.CreateReplayLatest<int>(new()
         {
             PublishingOption = PublishingOption.Concurrent,
             IsStateless = false,
@@ -762,7 +762,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenStatelessReplayLastSignalDisposedTwice_ThenIdempotent()
     {
-        var signal = Signal.CreateReplayLatest<int>(new ReplayLatestSignalCreationOptions
+        var signal = Signal.CreateReplayLatest<int>(new()
         {
             PublishingOption = PublishingOption.Serial,
             IsStateless = true,

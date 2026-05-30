@@ -104,7 +104,7 @@ public static partial class LinqMixins
 #if NET8_0_OR_GREATER
                 comparer is null ? [] : new HashSet<T>(comparer);
 #else
-                new HashSet<T>(comparer);
+                new(comparer);
 #endif
         }
 

@@ -391,7 +391,7 @@ public static partial class LinqMixins
             var interval = _first ? TimeSpan.Zero : now - _last;
             _first = false;
             _last = now;
-            _observer.OnNext(new TimeInterval<T>(value, interval));
+            _observer.OnNext(new(value, interval));
         }
 
         /// <inheritdoc/>

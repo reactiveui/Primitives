@@ -785,7 +785,7 @@ public partial class TakeUntilOperatorTests
         var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await source.Values
-            .TakeUntil(static (_, _) => new ValueTask<bool>(false), cts.Token)
+            .TakeUntil(static (_, _) => new(false), cts.Token)
             .SubscribeAsync(
                 static (_, _) => default,
                 null,
