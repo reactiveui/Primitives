@@ -2,14 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System;
 using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
-using System.Reactive.Linq;
-
 using RxObservable = System.Reactive.Linq.Observable;
-using RxSystemActionObserver = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
@@ -19,9 +14,24 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class FactorySignalBenchmarks
 {
+    /// <summary>
+    /// The first value produced by the range benchmarks.
+    /// </summary>
     private const int RangeStart = 4;
+
+    /// <summary>
+    /// The number of values produced by the range benchmarks.
+    /// </summary>
     private const int RangeCount = 32;
+
+    /// <summary>
+    /// The number of values produced by the repeat benchmarks.
+    /// </summary>
     private const int RepeatCount = 32;
+
+    /// <summary>
+    /// The value repeated by the repeat benchmarks.
+    /// </summary>
     private const int ThrowValue = 42;
 
     /// <summary>

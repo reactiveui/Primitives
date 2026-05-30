@@ -2,14 +2,12 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive.Concurrency;
+using System.Reactive.Linq;
 using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Signals;
-using System.Reactive.Concurrency;
-using System.Reactive.Linq;
-
 using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -21,7 +19,15 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class OperatorPassThroughBenchmarks
 {
+    /// <summary>
+    /// The number of values produced by each benchmarked sequence.
+    /// </summary>
     private const int Count = 16;
+
+    /// <summary>
+    /// The number of attempts used by the retry-on-error benchmarks.
+    /// </summary>
+    private const int RetryCount = 2;
 
     /// <summary>
     /// Benchmarks a side-effecting pass-through over a range.
@@ -55,7 +61,7 @@ public class OperatorPassThroughBenchmarks
     public int R3TapRange()
     {
         var observer = new IntR3Observer();
-        using var subscription = R3.ObservableExtensions.Do(R3.Observable.Range(1, Count), onNext: static (int _) => { })
+        using var subscription = R3.ObservableExtensions.Do(R3.Observable.Range(1, Count), onNext: static _ => { })
             .Subscribe(observer);
         return observer.Total;
     }
@@ -217,7 +223,7 @@ public class OperatorPassThroughBenchmarks
     public int PrimitivesReattemptRange()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Sequence(1, Count).Reattempt(2).Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).Reattempt(RetryCount).Subscribe(observer);
         return observer.Total;
     }
 
@@ -229,16 +235,32 @@ public class OperatorPassThroughBenchmarks
     public int SystemReactiveReattemptRange()
     {
         var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Range(1, Count).Retry(2).Subscribe(observer);
+        using var subscription = RxObservable.Range(1, Count).Retry(RetryCount).Subscribe(observer);
         return observer.Total;
     }
 
+    /// <summary>
+    /// A synchronization context that invokes callbacks synchronously on the calling thread.
+    /// </summary>
     private sealed class ImmediateSynchronizationContext : SynchronizationContext, IDisposable
     {
+        /// <summary>
+        /// Invokes the callback synchronously.
+        /// </summary>
+        /// <param name="d">The callback to invoke.</param>
+        /// <param name="state">The state passed to the callback.</param>
         public override void Post(SendOrPostCallback d, object? state) => d(state);
 
+        /// <summary>
+        /// Invokes the callback synchronously.
+        /// </summary>
+        /// <param name="d">The callback to invoke.</param>
+        /// <param name="state">The state passed to the callback.</param>
         public override void Send(SendOrPostCallback d, object? state) => d(state);
 
+        /// <summary>
+        /// Releases the resources used by the synchronization context.
+        /// </summary>
         public void Dispose()
         {
         }

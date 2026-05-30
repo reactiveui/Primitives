@@ -2,11 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Signals;
 using System.Reactive.Linq;
-
+using BenchmarkDotNet.Attributes;
+using ReactiveUI.Primitives.Signals;
 using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -54,7 +52,7 @@ public class OperatorFlatMapRangeBenchmarks
         var observer = new IntR3Observer();
         using var subscription = R3.ObservableExtensions.SelectMany(
                 R3.Observable.Range(1, 8),
-                static (int x) => R3.Observable.Range(x * 10, 2))
+                static x => R3.Observable.Range(x * 10, 2))
             .Subscribe(observer);
         return observer.Total;
     }

@@ -6,8 +6,7 @@
     <IsPackable>false</IsPackable>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <RunAnalyzers>true</RunAnalyzers>
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <NoWarn>$(NoWarn);SA1600;SA1649;SA1402;SA1518;SA1208;SA1210;SA1211;S109;S3257;CA1822;S1128;SA1200;S4144;S6966;IDE0300;S138;CA1849</NoWarn>
+    <NoWarn>$(NoWarn);CA1822</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

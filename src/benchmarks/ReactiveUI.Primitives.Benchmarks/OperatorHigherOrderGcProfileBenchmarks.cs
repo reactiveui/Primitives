@@ -17,6 +17,9 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
 public class OperatorHigherOrderGcProfileBenchmarks
 {
+    /// <summary>
+    /// The delegate benchmark instance that performs the measured work.
+    /// </summary>
     private readonly OperatorHigherOrderBenchmarks _b = new();
 
     /// <summary>Concat (Primitives).</summary>

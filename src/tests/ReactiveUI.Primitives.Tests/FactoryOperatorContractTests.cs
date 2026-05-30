@@ -2,18 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System;
-using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 using ReactiveUI.Primitives.Signals.Core;
-using TUnit.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -677,8 +672,8 @@ public class FactoryOperatorContractTests
         Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Sequence(FirstValue, -1));
         Assert.Throws<ArgumentNullException>(() => Signal.Sequence(FirstValue, SecondValue, null!));
         Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Loop(FirstValue, -1));
-        Assert.Throws<ArgumentNullException>(() => Signal.Unfold<int, int>(0, null!, static state => state, static state => state));
-        Assert.Throws<ArgumentNullException>(() => Signal.Unfold<int, int>(0, static _ => true, null!, static state => state));
+        Assert.Throws<ArgumentNullException>(() => Signal.Unfold(0, null!, static state => state, static state => state));
+        Assert.Throws<ArgumentNullException>(() => Signal.Unfold(0, static _ => true, null!, static state => state));
         Assert.Throws<ArgumentNullException>(() => Signal.Unfold<int, int>(0, static _ => true, static state => state, null!));
         Assert.Throws<ArgumentNullException>(() => Signal.FromEventPattern(null!, _ => { }));
         Assert.Throws<ArgumentNullException>(() => Signal.FromEventPattern(_ => { }, null!));
@@ -691,8 +686,8 @@ public class FactoryOperatorContractTests
         Assert.Throws<ArgumentNullException>(() => Signal.After(DateTimeOffset.UnixEpoch, null!));
         Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Every(TimeSpan.FromTicks(-1)));
         Assert.Throws<ArgumentNullException>(() => Signal.After(TimeSpan.Zero, TimeSpan.Zero, null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.FromAsync<int>((Func<Task<int>>)null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.FromAsync<int>((Func<CancellationToken, Task<int>>)null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.FromAsync((Func<Task<int>>)null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.FromAsync((Func<CancellationToken, Task<int>>)null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).SubscribeOn(Sequencer.Immediate));
         Assert.Throws<ArgumentNullException>(() => Signal.None<int>().SubscribeOn(null!));
 
@@ -792,6 +787,7 @@ public class FactoryOperatorContractTests
     /// Verifies task-based alias operators.
     /// </summary>
     /// <returns>A task that completes when assertions have run.</returns>
+    [SuppressMessage("Major Code Smell", "S6966:Awaitable method should be used", Justification = "Synchronous ToArray/ToList operators are deliberately covered alongside async variants.")]
     private static async Task VerifyTaskAliasOperators()
     {
         var converted = new[] { 4, AfterTicks }.ToObservable();
@@ -800,10 +796,10 @@ public class FactoryOperatorContractTests
         var lastDefault = await Signal.None<int>().LastOrDefaultAsync(RetryResult);
         var array = await Signal.Sequence(FirstValue, FourthValue).ToArrayAsync();
         var list = await Signal.Sequence(FirstValue, FourthValue).ToListAsync();
-#pragma warning disable S6966 // This verifies the observable ToArray/ToList aliases, not async enumerable materialization.
-        var observedArray = await Signal.Sequence(FirstValue, SecondValue).ToArray().ToTask();
-        var observedList = await Signal.Sequence(FirstValue, SecondValue).ToList().ToTask();
-#pragma warning restore S6966
+        int[] observedArray = [];
+        Signal.Sequence(FirstValue, SecondValue).ToArray().Subscribe(value => observedArray = value).Dispose();
+        List<int> observedList = [];
+        Signal.Sequence(FirstValue, SecondValue).ToList().Subscribe(value => observedList = [.. value]).Dispose();
         var first = await Signal.FromEnumerable([RepeatValue, ProjectionMultiplier]).FirstAsync().ToTask();
         var started = await Signal.Start(() => ProjectedSecondValue, Sequencer.CurrentThread).ToTask();
 

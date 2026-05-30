@@ -2,11 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Signals;
 using System.Reactive.Linq;
-
+using BenchmarkDotNet.Attributes;
+using ReactiveUI.Primitives.Signals;
 using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -20,7 +18,14 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class OperatorFilterCastBenchmarks
 {
+    /// <summary>
+    /// The number of values produced by each benchmarked sequence.
+    /// </summary>
     private const int Count = 16;
+
+    /// <summary>
+    /// The shared reference projected into each benchmarked sequence.
+    /// </summary>
     private const string Shared = "x";
 
     /// <summary>

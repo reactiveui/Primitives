@@ -3,10 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
-using R3;
-
 using RxSubject = System.Reactive.Subjects.Subject<int>;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -17,7 +14,14 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class SubjectSubscriptionBenchmarks
 {
+    /// <summary>
+    /// The small subscriber count used by the subscribe/dispose benchmarks.
+    /// </summary>
     private const int SubscriberCount8 = 8;
+
+    /// <summary>
+    /// The large subscriber count used by the subscribe/dispose benchmarks.
+    /// </summary>
     private const int SubscriberCount64 = 64;
 
     /// <summary>
@@ -25,61 +29,48 @@ public class SubjectSubscriptionBenchmarks
     /// </summary>
     /// <returns>A lifecycle marker confirming the benchmark created subscriptions and ran the disposal path.</returns>
     [Benchmark(Baseline = true)]
-    public int PrimitivesSubjectSubscribeDispose8()
-    {
-        return SubscribeDisposeCountSignal(SubscriberCount8);
-    }
+    public int PrimitivesSubjectSubscribeDispose8() => SubscribeDisposeCountSignal(SubscriberCount8);
 
     /// <summary>
     /// Subscribes and disposes 8 observers from System.Reactive Subject.
     /// </summary>
     /// <returns>A lifecycle marker confirming the benchmark created subscriptions and ran the disposal path.</returns>
     [Benchmark]
-    public int SystemReactiveSubjectSubscribeDispose8()
-    {
-        return SubscribeDisposeCountSystemSubject(SubscriberCount8);
-    }
+    public int SystemReactiveSubjectSubscribeDispose8() => SubscribeDisposeCountSystemSubject(SubscriberCount8);
 
     /// <summary>
     /// Subscribes and disposes 8 observers from <see cref="R3.Subject{T}"/>.
     /// </summary>
     /// <returns>A lifecycle marker confirming the benchmark created subscriptions and ran the disposal path.</returns>
     [Benchmark]
-    public int R3SubjectSubscribeDispose8()
-    {
-        return SubscribeDisposeCountR3Subject(SubscriberCount8);
-    }
+    public int R3SubjectSubscribeDispose8() => SubscribeDisposeCountR3Subject(SubscriberCount8);
 
     /// <summary>
     /// Subscribes and disposes 64 observers from primitives <see cref="Signal{T}"/>.
     /// </summary>
     /// <returns>A lifecycle marker confirming the benchmark created subscriptions and ran the disposal path.</returns>
     [Benchmark]
-    public int PrimitivesSubjectSubscribeDispose64()
-    {
-        return SubscribeDisposeCountSignal(SubscriberCount64);
-    }
+    public int PrimitivesSubjectSubscribeDispose64() => SubscribeDisposeCountSignal(SubscriberCount64);
 
     /// <summary>
     /// Subscribes and disposes 64 observers from System.Reactive Subject.
     /// </summary>
     /// <returns>A lifecycle marker confirming the benchmark created subscriptions and ran the disposal path.</returns>
     [Benchmark]
-    public int SystemReactiveSubjectSubscribeDispose64()
-    {
-        return SubscribeDisposeCountSystemSubject(SubscriberCount64);
-    }
+    public int SystemReactiveSubjectSubscribeDispose64() => SubscribeDisposeCountSystemSubject(SubscriberCount64);
 
     /// <summary>
     /// Subscribes and disposes 64 observers from <see cref="R3.Subject{T}"/>.
     /// </summary>
     /// <returns>A lifecycle marker confirming the benchmark created subscriptions and ran the disposal path.</returns>
     [Benchmark]
-    public int R3SubjectSubscribeDispose64()
-    {
-        return SubscribeDisposeCountR3Subject(SubscriberCount64);
-    }
+    public int R3SubjectSubscribeDispose64() => SubscribeDisposeCountR3Subject(SubscriberCount64);
 
+    /// <summary>
+    /// Subscribes and disposes the requested number of observers against a primitives signal.
+    /// </summary>
+    /// <param name="subscribers">The number of observers to subscribe and dispose.</param>
+    /// <returns>A lifecycle marker confirming the subscriptions were created and disposed.</returns>
     private static int SubscribeDisposeCountSignal(int subscribers)
     {
         var observer = new IntSignalObserver();
@@ -99,6 +90,11 @@ public class SubjectSubscriptionBenchmarks
         return before + (subject.HasObservers ? 1 : 0);
     }
 
+    /// <summary>
+    /// Subscribes and disposes the requested number of observers against a System.Reactive subject.
+    /// </summary>
+    /// <param name="subscribers">The number of observers to subscribe and dispose.</param>
+    /// <returns>A lifecycle marker confirming the subscriptions were created and disposed.</returns>
     private static int SubscribeDisposeCountSystemSubject(int subscribers)
     {
         var observer = new IntSignalObserver();
@@ -118,6 +114,11 @@ public class SubjectSubscriptionBenchmarks
         return before;
     }
 
+    /// <summary>
+    /// Subscribes and disposes the requested number of observers against an R3 subject.
+    /// </summary>
+    /// <param name="subscribers">The number of observers to subscribe and dispose.</param>
+    /// <returns>A lifecycle marker confirming the subscriptions were created and disposed.</returns>
     private static int SubscribeDisposeCountR3Subject(int subscribers)
     {
         using var subject = new R3.Subject<int>();

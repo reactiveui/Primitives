@@ -62,7 +62,7 @@ internal sealed class ReturnSignal<T> : SignalsBase<T>
     /// <summary>
     /// Represents the Return class.
     /// </summary>
-    private sealed class Return : WitnessBase<T, T>
+    internal sealed class Return : WitnessBase<T, T>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Return"/> class.

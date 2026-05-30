@@ -2,11 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Collections.Generic;
 using System.Reactive.Concurrency;
-using System.Reactive.Linq;
-using System.Reactive.Threading.Tasks;
-using System.Threading;
 using BenchmarkDotNet.Attributes;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
@@ -23,7 +19,14 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class FactoryAdapterExpansionBenchmarks
 {
+    /// <summary>
+    /// The number of values produced by each benchmarked sequence.
+    /// </summary>
     private const int Count = 16;
+
+    /// <summary>
+    /// The scalar value emitted by the single-value benchmarks.
+    /// </summary>
     private const int Value = 42;
 
     /// <summary>
@@ -68,7 +71,7 @@ public class FactoryAdapterExpansionBenchmarks
     public int R3CreateSubscribe()
     {
         var observer = new IntR3Observer();
-        using var subscription = R3.Observable.Create<int>(static (R3.Observer<int> target) =>
+        using var subscription = R3.Observable.Create<int>(static target =>
         {
             target.OnNext(Value);
             target.OnCompleted(R3.Result.Success);
@@ -90,40 +93,6 @@ public class FactoryAdapterExpansionBenchmarks
             target.OnNext(Value);
             target.OnCompleted();
             return Disposable.Empty;
-        }).Subscribe(observer);
-        return observer.Total;
-    }
-
-    /// <summary>
-    /// Benchmarks the safe custom create path using System.Reactive create semantics.
-    /// </summary>
-    /// <returns>The observed total.</returns>
-    [Benchmark]
-    public int SystemReactiveCreateSafeSubscribe()
-    {
-        var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Create<int>(target =>
-        {
-            target.OnNext(Value);
-            target.OnCompleted();
-            return RxDisposable.Empty;
-        }).Subscribe(observer);
-        return observer.Total;
-    }
-
-    /// <summary>
-    /// Benchmarks the safe custom create path using R3 create semantics.
-    /// </summary>
-    /// <returns>The observed total.</returns>
-    [Benchmark]
-    public int R3CreateSafeSubscribe()
-    {
-        var observer = new IntR3Observer();
-        using var subscription = R3.Observable.Create<int>(static (R3.Observer<int> target) =>
-        {
-            target.OnNext(Value);
-            target.OnCompleted(R3.Result.Success);
-            return R3.Disposable.Empty;
         }).Subscribe(observer);
         return observer.Total;
     }
@@ -239,7 +208,7 @@ public class FactoryAdapterExpansionBenchmarks
     public int R3UnfoldSubscribe()
     {
         var observer = new IntR3Observer();
-        using var subscription = R3.Observable.Create<int>(static (R3.Observer<int> target) =>
+        using var subscription = R3.Observable.Create<int>(static target =>
         {
             for (var state = 0; state < Count; state++)
             {
@@ -285,7 +254,7 @@ public class FactoryAdapterExpansionBenchmarks
     public int R3UseSubscribe()
     {
         var observer = new IntR3Observer();
-        using var subscription = R3.Observable.Create<int>(static (R3.Observer<int> target) =>
+        using var subscription = R3.Observable.Create<int>(static target =>
         {
             using var resource = R3.Disposable.Empty;
             target.OnNext(Value);
@@ -300,10 +269,7 @@ public class FactoryAdapterExpansionBenchmarks
     /// </summary>
     /// <returns>The number of values collected.</returns>
     [Benchmark]
-    public async Task<int> PrimitivesFromAsyncEnumerableSubscribeAsync()
-    {
-        return (await Signal.FromAsyncEnumerable(ValuesAsync()).CollectArrayAsync().ConfigureAwait(false)).Length;
-    }
+    public async Task<int> PrimitivesFromAsyncEnumerableSubscribeAsync() => (await Signal.FromAsyncEnumerable(ValuesAsync()).CollectArrayAsync().ConfigureAwait(false)).Length;
 
     /// <summary>
     /// Benchmarks async-enumerable adaptation using System.Reactive create semantics.
@@ -321,8 +287,7 @@ public class FactoryAdapterExpansionBenchmarks
 
                 target.OnCompleted();
             })
-            .ToArray()
-            .ToTask()
+            .ToArrayAsync()
             .ConfigureAwait(false);
         return values.Length;
     }
@@ -332,13 +297,11 @@ public class FactoryAdapterExpansionBenchmarks
     /// </summary>
     /// <returns>The number of values collected.</returns>
     [Benchmark]
-    public async Task<int> R3FromAsyncEnumerableSubscribeAsync()
-    {
-        return (await R3.ObservableExtensions.ToArrayAsync(
+    public async Task<int> R3FromAsyncEnumerableSubscribeAsync() =>
+        (await R3.ObservableExtensions.ToArrayAsync(
                 R3.Observable.ToObservable(ValuesAsync()),
                 CancellationToken.None)
             .ConfigureAwait(false)).Length;
-    }
 
     /// <summary>
     /// Benchmarks subscribing and disposing a never-ending signal.
@@ -376,6 +339,10 @@ public class FactoryAdapterExpansionBenchmarks
         return observer.NextCount + observer.CompletionCount + observer.ErrorCount;
     }
 
+    /// <summary>
+    /// Gets the values.
+    /// </summary>
+    /// <returns>The enumerable of values.</returns>
     private static async IAsyncEnumerable<int> ValuesAsync()
     {
         await Task.Yield();

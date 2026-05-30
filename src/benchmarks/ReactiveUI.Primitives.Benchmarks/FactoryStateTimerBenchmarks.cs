@@ -2,15 +2,12 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive.Concurrency;
 using BenchmarkDotNet.Attributes;
 using Microsoft.Extensions.Time.Testing;
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
-using System.Reactive.Concurrency;
-using System.Reactive.Linq;
-
 using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -23,10 +20,20 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class FactoryStateTimerBenchmarks
 {
+    /// <summary>
+    /// The number of values generated or events raised per benchmark iteration.
+    /// </summary>
     private const int Count = 16;
+
+    /// <summary>
+    /// The number of virtual-time ticks advanced for interval timer benchmarks.
+    /// </summary>
     private const int Ticks = 4;
 
-    private readonly int _limit = 16;
+    /// <summary>
+    /// The upper bound passed as explicit state to the create-with-state benchmarks.
+    /// </summary>
+    private readonly int _limit = Count;
 
     /// <summary>
     /// Benchmarks creating a sequence from explicit state without a per-subscription closure.
@@ -237,10 +244,19 @@ public class FactoryStateTimerBenchmarks
         return observer.Count;
     }
 
+    /// <summary>
+    /// A minimal event publisher used to drive the event-bridge benchmarks.
+    /// </summary>
     private sealed class EventSource
     {
+        /// <summary>
+        /// Occurs each time <see cref="Raise"/> is invoked.
+        /// </summary>
         public event EventHandler? Tick;
 
+        /// <summary>
+        /// Raises the <see cref="Tick"/> event once.
+        /// </summary>
         public void Raise() => Tick?.Invoke(this, EventArgs.Empty);
     }
 }

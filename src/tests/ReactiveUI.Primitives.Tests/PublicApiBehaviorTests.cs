@@ -2,27 +2,17 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
-using TUnit.Core;
 
 namespace ReactiveUI.Primitives.Tests;
-
-#pragma warning disable CS8602 // Tests intentionally exercise nullable edge cases and Spark null payload contracts.
 
 /// <summary>
 /// Completes branch and contract coverage for primitive signals and support types.
 /// </summary>
-public class CoverageCompletionTests
+public class PublicApiBehaviorTests
 {
     /// <summary>
     /// Two as a named value for analyzer-friendly coverage assertions.
@@ -108,11 +98,6 @@ public class CoverageCompletionTests
     /// Polling delay used by asynchronous spin assertions.
     /// </summary>
     private const int PollDelayMilliseconds = 10;
-
-    /// <summary>
-    /// Reflection field name for throw delegates.
-    /// </summary>
-    private const string ThrowMemberName = "Throw";
 
     /// <summary>
     /// Shared completed result text.
@@ -553,7 +538,7 @@ public class CoverageCompletionTests
         Signal.Use(() => Disposable.Empty, _ => (IObservable<int>)null!).Subscribe(_ => { }, ex => useErrors.Add(ex.Message));
         Signal.Use<IDisposable, int>(() => throw new InvalidOperationException("resource"), _ => Signal.Emit(1)).Subscribe(_ => { }, ex => useErrors.Add(ex.Message));
 
-        await ObserveTaskError(Task.FromCanceled<int>(new CancellationToken(true)), taskErrors);
+        await ObserveTaskError(Task.FromCanceled<int>(new(true)), taskErrors);
         await ObserveTaskError(Task.FromException<int>(new InvalidOperationException("faulted")), taskErrors);
 
         static async IAsyncEnumerable<int> ThrowingAsyncEnumerable()
@@ -584,14 +569,12 @@ public class CoverageCompletionTests
     }
 
     /// <summary>
-    /// Exercises value types, disposables, and reflection-covered handle delegates.
+    /// Exercises value types, disposables, and handle delegates.
     /// </summary>
     [Test]
-    [RequiresUnreferencedCode("The test exercises reflection and dynamic-code coverage branches.")]
-    [RequiresDynamicCode("The test exercises reflection and dynamic-code coverage branches.")]
     public void CoreValueTypesDisposablesAndHandlesCoverEqualityAndLifecycleBranches()
     {
-        var moment = new Moment<int>(Seven, new DateTimeOffset(CalendarYear, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var moment = new Moment<int>(Seven, new(CalendarYear, 1, 1, 0, 0, 0, TimeSpan.Zero));
         var sameMoment = new Moment<int>(Seven, moment.Timestamp);
         var differentMoment = new Moment<int>(Eight, moment.Timestamp.AddTicks(1));
         var interval = new TimeInterval<int>(Seven, TimeSpan.FromTicks(Three));
@@ -623,7 +606,7 @@ public class CoverageCompletionTests
         Assert.Equal("()", rxVoid.ToString());
 
         InvokeInternalHandleMembers(thrown);
-        InvokeInternalCatchIgnore(new InvalidOperationException("ignored"), 0).Subscribe(_ => ignored++);
+        Handle.CatchIgnore<int>(new InvalidOperationException("ignored")).Subscribe(_ => ignored++);
         Assert.Equal(0, ignored);
 
         var boolean = new BooleanDisposable();
@@ -704,11 +687,11 @@ public class CoverageCompletionTests
         Assert.False(errorSpark.HasValue);
         Assert.Equal(error, errorSpark.Exception);
         Assert.Equal(SparkKind.OnError, errorSpark.Kind);
-        Assert.Equal(default, errorSpark.Value);
+        Assert.Equal(0, errorSpark.Value);
         Assert.True(errorSpark.ToString().Contains(nameof(InvalidOperationException), StringComparison.Ordinal));
         Assert.Equal(errorSpark.GetHashCode(), sameError.GetHashCode());
         errorSpark.Accept((IObserver<int>)observer);
-        Assert.Equal("error:spark-error", errorSpark.Accept<string>((IObserver<int, string>)observer));
+        Assert.Equal("error:spark-error", errorSpark.Accept((IObserver<int, string>)observer));
         errorSpark.Accept(value => observer.Events.Add(value.ToString()), ex => observer.Events.Add("delegate-error:" + ex.Message), () => observer.Events.Add("delegate-completed"));
         Assert.Equal("fn-error:spark-error", errorSpark.Accept(value => value.ToString(), ex => "fn-error:" + ex.Message, () => FunctionCompletedText));
         Assert.Throws<ArgumentNullException>(() => Spark.CreateOnError<int>(null!));
@@ -725,10 +708,10 @@ public class CoverageCompletionTests
         Assert.True(completed.Equals(completedAgain));
         Assert.False(completed.HasValue);
         Assert.Equal(SparkKind.OnCompleted, completed.Kind);
-        Assert.Equal(default, completed.Value);
+        Assert.Equal(0, completed.Value);
         Assert.Equal("OnCompleted()", completed.ToString());
         completed.Accept((IObserver<int>)observer);
-        Assert.Equal(CompletedText, completed.Accept<string>((IObserver<int, string>)observer));
+        Assert.Equal(CompletedText, completed.Accept((IObserver<int, string>)observer));
         completed.Accept(value => observer.Events.Add(value.ToString()), ex => observer.Events.Add(ex.Message), () => observer.Events.Add("delegate-completed"));
         Assert.Equal(FunctionCompletedText, completed.Accept(value => value.ToString(), ex => ex.Message, () => FunctionCompletedText));
         Assert.Throws<ArgumentNullException>(() => completed.Accept((IObserver<int>)null!));
@@ -760,16 +743,16 @@ public class CoverageCompletionTests
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).MapWith(1, (_, value) => value));
         Assert.Throws<ArgumentNullException>(() => source.MapWith<int, int, int>(1, null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Keep(value => true));
-        Assert.Throws<ArgumentNullException>(() => source.Keep<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => source.Keep(null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).KeepWith(1, (_, _) => true));
-        Assert.Throws<ArgumentNullException>(() => source.KeepWith<int, int>(1, null!));
+        Assert.Throws<ArgumentNullException>(() => source.KeepWith(1, null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<string?>)null!).KeepNotNull());
         Assert.Throws<ArgumentNullException>(() => ((IObservable<object>)null!).KeepType<string>());
         Assert.Throws<ArgumentNullException>(() => ((IObservable<object>)null!).CastTo<string>());
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Tap(value => { }));
-        Assert.Throws<ArgumentNullException>(() => source.Tap<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => source.Tap(null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).TapWith(1, (_, _) => { }));
-        Assert.Throws<ArgumentNullException>(() => source.TapWith<int, int>(1, null!));
+        Assert.Throws<ArgumentNullException>(() => source.TapWith(1, null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Fold(0, (left, right) => left + right));
         Assert.Throws<ArgumentNullException>(() => source.Fold(0, null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Reduce(0, (left, right) => left + right));
@@ -829,16 +812,16 @@ public class CoverageCompletionTests
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).UniqueBy(value => value));
         Assert.Throws<ArgumentNullException>(() => source.UniqueBy<int, int>(null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).TakeWhile(value => true));
-        Assert.Throws<ArgumentNullException>(() => source.TakeWhile<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => source.TakeWhile(null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).SkipWhile(value => true));
-        Assert.Throws<ArgumentNullException>(() => source.SkipWhile<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => source.SkipWhile(null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).FlatMap(value => source));
         Assert.Throws<ArgumentNullException>(() => source.FlatMap<int, int>(null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Count());
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).LongCount());
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Any());
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).All(value => true));
-        Assert.Throws<ArgumentNullException>(() => source.All<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => source.All(null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).DelayStart(TimeSpan.Zero, Sequencer.Immediate));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Calm(TimeSpan.Zero, Sequencer.Immediate));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Probe(TimeSpan.Zero, Sequencer.Immediate));
@@ -886,106 +869,22 @@ public class CoverageCompletionTests
     }
 
     /// <summary>
-    /// Invokes internal handle members through reflection.
+    /// Invokes the public handle members directly.
     /// </summary>
     /// <param name="exception">The exception expected from throwing delegates.</param>
-    [RequiresDynamicCode("Calls System.Type.MakeGenericType(params Type[])")]
-    [RequiresUnreferencedCode("Calls System.Reflection.Assembly.GetType(String)")]
     private static void InvokeInternalHandleMembers(Exception exception)
     {
-        var assembly = typeof(RxVoid).Assembly;
-        InvokeAction(GetHandleField(assembly, "ReactiveUI.Primitives.Handle", "Nop"));
-        InvokeAction(GetGenericHandleField(assembly, "ReactiveUI.Primitives.Handle`1", "Ignore", typeof(int)), 1);
-        InvokeAction(GetGenericHandleField(assembly, "ReactiveUI.Primitives.Handle`2", "Ignore", typeof(int), typeof(int)), 1, Two);
-        InvokeAction(
-            GetGenericHandleField(assembly, "ReactiveUI.Primitives.Handle`3", "Ignore", typeof(int), typeof(int), typeof(int)),
-            1,
-            Two,
-            Three);
+        Handle.Nop();
+        Handle<int>.Ignore(1);
+        Handle<int, int>.Ignore(1, Two);
+        Handle<int, int, int>.Ignore(1, Two, Three);
 
-        var identity = (Delegate)GetGenericHandleField(assembly, "ReactiveUI.Primitives.Handle`1", "Identity", typeof(string));
-        Assert.Equal("x", identity.DynamicInvoke("x"));
+        Assert.Equal("x", Handle<string>.Identity("x"));
 
-        InvokeThrows(GetHandleField(assembly, "ReactiveUI.Primitives.Handle", ThrowMemberName), exception);
-        InvokeThrows(GetGenericHandleField(assembly, "ReactiveUI.Primitives.Handle`1", ThrowMemberName, typeof(int)), exception, 1);
-        InvokeThrows(
-            GetGenericHandleField(assembly, "ReactiveUI.Primitives.Handle`2", ThrowMemberName, typeof(int), typeof(int)),
-            exception,
-            1,
-            Two);
-        InvokeThrows(
-            GetGenericHandleField(assembly, "ReactiveUI.Primitives.Handle`3", ThrowMemberName, typeof(int), typeof(int), typeof(int)),
-            exception,
-            1,
-            Two,
-            Three);
-    }
-
-    /// <summary>
-    /// Invokes the internal catch-ignore helper.
-    /// </summary>
-    /// <typeparam name="T">The observable value type.</typeparam>
-    /// <param name="exception">The ignored exception.</param>
-    /// <param name="witness">A value used for generic type inference.</param>
-    /// <returns>The ignored observable.</returns>
-    [RequiresUnreferencedCode("Calls System.Reflection.Assembly.GetType(String)")]
-    [RequiresDynamicCode("Calls System.Reflection.MethodInfo.MakeGenericMethod(params Type[])")]
-    private static IObservable<T> InvokeInternalCatchIgnore<T>(Exception exception, T witness)
-    {
-        GC.KeepAlive(witness);
-        var handle = typeof(RxVoid).Assembly.GetType("ReactiveUI.Primitives.Handle")!;
-        var method = handle.GetMethod("CatchIgnore", BindingFlags.Public | BindingFlags.Static)!.MakeGenericMethod(typeof(T));
-        return (IObservable<T>)method.Invoke(null, [exception])!;
-    }
-
-    /// <summary>
-    /// Gets a non-generic handle field value.
-    /// </summary>
-    /// <param name="assembly">The source assembly.</param>
-    /// <param name="typeName">The handle type name.</param>
-    /// <param name="fieldName">The field name.</param>
-    /// <returns>The field value.</returns>
-    [RequiresUnreferencedCode("Calls System.Reflection.Assembly.GetType(String)")]
-    private static object GetHandleField(Assembly assembly, string typeName, string fieldName) =>
-        assembly.GetType(typeName)!.GetField(fieldName, BindingFlags.Public | BindingFlags.Static)!.GetValue(null)!;
-
-    /// <summary>
-    /// Gets a generic handle field value.
-    /// </summary>
-    /// <param name="assembly">The source assembly.</param>
-    /// <param name="typeName">The generic handle type name.</param>
-    /// <param name="fieldName">The field name.</param>
-    /// <param name="typeArguments">The generic type arguments.</param>
-    /// <returns>The field value.</returns>
-    [RequiresDynamicCode("Calls System.Type.MakeGenericType(params Type[])")]
-    [RequiresUnreferencedCode("Calls System.Reflection.Assembly.GetType(String)")]
-    private static object GetGenericHandleField(Assembly assembly, string typeName, string fieldName, params Type[] typeArguments) =>
-        assembly.GetType(typeName)!.MakeGenericType(typeArguments).GetField(fieldName, BindingFlags.Public | BindingFlags.Static)!.GetValue(null)!;
-
-    /// <summary>
-    /// Invokes a delegate action through reflection.
-    /// </summary>
-    /// <param name="action">The delegate object.</param>
-    /// <param name="args">The invocation arguments.</param>
-    private static void InvokeAction(object action, params object[] args) => _ = ((Delegate)action).DynamicInvoke(args);
-
-    /// <summary>
-    /// Invokes a delegate expected to throw.
-    /// </summary>
-    /// <param name="action">The delegate object.</param>
-    /// <param name="args">The invocation arguments.</param>
-    private static void InvokeThrows(object action, params object[] args)
-    {
-        try
-        {
-            _ = ((Delegate)action).DynamicInvoke(args);
-        }
-        catch (TargetInvocationException ex) when (ex.InnerException is InvalidOperationException)
-        {
-            return;
-        }
-
-        throw new InvalidOperationException("Expected internal handle throw delegate to throw InvalidOperationException.");
+        Assert.Throws<InvalidOperationException>(() => Handle.Throw(exception));
+        Assert.Throws<InvalidOperationException>(() => Handle<int>.Throw(exception, 1));
+        Assert.Throws<InvalidOperationException>(() => Handle<int, int>.Throw(exception, 1, Two));
+        Assert.Throws<InvalidOperationException>(() => Handle<int, int, int>.Throw(exception, 1, Two, Three));
     }
 
     /// <summary>

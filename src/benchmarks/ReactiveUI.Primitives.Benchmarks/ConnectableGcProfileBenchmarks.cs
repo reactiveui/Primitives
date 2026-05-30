@@ -17,6 +17,9 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
 public class ConnectableGcProfileBenchmarks
 {
+    /// <summary>
+    /// The delegate benchmark instance that performs the measured work.
+    /// </summary>
     private readonly ConnectableShareBenchmarks _b = new();
 
     /// <summary>Publish + Connect (Primitives).</summary>
@@ -69,11 +72,6 @@ public class ConnectableGcProfileBenchmarks
     [Benchmark]
     public int Primitives_RefCount() => _b.PrimitivesRefCountSubscribe();
 
-    /// <summary>RefCount (System.Reactive).</summary>
-    /// <returns>The observed total.</returns>
-    [Benchmark]
-    public int Rx_RefCount() => _b.SystemReactiveRefCountSubscribe();
-
     /// <summary>RefCount (R3).</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
@@ -88,9 +86,4 @@ public class ConnectableGcProfileBenchmarks
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int Rx_AutoConnect() => _b.SystemReactiveAutoConnectSubscribe();
-
-    /// <summary>AutoConnect (R3).</summary>
-    /// <returns>The observed total.</returns>
-    [Benchmark]
-    public int R3_AutoConnect() => _b.R3AutoConnectSubscribe();
 }

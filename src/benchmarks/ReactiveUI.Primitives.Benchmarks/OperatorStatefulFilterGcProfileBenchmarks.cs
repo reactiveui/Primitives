@@ -4,7 +4,6 @@
 
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Diagnosers;
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -19,8 +18,25 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
 public class OperatorStatefulFilterGcProfileBenchmarks
 {
+    /// <summary>
+    /// The starting value of each benchmarked sequence.
+    /// </summary>
     private const int StartValue = 0;
+
+    /// <summary>
+    /// The number of values produced by each benchmarked sequence.
+    /// </summary>
     private const int RangeCount = 1024;
+
+    /// <summary>
+    /// The number of leading values skipped or compared by the benchmarks.
+    /// </summary>
+    private const int SkipCount = 8;
+
+    /// <summary>
+    /// The divisor used by the key-selector benchmarks.
+    /// </summary>
+    private const int KeyDivisor = 2;
 
     /// <summary>Subscribe-and-drain through Skip.</summary>
     /// <returns>The observed total.</returns>
@@ -29,7 +45,7 @@ public class OperatorStatefulFilterGcProfileBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
-            .Skip(8)
+            .Skip(SkipCount)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -53,7 +69,7 @@ public class OperatorStatefulFilterGcProfileBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
-            .UniqueBy(static x => x / 2)
+            .UniqueBy(static x => x / KeyDivisor)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -89,7 +105,7 @@ public class OperatorStatefulFilterGcProfileBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
-            .TakeWhile(static x => x < (RangeCount - 8))
+            .TakeWhile(static x => x < (RangeCount - SkipCount))
             .Subscribe(observer);
         return observer.Total;
     }
@@ -101,7 +117,7 @@ public class OperatorStatefulFilterGcProfileBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
-            .SkipWhile(static x => x < 8)
+            .SkipWhile(static x => x < SkipCount)
             .Subscribe(observer);
         return observer.Total;
     }

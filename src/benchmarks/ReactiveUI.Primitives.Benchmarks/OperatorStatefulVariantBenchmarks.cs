@@ -2,11 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Signals;
 using System.Reactive.Linq;
-
+using BenchmarkDotNet.Attributes;
+using ReactiveUI.Primitives.Signals;
 using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -20,9 +18,19 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class OperatorStatefulVariantBenchmarks
 {
+    /// <summary>
+    /// The number of values produced by each benchmarked sequence.
+    /// </summary>
     private const int Count = 16;
 
+    /// <summary>
+    /// The multiplier passed as explicit state to the projection benchmarks.
+    /// </summary>
     private readonly int _factor = 3;
+
+    /// <summary>
+    /// The threshold passed as explicit state to the filter benchmarks.
+    /// </summary>
     private readonly int _threshold = 8;
 
     /// <summary>

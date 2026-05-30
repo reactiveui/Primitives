@@ -3,11 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
-using System.Reactive.Linq;
-using R3;
-
 using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -18,6 +14,9 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class ScalarSignalBenchmarks
 {
+    /// <summary>
+    /// The single value emitted by each scalar signal under test.
+    /// </summary>
     private const int ScalarValue = 42;
 
     /// <summary>

@@ -233,7 +233,7 @@ internal sealed class PriorityQueue<T>
     /// <summary>
     /// Heap item with an insertion-order tie-breaker.
     /// </summary>
-    private struct IndexedItem : IComparable<IndexedItem>, IEquatable<IndexedItem>
+    internal struct IndexedItem : IComparable<IndexedItem>, IEquatable<IndexedItem>
     {
         /// <summary>
         /// Insertion order id.

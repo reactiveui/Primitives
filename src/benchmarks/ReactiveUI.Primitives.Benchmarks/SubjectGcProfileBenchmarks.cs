@@ -17,10 +17,25 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
 public class SubjectGcProfileBenchmarks
 {
+    /// <summary>
+    /// The delegate target for the subject throughput scenarios.
+    /// </summary>
     private readonly SubjectThroughputBenchmarks _throughput = new();
+
+    /// <summary>
+    /// The delegate target for the subscribe/dispose churn scenarios.
+    /// </summary>
     private readonly SubjectSubscriptionBenchmarks _subscription = new();
+
+    /// <summary>
+    /// The delegate target for the behavior/state scenarios.
+    /// </summary>
     private readonly StatefulSignalBenchmarks _stateful = new();
-    private readonly HistorySignalBenchmarks _replay = new();
+
+    /// <summary>
+    /// The delegate target for the bounded replay scenarios.
+    /// </summary>
+    private readonly ReplaySignalBenchmarks _replay = new();
 
     /// <summary>Subject emit 1024 (Primitives).</summary>
     /// <returns>The observed total.</returns>

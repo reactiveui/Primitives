@@ -17,9 +17,24 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
 public class OperatorCoreGcProfileBenchmarks
 {
+    /// <summary>
+    /// The delegate target for the map/keep and aggregate scenarios.
+    /// </summary>
     private readonly OperatorMapKeepBenchmarks _mapKeep = new();
+
+    /// <summary>
+    /// The delegate target for the flat-map scenarios.
+    /// </summary>
     private readonly OperatorFlatMapRangeBenchmarks _flatMap = new();
+
+    /// <summary>
+    /// The delegate target for the zip scenarios.
+    /// </summary>
     private readonly OperatorZipBenchmarks _zip = new();
+
+    /// <summary>
+    /// The delegate target for the start-with/append/default-if-empty scenarios.
+    /// </summary>
     private readonly OperatorStartWithAppendDefaultIfEmptyBenchmarks _startWith = new();
 
     /// <summary>Map+Keep chain (Primitives).</summary>

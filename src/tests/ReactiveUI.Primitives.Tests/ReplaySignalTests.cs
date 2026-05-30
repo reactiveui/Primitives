@@ -2,10 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
-using TUnit.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -20,33 +18,43 @@ public class ReplaySignalTests
     private const int ReplayValue = 42;
 
     /// <summary>
+    /// Buffer size of two used across replay signal tests.
+    /// </summary>
+    private const int Two = 2;
+
+    /// <summary>
+    /// Buffer size of three used across replay signal tests.
+    /// </summary>
+    private const int Three = 3;
+
+    /// <summary>
     /// Constructors the argument checking.
     /// </summary>
     [Test]
     public void Constructor_ArgumentChecking()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new ReplaySignal<int>(-1)));
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new ReplaySignal<int>(-1, EmptySequencer.Instance)));
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new ReplaySignal<int>(-1, TimeSpan.Zero)));
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new ReplaySignal<int>(-1, TimeSpan.Zero, EmptySequencer.Instance)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1, EmptySequencer.Instance)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1, TimeSpan.Zero)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1, TimeSpan.Zero, EmptySequencer.Instance)));
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new ReplaySignal<int>(TimeSpan.FromTicks(-1))));
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new ReplaySignal<int>(TimeSpan.FromTicks(-1), EmptySequencer.Instance)));
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new ReplaySignal<int>(0, TimeSpan.FromTicks(-1))));
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new ReplaySignal<int>(0, TimeSpan.FromTicks(-1), EmptySequencer.Instance)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(TimeSpan.FromTicks(-1))));
+        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(TimeSpan.FromTicks(-1), EmptySequencer.Instance)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(0, TimeSpan.FromTicks(-1))));
+        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(0, TimeSpan.FromTicks(-1), EmptySequencer.Instance)));
 
-        Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new ReplaySignal<int>(null!)));
-        Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new ReplaySignal<int>(0, null!)));
-        Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new ReplaySignal<int>(TimeSpan.Zero, null!)));
-        Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new ReplaySignal<int>(0, TimeSpan.Zero, null!)));
+        Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(null!)));
+        Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(0, null!)));
+        Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(TimeSpan.Zero, null!)));
+        Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(0, TimeSpan.Zero, null!)));
 
         // zero allowed
-        CreateAndDispose(() => new ReplaySignal<int>(0));
-        CreateAndDispose(() => new ReplaySignal<int>(TimeSpan.Zero));
-        CreateAndDispose(() => new ReplaySignal<int>(0, TimeSpan.Zero));
-        CreateAndDispose(() => new ReplaySignal<int>(0, EmptySequencer.Instance));
-        CreateAndDispose(() => new ReplaySignal<int>(TimeSpan.Zero, EmptySequencer.Instance));
-        CreateAndDispose(() => new ReplaySignal<int>(0, TimeSpan.Zero, EmptySequencer.Instance));
+        CreateAndDispose(() => new(0));
+        CreateAndDispose(() => new(TimeSpan.Zero));
+        CreateAndDispose(() => new(0, TimeSpan.Zero));
+        CreateAndDispose(() => new(0, EmptySequencer.Instance));
+        CreateAndDispose(() => new(TimeSpan.Zero, EmptySequencer.Instance));
+        CreateAndDispose(() => new(0, TimeSpan.Zero, EmptySequencer.Instance));
 
         CreateAndDispose(() => new HistorySignal<int>());
         CreateAndDispose(() => new HistorySignal<int>(EmptySequencer.Instance));
@@ -64,10 +72,10 @@ public class ReplaySignalTests
     [Test]
     public void HasObservers()
     {
-        HasObserversImpl(new ReplaySignal<int>());
-        HasObserversImpl(new ReplaySignal<int>(1));
-        HasObserversImpl(new ReplaySignal<int>(3));
-        HasObserversImpl(new ReplaySignal<int>(TimeSpan.FromSeconds(1)));
+        HasObserversImpl(new());
+        HasObserversImpl(new(1));
+        HasObserversImpl(new(Three));
+        HasObserversImpl(new(TimeSpan.FromSeconds(1)));
     }
 
     /// <summary>
@@ -76,10 +84,10 @@ public class ReplaySignalTests
     [Test]
     public void HasObservers_Dispose1()
     {
-        HasObservers_Dispose1Impl(new ReplaySignal<int>());
-        HasObservers_Dispose1Impl(new ReplaySignal<int>(1));
-        HasObservers_Dispose1Impl(new ReplaySignal<int>(3));
-        HasObservers_Dispose1Impl(new ReplaySignal<int>(TimeSpan.FromSeconds(1)));
+        HasObservers_Dispose1Impl(new());
+        HasObservers_Dispose1Impl(new(1));
+        HasObservers_Dispose1Impl(new(Three));
+        HasObservers_Dispose1Impl(new(TimeSpan.FromSeconds(1)));
     }
 
     /// <summary>
@@ -88,10 +96,10 @@ public class ReplaySignalTests
     [Test]
     public void HasObservers_Dispose2()
     {
-        HasObservers_Dispose2Impl(new ReplaySignal<int>());
-        HasObservers_Dispose2Impl(new ReplaySignal<int>(1));
-        HasObservers_Dispose2Impl(new ReplaySignal<int>(3));
-        HasObservers_Dispose2Impl(new ReplaySignal<int>(TimeSpan.FromSeconds(1)));
+        HasObservers_Dispose2Impl(new());
+        HasObservers_Dispose2Impl(new(1));
+        HasObservers_Dispose2Impl(new(Three));
+        HasObservers_Dispose2Impl(new(TimeSpan.FromSeconds(1)));
     }
 
     /// <summary>
@@ -100,10 +108,10 @@ public class ReplaySignalTests
     [Test]
     public void HasObservers_Dispose3()
     {
-        HasObservers_Dispose3Impl(new ReplaySignal<int>());
-        HasObservers_Dispose3Impl(new ReplaySignal<int>(1));
-        HasObservers_Dispose3Impl(new ReplaySignal<int>(3));
-        HasObservers_Dispose3Impl(new ReplaySignal<int>(TimeSpan.FromSeconds(1)));
+        HasObservers_Dispose3Impl(new());
+        HasObservers_Dispose3Impl(new(1));
+        HasObservers_Dispose3Impl(new(Three));
+        HasObservers_Dispose3Impl(new(TimeSpan.FromSeconds(1)));
     }
 
     /// <summary>
@@ -112,10 +120,10 @@ public class ReplaySignalTests
     [Test]
     public void HasObservers_OnCompleted()
     {
-        HasObservers_OnCompletedImpl(new ReplaySignal<int>());
-        HasObservers_OnCompletedImpl(new ReplaySignal<int>(1));
-        HasObservers_OnCompletedImpl(new ReplaySignal<int>(3));
-        HasObservers_OnCompletedImpl(new ReplaySignal<int>(TimeSpan.FromSeconds(1)));
+        HasObservers_OnCompletedImpl(new());
+        HasObservers_OnCompletedImpl(new(1));
+        HasObservers_OnCompletedImpl(new(Three));
+        HasObservers_OnCompletedImpl(new(TimeSpan.FromSeconds(1)));
     }
 
     /// <summary>
@@ -124,10 +132,10 @@ public class ReplaySignalTests
     [Test]
     public void HasObservers_OnError()
     {
-        HasObservers_OnErrorImpl(new ReplaySignal<int>());
-        HasObservers_OnErrorImpl(new ReplaySignal<int>(1));
-        HasObservers_OnErrorImpl(new ReplaySignal<int>(3));
-        HasObservers_OnErrorImpl(new ReplaySignal<int>(TimeSpan.FromSeconds(1)));
+        HasObservers_OnErrorImpl(new());
+        HasObservers_OnErrorImpl(new(1));
+        HasObservers_OnErrorImpl(new(Three));
+        HasObservers_OnErrorImpl(new(TimeSpan.FromSeconds(1)));
     }
 
     /// <summary>
@@ -138,7 +146,7 @@ public class ReplaySignalTests
     {
         Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>().OnError(null!));
         Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(1).OnError(null!));
-        Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(2).OnError(null!));
+        Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(Two).OnError(null!));
         Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(EmptySequencer.Instance).OnError(null!));
     }
 
@@ -150,7 +158,7 @@ public class ReplaySignalTests
     {
         Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>().Subscribe(null!));
         Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(1).Subscribe(null!));
-        Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(2).Subscribe(null!));
+        Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(Two).Subscribe(null!));
         Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(EmptySequencer.Instance).Subscribe(null!));
     }
 

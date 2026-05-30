@@ -5,14 +5,15 @@
 namespace ReactiveUI.Primitives.Benchmarks;
 
 /// <summary>
-/// Observer used to capture a boolean result in benchmark cases.
+/// Observer used by Signal and System.Reactive benchmark cases that only need an item count.
 /// </summary>
-internal sealed class BooleanSignalObserver : IObserver<bool>
+/// <typeparam name="T">The observed value type.</typeparam>
+internal sealed class CountingSignalObserver<T> : IObserver<T>
 {
     /// <summary>
-    /// Gets a value indicating whether the latest sequence value was <see langword="true" />.
+    /// Gets the number of onNext calls.
     /// </summary>
-    public bool Value { get; private set; }
+    public int Count { get; private set; }
 
     /// <summary>
     /// Gets the number of terminal completions observed.
@@ -24,20 +25,12 @@ internal sealed class BooleanSignalObserver : IObserver<bool>
     /// </summary>
     public int ErrorCount { get; private set; }
 
-    /// <summary>
-    /// Called when a value is received.
-    /// </summary>
-    /// <param name="value">The value.</param>
-    public void OnNext(bool value) => Value = value;
+    /// <inheritdoc/>
+    public void OnNext(T value) => Count++;
 
-    /// <summary>
-    /// Called when an error is observed.
-    /// </summary>
-    /// <param name="error">The exception.</param>
+    /// <inheritdoc/>
     public void OnError(Exception error) => ErrorCount++;
 
-    /// <summary>
-    /// Called when sequence completed.
-    /// </summary>
+    /// <inheritdoc/>
     public void OnCompleted() => CompletionCount++;
 }

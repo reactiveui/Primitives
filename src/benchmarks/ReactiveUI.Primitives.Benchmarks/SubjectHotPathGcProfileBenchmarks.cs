@@ -19,8 +19,19 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
 public class SubjectHotPathGcProfileBenchmarks
 {
+    /// <summary>
+    /// The number of values emitted in each steady-state emission benchmark.
+    /// </summary>
     private const int EmitCount = 1024;
+
+    /// <summary>
+    /// The number of subscribe/dispose cycles performed in each churn benchmark.
+    /// </summary>
     private const int ChurnCount = 1024;
+
+    /// <summary>
+    /// The number of concurrent subscribers used in the fan-out churn benchmark.
+    /// </summary>
     private const int FanOut = 8;
 
     /// <summary>Steady-state emission through <see cref="Signal{T}"/> (single subscriber fast path).</summary>

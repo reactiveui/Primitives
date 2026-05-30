@@ -2,11 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Signals;
 using System.Reactive.Linq;
-
+using BenchmarkDotNet.Attributes;
+using ReactiveUI.Primitives.Signals;
 using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -20,8 +18,30 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class OperatorStatefulFilterBenchmarks
 {
+    /// <summary>
+    /// The starting value of each benchmarked sequence.
+    /// </summary>
     private const int StartValue = 0;
+
+    /// <summary>
+    /// The number of values produced by each benchmarked sequence.
+    /// </summary>
     private const int RangeCount = 32;
+
+    /// <summary>
+    /// The number of leading values skipped or compared by the benchmarks.
+    /// </summary>
+    private const int SkipCount = 8;
+
+    /// <summary>
+    /// The exclusive upper bound used by the take/skip-while benchmarks.
+    /// </summary>
+    private const int TakeWhileLimit = 24;
+
+    /// <summary>
+    /// The divisor used by the key-selector benchmarks.
+    /// </summary>
+    private const int KeyDivisor = 2;
 
     /// <summary>Primitives Skip.</summary>
     /// <returns>The observed total.</returns>
@@ -30,7 +50,7 @@ public class OperatorStatefulFilterBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
-            .Skip(8)
+            .Skip(SkipCount)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -42,7 +62,7 @@ public class OperatorStatefulFilterBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = RxObservable.Range(StartValue, RangeCount)
-            .Skip(8)
+            .Skip(SkipCount)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -126,7 +146,7 @@ public class OperatorStatefulFilterBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
-            .TakeWhile(static x => x < 24)
+            .TakeWhile(static x => x < TakeWhileLimit)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -138,7 +158,7 @@ public class OperatorStatefulFilterBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = RxObservable.Range(StartValue, RangeCount)
-            .TakeWhile(static x => x < 24)
+            .TakeWhile(static x => x < TakeWhileLimit)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -150,7 +170,7 @@ public class OperatorStatefulFilterBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
-            .SkipWhile(static x => x < 8)
+            .SkipWhile(static x => x < SkipCount)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -162,7 +182,7 @@ public class OperatorStatefulFilterBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = RxObservable.Range(StartValue, RangeCount)
-            .SkipWhile(static x => x < 8)
+            .SkipWhile(static x => x < SkipCount)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -174,7 +194,7 @@ public class OperatorStatefulFilterBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
-            .UniqueBy(static x => x / 2)
+            .UniqueBy(static x => x / KeyDivisor)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -186,7 +206,7 @@ public class OperatorStatefulFilterBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = RxObservable.Range(StartValue, RangeCount)
-            .DistinctUntilChanged(static x => x / 2)
+            .DistinctUntilChanged(static x => x / KeyDivisor)
             .Subscribe(observer);
         return observer.Total;
     }

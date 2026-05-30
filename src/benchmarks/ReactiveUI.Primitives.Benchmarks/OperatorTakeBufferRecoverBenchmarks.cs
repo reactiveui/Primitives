@@ -2,13 +2,10 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Collections.Generic;
+using System.Reactive.Linq;
 using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
-using System.Reactive.Linq;
-
 using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -20,10 +17,24 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class OperatorTakeBufferRecoverBenchmarks
 {
+    /// <summary>
+    /// The number of values produced by each benchmarked sequence.
+    /// </summary>
     private const int Count = 16;
+
+    /// <summary>
+    /// The number of leading values taken by the prefix-truncation benchmarks.
+    /// </summary>
     private const int TakeCount = 8;
+
+    /// <summary>
+    /// The number of values per batch used by the buffering benchmarks.
+    /// </summary>
     private const int BufferSize = 4;
 
+    /// <summary>
+    /// The error used to trigger the error-handling benchmarks.
+    /// </summary>
     private static readonly InvalidOperationException Boom = new("boom");
 
     /// <summary>
@@ -164,20 +175,6 @@ public class OperatorTakeBufferRecoverBenchmarks
         var observer = new IntSignalObserver();
         using var subscription = RxObservable.Throw<int>(Boom)
             .Catch(RxObservable.Range(1, Count))
-            .Subscribe(observer);
-        return observer.Total;
-    }
-
-    /// <summary>
-    /// Benchmarks resuming with a fallback sequence on error using R3.
-    /// </summary>
-    /// <returns>The observed total.</returns>
-    [Benchmark]
-    public int R3Resume()
-    {
-        var observer = new IntR3Observer();
-        using var subscription = R3.ObservableExtensions
-            .Catch<int, Exception>(R3.Observable.Throw<int>(Boom), static _ => R3.Observable.Range(1, Count))
             .Subscribe(observer);
         return observer.Total;
     }

@@ -233,7 +233,7 @@ public sealed partial class ThreadPoolSequencer : ISequencer, IDisposable
     /// Compatibility work item retained for coverage and direct reflection tests.
     /// </summary>
     /// <typeparam name="TState">The scheduled state type.</typeparam>
-    private sealed class ScheduledWorkItem<TState> : IWorkItem, IsDisposed
+    internal sealed class ScheduledWorkItem<TState> : IWorkItem, IsDisposed
     {
         /// <summary>
         /// Owning sequencer.

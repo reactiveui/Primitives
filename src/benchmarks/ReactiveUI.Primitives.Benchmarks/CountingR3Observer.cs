@@ -2,17 +2,20 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using R3;
+
 namespace ReactiveUI.Primitives.Benchmarks;
 
 /// <summary>
-/// Observer used to capture a boolean result in benchmark cases.
+/// Observer used by R3 benchmark cases that only need an item count.
 /// </summary>
-internal sealed class BooleanSignalObserver : IObserver<bool>
+/// <typeparam name="T">The observed value type.</typeparam>
+internal sealed class CountingR3Observer<T> : Observer<T>
 {
     /// <summary>
-    /// Gets a value indicating whether the latest sequence value was <see langword="true" />.
+    /// Gets the number of onNext calls.
     /// </summary>
-    public bool Value { get; private set; }
+    public int Count { get; private set; }
 
     /// <summary>
     /// Gets the number of terminal completions observed.
@@ -25,19 +28,29 @@ internal sealed class BooleanSignalObserver : IObserver<bool>
     public int ErrorCount { get; private set; }
 
     /// <summary>
-    /// Called when a value is received.
+    /// Called for each emitted value.
     /// </summary>
-    /// <param name="value">The value.</param>
-    public void OnNext(bool value) => Value = value;
+    /// <param name="value">The emitted value.</param>
+    protected override void OnNextCore(T value) => Count++;
 
     /// <summary>
     /// Called when an error is observed.
     /// </summary>
-    /// <param name="error">The exception.</param>
-    public void OnError(Exception error) => ErrorCount++;
+    /// <param name="error">The observed exception.</param>
+    protected override void OnErrorResumeCore(Exception error) => ErrorCount++;
 
     /// <summary>
     /// Called when sequence completed.
     /// </summary>
-    public void OnCompleted() => CompletionCount++;
+    /// <param name="result">The completion result.</param>
+    protected override void OnCompletedCore(Result result)
+    {
+        if (result.IsFailure)
+        {
+            ErrorCount++;
+            return;
+        }
+
+        CompletionCount++;
+    }
 }
