@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -31,7 +22,7 @@ public partial class CombiningOperatorTests
 
         var result = await first.Concat(second).ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
+        await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
     }
 
     /// <summary>Tests Concat enumerable emits in sequential order.</summary>
@@ -44,7 +35,7 @@ public partial class CombiningOperatorTests
 
         var result = await sources.Concat().ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3]);
+        await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 
     /// <summary>Tests Concat observable of observables concatenates sequentially.</summary>
@@ -56,7 +47,7 @@ public partial class CombiningOperatorTests
 
         var result = await sources.Concat().ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
+        await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
     }
 
     /// <summary>
@@ -442,7 +433,7 @@ public partial class CombiningOperatorTests
 
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
-        await Assert.That(items).IsEquivalentTo([SampleValue10, SampleValue20, SampleValue30]);
+        await Assert.That(items).IsCollectionEqualTo([SampleValue10, SampleValue20, SampleValue30]);
 
         await innerSignal.DisposeAsync();
         await outer.DisposeAsync();
@@ -610,7 +601,7 @@ public partial class CombiningOperatorTests
 
         var result = await source.Concat().ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
+        await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
     }
 
     /// <summary>Tests that Concat propagates error from first sequence.</summary>

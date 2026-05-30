@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -62,7 +53,7 @@ public class FilteringOperatorTests
             .Where(x => x % 2 == 0)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([SecondElement, FourthElement, SixthElement]);
+        await Assert.That(result).IsCollectionEqualTo([SecondElement, FourthElement, SixthElement]);
     }
 
     /// <summary>Tests async Where filters elements.</summary>
@@ -78,7 +69,7 @@ public class FilteringOperatorTests
             })
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([FourthElement, FifthElement]);
+        await Assert.That(result).IsCollectionEqualTo([FourthElement, FifthElement]);
     }
 
     /// <summary>Tests Where filtering all emits nothing.</summary>
@@ -102,7 +93,7 @@ public class FilteringOperatorTests
             .Take(3)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondElement, ThirdElement]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondElement, ThirdElement]);
     }
 
     /// <summary>Tests Take zero emits nothing.</summary>
@@ -126,7 +117,7 @@ public class FilteringOperatorTests
             .Take(100)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondElement, ThirdElement]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondElement, ThirdElement]);
     }
 
     /// <summary>Tests Take negative throws.</summary>
@@ -144,7 +135,7 @@ public class FilteringOperatorTests
             .Skip(2)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([ThirdElement, FourthElement, FifthElement]);
+        await Assert.That(result).IsCollectionEqualTo([ThirdElement, FourthElement, FifthElement]);
     }
 
     /// <summary>Tests Skip zero emits all.</summary>
@@ -156,7 +147,7 @@ public class FilteringOperatorTests
             .Skip(0)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondElement, ThirdElement]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondElement, ThirdElement]);
     }
 
     /// <summary>Tests Skip more than available emits nothing.</summary>
@@ -186,7 +177,7 @@ public class FilteringOperatorTests
             .TakeWhile(x => x < 4)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondElement, ThirdElement]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondElement, ThirdElement]);
     }
 
     /// <summary>Tests async TakeWhile emits while true.</summary>
@@ -202,7 +193,7 @@ public class FilteringOperatorTests
             })
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondElement]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondElement]);
     }
 
     /// <summary>Tests TakeWhile all true emits all.</summary>
@@ -214,7 +205,7 @@ public class FilteringOperatorTests
             .TakeWhile(_ => true)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondElement, ThirdElement]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondElement, ThirdElement]);
     }
 
     /// <summary>Tests TakeWhile all false emits nothing.</summary>
@@ -244,7 +235,7 @@ public class FilteringOperatorTests
             .SkipWhile(x => x < 4)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([FourthElement, FifthElement, SixthElement]);
+        await Assert.That(result).IsCollectionEqualTo([FourthElement, FifthElement, SixthElement]);
     }
 
     /// <summary>Tests async SkipWhile skips while true.</summary>
@@ -260,7 +251,7 @@ public class FilteringOperatorTests
             })
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([ThirdElement, FourthElement, FifthElement]);
+        await Assert.That(result).IsCollectionEqualTo([ThirdElement, FourthElement, FifthElement]);
     }
 
     /// <summary>Tests SkipWhile always true emits nothing.</summary>
@@ -284,7 +275,7 @@ public class FilteringOperatorTests
             .SkipWhile(_ => false)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondElement, ThirdElement]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondElement, ThirdElement]);
     }
 
     /// <summary>Tests SkipWhile null predicate throws.</summary>
@@ -302,7 +293,7 @@ public class FilteringOperatorTests
 
         var result = await source.Distinct().ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondElement, ThirdElement]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondElement, ThirdElement]);
     }
 
     /// <summary>Tests Distinct with comparer uses case insensitive.</summary>
@@ -314,7 +305,7 @@ public class FilteringOperatorTests
 
         var result = await source.Distinct(StringComparer.OrdinalIgnoreCase).ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(["a", "b"]);
+        await Assert.That(result).IsCollectionEqualTo(["a", "b"]);
     }
 
     /// <summary>Tests DistinctBy distinguishes by key.</summary>
@@ -326,7 +317,7 @@ public class FilteringOperatorTests
 
         var result = await source.DistinctBy(s => s.Length).ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(["abc", "ab", "a"]);
+        await Assert.That(result).IsCollectionEqualTo(["abc", "ab", "a"]);
     }
 
     /// <summary>Tests DistinctUntilChanged suppresses consecutive duplicates.</summary>
@@ -338,7 +329,7 @@ public class FilteringOperatorTests
 
         var result = await source.DistinctUntilChanged().ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondElement, ThirdElement, 1]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondElement, ThirdElement, 1]);
     }
 
     /// <summary>Tests DistinctUntilChanged with comparer.</summary>
@@ -350,7 +341,7 @@ public class FilteringOperatorTests
 
         var result = await source.DistinctUntilChanged(StringComparer.OrdinalIgnoreCase).ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(["a", "b"]);
+        await Assert.That(result).IsCollectionEqualTo(["a", "b"]);
     }
 
     /// <summary>Tests DistinctUntilChangedBy distinguishes by key.</summary>
@@ -362,7 +353,7 @@ public class FilteringOperatorTests
 
         var result = await source.DistinctUntilChangedBy(s => s[0]).ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(["aa", "ba"]);
+        await Assert.That(result).IsCollectionEqualTo(["aa", "ba"]);
     }
 
     /// <summary>Verifies that sync-predicate <c>SkipWhile</c> forwards a non-terminal upstream error
@@ -432,7 +423,7 @@ public class FilteringOperatorTests
             .SkipWhile(static (x, _) => new ValueTask<bool>(x < 3))
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([ThirdElement, FourthElement, FifthElement]);
+        await Assert.That(result).IsCollectionEqualTo([ThirdElement, FourthElement, FifthElement]);
     }
 
     /// <summary>Verifies the async-predicate <c>TakeWhile</c> sync-completed predicate path —
@@ -445,7 +436,7 @@ public class FilteringOperatorTests
             .TakeWhile(static (x, _) => new ValueTask<bool>(x < 3))
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondElement]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondElement]);
     }
 
     /// <summary>Verifies that async-predicate <c>SkipWhile</c> forwards a non-terminal upstream error.</summary>

@@ -62,7 +62,7 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
     /// <summary>
     /// Gets the debugger display text.
     /// </summary>
-    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>

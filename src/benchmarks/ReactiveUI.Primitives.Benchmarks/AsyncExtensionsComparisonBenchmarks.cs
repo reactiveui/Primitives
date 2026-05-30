@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
-using System.Threading;
 
 using ExtensionsAsyncObservable = ReactiveUI.Extensions.Async.ObservableAsync;
 using ExtensionsAsyncSubject = ReactiveUI.Extensions.Async.Subjects.SubjectAsync;
@@ -18,9 +17,20 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class AsyncExtensionsComparisonBenchmarks
 {
+    /// <summary>
+    /// The number of values produced by sequence-based benchmarks.
+    /// </summary>
     private const int Count = 32;
+
+    /// <summary>
+    /// The number of observers attached by broadcast benchmarks.
+    /// </summary>
     private const int SubscriberCount = 8;
 
+    /// <summary>
+    /// Maps, filters, and collects a primitive async sequence.
+    /// </summary>
+    /// <returns>The number of collected values.</returns>
     [Benchmark(Baseline = true)]
     public async Task<int> PrimitivesSequenceMapKeepToListAsync()
     {
@@ -28,13 +38,17 @@ public class AsyncExtensionsComparisonBenchmarks
                 PrimitivesAsyncSignal.Keep(
                     PrimitivesAsyncSignal.Map(
                         PrimitivesAsyncSignal.Sequence(0, Count),
-                        static (int value) => value + 1),
-                    static (int value) => (value & 1) == 0))
+                        static value => value + 1),
+                    static value => (value & 1) == 0))
             .ConfigureAwait(false);
 
         return values.Count;
     }
 
+    /// <summary>
+    /// Selects, filters, and collects a ReactiveUI.Extensions async range.
+    /// </summary>
+    /// <returns>The number of collected values.</returns>
     [Benchmark]
     public async Task<int> ExtensionsRangeSelectWhereToListAsync()
     {
@@ -49,22 +63,30 @@ public class AsyncExtensionsComparisonBenchmarks
         return values.Count;
     }
 
+    /// <summary>
+    /// Counts the values emitted by a primitive async sequence.
+    /// </summary>
+    /// <returns>The emitted value count.</returns>
     [Benchmark]
-    public async Task<int> PrimitivesSequenceCountAsync()
-    {
-        return await PrimitivesAsyncSignal.CountAsync(
+    public async Task<int> PrimitivesSequenceCountAsync() =>
+        await PrimitivesAsyncSignal.CountAsync(
                 PrimitivesAsyncSignal.Sequence(0, Count))
             .ConfigureAwait(false);
-    }
 
+    /// <summary>
+    /// Counts the values emitted by a ReactiveUI.Extensions async range.
+    /// </summary>
+    /// <returns>The emitted value count.</returns>
     [Benchmark]
-    public async Task<int> ExtensionsRangeCountAsync()
-    {
-        return await ExtensionsAsyncObservable.CountAsync(
+    public async Task<int> ExtensionsRangeCountAsync() =>
+        await ExtensionsAsyncObservable.CountAsync(
                 ExtensionsAsyncObservable.Range(0, Count))
             .ConfigureAwait(false);
-    }
 
+    /// <summary>
+    /// Broadcasts primitive async signal values to multiple subscribers.
+    /// </summary>
+    /// <returns>The total value sum observed by all subscribers.</returns>
     [Benchmark]
     public async Task<int> PrimitivesSignalBroadcastAsync()
     {
@@ -96,6 +118,10 @@ public class AsyncExtensionsComparisonBenchmarks
         }
     }
 
+    /// <summary>
+    /// Broadcasts ReactiveUI.Extensions async subject values to multiple subscribers.
+    /// </summary>
+    /// <returns>The total value sum observed by all subscribers.</returns>
     [Benchmark]
     public async Task<int> ExtensionsSubjectBroadcastAsync()
     {
@@ -127,6 +153,11 @@ public class AsyncExtensionsComparisonBenchmarks
         }
     }
 
+    /// <summary>
+    /// Sums the totals recorded by primitive async observers.
+    /// </summary>
+    /// <param name="observers">The observers to sum.</param>
+    /// <returns>The combined observed total.</returns>
     private static int Sum(PrimitivesCountingObserver[] observers)
     {
         var total = 0;
@@ -138,6 +169,11 @@ public class AsyncExtensionsComparisonBenchmarks
         return total;
     }
 
+    /// <summary>
+    /// Sums the totals recorded by ReactiveUI.Extensions async observers.
+    /// </summary>
+    /// <param name="observers">The observers to sum.</param>
+    /// <returns>The combined observed total.</returns>
     private static int Sum(ExtensionsCountingObserver[] observers)
     {
         var total = 0;
@@ -149,6 +185,11 @@ public class AsyncExtensionsComparisonBenchmarks
         return total;
     }
 
+    /// <summary>
+    /// Disposes every non-null async subscription in order.
+    /// </summary>
+    /// <param name="subscriptions">The subscriptions to dispose.</param>
+    /// <returns>A task that represents the asynchronous dispose operation.</returns>
     private static async ValueTask DisposeAllAsync(IAsyncDisposable[] subscriptions)
     {
         for (var i = 0; i < subscriptions.Length; i++)
@@ -160,15 +201,24 @@ public class AsyncExtensionsComparisonBenchmarks
         }
     }
 
-    private sealed class PrimitivesCountingObserver : ReactiveUI.Primitives.Async.ObserverAsync<int>
+    /// <summary>
+    /// Observer that accumulates primitive async signal values.
+    /// </summary>
+    private sealed class PrimitivesCountingObserver : Async.ObserverAsync<int>
     {
+        /// <summary>
+        /// Gets the accumulated value total.
+        /// </summary>
         public int Total { get; private set; }
 
-        protected override ValueTask OnCompletedAsyncCore(ReactiveUI.Primitives.Async.Result result) => default;
+        /// <inheritdoc/>
+        protected override ValueTask OnCompletedAsyncCore(Async.Result result) => default;
 
+        /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
             default;
 
+        /// <inheritdoc/>
         protected override ValueTask OnNextAsyncCore(int value, CancellationToken cancellationToken)
         {
             Total += value;
@@ -176,15 +226,24 @@ public class AsyncExtensionsComparisonBenchmarks
         }
     }
 
+    /// <summary>
+    /// Observer that accumulates ReactiveUI.Extensions async subject values.
+    /// </summary>
     private sealed class ExtensionsCountingObserver : ReactiveUI.Extensions.Async.ObserverAsync<int>
     {
+        /// <summary>
+        /// Gets the accumulated value total.
+        /// </summary>
         public int Total { get; private set; }
 
+        /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(ReactiveUI.Extensions.Async.Result result) => default;
 
+        /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
             default;
 
+        /// <inheritdoc/>
         protected override ValueTask OnNextAsyncCore(int value, CancellationToken cancellationToken)
         {
             Total += value;

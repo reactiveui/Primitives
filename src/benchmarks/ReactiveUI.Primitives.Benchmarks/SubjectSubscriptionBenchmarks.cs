@@ -99,7 +99,7 @@ public class SubjectSubscriptionBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subject = new RxSubject();
-        var disposables = new System.IDisposable[subscribers];
+        var disposables = new IDisposable[subscribers];
         for (var i = 0; i < subscribers; i++)
         {
             disposables[i] = subject.Subscribe(observer);

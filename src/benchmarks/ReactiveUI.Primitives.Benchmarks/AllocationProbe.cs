@@ -305,8 +305,7 @@ internal static class AllocationProbe
     /// </summary>
     /// <param name="observer">The reused observer.</param>
     /// <param name="handles">The reused subscription-handle buffer.</param>
-    private static void ProbeChurn(IntSignalObserver observer, IDisposable[] handles)
-    {
+    private static void ProbeChurn(IntSignalObserver observer, IDisposable[] handles) =>
         Row("Signal fan-out churn", () =>
         {
             using var subject = new Signal<int>();
@@ -320,7 +319,6 @@ internal static class AllocationProbe
                 handles[i].Dispose();
             }
         });
-    }
 
     /// <summary>
     /// Subscribes, emits a single value, then tears the subscription and subject down.

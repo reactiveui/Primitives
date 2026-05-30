@@ -228,14 +228,14 @@ public static partial class LinqMixins
         internal SparkObserver(IObserver<Spark<T>> observer) => _observer = observer;
 
         /// <inheritdoc/>
-        public override void OnNext(T value) => _observer.OnNext(ReactiveUI.Primitives.Core.Spark.CreateOnNext(value));
+        public override void OnNext(T value) => _observer.OnNext(Core.Spark.CreateOnNext(value));
 
         /// <inheritdoc/>
         public override void OnError(Exception error)
         {
             try
             {
-                _observer.OnNext(ReactiveUI.Primitives.Core.Spark.CreateOnError<T>(error));
+                _observer.OnNext(Core.Spark.CreateOnError<T>(error));
                 _observer.OnCompleted();
             }
             finally
@@ -249,7 +249,7 @@ public static partial class LinqMixins
         {
             try
             {
-                _observer.OnNext(ReactiveUI.Primitives.Core.Spark.CreateOnCompleted<T>());
+                _observer.OnNext(Core.Spark.CreateOnCompleted<T>());
                 _observer.OnCompleted();
             }
             finally

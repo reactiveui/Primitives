@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -69,7 +60,7 @@ public partial class TakeUntilOperatorTests
             .TakeUntil(SignalAsync.Never<string>())
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondItem, ThirdItem]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem]);
     }
 
     /// <summary>Tests that other error with SourceFailsWhenOtherFails=true completes with failure.</summary>
@@ -489,7 +480,7 @@ public partial class TakeUntilOperatorTests
             .TakeUntil(_ => false)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondItem, ThirdItem, FourthItem, FifthItem]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem, FourthItem, FifthItem]);
     }
 
     /// <summary>Tests that predicate returning true on first element emits nothing.</summary>
@@ -535,7 +526,7 @@ public partial class TakeUntilOperatorTests
                     return default;
                 });
 
-        await Assert.That(items).IsEquivalentTo([1, SecondItem]);
+        await Assert.That(items).IsCollectionEqualTo([1, SecondItem]);
         await Assert.That(errors).Count().IsEqualTo(1);
     }
 
@@ -581,7 +572,7 @@ public partial class TakeUntilOperatorTests
             })
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondItem, ThirdItem, FourthItem, FifthItem]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem, FourthItem, FifthItem]);
     }
 
     /// <summary>Tests that async predicate returning true on first element emits nothing.</summary>

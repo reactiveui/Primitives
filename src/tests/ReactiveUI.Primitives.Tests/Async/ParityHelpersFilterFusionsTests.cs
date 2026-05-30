@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -63,7 +54,7 @@ public class ParityHelpersFilterFusionsTests
             .WhereIsNotNull()
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(["a", "b"]);
+        await Assert.That(result).IsCollectionEqualTo(["a", "b"]);
     }
 
     /// <summary>Verifies that <c>LatestOrDefault</c> emits the seed first, then suppresses
@@ -81,7 +72,7 @@ public class ParityHelpersFilterFusionsTests
             .LatestOrDefault(Zero)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([Zero, One, Two]);
+        await Assert.That(result).IsCollectionEqualTo([Zero, One, Two]);
     }
 
     /// <summary>Verifies that <c>WaitUntil</c> emits the first matching value and completes,
@@ -96,7 +87,7 @@ public class ParityHelpersFilterFusionsTests
             .WaitUntil(static x => x >= WaitUntilThreshold)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([WaitUntilThreshold]);
+        await Assert.That(result).IsCollectionEqualTo([WaitUntilThreshold]);
     }
 
     /// <summary>Verifies that <c>WaitUntil</c> with no match completes empty.</summary>
@@ -142,7 +133,7 @@ public class ParityHelpersFilterFusionsTests
             .Not()
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([false, true, false]);
+        await Assert.That(result).IsCollectionEqualTo([false, true, false]);
     }
 
     /// <summary>Verifies that <c>WhereTrue</c> forwards only true values.</summary>

@@ -2,34 +2,39 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-#pragma warning disable SA1600, SA1611, SA1615, SA1618, S1118, S1144, S125, CA1034, CA1812, CA1822, IDE0051
-
-using System;
 using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.R3Bridge.Generator;
 using ReactiveUI.Primitives.Signals;
 using ReactiveUI.Primitives.SystemReactiveBridge.Generator;
-using TUnit.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
+/// <summary>
+/// Contract tests for bridge source generators that conditionally emit async adapter APIs.
+/// </summary>
 public sealed class AsyncBridgeGeneratorContractTests
 {
+    /// <summary>
+    /// The generated System.Reactive async bridge type name.
+    /// </summary>
     private const string SystemReactiveAsyncBridgeName = "SystemReactiveAsyncBridge";
 
+    /// <summary>
+    /// The generated R3 async bridge type name.
+    /// </summary>
     private const string R3AsyncBridgeName = "R3AsyncBridge";
 
+    /// <summary>
+    /// Verifies bridge generators emit async adapter extensions when async primitives are referenced.
+    /// </summary>
     [Test]
     [RequiresAssemblyFiles]
     public void BridgeGeneratorsEmitAsyncAdaptersOnlyWhenAsyncShapesArePresent()
     {
-        const string source = """
+        const string Source = """
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -104,18 +109,21 @@ public static class AsyncBridgeSmoke
 }
 """;
 
-        var (diagnostics, generatedSources) = RunGenerators(source, includeAsyncReference: true);
+        var (diagnostics, generatedSources) = RunGenerators(Source, includeAsyncReference: true);
 
         Assert.Equal(0, diagnostics.Length);
         Assert.True(Array.Exists(generatedSources, static text => text.Contains(SystemReactiveAsyncBridgeName, StringComparison.Ordinal)));
         Assert.True(Array.Exists(generatedSources, static text => text.Contains(R3AsyncBridgeName, StringComparison.Ordinal)));
     }
 
+    /// <summary>
+    /// Verifies bridge generators skip async adapter extensions when async primitives are absent.
+    /// </summary>
     [Test]
     [RequiresAssemblyFiles]
     public void BridgeGeneratorsSkipAsyncAdaptersWhenAsyncAssemblyIsAbsent()
     {
-        const string source = """
+        const string Source = """
 using System;
 using ReactiveUI.Primitives.SystemReactiveBridge;
 using ReactiveUI.Primitives.R3Bridge;
@@ -182,13 +190,19 @@ public static class CoreOnlySmoke
 }
 """;
 
-        var (diagnostics, generatedSources) = RunGenerators(source, includeAsyncReference: false);
+        var (diagnostics, generatedSources) = RunGenerators(Source, includeAsyncReference: false);
 
         Assert.Equal(0, diagnostics.Length);
         Assert.False(Array.Exists(generatedSources, static text => text.Contains(SystemReactiveAsyncBridgeName, StringComparison.Ordinal)));
         Assert.False(Array.Exists(generatedSources, static text => text.Contains(R3AsyncBridgeName, StringComparison.Ordinal)));
     }
 
+    /// <summary>
+    /// Runs the System.Reactive and R3 bridge generators against an in-memory compilation.
+    /// </summary>
+    /// <param name="source">The source text to compile.</param>
+    /// <param name="includeAsyncReference">Whether to include the async primitives assembly reference.</param>
+    /// <returns>The diagnostics and generated source texts produced by the generator run.</returns>
     [RequiresAssemblyFiles("Calls System.Reflection.Assembly.Location")]
     private static (ImmutableArray<Diagnostic> Diagnostics, string[] GeneratedSources) RunGenerators(
         string source,

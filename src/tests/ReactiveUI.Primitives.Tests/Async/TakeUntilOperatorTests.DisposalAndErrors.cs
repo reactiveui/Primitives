@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -47,7 +38,7 @@ public partial class TakeUntilOperatorTests
         // After dispose, emitting should not reach observer
         await source.OnNextAsync(SecondItem, CancellationToken.None);
 
-        await Assert.That(items).IsEquivalentTo([1]);
+        await Assert.That(items).IsCollectionEqualTo([1]);
     }
 
     /// <summary>
@@ -243,7 +234,7 @@ public partial class TakeUntilOperatorTests
             .TakeUntil(x => x > 3)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondItem, ThirdItem]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem]);
     }
 
     /// <summary>
@@ -261,7 +252,7 @@ public partial class TakeUntilOperatorTests
             })
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondItem]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondItem]);
     }
 
     /// <summary>

@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -41,7 +32,7 @@ public class TransformationOperatorTests
             .Select(x => x * Multiplier)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([ExpectedFirst, ExpectedSecond, ExpectedThird]);
+        await Assert.That(result).IsCollectionEqualTo([ExpectedFirst, ExpectedSecond, ExpectedThird]);
     }
 
     /// <summary>Tests async Select projects each element.</summary>
@@ -57,7 +48,7 @@ public class TransformationOperatorTests
             })
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(["1", "2", "3"]);
+        await Assert.That(result).IsCollectionEqualTo(["1", "2", "3"]);
     }
 
     /// <summary>Tests sync SelectMany flattens inner sequences.</summary>
@@ -140,7 +131,7 @@ public class TransformationOperatorTests
             .Scan(0, (acc, x) => acc + x)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, ExpectedSecond, ExpectedThird, ExpectedFourth]);
+        await Assert.That(result).IsCollectionEqualTo([1, ExpectedSecond, ExpectedThird, ExpectedFourth]);
     }
 
     /// <summary>Tests async Scan emits running accumulation.</summary>
@@ -156,7 +147,7 @@ public class TransformationOperatorTests
             })
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(["1", "12", "123"]);
+        await Assert.That(result).IsCollectionEqualTo(["1", "12", "123"]);
     }
 
     /// <summary>Tests Scan null accumulator throws.</summary>
@@ -205,7 +196,7 @@ public class TransformationOperatorTests
 
         await Task.WhenAll(errored.Task, completed.Task).WaitAsync(TimeSpan.FromSeconds(5));
 
-        await Assert.That(nextValues).IsEquivalentTo([ExpectedFirst, ExpectedSecond]);
+        await Assert.That(nextValues).IsCollectionEqualTo([ExpectedFirst, ExpectedSecond]);
         await Assert.That(errors).Count().IsEqualTo(1);
         await Assert.That(completions).Count().IsEqualTo(1);
     }
@@ -264,7 +255,7 @@ public class TransformationOperatorTests
 
         var result = await SignalAsync.Range(1, 3).Do().ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, ExpectedSecond, ExpectedThird]);
+        await Assert.That(result).IsCollectionEqualTo([1, ExpectedSecond, ExpectedThird]);
     }
 
     /// <summary>Tests sync Do invokes side effects.</summary>
@@ -285,8 +276,8 @@ public class TransformationOperatorTests
             })
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, ExpectedSecond, ExpectedThird]);
-        await Assert.That(sideEffects).IsEquivalentTo([1, ExpectedSecond, ExpectedThird]);
+        await Assert.That(result).IsCollectionEqualTo([1, ExpectedSecond, ExpectedThird]);
+        await Assert.That(sideEffects).IsCollectionEqualTo([1, ExpectedSecond, ExpectedThird]);
     }
 
     /// <summary>Tests async Do invokes side effects.</summary>
@@ -307,8 +298,8 @@ public class TransformationOperatorTests
             })
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, ExpectedSecond, ExpectedThird]);
-        await Assert.That(sideEffects).IsEquivalentTo([1, ExpectedSecond, ExpectedThird]);
+        await Assert.That(result).IsCollectionEqualTo([1, ExpectedSecond, ExpectedThird]);
+        await Assert.That(sideEffects).IsCollectionEqualTo([1, ExpectedSecond, ExpectedThird]);
     }
 
     /// <summary>Tests Do with completion handler invokes on completed.</summary>
@@ -370,7 +361,7 @@ public class TransformationOperatorTests
 
         var result = await source.Cast<object, string>().ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(["hello"]);
+        await Assert.That(result).IsCollectionEqualTo(["hello"]);
     }
 
     /// <summary>Tests OfType with matching type filters correctly.</summary>
@@ -383,7 +374,7 @@ public class TransformationOperatorTests
 
         var strings = await source.OfType<object, string>().ToListAsync();
 
-        await Assert.That(strings).IsEquivalentTo(["two", "four"]);
+        await Assert.That(strings).IsCollectionEqualTo(["two", "four"]);
     }
 
     /// <summary>Tests OfType with no matches emits nothing.</summary>
@@ -413,7 +404,7 @@ public class TransformationOperatorTests
         var source = SignalAsync.Never<int>();
         var pipeline = source.Prepend(values);
 
-        subscription = await pipeline.SubscribeAsync(
+        _ = await pipeline.SubscribeAsync(
             async (x, _) =>
             {
                 received.Add(x);
@@ -583,7 +574,7 @@ public class TransformationOperatorTests
         await using var sub = await source
             .Do(
                 (Action<int>?)null,
-                ex => resumedErrors.Add(ex),
+                resumedErrors.Add,
                 (Action<Result>?)null)
             .SubscribeAsync(
                 (_, _) => default,
@@ -615,7 +606,7 @@ public class TransformationOperatorTests
     [Test]
     public async Task WhenObserveOnIScheduler_ThenEmitsValues()
     {
-        var scheduler = ReactiveUI.Primitives.Concurrency.Sequencer.Immediate;
+        var scheduler = Concurrency.Sequencer.Immediate;
 
         const int ExpectedSecond = 2;
         const int ExpectedThird = 3;
@@ -624,7 +615,7 @@ public class TransformationOperatorTests
             .ObserveOn(scheduler)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(new[] { 1, ExpectedSecond, ExpectedThird });
+        await Assert.That(result).IsCollectionEqualTo([1, ExpectedSecond, ExpectedThird]);
     }
 
     /// <summary>
@@ -672,7 +663,7 @@ public class TransformationOperatorTests
             () => tcs.Task.IsCompleted,
             TimeSpan.FromSeconds(5));
 
-        await Assert.That(receivedValues).IsEquivalentTo([1, ExpectedSecond]);
+        await Assert.That(receivedValues).IsCollectionEqualTo([1, ExpectedSecond]);
         await Assert.That(downstreamErrors).Count().IsEqualTo(1);
         await Assert.That(downstreamErrors[0]).IsTypeOf<InvalidOperationException>();
         await Assert.That(downstreamErrors[0].Message).IsEqualTo("resumable");
@@ -772,7 +763,7 @@ public class TransformationOperatorTests
             .Yield()
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, Expected2, Expected3, Expected4, Expected5]);
+        await Assert.That(result).IsCollectionEqualTo([1, Expected2, Expected3, Expected4, Expected5]);
     }
 
     /// <summary>
@@ -916,8 +907,8 @@ public class TransformationOperatorTests
             TimeSpan.FromSeconds(5));
 
         await Assert.That(groups).Count().IsEqualTo(ExpectedGroupCount);
-        await Assert.That(groups[1]).IsEquivalentTo([1, OddSecond, OddThird]);
-        await Assert.That(groups[0]).IsEquivalentTo([EvenFirst, EvenSecond, EvenThird]);
+        await Assert.That(groups[1]).IsCollectionEqualTo([1, OddSecond, OddThird]);
+        await Assert.That(groups[0]).IsCollectionEqualTo([EvenFirst, EvenSecond, EvenThird]);
     }
 
     /// <summary>
@@ -1014,7 +1005,7 @@ public class TransformationOperatorTests
 
         await using var sub = await directSource.Do(
             (Action<int>?)null,
-            ex => errors.Add(ex),
+            errors.Add,
             (Action<Result>?)null).SubscribeAsync(
             static (_, _) => default,
             static (_, _) => default,
@@ -1083,7 +1074,7 @@ public class TransformationOperatorTests
             .Scan(0, static (acc, x, _) => new ValueTask<int>(acc + x))
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, ThirdRunningTotal, SixthRunningTotal]);
+        await Assert.That(result).IsCollectionEqualTo([1, ThirdRunningTotal, SixthRunningTotal]);
     }
 
     /// <summary>Verifies that the sync-accumulator <c>Scan</c> overload forwards a non-terminal

@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -217,7 +208,7 @@ public partial class TakeUntilOperatorTests
             .TakeUntil(x => x > 3)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondItem, ThirdItem]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem]);
     }
 
     /// <summary>
@@ -389,7 +380,7 @@ public partial class TakeUntilOperatorTests
         await source.OnNextAsync(SecondItem, CancellationToken.None);
         await other.OnNextAsync("stop", CancellationToken.None);
 
-        await Assert.That(items).IsEquivalentTo([1, SecondItem]);
+        await Assert.That(items).IsCollectionEqualTo([1, SecondItem]);
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
     }
@@ -427,7 +418,7 @@ public partial class TakeUntilOperatorTests
             })
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondItem, ThirdItem]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem]);
     }
 
     /// <summary>
@@ -627,7 +618,7 @@ public partial class TakeUntilOperatorTests
         const int Sentinel = 17;
         await source.OnNextAsync(Sentinel, CancellationToken.None);
 
-        await Assert.That(values).IsEquivalentTo([Sentinel]);
+        await Assert.That(values).IsCollectionEqualTo([Sentinel]);
     }
 
     /// <summary>Exercises the <c>cancellationToken.CanBeCanceled ? ... : ...</c> branch of the
@@ -668,7 +659,7 @@ public partial class TakeUntilOperatorTests
             () => completionResult.HasValue,
             TimeSpan.FromSeconds(5));
 
-        await Assert.That(values).IsEquivalentTo([Sentinel]);
+        await Assert.That(values).IsCollectionEqualTo([Sentinel]);
         await Assert.That(completionResult).IsNotNull();
     }
 }

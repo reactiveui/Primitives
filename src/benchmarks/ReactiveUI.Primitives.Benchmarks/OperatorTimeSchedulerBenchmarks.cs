@@ -272,7 +272,7 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int PrimitivesTimeIntervalRange()
     {
-        var observer = new CountingSignalObserver<ReactiveUI.Primitives.Core.TimeInterval<int>>();
+        var observer = new CountingSignalObserver<TimeInterval<int>>();
         using var subscription = Signal.Sequence(1, Count).TimeInterval(Sequencer.Immediate).Subscribe(observer);
         return observer.Count;
     }

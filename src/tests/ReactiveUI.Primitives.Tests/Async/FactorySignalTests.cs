@@ -2,16 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Async.Signals;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Internals;
 
@@ -50,7 +40,7 @@ public class FactorySignalTests
     {
         var result = await SignalAsync.Return("hello").ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(["hello"]);
+        await Assert.That(result).IsCollectionEqualTo(["hello"]);
     }
 
     /// <summary>
@@ -140,7 +130,7 @@ public class FactorySignalTests
         const int ExpectedFifth = 4;
         var result = await SignalAsync.Range(0, 5).ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([0, 1, ExpectedThird, ExpectedFourth, ExpectedFifth]);
+        await Assert.That(result).IsCollectionEqualTo([0, 1, ExpectedThird, ExpectedFourth, ExpectedFifth]);
     }
 
     /// <summary>
@@ -155,7 +145,7 @@ public class FactorySignalTests
         const int ExpectedThird = 12;
         var result = await SignalAsync.Range(10, 3).ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([ExpectedFirst, ExpectedSecond, ExpectedThird]);
+        await Assert.That(result).IsCollectionEqualTo([ExpectedFirst, ExpectedSecond, ExpectedThird]);
     }
 
     /// <summary>
@@ -186,7 +176,7 @@ public class FactorySignalTests
 
         var result = await source.ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([ExpectedValue]);
+        await Assert.That(result).IsCollectionEqualTo([ExpectedValue]);
     }
 
     /// <summary>
@@ -271,7 +261,7 @@ public class FactorySignalTests
 
         var result = await source.ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondItem]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondItem]);
     }
 
     /// <summary>
@@ -300,7 +290,7 @@ public class FactorySignalTests
 
         var result = await source.ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([SentinelValue]);
+        await Assert.That(result).IsCollectionEqualTo([SentinelValue]);
     }
 
     /// <summary>
@@ -376,7 +366,7 @@ public class FactorySignalTests
 
         var result = await source.ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, ExpectedSecond, ExpectedThird]);
+        await Assert.That(result).IsCollectionEqualTo([1, ExpectedSecond, ExpectedThird]);
     }
 
     /// <summary>
@@ -393,7 +383,7 @@ public class FactorySignalTests
 
         var result = await source.ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([FirstYield, SecondYield, ThirdYield]);
+        await Assert.That(result).IsCollectionEqualTo([FirstYield, SecondYield, ThirdYield]);
 
         static async IAsyncEnumerable<int> AsyncEnumerable()
         {
@@ -537,7 +527,7 @@ public class FactorySignalTests
 
         await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        await Assert.That(items).IsEquivalentTo([EmittedValue]);
+        await Assert.That(items).IsCollectionEqualTo([EmittedValue]);
     }
 
     /// <summary>
@@ -563,7 +553,7 @@ public class FactorySignalTests
 
         await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        await Assert.That(items).IsEquivalentTo([EmittedValue]);
+        await Assert.That(items).IsCollectionEqualTo([EmittedValue]);
     }
 
     /// <summary>
@@ -631,7 +621,7 @@ public class FactorySignalTests
 
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        await Assert.That(items).IsEquivalentTo([SentinelValue]);
+        await Assert.That(items).IsCollectionEqualTo([SentinelValue]);
     }
 
     /// <summary>
@@ -656,7 +646,7 @@ public class FactorySignalTests
 
         await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        await Assert.That(items).IsEquivalentTo([SentinelValue]);
+        await Assert.That(items).IsCollectionEqualTo([SentinelValue]);
     }
 
     /// <summary>

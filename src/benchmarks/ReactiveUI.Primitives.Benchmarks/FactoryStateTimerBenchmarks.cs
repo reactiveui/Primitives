@@ -216,7 +216,7 @@ public class FactoryStateTimerBenchmarks
     public int PrimitivesFromEventPattern()
     {
         var source = new EventSource();
-        var observer = new CountingSignalObserver<ReactiveUI.Primitives.Core.EventPattern<EventArgs>>();
+        var observer = new CountingSignalObserver<Core.EventPattern<EventArgs>>();
         using var subscription = Signal.FromEventPattern(h => source.Tick += h, h => source.Tick -= h).Subscribe(observer);
         for (var i = 0; i < Count; i++)
         {

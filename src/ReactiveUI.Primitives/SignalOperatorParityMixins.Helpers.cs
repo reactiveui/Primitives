@@ -18,7 +18,7 @@ public static partial class LinqMixins
     /// Prepends a single value without composing through concat and return signals.
     /// </summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class PrependSignal<T> : Signals.Core.IInlineSignal<T>
+    private sealed class PrependSignal<T> : IInlineSignal<T>
     {
         /// <summary>
         /// The source observable.
@@ -77,7 +77,7 @@ public static partial class LinqMixins
     /// Prepends an enumerable without composing through concat and enumerable signals.
     /// </summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class StartWithEnumerableSignal<T> : Signals.Core.IInlineSignal<T>
+    private sealed class StartWithEnumerableSignal<T> : IInlineSignal<T>
     {
         /// <summary>
         /// The source observable.
@@ -132,7 +132,7 @@ public static partial class LinqMixins
     /// Fuses a single prepended value and a single appended value around a source subscription.
     /// </summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class PrependAppendSignal<T> : Signals.Core.IInlineSignal<T>
+    private sealed class PrependAppendSignal<T> : IInlineSignal<T>
     {
         /// <summary>
         /// The source observable.

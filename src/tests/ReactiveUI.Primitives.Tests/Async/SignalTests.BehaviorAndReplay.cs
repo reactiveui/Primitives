@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -263,7 +254,7 @@ public partial class SignalTests
 
         await signal.OnNextAsync(SecondValue, CancellationToken.None);
 
-        await Assert.That(items).IsEquivalentTo([FirstValue, SecondValue]);
+        await Assert.That(items).IsCollectionEqualTo([FirstValue, SecondValue]);
     }
 
     /// <summary>Tests that OnErrorResumeAsync on a serial stateless replay-last Signal delivers the error to observers.</summary>
@@ -481,7 +472,7 @@ public partial class SignalTests
 
         await signal.OnNextAsync(PostCompletionValue, CancellationToken.None);
 
-        await Assert.That(items).IsEquivalentTo([1]);
+        await Assert.That(items).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Tests that OnErrorResumeAsync on a replay-latest Signal delivers the error to observers.</summary>

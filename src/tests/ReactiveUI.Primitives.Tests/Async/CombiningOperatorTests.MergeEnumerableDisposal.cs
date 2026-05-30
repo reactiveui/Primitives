@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -593,7 +584,7 @@ public partial class CombiningOperatorTests
         // Emit after disposal - should be dropped
         await innerSource.EmitNext(Sentinel99);
 
-        await Assert.That(results).IsEquivalentTo([1]);
+        await Assert.That(results).IsCollectionEqualTo([1]);
     }
 
     /// <summary>

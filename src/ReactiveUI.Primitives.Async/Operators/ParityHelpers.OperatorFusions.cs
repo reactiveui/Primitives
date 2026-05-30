@@ -209,7 +209,7 @@ public static partial class SignalAsync
 
             /// <summary>Synchronization gate protecting throttle/distinct state.</summary>
 #if NET9_0_OR_GREATER
-            private readonly System.Threading.Lock _gate = new();
+            private readonly Lock _gate = new();
 #else
             private readonly object _gate = new();
 #endif
@@ -489,7 +489,7 @@ public static partial class SignalAsync
 
         /// <summary>Synchronization gate protecting branch slots and the source-subscription lifecycle.</summary>
 #if NET9_0_OR_GREATER
-        private readonly System.Threading.Lock _gate = new();
+        private readonly Lock _gate = new();
 #else
         private readonly object _gate = new();
 #endif
@@ -589,7 +589,7 @@ public static partial class SignalAsync
         /// itself is covered by direct unit tests.</summary>
         /// <param name="subscription">The freshly-created upstream subscription.</param>
         /// <returns>A task that completes once the subscription has been attached or disposed.</returns>
-        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+        [ExcludeFromCodeCoverage]
         private async ValueTask AttachOrDisposeStaleSubscriptionAsync(IAsyncDisposable subscription)
         {
             if (!TryAttachSourceSubscription(subscription))
@@ -778,7 +778,7 @@ public static partial class SignalAsync
         {
             /// <summary>Synchronization gate protecting the id counter.</summary>
 #if NET9_0_OR_GREATER
-            private readonly System.Threading.Lock _gate = new();
+            private readonly Lock _gate = new();
 #else
             private readonly object _gate = new();
 #endif

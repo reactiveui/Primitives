@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -61,7 +52,7 @@ public partial class SignalTests
 
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        await Assert.That(items).IsEquivalentTo([FirstValue, SecondValue, ThirdValue]);
+        await Assert.That(items).IsCollectionEqualTo([FirstValue, SecondValue, ThirdValue]);
     }
 
     /// <summary>Tests concurrent Signal pushes values to all observers.</summary>
@@ -136,7 +127,7 @@ public partial class SignalTests
 
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        await Assert.That(items).IsEquivalentTo(["a", "b"]);
+        await Assert.That(items).IsCollectionEqualTo(["a", "b"]);
     }
 
     /// <summary>Tests concurrent stateless Signal pushes values.</summary>
@@ -173,7 +164,7 @@ public partial class SignalTests
 
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        await Assert.That(items).IsEquivalentTo([PushedValue]);
+        await Assert.That(items).IsCollectionEqualTo([PushedValue]);
     }
 
     /// <summary>Tests Signal OnErrorResume delivers error to observer.</summary>
@@ -300,8 +291,8 @@ public partial class SignalTests
 
         await Task.WhenAll(completed1.Task, completed2.Task).WaitAsync(TimeSpan.FromSeconds(5));
 
-        await Assert.That(items1).IsEquivalentTo([FirstValue, SecondValue]);
-        await Assert.That(items2).IsEquivalentTo([FirstValue, SecondValue]);
+        await Assert.That(items1).IsCollectionEqualTo([FirstValue, SecondValue]);
+        await Assert.That(items2).IsCollectionEqualTo([FirstValue, SecondValue]);
     }
 
     /// <summary>Tests AsObserverAsync forwards to Signal.</summary>
@@ -336,7 +327,7 @@ public partial class SignalTests
 
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        await Assert.That(items).IsEquivalentTo([FirstValue, SecondValue]);
+        await Assert.That(items).IsCollectionEqualTo([FirstValue, SecondValue]);
     }
 
     /// <summary>Tests default SignalCreationOptions is serial and stateful.</summary>

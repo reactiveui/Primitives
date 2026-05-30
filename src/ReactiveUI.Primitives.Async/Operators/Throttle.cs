@@ -122,7 +122,7 @@ public static partial class SignalAsync
             /// The synchronization gate protecting shared throttle state.
             /// </summary>
 #if NET9_0_OR_GREATER
-            private readonly System.Threading.Lock _gate = new();
+            private readonly Lock _gate = new();
 #else
             private readonly object _gate = new();
 #endif
