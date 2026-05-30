@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
@@ -23,10 +23,6 @@
     <PackageReference Include="System.Buffers" />
     <PackageReference Include="System.Memory" />
     <PackageReference Include="System.Collections.Immutable" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <AdditionalFiles Remove="D:\Projects\Github\reactiveui\Primitives\src\BannedSymbols.txt" />
   </ItemGroup>
 
   <ItemGroup>

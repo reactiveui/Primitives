@@ -4,26 +4,6 @@
     <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
 
-  <PropertyGroup Condition="$(TargetFramework.Contains('-ios'))">
-    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="$(TargetFramework.Contains('-tvos'))">
-    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="$(TargetFramework.Contains('-macos'))">
-    <SupportedOSPlatformVersion>12.0</SupportedOSPlatformVersion>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="$(TargetFramework.Contains('-maccatalyst'))">
-    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="$(TargetFramework.Contains('-android'))">
-    <SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
-  </PropertyGroup>
-
   <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
     <PackageReference Include="System.ValueTuple" />
   </ItemGroup>
@@ -35,9 +15,6 @@
   </ItemGroup>
   <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">
     <Using Include="System.Object" Alias="Lock" />
-  </ItemGroup>
-  <ItemGroup>
-    <AdditionalFiles Remove="D:\Projects\Github\reactiveui\Primitives\src\BannedSymbols.txt" />
   </ItemGroup>
 
   <ItemGroup>
