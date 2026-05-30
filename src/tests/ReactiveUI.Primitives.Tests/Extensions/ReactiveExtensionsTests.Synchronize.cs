@@ -208,6 +208,114 @@ public partial class ReactiveExtensionsTests
         }
     }
 
+    /// <summary>Verifies an empty limited-concurrency task sequence completes immediately.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WithLimitedConcurrency_EmptyTaskSequence_Completes()
+    {
+        var completed = false;
+        var values = new List<int>();
+
+        using var sub = Array.Empty<Task<int>>()
+            .WithLimitedConcurrency(SampleValue3)
+            .Subscribe(values.Add, () => completed = true);
+
+        await Assert.That(values).IsEmpty();
+        await Assert.That(completed).IsTrue();
+    }
+
+    /// <summary>Verifies faulted and canceled tasks stop enumeration and report the expected errors.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WithLimitedConcurrency_TaskFaultsOrCancels_ThenErrorsAndStops()
+    {
+        var expected = new InvalidOperationException("limited-concurrency");
+        Exception? fault = null;
+        Exception? canceled = null;
+        var afterFaultPulled = false;
+
+        IEnumerable<Task<int>> FaultingTasks()
+        {
+            yield return Task.FromException<int>(expected);
+            afterFaultPulled = true;
+            yield return Task.FromResult(SampleValue2);
+        }
+
+        using var faultSub = FaultingTasks()
+            .WithLimitedConcurrency(1)
+            .Subscribe(static _ => { }, ex => fault = ex);
+
+        using var canceledSub = new[] { Task.FromCanceled<int>(new CancellationToken(canceled: true)) }
+            .WithLimitedConcurrency(1)
+            .Subscribe(static _ => { }, ex => canceled = ex);
+
+        await Assert.That(fault).IsSameReferenceAs(expected);
+        await Assert.That(canceled).IsTypeOf<OperationCanceledException>();
+        await Assert.That(afterFaultPulled).IsFalse();
+    }
+
+    /// <summary>Verifies disposing before a pending task completes drops later notifications.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WithLimitedConcurrency_DisposeBeforeTaskContinuation_DropsWork()
+    {
+        var task = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var values = new List<int>();
+        Exception? caught = null;
+        var completed = false;
+
+        var sub = new[] { task.Task }
+            .WithLimitedConcurrency(1)
+            .Subscribe(values.Add, ex => caught = ex, () => completed = true);
+
+        sub.Dispose();
+        task.SetResult(SampleValue10);
+        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
+
+        await Assert.That(values).IsEmpty();
+        await Assert.That(caught).IsNull();
+        await Assert.That(completed).IsFalse();
+    }
+
+    /// <summary>Exercises the internal disposed pull path used after a subscription is closed.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WithLimitedConcurrency_PullAfterDisposed_ThenNoNotifications()
+    {
+        var limiter = new ConcurrencyLimiter<int>([Task.FromResult(SampleValue10)], 1)
+        {
+            Disposed = true
+        };
+        var values = new List<int>();
+        var completed = false;
+
+        limiter.PullNextTask(Observer.Create<int>(values.Add, static _ => { }, () => completed = true));
+
+        await Assert.That(values).IsEmpty();
+        await Assert.That(completed).IsFalse();
+    }
+
+    /// <summary>Exercises the null-current continuation path defensively tolerated by the limiter.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WithLimitedConcurrency_NullTaskEntry_ThenNoNotifications()
+    {
+        IEnumerable<Task<int>> tasks = [null!];
+        var values = new List<int>();
+        Exception? caught = null;
+        var completed = false;
+
+        using var sub = tasks
+            .WithLimitedConcurrency(1)
+            .Subscribe(values.Add, ex => caught = ex, () => completed = true);
+
+        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
+
+        await Assert.That(values).IsEmpty();
+        await Assert.That(caught).IsNull();
+        await Assert.That(completed).IsFalse();
+    }
+
     /// <summary>
     /// Tests SynchronizeSynchronous provides sync lock.
     /// </summary>

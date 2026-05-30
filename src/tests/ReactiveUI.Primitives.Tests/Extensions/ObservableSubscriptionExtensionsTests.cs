@@ -152,6 +152,16 @@ public partial class ObservableSubscriptionExtensionsTests
         await Assert.That(error).IsNull();
     }
 
+    /// <summary>Verifies the default <c>WaitForError</c> overload returns null on normal completion.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenWaitForErrorDefaultNormalCompletion_ThenReturnsNull()
+    {
+        var error = Observable.Return(SentinelValue).WaitForError();
+
+        await Assert.That(error).IsNull();
+    }
+
     /// <summary>Verifies that <c>WaitForError</c> returns the captured error rather than rethrowing.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -159,6 +169,17 @@ public partial class ObservableSubscriptionExtensionsTests
     {
         var expected = new InvalidOperationException("captured");
         var error = Observable.Throw<int>(expected).WaitForError(TimeSpan.FromSeconds(5));
+
+        await Assert.That(error).IsEqualTo(expected);
+    }
+
+    /// <summary>Verifies the default <c>WaitForError</c> overload returns the captured source error.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenWaitForErrorDefaultSourceErrors_ThenReturnsCapturedError()
+    {
+        var expected = new InvalidOperationException("captured-default");
+        var error = Observable.Throw<int>(expected).WaitForError();
 
         await Assert.That(error).IsEqualTo(expected);
     }

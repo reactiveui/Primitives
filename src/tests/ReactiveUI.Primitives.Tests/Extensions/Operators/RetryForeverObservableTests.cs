@@ -86,6 +86,22 @@ public class RetryForeverObservableTests
         await Assert.That(subscribeCount).IsEqualTo(1);
     }
 
+    /// <summary>Verifies completion after disposal is ignored.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenRetryForeverDisposedBeforeCompletion_ThenCompletionDropped()
+    {
+        var source = new SyncDirectSource<int>();
+        var completedCount = 0;
+
+        var sub = source.OnErrorRetry().Subscribe(static _ => { }, () => completedCount++);
+
+        sub.Dispose();
+        source.Observer.OnCompleted();
+
+        await Assert.That(completedCount).IsEqualTo(0);
+    }
+
     /// <summary>Verifies subscribing with a null observer throws.</summary>
     [Test]
     public void WhenRetryForeverObserverNull_ThenSubscribeThrows()

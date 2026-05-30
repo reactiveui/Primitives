@@ -211,4 +211,36 @@ public partial class ReactiveExtensionsTests
         // Then
         await Assert.That(received).IsCollectionEqualTo([SampleValue99]);
     }
+
+    /// <summary>Verifies FastForEach handles an <see cref="IReadOnlyList{T}"/> that is not an <see cref="IList{T}"/>.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenFastForEach_GivenReadOnlyListOnly_ThenAllItemsEmitted()
+    {
+        var source = new ReadOnlyListOnly<int>([SampleValue5, SampleValue10, SampleValue15]);
+        var received = new List<int>();
+        var observer = Observer.Create<int>(received.Add);
+
+        observer.FastForEach(source);
+
+        await Assert.That(received).IsCollectionEqualTo([SampleValue5, SampleValue10, SampleValue15]);
+    }
+
+    /// <summary>Read-only list implementation that deliberately does not implement <see cref="IList{T}"/>.</summary>
+    /// <typeparam name="T">The item type.</typeparam>
+    /// <param name="items">The backing items.</param>
+    private sealed class ReadOnlyListOnly<T>(T[] items) : IReadOnlyList<T>
+    {
+        /// <inheritdoc/>
+        public int Count => items.Length;
+
+        /// <inheritdoc/>
+        public T this[int index] => items[index];
+
+        /// <inheritdoc/>
+        public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)items).GetEnumerator();
+
+        /// <inheritdoc/>
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
 }

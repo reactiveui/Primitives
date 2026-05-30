@@ -80,6 +80,26 @@ public class SubscribeAsyncObservableTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
+    /// <summary>Verifies a handler exception is swallowed when no error callback is supplied.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSubscribeAsyncHandlerThrowsWithoutOnError_ThenNoExceptionEscapes()
+    {
+        const int TriggerValue = 1;
+        var subject = new Subject<int>();
+        var handlerRan = 0;
+
+        using var sub = subject.SubscribeSynchronous(_ =>
+        {
+            handlerRan++;
+            return ValueTask.FromException(new InvalidOperationException(HandlerFailedMessage));
+        });
+
+        subject.OnNext(TriggerValue);
+
+        await Assert.That(handlerRan).IsEqualTo(1);
+    }
+
     /// <summary>Verifies that source errors are forwarded to the error callback.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -123,6 +143,64 @@ public class SubscribeAsyncObservableTests
 
         var done = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(done).IsTrue();
+    }
+
+    /// <summary>Verifies deferred completion with no completion callback takes the null-callback path.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSubscribeAsyncCompletesWhileProcessingWithoutCallback_ThenNoExceptionEscapes()
+    {
+        const int Value = 7;
+        var subject = new Subject<int>();
+        var gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        using var sub = subject.SubscribeSynchronous(async _ =>
+        {
+            await gate.Task.ConfigureAwait(false);
+            handled.TrySetResult(true);
+        });
+
+        subject.OnNext(Value);
+        subject.OnCompleted();
+        gate.TrySetResult(true);
+
+        var done = await handled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
+        await Assert.That(done).IsTrue();
+    }
+
+    /// <summary>Verifies disposal during an in-flight handler suppresses deferred terminal callbacks.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSubscribeAsyncDisposedDuringInFlight_ThenSuppressesCompletionAndError()
+    {
+        const int Value = 7;
+        var subject = new Subject<int>();
+        var gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handlerStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Exception? caught = null;
+        var completedCount = 0;
+
+        var sub = subject.SubscribeSynchronous(
+            async _ =>
+            {
+                handlerStarted.TrySetResult(true);
+                await gate.Task.ConfigureAwait(false);
+                throw new InvalidOperationException(HandlerFailedMessage);
+            },
+            ex => caught = ex,
+            () => completedCount++);
+
+        subject.OnNext(Value);
+        await handlerStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        subject.OnCompleted();
+        sub.Dispose();
+        gate.TrySetResult(true);
+        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
+
+        await Assert.That(caught).IsNull();
+        await Assert.That(completedCount).IsEqualTo(0);
     }
 
     /// <summary>Verifies that disposing the subscription stops further handler invocations.</summary>

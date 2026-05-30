@@ -119,6 +119,74 @@ public class BooleanReduceObservableTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
+    /// <summary>Verifies collection-only source materialization uses <see cref="ICollection{T}.CopyTo"/>.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSourcesAreCollectionOnly_ThenMaterializedByCopyTo()
+    {
+        using var a = new BehaviorSubject<bool>(true);
+        using var b = new BehaviorSubject<bool>(true);
+        var sources = new CollectionOnlySources([a.AsObservable(), b.AsObservable()]);
+        var results = new List<bool>();
+
+        using var sub = sources.CombineLatestValuesAreAllTrue().Subscribe(results.Add);
+
+        await Assert.That(results).IsCollectionEqualTo([true]);
+    }
+
+    /// <summary>Verifies the non-collection materialization path returns the exact-size buffer.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenNonCollectionSourcesExactlyFillBuffer_ThenUsesBufferDirectly()
+    {
+        using var a = new BehaviorSubject<bool>(true);
+        using var b = new BehaviorSubject<bool>(true);
+        using var c = new BehaviorSubject<bool>(true);
+        using var d = new BehaviorSubject<bool>(true);
+        var results = new List<bool>();
+
+        using var sub = Enumerate(a, b, c, d)
+            .CombineLatestValuesAreAllTrue()
+            .Subscribe(results.Add);
+
+        await Assert.That(results).IsCollectionEqualTo([true]);
+
+        static IEnumerable<IObservable<bool>> Enumerate(params BehaviorSubject<bool>[] subjects)
+        {
+            for (var i = 0; i < subjects.Length; i++)
+            {
+                yield return subjects[i].AsObservable();
+            }
+        }
+    }
+
+    /// <summary>Verifies non-collection materialization grows beyond the initial buffer.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenNonCollectionSourcesExceedInitialBuffer_ThenGrowsBuffer()
+    {
+        using var a = new BehaviorSubject<bool>(true);
+        using var b = new BehaviorSubject<bool>(true);
+        using var c = new BehaviorSubject<bool>(true);
+        using var d = new BehaviorSubject<bool>(true);
+        using var e = new BehaviorSubject<bool>(true);
+        var results = new List<bool>();
+
+        using var sub = Enumerate(a, b, c, d, e)
+            .CombineLatestValuesAreAllTrue()
+            .Subscribe(results.Add);
+
+        await Assert.That(results).IsCollectionEqualTo([true]);
+
+        static IEnumerable<IObservable<bool>> Enumerate(params BehaviorSubject<bool>[] subjects)
+        {
+            for (var i = 0; i < subjects.Length; i++)
+            {
+                yield return subjects[i].AsObservable();
+            }
+        }
+    }
+
     /// <summary>Verifies that when every source completes, the combined sequence completes via
     /// the per-source <c>OnCompleted</c> path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -161,5 +229,37 @@ public class BooleanReduceObservableTests
 
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(results).IsEmpty();
+    }
+
+    /// <summary>Collection implementation that deliberately avoids <see cref="IReadOnlyList{T}"/>.</summary>
+    /// <param name="items">The source items.</param>
+    private sealed class CollectionOnlySources(IObservable<bool>[] items) : ICollection<IObservable<bool>>
+    {
+        /// <inheritdoc/>
+        public int Count => items.Length;
+
+        /// <inheritdoc/>
+        public bool IsReadOnly => true;
+
+        /// <inheritdoc/>
+        public void Add(IObservable<bool> item) => throw new NotSupportedException();
+
+        /// <inheritdoc/>
+        public void Clear() => throw new NotSupportedException();
+
+        /// <inheritdoc/>
+        public bool Contains(IObservable<bool> item) => Array.IndexOf(items, item) >= 0;
+
+        /// <inheritdoc/>
+        public void CopyTo(IObservable<bool>[] array, int arrayIndex) => Array.Copy(items, 0, array, arrayIndex, items.Length);
+
+        /// <inheritdoc/>
+        public bool Remove(IObservable<bool> item) => throw new NotSupportedException();
+
+        /// <inheritdoc/>
+        public IEnumerator<IObservable<bool>> GetEnumerator() => ((IEnumerable<IObservable<bool>>)items).GetEnumerator();
+
+        /// <inheritdoc/>
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

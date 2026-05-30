@@ -121,4 +121,19 @@ public class ContinuationTests
 
         await Assert.That(continuation.CompletedPhases).IsEqualTo(0);
     }
+
+    /// <summary>Verifies disposing twice is an idempotent no-op on the second call.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDisposeTwice_ThenSecondDisposeIsNoOp()
+    {
+        var continuation = new Continuation();
+        var disposedTwice = false;
+
+        continuation.Dispose();
+        continuation.Dispose();
+        disposedTwice = true;
+
+        await Assert.That(disposedTwice).IsTrue();
+    }
 }
