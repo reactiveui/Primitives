@@ -432,84 +432,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(sources));
         }
 
-        return Signal.Create<T>(observer =>
-        {
-            var gate = new OperatorGate();
-            var queue = new Queue<IObservable<T>>();
-            var pocket = new MultipleDisposable();
-            var active = false;
-            var outerCompleted = false;
-
-            void Drain()
-            {
-                IObservable<T>? next = null;
-                lock (gate.SyncRoot)
-                {
-                    if (active)
-                    {
-                        return;
-                    }
-
-                    if (queue.Count > 0)
-                    {
-                        active = true;
-                        next = queue.Dequeue();
-                    }
-                    else if (outerCompleted)
-                    {
-                        observer.OnCompleted();
-                        return;
-                    }
-                }
-
-                if (next == null)
-                {
-                    return;
-                }
-
-                pocket.Add(next.Subscribe(
-                    observer.OnNext,
-                    observer.OnError,
-                    () =>
-                    {
-                        lock (gate.SyncRoot)
-                        {
-                            active = false;
-                        }
-
-                        Drain();
-                    }));
-            }
-
-            pocket.Add(sources.Subscribe(
-                source =>
-                {
-                    if (source == null)
-                    {
-                        observer.OnError(new InvalidOperationException("Chain source contained null."));
-                        return;
-                    }
-
-                    lock (gate.SyncRoot)
-                    {
-                        queue.Enqueue(source);
-                    }
-
-                    Drain();
-                },
-                observer.OnError,
-                () =>
-                {
-                    lock (gate.SyncRoot)
-                    {
-                        outerCompleted = true;
-                    }
-
-                    Drain();
-                }));
-
-            return pocket;
-        });
+        return new ChainSignal<T>(sources);
     }
 
     /// <summary>
@@ -536,93 +459,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(sources));
         }
 
-        return Signal.Create<T>(observer =>
-        {
-            var gate = new OperatorGate();
-            var pocket = new MultipleDisposable();
-            var outerCompleted = false;
-            var active = 0;
-            var done = false;
-
-            // Blend runs inner sources concurrently, so every downstream callback must be
-            // serialized under the gate (the Rx contract) and suppressed once terminated.
-            void OnInnerNext(T value)
-            {
-                lock (gate.SyncRoot)
-                {
-                    if (!done)
-                    {
-                        observer.OnNext(value);
-                    }
-                }
-            }
-
-            void OnAnyError(Exception error)
-            {
-                lock (gate.SyncRoot)
-                {
-                    if (done)
-                    {
-                        return;
-                    }
-
-                    done = true;
-                    observer.OnError(error);
-                }
-            }
-
-            void TryComplete()
-            {
-                lock (gate.SyncRoot)
-                {
-                    if (!done && outerCompleted && active == 0)
-                    {
-                        done = true;
-                        observer.OnCompleted();
-                    }
-                }
-            }
-
-            pocket.Add(sources.Subscribe(
-                source =>
-                {
-                    if (source == null)
-                    {
-                        OnAnyError(new InvalidOperationException("Blend source contained null."));
-                        return;
-                    }
-
-                    lock (gate.SyncRoot)
-                    {
-                        active++;
-                    }
-
-                    pocket.Add(source.Subscribe(
-                        OnInnerNext,
-                        OnAnyError,
-                        () =>
-                        {
-                            lock (gate.SyncRoot)
-                            {
-                                active--;
-                            }
-
-                            TryComplete();
-                        }));
-                },
-                OnAnyError,
-                () =>
-                {
-                    lock (gate.SyncRoot)
-                    {
-                        outerCompleted = true;
-                    }
-
-                    TryComplete();
-                }));
-
-            return pocket;
-        });
+        return new BlendSignal<T>(sources);
     }
 
     /// <summary>
@@ -748,42 +585,7 @@ public static partial class LinqMixins
             return CreateRangeWithLatestSignal(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
         }
 
-        return Signal.CreateSafe<TResult>(observer =>
-        {
-            var gate = new OperatorGate();
-            var hasRight = false;
-            var latestRight = default(TRight);
-            return MultipleDisposable.Create(
-                right.Subscribe(
-                    value =>
-                    {
-                        lock (gate.SyncRoot)
-                        {
-                            hasRight = true;
-                            latestRight = value;
-                        }
-                    },
-                    observer.OnError,
-                    () => { }),
-                left.Subscribe(
-                    value =>
-                    {
-                        TRight rightValue;
-                        lock (gate.SyncRoot)
-                        {
-                            if (!hasRight)
-                            {
-                                return;
-                            }
-
-                            rightValue = latestRight!;
-                        }
-
-                        observer.OnNext(selector(value, rightValue));
-                    },
-                    observer.OnError,
-                    observer.OnCompleted));
-        });
+        return new LatchSignal<TLeft, TRight, TResult>(left, right, selector);
     }
 
     /// <summary>

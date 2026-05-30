@@ -183,6 +183,398 @@ public static partial class LinqMixins
         }
     }
 
+    /// <summary>Dedicated signal for <c>Chain</c> (sequential concat of inner sources).</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class ChainSignal<T> : IObservable<T>
+    {
+        /// <summary>The outer sequence of inner sources.</summary>
+        private readonly IObservable<IObservable<T>> _sources;
+
+        /// <summary>Initializes a new instance of the <see cref="ChainSignal{T}"/> class.</summary>
+        /// <param name="sources">The outer sequence of inner sources.</param>
+        internal ChainSignal(IObservable<IObservable<T>> sources) => _sources = sources;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            return new ChainCoordinator<T>(observer).Run(_sources);
+        }
+    }
+
+    /// <summary>Coordinates sequential concatenation of inner sources for <c>Chain</c>.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "The pocket is released through Dispose.")]
+    private sealed class ChainCoordinator<T> : IDisposable
+    {
+        /// <summary>Guards the queue and active/completed flags.</summary>
+        private readonly Lock _gate = new();
+
+        /// <summary>Queued inner sources awaiting the active one to complete.</summary>
+        private readonly Queue<IObservable<T>> _queue = new();
+
+        /// <summary>Active subscriptions.</summary>
+        private readonly MultipleDisposable _pocket = new();
+
+        /// <summary>The downstream observer.</summary>
+        private readonly IObserver<T> _observer;
+
+        /// <summary>A value indicating whether an inner source is active.</summary>
+        private bool _active;
+
+        /// <summary>A value indicating whether the outer source completed.</summary>
+        private bool _outerCompleted;
+
+        /// <summary>Initializes a new instance of the <see cref="ChainCoordinator{T}"/> class.</summary>
+        /// <param name="observer">The downstream observer.</param>
+        internal ChainCoordinator(IObserver<T> observer) => _observer = observer;
+
+        /// <inheritdoc/>
+        public void Dispose() => _pocket.Dispose();
+
+        /// <summary>Subscribes to the outer source.</summary>
+        /// <param name="sources">The outer sequence of inner sources.</param>
+        /// <returns>The coordinator that owns the subscription cleanup.</returns>
+        internal ChainCoordinator<T> Run(IObservable<IObservable<T>> sources)
+        {
+            _pocket.Add(sources.Subscribe(OnSource, _observer.OnError, OnOuterCompleted));
+            return this;
+        }
+
+        /// <summary>Queues a new inner source and pumps the drain.</summary>
+        /// <param name="source">The inner source.</param>
+        private void OnSource(IObservable<T> source)
+        {
+            if (source == null)
+            {
+                _observer.OnError(new InvalidOperationException("Chain source contained null."));
+                return;
+            }
+
+            lock (_gate)
+            {
+                _queue.Enqueue(source);
+            }
+
+            Drain();
+        }
+
+        /// <summary>Marks the outer source complete and pumps the drain.</summary>
+        private void OnOuterCompleted()
+        {
+            lock (_gate)
+            {
+                _outerCompleted = true;
+            }
+
+            Drain();
+        }
+
+        /// <summary>Marks the active inner complete and pumps the drain.</summary>
+        private void OnInnerCompleted()
+        {
+            lock (_gate)
+            {
+                _active = false;
+            }
+
+            Drain();
+        }
+
+        /// <summary>Subscribes the next queued inner source, or completes when the chain is drained.</summary>
+        private void Drain()
+        {
+            IObservable<T>? next = null;
+            lock (_gate)
+            {
+                if (_active)
+                {
+                    return;
+                }
+
+                if (_queue.Count > 0)
+                {
+                    _active = true;
+                    next = _queue.Dequeue();
+                }
+                else if (_outerCompleted)
+                {
+                    _observer.OnCompleted();
+                    return;
+                }
+            }
+
+            if (next == null)
+            {
+                return;
+            }
+
+            _pocket.Add(next.Subscribe(_observer.OnNext, _observer.OnError, OnInnerCompleted));
+        }
+    }
+
+    /// <summary>Dedicated signal for <c>Blend</c> (concurrent merge of inner sources).</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class BlendSignal<T> : IObservable<T>
+    {
+        /// <summary>The outer sequence of inner sources.</summary>
+        private readonly IObservable<IObservable<T>> _sources;
+
+        /// <summary>Initializes a new instance of the <see cref="BlendSignal{T}"/> class.</summary>
+        /// <param name="sources">The outer sequence of inner sources.</param>
+        internal BlendSignal(IObservable<IObservable<T>> sources) => _sources = sources;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            return new BlendCoordinator<T>(observer).Run(_sources);
+        }
+    }
+
+    /// <summary>Coordinates concurrent merging of inner sources for <c>Blend</c>.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "The pocket is released through Dispose.")]
+    private sealed class BlendCoordinator<T> : IDisposable
+    {
+        /// <summary>Serializes downstream callbacks and guards counters.</summary>
+        private readonly Lock _gate = new();
+
+        /// <summary>Active subscriptions.</summary>
+        private readonly MultipleDisposable _pocket = new();
+
+        /// <summary>The downstream observer.</summary>
+        private readonly IObserver<T> _observer;
+
+        /// <summary>A value indicating whether the outer source completed.</summary>
+        private bool _outerCompleted;
+
+        /// <summary>The number of active inner sources.</summary>
+        private int _active;
+
+        /// <summary>A value indicating whether a terminal notification has been emitted.</summary>
+        private bool _done;
+
+        /// <summary>Initializes a new instance of the <see cref="BlendCoordinator{T}"/> class.</summary>
+        /// <param name="observer">The downstream observer.</param>
+        internal BlendCoordinator(IObserver<T> observer) => _observer = observer;
+
+        /// <inheritdoc/>
+        public void Dispose() => _pocket.Dispose();
+
+        /// <summary>Subscribes to the outer source.</summary>
+        /// <param name="sources">The outer sequence of inner sources.</param>
+        /// <returns>The subscription cleanup.</returns>
+        internal BlendCoordinator<T> Run(IObservable<IObservable<T>> sources)
+        {
+            _pocket.Add(sources.Subscribe(OnSource, OnAnyError, OnOuterCompleted));
+            return this;
+        }
+
+        /// <summary>Subscribes a new inner source concurrently.</summary>
+        /// <param name="source">The inner source.</param>
+        private void OnSource(IObservable<T> source)
+        {
+            if (source == null)
+            {
+                OnAnyError(new InvalidOperationException("Blend source contained null."));
+                return;
+            }
+
+            lock (_gate)
+            {
+                _active++;
+            }
+
+            _pocket.Add(source.Subscribe(OnInnerNext, OnAnyError, OnInnerCompleted));
+        }
+
+        /// <summary>Forwards an inner value under the serialization gate.</summary>
+        /// <param name="value">The value to forward.</param>
+        private void OnInnerNext(T value)
+        {
+            lock (_gate)
+            {
+                if (!_done)
+                {
+                    _observer.OnNext(value);
+                }
+            }
+        }
+
+        /// <summary>Forwards the first terminal error and suppresses later notifications.</summary>
+        /// <param name="error">The error to forward.</param>
+        private void OnAnyError(Exception error)
+        {
+            lock (_gate)
+            {
+                if (_done)
+                {
+                    return;
+                }
+
+                _done = true;
+                _observer.OnError(error);
+            }
+        }
+
+        /// <summary>Decrements the active count and attempts completion.</summary>
+        private void OnInnerCompleted()
+        {
+            lock (_gate)
+            {
+                _active--;
+            }
+
+            TryComplete();
+        }
+
+        /// <summary>Marks the outer source complete and attempts completion.</summary>
+        private void OnOuterCompleted()
+        {
+            lock (_gate)
+            {
+                _outerCompleted = true;
+            }
+
+            TryComplete();
+        }
+
+        /// <summary>Completes downstream once the outer and all inners are done.</summary>
+        private void TryComplete()
+        {
+            lock (_gate)
+            {
+                if (!_done && _outerCompleted && _active == 0)
+                {
+                    _done = true;
+                    _observer.OnCompleted();
+                }
+            }
+        }
+    }
+
+    /// <summary>Dedicated signal for the general <c>Latch</c> (WithLatest) path.</summary>
+    /// <typeparam name="TLeft">The left value type.</typeparam>
+    /// <typeparam name="TRight">The right value type.</typeparam>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    private sealed class LatchSignal<TLeft, TRight, TResult> : IObservable<TResult>
+    {
+        /// <summary>The left (driving) source.</summary>
+        private readonly IObservable<TLeft> _left;
+
+        /// <summary>The right (latched) source.</summary>
+        private readonly IObservable<TRight> _right;
+
+        /// <summary>The projection function.</summary>
+        private readonly Func<TLeft, TRight, TResult> _selector;
+
+        /// <summary>Initializes a new instance of the <see cref="LatchSignal{TLeft, TRight, TResult}"/> class.</summary>
+        /// <param name="left">The left source.</param>
+        /// <param name="right">The right source.</param>
+        /// <param name="selector">The projection function.</param>
+        internal LatchSignal(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
+        {
+            _left = left;
+            _right = right;
+            _selector = selector;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<TResult> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            return new LatchCoordinator<TLeft, TRight, TResult>(observer, _selector).Run(_left, _right);
+        }
+    }
+
+    /// <summary>Coordinates the general WithLatest projection for <c>Latch</c>.</summary>
+    /// <typeparam name="TLeft">The left value type.</typeparam>
+    /// <typeparam name="TRight">The right value type.</typeparam>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    private sealed class LatchCoordinator<TLeft, TRight, TResult>
+    {
+        /// <summary>Guards the latest-right state.</summary>
+        private readonly Lock _gate = new();
+
+        /// <summary>The downstream observer.</summary>
+        private readonly IObserver<TResult> _observer;
+
+        /// <summary>The projection function.</summary>
+        private readonly Func<TLeft, TRight, TResult> _selector;
+
+        /// <summary>A value indicating whether the right source has produced a value.</summary>
+        private bool _hasRight;
+
+        /// <summary>The latest right value.</summary>
+        private TRight? _latestRight;
+
+        /// <summary>Initializes a new instance of the <see cref="LatchCoordinator{TLeft, TRight, TResult}"/> class.</summary>
+        /// <param name="observer">The downstream observer.</param>
+        /// <param name="selector">The projection function.</param>
+        internal LatchCoordinator(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
+        {
+            _observer = observer;
+            _selector = selector;
+        }
+
+        /// <summary>Subscribes to both sources.</summary>
+        /// <param name="left">The left source.</param>
+        /// <param name="right">The right source.</param>
+        /// <returns>The subscription cleanup.</returns>
+        internal IDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
+            MultipleDisposable.Create(
+                right.Subscribe(OnRightNext, _observer.OnError, NoOp),
+                left.Subscribe(OnLeftNext, _observer.OnError, _observer.OnCompleted));
+
+        /// <summary>No-op completion handler for the right (latched) source.</summary>
+        private static void NoOp()
+        {
+            // The right source's completion does not terminate the latch; only the left source does.
+        }
+
+        /// <summary>Stores the latest right value.</summary>
+        /// <param name="value">The right value.</param>
+        private void OnRightNext(TRight value)
+        {
+            lock (_gate)
+            {
+                _hasRight = true;
+                _latestRight = value;
+            }
+        }
+
+        /// <summary>Projects a left value with the latest right value when available.</summary>
+        /// <param name="value">The left value.</param>
+        private void OnLeftNext(TLeft value)
+        {
+            TRight rightValue;
+            lock (_gate)
+            {
+                if (!_hasRight)
+                {
+                    return;
+                }
+
+                rightValue = _latestRight!;
+            }
+
+            _observer.OnNext(_selector(value, rightValue));
+        }
+    }
+
     /// <summary>
     /// Timeout signal with a direct subscription path.
     /// </summary>
