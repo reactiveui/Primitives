@@ -557,7 +557,7 @@ public partial class SignalTests
     {
         var emptyObservers = ImmutableArray<IObserverAsync<int>>.Empty;
 
-        var task = Concurrent.ForwardOnCompletedConcurrently<int>(emptyObservers, Result.Success);
+        var task = Concurrent.ForwardOnCompletedConcurrently(emptyObservers, Result.Success);
 
         await Assert.That(task.IsCompletedSuccessfully).IsTrue();
     }

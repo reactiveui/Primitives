@@ -1,0 +1,99 @@
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// ReactiveUI Association Incorporated licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
+
+namespace ReactiveUI.Primitives.Extensions.Internal;
+
+/// <summary>
+/// Shared synchronous reduce-sink state used by <c>BooleanReduceObservable</c> (AllTrue / AllFalse)
+/// and <c>MinMaxObservable</c> (Max / Min). Each per-operator sink composes one instance (has-a, not
+/// is-a) and adds only its operator-specific OnNext reduce step; the boilerplate gate, value cache,
+/// completion bookkeeping, OnError, and OnCompleted bodies all live here in one place.
+/// </summary>
+/// <typeparam name="TIn">The source element type (must be a struct so <c>TIn?</c> doubles as the
+/// "value seen yet?" Optional).</typeparam>
+/// <typeparam name="TOut">The downstream element type the operator emits after reducing.</typeparam>
+internal sealed class ReduceSinkState<TIn, TOut>
+    where TIn : struct
+{
+    /// <summary>Initializes a new instance of the <see cref="ReduceSinkState{TIn, TOut}"/> class.</summary>
+    /// <param name="downstream">The downstream observer.</param>
+    /// <param name="count">The number of sources.</param>
+    public ReduceSinkState(IObserver<TOut> downstream, int count)
+    {
+        Downstream = downstream;
+        Values = new TIn?[count];
+        Completed = new bool[count];
+    }
+
+    /// <summary>Gets the synchronization gate held across every state read/write and every downstream notification.</summary>
+#if NET9_0_OR_GREATER
+    public Lock Gate { get; } = new();
+#else
+    public object Gate { get; } = new();
+#endif
+
+    /// <summary>Gets the downstream observer that receives reduced values, error, and completion.</summary>
+    public IObserver<TOut> Downstream { get; }
+
+    /// <summary>Gets the per-source latest values; index N is set on first OnNext from source N.</summary>
+    public TIn?[] Values { get; }
+
+    /// <summary>Gets the per-source completion bookkeeping.</summary>
+    public bool[] Completed { get; }
+
+    /// <summary>Gets or sets the number of sources that have produced at least one value.</summary>
+    public int HasValueCount { get; set; }
+
+    /// <summary>Gets or sets the number of sources that have completed.</summary>
+    public int CompletedCount { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the sink has reached its terminal state.</summary>
+    public bool IsDone { get; set; }
+
+    /// <summary>Gets a value indicating whether every source has produced at least one value.</summary>
+    public bool AllValuesPresent => HasValueCount >= Values.Length;
+
+    /// <summary>
+    /// Forwards a terminal error to the downstream observer and marks the sink terminal. Idempotent.
+    /// </summary>
+    /// <param name="error">The error to forward.</param>
+    public void HandleError(Exception error)
+    {
+        lock (Gate)
+        {
+            if (IsDone)
+            {
+                return;
+            }
+
+            IsDone = true;
+            Downstream.OnError(error);
+        }
+    }
+
+    /// <summary>
+    /// Records completion of the source at <paramref name="index"/>. The combined sequence terminates
+    /// once every source has completed OR a source completes without ever having emitted a value.
+    /// </summary>
+    /// <param name="index">The 0-based source index that just completed.</param>
+    public void HandleCompleted(int index)
+    {
+        lock (Gate)
+        {
+            if (IsDone || Completed[index])
+            {
+                return;
+            }
+
+            Completed[index] = true;
+            CompletedCount++;
+
+            if (CompletedCount == Values.Length || !Values[index].HasValue)
+            {
+                IsDone = true;
+                Downstream.OnCompleted();
+            }
+        }
+    }
+}

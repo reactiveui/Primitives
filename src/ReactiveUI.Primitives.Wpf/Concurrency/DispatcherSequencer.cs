@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <summary>
 /// WPF dispatcher sequencer that coalesces scheduled work onto a dispatcher drain.
 /// </summary>
-/// <seealso cref="ReactiveUI.Primitives.Concurrency.DispatchSequencerBase" />
+/// <seealso cref="DispatchSequencerBase" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class DispatcherSequencer : DispatchSequencerBase
 {

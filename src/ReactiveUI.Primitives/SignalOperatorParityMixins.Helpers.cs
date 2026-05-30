@@ -826,7 +826,7 @@ public static partial class LinqMixins
             return _sequencer.Schedule(
                 (Observer: observer, Range: _range),
                 _dueTime,
-                static (_, state) => EmitShiftedRange<T>(state.Observer, state.Range));
+                static (_, state) => EmitShiftedRange(state.Observer, state.Range));
         }
 
         /// <inheritdoc/>
@@ -845,7 +845,7 @@ public static partial class LinqMixins
             return _sequencer.Schedule(
                 (OnNext: onNext, OnCompleted: onCompleted, Range: _range),
                 _dueTime,
-                static (_, state) => EmitShiftedRange<T>(state.OnNext, state.OnCompleted, state.Range));
+                static (_, state) => EmitShiftedRange(state.OnNext, state.OnCompleted, state.Range));
         }
     }
 
