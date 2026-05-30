@@ -1,0 +1,127 @@
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// ReactiveUI Association Incorporated licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
+
+using System;
+using System.Collections.Generic;
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
+
+namespace ReactiveUI.Primitives.Benchmarks;
+
+/// <summary>
+/// Harness-free allocation probe (<c>--alloc</c>). Measures the exact bytes allocated per operation
+/// with <see cref="GC.GetAllocatedBytesForCurrentThread"/>, reusing a single observer so the
+/// reported figure is the operator's own allocation -- not the per-op test observer that
+/// BenchmarkDotNet's <c>Allocated</c> column folds in. Run with:
+/// <c>dotnet run -c Release --project ... -- --alloc</c>.
+/// </summary>
+internal static class AllocationProbe
+{
+    private const int Warmup = 50;
+    private const int Iterations = 1000;
+    private const int Count = 32;
+    private const int FanOut = 64;
+
+    /// <summary>
+    /// Runs the probe and prints a per-operator allocation table.
+    /// </summary>
+    public static void Run()
+    {
+        // Shared, reused observer: allocated once here, never inside a measured op, so its bytes
+        // are excluded from every measurement.
+        var observer = new IntSignalObserver();
+        var handles = new IDisposable[FanOut];
+
+        Console.WriteLine("Operator allocation — bytes/op, observer excluded (GC.GetAllocatedBytesForCurrentThread)");
+        Console.WriteLine(new string('-', 56));
+
+        Section("Factories / sources");
+        Row("RangeSubscribe (baseline)", () => Signal.Sequence(0, Count).Subscribe(observer).Dispose());
+        Row("Return", () => Signal.Emit(7).Subscribe(observer).Dispose());
+        Row("Empty", () => Signal.None<int>().Subscribe(observer).Dispose());
+
+        Section("Stateful single-source operators");
+        Row("Skip", () => Signal.Sequence(0, Count).Skip(8).Subscribe(observer).Dispose());
+        Row("Distinct", () => Signal.Sequence(0, Count).Distinct().Subscribe(observer).Dispose());
+        Row("Unique", () => Signal.Sequence(0, Count).Unique().Subscribe(observer).Dispose());
+        Row("UniqueBy", () => Signal.Sequence(0, Count).UniqueBy(static x => x / 2).Subscribe(observer).Dispose());
+        Row("Fold", () => Signal.Sequence(0, Count).Fold(0, static (a, x) => a + x).Subscribe(observer).Dispose());
+        Row("Reduce", () => Signal.Sequence(0, Count).Reduce(0, static (a, x) => a + x).Subscribe(observer).Dispose());
+        Row("TakeWhile", () => Signal.Sequence(0, Count).TakeWhile(static x => x < 24).Subscribe(observer).Dispose());
+        Row("SkipWhile", () => Signal.Sequence(0, Count).SkipWhile(static x => x < 8).Subscribe(observer).Dispose());
+
+        Section("Projection / combination");
+        Row("Map", () => Signal.Sequence(0, Count).Map(static x => x + 1).Subscribe(observer).Dispose());
+        Row("Keep", () => Signal.Sequence(0, Count).Keep(static x => (x & 1) == 0).Subscribe(observer).Dispose());
+        Row("Map+Keep", () => Signal.Sequence(0, Count).Map(static x => x + 1).Keep(static x => (x & 1) == 0).Subscribe(observer).Dispose());
+        Row("Zip", () => Signal.Pair(Signal.Sequence(0, Count), Signal.Sequence(0, Count), static (l, r) => l + r).Subscribe(observer).Dispose());
+        Row("FlatMap", () => Signal.Sequence(1, 8).FlatMap(static x => Signal.Sequence(x * 10, 2)).Subscribe(observer).Dispose());
+
+        Section("Subjects (construct + subscribe + one emit)");
+        Row("Signal", () => EmitOnce(new Signal<int>(), observer));
+        Row("StateSignal", () => EmitOnce(new StateSignal<int>(0), observer));
+        Row("ReplaySignal", () => EmitOnce(new HistorySignal<int>(16), observer));
+
+        Section("Connectable");
+        Row("Publish", () =>
+        {
+            var c = Signal.Sequence(1, Count).ShareLive();
+            using var s = c.Subscribe(observer);
+            using var conn = c.Connect();
+        });
+        Row("Share", () => Signal.Sequence(1, Count).ShareLatest().Subscribe(observer).Dispose());
+        Row("RefCount", () => Signal.Sequence(1, Count).ShareLive().AutoShare().Subscribe(observer).Dispose());
+        Row("AutoConnect", () => Signal.Sequence(1, Count).ShareLive().AutoConnect().Subscribe(observer).Dispose());
+
+        Section($"Subscribe/dispose churn (x{FanOut})");
+        Row("Signal fan-out churn", () =>
+        {
+            using var subject = new Signal<int>();
+            for (var i = 0; i < FanOut; i++)
+            {
+                handles[i] = subject.Subscribe(observer);
+            }
+
+            for (var i = 0; i < FanOut; i++)
+            {
+                handles[i].Dispose();
+            }
+        });
+    }
+
+    private static void EmitOnce(ISignal<int> subject, IObserver<int> observer)
+    {
+        var subscription = subject.Subscribe(observer);
+        subject.OnNext(1);
+        subscription.Dispose();
+        (subject as IDisposable)?.Dispose();
+    }
+
+    private static void Section(string name)
+    {
+        Console.WriteLine();
+        Console.WriteLine(name);
+    }
+
+    private static void Row(string name, Action op)
+    {
+        for (var i = 0; i < Warmup; i++)
+        {
+            op();
+        }
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < Iterations; i++)
+        {
+            op();
+        }
+
+        var perOp = (GC.GetAllocatedBytesForCurrentThread() - before) / Iterations;
+        Console.WriteLine($"  {name,-34} {perOp,6} B");
+    }
+}

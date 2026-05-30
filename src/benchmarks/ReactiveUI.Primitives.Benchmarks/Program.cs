@@ -38,6 +38,12 @@ internal static class Program
     /// <returns>A task that completes when execution is finished.</returns>
     public static async Task Main(string[] args)
     {
+        if (args.Contains("--alloc", StringComparer.OrdinalIgnoreCase))
+        {
+            AllocationProbe.Run();
+            return;
+        }
+
         if (args.Contains("--smoke", StringComparer.OrdinalIgnoreCase))
         {
             var originalOutput = Console.Out;
