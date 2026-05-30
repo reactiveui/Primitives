@@ -286,18 +286,7 @@ public static partial class LinqMixins
             return count == 0 ? Signal.None<T>() : new RepeatSignal<T>(loop.Value, count);
         }
 
-        return Signal.CreateSafe<T>(observer =>
-        {
-            if (count == 0)
-            {
-                observer.OnCompleted();
-                return Disposable.Empty;
-            }
-
-            var sink = new TakeObserver<T>(observer, count);
-            sink.SetSubscription(source.Subscribe(sink));
-            return sink;
-        });
+        return new TakeSignal<T>(source, count);
     }
 
     /// <summary>

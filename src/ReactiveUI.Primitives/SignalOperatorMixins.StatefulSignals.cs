@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Disposables;
+
 namespace ReactiveUI.Primitives;
 
 /// <content>
@@ -12,6 +14,45 @@ namespace ReactiveUI.Primitives;
 /// </content>
 public static partial class LinqMixins
 {
+    /// <summary>Dedicated signal for <c>Take</c>.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class TakeSignal<T> : IObservable<T>
+    {
+        /// <summary>The source observable.</summary>
+        private readonly IObservable<T> _source;
+
+        /// <summary>The maximum number of values to forward.</summary>
+        private readonly int _count;
+
+        /// <summary>Initializes a new instance of the <see cref="TakeSignal{T}"/> class.</summary>
+        /// <param name="source">The source observable.</param>
+        /// <param name="count">The maximum number of values to forward.</param>
+        internal TakeSignal(IObservable<T> source, int count)
+        {
+            _source = source;
+            _count = count;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            if (_count == 0)
+            {
+                observer.OnCompleted();
+                return Disposable.Empty;
+            }
+
+            var sink = new TakeObserver<T>(observer, _count);
+            sink.SetSubscription(_source.Subscribe(sink));
+            return sink;
+        }
+    }
+
     /// <summary>Dedicated signal for <c>Skip</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     private sealed class SkipSignal<T> : IObservable<T>
