@@ -43,12 +43,13 @@ public class SyncTimerObservableTests
         using var subThird = timer.Subscribe(_ => thirdTicks++);
 
         scheduler.AdvanceBy(period.Ticks);
+        var secondTicksBeforeDispose = secondTicks;
         subSecond.Dispose();
         scheduler.AdvanceBy(period.Ticks);
 
         await Assert.That(firstTicks).IsGreaterThanOrEqualTo(1);
         await Assert.That(thirdTicks).IsGreaterThanOrEqualTo(1);
-        await Assert.That(secondTicks).IsLessThanOrEqualTo(1);
+        await Assert.That(secondTicks).IsEqualTo(secondTicksBeforeDispose);
     }
 
     /// <summary>Verifies that disposing a subscription twice is idempotent.</summary>
