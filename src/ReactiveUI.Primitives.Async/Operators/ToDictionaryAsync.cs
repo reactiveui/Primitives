@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Async;
 /// dictionary, using user-supplied key and element selector functions. These operations are performed asynchronously
 /// and support cancellation via a CancellationToken. All methods throw an exception if duplicate keys are encountered
 /// in the source sequence, consistent with the behavior of Dictionary{TKey, TValue}.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Asynchronously creates a dictionary from the elements of the sequence, using the specified key selector

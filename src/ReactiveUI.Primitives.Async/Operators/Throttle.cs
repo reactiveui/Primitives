@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Async;
 /// within a specified time span. Only values that are not followed by another value within the due time
 /// are forwarded to observers. This is commonly used to suppress rapid bursts of events such as keystrokes
 /// or mouse movements.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Ignores elements from the source sequence that are followed by another element within
@@ -53,7 +53,7 @@ public static partial class ObservableAsync
         }
 #endif
 
-        return new ThrottleObservable<T>(@this, dueTime, timeProvider ?? TimeProvider.System);
+        return new ThrottleSignal<T>(@this, dueTime, timeProvider ?? TimeProvider.System);
     }
 
     /// <summary>
@@ -91,8 +91,8 @@ public static partial class ObservableAsync
     /// <param name="source">The source observable sequence to throttle.</param>
     /// <param name="dueTime">The quiet period that must elapse before an element is forwarded.</param>
     /// <param name="timeProvider">The time provider used for scheduling the debounce timer.</param>
-    internal sealed class ThrottleObservable<T>(IObservableAsync<T> source, TimeSpan dueTime, TimeProvider timeProvider)
-        : ObservableAsync<T>
+    internal sealed class ThrottleSignal<T>(IObservableAsync<T> source, TimeSpan dueTime, TimeProvider timeProvider)
+        : SignalAsync<T>
     {
         /// <summary>
         /// Subscribes the specified observer with throttle behavior applied.

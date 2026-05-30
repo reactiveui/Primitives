@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Async;
 /// </summary>
 /// <remarks>SkipWhile bypasses elements in the source sequence as long as a predicate is satisfied,
 /// then emits all remaining elements.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Bypasses elements in the observable sequence as long as the specified asynchronous condition is true,
@@ -29,7 +29,7 @@ public static partial class ObservableAsync
         ArgumentExceptionHelper.ThrowIfNull(@this);
         ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-        return new SkipWhileAsyncObservable<T>(@this, predicate);
+        return new SkipWhileAsyncSignal<T>(@this, predicate);
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ public static partial class ObservableAsync
         ArgumentExceptionHelper.ThrowIfNull(@this);
         ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-        return new SkipWhileSyncObservable<T>(@this, predicate);
+        return new SkipWhileSyncSignal<T>(@this, predicate);
     }
 
     /// <summary>
@@ -58,7 +58,7 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="predicate">The skip-while predicate.</param>
-    internal sealed class SkipWhileSyncObservable<T>(IObservableAsync<T> source, Func<T, bool> predicate) : ObservableAsync<T>
+    internal sealed class SkipWhileSyncSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -122,9 +122,9 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="predicate">The async skip-while predicate.</param>
-    internal sealed class SkipWhileAsyncObservable<T>(
+    internal sealed class SkipWhileAsyncSignal<T>(
         IObservableAsync<T> source,
-        Func<T, CancellationToken, ValueTask<bool>> predicate) : ObservableAsync<T>
+        Func<T, CancellationToken, ValueTask<bool>> predicate) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(

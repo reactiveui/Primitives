@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <remarks>The methods in this class enable functional-style operations, such as projection, on asynchronous
 /// observables. These extensions facilitate composing and manipulating streams of data in an asynchronous context,
 /// similar to LINQ operations for synchronous observables.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Projects each element of the observable sequence into a new form using the specified asynchronous selector
@@ -29,7 +29,7 @@ public static partial class ObservableAsync
     public static IObservableAsync<TDest> Select<T, TDest>(
         this IObservableAsync<T> @this,
         Func<T, CancellationToken, ValueTask<TDest>> selector) =>
-        new SelectAsyncObservable<T, TDest>(@this, selector);
+        new SelectAsyncSignal<T, TDest>(@this, selector);
 
     /// <summary>
     /// Projects each element of the observable sequence into a new form using the specified selector function.
@@ -46,7 +46,7 @@ public static partial class ObservableAsync
     public static IObservableAsync<TDest> Select<T, TDest>(
         this IObservableAsync<T> @this,
         Func<T, TDest> selector) =>
-        new SelectSyncObservable<T, TDest>(@this, selector);
+        new SelectSyncSignal<T, TDest>(@this, selector);
 
     /// <summary>
     /// Async-selector variant of <see cref="Select{T,TDest}(IObservableAsync{T}, Func{T,CancellationToken,ValueTask{TDest}})"/>.
@@ -57,9 +57,9 @@ public static partial class ObservableAsync
     /// <typeparam name="TDest">The projected element type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="selector">The asynchronous selector.</param>
-    internal sealed class SelectAsyncObservable<T, TDest>(
+    internal sealed class SelectAsyncSignal<T, TDest>(
         IObservableAsync<T> source,
-        Func<T, CancellationToken, ValueTask<TDest>> selector) : ObservableAsync<TDest>
+        Func<T, CancellationToken, ValueTask<TDest>> selector) : SignalAsync<TDest>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -108,16 +108,16 @@ public static partial class ObservableAsync
 
     /// <summary>
     /// Synchronous-selector variant of <see cref="Select{T,TDest}(IObservableAsync{T}, Func{T,TDest})"/>. Same
-    /// allocation profile as <see cref="SelectAsyncObservable{T,TDest}"/> but the per-emission <c>OnNextAsyncCore</c>
+    /// allocation profile as <see cref="SelectAsyncSignal{T,TDest}"/> but the per-emission <c>OnNextAsyncCore</c>
     /// is sync-completed so no state-machine box is allocated when the downstream completes synchronously.
     /// </summary>
     /// <typeparam name="T">The element type of the source sequence.</typeparam>
     /// <typeparam name="TDest">The projected element type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="selector">The synchronous selector.</param>
-    internal sealed class SelectSyncObservable<T, TDest>(
+    internal sealed class SelectSyncSignal<T, TDest>(
         IObservableAsync<T> source,
-        Func<T, TDest> selector) : ObservableAsync<TDest>
+        Func<T, TDest> selector) : SignalAsync<TDest>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(

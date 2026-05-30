@@ -12,8 +12,8 @@ using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
-using ReactiveUI.Primitives.Async.Subjects;
-using AsyncObs = ReactiveUI.Primitives.Async.ObservableAsync;
+using ReactiveUI.Primitives.Async.Signals;
+using AsyncObs = ReactiveUI.Primitives.Async.SignalAsync;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -28,8 +28,8 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestEnumerableDisposedDuringSubscribe_ThenReturnsEarly()
     {
-        var subject = SubjectAsync.Create<int>();
-        IObservableAsync<int>[] sources = [subject.Values, AsyncObs.Never<int>()];
+        var signal = Signal.Create<int>();
+        IObservableAsync<int>[] sources = [signal.Values, AsyncObs.Never<int>()];
 
         var sub = await sources.CombineLatest().SubscribeAsync(
             (_, _) => default,
@@ -39,7 +39,7 @@ public partial class CombineLatestOperatorTests
         await sub.DisposeAsync();
 
         // Emit after dispose - should be ignored
-        await subject.OnNextAsync(1, CancellationToken.None);
+        await signal.OnNextAsync(1, CancellationToken.None);
     }
 
     /// <summary>
@@ -50,12 +50,12 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestEnumerableOnNextAfterDispose_ThenIgnored()
     {
-        const int SecondSubjectValue = 2;
-        var subject1 = SubjectAsync.Create<int>();
-        var subject2 = SubjectAsync.Create<int>();
+        const int SecondSignalValue = 2;
+        var signal1 = Signal.Create<int>();
+        var signal2 = Signal.Create<int>();
         var items = new List<IReadOnlyList<int>>();
 
-        IObservableAsync<int>[] sources = [subject1.Values, subject2.Values];
+        IObservableAsync<int>[] sources = [signal1.Values, signal2.Values];
 
         var sub = await sources.CombineLatest().SubscribeAsync(
             (x, _) =>
@@ -68,8 +68,8 @@ public partial class CombineLatestOperatorTests
         await sub.DisposeAsync();
 
         // These should be ignored
-        await subject1.OnNextAsync(1, CancellationToken.None);
-        await subject2.OnNextAsync(SecondSubjectValue, CancellationToken.None);
+        await signal1.OnNextAsync(1, CancellationToken.None);
+        await signal2.OnNextAsync(SecondSignalValue, CancellationToken.None);
 
         await Assert.That(items).IsEmpty();
     }
@@ -82,10 +82,10 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestEnumerableOnErrorResumeAfterDispose_ThenIgnored()
     {
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         var errors = new List<Exception>();
 
-        IObservableAsync<int>[] sources = [subject.Values];
+        IObservableAsync<int>[] sources = [signal.Values];
 
         var sub = await sources.CombineLatest().SubscribeAsync(
             (_, _) => default,
@@ -98,7 +98,7 @@ public partial class CombineLatestOperatorTests
         await sub.DisposeAsync();
 
         // Error after dispose should be ignored
-        await subject.OnErrorResumeAsync(new InvalidOperationException("err"), CancellationToken.None);
+        await signal.OnErrorResumeAsync(new InvalidOperationException("err"), CancellationToken.None);
 
         await Assert.That(errors).IsEmpty();
     }
@@ -111,10 +111,10 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestEnumerableAlreadyDisposed_ThenOnCompletedIgnored()
     {
-        var subject1 = SubjectAsync.Create<int>();
-        var subject2 = SubjectAsync.Create<int>();
+        var signal1 = Signal.Create<int>();
+        var signal2 = Signal.Create<int>();
 
-        IObservableAsync<int>[] sources = [subject1.Values, subject2.Values];
+        IObservableAsync<int>[] sources = [signal1.Values, signal2.Values];
         Result? completion = null;
 
         var sub = await sources.CombineLatest().SubscribeAsync(
@@ -130,7 +130,7 @@ public partial class CombineLatestOperatorTests
         await sub.DisposeAsync();
 
         // Complete after dispose - should be ignored
-        await subject1.OnCompletedAsync(Result.Success);
+        await signal1.OnCompletedAsync(Result.Success);
 
         // No extra completion should have been forwarded since we disposed
         await Assert.That(completion).IsNull();
@@ -144,10 +144,10 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestEnumerableSourceCompletesWithoutValue_ThenCompletes()
     {
-        var subject1 = SubjectAsync.Create<int>();
+        var signal1 = Signal.Create<int>();
         var emptySource = AsyncObs.Empty<int>();
 
-        IObservableAsync<int>[] sources = [subject1.Values, emptySource];
+        IObservableAsync<int>[] sources = [signal1.Values, emptySource];
         Result? completion = null;
 
         await using var sub = await sources.CombineLatest().SubscribeAsync(
@@ -332,7 +332,7 @@ public partial class CombineLatestOperatorTests
         // First source triggers disposal when subscribed
         var disposeTrigger =
             new TaskCompletionSource<IAsyncDisposable>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var slowSource = ObservableAsync.Create<int>(async (_, ct) =>
+        var slowSource = SignalAsync.Create<int>(async (_, ct) =>
         {
             var disp = await disposeTrigger.Task.WaitAsync(ct);
             await disp.DisposeAsync();
@@ -374,7 +374,7 @@ public partial class CombineLatestOperatorTests
         var secondSourceSubscribed = false;
 
         // Second source records whether it was ever subscribed.
-        var trackingSource = ObservableAsync.Create<int>((_, _) =>
+        var trackingSource = SignalAsync.Create<int>((_, _) =>
         {
             secondSourceSubscribed = true;
             return new(DisposableAsync.Empty);

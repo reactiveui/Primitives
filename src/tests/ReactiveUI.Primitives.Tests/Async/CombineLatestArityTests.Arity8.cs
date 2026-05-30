@@ -11,8 +11,8 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Async.Subjects;
-using AsyncObs = ReactiveUI.Primitives.Async.ObservableAsync;
+using ReactiveUI.Primitives.Async.Signals;
+using AsyncObs = ReactiveUI.Primitives.Async.SignalAsync;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -27,13 +27,13 @@ public partial class CombineLatestArityTests
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
     public async Task WhenCombineLatest8SubscriptionThrows_ThenDisposesAndRethrows()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
         var throwingSrc = AsyncObs.Create<int>((_, _) => throw new InvalidOperationException("subscribe failed"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
@@ -57,14 +57,14 @@ public partial class CombineLatestArityTests
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
     public async Task WhenCombineLatest8DisposedBeforeCombine_ThenOnNextCombinedIsGuarded()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
-        var s8 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
+        var s8 = Signal.Create<int>();
         var results = new List<int>();
 
         var sub = await s1.Values
@@ -108,14 +108,14 @@ public partial class CombineLatestArityTests
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
     public async Task WhenCombineLatest8DisposedBeforeError_ThenOnErrorResumeIsGuarded()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
-        var s8 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
+        var s8 = Signal.Create<int>();
         Exception? receivedError = null;
 
         var sub = await s1.Values
@@ -150,14 +150,14 @@ public partial class CombineLatestArityTests
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
     public async Task WhenCombineLatest8LastSourceEmitsFirst_ThenNoEmission()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
-        var s8 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
+        var s8 = Signal.Create<int>();
         var results = new List<int>();
 
         await using var sub = await s1.Values
@@ -199,14 +199,14 @@ public partial class CombineLatestArityTests
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
     public async Task WhenCombineLatest8MiddleSourcesEmitFirst_ThenNoEmission()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
-        var s8 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
+        var s8 = Signal.Create<int>();
         var results = new List<int>();
 
         await using var sub = await s1.Values
@@ -255,14 +255,14 @@ public partial class CombineLatestArityTests
     {
         const int ExpectedSum11111112 = 11_111_112;
 
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
-        var s8 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
+        var s8 = Signal.Create<int>();
         var results = new List<int>();
 
         await using var sub = await s1.Values
@@ -315,14 +315,14 @@ public partial class CombineLatestArityTests
     {
         const int ExpectedSum11111121 = 11_111_121;
 
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
-        var s8 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
+        var s8 = Signal.Create<int>();
         var results = new List<int>();
 
         await using var sub = await s1.Values
@@ -375,14 +375,14 @@ public partial class CombineLatestArityTests
     {
         const int ExpectedSum11111211 = 11_111_211;
 
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
-        var s8 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
+        var s8 = Signal.Create<int>();
         var results = new List<int>();
 
         await using var sub = await s1.Values
@@ -435,14 +435,14 @@ public partial class CombineLatestArityTests
     {
         const int ExpectedSum11112111 = 11_112_111;
 
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
-        var s8 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
+        var s8 = Signal.Create<int>();
         var results = new List<int>();
 
         await using var sub = await s1.Values
@@ -495,14 +495,14 @@ public partial class CombineLatestArityTests
     {
         const int ExpectedSum11121111 = 11_121_111;
 
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
-        var s8 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
+        var s8 = Signal.Create<int>();
         var results = new List<int>();
 
         await using var sub = await s1.Values
@@ -555,14 +555,14 @@ public partial class CombineLatestArityTests
     {
         const int ExpectedSum11211111 = 11_211_111;
 
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
-        var s8 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
+        var s8 = Signal.Create<int>();
         var results = new List<int>();
 
         await using var sub = await s1.Values
@@ -615,14 +615,14 @@ public partial class CombineLatestArityTests
     {
         const int ExpectedSum12111111 = 12_111_111;
 
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
-        var s8 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
+        var s8 = Signal.Create<int>();
         var results = new List<int>();
 
         await using var sub = await s1.Values

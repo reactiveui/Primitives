@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Async;
 /// as obtaining the first element that matches a condition or a default value if no such element exists. These
 /// extensions are designed to be used with types implementing asynchronous observable patterns and support cancellation
 /// via cancellation tokens.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Asynchronously returns the first element that matches the specified predicate, or a default value if no such

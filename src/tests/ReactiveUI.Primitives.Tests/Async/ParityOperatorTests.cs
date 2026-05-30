@@ -11,8 +11,8 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Async.Subjects;
-using AsyncObs = ReactiveUI.Primitives.Async.ObservableAsync;
+using ReactiveUI.Primitives.Async.Signals;
+using AsyncObs = ReactiveUI.Primitives.Async.SignalAsync;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -59,7 +59,7 @@ public class ParityOperatorTests
         string?[] source = [null, "alpha", null, "beta"];
 
         var result = await source
-            .ToObservableAsync()
+            .ToAsyncSignal()
             .WhereIsNotNull()
             .ToListAsync();
 
@@ -195,7 +195,7 @@ public class ParityOperatorTests
     public async Task WhenPairwise_WithSingleElement_ThenProducesEmptySequence()
     {
         var result = await Sequence42
-            .ToObservableAsync()
+            .ToAsyncSignal()
             .Pairwise()
             .ToListAsync();
 
@@ -220,19 +220,19 @@ public class ParityOperatorTests
         const int Emit5 = 5;
         const int Emit6 = 6;
 
-        var subject = SubjectAsync.Create<int>();
-        var (trueBranch, falseBranch) = subject.Values.Partition(static value => value % EvenDivisor == 0);
+        var signal = Signal.Create<int>();
+        var (trueBranch, falseBranch) = signal.Values.Partition(static value => value % EvenDivisor == 0);
 
         var trueTask = trueBranch.ToListAsync().AsTask();
         var falseTask = falseBranch.ToListAsync().AsTask();
 
-        await subject.OnNextAsync(1, CancellationToken.None);
-        await subject.OnNextAsync(Emit2, CancellationToken.None);
-        await subject.OnNextAsync(Emit3, CancellationToken.None);
-        await subject.OnNextAsync(Emit4, CancellationToken.None);
-        await subject.OnNextAsync(Emit5, CancellationToken.None);
-        await subject.OnNextAsync(Emit6, CancellationToken.None);
-        await subject.OnCompletedAsync(Result.Success);
+        await signal.OnNextAsync(1, CancellationToken.None);
+        await signal.OnNextAsync(Emit2, CancellationToken.None);
+        await signal.OnNextAsync(Emit3, CancellationToken.None);
+        await signal.OnNextAsync(Emit4, CancellationToken.None);
+        await signal.OnNextAsync(Emit5, CancellationToken.None);
+        await signal.OnNextAsync(Emit6, CancellationToken.None);
+        await signal.OnCompletedAsync(Result.Success);
 
         await Task.WhenAll(trueTask, falseTask);
 
@@ -295,7 +295,7 @@ public class ParityOperatorTests
     public async Task WhenAsSignal_ThenEmitsUnitForEachValue()
     {
         var result = await Sequence123
-            .ToObservableAsync()
+            .ToAsyncSignal()
             .AsSignal()
             .ToListAsync();
 
@@ -429,13 +429,13 @@ public class ParityOperatorTests
         const int DroppedValueA = 2;
         const int DroppedValueB = 3;
         const int PassthroughValue = 4;
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var result = new List<int>();
         var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await using var sub = await subject.Values
+        await using var sub = await signal.Values
             .DropIfBusy(async (value, _) =>
             {
                 if (value == 1)
@@ -458,21 +458,21 @@ public class ParityOperatorTests
                 CancellationToken.None);
 
         // Emit value 1 which will block on the gate
-        var emitTask = subject.OnNextAsync(1, CancellationToken.None).AsTask();
+        var emitTask = signal.OnNextAsync(1, CancellationToken.None).AsTask();
 
         // Emit values 2 and 3 while the action for value 1 is still running - these should be dropped
         // We need a small yield to ensure value 1's handler has started
         await Task.Yield();
-        await subject.OnNextAsync(DroppedValueA, CancellationToken.None);
-        await subject.OnNextAsync(DroppedValueB, CancellationToken.None);
+        await signal.OnNextAsync(DroppedValueA, CancellationToken.None);
+        await signal.OnNextAsync(DroppedValueB, CancellationToken.None);
 
         // Release the gate so value 1 completes
         gate.SetResult();
         await emitTask;
 
         // Emit value 4 after the action finishes - this should go through
-        await subject.OnNextAsync(PassthroughValue, CancellationToken.None);
-        await subject.OnCompletedAsync(Result.Success);
+        await signal.OnNextAsync(PassthroughValue, CancellationToken.None);
+        await signal.OnCompletedAsync(Result.Success);
 
         await completed.Task;
 
@@ -492,7 +492,7 @@ public class ParityOperatorTests
         const int Second = 2;
         const int Third = 3;
         var result = await new[] { 1, Second, Third }
-            .ToObservableAsync()
+            .ToAsyncSignal()
             .DropIfBusy(static (_, _) => default)
             .ToListAsync();
 
@@ -508,7 +508,7 @@ public class ParityOperatorTests
     {
         const int Third = 2;
         var result = await new[] { 0, 1, Third }
-            .ToObservableAsync()
+            .ToAsyncSignal()
             .LatestOrDefault(0)
             .ToListAsync();
 
@@ -526,7 +526,7 @@ public class ParityOperatorTests
         const int First = 5;
         const int Second = 6;
         var result = await new[] { First, Second }
-            .ToObservableAsync()
+            .ToAsyncSignal()
             .LatestOrDefault(0)
             .ToListAsync();
 
@@ -589,7 +589,7 @@ public class ParityOperatorTests
     {
         const int FirstMatch = 4;
         var result = await Sequence12345
-            .ToObservableAsync()
+            .ToAsyncSignal()
             .WaitUntil(static v => v > 3)
             .ToListAsync();
 
@@ -723,8 +723,8 @@ public class ParityOperatorTests
     [Test]
     public async Task WhenReplayLastOnSubscribe_ThenReplaysInitialAndSourceValues()
     {
-        var subject = SubjectAsync.Create<int>();
-        var replayed = subject.Values.ReplayLastOnSubscribe(0);
+        var signal = Signal.Create<int>();
+        var replayed = signal.Values.ReplayLastOnSubscribe(0);
 
         var firstResult = await replayed.Take(1).FirstAsync();
         await Assert.That(firstResult).IsEqualTo(0);
@@ -741,11 +741,11 @@ public class ParityOperatorTests
         Justification = "Asserting on task results after completion.")]
     public async Task WhenThrottleDistinct_ThenEmitsDistinctThrottledValues()
     {
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         var results = new List<int>();
         var firstReceived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await using var sub = await subject.Values
+        await using var sub = await signal.Values
             .ThrottleDistinct(TimeSpan.FromMilliseconds(50))
             .SubscribeAsync(
                 (value, _) =>
@@ -757,15 +757,15 @@ public class ParityOperatorTests
                 null);
 
         // Emit duplicate values quickly - DistinctUntilChanged collapses them
-        await subject.OnNextAsync(1, CancellationToken.None);
-        await subject.OnNextAsync(1, CancellationToken.None);
+        await signal.OnNextAsync(1, CancellationToken.None);
+        await signal.OnNextAsync(1, CancellationToken.None);
 
         // Wait for throttle to emit the first distinct value
         var received = await AsyncTestHelpers.WaitForConditionAsync(
             () => results.Count >= 1,
             TimeSpan.FromSeconds(5));
 
-        await subject.OnCompletedAsync(Result.Success);
+        await signal.OnCompletedAsync(Result.Success);
 
         await Assert.That(received).IsTrue();
         await Assert.That(results[0]).IsEqualTo(1);
@@ -807,16 +807,16 @@ public class ParityOperatorTests
         const int DebounceSeconds = 10;
         const int Threshold = 5;
         const int EmittedValue = 10;
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
 
-        var resultTask = subject.Values
+        var resultTask = signal.Values
             .DebounceUntil(TimeSpan.FromSeconds(DebounceSeconds), static v => v > Threshold)
             .Take(1)
             .FirstAsync()
             .AsTask();
 
         // Value 10 satisfies condition, should emit immediately (no delay)
-        await subject.OnNextAsync(EmittedValue, CancellationToken.None);
+        await signal.OnNextAsync(EmittedValue, CancellationToken.None);
 
         var result = await resultTask;
 
@@ -834,10 +834,10 @@ public class ParityOperatorTests
         Justification = "Asserting on task results after completion.")]
     public async Task WhenDebounceUntil_WithConditionFalse_ThenDelaysEmission()
     {
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         var results = new List<int>();
 
-        await using var sub = await subject.Values
+        await using var sub = await signal.Values
             .DebounceUntil(TimeSpan.FromMilliseconds(50), static v => v > 100)
             .SubscribeAsync(
                 (value, _) =>
@@ -848,14 +848,14 @@ public class ParityOperatorTests
                 null);
 
         // Value 1 does not satisfy condition, should be delayed by 50ms
-        await subject.OnNextAsync(1, CancellationToken.None);
+        await signal.OnNextAsync(1, CancellationToken.None);
 
         // Wait for the delayed value to arrive
         var received = await AsyncTestHelpers.WaitForConditionAsync(
             () => results.Count >= 1,
             TimeSpan.FromSeconds(5));
 
-        await subject.OnCompletedAsync(Result.Success);
+        await signal.OnCompletedAsync(Result.Success);
 
         await Assert.That(received).IsTrue();
         await Assert.That(results[0]).IsEqualTo(1);
@@ -946,7 +946,7 @@ public class ParityOperatorTests
         const int Third = 3;
         const int Fourth = 4;
         var result = await new IEnumerable<int>[] { [1, Second], [Third, Fourth] }
-            .ToObservableAsync()
+            .ToAsyncSignal()
             .ForEach()
             .ToListAsync();
 
@@ -961,7 +961,7 @@ public class ParityOperatorTests
     public async Task WhenNot_ThenNegatesBooleanValues()
     {
         var result = await ParityBoolSequenceTft
-            .ToObservableAsync()
+            .ToAsyncSignal()
             .Not()
             .ToListAsync();
 
@@ -978,7 +978,7 @@ public class ParityOperatorTests
         string?[] source = [null, null, "first", null, "second"];
 
         var result = await source
-            .ToObservableAsync()
+            .ToAsyncSignal()
             .SkipWhileNull()
             .ToListAsync();
 
@@ -1048,7 +1048,7 @@ public class ParityOperatorTests
     public async Task WhenWhereFalse_ThenFiltersToFalseValues()
     {
         var result = await ParityBoolSequenceTftff
-            .ToObservableAsync()
+            .ToAsyncSignal()
             .WhereFalse()
             .ToListAsync();
 
@@ -1063,7 +1063,7 @@ public class ParityOperatorTests
     public async Task WhenWhereTrue_ThenFiltersToTrueValues()
     {
         var result = await ParityBoolSequenceTftft
-            .ToObservableAsync()
+            .ToAsyncSignal()
             .WhereTrue()
             .ToListAsync();
 
@@ -1116,7 +1116,7 @@ public class ParityOperatorTests
         const int Second = 2;
         const int Third = 3;
         var result = await new[] { 1, Second, Third }
-            .ToObservableAsync()
+            .ToAsyncSignal()
             .CatchAndReturn(FallbackSentinel)
             .ToListAsync();
 
@@ -1133,7 +1133,7 @@ public class ParityOperatorTests
         const int Second = 2;
         const int Third = 3;
         var result = await new[] { 1, Second, Third }
-            .ToObservableAsync()
+            .ToAsyncSignal()
             .CatchIgnore()
             .ToListAsync();
 

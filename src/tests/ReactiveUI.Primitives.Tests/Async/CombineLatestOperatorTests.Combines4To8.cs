@@ -11,7 +11,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Async.Subjects;
+using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -24,10 +24,10 @@ public partial class CombineLatestOperatorTests
     public async Task WhenCombineLatestFourSources_ThenCombinesAll()
     {
         const int ExpectedSum = 1_111;
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
 
         var results = new List<int>();
         await using var sub = await s1.Values
@@ -60,15 +60,15 @@ public partial class CombineLatestOperatorTests
     {
         const int ValueMultiplier = 10;
         const int ExpectedSum = 150;
-        var subjects = Enumerable.Range(0, FiveSources).Select(_ => SubjectAsync.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, FiveSources).Select(_ => Signal.Create<int>()).ToList();
 
         var results = new List<int>();
-        await using var sub = await subjects[0].Values
+        await using var sub = await signals[0].Values
             .CombineLatest(
-                subjects[1].Values,
-                subjects[Source2Index].Values,
-                subjects[Source3Index].Values,
-                subjects[Source4Index].Values,
+                signals[1].Values,
+                signals[Source2Index].Values,
+                signals[Source3Index].Values,
+                signals[Source4Index].Values,
                 (a, b, c, d, e) => a + b + c + d + e)
             .SubscribeAsync(
                 (x, _) =>
@@ -80,7 +80,7 @@ public partial class CombineLatestOperatorTests
 
         for (var i = 0; i < FiveSources; i++)
         {
-            await subjects[i].OnNextAsync((i + 1) * ValueMultiplier, CancellationToken.None);
+            await signals[i].OnNextAsync((i + 1) * ValueMultiplier, CancellationToken.None);
         }
 
         await AsyncTestHelpers.WaitForConditionAsync(
@@ -97,16 +97,16 @@ public partial class CombineLatestOperatorTests
     public async Task WhenCombineLatestSixSources_ThenCombinesAll()
     {
         const int ExpectedSum = 21;
-        var subjects = Enumerable.Range(0, SixSources).Select(_ => SubjectAsync.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, SixSources).Select(_ => Signal.Create<int>()).ToList();
 
         var results = new List<int>();
-        await using var sub = await subjects[0].Values
+        await using var sub = await signals[0].Values
             .CombineLatest(
-                subjects[1].Values,
-                subjects[Source2Index].Values,
-                subjects[Source3Index].Values,
-                subjects[Source4Index].Values,
-                subjects[Source5Index].Values,
+                signals[1].Values,
+                signals[Source2Index].Values,
+                signals[Source3Index].Values,
+                signals[Source4Index].Values,
+                signals[Source5Index].Values,
                 (a, b, c, d, e, f) => a + b + c + d + e + f)
             .SubscribeAsync(
                 (x, _) =>
@@ -118,7 +118,7 @@ public partial class CombineLatestOperatorTests
 
         for (var i = 0; i < SixSources; i++)
         {
-            await subjects[i].OnNextAsync(i + 1, CancellationToken.None);
+            await signals[i].OnNextAsync(i + 1, CancellationToken.None);
         }
 
         await AsyncTestHelpers.WaitForConditionAsync(
@@ -135,17 +135,17 @@ public partial class CombineLatestOperatorTests
     public async Task WhenCombineLatestSevenSources_ThenCombinesAll()
     {
         const int ExpectedSum = 7;
-        var subjects = Enumerable.Range(0, SevenSources).Select(_ => SubjectAsync.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, SevenSources).Select(_ => Signal.Create<int>()).ToList();
 
         var results = new List<int>();
-        await using var sub = await subjects[0].Values
+        await using var sub = await signals[0].Values
             .CombineLatest(
-                subjects[1].Values,
-                subjects[Source2Index].Values,
-                subjects[Source3Index].Values,
-                subjects[Source4Index].Values,
-                subjects[Source5Index].Values,
-                subjects[Source6Index].Values,
+                signals[1].Values,
+                signals[Source2Index].Values,
+                signals[Source3Index].Values,
+                signals[Source4Index].Values,
+                signals[Source5Index].Values,
+                signals[Source6Index].Values,
                 (a, b, c, d, e, f, g) => a + b + c + d + e + f + g)
             .SubscribeAsync(
                 (x, _) =>
@@ -157,7 +157,7 @@ public partial class CombineLatestOperatorTests
 
         for (var i = 0; i < SevenSources; i++)
         {
-            await subjects[i].OnNextAsync(1, CancellationToken.None);
+            await signals[i].OnNextAsync(1, CancellationToken.None);
         }
 
         await AsyncTestHelpers.WaitForConditionAsync(
@@ -175,18 +175,18 @@ public partial class CombineLatestOperatorTests
     public async Task WhenCombineLatestEightSources_ThenCombinesAll()
     {
         const int ExpectedSum = 8;
-        var subjects = Enumerable.Range(0, EightSources).Select(_ => SubjectAsync.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, EightSources).Select(_ => Signal.Create<int>()).ToList();
 
         var results = new List<int>();
-        await using var sub = await subjects[0].Values
+        await using var sub = await signals[0].Values
             .CombineLatest(
-                subjects[1].Values,
-                subjects[Source2Index].Values,
-                subjects[Source3Index].Values,
-                subjects[Source4Index].Values,
-                subjects[Source5Index].Values,
-                subjects[Source6Index].Values,
-                subjects[Source7Index].Values,
+                signals[1].Values,
+                signals[Source2Index].Values,
+                signals[Source3Index].Values,
+                signals[Source4Index].Values,
+                signals[Source5Index].Values,
+                signals[Source6Index].Values,
+                signals[Source7Index].Values,
                 (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h)
             .SubscribeAsync(
                 (x, _) =>
@@ -198,7 +198,7 @@ public partial class CombineLatestOperatorTests
 
         for (var i = 0; i < EightSources; i++)
         {
-            await subjects[i].OnNextAsync(1, CancellationToken.None);
+            await signals[i].OnNextAsync(1, CancellationToken.None);
         }
 
         await AsyncTestHelpers.WaitForConditionAsync(

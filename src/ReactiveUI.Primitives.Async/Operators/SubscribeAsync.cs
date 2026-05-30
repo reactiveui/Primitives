@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Async;
 /// All subscriptions return an <see cref="IAsyncDisposable"/> that should be disposed to terminate the subscription and
 /// release resources. These methods are intended to simplify the process of observing asynchronous streams without
 /// requiring explicit implementation of observer interfaces.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Subscribes to the asynchronous data source and invokes the specified callbacks for each item, error, or

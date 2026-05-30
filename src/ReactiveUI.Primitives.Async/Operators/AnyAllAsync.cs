@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <remarks>The methods in this class enable querying and evaluating asynchronous observable sequences, such as
 /// determining whether any or all elements satisfy a condition. These methods are designed to be used with types that
 /// implement asynchronous observation patterns.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Asynchronously determines whether any element in the sequence satisfies the specified predicate.

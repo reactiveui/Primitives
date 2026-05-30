@@ -39,7 +39,7 @@ internal abstract class CombineLatestSubscriptionBase<TResult> : IAsyncDisposabl
     /// <summary>
     /// Subscribes to every source observable via <see cref="SubscribeAtAsync"/>. Renamed from the
     /// obvious <c>SubscribeAsync</c> to avoid Sonar S3218 shadowing of
-    /// <see cref="ObservableAsync{TResult}.SubscribeAsync"/>.
+    /// <see cref="SignalAsync{TResult}.SubscribeAsync"/>.
     /// </summary>
     /// <param name="cancellationToken">A token to cancel the subscription.</param>
     /// <returns>A task representing the asynchronous subscribe operation.</returns>

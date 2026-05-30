@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Async;
 /// a single value after a specified delay.
 /// </summary>
 /// <remarks>Timer is useful for triggering one-shot deferred actions in observable pipelines.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Creates an observable sequence that produces a single value (0) after the specified delay,

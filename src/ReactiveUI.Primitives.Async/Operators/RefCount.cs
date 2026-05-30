@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <remarks>The methods in this class enable advanced operations on asynchronous observables, such as reference
 /// counting for connectable observables. These utilities are intended to be used with types that implement asynchronous
 /// observer patterns.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Returns an observable sequence that connects to the underlying connectable observable when the first observer
@@ -28,8 +28,8 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
     /// <param name="source">The connectable observable sequence to ref count. Cannot be null.</param>
     /// <returns>An observable sequence that stays connected to the source as long as there is at least one subscription.</returns>
-    public static ObservableAsync<T> RefCount<T>(this ConnectableObservableAsync<T> source) =>
-        new RefCountObservable<T>(source);
+    public static SignalAsync<T> RefCount<T>(this ConnectableSignalAsync<T> source) =>
+        new RefCountSignal<T>(source);
 
     /// <summary>
     /// Async observable that automatically connects to the underlying connectable source when the first
@@ -37,7 +37,7 @@ public static partial class ObservableAsync
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="source">The connectable observable to manage with reference counting.</param>
-    internal sealed class RefCountObservable<T>(ConnectableObservableAsync<T> source) : ObservableAsync<T>, IDisposable
+    internal sealed class RefCountSignal<T>(ConnectableSignalAsync<T> source) : SignalAsync<T>, IDisposable
     {
         /// <summary>
         /// The asynchronous gate used to serialize subscribe and dispose operations.
@@ -124,7 +124,7 @@ public static partial class ObservableAsync
         /// </summary>
         /// <param name="parent">The parent ref-count observable.</param>
         /// <param name="observer">The downstream observer to forward notifications to.</param>
-        internal sealed class RefCountObsever(RefCountObservable<T> parent, IObserverAsync<T> observer)
+        internal sealed class RefCountObsever(RefCountSignal<T> parent, IObserverAsync<T> observer)
             : ObserverAsync<T>
         {
             /// <summary>

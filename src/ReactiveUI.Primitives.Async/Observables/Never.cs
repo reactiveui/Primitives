@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <remarks>This class contains factory and utility methods for working with asynchronous observables. Use these
 /// methods to construct, transform, or combine observable sequences in asynchronous scenarios. All members are
 /// thread-safe and can be used in concurrent environments.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Creates an observable sequence that never produces any values and never completes.
@@ -27,19 +27,19 @@ public static partial class ObservableAsync
     [SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "Public factory API — caller specifies T explicitly: ObservableAsync.Never<int>().")]
-    public static IObservableAsync<T> Never<T>() => NeverObservableAsync<T>.Instance;
+        Justification = "Public factory API — caller specifies T explicitly: SignalAsync.Never<int>().")]
+    public static IObservableAsync<T> Never<T>() => NeverSignalAsync<T>.Instance;
 
     /// <summary>
     /// An observable sequence that never produces any values and never completes.
     /// </summary>
     /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
-    internal sealed class NeverObservableAsync<T> : ObservableAsync<T>
+    internal sealed class NeverSignalAsync<T> : SignalAsync<T>
     {
         /// <summary>
-        /// Gets the singleton instance of <see cref="NeverObservableAsync{T}"/>.
+        /// Gets the singleton instance of <see cref="NeverSignalAsync{T}"/>.
         /// </summary>
-        public static NeverObservableAsync<T> Instance { get; } = new();
+        public static NeverSignalAsync<T> Instance { get; } = new();
 
         /// <inheritdoc/>
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(

@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <remarks>The methods in this class allow you to specify the context on which observer callbacks are invoked
 /// for an asynchronous observable sequence. This is useful for ensuring that notifications are delivered on a
 /// particular synchronization or task context, such as a UI thread or a custom scheduler.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Wraps the source observable so that observer callbacks are invoked on the specified async context.
@@ -24,7 +24,7 @@ public static partial class ObservableAsync
     /// context.</param>
     /// <returns>An observable sequence whose observer callbacks execute on the specified context.</returns>
     public static IObservableAsync<T> ObserveOn<T>(this IObservableAsync<T> @this, AsyncContext asyncContext, bool forceYielding) =>
-        new ObserveOnAsyncObservable<T>(@this, asyncContext, forceYielding);
+        new ObserveOnAsyncSignal<T>(@this, asyncContext, forceYielding);
 
     /// <summary>
     /// Wraps the source observable so that observer callbacks are invoked on the specified async context.
@@ -47,7 +47,7 @@ public static partial class ObservableAsync
     public static IObservableAsync<T> ObserveOn<T>(this IObservableAsync<T> @this, SynchronizationContext synchronizationContext, bool forceYielding)
     {
         var asyncContext = AsyncContext.From(synchronizationContext);
-        return new ObserveOnAsyncObservable<T>(@this, asyncContext, forceYielding);
+        return new ObserveOnAsyncSignal<T>(@this, asyncContext, forceYielding);
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public static partial class ObservableAsync
     public static IObservableAsync<T> ObserveOn<T>(this IObservableAsync<T> @this, TaskScheduler taskScheduler, bool forceYielding)
     {
         var asyncContext = AsyncContext.From(taskScheduler);
-        return new ObserveOnAsyncObservable<T>(@this, asyncContext, forceYielding);
+        return new ObserveOnAsyncSignal<T>(@this, asyncContext, forceYielding);
     }
 
     /// <summary>
@@ -98,7 +98,7 @@ public static partial class ObservableAsync
     public static IObservableAsync<T> ObserveOn<T>(this IObservableAsync<T> @this, ISequencer scheduler, bool forceYielding)
     {
         var asyncContext = AsyncContext.From(scheduler);
-        return new ObserveOnAsyncObservable<T>(@this, asyncContext, forceYielding);
+        return new ObserveOnAsyncSignal<T>(@this, asyncContext, forceYielding);
     }
 
     /// <summary>

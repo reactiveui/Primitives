@@ -161,7 +161,7 @@ public partial class CombiningOperatorTests
     /// <summary>
     /// An enumerable whose enumerator throws on both <see cref="System.Collections.IEnumerator.MoveNext"/>
     /// and <see cref="IDisposable.Dispose"/>, used to exercise the catch block in
-    /// <c>ConcatEnumerableObservable.SubscribeAsyncCore</c>.
+    /// <c>ConcatEnumerableSignal.SubscribeAsyncCore</c>.
     /// </summary>
     /// <typeparam name="T">The element type.</typeparam>
     private sealed class MoveNextAndDisposeThrowingEnumerable<T> : IEnumerable<IObservableAsync<T>>

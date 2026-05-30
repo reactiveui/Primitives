@@ -54,7 +54,7 @@ public partial class TerminalOperatorTests
     public async Task WhenFirstAsync_ThenReturnsFirstElement()
     {
         const int ExpectedFirst = 10;
-        var result = await ObservableAsync.Range(10, 3).FirstAsync();
+        var result = await SignalAsync.Range(10, 3).FirstAsync();
         await Assert.That(result).IsEqualTo(ExpectedFirst);
     }
 
@@ -64,7 +64,7 @@ public partial class TerminalOperatorTests
     public async Task WhenFirstAsyncWithPredicate_ThenReturnsFirstMatch()
     {
         const int ExpectedFirstMatch = 4;
-        var result = await ObservableAsync.Range(1, 5).FirstAsync(x => x > 3);
+        var result = await SignalAsync.Range(1, 5).FirstAsync(x => x > 3);
         await Assert.That(result).IsEqualTo(ExpectedFirstMatch);
     }
 
@@ -75,7 +75,7 @@ public partial class TerminalOperatorTests
     public async Task WhenFirstAsyncOnEmpty_ThenThrowsInvalidOperation()
     {
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Empty<int>().FirstAsync());
+            await SignalAsync.Empty<int>().FirstAsync());
 
         await Assert.That(ex!.Message).IsEqualTo(NoElementsMessage);
     }
@@ -86,7 +86,7 @@ public partial class TerminalOperatorTests
     public async Task WhenFirstAsyncWithPredicateNoMatch_ThenThrowsInvalidOperationWithMatchingMessage()
     {
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Range(1, 5).FirstAsync(x => x > 100));
+            await SignalAsync.Range(1, 5).FirstAsync(x => x > 100));
 
         await Assert.That(ex!.Message).IsEqualTo(NoMatchingElementsMessage);
     }
@@ -97,7 +97,7 @@ public partial class TerminalOperatorTests
     public async Task WhenFirstAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
         var expectedError = new InvalidOperationException(ResumeErrorMessage);
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -115,7 +115,7 @@ public partial class TerminalOperatorTests
     public async Task WhenFirstAsyncSourceCompletesWithFailure_ThenThrowsSourceException()
     {
         var expectedError = new InvalidOperationException(SourceFailedMessage);
-        var source = ObservableAsync.Create<int>(async (observer, _) =>
+        var source = SignalAsync.Create<int>(async (observer, _) =>
         {
             await observer.OnCompletedAsync(new(expectedError));
             return DisposableAsync.Empty;
@@ -131,7 +131,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenFirstOrDefaultOnEmpty_ThenReturnsDefault()
     {
-        var result = await ObservableAsync.Empty<int>().FirstOrDefaultAsync();
+        var result = await SignalAsync.Empty<int>().FirstOrDefaultAsync();
         await Assert.That(result).IsEqualTo(0);
     }
 
@@ -141,7 +141,7 @@ public partial class TerminalOperatorTests
     public async Task WhenFirstOrDefaultWithMatch_ThenReturnsFirst()
     {
         const int ExpectedFirstMatch = 4;
-        var result = await ObservableAsync.Range(1, 5).Where(x => x > 3).FirstOrDefaultAsync(0);
+        var result = await SignalAsync.Range(1, 5).Where(x => x > 3).FirstOrDefaultAsync(0);
         await Assert.That(result).IsEqualTo(ExpectedFirstMatch);
     }
 
@@ -151,7 +151,7 @@ public partial class TerminalOperatorTests
     public async Task WhenFirstOrDefaultAsyncWithPredicate_ThenReturnsFirstMatch()
     {
         const int ExpectedFirstMatch = 4;
-        var result = await ObservableAsync.Range(1, 5).FirstOrDefaultAsync(x => x > 3, -1);
+        var result = await SignalAsync.Range(1, 5).FirstOrDefaultAsync(x => x > 3, -1);
         await Assert.That(result).IsEqualTo(ExpectedFirstMatch);
     }
 
@@ -160,7 +160,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenFirstOrDefaultAsyncWithPredicateNoMatch_ThenReturnsDefaultValue()
     {
-        var result = await ObservableAsync.Range(1, 5).FirstOrDefaultAsync(x => x > 100, -1);
+        var result = await SignalAsync.Range(1, 5).FirstOrDefaultAsync(x => x > 100, -1);
         await Assert.That(result).IsEqualTo(-1);
     }
 
@@ -170,7 +170,7 @@ public partial class TerminalOperatorTests
     public async Task WhenFirstOrDefaultAsyncWithPredicateSourceEmitsErrorResume_ThenThrows()
     {
         var expectedError = new InvalidOperationException(ResumeErrorMessage);
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -189,7 +189,7 @@ public partial class TerminalOperatorTests
     public async Task WhenFirstOrDefaultAsyncSourceEmitsErrorResume_ThenThrows()
     {
         var expectedError = new InvalidOperationException(ResumeErrorMessage);
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -207,7 +207,7 @@ public partial class TerminalOperatorTests
     public async Task WhenLastAsync_ThenReturnsLastElement()
     {
         const int ExpectedLast = 5;
-        var result = await ObservableAsync.Range(1, 5).LastAsync();
+        var result = await SignalAsync.Range(1, 5).LastAsync();
         await Assert.That(result).IsEqualTo(ExpectedLast);
     }
 
@@ -217,14 +217,14 @@ public partial class TerminalOperatorTests
     public async Task WhenLastAsyncWithPredicate_ThenReturnsLastMatch()
     {
         const int ExpectedLastMatch = 3;
-        var result = await ObservableAsync.Range(1, 5).LastAsync(x => x < 4);
+        var result = await SignalAsync.Range(1, 5).LastAsync(x => x < 4);
         await Assert.That(result).IsEqualTo(ExpectedLastMatch);
     }
 
     /// <summary>Tests LastAsync on empty throws.</summary>
     [Test]
     public void WhenLastAsyncOnEmpty_ThenThrowsInvalidOperation() =>
-        Assert.ThrowsAsync<InvalidOperationException>(async () => await ObservableAsync.Empty<int>().LastAsync());
+        Assert.ThrowsAsync<InvalidOperationException>(async () => await SignalAsync.Empty<int>().LastAsync());
 
     /// <summary>Tests LastAsync with predicate and no match throws with matching-elements message.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -232,7 +232,7 @@ public partial class TerminalOperatorTests
     public async Task WhenLastAsyncWithPredicateNoMatch_ThenThrowsWithMatchingMessage()
     {
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Range(1, 5).LastAsync(x => x > 100));
+            await SignalAsync.Range(1, 5).LastAsync(x => x > 100));
 
         await Assert.That(ex!.Message).IsEqualTo(NoMatchingElementsMessage);
     }
@@ -243,7 +243,7 @@ public partial class TerminalOperatorTests
     public async Task WhenLastAsyncOnEmpty_ThenThrowsWithNoElementsMessage()
     {
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Empty<int>().LastAsync());
+            await SignalAsync.Empty<int>().LastAsync());
 
         await Assert.That(ex!.Message).IsEqualTo(NoElementsMessage);
     }
@@ -254,7 +254,7 @@ public partial class TerminalOperatorTests
     public async Task WhenLastAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
         var expectedError = new InvalidOperationException(ResumeErrorMessage);
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnErrorResumeAsync(expectedError, ct);
@@ -273,7 +273,7 @@ public partial class TerminalOperatorTests
     public async Task WhenLastAsyncSourceCompletesWithFailure_ThenThrowsSourceException()
     {
         var expectedError = new InvalidOperationException(SourceFailedMessage);
-        var source = ObservableAsync.Create<int>(async (observer, _) =>
+        var source = SignalAsync.Create<int>(async (observer, _) =>
         {
             await observer.OnCompletedAsync(new(expectedError));
             return DisposableAsync.Empty;
@@ -289,7 +289,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenLastOrDefaultOnEmpty_ThenReturnsDefault()
     {
-        var result = await ObservableAsync.Empty<int>().LastOrDefaultAsync();
+        var result = await SignalAsync.Empty<int>().LastOrDefaultAsync();
         await Assert.That(result).IsEqualTo(0);
     }
 
@@ -299,7 +299,7 @@ public partial class TerminalOperatorTests
     public async Task WhenLastOrDefaultAsyncWithPredicate_ThenReturnsLastMatch()
     {
         const int ExpectedLastMatch = 3;
-        var result = await ObservableAsync.Range(1, 5).LastOrDefaultAsync(x => x < 4, -1);
+        var result = await SignalAsync.Range(1, 5).LastOrDefaultAsync(x => x < 4, -1);
         await Assert.That(result).IsEqualTo(ExpectedLastMatch);
     }
 
@@ -308,7 +308,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenLastOrDefaultAsyncWithPredicateNoMatch_ThenReturnsDefaultValue()
     {
-        var result = await ObservableAsync.Range(1, 5).LastOrDefaultAsync(x => x > 100, -1);
+        var result = await SignalAsync.Range(1, 5).LastOrDefaultAsync(x => x > 100, -1);
         await Assert.That(result).IsEqualTo(-1);
     }
 
@@ -318,7 +318,7 @@ public partial class TerminalOperatorTests
     public async Task WhenLastOrDefaultAsyncWithPredicateOnEmpty_ThenReturnsDefaultValue()
     {
         const int DefaultValue = 42;
-        var result = await ObservableAsync.Empty<int>().LastOrDefaultAsync(_ => true, DefaultValue);
+        var result = await SignalAsync.Empty<int>().LastOrDefaultAsync(_ => true, DefaultValue);
         await Assert.That(result).IsEqualTo(DefaultValue);
     }
 
@@ -328,7 +328,7 @@ public partial class TerminalOperatorTests
     public async Task WhenLastOrDefaultAsyncWithDefaultValueOnEmpty_ThenReturnsCustomDefault()
     {
         const int CustomDefault = 99;
-        var result = await ObservableAsync.Empty<int>().LastOrDefaultAsync(CustomDefault);
+        var result = await SignalAsync.Empty<int>().LastOrDefaultAsync(CustomDefault);
         await Assert.That(result).IsEqualTo(CustomDefault);
     }
 
@@ -338,7 +338,7 @@ public partial class TerminalOperatorTests
     public async Task WhenLastOrDefaultAsyncSourceEmitsErrorResume_ThenThrows()
     {
         var expectedError = new InvalidOperationException(ResumeErrorMessage);
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnErrorResumeAsync(expectedError, ct);
@@ -357,7 +357,7 @@ public partial class TerminalOperatorTests
     public async Task WhenLastOrDefaultAsyncSourceCompletesWithFailure_ThenThrows()
     {
         var expectedError = new InvalidOperationException(SourceFailedMessage);
-        var source = ObservableAsync.Create<int>(async (observer, _) =>
+        var source = SignalAsync.Create<int>(async (observer, _) =>
         {
             await observer.OnCompletedAsync(new(expectedError));
             return DisposableAsync.Empty;
@@ -374,7 +374,7 @@ public partial class TerminalOperatorTests
     public async Task WhenSingleAsync_ThenReturnsSingleElement()
     {
         const int SingleValue = 42;
-        var result = await ObservableAsync.Return(SingleValue).SingleAsync();
+        var result = await SignalAsync.Return(SingleValue).SingleAsync();
         await Assert.That(result).IsEqualTo(SingleValue);
     }
 
@@ -383,7 +383,7 @@ public partial class TerminalOperatorTests
     public void WhenSingleAsyncMultipleElements_ThenThrowsInvalidOperation()
     {
         const int MultipleElementCount = 3;
-        Assert.ThrowsAsync<InvalidOperationException>(async () => await ObservableAsync.Range(1, MultipleElementCount).SingleAsync());
+        Assert.ThrowsAsync<InvalidOperationException>(async () => await SignalAsync.Range(1, MultipleElementCount).SingleAsync());
     }
 
     /// <summary>Tests SingleAsync on empty throws — exercises the predicate-null branch of
@@ -393,7 +393,7 @@ public partial class TerminalOperatorTests
     public async Task WhenSingleAsyncOnEmpty_ThenThrowsInvalidOperation()
     {
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Empty<int>().SingleAsync());
+            await SignalAsync.Empty<int>().SingleAsync());
 
         await Assert.That(ex!.Message).IsEqualTo(NoElementsMessage);
     }
@@ -405,7 +405,7 @@ public partial class TerminalOperatorTests
     public async Task WhenSingleAsyncWithPredicateNoMatch_ThenThrowsInvalidOperationWithMatchingMessage()
     {
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Range(1, 5).SingleAsync(static x => x > 100));
+            await SignalAsync.Range(1, 5).SingleAsync(static x => x > 100));
 
         await Assert.That(ex!.Message).IsEqualTo(NoMatchingElementsMessage);
     }
@@ -415,7 +415,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenSingleOrDefaultOnEmpty_ThenReturnsDefault()
     {
-        var result = await ObservableAsync.Empty<int>().SingleOrDefaultAsync();
+        var result = await SignalAsync.Empty<int>().SingleOrDefaultAsync();
         await Assert.That(result).IsEqualTo(0);
     }
 
@@ -425,7 +425,7 @@ public partial class TerminalOperatorTests
     public async Task WhenSingleOrDefaultAsyncWithPredicate_ThenReturnsMatchingElement()
     {
         const int ExpectedMatch = 3;
-        var result = await ObservableAsync.Range(1, 5).SingleOrDefaultAsync(x => x == ExpectedMatch, -1);
+        var result = await SignalAsync.Range(1, 5).SingleOrDefaultAsync(x => x == ExpectedMatch, -1);
         await Assert.That(result).IsEqualTo(ExpectedMatch);
     }
 
@@ -434,7 +434,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenSingleOrDefaultAsyncWithPredicateNoMatch_ThenReturnsDefaultValue()
     {
-        var result = await ObservableAsync.Range(1, 5).SingleOrDefaultAsync(x => x > 100, -1);
+        var result = await SignalAsync.Range(1, 5).SingleOrDefaultAsync(x => x > 100, -1);
         await Assert.That(result).IsEqualTo(-1);
     }
 
@@ -445,7 +445,7 @@ public partial class TerminalOperatorTests
         const int SourceCount = 5;
         const int Threshold = 2;
         Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Range(1, SourceCount).SingleOrDefaultAsync(x => x > Threshold, -1));
+            await SignalAsync.Range(1, SourceCount).SingleOrDefaultAsync(x => x > Threshold, -1));
     }
 
     /// <summary>Tests SingleOrDefaultAsync with no predicate and multiple elements throws.</summary>
@@ -454,7 +454,7 @@ public partial class TerminalOperatorTests
     {
         const int MultipleElementCount = 3;
         Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Range(1, MultipleElementCount).SingleOrDefaultAsync(0));
+            await SignalAsync.Range(1, MultipleElementCount).SingleOrDefaultAsync(0));
     }
 
     /// <summary>Tests SingleOrDefaultAsync with custom default value on empty returns that default.</summary>
@@ -463,7 +463,7 @@ public partial class TerminalOperatorTests
     public async Task WhenSingleOrDefaultAsyncWithDefaultValueOnEmpty_ThenReturnsCustomDefault()
     {
         const int CustomDefault = 99;
-        var result = await ObservableAsync.Empty<int>().SingleOrDefaultAsync(CustomDefault);
+        var result = await SignalAsync.Empty<int>().SingleOrDefaultAsync(CustomDefault);
         await Assert.That(result).IsEqualTo(CustomDefault);
     }
 
@@ -471,7 +471,7 @@ public partial class TerminalOperatorTests
     [Test]
     public void WhenSingleOrDefaultAsyncSourceEmitsErrorResume_ThenThrows()
     {
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(new InvalidOperationException("resume"), ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -485,7 +485,7 @@ public partial class TerminalOperatorTests
     [Test]
     public void WhenSingleOrDefaultAsyncSourceCompletesWithError_ThenThrows()
     {
-        var source = ObservableAsync.Create<int>(async (observer, _) =>
+        var source = SignalAsync.Create<int>(async (observer, _) =>
         {
             await observer.OnCompletedAsync(Result.Failure(new InvalidOperationException("fail")));
             return DisposableAsync.Empty;
@@ -500,7 +500,7 @@ public partial class TerminalOperatorTests
     public async Task WhenSingleOrDefaultAsyncMultipleElementsNoPredicate_ThenMessageReportsMoreThanOneElement()
     {
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Range(1, 3).SingleOrDefaultAsync(0));
+            await SignalAsync.Range(1, 3).SingleOrDefaultAsync(0));
 
         await Assert.That(ex!.Message).IsEqualTo(MoreThanOneElementMessage);
     }
@@ -512,7 +512,7 @@ public partial class TerminalOperatorTests
         WhenSingleOrDefaultAsyncMultipleMatchesWithPredicate_ThenMessageReportsMoreThanOneMatchingElement()
     {
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Range(1, 5).SingleOrDefaultAsync(x => x > 2, -1));
+            await SignalAsync.Range(1, 5).SingleOrDefaultAsync(x => x > 2, -1));
 
         await Assert.That(ex!.Message).IsEqualTo(MoreThanOneMatchingElementMessage);
     }
@@ -523,7 +523,7 @@ public partial class TerminalOperatorTests
     public async Task WhenSingleOrDefaultAsyncWithDefaultValueSourceEmitsErrorResume_ThenThrowsWithCorrectMessage()
     {
         var expectedError = new InvalidOperationException("resume error detail");
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -541,7 +541,7 @@ public partial class TerminalOperatorTests
     public async Task WhenSingleOrDefaultAsyncWithDefaultValueSourceCompletesWithFailure_ThenThrowsWithCorrectMessage()
     {
         var expectedError = new InvalidOperationException("completion failure detail");
-        var source = ObservableAsync.Create<int>(async (observer, _) =>
+        var source = SignalAsync.Create<int>(async (observer, _) =>
         {
             await observer.OnCompletedAsync(Result.Failure(expectedError));
             return DisposableAsync.Empty;
@@ -558,7 +558,7 @@ public partial class TerminalOperatorTests
     public async Task WhenCountAsync_ThenReturnsElementCount()
     {
         const int ExpectedCount = 5;
-        var result = await ObservableAsync.Range(1, 5).CountAsync();
+        var result = await SignalAsync.Range(1, 5).CountAsync();
         await Assert.That(result).IsEqualTo(ExpectedCount);
     }
 
@@ -567,7 +567,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenCountAsyncOnEmpty_ThenReturnsZero()
     {
-        var result = await ObservableAsync.Empty<int>().CountAsync();
+        var result = await SignalAsync.Empty<int>().CountAsync();
         await Assert.That(result).IsEqualTo(0);
     }
 
@@ -577,7 +577,7 @@ public partial class TerminalOperatorTests
     public async Task WhenCountAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
         var expectedError = new InvalidOperationException(ResumeErrorMessage);
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnErrorResumeAsync(expectedError, ct);
@@ -596,7 +596,7 @@ public partial class TerminalOperatorTests
     public async Task WhenLongCountAsync_ThenReturnsElementCount()
     {
         const long ExpectedLongCount = 3L;
-        var result = await ObservableAsync.Range(1, 3).LongCountAsync();
+        var result = await SignalAsync.Range(1, 3).LongCountAsync();
         await Assert.That(result).IsEqualTo(ExpectedLongCount);
     }
 
@@ -605,7 +605,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenAnyAsyncOnNonEmpty_ThenReturnsTrue()
     {
-        var result = await ObservableAsync.Return(1).AnyAsync();
+        var result = await SignalAsync.Return(1).AnyAsync();
         await Assert.That(result).IsTrue();
     }
 
@@ -614,7 +614,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenAnyAsyncOnEmpty_ThenReturnsFalse()
     {
-        var result = await ObservableAsync.Empty<int>().AnyAsync();
+        var result = await SignalAsync.Empty<int>().AnyAsync();
         await Assert.That(result).IsFalse();
     }
 
@@ -623,7 +623,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenAnyAsyncWithPredicateMatch_ThenReturnsTrue()
     {
-        var hasEven = await ObservableAsync.Range(1, 5).AnyAsync(x => x % 2 == 0, CancellationToken.None);
+        var hasEven = await SignalAsync.Range(1, 5).AnyAsync(x => x % 2 == 0, CancellationToken.None);
         await Assert.That(hasEven).IsTrue();
     }
 
@@ -632,7 +632,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenAnyAsyncWithPredicateNoMatch_ThenReturnsFalse()
     {
-        var hasNeg = await ObservableAsync.Range(1, 5).AnyAsync(x => x < 0, CancellationToken.None);
+        var hasNeg = await SignalAsync.Range(1, 5).AnyAsync(x => x < 0, CancellationToken.None);
         await Assert.That(hasNeg).IsFalse();
     }
 
@@ -641,7 +641,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenAllAsyncAllMatch_ThenReturnsTrue()
     {
-        var allPositive = await ObservableAsync.Range(1, 5).AllAsync(x => x > 0);
+        var allPositive = await SignalAsync.Range(1, 5).AllAsync(x => x > 0);
         await Assert.That(allPositive).IsTrue();
     }
 
@@ -650,7 +650,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenAllAsyncPartialMatch_ThenReturnsFalse()
     {
-        var allGreaterThan3 = await ObservableAsync.Range(1, 5).AllAsync(x => x > 3);
+        var allGreaterThan3 = await SignalAsync.Range(1, 5).AllAsync(x => x > 3);
         await Assert.That(allGreaterThan3).IsFalse();
     }
 
@@ -659,7 +659,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenAllAsyncOnEmpty_ThenReturnsTrue()
     {
-        var result = await ObservableAsync.Empty<int>().AllAsync(_ => false);
+        var result = await SignalAsync.Empty<int>().AllAsync(_ => false);
         await Assert.That(result).IsTrue();
     }
 
@@ -669,7 +669,7 @@ public partial class TerminalOperatorTests
     public async Task WhenAnyAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
         var expectedError = new InvalidOperationException("any resume error");
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -687,7 +687,7 @@ public partial class TerminalOperatorTests
     public async Task WhenAnyAsyncWithPredicateSourceEmitsErrorResume_ThenThrowsSourceException()
     {
         var expectedError = new InvalidOperationException("any predicate resume error");
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -705,7 +705,7 @@ public partial class TerminalOperatorTests
     public async Task WhenAllAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
         var expectedError = new InvalidOperationException("all resume error");
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -722,7 +722,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenContainsAsyncWithMatch_ThenReturnsTrue()
     {
-        var result = await ObservableAsync.Range(1, 5).ContainsAsync(3);
+        var result = await SignalAsync.Range(1, 5).ContainsAsync(3);
         await Assert.That(result).IsTrue();
     }
 
@@ -731,7 +731,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenContainsAsyncWithNoMatch_ThenReturnsFalse()
     {
-        var result = await ObservableAsync.Range(1, 5).ContainsAsync(99);
+        var result = await SignalAsync.Range(1, 5).ContainsAsync(99);
         await Assert.That(result).IsFalse();
     }
 
@@ -741,7 +741,7 @@ public partial class TerminalOperatorTests
     public async Task WhenContainsAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
         var expectedError = new InvalidOperationException(ResumeErrorMessage);
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -759,7 +759,7 @@ public partial class TerminalOperatorTests
     public async Task WhenAggregateAsyncSync_ThenComputesFinalValue()
     {
         const int ExpectedSum = 10;
-        var result = await ObservableAsync.Range(1, 4).AggregateAsync(0, (acc, x) => acc + x);
+        var result = await SignalAsync.Range(1, 4).AggregateAsync(0, (acc, x) => acc + x);
         await Assert.That(result).IsEqualTo(ExpectedSum);
     }
 
@@ -768,7 +768,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenAggregateAsyncAsync_ThenComputesFinalValue()
     {
-        var result = await ObservableAsync.Range(1, 3).AggregateAsync(
+        var result = await SignalAsync.Range(1, 3).AggregateAsync(
             string.Empty,
             async (acc, x, _) =>
             {
@@ -784,7 +784,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenAggregateAsyncWithResultSelector_ThenTransformsFinalValue()
     {
-        var result = await ObservableAsync.Range(1, 4).AggregateAsync(
+        var result = await SignalAsync.Range(1, 4).AggregateAsync(
             0,
             (acc, x) => acc + x,
             acc => $"Sum={acc}");
@@ -798,7 +798,7 @@ public partial class TerminalOperatorTests
     public async Task WhenAggregateAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
         var expectedError = new InvalidOperationException("aggregate resume error");
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -815,7 +815,7 @@ public partial class TerminalOperatorTests
     [Test]
     public void WhenAggregateAsyncNullAccumulator_ThenThrowsArgumentNull() =>
         Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await ObservableAsync.Return(1).AggregateAsync(0, (Func<int, int, int>)null!));
+            await SignalAsync.Return(1).AggregateAsync(0, (Func<int, int, int>)null!));
 
     /// <summary>Tests ToListAsync collects all elements.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -825,7 +825,7 @@ public partial class TerminalOperatorTests
         const int Second = 2;
         const int Third = 3;
         const int Fourth = 4;
-        var result = await ObservableAsync.Range(1, 4).ToListAsync();
+        var result = await SignalAsync.Range(1, 4).ToListAsync();
         await Assert.That(result).IsEquivalentTo([1, Second, Third, Fourth]);
     }
 
@@ -835,7 +835,7 @@ public partial class TerminalOperatorTests
     public async Task WhenToListAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
         var expectedError = new InvalidOperationException(ResumeErrorMessage);
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnErrorResumeAsync(expectedError, ct);
@@ -854,7 +854,7 @@ public partial class TerminalOperatorTests
     public async Task WhenToDictionaryAsync_ThenCreatesCorrectDictionary()
     {
         const int ExpectedDictionaryCount = 3;
-        var source = SequenceABbCcc.ToObservableAsync();
+        var source = SequenceABbCcc.ToAsyncSignal();
         var result = await source.ToDictionaryAsync(s => s.Length);
 
         await Assert.That(result).Count().IsEqualTo(ExpectedDictionaryCount);
@@ -869,7 +869,7 @@ public partial class TerminalOperatorTests
         const int ExpectedDictionaryCount = 3;
         const int LengthTwoKey = 2;
         const int LengthThreeKey = 3;
-        var source = SequenceABbCcc.ToObservableAsync();
+        var source = SequenceABbCcc.ToAsyncSignal();
         var result = await source.ToDictionaryAsync(s => s.Length, s => s.ToUpperInvariant());
 
         await Assert.That(result).Count().IsEqualTo(ExpectedDictionaryCount);
@@ -885,7 +885,7 @@ public partial class TerminalOperatorTests
     {
         const int ExpectedDictionaryCount = 2;
         const int ExpectedWordLength = 5;
-        var source = SequenceHelloWorld.ToObservableAsync();
+        var source = SequenceHelloWorld.ToAsyncSignal();
         var result = await source.ToDictionaryAsync(
             s => s,
             s => s.Length,
@@ -901,13 +901,13 @@ public partial class TerminalOperatorTests
     [Test]
     public void WhenToDictionaryAsyncWithElementSelectorNullKeySelector_ThenThrowsArgumentNull() =>
         Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await ObservableAsync.Return("a").ToDictionaryAsync((Func<string, string>)null!, s => s.Length));
+            await SignalAsync.Return("a").ToDictionaryAsync((Func<string, string>)null!, s => s.Length));
 
     /// <summary>Tests ToDictionaryAsync with element selector throws ArgumentNullException when elementSelector is null.</summary>
     [Test]
     public void WhenToDictionaryAsyncWithNullElementSelector_ThenThrowsArgumentNull() =>
         Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await ObservableAsync.Return("a").ToDictionaryAsync(s => s.Length, (Func<string, int>)null!));
+            await SignalAsync.Return("a").ToDictionaryAsync(s => s.Length, (Func<string, int>)null!));
 
     /// <summary>Tests ToDictionaryAsync propagates error from OnErrorResumeAsync.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -915,7 +915,7 @@ public partial class TerminalOperatorTests
     public async Task WhenToDictionaryAsyncSourceEmitsErrorResume_ThenThrows()
     {
         var expectedError = new InvalidOperationException(ResumeErrorMessage);
-        var source = ObservableAsync.Create<string>(async (observer, ct) =>
+        var source = SignalAsync.Create<string>(async (observer, ct) =>
         {
             await observer.OnNextAsync("a", ct);
             await observer.OnErrorResumeAsync(expectedError, ct);
@@ -935,7 +935,7 @@ public partial class TerminalOperatorTests
     public async Task WhenToDictionaryAsyncSourceCompletesWithFailure_ThenThrows()
     {
         var expectedError = new InvalidOperationException(SourceFailedMessage);
-        var source = ObservableAsync.Create<string>(async (observer, _) =>
+        var source = SignalAsync.Create<string>(async (observer, _) =>
         {
             await observer.OnCompletedAsync(Result.Failure(expectedError));
             return DisposableAsync.Empty;
@@ -956,7 +956,7 @@ public partial class TerminalOperatorTests
         const int Second = 2;
         const int Third = 3;
         var items = new List<int>();
-        await ObservableAsync.Range(1, SourceCount).ForEachAsync(items.Add);
+        await SignalAsync.Range(1, SourceCount).ForEachAsync(items.Add);
         await Assert.That(items).IsEquivalentTo([1, Second, Third]);
     }
 
@@ -966,14 +966,14 @@ public partial class TerminalOperatorTests
     public async Task WhenWaitCompletionAsync_ThenWaitsForCompletion()
     {
         const int SourceCount = 3;
-        await ObservableAsync.Range(1, SourceCount).WaitCompletionAsync();
+        await SignalAsync.Range(1, SourceCount).WaitCompletionAsync();
     }
 
     /// <summary>Tests WaitCompletionAsync on error throws.</summary>
     [Test]
     public void WhenWaitCompletionAsyncOnError_ThenThrows() =>
         Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Throw<int>(new InvalidOperationException("err")).WaitCompletionAsync());
+            await SignalAsync.Throw<int>(new InvalidOperationException("err")).WaitCompletionAsync());
 
     /// <summary>Tests WaitCompletionAsync propagates error from OnErrorResumeAsync.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -981,7 +981,7 @@ public partial class TerminalOperatorTests
     public async Task WhenWaitCompletionAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
         var expectedError = new InvalidOperationException(ResumeErrorMessage);
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -1002,7 +1002,7 @@ public partial class TerminalOperatorTests
         const int Second = 2;
         const int Third = 3;
         var items = new List<int>();
-        await foreach (var item in ObservableAsync.Range(1, SourceCount).ToAsyncEnumerable(Channel.CreateUnbounded<int>))
+        await foreach (var item in SignalAsync.Range(1, SourceCount).ToAsyncEnumerable(Channel.CreateUnbounded<int>))
         {
             items.Add(item);
         }
@@ -1022,7 +1022,7 @@ public partial class TerminalOperatorTests
         const int ExpectedSecond = 2;
         const int ExpectedThird = 3;
         var items = new List<int>();
-        await foreach (var item in ObservableAsync.Range(1, SourceCount).ToAsyncEnumerable(Channel.CreateUnbounded<int>))
+        await foreach (var item in SignalAsync.Range(1, SourceCount).ToAsyncEnumerable(Channel.CreateUnbounded<int>))
         {
             items.Add(item);
         }
@@ -1039,7 +1039,7 @@ public partial class TerminalOperatorTests
     public async Task WhenSingleAsyncWithPredicate_ThenReturnsSingleMatch()
     {
         const int ExpectedMatch = 3;
-        var result = await ObservableAsync.Range(1, 5).SingleAsync(x => x == ExpectedMatch);
+        var result = await SignalAsync.Range(1, 5).SingleAsync(x => x == ExpectedMatch);
         await Assert.That(result).IsEqualTo(ExpectedMatch);
     }
 
@@ -1049,7 +1049,7 @@ public partial class TerminalOperatorTests
     public async Task WhenSingleAsyncWithPredicateMultipleMatches_ThenThrowsInvalidOperation()
     {
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Range(1, 5).SingleAsync(x => x > 2));
+            await SignalAsync.Range(1, 5).SingleAsync(x => x > 2));
 
         await Assert.That(ex!.Message).IsEqualTo(MoreThanOneMatchingElementMessage);
     }
@@ -1060,7 +1060,7 @@ public partial class TerminalOperatorTests
     public async Task WhenSingleAsyncWithPredicateNoMatch_ThenThrowsInvalidOperation()
     {
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Range(1, 5).SingleAsync(x => x > 100));
+            await SignalAsync.Range(1, 5).SingleAsync(x => x > 100));
 
         await Assert.That(ex!.Message).IsEqualTo(NoMatchingElementsMessage);
     }
@@ -1071,7 +1071,7 @@ public partial class TerminalOperatorTests
     public async Task WhenSingleAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
         var expectedError = new InvalidOperationException(ResumeErrorMessage);
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnErrorResumeAsync(expectedError, ct);
@@ -1090,7 +1090,7 @@ public partial class TerminalOperatorTests
     public async Task WhenSingleAsyncSourceCompletesWithFailure_ThenThrowsSourceException()
     {
         var expectedError = new InvalidOperationException(SourceFailedMessage);
-        var source = ObservableAsync.Create<int>(async (observer, _) =>
+        var source = SignalAsync.Create<int>(async (observer, _) =>
         {
             await observer.OnCompletedAsync(new(expectedError));
             return DisposableAsync.Empty;
@@ -1107,7 +1107,7 @@ public partial class TerminalOperatorTests
     public async Task WhenForEachAsyncSourceEmitsErrorResume_ThenExceptionCaptured()
     {
         var expectedError = new InvalidOperationException(ResumeErrorMessage);
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnErrorResumeAsync(expectedError, ct);
@@ -1128,7 +1128,7 @@ public partial class TerminalOperatorTests
     [Test]
     public void WhenAsyncForEachAsyncNullCallback_ThenThrowsArgumentNull() =>
         Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await ObservableAsync.Return(1).ForEachAsync(null!));
+            await SignalAsync.Return(1).ForEachAsync(null!));
 
     /// <summary>Tests that the synchronous ForEachAsync overload throws ArgumentNullException when onNext action is null.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -1136,7 +1136,7 @@ public partial class TerminalOperatorTests
     public async Task WhenSyncForEachAsyncNullAction_ThenThrowsArgumentNull()
     {
         var ex = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await ObservableAsync.Return(1).ForEachAsync((Action<int>)null!));
+            await SignalAsync.Return(1).ForEachAsync((Action<int>)null!));
 
         await Assert.That(ex!.ParamName).IsEqualTo("onNext");
     }
@@ -1150,7 +1150,7 @@ public partial class TerminalOperatorTests
         const int Second = 2;
         const int Third = 3;
         var items = new List<int>();
-        await ObservableAsync.Range(1, SourceCount).ForEachAsync(async (x, _) =>
+        await SignalAsync.Range(1, SourceCount).ForEachAsync(async (x, _) =>
         {
             await Task.Yield();
             items.Add(x);
@@ -1165,7 +1165,7 @@ public partial class TerminalOperatorTests
     public async Task WhenAsyncForEachAsyncSourceEmitsErrorResume_ThenThrows()
     {
         var expectedError = new InvalidOperationException("async resume error");
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnErrorResumeAsync(expectedError, ct);
@@ -1191,7 +1191,7 @@ public partial class TerminalOperatorTests
     public async Task WhenAsyncForEachAsyncSourceCompletesWithFailure_ThenThrows()
     {
         var expectedError = new InvalidOperationException(SourceFailedMessage);
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnCompletedAsync(new(expectedError));
@@ -1216,7 +1216,7 @@ public partial class TerminalOperatorTests
     public async Task WhenLongCountAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
         var expectedError = new InvalidOperationException(ResumeErrorMessage);
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnErrorResumeAsync(expectedError, ct);
@@ -1238,7 +1238,7 @@ public partial class TerminalOperatorTests
     public async Task WhenToAsyncEnumerableSourceErrorsWithoutErrorHandler_ThenEnumerationThrows()
     {
         var expectedError = new InvalidOperationException("source error");
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnErrorResumeAsync(expectedError, ct);
@@ -1272,7 +1272,7 @@ public partial class TerminalOperatorTests
         const int Third = 30;
         const int Fourth = 40;
         const int Fifth = 50;
-        var source = new[] { First, Second, Third, Fourth, Fifth }.ToObservableAsync();
+        var source = new[] { First, Second, Third, Fourth, Fifth }.ToAsyncSignal();
 
         var items = new List<int>();
         await foreach (var item in source.ToAsyncEnumerable(Channel.CreateUnbounded<int>))
@@ -1290,7 +1290,7 @@ public partial class TerminalOperatorTests
     {
         var error = new InvalidOperationException("test");
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Throw<int>(error).AggregateAsync(0, (acc, x) => acc + x));
+            await SignalAsync.Throw<int>(error).AggregateAsync(0, (acc, x) => acc + x));
     }
 
     /// <summary>Tests AnyAsync propagates source failure.</summary>
@@ -1298,70 +1298,70 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenAnyAsyncSourceFails_ThenThrows() =>
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Throw<int>(new InvalidOperationException("fail")).AnyAsync());
+            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).AnyAsync());
 
     /// <summary>Tests AllAsync propagates source failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAllAsyncSourceFails_ThenThrows() =>
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Throw<int>(new InvalidOperationException("fail")).AllAsync(_ => true));
+            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).AllAsync(_ => true));
 
     /// <summary>Tests ContainsAsync propagates source failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenContainsAsyncSourceFails_ThenThrows() =>
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Throw<int>(new InvalidOperationException("fail")).ContainsAsync(1));
+            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).ContainsAsync(1));
 
     /// <summary>Tests CountAsync propagates source failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCountAsyncSourceFails_ThenThrows() =>
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Throw<int>(new InvalidOperationException("fail")).CountAsync());
+            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).CountAsync());
 
     /// <summary>Tests LongCountAsync propagates source failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLongCountAsyncSourceFails_ThenThrows() =>
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Throw<int>(new InvalidOperationException("fail")).LongCountAsync());
+            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).LongCountAsync());
 
     /// <summary>Tests SingleAsync propagates source failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleAsyncSourceFails_ThenThrows() =>
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Throw<int>(new InvalidOperationException("fail")).SingleAsync());
+            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).SingleAsync());
 
     /// <summary>Tests FirstAsync propagates source failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstAsyncSourceFails_ThenThrows() =>
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Throw<int>(new InvalidOperationException("fail")).FirstAsync());
+            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).FirstAsync());
 
     /// <summary>Tests FirstOrDefaultAsync propagates source failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstOrDefaultAsyncSourceFails_ThenThrows() =>
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Throw<int>(new InvalidOperationException("fail")).FirstOrDefaultAsync());
+            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).FirstOrDefaultAsync());
 
     /// <summary>Tests WaitCompletionAsync propagates source failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenWaitCompletionAsyncSourceFails_ThenThrows() =>
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Throw<int>(new InvalidOperationException("fail")).WaitCompletionAsync());
+            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).WaitCompletionAsync());
 
     /// <summary>Tests ContainsAsync when value is not found returns false.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenContainsAsyncValueNotFound_ThenReturnsFalse()
     {
-        var result = await ObservableAsync.Range(1, 3).ContainsAsync(99);
+        var result = await SignalAsync.Range(1, 3).ContainsAsync(99);
         await Assert.That(result).IsFalse();
     }
 
@@ -1371,7 +1371,7 @@ public partial class TerminalOperatorTests
     public async Task WhenCountAsyncWithPredicate_ThenCountsMatchesOnly()
     {
         const int ExpectedMatchCount = 2;
-        var result = await ObservableAsync.Range(1, 5).CountAsync(x => x > 3);
+        var result = await SignalAsync.Range(1, 5).CountAsync(x => x > 3);
         await Assert.That(result).IsEqualTo(ExpectedMatchCount);
     }
 
@@ -1381,7 +1381,7 @@ public partial class TerminalOperatorTests
     public async Task WhenLongCountAsyncWithPredicate_ThenCountsMatchesOnly()
     {
         const long ExpectedMatchCount = 2L;
-        var result = await ObservableAsync.Range(1, 5).LongCountAsync(x => x > 3);
+        var result = await SignalAsync.Range(1, 5).LongCountAsync(x => x > 3);
         await Assert.That(result).IsEqualTo(ExpectedMatchCount);
     }
 
@@ -1391,6 +1391,6 @@ public partial class TerminalOperatorTests
     public async Task WhenWaitCompletionAsyncOnSuccess_ThenCompletes()
     {
         const int SourceValue = 42;
-        await ObservableAsync.Return(SourceValue).WaitCompletionAsync();
+        await SignalAsync.Return(SourceValue).WaitCompletionAsync();
     }
 }

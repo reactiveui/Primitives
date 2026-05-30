@@ -12,7 +12,7 @@ using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
-using ReactiveUI.Primitives.Async.Subjects;
+using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -26,12 +26,12 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenCombineLatestTwoSources_ThenCombinesLatestValues()
     {
-        var subject1 = SubjectAsync.Create<int>();
-        var subject2 = SubjectAsync.Create<string>();
+        var signal1 = Signal.Create<int>();
+        var signal2 = Signal.Create<string>();
 
         var results = new List<(int, string)>();
-        await using var sub = await subject1.Values
-            .CombineLatest(subject2.Values, (a, b) => (a, b))
+        await using var sub = await signal1.Values
+            .CombineLatest(signal2.Values, (a, b) => (a, b))
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -40,9 +40,9 @@ public partial class CombiningOperatorTests
                 },
                 null);
 
-        await subject1.OnNextAsync(1, CancellationToken.None);
-        await subject2.OnNextAsync("a", CancellationToken.None);
-        await subject1.OnNextAsync(SampleValue2, CancellationToken.None);
+        await signal1.OnNextAsync(1, CancellationToken.None);
+        await signal2.OnNextAsync("a", CancellationToken.None);
+        await signal1.OnNextAsync(SampleValue2, CancellationToken.None);
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo((1, "a"));
@@ -79,7 +79,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenCombineLatestOneSourceCompletesWithoutEmitting_ThenCompletes()
     {
-        IObservableAsync<int>[] sources = [ObservableAsync.Return(1), ObservableAsync.Empty<int>()];
+        IObservableAsync<int>[] sources = [SignalAsync.Return(1), SignalAsync.Empty<int>()];
 
         Result? completionResult = null;
         var items = new List<IReadOnlyList<int>>();
@@ -112,7 +112,7 @@ public partial class CombiningOperatorTests
     {
         IObservableAsync<int>[] sources =
         [
-            ObservableAsync.Return(1), ObservableAsync.Throw<int>(new InvalidOperationException("source fail"))
+            SignalAsync.Return(1), SignalAsync.Throw<int>(new InvalidOperationException("source fail"))
         ];
 
         Result? completionResult = null;
@@ -138,7 +138,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenCombineLatestSourceErrorResume_ThenForwarded()
     {
-        var inner = ObservableAsync.Create<int>(async (observer, ct) =>
+        var inner = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(new InvalidOperationException("warning"), ct);
             await observer.OnNextAsync(1, ct);
@@ -173,22 +173,22 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenCombineLatestDisposedDuringEmission_ThenNoError()
     {
-        var subject1 = SubjectAsync.Create<int>();
-        var subject2 = SubjectAsync.Create<int>();
+        var signal1 = Signal.Create<int>();
+        var signal2 = Signal.Create<int>();
 
-        IObservableAsync<int>[] sources = [subject1.Values, subject2.Values];
+        IObservableAsync<int>[] sources = [signal1.Values, signal2.Values];
 
         var sub = await sources.CombineLatest()
             .SubscribeAsync(
                 (_, _) => default,
                 null);
 
-        await subject1.OnNextAsync(1, CancellationToken.None);
+        await signal1.OnNextAsync(1, CancellationToken.None);
 
         await sub.DisposeAsync();
 
-        await subject1.DisposeAsync();
-        await subject2.DisposeAsync();
+        await signal1.DisposeAsync();
+        await signal2.DisposeAsync();
     }
 
     /// <summary>Tests CombineLatest with 3 sources combines all latest values.</summary>
@@ -196,9 +196,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenCombineLatestThreeSources_ThenCombinesAll()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
 
         var results = new List<int>();
         await using var sub = await s1.Values

@@ -10,11 +10,11 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>
 /// Provides extension methods for working with asynchronous observable sequences.
 /// </summary>
-/// <remarks>The ObservableAsync class contains static extension methods that enable advanced operations on
+/// <remarks>The SignalAsync class contains static extension methods that enable advanced operations on
 /// asynchronous observables, such as filtering, transformation, and sequence control. These methods are intended to be
-/// used with the ObservableAsync{T} type to facilitate reactive programming patterns in asynchronous
+/// used with the SignalAsync{T} type to facilitate reactive programming patterns in asynchronous
 /// scenarios.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Returns a new observable sequence that emits only the first specified number of elements from the source
@@ -42,7 +42,7 @@ public static partial class ObservableAsync
         }
 #endif
 
-        return count == 0 ? new TakeZeroObservable<T>() : new TakeObservable<T>(@this, count);
+        return count == 0 ? new TakeZeroSignal<T>() : new TakeSignal<T>(@this, count);
     }
 
     /// <summary>
@@ -50,7 +50,7 @@ public static partial class ObservableAsync
     /// subscribing to the upstream.
     /// </summary>
     /// <typeparam name="T">The element type.</typeparam>
-    internal sealed class TakeZeroObservable<T> : ObservableAsync<T>
+    internal sealed class TakeZeroSignal<T> : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -68,8 +68,8 @@ public static partial class ObservableAsync
     /// </summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
-    /// <param name="count">The maximum number of values to forward (must be &gt; 0; the zero case uses <see cref="TakeZeroObservable{T}"/>).</param>
-    internal sealed class TakeObservable<T>(IObservableAsync<T> source, int count) : ObservableAsync<T>
+    /// <param name="count">The maximum number of values to forward (must be &gt; 0; the zero case uses <see cref="TakeZeroSignal{T}"/>).</param>
+    internal sealed class TakeSignal<T>(IObservableAsync<T> source, int count) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(

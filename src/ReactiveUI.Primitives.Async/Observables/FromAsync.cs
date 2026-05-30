@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Async;
 /// pattern, enabling consumers to subscribe to results produced by asynchronous operations. All created observables
 /// execute the provided asynchronous factory as a background job and emit the result to subscribers upon
 /// completion.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Creates an asynchronous observable sequence that emits a single value produced by the specified factory
@@ -26,7 +26,7 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The type of the value produced by the factory and emitted by the observable sequence.</typeparam>
     /// <param name="factory">A function that asynchronously produces a value of type <typeparamref name="T"/> when invoked with a <see
     /// cref="CancellationToken"/>. Cannot be null.</param>
-    /// <returns>An <see cref="ObservableAsync{T}"/> that emits the value returned by the factory function and then completes.</returns>
+    /// <returns>An <see cref="SignalAsync{T}"/> that emits the value returned by the factory function and then completes.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="factory"/> is null.</exception>
     [SuppressMessage(
         "Roslynator",

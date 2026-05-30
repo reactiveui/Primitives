@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -12,10 +12,10 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>
 /// Provides factory methods for creating asynchronous observable sequences.
 /// </summary>
-/// <remarks>The ObservableAsync class offers static methods to construct and manipulate asynchronous observables.
+/// <remarks>The SignalAsync class offers static methods to construct and manipulate asynchronous observables.
 /// Use these methods to create sequences that emit values, errors, or completion notifications in an asynchronous
 /// manner.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Creates an observable sequence that terminates immediately with the specified exception.
@@ -29,12 +29,12 @@ public static partial class ObservableAsync
     [SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "Public factory API — caller specifies T explicitly: ObservableAsync.Throw<int>(ex).")]
+        Justification = "Public factory API — caller specifies T explicitly: SignalAsync.Throw<int>(ex).")]
     public static IObservableAsync<T> Throw<T>(Exception error)
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
 
-        return new ObservableAsyncThrow<T>(error);
+        return new ThrowSignalAsync<T>(error);
     }
 
     /// <summary>
@@ -45,7 +45,7 @@ public static partial class ObservableAsync
     /// asynchronous observable scenarios.</remarks>
     /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
     /// <param name="error">The exception that will be signaled to observers as the terminal error.</param>
-    internal sealed class ObservableAsyncThrow<T>(Exception error) : ObservableAsync<T>
+    internal sealed class ThrowSignalAsync<T>(Exception error) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(

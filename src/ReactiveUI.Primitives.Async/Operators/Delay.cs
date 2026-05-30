@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <remarks>Delay time-shifts the observable sequence by the specified time span. Each element is
 /// emitted after a relative delay from the time it was produced by the source. Errors and completion
 /// are not delayed.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Time-shifts the observable sequence by the specified time span. Each element notification
@@ -51,15 +51,15 @@ public static partial class ObservableAsync
             return @this;
         }
 
-        return new DelayObservable<T>(@this, delayInterval, timeProvider ?? TimeProvider.System);
+        return new DelaySignal<T>(@this, delayInterval, timeProvider ?? TimeProvider.System);
     }
 
     /// <summary>
     /// An observable that delays each element notification by a specified duration.
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    internal sealed class DelayObservable<T>(IObservableAsync<T> source, TimeSpan delayInterval, TimeProvider timeProvider)
-        : ObservableAsync<T>
+    internal sealed class DelaySignal<T>(IObservableAsync<T> source, TimeSpan delayInterval, TimeProvider timeProvider)
+        : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(

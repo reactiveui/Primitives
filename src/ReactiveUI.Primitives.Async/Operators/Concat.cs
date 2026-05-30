@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <remarks>The methods in this class enable fluent composition of asynchronous observables, allowing multiple
 /// sequences to be combined into a single sequence that emits items in order. These methods are intended for use with
 /// types that implement asynchronous, push-based data streams.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Concatenates a sequence of asynchronous observable sequences into a single observable sequence, subscribing to
@@ -25,7 +25,7 @@ public static partial class ObservableAsync
     /// <returns>An observable sequence that emits the elements of each inner observable sequence in order, waiting for each to
     /// complete before subscribing to the next.</returns>
     public static IObservableAsync<T> Concat<T>(this IObservableAsync<IObservableAsync<T>> @this) =>
-        new ConcatObservablesObservable<T>(@this);
+        new ConcatSignalSourcesSignal<T>(@this);
 
     /// <summary>
     /// Concatenates multiple asynchronous observable sequences into a single sequence that emits items from each source
@@ -38,7 +38,7 @@ public static partial class ObservableAsync
     /// <returns>An asynchronous observable sequence that emits all items from each source sequence in the order they appear in
     /// the collection.</returns>
     public static IObservableAsync<T> Concat<T>(this IEnumerable<IObservableAsync<T>> @this) =>
-        new ConcatEnumerableObservable<T>(@this);
+        new ConcatEnumerableSignal<T>(@this);
 
     /// <summary>
     /// Concatenates two asynchronous observable sequences into a single sequence that emits all elements from the first
@@ -53,5 +53,5 @@ public static partial class ObservableAsync
     /// <returns>An observable sequence that emits all elements from the first sequence, followed by all elements from the second
     /// sequence.</returns>
     public static IObservableAsync<T> Concat<T>(this IObservableAsync<T> @this, IObservableAsync<T> second) =>
-        new ConcatEnumerableObservable<T>([@this, second]);
+        new ConcatEnumerableSignal<T>([@this, second]);
 }

@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Async;
 /// asynchronous observables. These operations are useful for scenarios where intermediate results or running totals are
 /// needed as items are received. All methods are designed to work with asynchronous patterns and support cancellation
 /// via tokens.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Applies an accumulator function over the observable sequence and returns each intermediate result
@@ -35,7 +35,7 @@ public static partial class ObservableAsync
     {
         ArgumentExceptionHelper.ThrowIfNull(accumulator);
 
-        return new ScanAsyncObservable<T, TAcc>(@this, seed, accumulator);
+        return new ScanAsyncSignal<T, TAcc>(@this, seed, accumulator);
     }
 
     /// <summary>
@@ -53,7 +53,7 @@ public static partial class ObservableAsync
     {
         ArgumentExceptionHelper.ThrowIfNull(accumulator);
 
-        return new ScanSyncObservable<T, TAcc>(@this, seed, accumulator);
+        return new ScanSyncSignal<T, TAcc>(@this, seed, accumulator);
     }
 
     /// <summary>
@@ -66,10 +66,10 @@ public static partial class ObservableAsync
     /// <param name="source">The source observable.</param>
     /// <param name="seed">The initial accumulator value.</param>
     /// <param name="accumulator">The asynchronous accumulator.</param>
-    internal sealed class ScanAsyncObservable<T, TAcc>(
+    internal sealed class ScanAsyncSignal<T, TAcc>(
         IObservableAsync<T> source,
         TAcc seed,
-        Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator) : ObservableAsync<TAcc>
+        Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator) : SignalAsync<TAcc>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -140,7 +140,7 @@ public static partial class ObservableAsync
 
     /// <summary>
     /// Synchronous-accumulator variant of <see cref="Scan{T,TAcc}(IObservableAsync{T},TAcc,Func{TAcc,T,TAcc})"/>. Same
-    /// allocation profile as <see cref="ScanAsyncObservable{T,TAcc}"/> but the per-emission <c>OnNextAsyncCore</c> is
+    /// allocation profile as <see cref="ScanAsyncSignal{T,TAcc}"/> but the per-emission <c>OnNextAsyncCore</c> is
     /// sync-completed when the downstream completes synchronously.
     /// </summary>
     /// <typeparam name="T">The element type of the source sequence.</typeparam>
@@ -148,10 +148,10 @@ public static partial class ObservableAsync
     /// <param name="source">The source observable.</param>
     /// <param name="seed">The initial accumulator value.</param>
     /// <param name="accumulator">The synchronous accumulator.</param>
-    internal sealed class ScanSyncObservable<T, TAcc>(
+    internal sealed class ScanSyncSignal<T, TAcc>(
         IObservableAsync<T> source,
         TAcc seed,
-        Func<TAcc, T, TAcc> accumulator) : ObservableAsync<TAcc>
+        Func<TAcc, T, TAcc> accumulator) : SignalAsync<TAcc>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(

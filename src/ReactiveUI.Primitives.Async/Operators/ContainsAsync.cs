@@ -11,8 +11,8 @@ namespace ReactiveUI.Primitives.Async;
 /// </summary>
 /// <remarks>The methods in this class enable querying and manipulation of asynchronous observables, such as
 /// determining whether a sequence contains a specified element. These extensions are designed to integrate with the
-/// ObservableAsync{T} pattern for asynchronous, push-based data streams.</remarks>
-public static partial class ObservableAsync
+/// SignalAsync{T} pattern for asynchronous, push-based data streams.</remarks>
+public static partial class SignalAsync
 {
     /// <summary>
     /// Asynchronously determines whether the sequence contains a specified value using the given equality comparer.

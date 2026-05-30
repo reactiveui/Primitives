@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Async;
 /// </summary>
 /// <remarks>Zip combines elements from two observable sequences pair-wise. The nth element from
 /// each source is paired together. The resulting sequence completes when either source completes.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Combines two observable sequences element-by-element using the specified result selector.
@@ -36,7 +36,7 @@ public static partial class ObservableAsync
         ArgumentExceptionHelper.ThrowIfNull(second);
         ArgumentExceptionHelper.ThrowIfNull(resultSelector);
 
-        return new ZipObservable<T1, T2, TResult>(first, second, resultSelector);
+        return new ZipSignal<T1, T2, TResult>(first, second, resultSelector);
     }
 
     /// <summary>
@@ -67,10 +67,10 @@ public static partial class ObservableAsync
     /// <param name="first">The first asynchronous observable sequence to combine.</param>
     /// <param name="second">The second asynchronous observable sequence to combine.</param>
     /// <param name="resultSelector">A function that specifies how to combine elements from the first and second sequences into a result element.</param>
-    internal sealed class ZipObservable<T1, T2, TResult>(
+    internal sealed class ZipSignal<T1, T2, TResult>(
         IObservableAsync<T1> first,
         IObservableAsync<T2> second,
-        Func<T1, T2, TResult> resultSelector) : ObservableAsync<TResult>
+        Func<T1, T2, TResult> resultSelector) : SignalAsync<TResult>
     {
         /// <summary>
         /// Subscribes the specified observer by creating a shared <see cref="ZipState"/> and subscribing to both source sequences.
@@ -93,7 +93,7 @@ public static partial class ObservableAsync
                 new SecondObserver(state),
                 cancellationToken).ConfigureAwait(false);
 
-            return new CompositeDisposableAsync(sub1, sub2, state);
+            return new MultipleDisposableAsync(sub1, sub2, state);
         }
 
         /// <summary>

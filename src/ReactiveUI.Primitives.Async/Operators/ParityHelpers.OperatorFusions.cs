@@ -9,13 +9,13 @@ namespace ReactiveUI.Primitives.Async;
 
 /// <summary>
 /// Fused operator observables backing the parity-helper extension methods in
-/// <see cref="ObservableAsync"/>.
+/// <see cref="SignalAsync"/>.
 /// </summary>
 [SuppressMessage(
     "Major Code Smell",
     "S3604:Member initializer values should not be redundant",
     Justification = "Primary-constructor parameters are captured into observer state.")]
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Fuses <c>Return(initial).Concat(source.Scan(initial, accumulator))</c> into a single layer.
@@ -27,10 +27,10 @@ public static partial class ObservableAsync
     /// <param name="source">The upstream observable.</param>
     /// <param name="initial">The initial accumulator value, emitted on subscribe.</param>
     /// <param name="accumulator">The synchronous accumulator.</param>
-    internal sealed class ScanWithInitialObservable<TSource, TAccumulate>(
+    internal sealed class ScanWithInitialSignal<TSource, TAccumulate>(
         IObservableAsync<TSource> source,
         TAccumulate initial,
-        Func<TAccumulate, TSource, TAccumulate> accumulator) : ObservableAsync<TAccumulate>
+        Func<TAccumulate, TSource, TAccumulate> accumulator) : SignalAsync<TAccumulate>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -83,17 +83,17 @@ public static partial class ObservableAsync
     }
 
     /// <summary>
-    /// Async-accumulator variant of <see cref="ScanWithInitialObservable{TSource, TAccumulate}"/>.
+    /// Async-accumulator variant of <see cref="ScanWithInitialSignal{TSource, TAccumulate}"/>.
     /// </summary>
     /// <typeparam name="TSource">The upstream element type.</typeparam>
     /// <typeparam name="TAccumulate">The accumulator type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="initial">The initial accumulator value, emitted on subscribe.</param>
     /// <param name="accumulator">The asynchronous accumulator.</param>
-    internal sealed class ScanWithInitialAsyncObservable<TSource, TAccumulate>(
+    internal sealed class ScanWithInitialAsyncSignal<TSource, TAccumulate>(
         IObservableAsync<TSource> source,
         TAccumulate initial,
-        Func<TAccumulate, TSource, CancellationToken, ValueTask<TAccumulate>> accumulator) : ObservableAsync<TAccumulate>
+        Func<TAccumulate, TSource, CancellationToken, ValueTask<TAccumulate>> accumulator) : SignalAsync<TAccumulate>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -164,17 +164,17 @@ public static partial class ObservableAsync
     /// <summary>
     /// Fuses <c>DistinctUntilChanged().Throttle(window).DistinctUntilChanged()</c> into a single
     /// observer that tracks upstream-distinct, debounce-timer supersession, and downstream-distinct
-    /// state. Supersession follows the same id-based pattern used by <c>ThrottleObservable</c>: a
+    /// state. Supersession follows the same id-based pattern used by <c>ThrottleSignal</c>: a
     /// superseded delay still runs but its result is discarded.
     /// </summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="dueTime">The debounce window.</param>
     /// <param name="timeProvider">The time provider used for the debounce timer.</param>
-    internal sealed class ThrottleDistinctObservable<T>(
+    internal sealed class ThrottleDistinctSignal<T>(
         IObservableAsync<T> source,
         TimeSpan dueTime,
-        TimeProvider timeProvider) : ObservableAsync<T>
+        TimeProvider timeProvider) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -349,9 +349,9 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="asyncAction">The async side-effect invoked for accepted values.</param>
-    internal sealed class DropIfBusyObservable<T>(
+    internal sealed class DropIfBusySignal<T>(
         IObservableAsync<T> source,
-        Func<T, CancellationToken, ValueTask> asyncAction) : ObservableAsync<T>
+        Func<T, CancellationToken, ValueTask> asyncAction) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -464,7 +464,7 @@ public static partial class ObservableAsync
     /// <c>Partition</c>. Maintains a single source subscription that is started when the first
     /// branch subscribes and torn down when the last branch disposes. Each upstream emission
     /// evaluates the predicate exactly once and dispatches to the branch observer (if any)
-    /// subscribed at that moment — no <c>Publish</c>/<c>RefCount</c>/intermediate-subject
+    /// subscribed at that moment — no <c>Publish</c>/<c>RefCount</c>/intermediate-signal
     /// allocations on the per-emission path.
     /// </summary>
     /// <typeparam name="T">The element type partitioned across the two branches.</typeparam>
@@ -483,8 +483,8 @@ public static partial class ObservableAsync
         {
             _source = source;
             _predicate = predicate;
-            TrueBranch = new PartitionBranchObservable(isTrueBranch: true) { Coordinator = this };
-            FalseBranch = new PartitionBranchObservable(isTrueBranch: false) { Coordinator = this };
+            TrueBranch = new PartitionBranchSignal(isTrueBranch: true) { Coordinator = this };
+            FalseBranch = new PartitionBranchSignal(isTrueBranch: false) { Coordinator = this };
         }
 
         /// <summary>Synchronization gate protecting branch slots and the source-subscription lifecycle.</summary>
@@ -696,14 +696,14 @@ public static partial class ObservableAsync
 
         /// <summary>Observable view of one branch.</summary>
         /// <param name="isTrueBranch"><see langword="true"/> for the truthy branch.</param>
-        internal sealed class PartitionBranchObservable(bool isTrueBranch) : ObservableAsync<T>
+        internal sealed class PartitionBranchSignal(bool isTrueBranch) : SignalAsync<T>
         {
             /// <inheritdoc/>
             protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
                 IObserverAsync<T> observer,
                 CancellationToken cancellationToken)
             {
-                // The PartitionBranchObservable is created by the coordinator's constructor; the
+                // The PartitionBranchSignal is created by the coordinator's constructor; the
                 // coordinator field is filled in below.
                 return Coordinator.SubscribeBranchAsync(isTrueBranch, observer, cancellationToken);
             }
@@ -732,7 +732,7 @@ public static partial class ObservableAsync
     /// Fuses <c>Select(condition ? Return(value) : Return(value).Delay(...)).Switch()</c> into a
     /// single observer layer. Bypass-true values flow through with zero allocation; bypass-false
     /// values schedule a fire-and-forget delay with id-based supersession (the same pattern
-    /// <see cref="ThrottleDistinctObservable{T}"/> uses) so the previous pending delay is
+    /// <see cref="ThrottleDistinctSignal{T}"/> uses) so the previous pending delay is
     /// effectively cancelled on every new upstream value.
     /// </summary>
     /// <typeparam name="T">The element type.</typeparam>
@@ -740,11 +740,11 @@ public static partial class ObservableAsync
     /// <param name="debounce">The debounce window applied to bypass-false values.</param>
     /// <param name="condition">When <see langword="true"/> the value bypasses the delay and is forwarded immediately.</param>
     /// <param name="timeProvider">The time provider used for the debounce timer.</param>
-    internal sealed class DebounceUntilObservable<T>(
+    internal sealed class DebounceUntilSignal<T>(
         IObservableAsync<T> source,
         TimeSpan debounce,
         Func<T, bool> condition,
-        TimeProvider timeProvider) : ObservableAsync<T>
+        TimeProvider timeProvider) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -889,15 +889,15 @@ public static partial class ObservableAsync
     }
 
     /// <summary>
-    /// Fuses <c>source.SelectMany(values =&gt; values.ToObservableAsync())</c> into a single
+    /// Fuses <c>source.SelectMany(values =&gt; values.ToAsyncSignal())</c> into a single
     /// observer that iterates the inner enumerable inline and forwards each element. Avoids the
-    /// <c>SelectMany</c>+<c>ToObservableAsync</c> per-emission machinery; arrays and
+    /// <c>SelectMany</c>+<c>ToAsyncSignal</c> per-emission machinery; arrays and
     /// <see cref="IReadOnlyList{T}"/> snapshots are walked with an indexed <c>for</c> loop to
     /// dodge the enumerator-box allocation entirely.
     /// </summary>
     /// <typeparam name="T">The flattened element type.</typeparam>
     /// <param name="source">The upstream observable of <see cref="IEnumerable{T}"/> snapshots.</param>
-    internal sealed class ForEachEnumerableObservable<T>(IObservableAsync<IEnumerable<T>> source) : ObservableAsync<T>
+    internal sealed class ForEachEnumerableSignal<T>(IObservableAsync<IEnumerable<T>> source) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(

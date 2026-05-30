@@ -9,10 +9,10 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>
 /// Provides factory methods for creating asynchronous observable sequences.
 /// </summary>
-/// <remarks>The ObservableAsync class contains static methods for constructing and manipulating asynchronous
+/// <remarks>The SignalAsync class contains static methods for constructing and manipulating asynchronous
 /// observables. Use these methods to create observables that emit values asynchronously, supporting scenarios such as
 /// background processing or integration with asynchronous workflows.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Creates an observable sequence that emits a single value and then completes.
@@ -23,7 +23,7 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The type of the value to be emitted by the observable sequence.</typeparam>
     /// <param name="value">The value to be emitted by the observable sequence.</param>
     /// <returns>An observable sequence that emits the specified value and then signals completion.</returns>
-    public static IObservableAsync<T> Return<T>(T value) => new ReturnObservableAsync<T>(value);
+    public static IObservableAsync<T> Return<T>(T value) => new ReturnSignalAsync<T>(value);
 
     /// <summary>
     /// Single-value observable that captures the emitted value as a field and routes through a typed
@@ -32,7 +32,7 @@ public static partial class ObservableAsync
     /// </summary>
     /// <typeparam name="T">The element type emitted.</typeparam>
     /// <param name="value">The captured value emitted on each subscribe.</param>
-    internal sealed class ReturnObservableAsync<T>(T value) : ObservableAsync<T>
+    internal sealed class ReturnSignalAsync<T>(T value) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(

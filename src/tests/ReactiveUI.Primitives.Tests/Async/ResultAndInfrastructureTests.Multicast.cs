@@ -12,7 +12,7 @@ using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
-using ReactiveUI.Primitives.Async.Subjects;
+using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -22,15 +22,15 @@ namespace ReactiveUI.Primitives.Async.Tests;
 public partial class ResultAndInfrastructureTests
 {
     /// <summary>
-    /// Verifies that MulticastObservableAsync does not throw when ConnectAsync is called twice.
+    /// Verifies that MulticastSignalAsync does not throw when ConnectAsync is called twice.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMulticastConnectTwice_ThenSecondConnectSucceeds()
     {
-        var subject = SubjectAsync.Create<int>();
-        var source = ObservableAsync.Range(1, 3);
-        var connectable = source.Multicast(subject);
+        var signal = Signal.Create<int>();
+        var source = SignalAsync.Range(1, 3);
+        var connectable = source.Multicast(signal);
 
         await using var conn1 = await connectable.ConnectAsync(CancellationToken.None);
         var conn2 = await connectable.ConnectAsync(CancellationToken.None);
@@ -41,23 +41,23 @@ public partial class ResultAndInfrastructureTests
     }
 
     /// <summary>
-    /// Verifies that MulticastObservableAsync disconnect and reconnect works.
+    /// Verifies that MulticastSignalAsync disconnect and reconnect works.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMulticastDisconnectAndReconnect_ThenNewConnectionWorks()
     {
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         List<int> items = [];
 
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
 
-        var connectable = source.Multicast(subject);
+        var connectable = source.Multicast(signal);
 
         await using var sub = await connectable.SubscribeAsync(
             (x, _) =>
@@ -81,17 +81,17 @@ public partial class ResultAndInfrastructureTests
     [Test]
     public async Task WhenMulticastDisconnectHandle_ThenConnectionCleared()
     {
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         var callCount = 0;
 
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             Interlocked.Increment(ref callCount);
             await observer.OnNextAsync(callCount, ct);
             return DisposableAsync.Empty;
         });
 
-        var connectable = source.Multicast(subject);
+        var connectable = source.Multicast(signal);
 
         // Connect
         var conn1 = await connectable.ConnectAsync(CancellationToken.None);
@@ -112,7 +112,7 @@ public partial class ResultAndInfrastructureTests
     }
 
     /// <summary>
-    /// Verifies that disposing the MulticastObservableAsync via IDisposable disposes the
+    /// Verifies that disposing the MulticastSignalAsync via IDisposable disposes the
     /// connection and gate.
     /// Covers the Dispose(bool) path.
     /// </summary>
@@ -120,15 +120,15 @@ public partial class ResultAndInfrastructureTests
     [Test]
     public async Task WhenMulticastDispose_ThenConnectionAndGateDisposed()
     {
-        var subject = SubjectAsync.Create<int>();
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var signal = Signal.Create<int>();
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
 
-        var connectable = source.Multicast(subject);
+        var connectable = source.Multicast(signal);
 
         // Connect first so there is a connection to dispose
         await connectable.ConnectAsync(CancellationToken.None);
@@ -141,7 +141,7 @@ public partial class ResultAndInfrastructureTests
     }
 
     /// <summary>
-    /// Verifies that disposing the MulticastObservableAsync without an active connection
+    /// Verifies that disposing the MulticastSignalAsync without an active connection
     /// is safe and disposes the gate.
     /// Covers the Dispose path when no connection is active.
     /// </summary>
@@ -152,9 +152,9 @@ public partial class ResultAndInfrastructureTests
     {
         try
         {
-            var subject = SubjectAsync.Create<int>();
-            var source = ObservableAsync.Range(1, 3);
-            var connectable = source.Multicast(subject);
+            var signal = Signal.Create<int>();
+            var source = SignalAsync.Range(1, 3);
+            var connectable = source.Multicast(signal);
 
             // Dispose without ever connecting
             ((IDisposable)(object)connectable).Dispose();
@@ -167,22 +167,22 @@ public partial class ResultAndInfrastructureTests
     }
 
     /// <summary>
-    /// Verifies that subscribing to a MulticastObservableAsync works and items flow
-    /// through the subject when connected.
+    /// Verifies that subscribing to a MulticastSignalAsync works and items flow
+    /// through the Signal when connected.
     /// Covers SubscribeAsyncCore.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMulticastSubscribeAndConnect_ThenItemsFlowThroughSubject()
+    public async Task WhenMulticastSubscribeAndConnect_ThenItemsFlowThroughSignal()
     {
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         List<int> items = [];
         var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         const int FirstValue = 10;
         const int SecondValue = 20;
 
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(FirstValue, ct);
             await observer.OnNextAsync(SecondValue, ct);
@@ -190,7 +190,7 @@ public partial class ResultAndInfrastructureTests
             return DisposableAsync.Empty;
         });
 
-        var connectable = source.Multicast(subject);
+        var connectable = source.Multicast(signal);
 
         await using var sub = await connectable.SubscribeAsync(
             (x, _) =>
@@ -213,15 +213,15 @@ public partial class ResultAndInfrastructureTests
     }
 
     /// <summary>
-    /// Verifies that disposing the connection from MulticastObservableAsync twice
+    /// Verifies that disposing the connection from MulticastSignalAsync twice
     /// exercises the null-guard early return on the second dispose.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMulticastConnectDisposedTwice_ThenSecondDisposeIsNoop()
     {
-        var subject = SubjectAsync.Create<int>();
-        var multicast = ObservableAsync.Return(42).Multicast(subject);
+        var signal = Signal.Create<int>();
+        var multicast = SignalAsync.Return(42).Multicast(signal);
 
         var connection = await multicast.ConnectAsync(CancellationToken.None);
         await connection.DisposeAsync();
@@ -238,7 +238,7 @@ public partial class ResultAndInfrastructureTests
     public async Task WhenRefCountSourceErrorResume_ThenForwardsToSubscriber()
     {
         Exception? captured = null;
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnErrorResumeAsync(new InvalidOperationException("refcount-error"), ct);
@@ -246,8 +246,8 @@ public partial class ResultAndInfrastructureTests
             return DisposableAsync.Empty;
         });
 
-        var subject = SubjectAsync.Create<int>();
-        var refCounted = source.Multicast(subject).RefCount();
+        var signal = Signal.Create<int>();
+        var refCounted = source.Multicast(signal).RefCount();
 
         List<int> items = [];
         await using var sub = await refCounted.SubscribeAsync(

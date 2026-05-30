@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Async;
 /// </summary>
 /// <remarks>TakeWhile emits elements from the source sequence as long as a predicate is satisfied,
 /// then completes the sequence when the predicate returns false.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Returns elements from the observable sequence as long as the specified asynchronous condition is true,
@@ -29,7 +29,7 @@ public static partial class ObservableAsync
         ArgumentExceptionHelper.ThrowIfNull(@this);
         ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-        return new TakeWhileAsyncObservable<T>(@this, predicate);
+        return new TakeWhileAsyncSignal<T>(@this, predicate);
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ public static partial class ObservableAsync
         ArgumentExceptionHelper.ThrowIfNull(@this);
         ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-        return new TakeWhileSyncObservable<T>(@this, predicate);
+        return new TakeWhileSyncSignal<T>(@this, predicate);
     }
 
     /// <summary>
@@ -57,7 +57,7 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="predicate">The take-while predicate.</param>
-    internal sealed class TakeWhileSyncObservable<T>(IObservableAsync<T> source, Func<T, bool> predicate) : ObservableAsync<T>
+    internal sealed class TakeWhileSyncSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -122,9 +122,9 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="predicate">The async take-while predicate.</param>
-    internal sealed class TakeWhileAsyncObservable<T>(
+    internal sealed class TakeWhileAsyncSignal<T>(
         IObservableAsync<T> source,
-        Func<T, CancellationToken, ValueTask<bool>> predicate) : ObservableAsync<T>
+        Func<T, CancellationToken, ValueTask<bool>> predicate) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(

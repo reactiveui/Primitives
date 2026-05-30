@@ -9,10 +9,10 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>
 /// Provides extension methods for working with asynchronous observable sequences.
 /// </summary>
-/// <remarks>The ObservableAsync class offers utility methods that enable manipulation and composition of
+/// <remarks>The SignalAsync class offers utility methods that enable manipulation and composition of
 /// asynchronous observables, such as prepending values to a sequence. These methods facilitate common operations when
 /// building reactive, asynchronous workflows.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Returns a new observable sequence that begins with the specified value, followed by the elements of the

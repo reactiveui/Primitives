@@ -11,7 +11,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Async.Subjects;
+using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -25,9 +25,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMulticastConnectAsync_ThenEmitsToSubscribers()
     {
-        var subject = SubjectAsync.Create<int>();
-        var source = ObservableAsync.Range(1, 3);
-        var connectable = source.Multicast(subject);
+        var signal = Signal.Create<int>();
+        var source = SignalAsync.Range(1, 3);
+        var connectable = source.Multicast(signal);
 
         var items = new List<int>();
         await using var sub = await connectable.SubscribeAsync(
@@ -51,9 +51,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMulticastDisconnectHandleDisposedTwice_ThenSecondCallIsNoop()
     {
-        var subject = SubjectAsync.Create<int>();
-        var source = ObservableAsync.Range(1, 3);
-        var connectable = source.Multicast(subject);
+        var signal = Signal.Create<int>();
+        var source = SignalAsync.Range(1, 3);
+        var connectable = source.Multicast(signal);
 
         var disconnectHandle = await connectable.ConnectAsync(CancellationToken.None);
 
@@ -73,9 +73,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMulticastConnectHandleDisposedTwice_ThenCanReconnectSuccessfully()
     {
-        var subject = SubjectAsync.Create<int>();
-        var source = ObservableAsync.Return(42);
-        var connectable = source.Multicast(subject);
+        var signal = Signal.Create<int>();
+        var source = SignalAsync.Return(42);
+        var connectable = source.Multicast(signal);
 
         var handle = await connectable.ConnectAsync(CancellationToken.None);
 
@@ -88,7 +88,7 @@ public partial class CombiningOperatorTests
         // After the double-dispose the connectable must accept a new connection.
         await using var sub = await connectable.SubscribeAsync(static (_, _) =>
         {
-            // Subject is already completed from first connect, so no items arrive.
+            // Signal is already completed from first connect, so no items arrive.
             return ValueTask.CompletedTask;
         });
 
@@ -105,7 +105,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPublish_ThenEmitsToSubscribersAfterConnect()
     {
-        var source = ObservableAsync.Range(1, 3);
+        var source = SignalAsync.Range(1, 3);
         var connectable = source.Publish();
 
         var items = new List<int>();
@@ -123,15 +123,15 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that Publish with SubjectCreationOptions creates a connectable observable
+    /// Verifies that Publish with SignalCreationOptions creates a connectable observable
     /// that emits all source items to subscribers.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPublishWithOptions_ThenEmitsToSubscribers()
     {
-        var source = ObservableAsync.Range(1, 3);
-        var connectable = source.Publish(SubjectCreationOptions.Default);
+        var source = SignalAsync.Range(1, 3);
+        var connectable = source.Publish(SignalCreationOptions.Default);
 
         var items = new List<int>();
         await using var sub = await connectable.SubscribeAsync(
@@ -155,7 +155,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenStatelessPublish_ThenEmitsToSubscribers()
     {
-        var source = ObservableAsync.Range(1, 3);
+        var source = SignalAsync.Range(1, 3);
         var connectable = source.StatelessPublish();
 
         var items = new List<int>();
@@ -180,7 +180,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPublishWithInitialValue_ThenSubscriberReceivesInitialValueAndSourceItems()
     {
-        var source = ObservableAsync.Range(1, 2);
+        var source = SignalAsync.Range(1, 2);
         var connectable = source.Publish(0);
 
         var items = new List<int>();
@@ -200,15 +200,15 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that Publish with an initial value and BehaviorSubjectCreationOptions creates
+    /// Verifies that Publish with an initial value and BehaviorSignalCreationOptions creates
     /// a connectable observable that replays the initial value and source items.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPublishWithInitialValueAndOptions_ThenSubscriberReceivesInitialValueAndSourceItems()
     {
-        var source = ObservableAsync.Range(1, 2);
-        var connectable = source.Publish(0, BehaviorSubjectCreationOptions.Default);
+        var source = SignalAsync.Range(1, 2);
+        var connectable = source.Publish(0, BehaviorSignalCreationOptions.Default);
 
         var items = new List<int>();
         await using var sub = await connectable.SubscribeAsync(
@@ -234,7 +234,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenStatelessPublishWithInitialValue_ThenSubscriberReceivesInitialValueAndSourceItems()
     {
-        var source = ObservableAsync.Range(1, 2);
+        var source = SignalAsync.Range(1, 2);
         var connectable = source.StatelessPublish(0);
 
         var items = new List<int>();
@@ -261,7 +261,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenReplayLatestPublish_ThenEmitsToSubscribers()
     {
-        var source = ObservableAsync.Range(1, 3);
+        var source = SignalAsync.Range(1, 3);
         var connectable = source.ReplayLatestPublish();
 
         var items = new List<int>();
@@ -279,15 +279,15 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that ReplayLatestPublish with ReplayLatestSubjectCreationOptions creates
+    /// Verifies that ReplayLatestPublish with ReplayLatestSignalCreationOptions creates
     /// a connectable observable that emits source items to subscribers.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenReplayLatestPublishWithOptions_ThenEmitsToSubscribers()
     {
-        var source = ObservableAsync.Range(1, 3);
-        var connectable = source.ReplayLatestPublish(ReplayLatestSubjectCreationOptions.Default);
+        var source = SignalAsync.Range(1, 3);
+        var connectable = source.ReplayLatestPublish(ReplayLatestSignalCreationOptions.Default);
 
         var items = new List<int>();
         await using var sub = await connectable.SubscribeAsync(
@@ -311,7 +311,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenStatelessReplayLatestPublish_ThenEmitsToSubscribers()
     {
-        var source = ObservableAsync.Range(1, 3);
+        var source = SignalAsync.Range(1, 3);
         var connectable = source.StatelessReplayLatestPublish();
 
         var items = new List<int>();
@@ -338,9 +338,9 @@ public partial class CombiningOperatorTests
         Exception? unhandled = null;
         UnhandledExceptionHandler.Register(ex => unhandled = ex);
 
-        ObservableAsync.MergeEnumerableObservable<int>.MergeEnumerableSubscription.RoutePostDisposalException(
+        SignalAsync.MergeEnumerableSignal<int>.MergeEnumerableSubscription.RoutePostDisposalException(
             Result.Success);
-        ObservableAsync.MergeEnumerableObservable<int>.MergeEnumerableSubscription.RoutePostDisposalException(null);
+        SignalAsync.MergeEnumerableSignal<int>.MergeEnumerableSubscription.RoutePostDisposalException(null);
 
         await Assert.That(unhandled).IsNull();
     }
@@ -352,7 +352,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenRefCountDisposedWithActiveConnection_ThenConnectionIsDisposed()
     {
-        var source = SubjectAsync.Create<int>();
+        var source = Signal.Create<int>();
         var connectable = source.Values.Publish();
         var refCounted = connectable.RefCount();
 
@@ -372,7 +372,7 @@ public partial class CombiningOperatorTests
             () => items.Count == 1,
             TimeSpan.FromSeconds(5));
 
-        // Dispose the RefCountObservable via its IDisposable implementation.
+        // Dispose the RefCountSignal via its IDisposable implementation.
         ((IDisposable)(object)refCounted).Dispose();
 
         await Assert.That(items).Contains(Sentinel42);
@@ -387,7 +387,7 @@ public partial class CombiningOperatorTests
     [Test]
     public void WhenRefCountDisposedWithNoSubscribers_ThenDoesNotThrow()
     {
-        var source = ObservableAsync.Return(1);
+        var source = SignalAsync.Return(1);
         var connectable = source.Publish();
         var refCounted = connectable.RefCount();
 
@@ -401,7 +401,7 @@ public partial class CombiningOperatorTests
     [Test]
     public void WhenRefCountDisposedTwice_ThenSecondDisposeIsNoop()
     {
-        var source = ObservableAsync.Return(1);
+        var source = SignalAsync.Return(1);
         var connectable = source.Publish();
         var refCounted = connectable.RefCount();
 
@@ -416,8 +416,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMulticastConnectAsyncWithCustomToken_ThenLinkedCtsPathTaken()
     {
-        var subject = SubjectAsync.Create<int>();
-        var connectable = ObservableAsync.Return(1).Multicast(subject);
+        var signal = Signal.Create<int>();
+        var connectable = SignalAsync.Return(1).Multicast(signal);
 
         using var cts = new CancellationTokenSource();
         await using var connection = await connectable.ConnectAsync(cts.Token);
@@ -431,8 +431,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMulticastConnectionDisposedTwice_ThenSecondIsNoOp()
     {
-        var subject = SubjectAsync.Create<int>();
-        var connectable = ObservableAsync.Return(1).Multicast(subject);
+        var signal = Signal.Create<int>();
+        var connectable = SignalAsync.Return(1).Multicast(signal);
 
         var connection = await connectable.ConnectAsync(CancellationToken.None);
 

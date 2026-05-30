@@ -10,11 +10,11 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>
 /// Provides extension methods for working with asynchronous observable sequences.
 /// </summary>
-/// <remarks>The ObservableAsync class contains static methods that extend the functionality of asynchronous
+/// <remarks>The SignalAsync class contains static methods that extend the functionality of asynchronous
 /// observables, enabling additional operations such as type casting and sequence manipulation. These methods are
-/// intended to be used with the ObservableAsync{T} type to facilitate reactive programming patterns in asynchronous
+/// intended to be used with the SignalAsync{T} type to facilitate reactive programming patterns in asynchronous
 /// scenarios.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Projects each element of the observable sequence to the specified result type by performing a runtime cast.
@@ -35,14 +35,14 @@ public static partial class ObservableAsync
     {
         ArgumentExceptionHelper.ThrowIfNull(@this);
 
-        return new CastObservable<T, TResult>(@this);
+        return new CastSignal<T, TResult>(@this);
     }
 
     /// <summary>Single-observer-layer <c>Cast</c>; failed casts terminate the sequence with failure.</summary>
     /// <typeparam name="T">The upstream element type.</typeparam>
     /// <typeparam name="TResult">The target element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
-    internal sealed class CastObservable<T, TResult>(IObservableAsync<T> source) : ObservableAsync<TResult>
+    internal sealed class CastSignal<T, TResult>(IObservableAsync<T> source) : SignalAsync<TResult>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(

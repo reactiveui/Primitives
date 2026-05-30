@@ -11,10 +11,10 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>
 /// Provides factory methods for creating asynchronous observable sequences.
 /// </summary>
-/// <remarks>The ObservableAsync class contains static methods for constructing instances of asynchronous
+/// <remarks>The SignalAsync class contains static methods for constructing instances of asynchronous
 /// observables. Use these methods to create observable sequences that support asynchronous notification
 /// patterns.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Creates an observable sequence that completes immediately without emitting any items.
@@ -28,8 +28,8 @@ public static partial class ObservableAsync
     [SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "Public factory API — caller specifies T explicitly: ObservableAsync.Empty<int>().")]
-    public static IObservableAsync<T> Empty<T>() => EmptyObservableAsync<T>.Instance;
+        Justification = "Public factory API — caller specifies T explicitly: SignalAsync.Empty<int>().")]
+    public static IObservableAsync<T> Empty<T>() => EmptySignalAsync<T>.Instance;
 
     /// <summary>
     /// Dedicated singleton observable that signals immediate successful completion on subscribe. Replaces the
@@ -37,13 +37,13 @@ public static partial class ObservableAsync
     /// per-T cached instance — no anonymous observable wrapper, no closure, no per-subscribe allocation.
     /// </summary>
     /// <typeparam name="T">The element type of the empty sequence.</typeparam>
-    internal sealed class EmptyObservableAsync<T> : ObservableAsync<T>
+    internal sealed class EmptySignalAsync<T> : SignalAsync<T>
     {
         /// <summary>The shared singleton instance for <typeparamref name="T"/>.</summary>
-        public static readonly EmptyObservableAsync<T> Instance = new();
+        public static readonly EmptySignalAsync<T> Instance = new();
 
-        /// <summary>Initializes a new instance of the <see cref="EmptyObservableAsync{T}"/> class.</summary>
-        private EmptyObservableAsync()
+        /// <summary>Initializes a new instance of the <see cref="EmptySignalAsync{T}"/> class.</summary>
+        private EmptySignalAsync()
         {
         }
 

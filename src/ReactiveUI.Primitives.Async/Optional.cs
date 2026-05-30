@@ -13,6 +13,7 @@ namespace ReactiveUI.Primitives.Async;
 /// exception. This pattern is useful for APIs that need to distinguish between an explicit 'no value' state and a
 /// default value.</remarks>
 /// <typeparam name="T">The type of the value that may be contained by the optional.</typeparam>
+[System.Diagnostics.DebuggerDisplay("HasValue = {HasValue}, Value = {_value}")]
 public readonly record struct Optional<T>
 {
     /// <summary>

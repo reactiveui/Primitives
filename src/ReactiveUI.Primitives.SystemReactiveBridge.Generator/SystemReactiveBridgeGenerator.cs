@@ -357,7 +357,7 @@ internal static class SystemReactiveAsyncBridge
     }
 
     private sealed class ObservableToObservableAsync<T>(global::System.IObservable<T> source)
-        : global::ReactiveUI.Primitives.Async.ObservableAsync<T>
+        : global::ReactiveUI.Primitives.Async.SignalAsync<T>
     {
         protected override global::System.Threading.Tasks.ValueTask<global::System.IAsyncDisposable> SubscribeAsyncCore(
             global::ReactiveUI.Primitives.Async.IObserverAsync<T> observer,

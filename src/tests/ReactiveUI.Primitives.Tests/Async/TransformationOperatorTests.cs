@@ -12,7 +12,7 @@ using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
-using ReactiveUI.Primitives.Async.Subjects;
+using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -37,7 +37,7 @@ public class TransformationOperatorTests
         const int ExpectedSecond = 20;
         const int ExpectedThird = 30;
 
-        var result = await ObservableAsync.Range(1, 3)
+        var result = await SignalAsync.Range(1, 3)
             .Select(x => x * Multiplier)
             .ToListAsync();
 
@@ -49,7 +49,7 @@ public class TransformationOperatorTests
     [Test]
     public async Task WhenSelectAsyncSelector_ThenProjectsEachElement()
     {
-        var result = await ObservableAsync.Range(1, 3)
+        var result = await SignalAsync.Range(1, 3)
             .Select(async (x, _) =>
             {
                 await Task.Yield();
@@ -70,8 +70,8 @@ public class TransformationOperatorTests
         const int FirstExpectedValue = 10;
         const int LastExpectedValue = 30;
 
-        var result = await ObservableAsync.Range(1, 3)
-            .SelectMany(x => ObservableAsync.Range(x * InnerMultiplier, 2))
+        var result = await SignalAsync.Range(1, 3)
+            .SelectMany(x => SignalAsync.Range(x * InnerMultiplier, 2))
             .ToListAsync();
 
         await Assert.That(result).Count().IsEqualTo(ExpectedCount);
@@ -89,11 +89,11 @@ public class TransformationOperatorTests
         const int FirstExpectedValue = 100;
         const int SecondExpectedValue = 200;
 
-        var result = await ObservableAsync.Range(1, 2)
+        var result = await SignalAsync.Range(1, 2)
             .SelectMany(async (x, _) =>
             {
                 await Task.Yield();
-                return ObservableAsync.Return(x * Multiplier);
+                return SignalAsync.Return(x * Multiplier);
             })
             .ToListAsync();
 
@@ -110,9 +110,9 @@ public class TransformationOperatorTests
         const int InnerMultiplier = 10;
         const int ExpectedCount = 2;
 
-        var result = await ObservableAsync.Range(1, 2)
+        var result = await SignalAsync.Range(1, 2)
             .SelectMany(
-                x => ObservableAsync.Return(x * InnerMultiplier),
+                x => SignalAsync.Return(x * InnerMultiplier),
                 (outer, inner) => $"{outer}:{inner}")
             .ToListAsync();
 
@@ -125,7 +125,7 @@ public class TransformationOperatorTests
     [Test]
     public void WhenSelectManyNullSelector_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(() =>
-            ObservableAsync.Return(1).SelectMany((Func<int, ObservableAsync<int>>)null!));
+            SignalAsync.Return(1).SelectMany((Func<int, SignalAsync<int>>)null!));
 
     /// <summary>Tests sync Scan emits running accumulation.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -136,7 +136,7 @@ public class TransformationOperatorTests
         const int ExpectedThird = 6;
         const int ExpectedFourth = 10;
 
-        var result = await ObservableAsync.Range(1, 4)
+        var result = await SignalAsync.Range(1, 4)
             .Scan(0, (acc, x) => acc + x)
             .ToListAsync();
 
@@ -148,7 +148,7 @@ public class TransformationOperatorTests
     [Test]
     public async Task WhenScanAsync_ThenEmitsRunningAccumulation()
     {
-        var result = await ObservableAsync.Range(1, 3)
+        var result = await SignalAsync.Range(1, 3)
             .Scan(string.Empty, async (acc, x, _) =>
             {
                 await Task.Yield();
@@ -163,7 +163,7 @@ public class TransformationOperatorTests
     [Test]
     public void WhenScanNullAccumulator_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(() =>
-            ObservableAsync.Return(1).Scan(0, (Func<int, int, int>)null!));
+            SignalAsync.Return(1).Scan(0, (Func<int, int, int>)null!));
 
     /// <summary>Exercises the sync-action <c>Do&lt;T&gt;(Action&lt;T&gt;, Action&lt;Exception&gt;, Action&lt;Result&gt;)</c>
     /// overload's non-null-callback branches in <c>DoSyncObserver</c>'s OnNext / OnErrorResume / OnCompleted.</summary>
@@ -179,7 +179,7 @@ public class TransformationOperatorTests
         var errored = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(ExpectedFirst, ct);
             await observer.OnErrorResumeAsync(new InvalidOperationException("resume"), ct);
@@ -223,7 +223,7 @@ public class TransformationOperatorTests
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var completionTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(new InvalidOperationException("resume"), ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -254,7 +254,7 @@ public class TransformationOperatorTests
     }
 
     /// <summary>Exercises the no-arg <c>Do&lt;T&gt;()</c> overload — a pure pass-through that
-    /// constructs a <c>DoSyncObservable</c> with all callbacks set to null.</summary>
+    /// constructs a <c>DoSyncSignal</c> with all callbacks set to null.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDoWithNoCallbacks_ThenPassesThroughValues()
@@ -262,7 +262,7 @@ public class TransformationOperatorTests
         const int ExpectedSecond = 2;
         const int ExpectedThird = 3;
 
-        var result = await ObservableAsync.Range(1, 3).Do().ToListAsync();
+        var result = await SignalAsync.Range(1, 3).Do().ToListAsync();
 
         await Assert.That(result).IsEquivalentTo([1, ExpectedSecond, ExpectedThird]);
     }
@@ -277,7 +277,7 @@ public class TransformationOperatorTests
 
         var sideEffects = new List<int>();
 
-        var result = await ObservableAsync.Range(1, 3)
+        var result = await SignalAsync.Range(1, 3)
             .Do((x, _) =>
             {
                 sideEffects.Add(x);
@@ -299,7 +299,7 @@ public class TransformationOperatorTests
 
         var sideEffects = new List<int>();
 
-        var result = await ObservableAsync.Range(1, 3)
+        var result = await SignalAsync.Range(1, 3)
             .Do(async (x, _) =>
             {
                 await Task.Yield();
@@ -318,7 +318,7 @@ public class TransformationOperatorTests
     {
         Result? completion = null;
 
-        await ObservableAsync.Empty<int>()
+        await SignalAsync.Empty<int>()
             .Do(
                 (Action<int>?)null,
                 (Action<Exception>?)null,
@@ -337,7 +337,7 @@ public class TransformationOperatorTests
     [Test]
     public async Task WhenCastIncompatibleType_ThenCompletesWithFailure()
     {
-        var source = ObservableAsync.Return<object>(42);
+        var source = SignalAsync.Return<object>(42);
         Result? completionResult = null;
         var tcs = new TaskCompletionSource();
 
@@ -366,7 +366,7 @@ public class TransformationOperatorTests
     [Test]
     public async Task WhenCastCompatibleType_ThenCasts()
     {
-        var source = ObservableAsync.Return<object>("hello");
+        var source = SignalAsync.Return<object>("hello");
 
         var result = await source.Cast<object, string>().ToListAsync();
 
@@ -379,7 +379,7 @@ public class TransformationOperatorTests
     public async Task WhenOfTypeMatchingType_ThenFiltersCorrectly()
     {
         var items = new object[] { 1, "two", 3, "four" };
-        var source = items.ToObservableAsync();
+        var source = items.ToAsyncSignal();
 
         var strings = await source.OfType<object, string>().ToListAsync();
 
@@ -391,7 +391,7 @@ public class TransformationOperatorTests
     [Test]
     public async Task WhenOfTypeNoMatches_ThenEmitsNothing()
     {
-        var source = new object[] { 1, 2, 3 }.ToObservableAsync();
+        var source = new object[] { 1, 2, 3 }.ToAsyncSignal();
 
         var strings = await source.OfType<object, string>().ToListAsync();
 
@@ -410,7 +410,7 @@ public class TransformationOperatorTests
         var values = Enumerable.Range(1, 100).ToArray();
         IAsyncDisposable? subscription = null;
 
-        var source = ObservableAsync.Never<int>();
+        var source = SignalAsync.Never<int>();
         var pipeline = source.Prepend(values);
 
         subscription = await pipeline.SubscribeAsync(
@@ -446,7 +446,7 @@ public class TransformationOperatorTests
         using var unhandled = new UnhandledExceptionCapture();
         var completionException = new InvalidOperationException("completion failed");
 
-        var source = ObservableAsync.Create<int>((_, _) =>
+        var source = SignalAsync.Create<int>((_, _) =>
             ValueTask.FromException<IAsyncDisposable>(new ApplicationException("source error")));
 
         var pipeline = source.Prepend(42);
@@ -475,7 +475,7 @@ public class TransformationOperatorTests
         var downstreamErrors = new List<Exception>();
         var tcs = new TaskCompletionSource();
 
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnErrorResumeAsync(new InvalidOperationException("test error"), ct);
@@ -526,7 +526,7 @@ public class TransformationOperatorTests
         Result? capturedResult = null;
         var tcs = new TaskCompletionSource();
 
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(42, ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -571,7 +571,7 @@ public class TransformationOperatorTests
         var downstreamErrors = new List<Exception>();
         var tcs = new TaskCompletionSource();
 
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnErrorResumeAsync(new InvalidOperationException("sync error"), ct);
@@ -620,7 +620,7 @@ public class TransformationOperatorTests
         const int ExpectedSecond = 2;
         const int ExpectedThird = 3;
 
-        var result = await ObservableAsync.Range(1, 3)
+        var result = await SignalAsync.Range(1, 3)
             .ObserveOn(scheduler)
             .ToListAsync();
 
@@ -640,7 +640,7 @@ public class TransformationOperatorTests
         var receivedValues = new List<int>();
         var tcs = new TaskCompletionSource();
 
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnErrorResumeAsync(new InvalidOperationException("resumable"), ct);
@@ -691,7 +691,7 @@ public class TransformationOperatorTests
         var received = new List<int>();
         using var cts = new CancellationTokenSource();
 
-        var source = ObservableAsync.Never<int>();
+        var source = SignalAsync.Never<int>();
         var pipeline = source.Prepend(Enumerable.Range(1, 100));
 
         // Cancel the token before subscribing so the prepend loop sees cancellation immediately.
@@ -728,7 +728,7 @@ public class TransformationOperatorTests
         using var unhandled = new UnhandledExceptionCapture();
         var secondaryException = new InvalidOperationException("onCompleted blew up");
 
-        var source = ObservableAsync.Create<int>((_, _) =>
+        var source = SignalAsync.Create<int>((_, _) =>
             ValueTask.FromException<IAsyncDisposable>(new ApplicationException("source failure")));
 
         // Prepend a single value so the prepend loop completes, then SubscribeAsync on the
@@ -754,7 +754,7 @@ public class TransformationOperatorTests
     [Test]
     public void WhenYieldNullSource_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(() =>
-            ObservableAsync.Yield<int>(null!));
+            SignalAsync.Yield<int>(null!));
 
     /// <summary>
     /// Verifies that Yield forwards all elements from the source sequence.
@@ -768,7 +768,7 @@ public class TransformationOperatorTests
         const int Expected4 = 4;
         const int Expected5 = 5;
 
-        var result = await ObservableAsync.Range(1, 5)
+        var result = await SignalAsync.Range(1, 5)
             .Yield()
             .ToListAsync();
 
@@ -785,7 +785,7 @@ public class TransformationOperatorTests
         Result? capturedResult = null;
         var tcs = new TaskCompletionSource();
 
-        await using var sub = await ObservableAsync.Return(42)
+        await using var sub = await SignalAsync.Return(42)
             .Yield()
             .SubscribeAsync(
                 (_, _) => default,
@@ -815,7 +815,7 @@ public class TransformationOperatorTests
         Result? capturedResult = null;
         var tcs = new TaskCompletionSource();
 
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnCompletedAsync(Result.Failure(new InvalidOperationException("yield error")));
@@ -847,31 +847,31 @@ public class TransformationOperatorTests
     /// when the source parameter is null.
     /// </summary>
     [Test]
-    public void WhenGroupByWithSubjectSelectorNullSource_ThenThrowsArgumentNull() =>
+    public void WhenGroupByWithSignalSelectorNullSource_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(() =>
-            ObservableAsync.GroupBy<int, int>(
+            SignalAsync.GroupBy<int, int>(
                 null!,
                 static x => x,
-                static _ => SubjectAsync.Create<int>()));
+                static _ => Signal.Create<int>()));
 
     /// <summary>
     /// Verifies that the three-argument GroupBy overload throws <see cref="ArgumentNullException"/>
     /// when the keySelector parameter is null.
     /// </summary>
     [Test]
-    public void WhenGroupByWithSubjectSelectorNullKeySelector_ThenThrowsArgumentNull() =>
+    public void WhenGroupByWithSignalSelectorNullKeySelector_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(() =>
-            ObservableAsync.Empty<int>().GroupBy<int, int>(
+            SignalAsync.Empty<int>().GroupBy<int, int>(
                 null!,
-                static _ => SubjectAsync.Create<int>()));
+                static _ => Signal.Create<int>()));
 
     /// <summary>
-    /// Verifies that the three-argument GroupBy overload with a custom group subject selector
-    /// correctly groups elements by key using the provided subject factory.
+    /// Verifies that the three-argument GroupBy overload with a custom group Signal selector
+    /// correctly groups elements by key using the provided Signal factory.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenGroupByWithCustomSubjectSelector_ThenGroupsByKey()
+    public async Task WhenGroupByWithCustomSignalSelector_ThenGroupsByKey()
     {
         const int ExpectedGroupCount = 2;
         const int OddSecond = 3;
@@ -880,7 +880,7 @@ public class TransformationOperatorTests
         const int EvenSecond = 4;
         const int EvenThird = 6;
 
-        var source = Sequence123456.ToObservableAsync();
+        var source = Sequence123456.ToAsyncSignal();
 
         var groups = new Dictionary<int, List<int>>();
         var tcs = new TaskCompletionSource();
@@ -888,7 +888,7 @@ public class TransformationOperatorTests
         await using var sub = await source
             .GroupBy(
                 static x => x % 2,
-                static _ => SubjectAsync.Create<int>())
+                static _ => Signal.Create<int>())
             .SubscribeAsync(
                 async (group, ct) =>
                 {
@@ -931,7 +931,7 @@ public class TransformationOperatorTests
         var downstreamErrors = new List<Exception>();
         var tcs = new TaskCompletionSource();
 
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnErrorResumeAsync(new InvalidOperationException("group error"), ct);
@@ -941,7 +941,7 @@ public class TransformationOperatorTests
         });
 
         await using var sub = await source
-            .GroupBy(static x => x, static _ => SubjectAsync.Create<int>())
+            .GroupBy(static x => x, static _ => Signal.Create<int>())
             .SubscribeAsync(
                 async (group, ct) =>
                 {
@@ -988,7 +988,7 @@ public class TransformationOperatorTests
         using var unhandled = new UnhandledExceptionCapture();
         var completionException = new InvalidOperationException("raw observer completion failed");
 
-        var source = ObservableAsync.Create<int>((_, _) =>
+        var source = SignalAsync.Create<int>((_, _) =>
             ValueTask.FromException<IAsyncDisposable>(new ApplicationException("source subscribe error")));
 
         var pipeline = source.Prepend(1);
@@ -1035,7 +1035,7 @@ public class TransformationOperatorTests
         var error = new InvalidOperationException("group-fail");
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Throw<int>(error)
+            await SignalAsync.Throw<int>(error)
                 .GroupBy(x => x % GroupModulus)
                 .FirstAsync());
     }
@@ -1049,7 +1049,7 @@ public class TransformationOperatorTests
         var error = new InvalidOperationException("test");
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Using(
+            await SignalAsync.Using(
                 _ =>
                     {
                         try
@@ -1065,7 +1065,7 @@ public class TransformationOperatorTests
                             return ValueTask.FromException<IAsyncDisposable>(exception);
                         }
                     },
-                _ => ObservableAsync.Throw<int>(error)).FirstAsync());
+                _ => SignalAsync.Throw<int>(error)).FirstAsync());
 
         await Assert.That(disposed).IsTrue();
     }
@@ -1079,7 +1079,7 @@ public class TransformationOperatorTests
     {
         const int ThirdRunningTotal = 3;
         const int SixthRunningTotal = 6;
-        var result = await ObservableAsync.Range(1, ScanInputCount)
+        var result = await SignalAsync.Range(1, ScanInputCount)
             .Scan(0, static (acc, x, _) => new ValueTask<int>(acc + x))
             .ToListAsync();
 
@@ -1092,11 +1092,11 @@ public class TransformationOperatorTests
     [Test]
     public async Task WhenScanSyncSourceErrorResume_ThenForwarded()
     {
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         Exception? caught = null;
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await using var sub = await subject.Values
+        await using var sub = await signal.Values
             .Scan(0, static (acc, x) => acc + x)
             .SubscribeAsync(
                 static (_, _) => default,
@@ -1108,7 +1108,7 @@ public class TransformationOperatorTests
                 });
 
         var expected = new InvalidOperationException("scan-sync-error");
-        await subject.OnErrorResumeAsync(expected, CancellationToken.None);
+        await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -1120,11 +1120,11 @@ public class TransformationOperatorTests
     [Test]
     public async Task WhenScanAsyncSourceErrorResume_ThenForwarded()
     {
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         Exception? caught = null;
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await using var sub = await subject.Values
+        await using var sub = await signal.Values
             .Scan(0, static (acc, x, _) => new ValueTask<int>(acc + x))
             .SubscribeAsync(
                 static (_, _) => default,
@@ -1136,7 +1136,7 @@ public class TransformationOperatorTests
                 });
 
         var expected = new InvalidOperationException("scan-async-error");
-        await subject.OnErrorResumeAsync(expected, CancellationToken.None);
+        await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);

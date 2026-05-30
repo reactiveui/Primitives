@@ -15,7 +15,7 @@ using ReactiveUI.Primitives.Async;
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>Direct unit tests for the internal types inside
-/// <c>CombineLatestEnumerableObservable{TSource,TResult}</c> that the public API path doesn't
+/// <c>CombineLatestEnumerableSignal{TSource,TResult}</c> that the public API path doesn't
 /// fully exercise — specifically the contractual <see cref="IAsyncDisposable.DisposeAsync"/>
 /// stub on <c>IndexedObserver</c>.</summary>
 public class CombineLatestEnumerableInternalsTests
@@ -27,13 +27,13 @@ public class CombineLatestEnumerableInternalsTests
     [Test]
     public async Task WhenIndexedObserverDisposed_ThenNoOp()
     {
-        var sources = new[] { ObservableAsync.Return(1) };
+        var sources = new[] { SignalAsync.Return(1) };
         var downstream = new NoOpObserver();
-        var subscription = new ObservableAsync.CombineLatestEnumerableObservable<int, int>.Subscription(
+        var subscription = new SignalAsync.CombineLatestEnumerableSignal<int, int>.Subscription(
             sources,
             downstream,
             static s => s[0]);
-        var indexed = new ObservableAsync.CombineLatestEnumerableObservable<int, int>.IndexedObserver(subscription, 0);
+        var indexed = new SignalAsync.CombineLatestEnumerableSignal<int, int>.IndexedObserver(subscription, 0);
 
         await indexed.DisposeAsync();
 

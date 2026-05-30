@@ -3,52 +3,53 @@
 // See the LICENSE file in the project root for full license information.
 
 using ReactiveUI.Primitives.Async.Internals;
-using ReactiveUI.Primitives.Async.Subjects;
+using ReactiveUI.Primitives.Async.Signals;
+using AsyncSignalFactory = ReactiveUI.Primitives.Async.Signals.Signal;
 
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>
 /// Provides a set of extension methods for creating and managing connectable asynchronous observables using various
-/// subject types.
+/// Signal types.
 /// </summary>
 /// <remarks>The methods in this class enable advanced multicasting scenarios for asynchronous observables,
 /// allowing multiple subscribers to share a single subscription to the underlying data source. These methods support
-/// different subject types and configuration options, including stateless and replay behaviors, to accommodate a wide
+/// different Signal types and configuration options, including stateless and replay behaviors, to accommodate a wide
 /// range of reactive programming patterns.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
-    /// Cached creation options for stateless subject publishing.
+    /// Cached creation options for stateless Signal publishing.
     /// </summary>
-    private static readonly SubjectCreationOptions _statelessPublishOptions = SubjectCreationOptions.Default with
+    private static readonly SignalCreationOptions _statelessPublishOptions = SignalCreationOptions.Default with
     {
         IsStateless = true
     };
 
     /// <summary>
-    /// Cached creation options for stateless behavior subject publishing.
+    /// Cached creation options for stateless behavior Signal publishing.
     /// </summary>
-    private static readonly BehaviorSubjectCreationOptions _statelessBehaviorPublishOptions =
-        BehaviorSubjectCreationOptions.Default with { IsStateless = true };
+    private static readonly BehaviorSignalCreationOptions _statelessBehaviorPublishOptions =
+        BehaviorSignalCreationOptions.Default with { IsStateless = true };
 
     /// <summary>
-    /// Cached creation options for stateless replay-latest subject publishing.
+    /// Cached creation options for stateless replay-latest Signal publishing.
     /// </summary>
-    private static readonly ReplayLatestSubjectCreationOptions _statelessReplayLatestPublishOptions =
-        ReplayLatestSubjectCreationOptions.Default with { IsStateless = true };
+    private static readonly ReplayLatestSignalCreationOptions _statelessReplayLatestPublishOptions =
+        ReplayLatestSignalCreationOptions.Default with { IsStateless = true };
 
     /// <summary>
     /// Creates a connectable observable sequence that shares a single subscription to the underlying sequence using
-    /// the specified subject.
+    /// the specified Signal.
     /// </summary>
     /// <remarks>The returned connectable observable will not begin emitting items until its Connect
     /// method is called. This allows multiple observers to subscribe before the sequence starts.</remarks>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
     /// <param name="source">The source sequence.</param>
-    /// <param name="subject">The subject used to multicast the elements of the source sequence to multiple observers. Cannot be null.</param>
-    /// <returns>A connectable observable sequence that multicasts the source sequence through the specified subject.</returns>
-    public static ConnectableObservableAsync<T> Multicast<T>(this IObservableAsync<T> source, ISubjectAsync<T> subject) =>
-        new MulticastObservableAsync<T>(source, subject);
+    /// <param name="signal">The signal used to multicast the elements of the source sequence to multiple observers. Cannot be null.</param>
+    /// <returns>A connectable observable sequence that multicasts the source sequence through the specified signal.</returns>
+    public static ConnectableSignalAsync<T> Multicast<T>(this IObservableAsync<T> source, ISignalAsync<T> signal) =>
+        new MulticastSignalAsync<T>(source, signal);
 
     /// <summary>
     /// Returns a connectable observable sequence that shares a single subscription to the underlying asynchronous
@@ -62,22 +63,22 @@ public static partial class ObservableAsync
     /// <param name="source">The source sequence.</param>
     /// <returns>A connectable observable sequence that multicasts notifications to all subscribed observers. The sequence
     /// does not begin emitting items until its Connect method is called.</returns>
-    public static ConnectableObservableAsync<T> Publish<T>(this IObservableAsync<T> source) => source.Multicast(SubjectAsync.Create<T>());
+    public static ConnectableSignalAsync<T> Publish<T>(this IObservableAsync<T> source) => source.Multicast(AsyncSignalFactory.Create<T>());
 
     /// <summary>
     /// Creates a connectable observable sequence that shares a single subscription to the underlying sequence,
-    /// using a subject created with the specified options.
+    /// using a Signal created with the specified options.
     /// </summary>
     /// <remarks>The returned connectable observable does not begin emitting items until its Connect
     /// method is called. Use this method to control when the subscription to the source sequence starts and to
     /// share the subscription among multiple observers.</remarks>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
     /// <param name="source">The source sequence.</param>
-    /// <param name="options">The options used to configure the subject that will multicast the source sequence. Cannot be null.</param>
-    /// <returns>A connectable observable sequence that multicasts the source sequence using a subject configured with the
+    /// <param name="options">The options used to configure the Signal that will multicast the source sequence. Cannot be null.</param>
+    /// <returns>A connectable observable sequence that multicasts the source sequence using a Signal configured with the
     /// specified options.</returns>
-    public static ConnectableObservableAsync<T> Publish<T>(this IObservableAsync<T> source, SubjectCreationOptions options) =>
-        source.Multicast(SubjectAsync.Create<T>(options));
+    public static ConnectableSignalAsync<T> Publish<T>(this IObservableAsync<T> source, SignalCreationOptions options) =>
+        source.Multicast(AsyncSignalFactory.Create<T>(options));
 
     /// <summary>
     /// Returns a connectable observable sequence that shares a single subscription to the underlying sequence and
@@ -91,8 +92,8 @@ public static partial class ObservableAsync
     /// <param name="initialValue">The initial value to be emitted to subscribers before any values are emitted by the source sequence.</param>
     /// <returns>A connectable observable sequence that multicasts the source sequence and replays the latest value, starting
     /// with the specified initial value.</returns>
-    public static ConnectableObservableAsync<T> Publish<T>(this IObservableAsync<T> source, T initialValue) =>
-        source.Multicast(SubjectAsync.CreateBehavior(initialValue));
+    public static ConnectableSignalAsync<T> Publish<T>(this IObservableAsync<T> source, T initialValue) =>
+        source.Multicast(AsyncSignalFactory.CreateBehavior(initialValue));
 
     /// <summary>
     /// Creates a connectable observable sequence that shares a single subscription to the underlying sequence and
@@ -104,11 +105,11 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="initialValue">The initial value to be emitted to subscribers before any items are emitted by the source sequence.</param>
-    /// <param name="options">The options used to configure the behavior of the underlying behavior subject.</param>
+    /// <param name="options">The options used to configure the behavior of the underlying behavior Signal.</param>
     /// <returns>A connectable observable sequence that multicasts the source sequence and emits the specified initial value
     /// to new subscribers.</returns>
-    public static ConnectableObservableAsync<T> Publish<T>(this IObservableAsync<T> source, T initialValue, BehaviorSubjectCreationOptions options) =>
-        source.Multicast(SubjectAsync.CreateBehavior(initialValue, options));
+    public static ConnectableSignalAsync<T> Publish<T>(this IObservableAsync<T> source, T initialValue, BehaviorSignalCreationOptions options) =>
+        source.Multicast(AsyncSignalFactory.CreateBehavior(initialValue, options));
 
     /// <summary>
     /// Creates a connectable observable sequence that shares a single subscription to the underlying source and
@@ -121,8 +122,8 @@ public static partial class ObservableAsync
     /// <param name="source">The source sequence.</param>
     /// <returns>A connectable observable sequence that multicasts notifications from the source without retaining state
     /// between subscribers.</returns>
-    public static ConnectableObservableAsync<T> StatelessPublish<T>(this IObservableAsync<T> source) =>
-        source.Multicast(SubjectAsync.Create<T>(_statelessPublishOptions));
+    public static ConnectableSignalAsync<T> StatelessPublish<T>(this IObservableAsync<T> source) =>
+        source.Multicast(AsyncSignalFactory.Create<T>(_statelessPublishOptions));
 
     /// <summary>
     /// Creates a connectable observable sequence that shares a single subscription to the underlying source and
@@ -137,8 +138,8 @@ public static partial class ObservableAsync
     /// <param name="initialValue">The initial value to be emitted to subscribers before any values are published by the source sequence.</param>
     /// <returns>A connectable observable sequence that multicasts the source sequence and replays the latest value, starting
     /// with the specified initial value.</returns>
-    public static ConnectableObservableAsync<T> StatelessPublish<T>(this IObservableAsync<T> source, T initialValue) =>
-        source.Multicast(SubjectAsync.CreateBehavior(initialValue, _statelessBehaviorPublishOptions));
+    public static ConnectableSignalAsync<T> StatelessPublish<T>(this IObservableAsync<T> source, T initialValue) =>
+        source.Multicast(AsyncSignalFactory.CreateBehavior(initialValue, _statelessBehaviorPublishOptions));
 
     /// <summary>
     /// Creates a connectable observable sequence that replays only the most recent item to new subscribers.
@@ -151,24 +152,24 @@ public static partial class ObservableAsync
     /// <param name="source">The source sequence.</param>
     /// <returns>A connectable observable sequence that publishes the latest item to current and future subscribers until a
     /// new item is emitted.</returns>
-    public static ConnectableObservableAsync<T> ReplayLatestPublish<T>(this IObservableAsync<T> source) =>
-        source.Multicast(SubjectAsync.CreateReplayLatest<T>());
+    public static ConnectableSignalAsync<T> ReplayLatestPublish<T>(this IObservableAsync<T> source) =>
+        source.Multicast(AsyncSignalFactory.CreateReplayLatest<T>());
 
     /// <summary>
     /// Creates a connectable observable sequence that replays only the latest published value to new subscribers,
-    /// using the specified replay subject creation options.
+    /// using the specified replay Signal creation options.
     /// </summary>
     /// <remarks>Use this method when you want late subscribers to receive only the most recently
     /// published value, rather than the entire sequence or a fixed buffer. The returned connectable observable does
     /// not begin emitting items until its Connect method is called.</remarks>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
     /// <param name="source">The source sequence.</param>
-    /// <param name="options">The options used to configure the replay subject, such as buffer size, scheduler, or other replay behavior
+    /// <param name="options">The options used to configure the replay Signal, such as buffer size, scheduler, or other replay behavior
     /// settings.</param>
     /// <returns>A connectable observable sequence that replays the most recent value to each new subscriber after
     /// connection.</returns>
-    public static ConnectableObservableAsync<T> ReplayLatestPublish<T>(this IObservableAsync<T> source, ReplayLatestSubjectCreationOptions options) =>
-        source.Multicast(SubjectAsync.CreateReplayLatest<T>(options));
+    public static ConnectableSignalAsync<T> ReplayLatestPublish<T>(this IObservableAsync<T> source, ReplayLatestSignalCreationOptions options) =>
+        source.Multicast(AsyncSignalFactory.CreateReplayLatest<T>(options));
 
     /// <summary>
     /// Creates a connectable observable sequence that replays only the latest item to new subscribers and publishes
@@ -182,6 +183,6 @@ public static partial class ObservableAsync
     /// <param name="source">The source sequence.</param>
     /// <returns>A connectable observable sequence that replays the most recent item to new subscribers and multicasts
     /// notifications to all current subscribers.</returns>
-    public static ConnectableObservableAsync<T> StatelessReplayLatestPublish<T>(this IObservableAsync<T> source) =>
-        source.Multicast(SubjectAsync.CreateReplayLatest<T>(_statelessReplayLatestPublishOptions));
+    public static ConnectableSignalAsync<T> StatelessReplayLatestPublish<T>(this IObservableAsync<T> source) =>
+        source.Multicast(AsyncSignalFactory.CreateReplayLatest<T>(_statelessReplayLatestPublishOptions));
 }

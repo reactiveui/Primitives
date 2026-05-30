@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Async;
 /// </summary>
 /// <remarks>Retry re-subscribes to the source sequence upon failure, enabling automatic recovery
 /// from transient errors. An optional retry count limits the number of re-subscription attempts.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Repeats the source observable sequence indefinitely until it completes successfully, re-subscribing
@@ -47,7 +47,7 @@ public static partial class ObservableAsync
         return Create<T>(async (observer, cancellationToken) =>
         {
             var remaining = retryCount;
-            SerialDisposableAsync serialDisposable = new();
+            SingleReplaceableDisposableAsync serialDisposable = new();
 
             async ValueTask SubscribeOnceAsync(Result result)
             {

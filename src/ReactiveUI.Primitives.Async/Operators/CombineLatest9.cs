@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Async;
     "Major Code Smell",
     "S107:Methods should not have too many parameters",
     Justification = "Has more than 7 parameters - just expected for arity-N CombineLatest operator surface.")]
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Combines the latest values from nine asynchronous observable sources into a single
@@ -59,7 +59,7 @@ public static partial class ObservableAsync
         IObservableAsync<T8> src8,
         IObservableAsync<T9> src9,
         Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) =>
-        new CombineLatest9ObservableAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>(
+        new CombineLatest9SignalAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>(
             new(src1, src2, src3, src4, src5, src6, src7, src8, src9),
             selector);
 
@@ -76,9 +76,9 @@ public static partial class ObservableAsync
     /// <typeparam name="T8">Element type of source 8.</typeparam>
     /// <typeparam name="T9">Element type of source 9.</typeparam>
     /// <typeparam name="TResult">The projected element type.</typeparam>
-    internal sealed class CombineLatest9ObservableAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>(
-        CombineLatest9ObservableAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>.Sources sources,
-        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) : ObservableAsync<TResult>
+    internal sealed class CombineLatest9SignalAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>(
+        CombineLatest9SignalAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>.Sources sources,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) : SignalAsync<TResult>
     {
         /// <summary>
         /// Bundles the nine source observables so the subscription constructor stays at three

@@ -8,13 +8,13 @@ namespace ReactiveUI.Primitives.Async;
 
 /// <summary>
 /// Fused filter / projection observables that back the parity-helper extension methods in
-/// <see cref="ObservableAsync"/>.
+/// <see cref="SignalAsync"/>.
 /// </summary>
 [SuppressMessage(
     "Major Code Smell",
     "S3604:Member initializer values should not be redundant",
     Justification = "Primary-constructor parameters are captured into observer state.")]
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Fuses the previous <c>Create&lt;(T, T)&gt;</c> + closure-based <c>Pairwise</c> implementation
@@ -23,7 +23,7 @@ public static partial class ObservableAsync
     /// </summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
-    internal sealed class PairwiseObservable<T>(IObservableAsync<T> source) : ObservableAsync<(T Previous, T Current)>
+    internal sealed class PairwiseSignal<T>(IObservableAsync<T> source) : SignalAsync<(T Previous, T Current)>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -88,7 +88,7 @@ public static partial class ObservableAsync
     /// </summary>
     /// <typeparam name="T">The non-nullable element type seen downstream.</typeparam>
     /// <param name="source">The nullable source observable.</param>
-    internal sealed class SkipWhileNullObservable<T>(IObservableAsync<T?> source) : ObservableAsync<T>
+    internal sealed class SkipWhileNullSignal<T>(IObservableAsync<T?> source) : SignalAsync<T>
         where T : class
     {
         /// <inheritdoc/>
@@ -152,7 +152,7 @@ public static partial class ObservableAsync
     /// </summary>
     /// <typeparam name="T">The non-nullable element type seen downstream.</typeparam>
     /// <param name="source">The nullable source observable.</param>
-    internal sealed class WhereIsNotNullObservable<T>(IObservableAsync<T?> source) : ObservableAsync<T>
+    internal sealed class WhereIsNotNullSignal<T>(IObservableAsync<T?> source) : SignalAsync<T>
         where T : class
     {
         /// <inheritdoc/>
@@ -212,7 +212,7 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="defaultValue">The seed value emitted on subscribe.</param>
-    internal sealed class LatestOrDefaultObservable<T>(IObservableAsync<T> source, T defaultValue) : ObservableAsync<T>
+    internal sealed class LatestOrDefaultSignal<T>(IObservableAsync<T> source, T defaultValue) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -280,7 +280,7 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="predicate">The predicate matched against each value.</param>
-    internal sealed class WaitUntilObservable<T>(IObservableAsync<T> source, Func<T, bool> predicate) : ObservableAsync<T>
+    internal sealed class WaitUntilSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -340,7 +340,7 @@ public static partial class ObservableAsync
     /// </summary>
     /// <typeparam name="T">The upstream element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
-    internal sealed class AsSignalObservable<T>(IObservableAsync<T> source) : ObservableAsync<RxVoid>
+    internal sealed class AsRxVoidSignal<T>(IObservableAsync<T> source) : SignalAsync<RxVoid>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -384,7 +384,7 @@ public static partial class ObservableAsync
     /// Fuses <c>source.Select(static value =&gt; !value)</c> into a single observer layer.
     /// </summary>
     /// <param name="source">The boolean source observable.</param>
-    internal sealed class NotObservable(IObservableAsync<bool> source) : ObservableAsync<bool>
+    internal sealed class NotSignal(IObservableAsync<bool> source) : SignalAsync<bool>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -428,7 +428,7 @@ public static partial class ObservableAsync
     /// Fuses <c>source.Where(static value =&gt; value)</c> into a single observer layer.
     /// </summary>
     /// <param name="source">The boolean source observable.</param>
-    internal sealed class WhereTrueObservable(IObservableAsync<bool> source) : ObservableAsync<bool>
+    internal sealed class WhereTrueSignal(IObservableAsync<bool> source) : SignalAsync<bool>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -472,7 +472,7 @@ public static partial class ObservableAsync
     /// Fuses <c>source.Where(static value =&gt; !value)</c> into a single observer layer.
     /// </summary>
     /// <param name="source">The boolean source observable.</param>
-    internal sealed class WhereFalseObservable(IObservableAsync<bool> source) : ObservableAsync<bool>
+    internal sealed class WhereFalseSignal(IObservableAsync<bool> source) : SignalAsync<bool>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(

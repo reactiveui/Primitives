@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <remarks>SelectMany projects each element of an observable sequence to an observable sequence and
 /// merges the resulting observable sequences into one observable sequence. This is the monadic bind
 /// operation for observables and is essential for composing chains of asynchronous operations.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Projects each element of the observable sequence to an asynchronous observable sequence and

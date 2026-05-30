@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <remarks>The methods in this class enable querying and manipulation of asynchronous observables, such as
 /// retrieving the last element of a sequence. These extensions are designed to support asynchronous and reactive
 /// programming patterns.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Asynchronously returns the last element in the sequence that satisfies the specified predicate.

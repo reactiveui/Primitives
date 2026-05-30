@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -7,10 +7,10 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>
 /// Provides extension methods for working with asynchronous observable sequences.
 /// </summary>
-/// <remarks>The ObservableAsync class contains static methods that extend the functionality of asynchronous
+/// <remarks>The SignalAsync class contains static methods that extend the functionality of asynchronous
 /// observables, enabling advanced composition and error handling scenarios. These methods are intended to be used with
 /// types that implement asynchronous push-based notification patterns.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Creates a new observable sequence that converts any error encountered in the source sequence into a failure
@@ -29,10 +29,10 @@ public static partial class ObservableAsync
         {
             throw new ArgumentNullException(
                 nameof(@this),
-                "Cannot create an OnErrorResumeAsFailure observable from a null source.");
+                "Cannot create an OnErrorResumeAsFailure signal from a null source.");
         }
 
-        return new OnErrorResumeAsFailureObservable<T>(@this);
+        return new OnErrorResumeAsFailureSignal<T>(@this);
     }
 
     /// <summary>
@@ -40,7 +40,7 @@ public static partial class ObservableAsync
     /// </summary>
     /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
     /// <param name="source">The source observable to monitor for errors.</param>
-    internal sealed class OnErrorResumeAsFailureObservable<T>(IObservableAsync<T> source) : ObservableAsync<T>
+    internal sealed class OnErrorResumeAsFailureSignal<T>(IObservableAsync<T> source) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(

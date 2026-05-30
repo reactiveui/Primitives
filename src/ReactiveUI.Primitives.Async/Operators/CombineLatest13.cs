@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Async;
     "Major Code Smell",
     "S107:Methods should not have too many parameters",
     Justification = "Has more than 7 parameters - just expected for arity-N CombineLatest operator surface.")]
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Combines the latest values from thirteen asynchronous observable sources into a single
@@ -71,7 +71,7 @@ public static partial class ObservableAsync
         IObservableAsync<T12> src12,
         IObservableAsync<T13> src13,
         Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) =>
-        new CombineLatest13ObservableAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>(
+        new CombineLatest13SignalAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>(
             new(src1, src2, src3, src4, src5, src6, src7, src8, src9, src10, src11, src12, src13),
             selector);
 
@@ -92,9 +92,9 @@ public static partial class ObservableAsync
     /// <typeparam name="T12">Element type of source 12.</typeparam>
     /// <typeparam name="T13">Element type of source 13.</typeparam>
     /// <typeparam name="TResult">The projected element type.</typeparam>
-    internal sealed class CombineLatest13ObservableAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>(
-        CombineLatest13ObservableAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>.Sources sources,
-        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) : ObservableAsync<TResult>
+    internal sealed class CombineLatest13SignalAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>(
+        CombineLatest13SignalAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>.Sources sources,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) : SignalAsync<TResult>
     {
         /// <summary>
         /// Bundles the thirteen source observables so the subscription constructor stays at three

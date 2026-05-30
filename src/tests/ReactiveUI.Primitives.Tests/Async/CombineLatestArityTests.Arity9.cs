@@ -11,8 +11,8 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Async.Subjects;
-using AsyncObs = ReactiveUI.Primitives.Async.ObservableAsync;
+using ReactiveUI.Primitives.Async.Signals;
+using AsyncObs = ReactiveUI.Primitives.Async.SignalAsync;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -29,17 +29,17 @@ public partial class CombineLatestArityTests
     [SuppressMessage(
         "Major Code Smell",
         "S138:Methods should not have too many lines",
-        Justification = "Smoke test inherently lists N subjects + per-source calls; splitting would obscure the under-test sequence.")]
+        Justification = "Smoke test inherently lists N Signals + per-source calls; splitting would obscure the under-test sequence.")]
     public async Task WhenCombineLatest9SubscriptionThrows_ThenDisposesAndRethrows()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
-        var s8 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
+        var s8 = Signal.Create<int>();
         var throwingSrc = AsyncObs.Create<int>((_, _) => throw new InvalidOperationException("subscribe failed"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
@@ -65,18 +65,18 @@ public partial class CombineLatestArityTests
     [SuppressMessage(
         "Major Code Smell",
         "S138:Methods should not have too many lines",
-        Justification = "Smoke test inherently lists N subjects + per-source calls; splitting would obscure the under-test sequence.")]
+        Justification = "Smoke test inherently lists N Signals + per-source calls; splitting would obscure the under-test sequence.")]
     public async Task WhenCombineLatest9DisposedBeforeCombine_ThenOnNextCombinedIsGuarded()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
-        var s8 = SubjectAsync.Create<int>();
-        var s9 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
+        var s8 = Signal.Create<int>();
+        var s9 = Signal.Create<int>();
         var results = new List<int>();
 
         var sub = await s1.Values
@@ -123,18 +123,18 @@ public partial class CombineLatestArityTests
     [SuppressMessage(
         "Major Code Smell",
         "S138:Methods should not have too many lines",
-        Justification = "Smoke test inherently lists N subjects + per-source calls; splitting would obscure the under-test sequence.")]
+        Justification = "Smoke test inherently lists N Signals + per-source calls; splitting would obscure the under-test sequence.")]
     public async Task WhenCombineLatest9OneSourceErrors_ThenCombinedErrorForwarded()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
-        var s8 = SubjectAsync.Create<int>();
-        var s9 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
+        var s8 = Signal.Create<int>();
+        var s9 = Signal.Create<int>();
         Exception? receivedError = null;
         var errorReceived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -173,18 +173,18 @@ public partial class CombineLatestArityTests
     [SuppressMessage(
         "Major Code Smell",
         "S138:Methods should not have too many lines",
-        Justification = "Smoke test inherently lists N subjects + per-source calls; splitting would obscure the under-test sequence.")]
+        Justification = "Smoke test inherently lists N Signals + per-source calls; splitting would obscure the under-test sequence.")]
     public async Task WhenCombineLatest9AllSourcesEmit_ThenSelectorResultEmitted()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
-        var s8 = SubjectAsync.Create<int>();
-        var s9 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
+        var s8 = Signal.Create<int>();
+        var s9 = Signal.Create<int>();
         var results = new List<int>();
         var emitted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -248,18 +248,18 @@ public partial class CombineLatestArityTests
     [SuppressMessage(
         "Major Code Smell",
         "S138:Methods should not have too many lines",
-        Justification = "Smoke test inherently lists N subjects + per-source calls; splitting would obscure the under-test sequence.")]
+        Justification = "Smoke test inherently lists N Signals + per-source calls; splitting would obscure the under-test sequence.")]
     public async Task WhenCombineLatest9AllSourcesComplete_ThenCombinedCompletes()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
-        var s4 = SubjectAsync.Create<int>();
-        var s5 = SubjectAsync.Create<int>();
-        var s6 = SubjectAsync.Create<int>();
-        var s7 = SubjectAsync.Create<int>();
-        var s8 = SubjectAsync.Create<int>();
-        var s9 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
+        var s4 = Signal.Create<int>();
+        var s5 = Signal.Create<int>();
+        var s6 = Signal.Create<int>();
+        var s7 = Signal.Create<int>();
+        var s8 = Signal.Create<int>();
+        var s9 = Signal.Create<int>();
         var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await s1.Values

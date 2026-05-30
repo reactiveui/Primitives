@@ -10,10 +10,10 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>
 /// Provides extension methods for working with asynchronous observable sequences.
 /// </summary>
-/// <remarks>The ObservableAsync class contains utility methods that enable consumers to process items emitted by
+/// <remarks>The SignalAsync class contains utility methods that enable consumers to process items emitted by
 /// asynchronous observables in a convenient and idiomatic way. These methods are designed to simplify common patterns
 /// when interacting with IAsyncObservable or similar asynchronous push-based data sources.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Asynchronously invokes the specified action for each element in the sequence as elements are received.

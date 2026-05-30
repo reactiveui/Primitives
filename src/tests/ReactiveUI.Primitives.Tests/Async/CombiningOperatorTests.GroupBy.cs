@@ -11,7 +11,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Async.Subjects;
+using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -27,7 +27,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenGroupBySourceThrowsDuringSubscription_ThenDisposesAndRethrows()
     {
-        var failing = ObservableAsync.Create<int>((_, _) =>
+        var failing = SignalAsync.Create<int>((_, _) =>
             throw new InvalidOperationException("subscribe fail"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
@@ -41,12 +41,12 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenGroupByGroupObservableSubscribed_ThenSubscriptionIsTracked()
     {
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         var evenItems = new List<int>();
         var oddItems = new List<int>();
         var innerSubs = new List<IAsyncDisposable>();
 
-        await using var sub = await subject.Values.GroupBy(x => x % 2)
+        await using var sub = await signal.Values.GroupBy(x => x % 2)
             .SubscribeAsync(
                 async (group, ct) =>
                 {
@@ -71,11 +71,11 @@ public partial class CombiningOperatorTests
                 },
                 null);
 
-        await subject.OnNextAsync(1, CancellationToken.None);
-        await subject.OnNextAsync(SampleValue2, CancellationToken.None);
-        await subject.OnNextAsync(SampleValue3, CancellationToken.None);
-        await subject.OnNextAsync(SampleValue4, CancellationToken.None);
-        await subject.OnCompletedAsync(Result.Success);
+        await signal.OnNextAsync(1, CancellationToken.None);
+        await signal.OnNextAsync(SampleValue2, CancellationToken.None);
+        await signal.OnNextAsync(SampleValue3, CancellationToken.None);
+        await signal.OnNextAsync(SampleValue4, CancellationToken.None);
+        await signal.OnCompletedAsync(Result.Success);
 
         await Assert.That(oddItems).Contains(1);
         await Assert.That(oddItems).Contains(SampleValue3);

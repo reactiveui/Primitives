@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Concurrency;
 using TUnit.Core;
-using AsyncObs = ReactiveUI.Primitives.Async.ObservableAsync;
+using AsyncObs = ReactiveUI.Primitives.Async.SignalAsync;
 
 namespace ReactiveUI.Primitives.Tests;
 

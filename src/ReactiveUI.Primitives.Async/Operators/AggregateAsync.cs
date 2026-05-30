@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <remarks>Aggregate applies an accumulator function over each element of the observable sequence
 /// and returns the final accumulated value when the sequence completes. This is equivalent to a fold
 /// or reduce operation.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Applies an asynchronous accumulator function over the observable sequence, returning the

@@ -18,6 +18,7 @@ namespace ReactiveUI.Primitives.Async;
 /// a desired context, such as a UI thread or a custom scheduler. An AsyncContext can be created from a
 /// SynchronizationContext, TaskScheduler, or ISequencer. The Default context represents the absence of a specific
 /// synchronization or scheduling context, and typically corresponds to the default task scheduler.</remarks>
+[System.Diagnostics.DebuggerDisplay("SynchronizationContext = {SynchronizationContext}, TaskScheduler = {TaskScheduler}, Sequencer = {Sequencer}")]
 public record AsyncContext
 {
     /// <summary>
@@ -151,6 +152,7 @@ public record AsyncContext
     /// <param name="ForceYielding">true to always yield execution even if already in the target context; otherwise, false to avoid yielding if
     /// already in the specified context.</param>
     /// <param name="CancellationToken">A cancellation token that can be used to cancel the await operation before the continuation is scheduled.</param>
+    [System.Diagnostics.DebuggerDisplay("IsCompleted = {IsCompleted}, ForceYielding = {ForceYielding}")]
     public readonly record struct AsyncContextSwitcherAwaitable(
         AsyncContext AsyncContext,
         bool ForceYielding,

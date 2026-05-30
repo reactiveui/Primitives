@@ -131,7 +131,7 @@ internal static class R3AsyncBridge
             throw new global::System.ArgumentNullException(nameof(source));
         }
 
-        return global::ReactiveUI.Primitives.Async.ObservableAsync.Create<T>((observer, cancellationToken) =>
+        return global::ReactiveUI.Primitives.Async.SignalAsync.Create<T>((observer, cancellationToken) =>
             new global::System.Threading.Tasks.ValueTask<global::System.IAsyncDisposable>(
                 new AsyncDisposableAdapter(source.Subscribe(new R3ToAsyncObserver<T>(observer, cancellationToken)))));
     }

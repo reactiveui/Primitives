@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Async;
 /// various triggers, such as another observable, a task, a cancellation token, or a predicate. These methods are useful
 /// for scenarios where you need to automatically stop processing items from a source sequence when a certain event
 /// occurs or a condition is satisfied.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     extension<T>(IObservableAsync<T> source)
     {
@@ -76,7 +76,7 @@ public static partial class ObservableAsync
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(other);
 
-            var inner = new TakeUntilAsyncObservable<T, TOther>(source, other, options ?? TakeUntilOptions.Default);
+            var inner = new TakeUntilAsyncSignal<T, TOther>(source, other, options ?? TakeUntilOptions.Default);
             return cancellationToken.CanBeCanceled ? inner.TakeUntil(cancellationToken) : inner;
         }
 
@@ -207,56 +207,56 @@ public static partial class ObservableAsync
         /// Returns an observable sequence that emits items from the source sequence until the specified stop signal
         /// completes.
         /// </summary>
-        /// <param name="stopSignalSignal">A delegate that provides a completion signal. The returned observable will stop emitting items when this
+        /// <param name="stopSignal">A delegate that provides a completion signal. The returned observable will stop emitting items when this
         /// signal completes.</param>
         /// <returns>An observable sequence that emits items from the source until the stop signal completes.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="stopSignalSignal"/> is null.</exception>
-        public IObservableAsync<T> TakeUntil(CompletionObservableDelegate stopSignalSignal) =>
-            source.TakeUntil(stopSignalSignal, null, CancellationToken.None);
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="stopSignal"/> is null.</exception>
+        public IObservableAsync<T> TakeUntil(CompletionSignalDelegate stopSignal) =>
+            source.TakeUntil(stopSignal, null, CancellationToken.None);
 
         /// <summary>
         /// Returns an observable sequence that emits items from the source sequence until the specified stop signal
         /// completes.
         /// </summary>
-        /// <param name="stopSignalSignal">A delegate that provides a completion signal. The returned observable will stop emitting items when this
+        /// <param name="stopSignal">A delegate that provides a completion signal. The returned observable will stop emitting items when this
         /// signal completes.</param>
         /// <param name="options">An optional set of options that configure the behavior of the take-until operation. If null, default options
         /// are used.</param>
         /// <returns>An observable sequence that emits items from the source until the stop signal completes.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="stopSignalSignal"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="stopSignal"/> is null.</exception>
         public IObservableAsync<T> TakeUntil(
-            CompletionObservableDelegate stopSignalSignal,
+            CompletionSignalDelegate stopSignal,
             TakeUntilOptions? options) =>
-            source.TakeUntil(stopSignalSignal, options, CancellationToken.None);
+            source.TakeUntil(stopSignal, options, CancellationToken.None);
 
         /// <summary>
-        /// Returns an observable sequence that emits items from the source until <paramref name="stopSignalSignal"/>
+        /// Returns an observable sequence that emits items from the source until <paramref name="stopSignal"/>
         /// fires or <paramref name="cancellationToken"/> is cancelled — whichever comes first.
         /// </summary>
-        /// <param name="stopSignalSignal">A delegate that provides the completion stop signal.</param>
+        /// <param name="stopSignal">A delegate that provides the completion stop signal.</param>
         /// <param name="cancellationToken">A cancellation token that also terminates the result when cancelled.</param>
         /// <returns>An observable sequence that completes on the first of the two signals.</returns>
         public IObservableAsync<T> TakeUntil(
-            CompletionObservableDelegate stopSignalSignal,
+            CompletionSignalDelegate stopSignal,
             CancellationToken cancellationToken) =>
-            source.TakeUntil(stopSignalSignal, null, cancellationToken);
+            source.TakeUntil(stopSignal, null, cancellationToken);
 
         /// <summary>
-        /// Returns an observable sequence that emits items from the source until <paramref name="stopSignalSignal"/>
+        /// Returns an observable sequence that emits items from the source until <paramref name="stopSignal"/>
         /// fires or <paramref name="cancellationToken"/> is cancelled — whichever comes first.
         /// </summary>
-        /// <param name="stopSignalSignal">A delegate that provides the completion stop signal.</param>
+        /// <param name="stopSignal">A delegate that provides the completion stop signal.</param>
         /// <param name="options">Options controlling the take-until behavior, or null for defaults.</param>
         /// <param name="cancellationToken">A cancellation token that also terminates the result when cancelled.</param>
         /// <returns>An observable sequence that completes on the first of the two signals.</returns>
         public IObservableAsync<T> TakeUntil(
-            CompletionObservableDelegate stopSignalSignal,
+            CompletionSignalDelegate stopSignal,
             TakeUntilOptions? options,
             CancellationToken cancellationToken)
         {
-            ArgumentExceptionHelper.ThrowIfNull(stopSignalSignal);
+            ArgumentExceptionHelper.ThrowIfNull(stopSignal);
 
-            var inner = new TakeUntilFromRawSignal<T>(source, stopSignalSignal, options ?? TakeUntilOptions.Default);
+            var inner = new TakeUntilFromRawSignal<T>(source, stopSignal, options ?? TakeUntilOptions.Default);
             return cancellationToken.CanBeCanceled ? inner.TakeUntil(cancellationToken) : inner;
         }
     }
@@ -266,7 +266,7 @@ public static partial class ObservableAsync
     /// </summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
     internal sealed class TakeUntilPredicate<T>(IObservableAsync<T> source, Func<T, bool> predicate)
-        : ObservableAsync<T>
+        : SignalAsync<T>
     {
         /// <summary>The predicate that signals when to stop emitting items.</summary>
         private readonly Func<T, bool> _predicate = predicate;
@@ -338,7 +338,7 @@ public static partial class ObservableAsync
     /// </summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
     internal sealed class TakeUntilCancellationToken<T>(IObservableAsync<T> source, CancellationToken cancellationToken)
-        : ObservableAsync<T>
+        : SignalAsync<T>
     {
         /// <summary>The source observable sequence.</summary>
         private readonly IObservableAsync<T> _source = source;
@@ -444,14 +444,14 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
     internal sealed class TakeUntilFromRawSignal<T>(
         IObservableAsync<T> source,
-        CompletionObservableDelegate stopSignalSignal,
-        TakeUntilOptions options) : ObservableAsync<T>
+        CompletionSignalDelegate stopSignal,
+        TakeUntilOptions options) : SignalAsync<T>
     {
         /// <summary>The source observable sequence.</summary>
         private readonly IObservableAsync<T> _source = source;
 
         /// <summary>The delegate that provides the stop signal.</summary>
-        private readonly CompletionObservableDelegate _stopSignalSignal = stopSignalSignal;
+        private readonly CompletionSignalDelegate _stopSignal = stopSignal;
 
         /// <summary>Options controlling the take-until behavior.</summary>
         private readonly TakeUntilOptions _options = options;
@@ -542,7 +542,7 @@ public static partial class ObservableAsync
                     }
                 }
 
-                var disposable = _parent._stopSignalSignal(Stop);
+                var disposable = _parent._stopSignal(Stop);
 
                 try
                 {
@@ -587,7 +587,7 @@ public static partial class ObservableAsync
     /// </summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
     internal sealed class TakeUntilTask<T>(IObservableAsync<T> source, Task task, TakeUntilOptions options)
-        : ObservableAsync<T>
+        : SignalAsync<T>
     {
         /// <summary>The source observable sequence.</summary>
         private readonly IObservableAsync<T> _source = source;
@@ -698,10 +698,10 @@ public static partial class ObservableAsync
     /// </summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
     /// <typeparam name="TOther">The type of the elements in the signal sequence.</typeparam>
-    internal sealed class TakeUntilAsyncObservable<T, TOther>(
+    internal sealed class TakeUntilAsyncSignal<T, TOther>(
         IObservableAsync<T> source,
         IObservableAsync<TOther> other,
-        TakeUntilOptions options) : ObservableAsync<T>
+        TakeUntilOptions options) : SignalAsync<T>
     {
         /// <summary>The source observable sequence.</summary>
         private readonly IObservableAsync<T> _source = source;
@@ -731,7 +731,7 @@ public static partial class ObservableAsync
         internal sealed class Subscription : IAsyncDisposable
         {
             /// <summary>The parent observable that owns this subscription.</summary>
-            private readonly TakeUntilAsyncObservable<T, TOther> _parent;
+            private readonly TakeUntilAsyncSignal<T, TOther> _parent;
 
             /// <summary>Shared subscription lifecycle (gate / dispose CTS / external link / forwarders).</summary>
             private readonly TakeUntilLifecycle<T> _lifecycle;
@@ -747,7 +747,7 @@ public static partial class ObservableAsync
             /// </summary>
             /// <param name="parent">The parent observable that owns this subscription.</param>
             /// <param name="observer">The downstream observer to forward items to.</param>
-            public Subscription(TakeUntilAsyncObservable<T, TOther> parent, IObserverAsync<T> observer)
+            public Subscription(TakeUntilAsyncSignal<T, TOther> parent, IObserverAsync<T> observer)
             {
                 _parent = parent;
                 _lifecycle = new TakeUntilLifecycle<T>(observer);
@@ -832,7 +832,7 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
     internal sealed class TakeUntilAsyncPredicate<T>(
         IObservableAsync<T> source,
-        Func<T, CancellationToken, ValueTask<bool>> asyncPredicate) : ObservableAsync<T>
+        Func<T, CancellationToken, ValueTask<bool>> asyncPredicate) : SignalAsync<T>
     {
         /// <summary>The async predicate that signals when to stop emitting items.</summary>
         private readonly Func<T, CancellationToken, ValueTask<bool>> _asyncPredicate = asyncPredicate;

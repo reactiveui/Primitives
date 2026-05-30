@@ -9,11 +9,11 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>
 /// Provides a set of static methods for creating and composing asynchronous observable sequences.
 /// </summary>
-/// <remarks>The ObservableAsync class offers extension methods that enable functional-style operations, such as
+/// <remarks>The SignalAsync class offers extension methods that enable functional-style operations, such as
 /// filtering for distinct elements, on asynchronous observable sequences. These methods are designed to work with the
-/// ObservableAsync{T} type, allowing developers to build complex, asynchronous event processing pipelines in a
+/// SignalAsync{T} type, allowing developers to build complex, asynchronous event processing pipelines in a
 /// composable manner.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Returns a sequence that contains only distinct elements from the source sequence, using the default equality
@@ -43,7 +43,7 @@ public static partial class ObservableAsync
         ArgumentExceptionHelper.ThrowIfNull(@this);
         ArgumentExceptionHelper.ThrowIfNull(equalityComparer);
 
-        return new DistinctObservable<T>(@this, equalityComparer);
+        return new DistinctSignal<T>(@this, equalityComparer);
     }
 
     /// <summary>
@@ -82,14 +82,14 @@ public static partial class ObservableAsync
         ArgumentExceptionHelper.ThrowIfNull(keySelector);
         ArgumentExceptionHelper.ThrowIfNull(equalityComparer);
 
-        return new DistinctByObservable<T, TKey>(@this, keySelector, equalityComparer);
+        return new DistinctBySignal<T, TKey>(@this, keySelector, equalityComparer);
     }
 
     /// <summary>Single-observer-layer <c>Distinct</c> using a per-subscription <see cref="HashSet{T}"/>.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="comparer">The equality comparer used to detect duplicates.</param>
-    internal sealed class DistinctObservable<T>(IObservableAsync<T> source, IEqualityComparer<T> comparer) : ObservableAsync<T>
+    internal sealed class DistinctSignal<T>(IObservableAsync<T> source, IEqualityComparer<T> comparer) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -140,10 +140,10 @@ public static partial class ObservableAsync
     /// <param name="source">The upstream observable.</param>
     /// <param name="keySelector">The key selector.</param>
     /// <param name="comparer">The key equality comparer.</param>
-    internal sealed class DistinctByObservable<T, TKey>(
+    internal sealed class DistinctBySignal<T, TKey>(
         IObservableAsync<T> source,
         Func<T, TKey> keySelector,
-        IEqualityComparer<TKey> comparer) : ObservableAsync<T>
+        IEqualityComparer<TKey> comparer) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(

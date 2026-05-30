@@ -7,8 +7,8 @@ using System.Threading;
 
 using ExtensionsAsyncObservable = ReactiveUI.Extensions.Async.ObservableAsync;
 using ExtensionsAsyncSubject = ReactiveUI.Extensions.Async.Subjects.SubjectAsync;
-using PrimitivesAsyncObservable = ReactiveUI.Primitives.Async.ObservableAsync;
-using PrimitivesAsyncSubject = ReactiveUI.Primitives.Async.Subjects.SubjectAsync;
+using PrimitivesAsyncSignal = ReactiveUI.Primitives.Async.SignalAsync;
+using PrimitivesAsyncSignalFactory = ReactiveUI.Primitives.Async.Signals.Signal;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
@@ -24,10 +24,10 @@ public class AsyncExtensionsComparisonBenchmarks
     [Benchmark(Baseline = true)]
     public async Task<int> PrimitivesSequenceMapKeepToListAsync()
     {
-        var values = await PrimitivesAsyncObservable.ToListAsync(
-                PrimitivesAsyncObservable.Keep(
-                    PrimitivesAsyncObservable.Map(
-                        PrimitivesAsyncObservable.Sequence(0, Count),
+        var values = await PrimitivesAsyncSignal.ToListAsync(
+                PrimitivesAsyncSignal.Keep(
+                    PrimitivesAsyncSignal.Map(
+                        PrimitivesAsyncSignal.Sequence(0, Count),
                         static (int value) => value + 1),
                     static (int value) => (value & 1) == 0))
             .ConfigureAwait(false);
@@ -52,8 +52,8 @@ public class AsyncExtensionsComparisonBenchmarks
     [Benchmark]
     public async Task<int> PrimitivesSequenceCountAsync()
     {
-        return await PrimitivesAsyncObservable.CountAsync(
-                PrimitivesAsyncObservable.Sequence(0, Count))
+        return await PrimitivesAsyncSignal.CountAsync(
+                PrimitivesAsyncSignal.Sequence(0, Count))
             .ConfigureAwait(false);
     }
 
@@ -66,9 +66,9 @@ public class AsyncExtensionsComparisonBenchmarks
     }
 
     [Benchmark]
-    public async Task<int> PrimitivesSubjectBroadcastAsync()
+    public async Task<int> PrimitivesSignalBroadcastAsync()
     {
-        var subject = PrimitivesAsyncSubject.Create<int>();
+        var signal = PrimitivesAsyncSignalFactory.Create<int>();
         var observers = new PrimitivesCountingObserver[SubscriberCount];
         var subscriptions = new IAsyncDisposable[SubscriberCount];
 
@@ -78,13 +78,13 @@ public class AsyncExtensionsComparisonBenchmarks
             {
                 var observer = new PrimitivesCountingObserver();
                 observers[i] = observer;
-                subscriptions[i] = await subject.SubscribeAsync(observer, CancellationToken.None)
+                subscriptions[i] = await signal.SubscribeAsync(observer, CancellationToken.None)
                     .ConfigureAwait(false);
             }
 
             for (var i = 0; i < Count; i++)
             {
-                await subject.OnNextAsync(i, CancellationToken.None).ConfigureAwait(false);
+                await signal.OnNextAsync(i, CancellationToken.None).ConfigureAwait(false);
             }
 
             return Sum(observers);
@@ -92,7 +92,7 @@ public class AsyncExtensionsComparisonBenchmarks
         finally
         {
             await DisposeAllAsync(subscriptions).ConfigureAwait(false);
-            await subject.DisposeAsync().ConfigureAwait(false);
+            await signal.DisposeAsync().ConfigureAwait(false);
         }
     }
 

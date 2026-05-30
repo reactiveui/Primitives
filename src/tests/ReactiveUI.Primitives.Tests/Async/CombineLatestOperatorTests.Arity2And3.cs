@@ -11,7 +11,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Async.Subjects;
+using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -24,8 +24,8 @@ public partial class CombineLatestOperatorTests
     public async Task WhenCombineLatestTwoSources_NoEmissionUntilBothHaveValues()
     {
         const int ExpectedSum = 11;
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
 
         var results = new List<int>();
         await using var sub = await s1.Values
@@ -58,8 +58,8 @@ public partial class CombineLatestOperatorTests
         const int Sum2 = 12;
         const int Sum3 = 22;
         const int Sum3Index = 2;
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
 
         var results = new List<int>();
         await using var sub = await s1.Values
@@ -88,8 +88,8 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestTwoSources_ErrorFromSrc1_ThenCompletes()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
 
         Result? completionResult = null;
         await using var sub = await s1.Values
@@ -115,8 +115,8 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestTwoSources_ErrorFromSrc2_ThenCompletes()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
 
         Result? completionResult = null;
         await using var sub = await s1.Values
@@ -141,8 +141,8 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestTwoSources_BothComplete_ThenCombinedCompletes()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
 
         Result? completionResult = null;
         await using var sub = await s1.Values
@@ -169,8 +169,8 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestTwoSources_OnlyOneCompletes_ThenNotComplete()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
 
         Result? completionResult = null;
         await using var sub = await s1.Values
@@ -194,8 +194,8 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestTwoSources_Disposed_ThenNoMoreEmissions()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
 
         var results = new List<int>();
         var sub = await s1.Values
@@ -224,8 +224,8 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestTwoSources_DoubleDispose_ThenSafe()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
 
         var sub = await s1.Values
             .CombineLatest(s2.Values, (a, b) => a + b)
@@ -242,8 +242,8 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestTwoSources_ErrorResume_ThenForwarded()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
 
         var errors = new List<Exception>();
         await using var sub = await s1.Values
@@ -268,8 +268,8 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestTwoSources_ErrorResumeFromSrc2_ThenForwarded()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
 
         var errors = new List<Exception>();
         await using var sub = await s1.Values
@@ -295,9 +295,9 @@ public partial class CombineLatestOperatorTests
     public async Task WhenCombineLatestThreeSources_ThenCombinesAll()
     {
         const int ExpectedSum = 111;
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
 
         var results = new List<int>();
         await using var sub = await s1.Values
@@ -323,9 +323,9 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestThreeSources_NoEmissionUntilAllHaveValues()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
 
         var results = new List<int>();
         await using var sub = await s1.Values
@@ -349,9 +349,9 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestThreeSources_Error_ThenCompletes()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
 
         Result? completionResult = null;
         await using var sub = await s1.Values
@@ -376,9 +376,9 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestThreeSources_AllComplete_ThenCombinedCompletes()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
 
         Result? completionResult = null;
         await using var sub = await s1.Values
@@ -406,9 +406,9 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestThreeSources_ErrorResume_ThenForwarded()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
-        var s3 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
+        var s3 = Signal.Create<int>();
 
         var errors = new List<Exception>();
         await using var sub = await s1.Values

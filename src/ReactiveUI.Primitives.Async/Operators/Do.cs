@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <remarks>The methods in this class enable the addition of side effects, such as logging or resource
 /// management, to asynchronous observable sequences without modifying their elements or control flow. These methods are
 /// intended to be used as part of a fluent query or processing pipeline for asynchronous observables.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Invokes the specified asynchronous actions for each element, error, or completion notification in the
@@ -34,7 +34,7 @@ public static partial class ObservableAsync
         Func<T, CancellationToken, ValueTask>? onNext,
         Func<Exception, CancellationToken, ValueTask>? onErrorResume,
         Func<Result, ValueTask>? onCompleted) =>
-        new DoAsyncObservable<T>(@this, onNext, onErrorResume, onCompleted);
+        new DoAsyncSignal<T>(@this, onNext, onErrorResume, onCompleted);
 
     /// <summary>
     /// Invokes the specified asynchronous action for each element in the observable sequence without modifying the
@@ -47,7 +47,7 @@ public static partial class ObservableAsync
     /// <returns>An observable sequence that is identical to the source sequence but invokes the specified callback for side
     /// effects.</returns>
     public static IObservableAsync<T> Do<T>(this IObservableAsync<T> @this, Func<T, CancellationToken, ValueTask>? onNext) =>
-        new DoAsyncObservable<T>(@this, onNext, null, null);
+        new DoAsyncSignal<T>(@this, onNext, null, null);
 
     /// <summary>
     /// Invokes the specified actions in response to notifications from the observable sequence without modifying
@@ -70,7 +70,7 @@ public static partial class ObservableAsync
         this IObservableAsync<T> @this,
         Action<T>? onNext,
         Action<Exception>? onErrorResume,
-        Action<Result>? onCompleted) => new DoSyncObservable<T>(@this, onNext, onErrorResume, onCompleted);
+        Action<Result>? onCompleted) => new DoSyncSignal<T>(@this, onNext, onErrorResume, onCompleted);
 
     /// <summary>
     /// Returns an observable sequence that is identical to the source sequence and performs no side effects.
@@ -79,17 +79,17 @@ public static partial class ObservableAsync
     /// <param name="this">The source observable sequence.</param>
     /// <returns>An observable sequence that is identical to the source sequence.</returns>
     public static IObservableAsync<T> Do<T>(this IObservableAsync<T> @this) =>
-        new DoSyncObservable<T>(@this, null, null, null);
+        new DoSyncSignal<T>(@this, null, null, null);
 
     /// <summary>
     /// An observable that invokes asynchronous side-effect callbacks for each notification.
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    internal sealed class DoAsyncObservable<T>(
+    internal sealed class DoAsyncSignal<T>(
         IObservableAsync<T> source,
         Func<T, CancellationToken, ValueTask>? onNext,
         Func<Exception, CancellationToken, ValueTask>? onErrorResume,
-        Func<Result, ValueTask>? onCompleted) : ObservableAsync<T>
+        Func<Result, ValueTask>? onCompleted) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -150,11 +150,11 @@ public static partial class ObservableAsync
     /// An observable that invokes synchronous side-effect callbacks for each notification.
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    internal sealed class DoSyncObservable<T>(
+    internal sealed class DoSyncSignal<T>(
         IObservableAsync<T> source,
         Action<T>? onNext,
         Action<Exception>? onErrorResume,
-        Action<Result>? onCompleted) : ObservableAsync<T>
+        Action<Result>? onCompleted) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(

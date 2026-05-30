@@ -16,6 +16,7 @@ namespace ReactiveUI.Primitives.Async;
 /// successful results and <see cref="Failure(Exception)"/> to create failed results. The <see cref="IsSuccess"/> and
 /// <see cref="IsFailure"/> properties allow callers to check the operation's status before accessing error information
 /// or propagating exceptions. This struct is immutable and thread-safe.</remarks>
+[System.Diagnostics.DebuggerDisplay("IsSuccess = {IsSuccess}, Exception = {Exception}")]
 public readonly record struct Result
 {
     /// <summary>

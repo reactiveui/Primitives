@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Async;
     "StyleCop.CSharp.OrderingRules",
     "SA1201:ElementsShouldAppearInTheCorrectOrder",
     Justification = "C# 14 extension methods")]
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     extension<T>(IObservableAsync<T> source)
     {
@@ -29,7 +29,7 @@ public static partial class ObservableAsync
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return new AsSignalObservable<T>(source);
+            return new AsRxVoidSignal<T>(source);
         }
 
         /// <summary>
@@ -139,7 +139,7 @@ public static partial class ObservableAsync
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(asyncAction);
 
-            return new DropIfBusyObservable<T>(source, asyncAction);
+            return new DropIfBusySignal<T>(source, asyncAction);
         }
 
         /// <summary>
@@ -153,7 +153,7 @@ public static partial class ObservableAsync
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return new LatestOrDefaultObservable<T>(source, defaultValue);
+            return new LatestOrDefaultSignal<T>(source, defaultValue);
         }
 
         /// <summary>
@@ -187,7 +187,7 @@ public static partial class ObservableAsync
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-            return new WaitUntilObservable<T>(source, predicate);
+            return new WaitUntilSignal<T>(source, predicate);
         }
 
         /// <summary>
@@ -284,7 +284,7 @@ public static partial class ObservableAsync
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return new PairwiseObservable<T>(source);
+            return new PairwiseSignal<T>(source);
         }
 
         /// <summary>
@@ -339,7 +339,7 @@ public static partial class ObservableAsync
             }
 #endif
 
-            return new ThrottleDistinctObservable<T>(source, throttle, timeProvider ?? TimeProvider.System);
+            return new ThrottleDistinctSignal<T>(source, throttle, timeProvider ?? TimeProvider.System);
         }
 
         /// <summary>
@@ -356,7 +356,7 @@ public static partial class ObservableAsync
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(accumulator);
 
-            return new ScanWithInitialObservable<T, TAccumulate>(source, initial, accumulator);
+            return new ScanWithInitialSignal<T, TAccumulate>(source, initial, accumulator);
         }
 
         /// <summary>
@@ -373,7 +373,7 @@ public static partial class ObservableAsync
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(accumulator);
 
-            return new ScanWithInitialAsyncObservable<T, TAccumulate>(source, initial, accumulator);
+            return new ScanWithInitialAsyncSignal<T, TAccumulate>(source, initial, accumulator);
         }
 
         /// <summary>
@@ -409,7 +409,7 @@ public static partial class ObservableAsync
             }
 #endif
 
-            return new DebounceUntilObservable<T>(source, debounce, condition, timeProvider ?? TimeProvider.System);
+            return new DebounceUntilSignal<T>(source, debounce, condition, timeProvider ?? TimeProvider.System);
         }
     }
 
@@ -538,7 +538,7 @@ public static partial class ObservableAsync
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
-        return new ForEachEnumerableObservable<T>(source);
+        return new ForEachEnumerableSignal<T>(source);
     }
 
     /// <summary>
@@ -550,7 +550,7 @@ public static partial class ObservableAsync
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
-        return new NotObservable(source);
+        return new NotSignal(source);
     }
 
     /// <summary>
@@ -564,7 +564,7 @@ public static partial class ObservableAsync
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
-        return new SkipWhileNullObservable<T>(source);
+        return new SkipWhileNullSignal<T>(source);
     }
 
     /// <summary>
@@ -639,7 +639,7 @@ public static partial class ObservableAsync
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
-        return new WhereFalseObservable(source);
+        return new WhereFalseSignal(source);
     }
 
     /// <summary>
@@ -653,7 +653,7 @@ public static partial class ObservableAsync
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
-        return new WhereIsNotNullObservable<T>(source);
+        return new WhereIsNotNullSignal<T>(source);
     }
 
     /// <summary>
@@ -665,6 +665,6 @@ public static partial class ObservableAsync
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
-        return new WhereTrueObservable(source);
+        return new WhereTrueSignal(source);
     }
 }

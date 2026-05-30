@@ -8,7 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace ReactiveUI.Primitives.Async.Disposables;
 
 /// <summary>
-/// Zero-allocation static helpers that implement <see cref="SerialDisposableAsync"/>-style swap
+/// Zero-allocation static helpers that implement <see cref="SingleReplaceableDisposableAsync"/>-style swap
 /// and <see cref="SingleAssignmentDisposableAsync"/>-style single-assignment semantics directly
 /// against a caller-owned <see cref="IAsyncDisposable"/> field. Use these when the wrapper-class
 /// allocation that the convenience types incur is on a hot path.
@@ -18,7 +18,7 @@ public static class DisposableAsyncSlot
 {
     /// <summary>Swaps the slot's current contents with <paramref name="value"/> and asynchronously
     /// disposes the previous occupant. Equivalent to
-    /// <see cref="SerialDisposableAsync.SetDisposableAsync"/>, but operates on a caller-owned field
+    /// <see cref="SingleReplaceableDisposableAsync.SetDisposableAsync"/>, but operates on a caller-owned field
     /// so no wrapper instance is allocated.</summary>
     /// <param name="slot">Reference to the caller-owned <see cref="IAsyncDisposable"/> field.</param>
     /// <param name="value">The new value to store, or <see langword="null"/> to clear the slot.</param>
@@ -96,7 +96,7 @@ public static class DisposableAsyncSlot
         ReferenceEquals(slot, DisposedSentinel.Instance);
 
     /// <summary>Shared sentinel marking a disposed slot. Distinct from the per-class sentinels in
-    /// <see cref="SerialDisposableAsync"/> and <see cref="SingleAssignmentDisposableAsync"/> so the
+    /// <see cref="SingleReplaceableDisposableAsync"/> and <see cref="SingleAssignmentDisposableAsync"/> so the
     /// slot helpers can be used independently of (and alongside) those wrapper classes.</summary>
     internal sealed class DisposedSentinel : IAsyncDisposable
     {

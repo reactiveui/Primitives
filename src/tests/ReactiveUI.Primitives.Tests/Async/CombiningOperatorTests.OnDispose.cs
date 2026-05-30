@@ -13,7 +13,7 @@ using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Internals;
-using ReactiveUI.Primitives.Async.Subjects;
+using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -32,7 +32,7 @@ public partial class CombiningOperatorTests
         var items = new List<int>();
         var disposed = false;
 
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(SampleValue1, ct);
             await observer.OnNextAsync(SampleValue2, ct);
@@ -63,7 +63,7 @@ public partial class CombiningOperatorTests
     {
         var errors = new List<Exception>();
 
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(new InvalidOperationException("resume"), ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -93,7 +93,7 @@ public partial class CombiningOperatorTests
     {
         Result? completionResult = null;
 
-        var source = ObservableAsync.Create<int>(async (observer, _) =>
+        var source = SignalAsync.Create<int>(async (observer, _) =>
         {
             await observer.OnCompletedAsync(Result.Failure(new InvalidOperationException("fail")));
             return DisposableAsync.Empty;
@@ -122,9 +122,9 @@ public partial class CombiningOperatorTests
     public async Task WhenOnDisposeSyncExplicitDispose_ThenActionInvoked()
     {
         var disposed = false;
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
 
-        await using var sub = await subject.Values
+        await using var sub = await signal.Values
             .OnDispose(() => disposed = true)
             .SubscribeAsync(
                 (_, _) => default,
@@ -132,7 +132,7 @@ public partial class CombiningOperatorTests
 
         await Assert.That(disposed).IsFalse();
 
-        await subject.OnCompletedAsync(Result.Success);
+        await signal.OnCompletedAsync(Result.Success);
 
         await Assert.That(disposed).IsTrue();
     }
@@ -147,7 +147,7 @@ public partial class CombiningOperatorTests
         var items = new List<int>();
         var disposed = false;
 
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnNextAsync(2, ct);
@@ -182,7 +182,7 @@ public partial class CombiningOperatorTests
     {
         var errors = new List<Exception>();
 
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(new InvalidOperationException("async resume"), ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -212,7 +212,7 @@ public partial class CombiningOperatorTests
     {
         Result? completionResult = null;
 
-        var source = ObservableAsync.Create<int>(async (observer, _) =>
+        var source = SignalAsync.Create<int>(async (observer, _) =>
         {
             await observer.OnCompletedAsync(Result.Failure(new InvalidOperationException("async fail")));
             return DisposableAsync.Empty;
@@ -241,9 +241,9 @@ public partial class CombiningOperatorTests
     public async Task WhenOnDisposeAsyncExplicitDispose_ThenCallbackInvoked()
     {
         var disposed = false;
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
 
-        await using var sub = await subject.Values
+        await using var sub = await signal.Values
             .OnDispose(() =>
             {
                 disposed = true;
@@ -255,7 +255,7 @@ public partial class CombiningOperatorTests
 
         await Assert.That(disposed).IsFalse();
 
-        await subject.OnCompletedAsync(Result.Success);
+        await signal.OnCompletedAsync(Result.Success);
 
         await Assert.That(disposed).IsTrue();
     }
@@ -268,7 +268,7 @@ public partial class CombiningOperatorTests
     public async Task WhenMergeSubscriptionDisposed_ThenForwardOnNextReturnsDirectly()
     {
         var observer = new AnonymousObserverAsync<int>((_, _) => default);
-        var subscription = new ObservableAsync.MergeSubscription<int>(observer);
+        var subscription = new SignalAsync.MergeSubscription<int>(observer);
         await subscription.DisposeAsync();
 
         await subscription.ForwardOnNext(Sentinel99, CancellationToken.None);
@@ -282,7 +282,7 @@ public partial class CombiningOperatorTests
     public async Task WhenMergeSubscriptionDisposed_ThenForwardOnErrorResumeReturnsDirectly()
     {
         var observer = new AnonymousObserverAsync<int>((_, _) => default);
-        var subscription = new ObservableAsync.MergeSubscription<int>(observer);
+        var subscription = new SignalAsync.MergeSubscription<int>(observer);
         await subscription.DisposeAsync();
 
         await subscription.ForwardOnErrorResume(new InvalidOperationException("test"), CancellationToken.None);
@@ -313,7 +313,7 @@ public partial class CombiningOperatorTests
                 await allowCompletion.Task;
             });
 
-        var subscription = new ObservableAsync.MergeSubscription<int>(observer);
+        var subscription = new SignalAsync.MergeSubscription<int>(observer);
 
         // Trigger CompleteAsync with failure - blocks on observer.OnCompletedAsync
         var failTask = Task.Run(() =>
@@ -353,7 +353,7 @@ public partial class CombiningOperatorTests
                 await allowCompletion.Task;
             });
 
-        var subscription = new ObservableAsync.MergeSubscription<int>(observer);
+        var subscription = new SignalAsync.MergeSubscription<int>(observer);
 
         var failTask = Task.Run(() =>
             subscription.CompleteAsync(Result.Failure(new InvalidOperationException("fail"))));
@@ -377,7 +377,7 @@ public partial class CombiningOperatorTests
         var observer = new AnonymousObserverAsync<int>((_, _) => default);
         IObservableAsync<int>[] sources = [];
         var subscription =
-            new ObservableAsync.MergeEnumerableObservable<int>.MergeEnumerableSubscription(observer, sources);
+            new SignalAsync.MergeEnumerableSignal<int>.MergeEnumerableSubscription(observer, sources);
         subscription.StartAsync();
         await subscription.DisposeAsync();
 
@@ -394,7 +394,7 @@ public partial class CombiningOperatorTests
         var observer = new AnonymousObserverAsync<int>((_, _) => default);
         IObservableAsync<int>[] sources = [];
         var subscription =
-            new ObservableAsync.MergeEnumerableObservable<int>.MergeEnumerableSubscription(observer, sources);
+            new SignalAsync.MergeEnumerableSignal<int>.MergeEnumerableSubscription(observer, sources);
         subscription.StartAsync();
         await subscription.DisposeAsync();
 

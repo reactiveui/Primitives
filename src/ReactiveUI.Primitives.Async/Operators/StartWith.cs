@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Async;
 /// </summary>
 /// <remarks>StartWith mirrors the System.Reactive naming convention and prepends one or more values
 /// to the beginning of an observable sequence before its own emissions.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Prepends the specified value to the beginning of the observable sequence.

@@ -9,10 +9,10 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>
 /// Provides extension methods for working with asynchronous observable sequences.
 /// </summary>
-/// <remarks>The ObservableAsync class contains static extension methods that enable LINQ-style and other
+/// <remarks>The SignalAsync class contains static extension methods that enable LINQ-style and other
 /// operations on asynchronous observables. These methods are intended to facilitate the composition and manipulation of
 /// asynchronous data streams in a reactive programming style.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Returns a new observable sequence that skips the specified number of elements from the start of the source
@@ -36,7 +36,7 @@ public static partial class ObservableAsync
         }
 #endif
 
-        return count == 0 ? @this : new SkipObservable<T>(@this, count);
+        return count == 0 ? @this : new SkipSignal<T>(@this, count);
     }
 
     /// <summary>
@@ -46,7 +46,7 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="count">The number of leading emissions to drop (must be &gt; 0; the zero case bypasses this observable entirely).</param>
-    internal sealed class SkipObservable<T>(IObservableAsync<T> source, int count) : ObservableAsync<T>
+    internal sealed class SkipSignal<T>(IObservableAsync<T> source, int count) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(

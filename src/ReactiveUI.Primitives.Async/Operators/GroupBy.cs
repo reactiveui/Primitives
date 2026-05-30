@@ -4,8 +4,9 @@
 
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Internals;
-using ReactiveUI.Primitives.Async.Subjects;
+using ReactiveUI.Primitives.Async.Signals;
 using ReactiveUI.Primitives.Internal;
+using AsyncSignalFactory = ReactiveUI.Primitives.Async.Signals.Signal;
 
 namespace ReactiveUI.Primitives.Async;
 
@@ -15,7 +16,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <remarks>The methods in this class enable advanced operations on asynchronous observables, such as grouping
 /// elements by key. These extensions are intended for use with types implementing asynchronous observation patterns,
 /// allowing developers to compose and transform streams of data in a reactive manner.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Groups the elements of an asynchronous observable sequence according to a specified key selector function.
@@ -29,16 +30,16 @@ public static partial class ObservableAsync
     /// <param name="keySelector">A function to extract the key for each element in the source sequence.</param>
     /// <returns>An asynchronous observable sequence of grouped observables, each containing elements that share a common key.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="keySelector"/> is null.</exception>
-    public static IObservableAsync<GroupedAsyncObservable<TKey, TValue>> GroupBy<TValue, TKey>(this IObservableAsync<TValue> source, Func<TValue, TKey> keySelector)
+    public static IObservableAsync<GroupedAsyncSignal<TKey, TValue>> GroupBy<TValue, TKey>(this IObservableAsync<TValue> source, Func<TValue, TKey> keySelector)
         where TKey : notnull
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(keySelector);
 
-        return new GroupByAsyncObservable<TKey, TValue>(
+        return new GroupByAsyncSignal<TKey, TValue>(
             source,
             keySelector,
-            static _ => SubjectAsync.Create<TValue>());
+            static _ => AsyncSignalFactory.Create<TValue>());
     }
 
     /// <summary>
@@ -46,43 +47,43 @@ public static partial class ObservableAsync
     /// returns an observable sequence of grouped observables.
     /// </summary>
     /// <remarks>Each group in the resulting sequence is represented by a <see
-    /// cref="GroupedAsyncObservable{TKey, TValue}"/>, which exposes the group's key and an observable sequence of its
-    /// elements. The <paramref name="groupSubjectSelector"/> parameter allows customization of the subject used for
+    /// cref="GroupedAsyncSignal{TKey, TValue}"/>, which exposes the group's key and an observable sequence of its
+    /// elements. The <paramref name="groupSignalSelector"/> parameter allows customization of the signal used for
     /// each group, which can affect how elements are buffered or multicast within the group.</remarks>
     /// <typeparam name="TValue">The type of elements in the source sequence.</typeparam>
     /// <typeparam name="TKey">The type of the key returned by the key selector function. Must be non-null.</typeparam>
     /// <param name="source">The source observable sequence.</param>
     /// <param name="keySelector">A function to extract the key for each element in the source sequence.</param>
-    /// <param name="groupSubjectSelector">A function that provides a subject for each group, given its key. Used to control how elements are published
+    /// <param name="groupSignalSelector">A function that provides a signal for each group, given its key. Used to control how elements are published
     /// within each group.</param>
     /// <returns>An asynchronous observable sequence containing grouped observables, each representing a collection of elements
     /// that share a common key.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="keySelector"/> is null.</exception>
-    public static IObservableAsync<GroupedAsyncObservable<TKey, TValue>> GroupBy<TValue, TKey>(
+    public static IObservableAsync<GroupedAsyncSignal<TKey, TValue>> GroupBy<TValue, TKey>(
         this IObservableAsync<TValue> source,
         Func<TValue, TKey> keySelector,
-        Func<TKey, ISubjectAsync<TValue>> groupSubjectSelector)
+        Func<TKey, ISignalAsync<TValue>> groupSignalSelector)
         where TKey : notnull
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(keySelector);
 
-        return new GroupByAsyncObservable<TKey, TValue>(source, keySelector, groupSubjectSelector);
+        return new GroupByAsyncSignal<TKey, TValue>(source, keySelector, groupSignalSelector);
     }
 
     /// <summary>
-    /// Async observable that groups source elements by key, emitting a <see cref="GroupedAsyncObservable{TKey, TValue}"/>
+    /// Async observable that groups source elements by key, emitting a <see cref="GroupedAsyncSignal{TKey, TValue}"/>
     /// for each unique key encountered.
     /// </summary>
     /// <typeparam name="TKey">The type of the grouping key.</typeparam>
     /// <typeparam name="TValue">The type of elements in the source sequence.</typeparam>
     /// <param name="source">The source observable sequence.</param>
     /// <param name="keySelector">A function to extract the key for each element.</param>
-    /// <param name="groupSubjectSelector">A function that provides a subject for each group, given its key.</param>
-    internal sealed class GroupByAsyncObservable<TKey, TValue>(
+    /// <param name="groupSignalSelector">A function that provides a signal for each group, given its key.</param>
+    internal sealed class GroupByAsyncSignal<TKey, TValue>(
         IObservableAsync<TValue> source,
         Func<TValue, TKey> keySelector,
-        Func<TKey, ISubjectAsync<TValue>> groupSubjectSelector) : ObservableAsync<GroupedAsyncObservable<TKey, TValue>>
+        Func<TKey, ISignalAsync<TValue>> groupSignalSelector) : SignalAsync<GroupedAsyncSignal<TKey, TValue>>
         where TKey : notnull
     {
         /// <summary>
@@ -96,9 +97,9 @@ public static partial class ObservableAsync
         private readonly Func<TValue, TKey> _keySelector = keySelector;
 
         /// <summary>
-        /// The factory function that creates a subject for each new group key.
+        /// The factory function that creates a signal for each new group key.
         /// </summary>
-        private readonly Func<TKey, ISubjectAsync<TValue>> _groupSubjectSelector = groupSubjectSelector;
+        private readonly Func<TKey, ISignalAsync<TValue>> _groupSignalSelector = groupSignalSelector;
 
         /// <summary>
         /// Subscribes the specified observer by creating a <see cref="Subscription"/> that tracks groups by key.
@@ -107,7 +108,7 @@ public static partial class ObservableAsync
         /// <param name="cancellationToken">A token to cancel the subscription.</param>
         /// <returns>An async disposable that tears down the subscription when disposed.</returns>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
-            IObserverAsync<GroupedAsyncObservable<TKey, TValue>> observer,
+            IObserverAsync<GroupedAsyncSignal<TKey, TValue>> observer,
             CancellationToken cancellationToken)
         {
             var subscription = new Subscription(this, observer);
@@ -125,21 +126,21 @@ public static partial class ObservableAsync
         /// <summary>
         /// Observer subscription that tracks groups by key, creating new grouped observables as new keys are encountered.
         /// </summary>
-        /// <param name="parent">The parent GroupBy observable that provides the key selector and subject factory.</param>
+        /// <param name="parent">The parent GroupBy observable that provides the key selector and signal factory.</param>
         /// <param name="observer">The downstream observer to receive grouped observables.</param>
         internal sealed class Subscription(
-            GroupByAsyncObservable<TKey, TValue> parent,
-            IObserverAsync<GroupedAsyncObservable<TKey, TValue>> observer) : ObserverAsync<TValue>
+            GroupByAsyncSignal<TKey, TValue> parent,
+            IObserverAsync<GroupedAsyncSignal<TKey, TValue>> observer) : ObserverAsync<TValue>
         {
             /// <summary>
             /// The composite disposable that tracks all group subscription disposables.
             /// </summary>
-            private readonly CompositeDisposableAsync _disposables = new();
+            private readonly MultipleDisposableAsync _disposables = new();
 
             /// <summary>
-            /// A dictionary mapping each encountered key to its corresponding group subject.
+            /// A dictionary mapping each encountered key to its corresponding group signal.
             /// </summary>
-            private Dictionary<TKey, ISubjectAsync<TValue>> _subjectsByKey = [];
+            private Dictionary<TKey, ISignalAsync<TValue>> _signalsByKey = [];
 
             /// <summary>
             /// Subscribes this observer to the parent's source sequence.
@@ -150,7 +151,7 @@ public static partial class ObservableAsync
                 parent._source.SubscribeAsync(this, cancellationToken);
 
             /// <summary>
-            /// Routes the element to the appropriate group subject, creating a new group if the key is new.
+            /// Routes the element to the appropriate group signal, creating a new group if the key is new.
             /// </summary>
             /// <param name="value">The element to route.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
@@ -158,16 +159,16 @@ public static partial class ObservableAsync
             protected override async ValueTask OnNextAsyncCore(TValue value, CancellationToken cancellationToken)
             {
                 var key = parent._keySelector(value);
-                if (!_subjectsByKey.TryGetValue(key, out var subject))
+                if (!_signalsByKey.TryGetValue(key, out var signal))
                 {
-                    subject = parent._groupSubjectSelector(key);
-                    _subjectsByKey.Add(key, subject);
+                    signal = parent._groupSignalSelector(key);
+                    _signalsByKey.Add(key, signal);
 
                     // We use the cancellationToken passed from the source subscription.
-                    await observer.OnNextAsync(new Observable(this, key, subject.Values), cancellationToken).ConfigureAwait(false);
+                    await observer.OnNextAsync(new Signal(this, key, signal.Values), cancellationToken).ConfigureAwait(false);
                 }
 
-                await subject.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
+                await signal.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
             }
 
             /// <summary>
@@ -180,17 +181,17 @@ public static partial class ObservableAsync
                 observer.OnErrorResumeAsync(error, cancellationToken);
 
             /// <summary>
-            /// Completes all group subjects and then completes the downstream observer.
+            /// Completes all group signals and then completes the downstream observer.
             /// </summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override async ValueTask OnCompletedAsyncCore(Result result)
             {
-                var subjects = _subjectsByKey.Values;
-                _subjectsByKey = null!;
-                foreach (var subject in subjects)
+                var signals = _signalsByKey.Values;
+                _signalsByKey = null!;
+                foreach (var signal in signals)
                 {
-                    await subject.OnCompletedAsync(result).ConfigureAwait(false);
+                    await signal.OnCompletedAsync(result).ConfigureAwait(false);
                 }
 
                 await observer.OnCompletedAsync(result).ConfigureAwait(false);
@@ -211,9 +212,9 @@ public static partial class ObservableAsync
             /// </summary>
             /// <param name="parent">The parent subscription that manages group disposables.</param>
             /// <param name="key">The key that identifies this group.</param>
-            /// <param name="subjectValues">The observable sequence of values for this group.</param>
-            internal sealed class Observable(Subscription parent, TKey key, IObservableAsync<TValue> subjectValues)
-                : GroupedAsyncObservable<TKey, TValue>
+            /// <param name="signalValues">The observable sequence of values for this group.</param>
+            internal sealed class Signal(Subscription parent, TKey key, IObservableAsync<TValue> signalValues)
+                : GroupedAsyncSignal<TKey, TValue>
             {
                 /// <summary>
                 /// Gets the key associated with this element.
@@ -242,7 +243,7 @@ public static partial class ObservableAsync
                         downstream.LinkUpstreamCancellation(wrap.InternalDisposedToken);
                     }
 
-                    var subscription = await subjectValues.SubscribeAsync(wrap, cancellationToken).ConfigureAwait(false);
+                    var subscription = await signalValues.SubscribeAsync(wrap, cancellationToken).ConfigureAwait(false);
                     await parent._disposables.AddAsync(subscription).ConfigureAwait(false);
                     return DisposableAsync.Create(async () =>
                     {

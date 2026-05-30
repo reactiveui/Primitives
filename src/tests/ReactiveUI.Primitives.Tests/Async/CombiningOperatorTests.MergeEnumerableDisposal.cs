@@ -11,7 +11,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Async.Subjects;
+using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -28,10 +28,10 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposedDuringInnerNext_ThenOnNextSilentlyReturns()
     {
-        var innerSubject = SubjectAsync.Create<int>();
+        var innerSignal = Signal.Create<int>();
         var items = new List<int>();
 
-        var sub = await new[] { innerSubject.Values }.Merge()
+        var sub = await new[] { innerSignal.Values }.Merge()
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -40,13 +40,13 @@ public partial class CombiningOperatorTests
                 },
                 null);
 
-        await innerSubject.OnNextAsync(1, CancellationToken.None);
+        await innerSignal.OnNextAsync(1, CancellationToken.None);
 
         await sub.DisposeAsync();
 
         try
         {
-            await innerSubject.OnNextAsync(SampleValue2, CancellationToken.None);
+            await innerSignal.OnNextAsync(SampleValue2, CancellationToken.None);
         }
         catch (OperationCanceledException)
         {
@@ -55,7 +55,7 @@ public partial class CombiningOperatorTests
 
         await Assert.That(items).Contains(1);
 
-        await innerSubject.DisposeAsync();
+        await innerSignal.DisposeAsync();
     }
 
     /// <summary>
@@ -66,10 +66,10 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposedDuringInnerErrorResume_ThenSilentlyReturns()
     {
-        var innerSubject = SubjectAsync.Create<int>();
+        var innerSignal = Signal.Create<int>();
         var errors = new List<Exception>();
 
-        var sub = await new[] { innerSubject.Values }.Merge()
+        var sub = await new[] { innerSignal.Values }.Merge()
             .SubscribeAsync(
                 (_, _) => default,
                 (ex, _) =>
@@ -82,7 +82,7 @@ public partial class CombiningOperatorTests
 
         try
         {
-            await innerSubject.OnErrorResumeAsync(new InvalidOperationException(LateErrorMessage), CancellationToken.None);
+            await innerSignal.OnErrorResumeAsync(new InvalidOperationException(LateErrorMessage), CancellationToken.None);
         }
         catch (OperationCanceledException)
         {
@@ -91,7 +91,7 @@ public partial class CombiningOperatorTests
 
         await Assert.That(errors).IsEmpty();
 
-        await innerSubject.DisposeAsync();
+        await innerSignal.DisposeAsync();
     }
 
     /// <summary>
@@ -101,11 +101,11 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposedDuringEmission_ThenOnNextReturnsEarly()
     {
-        var subject1 = SubjectAsync.Create<int>();
-        var subject2 = SubjectAsync.Create<int>();
+        var signal1 = Signal.Create<int>();
+        var signal2 = Signal.Create<int>();
         var items = new List<int>();
 
-        IObservableAsync<int>[] sources = [subject1.Values, subject2.Values];
+        IObservableAsync<int>[] sources = [signal1.Values, signal2.Values];
 
         var sub = await sources.Merge()
             .SubscribeAsync(
@@ -120,9 +120,9 @@ public partial class CombiningOperatorTests
                 },
                 null);
 
-        await subject1.OnNextAsync(1, CancellationToken.None);
+        await signal1.OnNextAsync(1, CancellationToken.None);
         await sub.DisposeAsync();
-        await subject1.OnNextAsync(SampleValue2, CancellationToken.None);
+        await signal1.OnNextAsync(SampleValue2, CancellationToken.None);
 
         await Assert.That(items).Contains(1);
         await Assert.That(items).DoesNotContain(SampleValue2);
@@ -135,10 +135,10 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposed_ThenOnErrorResumeReturnsEarly()
     {
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         var errors = new List<Exception>();
 
-        IObservableAsync<int>[] sources = [subject.Values];
+        IObservableAsync<int>[] sources = [signal.Values];
 
         var sub = await sources.Merge()
             .SubscribeAsync(
@@ -154,7 +154,7 @@ public partial class CombiningOperatorTests
                 });
 
         await sub.DisposeAsync();
-        await subject.OnErrorResumeAsync(new InvalidOperationException("test"), CancellationToken.None);
+        await signal.OnErrorResumeAsync(new InvalidOperationException("test"), CancellationToken.None);
 
         await Assert.That(errors).IsEmpty();
     }
@@ -169,9 +169,9 @@ public partial class CombiningOperatorTests
         Exception? unhandledException = null;
         UnhandledExceptionHandler.Register(ex => unhandledException = ex);
 
-        var subject1 = SubjectAsync.Create<int>();
-        var subject2 = SubjectAsync.Create<int>();
-        IObservableAsync<int>[] sources = [subject1.Values, subject2.Values];
+        var signal1 = Signal.Create<int>();
+        var signal2 = Signal.Create<int>();
+        IObservableAsync<int>[] sources = [signal1.Values, signal2.Values];
 
         await using var sub = await sources.Merge()
             .SubscribeAsync(
@@ -179,10 +179,10 @@ public partial class CombiningOperatorTests
                 null);
 
         // First source fails - triggers CompleteAsync
-        await subject1.OnCompletedAsync(Result.Failure(new InvalidOperationException(FirstLiteral)));
+        await signal1.OnCompletedAsync(Result.Failure(new InvalidOperationException(FirstLiteral)));
 
         // Second source fails - already disposed, error goes to UnhandledExceptionHandler
-        await subject2.OnCompletedAsync(Result.Failure(new InvalidOperationException(SecondLiteral)));
+        await signal2.OnCompletedAsync(Result.Failure(new InvalidOperationException(SecondLiteral)));
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => unhandledException is not null,
@@ -193,7 +193,7 @@ public partial class CombiningOperatorTests
 
     /// <summary>
     /// Verifies that MergeEnumerable OnNextAsync returns early when the subscription
-    /// has already been disposed, using DirectSource to bypass subject un-subscription.
+    /// has already been disposed, using DirectSource to bypass Signal un-subscription.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -237,7 +237,7 @@ public partial class CombiningOperatorTests
 
     /// <summary>
     /// Verifies that MergeEnumerable OnErrorResumeAsync returns early when the subscription
-    /// has already been disposed, using DirectSource to bypass subject un-subscription.
+    /// has already been disposed, using DirectSource to bypass Signal un-subscription.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -326,7 +326,7 @@ public partial class CombiningOperatorTests
         // The sentinel decrement triggers CompleteAsync(Result.Success), and we make the
         // observer's OnCompletedAsync throw, which escapes the inner try/finally and is
         // caught by the outer try in StartAsync.
-        IObservableAsync<int>[] sources = [ObservableAsync.Return(1)];
+        IObservableAsync<int>[] sources = [SignalAsync.Return(1)];
 
         await using var sub = await sources.Merge()
             .SubscribeAsync(
@@ -554,7 +554,7 @@ public partial class CombiningOperatorTests
         Exception? unhandled = null;
         UnhandledExceptionHandler.Register(ex => unhandled = ex);
 
-        ObservableAsync.MergeEnumerableObservable<int>.MergeEnumerableSubscription.RoutePostDisposalException(
+        SignalAsync.MergeEnumerableSignal<int>.MergeEnumerableSubscription.RoutePostDisposalException(
             Result.Failure(new InvalidOperationException("post-dispose error")));
 
         await Assert.That(unhandled).IsNotNull();

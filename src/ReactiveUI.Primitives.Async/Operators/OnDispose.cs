@@ -9,11 +9,11 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>
 /// Provides extension methods for composing and managing asynchronous observable sequences.
 /// </summary>
-/// <remarks>The ObservableAsync class offers utility methods for working with asynchronous observables, enabling
+/// <remarks>The SignalAsync class offers utility methods for working with asynchronous observables, enabling
 /// additional behaviors such as resource cleanup or side-effect handling when subscriptions are disposed. These methods
 /// are intended to simplify the creation and management of custom observable pipelines in asynchronous programming
 /// scenarios.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Registers a callback to be invoked asynchronously when the observable sequence is disposed.
@@ -25,13 +25,13 @@ public static partial class ObservableAsync
     /// <param name="this">The source observable sequence.</param>
     /// <param name="disposeAction">A function that returns a ValueTask representing the asynchronous operation to execute upon disposal of the
     /// observable sequence. Cannot be null.</param>
-    /// <returns>An ObservableAsync{T} that invokes the specified asynchronous callback when disposed.</returns>
+    /// <returns>An SignalAsync{T} that invokes the specified asynchronous callback when disposed.</returns>
     public static IObservableAsync<T> OnDispose<T>(this IObservableAsync<T> @this, Func<ValueTask> disposeAction)
     {
         ArgumentExceptionHelper.ThrowIfNull(@this);
         ArgumentExceptionHelper.ThrowIfNull(disposeAction);
 
-        return new OnDisposeObservable<T>(@this, disposeAction);
+        return new OnDisposeSignal<T>(@this, disposeAction);
     }
 
     /// <summary>
@@ -49,14 +49,14 @@ public static partial class ObservableAsync
         ArgumentExceptionHelper.ThrowIfNull(@this);
         ArgumentExceptionHelper.ThrowIfNull(disposeAction);
 
-        return new OnDisposeSyncObservable<T>(@this, disposeAction);
+        return new OnDisposeSyncSignal<T>(@this, disposeAction);
     }
 
     /// <summary>Wraps a source observable with an async-action <c>OnDispose</c> observer without the prior <c>Create&lt;T&gt;</c> wrapper layer.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="disposeAction">The async dispose action.</param>
-    internal sealed class OnDisposeObservable<T>(IObservableAsync<T> source, Func<ValueTask> disposeAction) : ObservableAsync<T>
+    internal sealed class OnDisposeSignal<T>(IObservableAsync<T> source, Func<ValueTask> disposeAction) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken)
@@ -70,7 +70,7 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="disposeAction">The sync dispose action.</param>
-    internal sealed class OnDisposeSyncObservable<T>(IObservableAsync<T> source, Action disposeAction) : ObservableAsync<T>
+    internal sealed class OnDisposeSyncSignal<T>(IObservableAsync<T> source, Action disposeAction) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken)

@@ -82,7 +82,7 @@ public class DisposableTests
             return default;
         });
 
-        var composite = new CompositeDisposableAsync(d1, d2);
+        var composite = new MultipleDisposableAsync(d1, d2);
 
         const int ExpectedCount = 2;
         await Assert.That(composite.Count).IsEqualTo(ExpectedCount);
@@ -98,14 +98,14 @@ public class DisposableTests
     /// <summary>Tests CompositeDisposableAsync negative capacity throws.</summary>
     [Test]
     public void WhenCompositeDisposableAsyncNegativeCapacity_ThenThrowsArgumentOutOfRange() =>
-        Assert.Throws<ArgumentOutOfRangeException>(() => _ = new CompositeDisposableAsync(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => _ = new MultipleDisposableAsync(-1));
 
     /// <summary>Tests CompositeDisposableAsync with zero capacity leaves the backing array unallocated.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCompositeDisposableAsyncZeroCapacity_ThenEmpty()
     {
-        var composite = new CompositeDisposableAsync(0);
+        var composite = new MultipleDisposableAsync(0);
 
         await Assert.That(composite.Count).IsEqualTo(0);
         await composite.DisposeAsync();
@@ -116,7 +116,7 @@ public class DisposableTests
     [Test]
     public async Task WhenCompositeDisposableAsyncWithCapacity_ThenWorks()
     {
-        var composite = new CompositeDisposableAsync(10);
+        var composite = new MultipleDisposableAsync(10);
         await Assert.That(composite.Count).IsEqualTo(0);
 
         var disposed = false;
@@ -144,7 +144,7 @@ public class DisposableTests
         }));
 
         const int ExpectedCount = 3;
-        var composite = new CompositeDisposableAsync(disposables);
+        var composite = new MultipleDisposableAsync(disposables);
         await Assert.That(composite.Count).IsEqualTo(ExpectedCount);
 
         await composite.DisposeAsync();
@@ -156,7 +156,7 @@ public class DisposableTests
     [Test]
     public async Task WhenCompositeDisposableAsyncAddAfterDispose_ThenItemDisposedImmediately()
     {
-        var composite = new CompositeDisposableAsync();
+        var composite = new MultipleDisposableAsync();
         await composite.DisposeAsync();
 
         var disposed = false;
@@ -181,7 +181,7 @@ public class DisposableTests
             return default;
         });
 
-        var composite = new CompositeDisposableAsync(d);
+        var composite = new MultipleDisposableAsync(d);
         var removed = await composite.Remove(d);
 
         await Assert.That(removed).IsTrue();
@@ -194,7 +194,7 @@ public class DisposableTests
     [Test]
     public async Task WhenCompositeDisposableAsyncIsDisposed_ThenReturnsFalse()
     {
-        var composite = new CompositeDisposableAsync();
+        var composite = new MultipleDisposableAsync();
         await Assert.That(composite.IsDisposed).IsFalse();
     }
 
@@ -282,7 +282,7 @@ public class DisposableTests
     [Test]
     public async Task WhenSerialDisposableAsync_ThenReplacesAndDisposesPrevious()
     {
-        var serial = new SerialDisposableAsync();
+        var serial = new SingleReplaceableDisposableAsync();
         var disposed1 = false;
         var disposed2 = false;
 
@@ -313,7 +313,7 @@ public class DisposableTests
     [Test]
     public async Task WhenSerialDisposableAsyncSetAfterDispose_ThenDisposedImmediately()
     {
-        var serial = new SerialDisposableAsync();
+        var serial = new SingleReplaceableDisposableAsync();
         await serial.DisposeAsync();
 
         var disposed = false;
@@ -330,7 +330,7 @@ public class DisposableTests
     [Test]
     public async Task WhenSerialDisposableAsyncDoubleDispose_ThenSafe()
     {
-        var serial = new SerialDisposableAsync();
+        var serial = new SingleReplaceableDisposableAsync();
         var disposed = false;
         await serial.SetDisposableAsync(DisposableAsync.Create(() =>
         {
@@ -349,7 +349,7 @@ public class DisposableTests
     [Test]
     public async Task WhenSerialDisposableAsyncSetNull_ThenSucceeds()
     {
-        var serial = new SerialDisposableAsync();
+        var serial = new SingleReplaceableDisposableAsync();
         await serial.SetDisposableAsync(null);
         await serial.DisposeAsync();
     }
@@ -370,7 +370,7 @@ public class DisposableTests
         const int LastIndex = TotalAdded - 1;
 
         // Create a composite with enough capacity to exceed the shrink threshold (64)
-        var composite = new CompositeDisposableAsync(InitialCapacity);
+        var composite = new MultipleDisposableAsync(InitialCapacity);
 
         // Add 80 disposables to build capacity above 64
         var disposables = new List<IAsyncDisposable>();
@@ -408,7 +408,7 @@ public class DisposableTests
     public async Task WhenCompositeCopyToAfterDispose_ThenNoItemsCopied()
     {
         var d1 = DisposableAsync.Create(() => default);
-        var composite = new CompositeDisposableAsync(d1);
+        var composite = new MultipleDisposableAsync(d1);
         await composite.DisposeAsync();
 
         var array = new IAsyncDisposable[5];
@@ -428,7 +428,7 @@ public class DisposableTests
     {
         var d1 = DisposableAsync.Create(() => default);
         var d2 = DisposableAsync.Create(() => default);
-        var composite = new CompositeDisposableAsync(d1, d2);
+        var composite = new MultipleDisposableAsync(d1, d2);
 
         // Array of size 2 starting at index 1 means only 1 slot available for 2 items
         var array = new IAsyncDisposable[2];
@@ -445,7 +445,7 @@ public class DisposableTests
     [Test]
     public async Task WhenCompositeCopyToNegativeIndex_ThenThrowsArgumentOutOfRange()
     {
-        var composite = new CompositeDisposableAsync();
+        var composite = new MultipleDisposableAsync();
         var array = new IAsyncDisposable[5];
 
         Assert.Throws<ArgumentOutOfRangeException>(() => composite.CopyTo(array, -1));
@@ -461,7 +461,7 @@ public class DisposableTests
     public async Task WhenCompositeCopyToIndexAtArrayLength_ThenThrowsArgumentOutOfRange()
     {
         const int ArrayLength = 2;
-        var composite = new CompositeDisposableAsync();
+        var composite = new MultipleDisposableAsync();
         var array = new IAsyncDisposable[ArrayLength];
 
         Assert.Throws<ArgumentOutOfRangeException>(() => composite.CopyTo(array, ArrayLength));
@@ -479,7 +479,7 @@ public class DisposableTests
     public async Task WhenCompositeCopyToNullArray_ThenBoundsChecksFallThrough()
     {
         var d1 = DisposableAsync.Create(static () => default);
-        var composite = new CompositeDisposableAsync(d1);
+        var composite = new MultipleDisposableAsync(d1);
 
         composite.CopyTo(null, 0);
 
@@ -496,7 +496,7 @@ public class DisposableTests
     [SuppressMessage("TUnit", "TUnitAssertions0005", Justification = "Asserting expected constant outcome")]
     public async Task WhenSerialSetNullAfterDispose_ThenCompletesWithoutError()
     {
-        var serial = new SerialDisposableAsync();
+        var serial = new SingleReplaceableDisposableAsync();
         await serial.DisposeAsync();
 
         // Set null after disposal - should complete without error
@@ -513,7 +513,7 @@ public class DisposableTests
     [Test]
     public async Task WhenSerialConcurrentSet_ThenAllPreviousDisposed()
     {
-        var serial = new SerialDisposableAsync();
+        var serial = new SingleReplaceableDisposableAsync();
         var disposedCount = 0;
 
         IAsyncDisposable MakeDisposable() => DisposableAsync.Create(() =>
@@ -547,7 +547,7 @@ public class DisposableTests
     [SuppressMessage("TUnit", "TUnitAssertions0005", Justification = "Asserting expected constant outcome")]
     public async Task WhenSerialDisposeWithNoDisposableSet_ThenCompletesCleanly()
     {
-        var serial = new SerialDisposableAsync();
+        var serial = new SingleReplaceableDisposableAsync();
 
         // Dispose without ever setting a disposable
         await serial.DisposeAsync();
@@ -634,7 +634,7 @@ public class DisposableTests
     {
         const int ExpectedCount = 3;
         var count = 0;
-        var composite = new CompositeDisposableAsync();
+        var composite = new MultipleDisposableAsync();
 
         for (var i = 0; i < ExpectedCount; i++)
         {
@@ -658,7 +658,7 @@ public class DisposableTests
     [Test]
     public async Task WhenCompositeDisposableAsyncContains_ThenReturnsTrueForAdded()
     {
-        var composite = new CompositeDisposableAsync();
+        var composite = new MultipleDisposableAsync();
         var d = DisposableAsync.Empty;
 
         await composite.AddAsync(d);
@@ -672,7 +672,7 @@ public class DisposableTests
     [Test]
     public async Task WhenCompositeDisposableAsyncContainsAfterDispose_ThenReturnsFalse()
     {
-        var composite = new CompositeDisposableAsync();
+        var composite = new MultipleDisposableAsync();
         var d = DisposableAsync.Empty;
 
         await composite.AddAsync(d);
@@ -688,7 +688,7 @@ public class DisposableTests
     {
         var d1 = DisposableAsync.Empty;
         var d2 = DisposableAsync.Empty;
-        var composite = new CompositeDisposableAsync(d1, d2);
+        var composite = new MultipleDisposableAsync(d1, d2);
 
         var array = new IAsyncDisposable[2];
         composite.CopyTo(array, 0);
@@ -702,7 +702,7 @@ public class DisposableTests
     [Test]
     public void WhenCompositeDisposableAsyncCopyToInvalidIndex_ThenThrows()
     {
-        var composite = new CompositeDisposableAsync();
+        var composite = new MultipleDisposableAsync();
         var array = new IAsyncDisposable[1];
 
         Assert.Throws<ArgumentOutOfRangeException>(() => composite.CopyTo(array, -1));
@@ -714,7 +714,7 @@ public class DisposableTests
     public async Task WhenCompositeDisposableAsyncDoubleDispose_ThenSafe()
     {
         var disposed = false;
-        var composite = new CompositeDisposableAsync(DisposableAsync.Create(() =>
+        var composite = new MultipleDisposableAsync(DisposableAsync.Create(() =>
         {
             disposed = true;
             return default;
@@ -731,7 +731,7 @@ public class DisposableTests
     [Test]
     public async Task WhenCompositeDisposableAsyncRemoveFromDisposed_ThenReturnsFalse()
     {
-        var composite = new CompositeDisposableAsync();
+        var composite = new MultipleDisposableAsync();
         await composite.DisposeAsync();
 
         var result = await composite.Remove(DisposableAsync.Empty);
@@ -743,7 +743,7 @@ public class DisposableTests
     [Test]
     public async Task WhenCompositeDisposableAsyncRemoveNonExistent_ThenReturnsFalse()
     {
-        var composite = new CompositeDisposableAsync();
+        var composite = new MultipleDisposableAsync();
         var result = await composite.Remove(DisposableAsync.Empty);
         await Assert.That(result).IsFalse();
         await composite.DisposeAsync();
@@ -754,7 +754,7 @@ public class DisposableTests
     [Test]
     public async Task WhenCompositeDisposableAsyncClearOnDisposed_ThenSafe()
     {
-        var composite = new CompositeDisposableAsync();
+        var composite = new MultipleDisposableAsync();
         await composite.DisposeAsync();
         await composite.Clear();
 
@@ -766,7 +766,7 @@ public class DisposableTests
     [Test]
     public async Task WhenCompositeDisposableAsyncClearOnEmpty_ThenSafe()
     {
-        var composite = new CompositeDisposableAsync();
+        var composite = new MultipleDisposableAsync();
         await composite.Clear();
 
         await Assert.That(composite.Count).IsEqualTo(0);
@@ -780,7 +780,7 @@ public class DisposableTests
     {
         var d1 = DisposableAsync.Empty;
         var d2 = DisposableAsync.Empty;
-        var composite = new CompositeDisposableAsync(d1, d2);
+        var composite = new MultipleDisposableAsync(d1, d2);
 
         var count = 0;
         foreach (var item in composite)
@@ -874,7 +874,7 @@ public class DisposableTests
     [Test]
     public async Task WhenSerialCASRetryLoop_ThenAllDisposablesAccountedFor()
     {
-        var serial = new SerialDisposableAsync();
+        var serial = new SingleReplaceableDisposableAsync();
         var disposedCount = 0;
 
         IAsyncDisposable MakeDisposable() => DisposableAsync.Create(() =>
@@ -917,7 +917,7 @@ public class DisposableTests
     [Test]
     public async Task WhenSerialDisposedSentinelDisposeAsync_ThenReturnsCompletedValueTask()
     {
-        var sentinel = SerialDisposableAsync.DisposedSentinel.Instance;
+        var sentinel = SingleReplaceableDisposableAsync.DisposedSentinel.Instance;
 
         // DisposeAsync should return default (no-op)
         var task = sentinel.DisposeAsync();
@@ -975,7 +975,7 @@ public class DisposableTests
     [Test]
     public async Task WhenCopyToWithNegativeIndex_ThenThrows()
     {
-        await using var composite = new CompositeDisposableAsync();
+        await using var composite = new MultipleDisposableAsync();
         var array = new IAsyncDisposable[1];
         Assert.Throws<ArgumentOutOfRangeException>(() => composite.CopyTo(array, -1));
     }
@@ -985,7 +985,7 @@ public class DisposableTests
     [Test]
     public async Task WhenCopyToWithInsufficientSpace_ThenThrows()
     {
-        var composite = new CompositeDisposableAsync();
+        var composite = new MultipleDisposableAsync();
         await composite.AddAsync(DisposableAsync.Empty);
         await composite.AddAsync(DisposableAsync.Empty);
 
@@ -1016,7 +1016,7 @@ public class DisposableTests
         ];
 
         const int ExpectedCount = 2;
-        var composite = new CompositeDisposableAsync(list);
+        var composite = new MultipleDisposableAsync(list);
         await Assert.That(composite.Count).IsEqualTo(ExpectedCount);
 
         await composite.DisposeAsync();
@@ -1029,7 +1029,7 @@ public class DisposableTests
     public async Task WhenCompositeDisposableAsyncFromEmptyCollection_ThenEmpty()
     {
         List<IAsyncDisposable> empty = [];
-        var composite = new CompositeDisposableAsync(empty);
+        var composite = new MultipleDisposableAsync(empty);
 
         await Assert.That(composite.Count).IsEqualTo(0);
         await composite.DisposeAsync();
@@ -1041,7 +1041,7 @@ public class DisposableTests
     public async Task WhenCompositeDisposableAsyncFromEmptyParams_ThenEmpty()
     {
         IAsyncDisposable[] empty = [];
-        var composite = new CompositeDisposableAsync(empty);
+        var composite = new MultipleDisposableAsync(empty);
 
         await Assert.That(composite.Count).IsEqualTo(0);
         await composite.DisposeAsync();
@@ -1056,7 +1056,7 @@ public class DisposableTests
         const int Total = 20;
         const int Removed = 16;
         var disposed = 0;
-        var composite = new CompositeDisposableAsync();
+        var composite = new MultipleDisposableAsync();
         var items = new IAsyncDisposable[Total];
 
         for (var i = 0; i < Total; i++)
@@ -1098,7 +1098,7 @@ public class DisposableTests
     [Test]
     public async Task WhenEnumeratedEmpty_ThenNoElements()
     {
-        var composite = new CompositeDisposableAsync();
+        var composite = new MultipleDisposableAsync();
 
         var enumerated = 0;
         using (var enumerator = composite.GetEnumerator())

@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -15,7 +15,7 @@ namespace ReactiveUI.Primitives.Async;
 /// subscription logic or background jobs. Observables created with these methods support asynchronous notification and
 /// cancellation, enabling integration with modern async workflows. Use these methods to bridge asynchronous producers
 /// with consumers following the observer pattern.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Creates a new asynchronous observable sequence using the specified subscription function.
@@ -27,13 +27,13 @@ public static partial class ObservableAsync
     /// <param name="subscribeAsync">A function that is invoked when an observer subscribes to the sequence. The function receives an asynchronous
     /// observer and a cancellation token, and returns a task that yields a disposable resource representing the
     /// subscription.</param>
-    /// <returns>An ObservableAsync{T} that invokes the specified subscription function for each observer.</returns>
+    /// <returns>An SignalAsync{T} that invokes the specified subscription function for each observer.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="subscribeAsync"/> is <see langword="null"/>.</exception>
     public static IObservableAsync<T> Create<T>(
         Func<IObserverAsync<T>, CancellationToken, ValueTask<IAsyncDisposable>> subscribeAsync) =>
         subscribeAsync is null
             ? throw new ArgumentNullException(nameof(subscribeAsync))
-            : new AnonymousObservableAsync<T>(subscribeAsync);
+            : new AnonymousSignalAsync<T>(subscribeAsync);
 
     /// <summary>
     /// Creates a new observable sequence that runs the specified asynchronous job as a background task.
@@ -41,7 +41,7 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The type of elements produced by the observable sequence.</typeparam>
     /// <param name="job">A delegate that defines the asynchronous job to execute. The delegate receives an observer to report results and
     /// a cancellation token to observe cancellation requests.</param>
-    /// <returns>An ObservableAsync{T} that represents the observable sequence produced by the background job.</returns>
+    /// <returns>An SignalAsync{T} that represents the observable sequence produced by the background job.</returns>
     public static IObservableAsync<T> CreateAsBackgroundJob<T>(
         Func<IObserverAsync<T>, CancellationToken, ValueTask> job) =>
         CreateAsBackgroundJob(job, false, null);
@@ -54,7 +54,7 @@ public static partial class ObservableAsync
     /// a cancellation token to observe cancellation requests.</param>
     /// <param name="startSynchronously">true to start the job synchronously on the calling thread; otherwise, false to schedule it to run
     /// asynchronously.</param>
-    /// <returns>An ObservableAsync{T} that represents the observable sequence produced by the background job.</returns>
+    /// <returns>An SignalAsync{T} that represents the observable sequence produced by the background job.</returns>
     public static IObservableAsync<T> CreateAsBackgroundJob<T>(
         Func<IObserverAsync<T>, CancellationToken, ValueTask> job,
         bool startSynchronously) =>
@@ -68,7 +68,7 @@ public static partial class ObservableAsync
     /// <param name="job">A delegate that defines the asynchronous job to execute. The delegate receives an observer to report results and
     /// a cancellation token to observe cancellation requests.</param>
     /// <param name="taskScheduler">The task scheduler that is used to schedule the background job.</param>
-    /// <returns>An ObservableAsync{T} that represents the asynchronous background job and emits the results produced by the job.</returns>
+    /// <returns>An SignalAsync{T} that represents the asynchronous background job and emits the results produced by the job.</returns>
     public static IObservableAsync<T> CreateAsBackgroundJob<T>(
         Func<IObserverAsync<T>, CancellationToken, ValueTask> job,
         TaskScheduler taskScheduler) =>

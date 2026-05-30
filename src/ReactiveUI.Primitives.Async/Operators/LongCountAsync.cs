@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <remarks>The methods in this class enable querying and aggregating data from asynchronous observables in a
 /// manner similar to LINQ operators. These extensions are designed to be used with types that implement asynchronous
 /// observable patterns, allowing for efficient and composable asynchronous data processing.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Asynchronously returns the number of elements in the sequence that satisfy an optional predicate.

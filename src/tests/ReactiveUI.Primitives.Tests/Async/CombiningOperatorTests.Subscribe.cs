@@ -28,7 +28,7 @@ public partial class CombiningOperatorTests
     public async Task WhenSubscribeAsyncWithActionOverload_ThenReceivesItems()
     {
         var items = new List<int>();
-        var source = ObservableAsync.Range(1, 3);
+        var source = SignalAsync.Range(1, 3);
 
         await using var sub = await source.SubscribeAsync(items.Add, CancellationToken.None);
 
@@ -47,7 +47,7 @@ public partial class CombiningOperatorTests
     public async Task WhenSubscribeAsyncSyncOverloadWithNullHandlers_ThenOnlyOnNextCalled()
     {
         var items = new List<int>();
-        var source = ObservableAsync.Range(1, 3);
+        var source = SignalAsync.Range(1, 3);
 
         await using var sub = await source.SubscribeAsync(
             (Action<int>)items.Add,
@@ -70,7 +70,7 @@ public partial class CombiningOperatorTests
     public async Task WhenSubscribeAsyncSyncOverloadWithErrorHandler_ThenErrorHandlerCalled()
     {
         Exception? receivedError = null;
-        var source = ObservableAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(new InvalidOperationException("test error"), ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -100,7 +100,7 @@ public partial class CombiningOperatorTests
     {
         Result? completionResult = null;
 
-        await using var sub = await ObservableAsync.Return(1).SubscribeAsync(
+        await using var sub = await SignalAsync.Return(1).SubscribeAsync(
             (Action<int>)(_ => { }),
             (Action<Exception>?)null,
             (Action<Result>?)(result => completionResult = result),

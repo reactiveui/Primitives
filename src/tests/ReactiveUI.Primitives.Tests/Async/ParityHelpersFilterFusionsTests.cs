@@ -11,7 +11,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Async.Subjects;
+using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -41,7 +41,7 @@ public class ParityHelpersFilterFusionsTests
     {
         string?[] inputs = [null, null, "a", null, "b"];
 
-        var result = await inputs.ToObservableAsync()
+        var result = await inputs.ToAsyncSignal()
             .SkipWhileNull()
             .ToListAsync();
 
@@ -59,7 +59,7 @@ public class ParityHelpersFilterFusionsTests
     {
         string?[] inputs = [null, "a", null, "b", null];
 
-        var result = await inputs.ToObservableAsync()
+        var result = await inputs.ToAsyncSignal()
             .WhereIsNotNull()
             .ToListAsync();
 
@@ -77,7 +77,7 @@ public class ParityHelpersFilterFusionsTests
         const int Two = 2;
         int[] inputs = [Zero, Zero, One, One, Two];
 
-        var result = await inputs.ToObservableAsync()
+        var result = await inputs.ToAsyncSignal()
             .LatestOrDefault(Zero)
             .ToListAsync();
 
@@ -92,7 +92,7 @@ public class ParityHelpersFilterFusionsTests
     {
         int[] inputs = [1, 2, 3, 4, 5];
 
-        var result = await inputs.ToObservableAsync()
+        var result = await inputs.ToAsyncSignal()
             .WaitUntil(static x => x >= WaitUntilThreshold)
             .ToListAsync();
 
@@ -106,7 +106,7 @@ public class ParityHelpersFilterFusionsTests
     {
         int[] inputs = [1, 2, 3];
 
-        var result = await inputs.ToObservableAsync()
+        var result = await inputs.ToAsyncSignal()
             .WaitUntil(static _ => false)
             .ToListAsync();
 
@@ -120,7 +120,7 @@ public class ParityHelpersFilterFusionsTests
     {
         int[] inputs = [1, 2, 3];
 
-        var result = await inputs.ToObservableAsync()
+        var result = await inputs.ToAsyncSignal()
             .AsSignal()
             .ToListAsync();
 
@@ -138,7 +138,7 @@ public class ParityHelpersFilterFusionsTests
     {
         bool[] inputs = [true, false, true];
 
-        var result = await inputs.ToObservableAsync()
+        var result = await inputs.ToAsyncSignal()
             .Not()
             .ToListAsync();
 
@@ -152,7 +152,7 @@ public class ParityHelpersFilterFusionsTests
     {
         bool[] inputs = [true, false, true, false];
 
-        var result = await inputs.ToObservableAsync()
+        var result = await inputs.ToAsyncSignal()
             .WhereTrue()
             .ToListAsync();
 
@@ -170,7 +170,7 @@ public class ParityHelpersFilterFusionsTests
     {
         bool[] inputs = [true, false, true, false];
 
-        var result = await inputs.ToObservableAsync()
+        var result = await inputs.ToAsyncSignal()
             .WhereFalse()
             .ToListAsync();
 
@@ -186,10 +186,10 @@ public class ParityHelpersFilterFusionsTests
     [Test]
     public async Task WhenWhereIsNotNullSourceErrorResume_ThenForwarded()
     {
-        var subject = SubjectAsync.Create<string?>();
+        var signal = Signal.Create<string?>();
         Exception? received = null;
 
-        await using var sub = await subject.Values
+        await using var sub = await signal.Values
             .WhereIsNotNull()
             .SubscribeAsync(
                 static (_, _) => default,
@@ -199,7 +199,7 @@ public class ParityHelpersFilterFusionsTests
                     return default;
                 });
 
-        await subject.OnErrorResumeAsync(new InvalidOperationException(Hit), CancellationToken.None);
+        await signal.OnErrorResumeAsync(new InvalidOperationException(Hit), CancellationToken.None);
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => received is not null,
@@ -214,11 +214,11 @@ public class ParityHelpersFilterFusionsTests
     [Test]
     public async Task WhenPairwiseSourceErrorResume_ThenForwarded()
     {
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         Exception? caught = null;
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await using var sub = await subject.Values.Pairwise().SubscribeAsync(
+        await using var sub = await signal.Values.Pairwise().SubscribeAsync(
             static (_, _) => default,
             (ex, _) =>
             {
@@ -228,7 +228,7 @@ public class ParityHelpersFilterFusionsTests
             });
 
         var expected = new InvalidOperationException("pairwise-error");
-        await subject.OnErrorResumeAsync(expected, CancellationToken.None);
+        await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -239,11 +239,11 @@ public class ParityHelpersFilterFusionsTests
     [Test]
     public async Task WhenSkipWhileNullSourceErrorResume_ThenForwarded()
     {
-        var subject = SubjectAsync.Create<string?>();
+        var signal = Signal.Create<string?>();
         Exception? caught = null;
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await using var sub = await subject.Values.SkipWhileNull().SubscribeAsync(
+        await using var sub = await signal.Values.SkipWhileNull().SubscribeAsync(
             static (_, _) => default,
             (ex, _) =>
             {
@@ -253,7 +253,7 @@ public class ParityHelpersFilterFusionsTests
             });
 
         var expected = new InvalidOperationException("skip-while-null-error");
-        await subject.OnErrorResumeAsync(expected, CancellationToken.None);
+        await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -264,11 +264,11 @@ public class ParityHelpersFilterFusionsTests
     [Test]
     public async Task WhenLatestOrDefaultSourceErrorResume_ThenForwarded()
     {
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         Exception? caught = null;
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await using var sub = await subject.Values.LatestOrDefault(0).SubscribeAsync(
+        await using var sub = await signal.Values.LatestOrDefault(0).SubscribeAsync(
             static (_, _) => default,
             (ex, _) =>
             {
@@ -278,7 +278,7 @@ public class ParityHelpersFilterFusionsTests
             });
 
         var expected = new InvalidOperationException("latest-or-default-error");
-        await subject.OnErrorResumeAsync(expected, CancellationToken.None);
+        await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -289,11 +289,11 @@ public class ParityHelpersFilterFusionsTests
     [Test]
     public async Task WhenWaitUntilSourceErrorResume_ThenForwarded()
     {
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         Exception? caught = null;
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await using var sub = await subject.Values.WaitUntil(static _ => false).SubscribeAsync(
+        await using var sub = await signal.Values.WaitUntil(static _ => false).SubscribeAsync(
             static (_, _) => default,
             (ex, _) =>
             {
@@ -303,7 +303,7 @@ public class ParityHelpersFilterFusionsTests
             });
 
         var expected = new InvalidOperationException("wait-until-error");
-        await subject.OnErrorResumeAsync(expected, CancellationToken.None);
+        await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -314,11 +314,11 @@ public class ParityHelpersFilterFusionsTests
     [Test]
     public async Task WhenAsSignalSourceErrorResume_ThenForwarded()
     {
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         Exception? caught = null;
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await using var sub = await subject.Values.AsSignal().SubscribeAsync(
+        await using var sub = await signal.Values.AsSignal().SubscribeAsync(
             static (_, _) => default,
             (ex, _) =>
             {
@@ -328,7 +328,7 @@ public class ParityHelpersFilterFusionsTests
             });
 
         var expected = new InvalidOperationException("as-signal-error");
-        await subject.OnErrorResumeAsync(expected, CancellationToken.None);
+        await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -339,11 +339,11 @@ public class ParityHelpersFilterFusionsTests
     [Test]
     public async Task WhenAsyncNotSourceErrorResume_ThenForwarded()
     {
-        var subject = SubjectAsync.Create<bool>();
+        var signal = Signal.Create<bool>();
         Exception? caught = null;
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await using var sub = await subject.Values.Not().SubscribeAsync(
+        await using var sub = await signal.Values.Not().SubscribeAsync(
             static (_, _) => default,
             (ex, _) =>
             {
@@ -353,7 +353,7 @@ public class ParityHelpersFilterFusionsTests
             });
 
         var expected = new InvalidOperationException("not-error");
-        await subject.OnErrorResumeAsync(expected, CancellationToken.None);
+        await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -364,11 +364,11 @@ public class ParityHelpersFilterFusionsTests
     [Test]
     public async Task WhenWhereTrueSourceErrorResume_ThenForwarded()
     {
-        var subject = SubjectAsync.Create<bool>();
+        var signal = Signal.Create<bool>();
         Exception? caught = null;
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await using var sub = await subject.Values.WhereTrue().SubscribeAsync(
+        await using var sub = await signal.Values.WhereTrue().SubscribeAsync(
             static (_, _) => default,
             (ex, _) =>
             {
@@ -378,7 +378,7 @@ public class ParityHelpersFilterFusionsTests
             });
 
         var expected = new InvalidOperationException("where-true-error");
-        await subject.OnErrorResumeAsync(expected, CancellationToken.None);
+        await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -389,11 +389,11 @@ public class ParityHelpersFilterFusionsTests
     [Test]
     public async Task WhenWhereFalseSourceErrorResume_ThenForwarded()
     {
-        var subject = SubjectAsync.Create<bool>();
+        var signal = Signal.Create<bool>();
         Exception? caught = null;
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await using var sub = await subject.Values.WhereFalse().SubscribeAsync(
+        await using var sub = await signal.Values.WhereFalse().SubscribeAsync(
             static (_, _) => default,
             (ex, _) =>
             {
@@ -403,7 +403,7 @@ public class ParityHelpersFilterFusionsTests
             });
 
         var expected = new InvalidOperationException("where-false-error");
-        await subject.OnErrorResumeAsync(expected, CancellationToken.None);
+        await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);

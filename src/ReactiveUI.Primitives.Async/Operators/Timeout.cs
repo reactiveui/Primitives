@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <remarks>Timeout applies a time limit to the observable sequence. If the sequence does not produce
 /// a value within the specified time span, a <see cref="TimeoutException"/> is signalled as a failure
 /// completion.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Applies a dueTime policy to the observable sequence. If the next element is not received within
@@ -50,7 +50,7 @@ public static partial class ObservableAsync
         }
 #endif
 
-        return new TimeoutObservable<T>(@this, dueTime, timeProvider ?? TimeProvider.System);
+        return new TimeoutSignal<T>(@this, dueTime, timeProvider ?? TimeProvider.System);
     }
 
     /// <summary>
@@ -98,7 +98,7 @@ public static partial class ObservableAsync
         }
 #endif
 
-        return new TimeoutWithFallbackObservable<T>(@this, dueTime, fallback, timeProvider ?? TimeProvider.System);
+        return new TimeoutWithFallbackSignal<T>(@this, dueTime, fallback, timeProvider ?? TimeProvider.System);
     }
 
     /// <summary>
@@ -109,8 +109,8 @@ public static partial class ObservableAsync
     /// <param name="source">The source observable sequence.</param>
     /// <param name="dueTime">The maximum allowed inter-element interval.</param>
     /// <param name="timeProvider">The time provider used for scheduling the dueTime.</param>
-    internal sealed class TimeoutObservable<T>(IObservableAsync<T> source, TimeSpan dueTime, TimeProvider timeProvider)
-        : ObservableAsync<T>
+    internal sealed class TimeoutSignal<T>(IObservableAsync<T> source, TimeSpan dueTime, TimeProvider timeProvider)
+        : SignalAsync<T>
     {
         /// <summary>
         /// Subscribes the specified observer and starts the dueTime timer.
@@ -313,11 +313,11 @@ public static partial class ObservableAsync
     /// <param name="dueTime">The maximum allowed inter-element interval.</param>
     /// <param name="fallback">The fallback observable to switch to on dueTime.</param>
     /// <param name="timeProvider">The time provider used for scheduling the dueTime.</param>
-    internal sealed class TimeoutWithFallbackObservable<T>(
+    internal sealed class TimeoutWithFallbackSignal<T>(
         IObservableAsync<T> source,
         TimeSpan dueTime,
         IObservableAsync<T> fallback,
-        TimeProvider timeProvider) : ObservableAsync<T>
+        TimeProvider timeProvider) : SignalAsync<T>
     {
         /// <summary>
         /// Subscribes the specified observer by wrapping the source with a dueTime and a catch-to-fallback.
@@ -330,7 +330,7 @@ public static partial class ObservableAsync
             CancellationToken cancellationToken)
         {
             // Wrap with Catch to switch to fallback on TimeoutException
-            var withTimeout = new TimeoutObservable<T>(source, dueTime, timeProvider);
+            var withTimeout = new TimeoutSignal<T>(source, dueTime, timeProvider);
             var withFallback = withTimeout.Catch(ex => ex is TimeoutException ? fallback : Throw<T>(ex));
             return withFallback.SubscribeAsync(observer.Wrap(), cancellationToken);
         }

@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Async;
     "Major Code Smell",
     "S107:Methods should not have too many parameters",
     Justification = "Has more than 7 parameters - just expected for arity-N CombineLatest operator surface.")]
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Combines the latest values from fifteen asynchronous observable sources into a single
@@ -77,7 +77,7 @@ public static partial class ObservableAsync
         IObservableAsync<T14> src14,
         IObservableAsync<T15> src15,
         Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector) =>
-        new CombineLatest15ObservableAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>(
+        new CombineLatest15SignalAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>(
             new(src1, src2, src3, src4, src5, src6, src7, src8, src9, src10, src11, src12, src13, src14, src15),
             selector);
 
@@ -100,9 +100,9 @@ public static partial class ObservableAsync
     /// <typeparam name="T14">Element type of source 14.</typeparam>
     /// <typeparam name="T15">Element type of source 15.</typeparam>
     /// <typeparam name="TResult">The projected element type.</typeparam>
-    internal sealed class CombineLatest15ObservableAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>(
-        CombineLatest15ObservableAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>.Sources sources,
-        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector) : ObservableAsync<TResult>
+    internal sealed class CombineLatest15SignalAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>(
+        CombineLatest15SignalAsync<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>.Sources sources,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector) : SignalAsync<TResult>
     {
         /// <summary>
         /// Bundles the fifteen source observables so the subscription constructor stays at three

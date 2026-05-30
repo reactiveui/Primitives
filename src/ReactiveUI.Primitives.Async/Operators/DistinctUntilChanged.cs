@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <remarks>The methods in this class allow developers to filter out consecutive duplicates in observable
 /// sequences, either by value or by a specified key. These operations are useful for scenarios where only changes or
 /// distinct consecutive values are of interest, such as event streams or state change notifications.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Returns an observable sequence that emits only distinct consecutive elements, suppressing duplicates that
@@ -46,7 +46,7 @@ public static partial class ObservableAsync
         ArgumentExceptionHelper.ThrowIfNull(@this);
         ArgumentExceptionHelper.ThrowIfNull(equalityComparer);
 
-        return new DistinctUntilChangedObservable<T>(@this, equalityComparer);
+        return new DistinctUntilChangedSignal<T>(@this, equalityComparer);
     }
 
     /// <summary>
@@ -89,7 +89,7 @@ public static partial class ObservableAsync
         ArgumentExceptionHelper.ThrowIfNull(keySelector);
         ArgumentExceptionHelper.ThrowIfNull(equalityComparer);
 
-        return new DistinctUntilChangedByObservable<T, TKey>(@this, keySelector, equalityComparer);
+        return new DistinctUntilChangedBySignal<T, TKey>(@this, keySelector, equalityComparer);
     }
 
     /// <summary>
@@ -99,7 +99,7 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="comparer">The equality comparer used to detect duplicates.</param>
-    internal sealed class DistinctUntilChangedObservable<T>(IObservableAsync<T> source, IEqualityComparer<T> comparer) : ObservableAsync<T>
+    internal sealed class DistinctUntilChangedSignal<T>(IObservableAsync<T> source, IEqualityComparer<T> comparer) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -165,10 +165,10 @@ public static partial class ObservableAsync
     /// <param name="source">The upstream observable.</param>
     /// <param name="keySelector">The key selector.</param>
     /// <param name="comparer">The key equality comparer.</param>
-    internal sealed class DistinctUntilChangedByObservable<T, TKey>(
+    internal sealed class DistinctUntilChangedBySignal<T, TKey>(
         IObservableAsync<T> source,
         Func<T, TKey> keySelector,
-        IEqualityComparer<TKey> comparer) : ObservableAsync<T>
+        IEqualityComparer<TKey> comparer) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(

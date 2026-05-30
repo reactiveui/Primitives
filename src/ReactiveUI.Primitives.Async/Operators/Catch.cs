@@ -11,9 +11,9 @@ namespace ReactiveUI.Primitives.Async;
 /// Provides extension methods for composing and handling asynchronous observable sequences.
 /// </summary>
 /// <remarks>The methods in this class enable advanced error handling and composition scenarios for asynchronous
-/// observables. These extensions are intended to be used with the ObservableAsync{T} type to facilitate robust,
+/// observables. These extensions are intended to be used with the SignalAsync{T} type to facilitate robust,
 /// composable, and resilient asynchronous data streams.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Creates a new observable sequence that continues with a handler-provided sequence when an exception occurs
@@ -58,7 +58,7 @@ public static partial class ObservableAsync
         ArgumentExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(handler);
 
-        return new CatchObservable<T>(source, handler, onErrorResume);
+        return new CatchSignal<T>(source, handler, onErrorResume);
     }
 
     /// <summary>
@@ -91,10 +91,10 @@ public static partial class ObservableAsync
     /// <param name="handler">The fallback handler invoked with the source exception when the source completes with a failure.</param>
     /// <param name="onErrorResume">Optional asynchronous error-resume callback. When <see langword="null"/>, error-resume notifications are
     /// forwarded straight to the downstream observer.</param>
-    internal sealed class CatchObservable<T>(
+    internal sealed class CatchSignal<T>(
         IObservableAsync<T> source,
         Func<Exception, IObservableAsync<T>> handler,
-        Func<Exception, CancellationToken, ValueTask>? onErrorResume) : ObservableAsync<T>
+        Func<Exception, CancellationToken, ValueTask>? onErrorResume) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(

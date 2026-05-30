@@ -12,29 +12,29 @@ using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
-using ReactiveUI.Primitives.Async.Subjects;
+using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>
-/// TakeUntil operator tests — CompletionObservableDelegate overload and option behavior.
+/// TakeUntil operator tests — CompletionSignalDelegate overload and option behavior.
 /// </summary>
 public partial class TakeUntilOperatorTests
 {
     /// <summary>String literal "subscribe failed" used by multiple tests.</summary>
     private const string SubscribeFailedMessage = "subscribe failed";
 
-    /// <summary>Tests that CompletionObservableDelegate failure signal with SourceFailsWhenOtherFails=true completes with failure.</summary>
+    /// <summary>Tests that CompletionSignalDelegate failure signal with SourceFailsWhenOtherFails=true completes with failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilCompletionDelegateFailsAndOptionTrue_ThenCompletesWithFailure()
     {
-        var source = SubjectAsync.Create<int>();
+        var source = Signal.Create<int>();
         Action<Result>? notifyStop = null;
         Result? completionResult = null;
 
         await using var sub = await source.Values
-            .TakeUntil((CompletionObservableDelegate)StopSignal, new TakeUntilOptions { SourceFailsWhenOtherFails = true })
+            .TakeUntil((CompletionSignalDelegate)StopSignal, new TakeUntilOptions { SourceFailsWhenOtherFails = true })
             .SubscribeAsync(
                 (_, _) => default,
                 null,
@@ -58,16 +58,16 @@ public partial class TakeUntilOperatorTests
         }
     }
 
-    /// <summary>Tests that CompletionObservableDelegate failure signal with default options sends error resume.</summary>
+    /// <summary>Tests that CompletionSignalDelegate failure signal with default options sends error resume.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilCompletionDelegateFailsAndOptionFalse_ThenSendsErrorResume()
     {
-        var source = SubjectAsync.Create<int>();
+        var source = Signal.Create<int>();
         Action<Result>? notifyStop = null;
         var errors = new List<Exception>();
 
-        CompletionObservableDelegate stopSignal = notify =>
+        CompletionSignalDelegate stopSignal = notify =>
         {
             notifyStop = notify;
             return DisposableAsync.Empty;
@@ -90,15 +90,15 @@ public partial class TakeUntilOperatorTests
         await Assert.That(errors).Count().IsEqualTo(1);
     }
 
-    /// <summary>Tests that source error resume is forwarded through TakeUntil(CompletionObservableDelegate).</summary>
+    /// <summary>Tests that source error resume is forwarded through TakeUntil(CompletionSignalDelegate).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilCompletionDelegateSourceErrorResume_ThenForwarded()
     {
-        var source = SubjectAsync.Create<int>();
+        var source = Signal.Create<int>();
         var errors = new List<Exception>();
 
-        CompletionObservableDelegate stopSignal = _ => DisposableAsync.Empty;
+        CompletionSignalDelegate stopSignal = _ => DisposableAsync.Empty;
 
         await using var sub = await source.Values
             .TakeUntil(stopSignal)
@@ -115,15 +115,15 @@ public partial class TakeUntilOperatorTests
         await Assert.That(errors).Count().IsEqualTo(1);
     }
 
-    /// <summary>Tests that source completion is forwarded through TakeUntil(CompletionObservableDelegate).</summary>
+    /// <summary>Tests that source completion is forwarded through TakeUntil(CompletionSignalDelegate).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilCompletionDelegateSourceCompletes_ThenCompletionForwarded()
     {
-        var source = SubjectAsync.Create<int>();
+        var source = Signal.Create<int>();
         Result? completionResult = null;
 
-        CompletionObservableDelegate stopSignal = _ => DisposableAsync.Empty;
+        CompletionSignalDelegate stopSignal = _ => DisposableAsync.Empty;
 
         await using var sub = await source.Values
             .TakeUntil(stopSignal)
@@ -143,15 +143,15 @@ public partial class TakeUntilOperatorTests
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
     }
 
-    /// <summary>Tests disposal of TakeUntil(CompletionObservableDelegate) stops emissions.</summary>
+    /// <summary>Tests disposal of TakeUntil(CompletionSignalDelegate) stops emissions.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilCompletionDelegateDisposed_ThenStopsEmissions()
     {
-        var source = SubjectAsync.Create<int>();
+        var source = Signal.Create<int>();
         var items = new List<int>();
 
-        CompletionObservableDelegate stopSignal = _ => DisposableAsync.Empty;
+        CompletionSignalDelegate stopSignal = _ => DisposableAsync.Empty;
 
         var sub = await source.Values
             .TakeUntil(stopSignal)
@@ -199,7 +199,7 @@ public partial class TakeUntilOperatorTests
     [Test]
     public async Task WhenTakeUntilPredicateSourceThrowsOnSubscribe_ThenDisposesAndRethrows()
     {
-        var throwingSource = ObservableAsync.Create<int>((_, _) =>
+        var throwingSource = SignalAsync.Create<int>((_, _) =>
             throw new InvalidOperationException(SubscribeFailedMessage));
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
@@ -213,7 +213,7 @@ public partial class TakeUntilOperatorTests
     [Test]
     public async Task WhenTakeUntilPredicateBecomesTrueMidStream_ThenStopsEmitting()
     {
-        var result = await ObservableAsync.Range(1, 10)
+        var result = await SignalAsync.Range(1, 10)
             .TakeUntil(x => x > 3)
             .ToListAsync();
 
@@ -228,7 +228,7 @@ public partial class TakeUntilOperatorTests
     public async Task WhenTakeUntilCancellationTokenSourceThrowsOnSubscribe_ThenDisposesAndRethrows()
     {
         using var cts = new CancellationTokenSource();
-        var throwingSource = ObservableAsync.Create<int>((_, _) =>
+        var throwingSource = SignalAsync.Create<int>((_, _) =>
             throw new InvalidOperationException(SubscribeFailedMessage));
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
@@ -243,7 +243,7 @@ public partial class TakeUntilOperatorTests
     public async Task WhenTakeUntilTokenCanceledDuringEmission_ThenEmissionStops()
     {
         using var cts = new CancellationTokenSource();
-        var source = SubjectAsync.Create<int>();
+        var source = Signal.Create<int>();
         var items = new List<int>();
         var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -275,16 +275,16 @@ public partial class TakeUntilOperatorTests
     }
 
     /// <summary>
-    /// Verifies that TakeUntil with a CompletionObservableDelegate disposes the subscription and rethrows when the source throws during subscribe.
+    /// Verifies that TakeUntil with a CompletionSignalDelegate disposes the subscription and rethrows when the source throws during subscribe.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilCompletionDelegateSourceThrowsOnSubscribe_ThenDisposesAndRethrows()
     {
-        var throwingSource = ObservableAsync.Create<int>((_, _) =>
+        var throwingSource = SignalAsync.Create<int>((_, _) =>
             throw new InvalidOperationException(SubscribeFailedMessage));
 
-        CompletionObservableDelegate stopSignal = _ => DisposableAsync.Empty;
+        CompletionSignalDelegate stopSignal = _ => DisposableAsync.Empty;
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await throwingSource.TakeUntil(stopSignal).SubscribeAsync((_, _) => default, null));
@@ -298,7 +298,7 @@ public partial class TakeUntilOperatorTests
     public async Task WhenTakeUntilTaskSourceThrowsOnSubscribe_ThenDisposesAndRethrows()
     {
         var tcs = new TaskCompletionSource();
-        var throwingSource = ObservableAsync.Create<int>((_, _) =>
+        var throwingSource = SignalAsync.Create<int>((_, _) =>
             throw new InvalidOperationException(SubscribeFailedMessage));
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
@@ -313,7 +313,7 @@ public partial class TakeUntilOperatorTests
     public async Task WhenTakeUntilTaskCompletesMidStream_ThenStopsEmissions()
     {
         var tcs = new TaskCompletionSource();
-        var source = SubjectAsync.Create<int>();
+        var source = Signal.Create<int>();
         var items = new List<int>();
         Result? completionResult = null;
 
@@ -350,11 +350,11 @@ public partial class TakeUntilOperatorTests
     [Test]
     public async Task WhenTakeUntilAsyncObservableSourceThrowsOnSubscribe_ThenDisposesAndRethrows()
     {
-        var throwingSource = ObservableAsync.Create<int>((_, _) =>
+        var throwingSource = SignalAsync.Create<int>((_, _) =>
             throw new InvalidOperationException(SubscribeFailedMessage));
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await throwingSource.TakeUntil(ObservableAsync.Never<string>())
+            await throwingSource.TakeUntil(SignalAsync.Never<string>())
                 .SubscribeAsync((_, _) => default, null));
     }
 
@@ -365,8 +365,8 @@ public partial class TakeUntilOperatorTests
     [Test]
     public async Task WhenTakeUntilOtherObservableEmitsItem_ThenSourceCompletes()
     {
-        var source = SubjectAsync.Create<int>();
-        var other = SubjectAsync.Create<string>();
+        var source = Signal.Create<int>();
+        var other = Signal.Create<string>();
         var items = new List<int>();
         Result? completionResult = null;
 
@@ -401,7 +401,7 @@ public partial class TakeUntilOperatorTests
     [Test]
     public async Task WhenTakeUntilAsyncPredicateSourceThrowsOnSubscribe_ThenDisposesAndRethrows()
     {
-        var throwingSource = ObservableAsync.Create<int>((_, _) =>
+        var throwingSource = SignalAsync.Create<int>((_, _) =>
             throw new InvalidOperationException(SubscribeFailedMessage));
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
@@ -419,7 +419,7 @@ public partial class TakeUntilOperatorTests
     [Test]
     public async Task WhenTakeUntilAsyncPredicateBecomesTrueMidStream_ThenStopsEmitting()
     {
-        var result = await ObservableAsync.Range(1, 10)
+        var result = await SignalAsync.Range(1, 10)
             .TakeUntil(async (x, _) =>
             {
                 await Task.Yield();
@@ -438,10 +438,10 @@ public partial class TakeUntilOperatorTests
     public async Task WhenTakeUntilTask_ThenStopsWhenTaskCompletes()
     {
         var tcs = new TaskCompletionSource<bool>();
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         var items = new List<int>();
 
-        await using var sub = await subject.Values
+        await using var sub = await signal.Values
             .TakeUntil(tcs.Task)
             .SubscribeAsync(
                 (x, _) =>
@@ -451,11 +451,11 @@ public partial class TakeUntilOperatorTests
                 },
                 null);
 
-        await subject.OnNextAsync(1, CancellationToken.None);
+        await signal.OnNextAsync(1, CancellationToken.None);
 
         tcs.SetResult(true);
 
-        await subject.OnNextAsync(SecondItem, CancellationToken.None);
+        await signal.OnNextAsync(SecondItem, CancellationToken.None);
 
         await Assert.That(items).Contains(1);
     }
@@ -468,10 +468,10 @@ public partial class TakeUntilOperatorTests
     public async Task WhenTakeUntilCancellationToken_ThenStopsWhenCanceled()
     {
         using var cts = new CancellationTokenSource();
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         var items = new List<int>();
 
-        await using var sub = await subject.Values
+        await using var sub = await signal.Values
             .TakeUntil(cts.Token)
             .SubscribeAsync(
                 (x, _) =>
@@ -481,7 +481,7 @@ public partial class TakeUntilOperatorTests
                 },
                 null);
 
-        await subject.OnNextAsync(1, CancellationToken.None);
+        await signal.OnNextAsync(1, CancellationToken.None);
 
         await cts.CancelAsync();
 
@@ -489,17 +489,17 @@ public partial class TakeUntilOperatorTests
     }
 
     /// <summary>
-    /// Tests TakeUntil with CompletionObservableDelegate stops emitting when delegate signal completes.
+    /// Tests TakeUntil with CompletionSignalDelegate stops emitting when delegate signal completes.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilCompletionDelegate_ThenStopsWhenSignalCompletes()
     {
-        var subject = SubjectAsync.Create<int>();
+        var signal = Signal.Create<int>();
         var items = new List<int>();
 
-        await using var sub = await subject.Values
-            .TakeUntil((CompletionObservableDelegate)Signal)
+        await using var sub = await signal.Values
+            .TakeUntil((CompletionSignalDelegate)CompletionSignal)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -508,11 +508,11 @@ public partial class TakeUntilOperatorTests
                 },
                 null);
 
-        await subject.OnNextAsync(1, CancellationToken.None);
+        await signal.OnNextAsync(1, CancellationToken.None);
 
         await Assert.That(items).Contains(1);
 
-        IAsyncDisposable Signal(Action<Result> notifyStop)
+        IAsyncDisposable CompletionSignal(Action<Result> notifyStop)
         {
             const int Delay = 100;
             _ = Task.Run(async () =>
@@ -525,14 +525,14 @@ public partial class TakeUntilOperatorTests
     }
 
     /// <summary>
-    /// Tests TakeUntil(CompletionObservableDelegate) where the stop signal fails and option is false,
+    /// Tests TakeUntil(CompletionSignalDelegate) where the stop signal fails and option is false,
     /// exercising the error resume path in WaitAndComplete.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilCompletionDelegateFailsAndOptionFalse_ThenErrorResumeForwarded()
     {
-        var source = SubjectAsync.Create<int>();
+        var source = Signal.Create<int>();
         Exception? errorResumed = null;
         var items = new List<int>();
 
@@ -579,7 +579,7 @@ public partial class TakeUntilOperatorTests
     [Test]
     public async Task WhenTakeUntilTaskFailsAndOptionFalse_ThenErrorResumeForwardedViaWaitAndComplete()
     {
-        var source = SubjectAsync.Create<int>();
+        var source = Signal.Create<int>();
         var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         Exception? errorResumed = null;
 
@@ -604,16 +604,16 @@ public partial class TakeUntilOperatorTests
         await Assert.That(errorResumed!.Message).IsEqualTo("task fail");
     }
 
-    /// <summary>Exercises the <c>TakeUntil(CompletionObservableDelegate, CancellationToken)</c>
+    /// <summary>Exercises the <c>TakeUntil(CompletionSignalDelegate, CancellationToken)</c>
     /// overload — the no-options shortcut that forwards to the full overload with null options.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilCompletionDelegateWithCancellationTokenOverload_ThenForwardsValues()
     {
-        var source = SubjectAsync.Create<int>();
+        var source = Signal.Create<int>();
         var values = new List<int>();
 
-        CompletionObservableDelegate stopSignal = _ => DisposableAsync.Empty;
+        CompletionSignalDelegate stopSignal = _ => DisposableAsync.Empty;
 
         await using var sub = await source.Values
             .TakeUntil(stopSignal, CancellationToken.None)
@@ -639,11 +639,11 @@ public partial class TakeUntilOperatorTests
     public async Task WhenTakeUntilCompletionDelegateWithCancellableToken_ThenLinkedToTokenCancellation()
     {
         using var cts = new CancellationTokenSource();
-        var source = SubjectAsync.Create<int>();
+        var source = Signal.Create<int>();
         var values = new List<int>();
         Result? completionResult = null;
 
-        CompletionObservableDelegate stopSignal = _ => DisposableAsync.Empty;
+        CompletionSignalDelegate stopSignal = _ => DisposableAsync.Empty;
 
         await using var sub = await source.Values
             .TakeUntil(stopSignal, options: null, cts.Token)

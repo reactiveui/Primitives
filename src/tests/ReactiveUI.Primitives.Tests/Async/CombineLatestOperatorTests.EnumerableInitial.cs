@@ -11,8 +11,8 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Async.Subjects;
-using AsyncObs = ReactiveUI.Primitives.Async.ObservableAsync;
+using ReactiveUI.Primitives.Async.Signals;
+using AsyncObs = ReactiveUI.Primitives.Async.SignalAsync;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -41,8 +41,8 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestEnumerableErrorResume_ThenForwardedToObserver()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
         Exception? received = null;
 
         IObservableAsync<int>[] sources = [s1.Values, s2.Values];
@@ -73,8 +73,8 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestEnumerableErrorResumeAfterDisposed_ThenIgnored()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
         Exception? received = null;
 
         IObservableAsync<int>[] sources = [s1.Values, s2.Values];
@@ -103,8 +103,8 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestEnumerableSourceCompletesWithoutEmitting_ThenCompletes()
     {
-        var s1 = SubjectAsync.Create<int>();
-        var s2 = SubjectAsync.Create<int>();
+        var s1 = Signal.Create<int>();
+        var s2 = Signal.Create<int>();
         Result? completionResult = null;
 
         IObservableAsync<int>[] sources = [s1.Values, s2.Values];

@@ -10,10 +10,10 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>
 /// Provides extension methods for working with asynchronous observable sequences.
 /// </summary>
-/// <remarks>The ObservableAsync class contains static methods that extend the functionality of asynchronous
+/// <remarks>The SignalAsync class contains static methods that extend the functionality of asynchronous
 /// observables, enabling advanced filtering, transformation, and composition operations. These methods are intended to
-/// be used with types implementing asynchronous observable patterns, such as ObservableAsync{T}.</remarks>
-public static partial class ObservableAsync
+/// be used with types implementing asynchronous observable patterns, such as SignalAsync{T}.</remarks>
+public static partial class SignalAsync
 {
     /// <summary>
     /// Projects each element of the observable sequence to the specified reference type and filters out elements
@@ -35,14 +35,14 @@ public static partial class ObservableAsync
     {
         ArgumentExceptionHelper.ThrowIfNull(@this);
 
-        return new OfTypeObservable<T, TResult>(@this);
+        return new OfTypeSignal<T, TResult>(@this);
     }
 
     /// <summary>Single-observer-layer <c>OfType</c>; non-matching elements are silently dropped.</summary>
     /// <typeparam name="T">The upstream element type.</typeparam>
     /// <typeparam name="TResult">The target reference type.</typeparam>
     /// <param name="source">The upstream observable.</param>
-    internal sealed class OfTypeObservable<T, TResult>(IObservableAsync<T> source) : ObservableAsync<TResult>
+    internal sealed class OfTypeSignal<T, TResult>(IObservableAsync<T> source) : SignalAsync<TResult>
         where TResult : class
     {
         /// <inheritdoc/>

@@ -11,7 +11,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Async.Subjects;
+using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -86,8 +86,8 @@ public partial class CombineLatestOperatorTests
         const int ExpectedCount = 2;
         IReadOnlyList<IObservableAsync<int>> sources =
         [
-            ObservableAsync.Return(1),
-            ObservableAsync.Return(SecondSourceValue)
+            SignalAsync.Return(1),
+            SignalAsync.Return(SecondSourceValue)
         ];
 
         var result = await sources.CombineLatest().FirstAsync();
@@ -100,8 +100,8 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestSelectorThrows_ThenCompletesWithFailure()
     {
-        var a = SubjectAsync.Create<int>();
-        var b = SubjectAsync.Create<int>();
+        var a = Signal.Create<int>();
+        var b = Signal.Create<int>();
         IReadOnlyList<IObservableAsync<int>> sources = [a.Values, b.Values];
         var expected = new InvalidOperationException("selector-failed");
         var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);

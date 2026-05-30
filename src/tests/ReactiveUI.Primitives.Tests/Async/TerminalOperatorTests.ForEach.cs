@@ -24,13 +24,13 @@ public partial class TerminalOperatorTests
     [Test]
     public void WhenForEachAsyncWithNullSyncAction_ThenThrowsArgumentNullException() =>
         Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await ObservableAsync.Return(1).ForEachAsync((Action<int>)null!));
+            await SignalAsync.Return(1).ForEachAsync((Action<int>)null!));
 
     /// <summary>Tests ForEachAsync with null async action throws ArgumentNullException.</summary>
     [Test]
     public void WhenForEachAsyncWithNullAsyncAction_ThenThrowsArgumentNullException() =>
         Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await ObservableAsync.Return(1).ForEachAsync(null!));
+            await SignalAsync.Return(1).ForEachAsync(null!));
 
     /// <summary>Tests async ForEachAsync propagates source failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -39,7 +39,7 @@ public partial class TerminalOperatorTests
     {
         var error = new InvalidOperationException("test");
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Throw<int>(error).ForEachAsync((_, _) => default));
+            await SignalAsync.Throw<int>(error).ForEachAsync((_, _) => default));
     }
 
     /// <summary>Tests sync ForEachAsync propagates source failure.</summary>
@@ -49,7 +49,7 @@ public partial class TerminalOperatorTests
     {
         var error = new InvalidOperationException("test");
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await ObservableAsync.Throw<int>(error).ForEachAsync(_ => { }));
+            await SignalAsync.Throw<int>(error).ForEachAsync(_ => { }));
     }
 
     /// <summary>Tests ToAsyncEnumerable propagates source failure.</summary>
@@ -60,7 +60,7 @@ public partial class TerminalOperatorTests
         var error = new InvalidOperationException("enum-error");
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
         {
-            await foreach (var item in ObservableAsync.Throw<int>(error)
+            await foreach (var item in SignalAsync.Throw<int>(error)
                                .ToAsyncEnumerable(() => Channel.CreateUnbounded<int>()))
             {
                 _ = item;
@@ -71,7 +71,7 @@ public partial class TerminalOperatorTests
     /// <summary>Tests Wrap with a null observer throws ArgumentNullException.</summary>
     [Test]
     public void WhenWrapWithNullObserver_ThenThrowsArgumentNullException() =>
-        Assert.Throws<ArgumentNullException>(() => ObservableAsync.Wrap<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => SignalAsync.Wrap<int>(null!));
 
     /// <summary>Verifies the async-callback <c>ForEachAsync</c> overload throws when the
     /// callback delegate is null.</summary>
@@ -79,5 +79,5 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenForEachAsyncCallbackNull_ThenThrowsArgumentNullException() =>
         await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await ObservableAsync.Return(1).ForEachAsync(null!, CancellationToken.None));
+            await SignalAsync.Return(1).ForEachAsync(null!, CancellationToken.None));
 }

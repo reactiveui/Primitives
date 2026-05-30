@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>
 /// Provides CombineLatest overloads for enumerable collections of asynchronous observable sequences.
 /// </summary>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Combines the latest value from each asynchronous observable sequence in the supplied collection.
@@ -37,7 +37,7 @@ public static partial class ObservableAsync
         // Delegate to the projecting variant with an identity selector so a single subscription
         // implementation backs both shapes. The static lambda avoids capturing and matches the
         // perf-critical zero-alloc rule for selectors that don't reference enclosing state.
-        return new CombineLatestEnumerableObservable<T, IReadOnlyList<T>>(sources, static s => s);
+        return new CombineLatestEnumerableSignal<T, IReadOnlyList<T>>(sources, static s => s);
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ public static partial class ObservableAsync
         ArgumentExceptionHelper.ThrowIfNull(sources);
         ArgumentExceptionHelper.ThrowIfNull(resultSelector);
 
-        return new CombineLatestEnumerableObservable<TSource, TResult>(sources, resultSelector);
+        return new CombineLatestEnumerableSignal<TSource, TResult>(sources, resultSelector);
     }
 
     /// <summary>
@@ -71,10 +71,10 @@ public static partial class ObservableAsync
     /// <typeparam name="TResult">The projected result type.</typeparam>
     /// <param name="sources">The source sequences to combine.</param>
     /// <param name="resultSelector">The result selector.</param>
-    internal sealed class CombineLatestEnumerableObservable<TSource, TResult>(
+    internal sealed class CombineLatestEnumerableSignal<TSource, TResult>(
         IEnumerable<IObservableAsync<TSource>> sources,
         Func<IReadOnlyList<TSource>, TResult> resultSelector)
-        : ObservableAsync<TResult>
+        : SignalAsync<TResult>
     {
         /// <summary>The source sequences.</summary>
         private readonly IObservableAsync<TSource>[] _sources =

@@ -7,11 +7,11 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>
 /// Provides extension methods for creating and manipulating asynchronous observable sequences.
 /// </summary>
-/// <remarks>The ObservableAsync class offers LINQ-style operators for working with asynchronous observables,
+/// <remarks>The SignalAsync class offers LINQ-style operators for working with asynchronous observables,
 /// enabling developers to compose, filter, and transform event streams in an asynchronous context. These methods are
-/// designed to integrate with the ObservableAsync{T} type, supporting both synchronous and asynchronous predicate
+/// designed to integrate with the SignalAsync{T} type, supporting both synchronous and asynchronous predicate
 /// functions for filtering sequences.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Creates a new observable sequence that contains only the elements from the source sequence that satisfy the
@@ -29,7 +29,7 @@ public static partial class ObservableAsync
     /// <returns>An observable sequence that emits only those elements for which the predicate returns <see
     /// langword="true"/>.</returns>
     public static IObservableAsync<T> Where<T>(this IObservableAsync<T> @this, Func<T, CancellationToken, ValueTask<bool>> predicate) =>
-        new WhereAsyncObservable<T>(@this, predicate);
+        new WhereAsyncSignal<T>(@this, predicate);
 
     /// <summary>
     /// Creates a new observable sequence that contains only the elements from the current sequence that satisfy the
@@ -45,7 +45,7 @@ public static partial class ObservableAsync
     /// <returns>An observable sequence that contains elements from the current sequence that satisfy the specified
     /// predicate.</returns>
     public static IObservableAsync<T> Where<T>(this IObservableAsync<T> @this, Func<T, bool> predicate) =>
-        new WhereSyncObservable<T>(@this, predicate);
+        new WhereSyncSignal<T>(@this, predicate);
 
     /// <summary>
     /// Async-predicate variant of <see cref="Where{T}(IObservableAsync{T}, Func{T,CancellationToken,ValueTask{bool}})"/>.
@@ -55,9 +55,9 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The element type of the source sequence.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="predicate">The asynchronous predicate.</param>
-    internal sealed class WhereAsyncObservable<T>(
+    internal sealed class WhereAsyncSignal<T>(
         IObservableAsync<T> source,
-        Func<T, CancellationToken, ValueTask<bool>> predicate) : ObservableAsync<T>
+        Func<T, CancellationToken, ValueTask<bool>> predicate) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -108,15 +108,15 @@ public static partial class ObservableAsync
 
     /// <summary>
     /// Synchronous-predicate variant of <see cref="Where{T}(IObservableAsync{T}, Func{T,bool})"/>. Same allocation
-    /// profile as <see cref="WhereAsyncObservable{T}"/> but the per-emission <c>OnNextAsyncCore</c> is sync-completed
+    /// profile as <see cref="WhereAsyncSignal{T}"/> but the per-emission <c>OnNextAsyncCore</c> is sync-completed
     /// when the predicate rejects, avoiding any state-machine box on rejection.
     /// </summary>
     /// <typeparam name="T">The element type of the source sequence.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="predicate">The synchronous predicate.</param>
-    internal sealed class WhereSyncObservable<T>(
+    internal sealed class WhereSyncSignal<T>(
         IObservableAsync<T> source,
-        Func<T, bool> predicate) : ObservableAsync<T>
+        Func<T, bool> predicate) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(

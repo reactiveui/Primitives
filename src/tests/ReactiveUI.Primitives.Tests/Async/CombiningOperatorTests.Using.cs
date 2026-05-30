@@ -26,9 +26,9 @@ public partial class CombiningOperatorTests
     {
         var trackingResource = new TrackingAsyncDisposable();
 
-        var result = await ObservableAsync.Using(
+        var result = await SignalAsync.Using(
             _ => new ValueTask<TrackingAsyncDisposable>(trackingResource),
-            static _ => ObservableAsync.Return(99)).ToListAsync();
+            static _ => SignalAsync.Return(99)).ToListAsync();
 
         await Assert.That(result).Count().IsEqualTo(1);
         await Assert.That(result[0]).IsEqualTo(Sentinel99);
@@ -42,7 +42,7 @@ public partial class CombiningOperatorTests
     {
         var trackingResource = new TrackingAsyncDisposable();
 
-        var observable = ObservableAsync.Using<int, TrackingAsyncDisposable>(
+        var observable = SignalAsync.Using<int, TrackingAsyncDisposable>(
             _ => new(trackingResource),
             static _ => throw new InvalidOperationException("factory boom"));
 
@@ -60,13 +60,13 @@ public partial class CombiningOperatorTests
     {
         var factoryCalled = false;
 
-        var observable = ObservableAsync.Using<int, TrackingAsyncDisposable>(
+        var observable = SignalAsync.Using<int, TrackingAsyncDisposable>(
             _ =>
             {
                 factoryCalled = true;
                 return new(new TrackingAsyncDisposable());
             },
-            static _ => ObservableAsync.Return(1));
+            static _ => SignalAsync.Return(1));
 
         var result = await observable.ToListAsync();
 
@@ -81,9 +81,9 @@ public partial class CombiningOperatorTests
     {
         var trackingResource = new TrackingAsyncDisposable();
 
-        var result = await ObservableAsync.Using(
+        var result = await SignalAsync.Using(
             _ => new ValueTask<TrackingAsyncDisposable>(trackingResource),
-            static _ => ObservableAsync.Range(1, 3)).ToListAsync();
+            static _ => SignalAsync.Range(1, 3)).ToListAsync();
 
         const int ResultIndexThird = 2;
 

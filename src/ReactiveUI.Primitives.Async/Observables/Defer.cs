@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Async;
 /// subscription triggers a new invocation of the provided factory function, ensuring that each observer receives a
 /// fresh sequence. This is useful for scenarios where the observable's behavior or state should be determined at the
 /// time of subscription rather than at the time of declaration.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Creates a new observable sequence for each subscription by invoking the specified asynchronous factory function.
@@ -26,7 +26,7 @@ public static partial class ObservableAsync
     /// <returns>An observable sequence that, upon each subscription, invokes the factory function to obtain the actual
     /// observable sequence to subscribe to.</returns>
     public static IObservableAsync<T> Defer<T>(Func<CancellationToken, ValueTask<IObservableAsync<T>>> factory) =>
-        new DeferAsyncObservableAsync<T>(factory);
+        new DeferAsyncSignalAsync<T>(factory);
 
     /// <summary>
     /// Returns an observable sequence that is created by invoking the specified factory function each time a new
@@ -39,7 +39,7 @@ public static partial class ObservableAsync
     /// <param name="factory">A function that returns a new instance of an observable sequence to be subscribed to for each observer.</param>
     /// <returns>An observable sequence whose observers trigger the invocation of the factory function upon subscription.</returns>
     public static IObservableAsync<T> Defer<T>(Func<IObservableAsync<T>> factory) =>
-        new DeferSyncObservableAsync<T>(factory);
+        new DeferSyncSignalAsync<T>(factory);
 
     /// <summary>Dedicated observable for <see cref="Defer{T}(Func{IObservableAsync{T}})"/>.
     /// Holds the factory delegate directly — no closure-capturing lambda, no
@@ -48,7 +48,7 @@ public static partial class ObservableAsync
     /// freshly-produced inner observable.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="factory">The deferred factory invoked once per subscribe.</param>
-    internal sealed class DeferSyncObservableAsync<T>(Func<IObservableAsync<T>> factory) : ObservableAsync<T>
+    internal sealed class DeferSyncSignalAsync<T>(Func<IObservableAsync<T>> factory) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -59,20 +59,20 @@ public static partial class ObservableAsync
 
     /// <summary>Dedicated observable for the <see cref="ValueTask"/>-returning
     /// <see cref="Defer{T}(Func{CancellationToken, ValueTask{IObservableAsync{T}}})"/>.
-    /// Same allocation profile as <see cref="DeferSyncObservableAsync{T}"/> with one extra
+    /// Same allocation profile as <see cref="DeferSyncSignalAsync{T}"/> with one extra
     /// state-machine box per call to host the factory's <c>await</c>.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="factory">The deferred factory invoked once per subscribe.</param>
-    internal sealed class DeferAsyncObservableAsync<T>(Func<CancellationToken, ValueTask<IObservableAsync<T>>> factory)
-        : ObservableAsync<T>
+    internal sealed class DeferAsyncSignalAsync<T>(Func<CancellationToken, ValueTask<IObservableAsync<T>>> factory)
+        : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var observable = await factory(cancellationToken).ConfigureAwait(false);
-            return await observable.SubscribeAsync(observer.Wrap(), cancellationToken).ConfigureAwait(false);
+            var signal = await factory(cancellationToken).ConfigureAwait(false);
+            return await signal.SubscribeAsync(observer.Wrap(), cancellationToken).ConfigureAwait(false);
         }
     }
 }

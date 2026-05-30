@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -11,12 +11,12 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>
 /// Provides a set of static methods for composing and merging asynchronous observable sequences.
 /// </summary>
-/// <remarks>The ObservableAsync class offers extension methods that enable advanced composition patterns for
+/// <remarks>The SignalAsync class offers extension methods that enable advanced composition patterns for
 /// asynchronous observables, such as merging multiple sequences into a single stream. These methods are designed to
-/// work with the ObservableAsync{T} abstraction, supporting scenarios where asynchronous event streams need to be
+/// work with the SignalAsync{T} abstraction, supporting scenarios where asynchronous event streams need to be
 /// combined or coordinated. All methods are thread-safe and intended for use in asynchronous, reactive programming
 /// models.</remarks>
-public static partial class ObservableAsync
+public static partial class SignalAsync
 {
     /// <summary>
     /// Merges multiple asynchronous observable sequences into a single observable sequence that emits items from all
@@ -30,7 +30,7 @@ public static partial class ObservableAsync
     /// Cannot be null.</param>
     /// <returns>An asynchronous observable sequence that emits items from all inner observable sequences as they are produced.</returns>
     public static IObservableAsync<T> Merge<T>(this IObservableAsync<IObservableAsync<T>> @this) =>
-        new MergeObservableObservables<T>(@this);
+        new MergeSignalSourcesSignal<T>(@this);
 
     /// <summary>
     /// Merges the emissions of multiple asynchronous observable sequences into a single observable sequence, limiting
@@ -46,7 +46,7 @@ public static partial class ObservableAsync
     /// <returns>An observable sequence that emits the items from the merged inner observable sequences, with at most the
     /// specified number of concurrent subscriptions.</returns>
     public static IObservableAsync<T> Merge<T>(this IObservableAsync<IObservableAsync<T>> @this, int maxConcurrent) =>
-        new MergeObservableObservablesWithMaxConcurrency<T>(@this, maxConcurrent);
+        new MergeSignalSourcesSignalWithMaxConcurrency<T>(@this, maxConcurrent);
 
     /// <summary>
     /// Combines multiple asynchronous observable sequences into a single observable sequence that emits items from all
@@ -60,7 +60,7 @@ public static partial class ObservableAsync
     /// <param name="this">A collection of asynchronous observable sequences to be merged.</param>
     /// <returns>An observable sequence that emits items from all input sequences as they are produced.</returns>
     public static IObservableAsync<T> Merge<T>(this IEnumerable<IObservableAsync<T>> @this) =>
-        new MergeEnumerableObservable<T>(@this);
+        new MergeEnumerableSignal<T>(@this);
 
     /// <summary>
     /// Combines the elements of two asynchronous observable sequences into a single sequence by merging their
@@ -72,16 +72,16 @@ public static partial class ObservableAsync
     /// <typeparam name="T">The type of the elements in the observable sequences.</typeparam>
     /// <param name="this">The first asynchronous observable sequence to merge.</param>
     /// <param name="other">The second asynchronous observable sequence to merge with the first.</param>
-    /// <returns>An ObservableAsync{T} that emits the elements from both input sequences as they arrive.</returns>
+    /// <returns>An SignalAsync{T} that emits the elements from both input sequences as they arrive.</returns>
     public static IObservableAsync<T> Merge<T>(this IObservableAsync<T> @this, IObservableAsync<T> other) =>
-        new MergeEnumerableObservable<T>([@this, other]);
+        new MergeEnumerableSignal<T>([@this, other]);
 
     /// <summary>
     /// Async observable that merges items from an observable of observables into a single stream.
     /// </summary>
     /// <typeparam name="T">The type of the elements emitted by the inner observable sequences.</typeparam>
-    internal sealed class MergeObservableObservables<T>(IObservableAsync<IObservableAsync<T>> sources)
-        : ObservableAsync<T>
+    internal sealed class MergeSignalSourcesSignal<T>(IObservableAsync<IObservableAsync<T>> sources)
+        : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -100,9 +100,9 @@ public static partial class ObservableAsync
     /// Async observable that merges items from an observable of observables with a maximum concurrency limit.
     /// </summary>
     /// <typeparam name="T">The type of the elements emitted by the inner observable sequences.</typeparam>
-    internal sealed class MergeObservableObservablesWithMaxConcurrency<T>(
+    internal sealed class MergeSignalSourcesSignalWithMaxConcurrency<T>(
         IObservableAsync<IObservableAsync<T>> sources,
-        int maxConcurrent) : ObservableAsync<T>
+        int maxConcurrent) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -133,7 +133,7 @@ public static partial class ObservableAsync
         private readonly SingleAssignmentDisposableAsync _outerDisposable = new();
 
         /// <summary>Tracks all inner subscriptions for disposal.</summary>
-        private readonly CompositeDisposableAsync _innerDisposables = new();
+        private readonly MultipleDisposableAsync _innerDisposables = new();
 
         /// <summary>Serializes observer notifications to prevent concurrent calls.</summary>
         private readonly AsyncGate _onSomethingGate = new();
@@ -484,7 +484,7 @@ public static partial class ObservableAsync
     /// Async observable that merges items from an enumerable collection of observables into a single stream.
     /// </summary>
     /// <typeparam name="T">The type of the elements emitted by the observable sequences.</typeparam>
-    internal sealed class MergeEnumerableObservable<T>(IEnumerable<IObservableAsync<T>> sources) : ObservableAsync<T>
+    internal sealed class MergeEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> sources) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -506,7 +506,7 @@ public static partial class ObservableAsync
             private readonly IEnumerable<IObservableAsync<T>> _sources;
 
             /// <summary>Tracks all inner subscriptions for disposal.</summary>
-            private readonly CompositeDisposableAsync _innerDisposables = new();
+            private readonly MultipleDisposableAsync _innerDisposables = new();
 
             /// <summary>Cancellation source for disposal.</summary>
             private readonly CancellationTokenSource _cts = new();
