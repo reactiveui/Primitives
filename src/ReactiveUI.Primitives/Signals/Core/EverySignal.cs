@@ -70,6 +70,9 @@ internal sealed class EverySignal : IRequireCurrentThread<long>
         /// <summary>The cancellation slot for the current scheduled tick.</summary>
         private readonly SingleReplaceableDisposable _slot = new();
 
+        /// <summary>Cached tick callback, reused across reschedules to avoid per-tick delegate allocation.</summary>
+        private readonly Action _tickAction;
+
         /// <summary>The next tick index to emit.</summary>
         private long _tick;
 
@@ -82,6 +85,7 @@ internal sealed class EverySignal : IRequireCurrentThread<long>
             _observer = observer;
             _scheduler = scheduler;
             _period = period;
+            _tickAction = Tick;
         }
 
         /// <summary>Schedules the first tick and returns the cancellation slot.</summary>
@@ -93,7 +97,7 @@ internal sealed class EverySignal : IRequireCurrentThread<long>
         }
 
         /// <summary>Schedules the next tick into the cancellation slot.</summary>
-        private void ScheduleNext() => _slot.Create(_scheduler.Schedule(_period, Tick));
+        private void ScheduleNext() => _slot.Create(_scheduler.Schedule(_period, _tickAction));
 
         /// <summary>Emits the current tick and reschedules unless cancelled.</summary>
         private void Tick()
