@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
+using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -37,6 +38,9 @@ internal static class AllocationProbe
         var intervalObserver = new CountingSignalObserver<TimeInterval<int>>();
         var listObserver = new CountingSignalObserver<IList<int>>();
         var arrayObserver = new CountingSignalObserver<int[]>();
+        var stringObserver = new CountingSignalObserver<string>();
+        var error = new InvalidOperationException("probe");
+        var failSource = Signal.Fail<int>(error, Sequencer.Immediate);
         var handles = new IDisposable[FanOut];
 
         Console.WriteLine("Operator allocation — bytes/op, observer excluded (GC.GetAllocatedBytesForCurrentThread)");
@@ -77,6 +81,36 @@ internal static class AllocationProbe
         Row("Reattempt", () => Signal.Sequence(0, Count).Reattempt(2).Subscribe(observer).Dispose());
         Row("CollectList (range)", () => Signal.Sequence(0, Count).CollectList().Subscribe(listObserver).Dispose());
         Row("CollectArray (range)", () => Signal.Sequence(0, Count).CollectArray().Subscribe(arrayObserver).Dispose());
+
+        Section("Coverage-gap operators / factories");
+        Row("Take", () => Signal.Sequence(0, Count).Take(8).Subscribe(observer).Dispose());
+        Row("Buffer", () => Signal.Sequence(0, Count).Buffer(8).Subscribe(listObserver).Dispose());
+        Row("Recover", () => failSource.Recover<int, Exception>(static _ => Signal.Sequence(0, Count)).Subscribe(observer).Dispose());
+        Row("Resume", () => failSource.Resume(Signal.Sequence(0, Count)).Subscribe(observer).Dispose());
+        Row("MapWith", () => Signal.Sequence(0, Count).MapWith(3, static (f, x) => x * f).Subscribe(observer).Dispose());
+        Row("KeepWith", () => Signal.Sequence(0, Count).KeepWith(8, static (t, x) => x > t).Subscribe(observer).Dispose());
+        Row("TapWith", () => Signal.Sequence(0, Count).TapWith(0, static (s, x) => _ = x + s).Subscribe(observer).Dispose());
+        Row("KeepNotNull", () => Signal.Sequence(0, Count).Map(static x => (string?)x.ToString()).KeepNotNull().Subscribe(stringObserver).Dispose());
+        Row("KeepType", () => Signal.Sequence(0, Count).Map(static x => (object?)x).KeepType<int>().Subscribe(observer).Dispose());
+        Row("CastTo", () => Signal.Sequence(0, Count).Map(static x => (object?)x).CastTo<int>().Subscribe(observer).Dispose());
+        Row("Iterate", () => Signal.Iterate(0, static s => s < Count, static s => s + 1, static s => s).Subscribe(observer).Dispose());
+        Row("OnCleanup", () => Signal.Sequence(0, Count).OnCleanup(static () => { }).Subscribe(observer).Dispose());
+        Row("CreateWithState", () => Signal.CreateWithState<int, int>(Count, static (count, target) =>
+        {
+            for (var i = 0; i < count; i++)
+            {
+                target.OnNext(i);
+            }
+
+            target.OnCompleted();
+            return Disposable.Empty;
+        }).Subscribe(observer).Dispose());
+        Row("Multicast", () =>
+        {
+            var c = Signal.Sequence(1, Count).Multicast(new Signal<int>());
+            using var s = c.Subscribe(observer);
+            using var conn = c.Connect();
+        });
 
         // Calm / Shift / DelayStart need time advancement; their allocation is captured by the
         // OperatorTimeSchedulerBenchmarks BDN "Allocated" column instead of this synchronous probe.
