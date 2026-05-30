@@ -113,9 +113,26 @@ public static partial class LinqMixins
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new DistinctObserver<T>(observer, _comparer);
+            var sink = new DistinctObserver<T>(observer, CreateSeen());
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
+        }
+
+        /// <summary>Creates the duplicate-tracking set, pre-sized when the source has a known element count.</summary>
+        /// <returns>The set used to track already-observed values.</returns>
+        private HashSet<T> CreateSeen()
+        {
+#if NET8_0_OR_GREATER
+            var capacity = _source is Signals.Core.RangeSignal range ? range.Count : 0;
+            return capacity switch
+            {
+                > 0 => new HashSet<T>(capacity, _comparer),
+                _ when _comparer is null => [],
+                _ => new HashSet<T>(_comparer),
+            };
+#else
+            return new(_comparer);
+#endif
         }
     }
 

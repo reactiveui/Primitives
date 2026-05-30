@@ -96,16 +96,11 @@ public static partial class LinqMixins
         /// Initializes a new instance of the <see cref="DistinctObserver{T}"/> class.
         /// </summary>
         /// <param name="observer">The downstream observer.</param>
-        /// <param name="comparer">The comparer used to identify duplicates.</param>
-        internal DistinctObserver(IObserver<T> observer, IEqualityComparer<T>? comparer)
+        /// <param name="seen">The set used to track already-observed values.</param>
+        internal DistinctObserver(IObserver<T> observer, HashSet<T> seen)
         {
             _observer = observer;
-            _seen =
-#if NET8_0_OR_GREATER
-                comparer is null ? [] : new HashSet<T>(comparer);
-#else
-                new(comparer);
-#endif
+            _seen = seen;
         }
 
         /// <inheritdoc/>

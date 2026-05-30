@@ -16,6 +16,11 @@ namespace ReactiveUI.Primitives.Concurrency;
 public sealed class CurrentThreadSequencer : ISequencer
 {
     /// <summary>
+    /// Initial capacity for a freshly created thread-local work queue.
+    /// </summary>
+    private const int InitialQueueCapacity = 4;
+
+    /// <summary>
     /// Singleton holder for the current-thread sequencer.
     /// </summary>
     private static readonly Lazy<CurrentThreadSequencer> StaticInstance = new(() => new());
@@ -190,7 +195,7 @@ public sealed class CurrentThreadSequencer : ISequencer
         // if there is a task running or there is a queue
         if (queue == null)
         {
-            queue = new(4);
+            queue = new(InitialQueueCapacity);
             SetQueue(queue);
         }
 

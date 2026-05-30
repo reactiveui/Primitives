@@ -330,7 +330,7 @@ internal static class AllocationProbe
         var subscription = subject.Subscribe(observer);
         subject.OnNext(1);
         subscription.Dispose();
-        (subject as IDisposable)?.Dispose();
+        subject.Dispose();
     }
 
     /// <summary>

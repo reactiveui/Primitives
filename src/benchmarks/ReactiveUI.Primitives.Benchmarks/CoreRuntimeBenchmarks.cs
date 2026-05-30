@@ -140,16 +140,17 @@ public class CoreRuntimeBenchmarks
     }
 
     /// <summary>
-    /// Notify an R3 observer.
+    /// Notify an R3 observer created from delegates.
     /// </summary>
     /// <returns>The forwarded value.</returns>
     [Benchmark]
     public int R3SafeWitness()
     {
-        var observer = new IntR3Observer();
+        var value = 0;
+        var observer = new IntR3ActionObserver(x => value = x);
         observer.OnNext(ForwardedValue);
         observer.OnCompleted(R3.Result.Success);
-        return observer.LastValue;
+        return value;
     }
 
     /// <summary>

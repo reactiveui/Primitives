@@ -12,12 +12,21 @@ namespace ReactiveUI.Primitives.Benchmarks;
 internal sealed class IntR3ActionObserver : Observer<int>
 {
     /// <summary>
+    /// The optional per-value callback, or <see langword="null"/> for a no-op observer.
+    /// </summary>
+    private readonly Action<int>? _onNext;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="IntR3ActionObserver"/> class.
+    /// </summary>
+    /// <param name="onNext">An optional callback invoked for each value.</param>
+    public IntR3ActionObserver(Action<int>? onNext = null) => _onNext = onNext;
+
+    /// <summary>
     /// Receives the next value.
     /// </summary>
     /// <param name="value">The value.</param>
-    protected override void OnNextCore(int value)
-    {
-    }
+    protected override void OnNextCore(int value) => _onNext?.Invoke(value);
 
     /// <summary>
     /// Receives an error.

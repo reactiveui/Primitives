@@ -105,7 +105,7 @@ public class SubjectSubscriptionBenchmarks
             disposables[i] = subject.Subscribe(observer);
         }
 
-        var before = disposables.Length > 0 ? 1 : 0;
+        var before = disposables.Length;
         for (var i = 0; i < subscribers; i++)
         {
             disposables[i].Dispose();
@@ -128,7 +128,7 @@ public class SubjectSubscriptionBenchmarks
             disposables[i] = subject.Subscribe(new IntR3ActionObserver());
         }
 
-        var before = disposables.Length > 0 ? 1 : 0;
+        var before = disposables.Length;
         for (var i = 0; i < subscribers; i++)
         {
             disposables[i].Dispose();
