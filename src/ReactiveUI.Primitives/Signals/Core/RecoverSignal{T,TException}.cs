@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Threading;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
@@ -11,7 +12,7 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// <summary>
 /// Dedicated cold signal for <c>Recover</c>/<c>Resume</c> (catch a typed error and switch to a
 /// handler-selected sequence). Replaces the witness-framework subject with a lightweight sink that
-/// holds its source and fallback subscriptions in a single pocket.
+/// holds its source and fallback subscriptions in two interlocked slots, with no composite disposable.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <typeparam name="TException">The handled exception type.</typeparam>
@@ -56,24 +57,26 @@ internal sealed class RecoverSignal<T, TException> : IRequireCurrentThread<T>
 
     /// <summary>Builds the sink and subscribes it to the source.</summary>
     /// <param name="observer">The downstream observer.</param>
-    /// <returns>The subscription pocket.</returns>
-    private MultipleDisposable Run(IObserver<T> observer) => new RecoverObserver(observer, _handler).Run(_source);
+    /// <returns>The sink, which is the subscription.</returns>
+    private RecoverObserver Run(IObserver<T> observer) => new RecoverObserver(observer, _handler).Run(_source);
 
     /// <summary>Forwards source values and, on a caught error, switches to the fallback sequence.</summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Design",
-        "CA1001:Types that own disposable fields should be disposable",
-        Justification = "The pocket is the subscription returned from Run; its lifetime is owned by the subscriber.")]
-    private sealed class RecoverObserver : IObserver<T>
+    private sealed class RecoverObserver : IObserver<T>, IDisposable
     {
+        /// <summary>Marker stored in a slot once the sink is disposed.</summary>
+        private static readonly IDisposable Disposed = new DisposedMarker();
+
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer;
 
         /// <summary>The handler that selects the fallback sequence.</summary>
         private readonly Func<TException, IObservable<T>> _handler;
 
-        /// <summary>Holds the source subscription and, after a caught error, the fallback subscription.</summary>
-        private MultipleDisposable? _pocket;
+        /// <summary>The source subscription slot.</summary>
+        private IDisposable? _sourceSubscription;
+
+        /// <summary>The fallback subscription slot, populated after a caught error.</summary>
+        private IDisposable? _fallbackSubscription;
 
         /// <summary>Initializes a new instance of the <see cref="RecoverObserver"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
@@ -99,36 +102,99 @@ internal sealed class RecoverSignal<T, TException> : IRequireCurrentThread<T>
                 }
                 catch (Exception handlerError)
                 {
-                    _observer.OnError(handlerError);
-                    _pocket?.Dispose();
+                    try
+                    {
+                        _observer.OnError(handlerError);
+                    }
+                    finally
+                    {
+                        Dispose();
+                    }
+
                     return;
                 }
 
-                _pocket?.Add(next.Subscribe(_observer));
+                SetFallback(next.Subscribe(_observer));
             }
             else
             {
-                _observer.OnError(error);
-                _pocket?.Dispose();
+                try
+                {
+                    _observer.OnError(error);
+                }
+                finally
+                {
+                    Dispose();
+                }
             }
         }
 
         /// <inheritdoc/>
         public void OnCompleted()
         {
-            _observer.OnCompleted();
-            _pocket?.Dispose();
+            try
+            {
+                _observer.OnCompleted();
+            }
+            finally
+            {
+                Dispose();
+            }
         }
 
-        /// <summary>Subscribes to the source and returns the subscription pocket.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <returns>The disposable owning the source and fallback subscriptions.</returns>
-        internal MultipleDisposable Run(IObservable<T> source)
+        /// <inheritdoc/>
+        public void Dispose()
         {
-            var pocket = new MultipleDisposable();
-            _pocket = pocket;
-            pocket.Add(source.Subscribe(this));
-            return pocket;
+            Release(ref _sourceSubscription);
+            Release(ref _fallbackSubscription);
+        }
+
+        /// <summary>Subscribes to the source and returns the sink.</summary>
+        /// <param name="source">The source observable.</param>
+        /// <returns>This sink, which is the subscription.</returns>
+        internal RecoverObserver Run(IObservable<T> source)
+        {
+            Assign(ref _sourceSubscription, source.Subscribe(this));
+            return this;
+        }
+
+        /// <summary>Exchanges a slot for the disposed marker and releases any live subscription.</summary>
+        /// <param name="slot">The slot to release.</param>
+        private static void Release(ref IDisposable? slot)
+        {
+            var current = Interlocked.Exchange(ref slot, Disposed);
+            if (current == null || ReferenceEquals(current, Disposed))
+            {
+                return;
+            }
+
+            current.Dispose();
+        }
+
+        /// <summary>Stores a subscription into an empty slot, disposing it instead if the sink is already disposed.</summary>
+        /// <param name="slot">The target slot.</param>
+        /// <param name="subscription">The subscription to store.</param>
+        private static void Assign(ref IDisposable? slot, IDisposable subscription)
+        {
+            if (Interlocked.CompareExchange(ref slot, subscription, null) == null)
+            {
+                return;
+            }
+
+            subscription.Dispose();
+        }
+
+        /// <summary>Stores the fallback subscription.</summary>
+        /// <param name="subscription">The fallback subscription.</param>
+        private void SetFallback(IDisposable subscription) => Assign(ref _fallbackSubscription, subscription);
+
+        /// <summary>No-op disposable used as the disposed-slot sentinel.</summary>
+        private sealed class DisposedMarker : IDisposable
+        {
+            /// <inheritdoc/>
+            public void Dispose()
+            {
+            }
         }
     }
 }
