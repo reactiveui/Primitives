@@ -342,9 +342,9 @@ public partial class MultipleDisposable : IsDisposed
                 return;
             }
 
-            foreach (var disposable in disposables)
+            for (var i = 0; i < disposables.Length; i++)
             {
-                disposable?.Dispose();
+                disposables[i]?.Dispose();
             }
         }
     }

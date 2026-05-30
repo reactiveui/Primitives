@@ -174,8 +174,9 @@ public class CoverageRemainderTests
             Signal.FromEnumerable([One, Two, Three]).Any(value => value > Two),
         ];
 
-        foreach (var signal in intSignals)
+        for (var i = 0; i < intSignals.Length; i++)
         {
+            var signal = intSignals[i];
             Assert.Throws<ArgumentNullException>(() => signal.Subscribe((IObserver<int>)null!));
             if (signal is IRequireCurrentThread<int> required)
             {
@@ -183,8 +184,9 @@ public class CoverageRemainderTests
             }
         }
 
-        foreach (var signal in longSignals)
+        for (var i = 0; i < longSignals.Length; i++)
         {
+            var signal = longSignals[i];
             Assert.Throws<ArgumentNullException>(() => signal.Subscribe((IObserver<long>)null!));
             if (signal is IRequireCurrentThread<long> required)
             {
@@ -192,8 +194,9 @@ public class CoverageRemainderTests
             }
         }
 
-        foreach (var signal in boolSignals)
+        for (var i = 0; i < boolSignals.Length; i++)
         {
+            var signal = boolSignals[i];
             Assert.Throws<ArgumentNullException>(() => signal.Subscribe((IObserver<bool>)null!));
             if (signal is IRequireCurrentThread<bool> required)
             {
