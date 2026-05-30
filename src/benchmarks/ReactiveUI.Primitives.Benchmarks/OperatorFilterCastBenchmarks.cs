@@ -21,6 +21,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 public class OperatorFilterCastBenchmarks
 {
     private const int Count = 16;
+    private const string Shared = "x";
 
     /// <summary>
     /// Benchmarks filtering out nulls from a nullable reference sequence.
@@ -65,76 +66,76 @@ public class OperatorFilterCastBenchmarks
     }
 
     /// <summary>
-    /// Benchmarks filtering a boxed sequence by element type.
+    /// Benchmarks filtering a reference sequence by element type.
     /// </summary>
-    /// <returns>The observed total.</returns>
+    /// <returns>The number of matching values observed.</returns>
     [Benchmark]
     public int PrimitivesKeepType()
     {
-        var observer = new IntSignalObserver();
-        using var subscription = Signal.Sequence(1, Count).Map(static x => (object?)x).KeepType<int>().Subscribe(observer);
-        return observer.Total;
+        var observer = new CountingSignalObserver<string>();
+        using var subscription = Signal.Sequence(1, Count).Map(static _ => (object?)Shared).KeepType<string>().Subscribe(observer);
+        return observer.Count;
     }
 
     /// <summary>
-    /// Benchmarks filtering a boxed sequence by element type using System.Reactive.
+    /// Benchmarks filtering a reference sequence by element type using System.Reactive.
     /// </summary>
-    /// <returns>The observed total.</returns>
+    /// <returns>The number of matching values observed.</returns>
     [Benchmark]
     public int SystemReactiveKeepType()
     {
-        var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Range(1, Count).Select(static x => (object)x).OfType<int>().Subscribe(observer);
-        return observer.Total;
+        var observer = new CountingSignalObserver<string>();
+        using var subscription = RxObservable.Range(1, Count).Select(static _ => (object)Shared).OfType<string>().Subscribe(observer);
+        return observer.Count;
     }
 
     /// <summary>
-    /// Benchmarks filtering a boxed sequence by element type using R3.
+    /// Benchmarks filtering a reference sequence by element type using R3.
     /// </summary>
-    /// <returns>The observed total.</returns>
+    /// <returns>The number of matching values observed.</returns>
     [Benchmark]
     public int R3KeepType()
     {
-        var observer = new IntR3Observer();
-        var boxed = R3.ObservableExtensions.Select(R3.Observable.Range(1, Count), static x => (object)x);
-        using var subscription = R3.ObservableExtensions.OfType<object, int>(boxed).Subscribe(observer);
-        return observer.Total;
+        var observer = new CountingR3Observer<string>();
+        var typed = R3.ObservableExtensions.Select(R3.Observable.Range(1, Count), static _ => (object)Shared);
+        using var subscription = R3.ObservableExtensions.OfType<object, string>(typed).Subscribe(observer);
+        return observer.Count;
     }
 
     /// <summary>
-    /// Benchmarks casting a boxed sequence to a value type.
+    /// Benchmarks casting a reference sequence to a target type.
     /// </summary>
-    /// <returns>The observed total.</returns>
+    /// <returns>The number of values observed.</returns>
     [Benchmark]
     public int PrimitivesCastTo()
     {
-        var observer = new IntSignalObserver();
-        using var subscription = Signal.Sequence(1, Count).Map(static x => (object?)x).CastTo<int>().Subscribe(observer);
-        return observer.Total;
+        var observer = new CountingSignalObserver<string>();
+        using var subscription = Signal.Sequence(1, Count).Map(static _ => (object?)Shared).CastTo<string>().Subscribe(observer);
+        return observer.Count;
     }
 
     /// <summary>
-    /// Benchmarks casting a boxed sequence to a value type using System.Reactive.
+    /// Benchmarks casting a reference sequence to a target type using System.Reactive.
     /// </summary>
-    /// <returns>The observed total.</returns>
+    /// <returns>The number of values observed.</returns>
     [Benchmark]
     public int SystemReactiveCastTo()
     {
-        var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Range(1, Count).Select(static x => (object)x).Cast<int>().Subscribe(observer);
-        return observer.Total;
+        var observer = new CountingSignalObserver<string>();
+        using var subscription = RxObservable.Range(1, Count).Select(static _ => (object)Shared).Cast<string>().Subscribe(observer);
+        return observer.Count;
     }
 
     /// <summary>
-    /// Benchmarks casting a boxed sequence to a value type using R3.
+    /// Benchmarks casting a reference sequence to a target type using R3.
     /// </summary>
-    /// <returns>The observed total.</returns>
+    /// <returns>The number of values observed.</returns>
     [Benchmark]
     public int R3CastTo()
     {
-        var observer = new IntR3Observer();
-        var boxed = R3.ObservableExtensions.Select(R3.Observable.Range(1, Count), static x => (object)x);
-        using var subscription = R3.ObservableExtensions.Cast<object, int>(boxed).Subscribe(observer);
-        return observer.Total;
+        var observer = new CountingR3Observer<string>();
+        var typed = R3.ObservableExtensions.Select(R3.Observable.Range(1, Count), static _ => (object)Shared);
+        using var subscription = R3.ObservableExtensions.Cast<object, string>(typed).Subscribe(observer);
+        return observer.Count;
     }
 }

@@ -21,6 +21,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 /// </summary>
 internal static class AllocationProbe
 {
+    private const string ProbeShared = "x";
     private const int Warmup = 50;
     private const int Iterations = 1000;
     private const int Count = 32;
@@ -91,8 +92,8 @@ internal static class AllocationProbe
         Row("KeepWith", () => Signal.Sequence(0, Count).KeepWith(8, static (t, x) => x > t).Subscribe(observer).Dispose());
         Row("TapWith", () => Signal.Sequence(0, Count).TapWith(0, static (s, x) => _ = x + s).Subscribe(observer).Dispose());
         Row("KeepNotNull", () => Signal.Sequence(0, Count).Map(static x => (string?)x.ToString()).KeepNotNull().Subscribe(stringObserver).Dispose());
-        Row("KeepType", () => Signal.Sequence(0, Count).Map(static x => (object?)x).KeepType<int>().Subscribe(observer).Dispose());
-        Row("CastTo", () => Signal.Sequence(0, Count).Map(static x => (object?)x).CastTo<int>().Subscribe(observer).Dispose());
+        Row("KeepType", () => Signal.Sequence(0, Count).Map(static _ => (object?)ProbeShared).KeepType<string>().Subscribe(stringObserver).Dispose());
+        Row("CastTo", () => Signal.Sequence(0, Count).Map(static _ => (object?)ProbeShared).CastTo<string>().Subscribe(stringObserver).Dispose());
         Row("Iterate", () => Signal.Iterate(0, static s => s < Count, static s => s + 1, static s => s).Subscribe(observer).Dispose());
         Row("OnCleanup", () => Signal.Sequence(0, Count).OnCleanup(static () => { }).Subscribe(observer).Dispose());
         Row("CreateWithState", () => Signal.CreateWithState<int, int>(Count, static (count, target) =>

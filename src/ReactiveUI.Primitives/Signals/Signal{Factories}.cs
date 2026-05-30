@@ -432,15 +432,7 @@ public static partial class Signal
             throw new ArgumentNullException(nameof(scheduler));
         }
 
-        return CreateSafe<long>(
-            observer => scheduler.Schedule(
-                Sequencer.Normalize(dueTime),
-                () =>
-                {
-                    observer.OnNext(0L);
-                    observer.OnCompleted();
-                }),
-            scheduler == Sequencer.CurrentThread);
+        return new AfterSignal(dueTime, scheduler);
     }
 
     /// <summary>
@@ -518,27 +510,7 @@ public static partial class Signal
             throw new ArgumentNullException(nameof(scheduler));
         }
 
-        return CreateSafe<long>(
-            observer =>
-            {
-                var slot = new SingleReplaceableDisposable();
-                var tick = 0L;
-                Action? scheduleNext = null;
-                scheduleNext = () => slot.Create(scheduler.Schedule(period, () =>
-                {
-                    observer.OnNext(tick++);
-                    if (slot.IsDisposed)
-                    {
-                        return;
-                    }
-
-                    scheduleNext!();
-                }));
-
-                scheduleNext();
-                return slot;
-            },
-            scheduler == Sequencer.CurrentThread);
+        return new EverySignal(period, scheduler);
     }
 
     /// <summary>

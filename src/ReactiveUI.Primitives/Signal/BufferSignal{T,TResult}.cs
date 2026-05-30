@@ -23,9 +23,9 @@ internal sealed class BufferSignal<T, TResult> : Signal<TResult>
     private readonly int _count;
 
     /// <summary>
-    /// Stores state for the signal implementation.
+    /// The current window buffer, sized to <see cref="_count"/>; <see langword="null"/> between windows.
     /// </summary>
-    private TResult? _buffer;
+    private T[]? _buffer;
 
     /// <summary>
     /// Stores state for the signal implementation.
@@ -59,15 +59,15 @@ internal sealed class BufferSignal<T, TResult> : Signal<TResult>
                 var buffer = _buffer;
                 if (idx == 0)
                 {
-                    // Reset buffer.
-                    buffer = CreateBuffer();
+                    // Window starts: allocate exactly one array of the known window size.
+                    buffer = new T[_count];
                     _buffer = buffer;
                 }
 
-                // Take while not skipping
+                // Take while not skipping; the window index doubles as the array slot.
                 if (idx >= 0)
                 {
-                    buffer?.Add(next);
+                    buffer![idx] = next;
                 }
 
                 if (++idx == _count)
@@ -76,7 +76,9 @@ internal sealed class BufferSignal<T, TResult> : Signal<TResult>
 
                     // Set the skip.
                     idx = 0 - _skip;
-                    OnNext(buffer!);
+
+                    // The window is full, so the array is exactly the right size; emit it directly.
+                    OnNext((TResult)(IList<T>)buffer!);
                 }
 
                 _index = idx;
@@ -89,11 +91,12 @@ internal sealed class BufferSignal<T, TResult> : Signal<TResult>
             () =>
             {
                 var buffer = _buffer;
+                var length = _index;
                 _buffer = null;
 
                 if (buffer != null)
                 {
-                    OnNext(buffer);
+                    OnNext(ToResult(buffer, length));
                 }
 
                 OnCompleted();
@@ -113,11 +116,12 @@ internal sealed class BufferSignal<T, TResult> : Signal<TResult>
         }
 
         var buffer = _buffer;
+        var length = _index;
         _buffer = null;
 
         if (buffer != null)
         {
-            OnNext(buffer);
+            OnNext(ToResult(buffer, length));
         }
 
         _subscription?.Dispose();
@@ -126,12 +130,20 @@ internal sealed class BufferSignal<T, TResult> : Signal<TResult>
     }
 
     /// <summary>
-    /// Executes the CreateBuffer operation.
+    /// Returns the buffer as a result, copying to an exactly-sized array only for a partial trailing window.
     /// </summary>
-    /// <returns>The result.</returns>
-    private TResult CreateBuffer()
+    /// <param name="buffer">The window buffer.</param>
+    /// <param name="length">The number of filled elements.</param>
+    /// <returns>The result list.</returns>
+    private static TResult ToResult(T[] buffer, int length)
     {
-        var buffer = new List<T>(_count);
-        return (TResult)(IList<T>)buffer;
+        if (length == buffer.Length)
+        {
+            return (TResult)(IList<T>)buffer;
+        }
+
+        var exact = new T[length];
+        Array.Copy(buffer, exact, length);
+        return (TResult)(IList<T>)exact;
     }
 }

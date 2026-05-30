@@ -76,7 +76,10 @@ internal sealed class CatchSignal<T, TException> : SignalsBase<T>
         public MultipleDisposable Run()
         {
             _exceptionSubscription = new SingleDisposable();
-            var sourceSubscription = new SingleDisposable(_parent._source.Subscribe(this));
+
+            // The source subscription is already an IDisposable; compose it directly rather than
+            // wrapping it in an extra SingleDisposable.
+            var sourceSubscription = _parent._source.Subscribe(this);
 
             return new MultipleDisposable(sourceSubscription, _exceptionSubscription);
         }
