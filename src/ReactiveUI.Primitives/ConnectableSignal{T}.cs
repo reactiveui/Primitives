@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.Disposables;
+using System.Threading;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives;
@@ -53,23 +53,54 @@ public sealed partial class ConnectableSignal<T> : IObservable<T>
     {
         lock (_gate)
         {
-            if (_connection == null)
-            {
-                var sourceSubscription = _source.Subscribe(_hub);
-                _connection = Disposable.Create(() =>
-                {
-                    lock (_gate)
-                    {
-                        sourceSubscription.Dispose();
-                        _connection = null;
-                    }
-                });
-            }
-
+            // Allocate the connection only on the first connect. A dedicated disposable type
+            // avoids the closure (and extra anonymous-disposable wrapper) that Disposable.Create
+            // would allocate.
+            _connection ??= new Connection(this, _source.Subscribe(_hub));
             return _connection;
         }
     }
 
     /// <inheritdoc />
     public IDisposable Subscribe(IObserver<T> observer) => _hub.Subscribe(observer);
+
+    /// <summary>
+    /// Disconnect handle for an active source connection.
+    /// </summary>
+    private sealed class Connection : IDisposable
+    {
+        /// <summary>The owning connectable signal.</summary>
+        private readonly ConnectableSignal<T> _parent;
+
+        /// <summary>The source subscription feeding the hub; nulled once on dispose.</summary>
+        private IDisposable? _sourceSubscription;
+
+        /// <summary>Initializes a new instance of the <see cref="Connection"/> class.</summary>
+        /// <param name="parent">The owning connectable signal.</param>
+        /// <param name="sourceSubscription">The source subscription feeding the hub.</param>
+        public Connection(ConnectableSignal<T> parent, IDisposable sourceSubscription)
+        {
+            _parent = parent;
+            _sourceSubscription = sourceSubscription;
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            var sourceSubscription = Interlocked.Exchange(ref _sourceSubscription, null);
+            if (sourceSubscription == null)
+            {
+                return;
+            }
+
+            lock (_parent._gate)
+            {
+                sourceSubscription.Dispose();
+                if (ReferenceEquals(_parent._connection, this))
+                {
+                    _parent._connection = null;
+                }
+            }
+        }
+    }
 }
