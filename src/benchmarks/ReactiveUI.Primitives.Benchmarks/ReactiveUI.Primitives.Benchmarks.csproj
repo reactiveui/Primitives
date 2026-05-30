@@ -14,10 +14,12 @@
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <PackageReference Include="System.Reactive" />
     <PackageReference Include="R3" />
+    <PackageReference Include="ReactiveUI.Extensions" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Async\ReactiveUI.Primitives.Async.csproj" />
   </ItemGroup>
 
 </Project>

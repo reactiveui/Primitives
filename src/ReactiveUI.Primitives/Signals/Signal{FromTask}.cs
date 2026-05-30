@@ -373,15 +373,15 @@ public static partial class Signal
             // or cancellation is requested.
             var readyTask = await Task.WhenAny(asyncTask, cancellationTask).ConfigureAwait(false);
 
-            // In case of cancellation, register a continuation to observe any unhandled.
-            // exceptions from the asynchronous operation (once it completes).
+            // In case of cancellation, register a continuation to observe any unhandled
+            // exceptions from the asynchronous operation once it completes.
             if (readyTask == cancellationTask)
             {
-                await asyncTask.ContinueWith(
-                    _ => asyncTask.Exception,
-                    cancellationToken,
+                _ = asyncTask.ContinueWith(
+                    static task => _ = task.Exception,
+                    CancellationToken.None,
                     TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                    TaskScheduler.Current).ConfigureAwait(false);
+                    TaskScheduler.Default);
             }
 
             return (await readyTask.ConfigureAwait(false), tcs.Task.IsCanceled || readyTask.IsCanceled);
