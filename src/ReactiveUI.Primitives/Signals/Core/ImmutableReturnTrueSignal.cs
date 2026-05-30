@@ -12,14 +12,11 @@ namespace ReactiveUI.Primitives.Signals.Core;
 /// </summary>
 internal sealed class ImmutableReturnTrueSignal : IRequireCurrentThread<bool>, IInlineSignal<bool>
 {
-#pragma warning disable SA1401 // Fields should be private
-
     /// <summary>
     /// Executes the new operation.
     /// </summary>
     /// <returns>The result.</returns>
-    internal static ImmutableReturnTrueSignal Instance = new();
-#pragma warning restore SA1401 // Fields should be private
+    internal static readonly ImmutableReturnTrueSignal Instance = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ImmutableReturnTrueSignal"/> class.

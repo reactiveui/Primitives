@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Threading;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
@@ -12,12 +11,12 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// </summary>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class ImmediateSequencer : ISequencer
+public sealed class ImmediateSequencer : ISequencer
 {
     /// <summary>
     /// Singleton holder for the immediate sequencer.
     /// </summary>
-    private static readonly Lazy<ImmediateSequencer> StaticInstance = new(static () => new ImmediateSequencer());
+    private static readonly Lazy<ImmediateSequencer> StaticInstance = new(static () => new());
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ImmediateSequencer"/> class.
@@ -42,14 +41,22 @@ public sealed partial class ImmediateSequencer : ISequencer
     public long Timestamp => Sequencer.Timestamp;
 
     /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
+
+    /// <summary>
     /// Schedules an action to run immediately.
     /// </summary>
     /// <param name="action">Action to execute.</param>
     /// <returns>An empty disposable because the action has already run.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
-    #pragma warning disable CA1822 // Mark members as static
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Performance",
+        "CA1822:Mark members as static",
+        Justification = "Must remain an instance method so overload resolution selects it over the allocating ISequencer.Schedule(Action) extension, giving an allocation-free immediate path.")]
     public IDisposable Schedule(Action action)
-    #pragma warning restore CA1822 // Mark members as static
     {
         if (action == null)
         {

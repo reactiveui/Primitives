@@ -35,7 +35,7 @@ public static partial class Signal
             throw new ArgumentNullException(nameof(handler));
         }
 
-        return new CatchSignal<TSource, TException>(source, handler);
+        return new RecoverSignal<TSource, TException>(source, handler);
     }
 
     /// <summary>

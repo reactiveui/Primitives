@@ -3,10 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
-using R3;
-
 using R3ReplaySubject = R3.ReplaySubject<int>;
 using RxReplaySubject = System.Reactive.Subjects.ReplaySubject<int>;
 
@@ -16,8 +13,13 @@ namespace ReactiveUI.Primitives.Benchmarks;
 /// Benchmarks history/snapshot behavior for bounded replay buffers.
 /// </summary>
 [MemoryDiagnoser]
-public class HistorySignalBenchmarks
+public class ReplaySignalBenchmarks
 {
+    /// <summary>
+    /// The bounded replay buffer size and the number of values populated into each subject.
+    /// </summary>
+    private const int BufferSize = 16;
+
     /// <summary>
     /// Baseline bounded replay subscription benchmark for primitives.
     /// </summary>
@@ -26,7 +28,7 @@ public class HistorySignalBenchmarks
     public int PrimitivesHistorySubscribe()
     {
         var observer = new IntSignalObserver();
-        using var subject = new HistorySignal<int>(16);
+        using var subject = new HistorySignal<int>(BufferSize);
         PopulateHistorySignal(subject);
         using var subscription = subject.Subscribe(observer);
         return observer.Total;
@@ -40,7 +42,7 @@ public class HistorySignalBenchmarks
     public int SystemReactiveReplaySubscribe()
     {
         var observer = new IntSignalObserver();
-        using var subject = new RxReplaySubject(16);
+        using var subject = new RxReplaySubject(BufferSize);
         PopulateReplaySubject(subject);
         using var subscription = subject.Subscribe(observer);
         return observer.Total;
@@ -54,31 +56,43 @@ public class HistorySignalBenchmarks
     public int R3ReplaySubscribe()
     {
         var observer = new IntR3Observer();
-        using var subject = new R3ReplaySubject(16);
+        using var subject = new R3ReplaySubject(BufferSize);
         PopulateReplaySubject(subject);
         using var subscription = subject.Subscribe(observer);
         return observer.Total;
     }
 
+    /// <summary>
+    /// Populates the bounded primitives history signal with the buffered values.
+    /// </summary>
+    /// <param name="subject">The history signal to populate.</param>
     private static void PopulateHistorySignal(HistorySignal<int> subject)
     {
-        for (var i = 0; i < 16; i++)
+        for (var i = 0; i < BufferSize; i++)
         {
             subject.OnNext(i);
         }
     }
 
+    /// <summary>
+    /// Populates the System.Reactive replay subject with the buffered values.
+    /// </summary>
+    /// <param name="subject">The replay subject to populate.</param>
     private static void PopulateReplaySubject(RxReplaySubject subject)
     {
-        for (var i = 0; i < 16; i++)
+        for (var i = 0; i < BufferSize; i++)
         {
             subject.OnNext(i);
         }
     }
 
+    /// <summary>
+    /// Populates the R3 replay subject with the buffered values.
+    /// </summary>
+    /// <param name="subject">The replay subject to populate.</param>
     private static void PopulateReplaySubject(R3ReplaySubject subject)
     {
-        for (var i = 0; i < 16; i++)
+        for (var i = 0; i < BufferSize; i++)
         {
             subject.OnNext(i);
         }

@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Disposables;
 /// A disposable pocket that contains a set of disposables and disposes them together.
 /// </summary>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public partial class MultipleDisposable : IsDisposed
+public class MultipleDisposable : IsDisposed
 {
     /// <summary>
     /// Initial capacity for overflow disposable storage.
@@ -23,7 +23,7 @@ public partial class MultipleDisposable : IsDisposed
     /// <summary>
     /// Synchronizes mutations to the disposable set.
     /// </summary>
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
 
     /// <summary>
     /// First inline disposable slot.
@@ -116,6 +116,12 @@ public partial class MultipleDisposable : IsDisposed
     }
 
     /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
+
+    /// <summary>
     /// Creates a new group of disposable resources that are disposed together.
     /// </summary>
     /// <param name="disposables">Disposable resources to add to the group.</param>
@@ -168,7 +174,7 @@ public partial class MultipleDisposable : IsDisposed
             throw new ArgumentNullException(nameof(item));
         }
 
-        var shouldDispose = false;
+        bool shouldDispose;
         lock (_gate)
         {
             shouldDispose = !_disposed && RemoveCore(item);
@@ -342,9 +348,9 @@ public partial class MultipleDisposable : IsDisposed
                 return;
             }
 
-            foreach (var disposable in disposables)
+            for (var i = 0; i < disposables.Length; i++)
             {
-                disposable?.Dispose();
+                disposables[i]?.Dispose();
             }
         }
     }

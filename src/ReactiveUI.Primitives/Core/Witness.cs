@@ -124,6 +124,105 @@ public static class Witness
     }
 
     /// <summary>
+    /// Observer wrapper that prevents notifications after termination.
+    /// </summary>
+    /// <typeparam name="T">The observed value type.</typeparam>
+    internal sealed class SafeWitness<T> : IObserver<T>
+    {
+        /// <summary>
+        /// Wrapped observer.
+        /// </summary>
+        private readonly IObserver<T> _observer;
+
+        /// <summary>
+        /// Cancellation resource disposed on terminal notifications.
+        /// </summary>
+        private IDisposable? _cancel;
+
+        /// <summary>
+        /// Non-zero after the observer has stopped.
+        /// </summary>
+        private int _stopped;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SafeWitness{T}"/> class.
+        /// </summary>
+        /// <param name="observer">Wrapped observer.</param>
+        /// <param name="cancel">Cancellation resource disposed on terminal notifications.</param>
+        public SafeWitness(IObserver<T> observer, IDisposable cancel)
+        {
+            _observer = observer;
+            _cancel = cancel;
+        }
+
+        /// <inheritdoc/>
+        public void OnCompleted()
+        {
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _observer.OnCompleted();
+            }
+            finally
+            {
+                DisposeCancel();
+            }
+        }
+
+        /// <inheritdoc/>
+        public void OnError(Exception error)
+        {
+            if (error == null)
+            {
+                throw new ArgumentNullException(nameof(error));
+            }
+
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _observer.OnError(error);
+            }
+            finally
+            {
+                DisposeCancel();
+            }
+        }
+
+        /// <inheritdoc/>
+        public void OnNext(T value)
+        {
+            if (Volatile.Read(ref _stopped) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _observer.OnNext(value);
+            }
+            catch
+            {
+                Interlocked.Exchange(ref _stopped, 1);
+                DisposeCancel();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Disposes the cancellation resource exactly once.
+        /// </summary>
+        private void DisposeCancel() => Interlocked.Exchange(ref _cancel, null)?.Dispose();
+    }
+
+    /// <summary>
     /// Delegate-backed observer implementation.
     /// </summary>
     /// <typeparam name="T">The observed value type.</typeparam>
@@ -304,104 +403,5 @@ public static class Witness
                 throw;
             }
         }
-    }
-
-    /// <summary>
-    /// Observer wrapper that prevents notifications after termination.
-    /// </summary>
-    /// <typeparam name="T">The observed value type.</typeparam>
-    private sealed class SafeWitness<T> : IObserver<T>
-    {
-        /// <summary>
-        /// Wrapped observer.
-        /// </summary>
-        private readonly IObserver<T> _observer;
-
-        /// <summary>
-        /// Cancellation resource disposed on terminal notifications.
-        /// </summary>
-        private IDisposable? _cancel;
-
-        /// <summary>
-        /// Non-zero after the observer has stopped.
-        /// </summary>
-        private int _stopped;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SafeWitness{T}"/> class.
-        /// </summary>
-        /// <param name="observer">Wrapped observer.</param>
-        /// <param name="cancel">Cancellation resource disposed on terminal notifications.</param>
-        public SafeWitness(IObserver<T> observer, IDisposable cancel)
-        {
-            _observer = observer;
-            _cancel = cancel;
-        }
-
-        /// <inheritdoc/>
-        public void OnCompleted()
-        {
-            if (Interlocked.Exchange(ref _stopped, 1) != 0)
-            {
-                return;
-            }
-
-            try
-            {
-                _observer.OnCompleted();
-            }
-            finally
-            {
-                DisposeCancel();
-            }
-        }
-
-        /// <inheritdoc/>
-        public void OnError(Exception error)
-        {
-            if (error == null)
-            {
-                throw new ArgumentNullException(nameof(error));
-            }
-
-            if (Interlocked.Exchange(ref _stopped, 1) != 0)
-            {
-                return;
-            }
-
-            try
-            {
-                _observer.OnError(error);
-            }
-            finally
-            {
-                DisposeCancel();
-            }
-        }
-
-        /// <inheritdoc/>
-        public void OnNext(T value)
-        {
-            if (Volatile.Read(ref _stopped) != 0)
-            {
-                return;
-            }
-
-            try
-            {
-                _observer.OnNext(value);
-            }
-            catch
-            {
-                Interlocked.Exchange(ref _stopped, 1);
-                DisposeCancel();
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Disposes the cancellation resource exactly once.
-        /// </summary>
-        private void DisposeCancel() => Interlocked.Exchange(ref _cancel, null)?.Dispose();
     }
 }

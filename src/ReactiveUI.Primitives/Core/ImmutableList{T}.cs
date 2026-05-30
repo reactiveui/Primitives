@@ -41,7 +41,7 @@ internal sealed class ImmutableList<T>
         var newData = new T[Items.Length + 1];
         Array.Copy(Items, newData, Items.Length);
         newData[Items.Length] = value;
-        return new ImmutableList<T>(newData);
+        return new(newData);
     }
 
     /// <summary>
@@ -68,7 +68,7 @@ internal sealed class ImmutableList<T>
         Array.Copy(Items, 0, newData, 0, i);
         Array.Copy(Items, i + 1, newData, i, length - i - 1);
 
-        return new ImmutableList<T>(newData);
+        return new(newData);
     }
 
     /// <summary>

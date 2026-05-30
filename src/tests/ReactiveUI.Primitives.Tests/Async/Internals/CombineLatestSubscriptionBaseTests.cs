@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async.Tests.Internals;
@@ -48,7 +39,7 @@ public class CombineLatestSubscriptionBaseTests
 
         await subscription.SubscribeSourcesAsync(CancellationToken.None);
 
-        await Assert.That(subscription.SubscribedIndices).IsEquivalentTo([FirstIndex, SecondIndex, ThirdIndex]);
+        await Assert.That(subscription.SubscribedIndices).IsCollectionEqualTo([FirstIndex, SecondIndex, ThirdIndex]);
         await Assert.That(subscription.Lifecycle.Subscriptions[FirstIndex]).IsNotNull();
         await Assert.That(subscription.Lifecycle.Subscriptions[SecondIndex]).IsNotNull();
         await Assert.That(subscription.Lifecycle.Subscriptions[ThirdIndex]).IsNotNull();
@@ -185,7 +176,7 @@ public class CombineLatestSubscriptionBaseTests
         {
             _ = cancellationToken;
             SubscribedIndices.Add(index);
-            return new ValueTask<IAsyncDisposable>(NoopDisposable.Instance);
+            return new(NoopDisposable.Instance);
         }
     }
 

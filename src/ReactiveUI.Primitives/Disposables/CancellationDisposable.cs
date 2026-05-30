@@ -9,12 +9,17 @@ namespace ReactiveUI.Primitives.Disposables;
 /// </summary>
 /// <seealso cref="IDisposable" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class CancellationDisposable : IsDisposed
+public sealed class CancellationDisposable : IsDisposed
 {
     /// <summary>
     /// Cancellation source owned by this disposable.
     /// </summary>
     private readonly CancellationTokenSource _cts;
+
+    /// <summary>
+    /// Disposed latch; 0 when alive, 1 once disposed.
+    /// </summary>
+    private int _isDisposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CancellationDisposable"/> class.
@@ -27,7 +32,7 @@ public sealed partial class CancellationDisposable : IsDisposed
     /// Initializes a new instance of the <see cref="CancellationDisposable"/> class.
     /// </summary>
     public CancellationDisposable()
-      : this(new CancellationTokenSource())
+      : this(new())
     {
     }
 
@@ -45,33 +50,25 @@ public sealed partial class CancellationDisposable : IsDisposed
     /// <value>
     /// <c>true</c> if this instance is disposed; otherwise, <c>false</c>.
     /// </value>
-    public bool IsDisposed { get; private set; }
+    public bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
     /// </summary>
     public void Dispose()
     {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-    }
-
-    /// <summary>
-    /// Releases resources used by this disposable.
-    /// </summary>
-    /// <param name="disposing"><see langword="true"/> when called from <see cref="Dispose()"/>.</param>
-    private void Dispose(bool disposing)
-    {
-        if (IsDisposed)
+        // Atomic run-once latch so concurrent disposal cannot cancel the source twice.
+        if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
         {
             return;
         }
 
-        if (disposing)
-        {
-            _cts.Cancel();
-        }
-
-        IsDisposed = true;
+        _cts.Cancel();
     }
 }

@@ -333,20 +333,20 @@ public static partial class SignalAsync
             {
                 _sources = sources;
                 _selector = selector;
-                _obs1 = new CombineLatestIndexedObserver<T1, TResult>(this, Source1Bit, v => _val1 = new(v));
-                _obs2 = new CombineLatestIndexedObserver<T2, TResult>(this, Source2Bit, v => _val2 = new(v));
-                _obs3 = new CombineLatestIndexedObserver<T3, TResult>(this, Source3Bit, v => _val3 = new(v));
-                _obs4 = new CombineLatestIndexedObserver<T4, TResult>(this, Source4Bit, v => _val4 = new(v));
-                _obs5 = new CombineLatestIndexedObserver<T5, TResult>(this, Source5Bit, v => _val5 = new(v));
-                _obs6 = new CombineLatestIndexedObserver<T6, TResult>(this, Source6Bit, v => _val6 = new(v));
-                _obs7 = new CombineLatestIndexedObserver<T7, TResult>(this, Source7Bit, v => _val7 = new(v));
-                _obs8 = new CombineLatestIndexedObserver<T8, TResult>(this, Source8Bit, v => _val8 = new(v));
-                _obs9 = new CombineLatestIndexedObserver<T9, TResult>(this, Source9Bit, v => _val9 = new(v));
-                _obs10 = new CombineLatestIndexedObserver<T10, TResult>(this, Source10Bit, v => _val10 = new(v));
-                _obs11 = new CombineLatestIndexedObserver<T11, TResult>(this, Source11Bit, v => _val11 = new(v));
-                _obs12 = new CombineLatestIndexedObserver<T12, TResult>(this, Source12Bit, v => _val12 = new(v));
-                _obs13 = new CombineLatestIndexedObserver<T13, TResult>(this, Source13Bit, v => _val13 = new(v));
-                _obs14 = new CombineLatestIndexedObserver<T14, TResult>(this, Source14Bit, v => _val14 = new(v));
+                _obs1 = new(this, Source1Bit, v => _val1 = new(v));
+                _obs2 = new(this, Source2Bit, v => _val2 = new(v));
+                _obs3 = new(this, Source3Bit, v => _val3 = new(v));
+                _obs4 = new(this, Source4Bit, v => _val4 = new(v));
+                _obs5 = new(this, Source5Bit, v => _val5 = new(v));
+                _obs6 = new(this, Source6Bit, v => _val6 = new(v));
+                _obs7 = new(this, Source7Bit, v => _val7 = new(v));
+                _obs8 = new(this, Source8Bit, v => _val8 = new(v));
+                _obs9 = new(this, Source9Bit, v => _val9 = new(v));
+                _obs10 = new(this, Source10Bit, v => _val10 = new(v));
+                _obs11 = new(this, Source11Bit, v => _val11 = new(v));
+                _obs12 = new(this, Source12Bit, v => _val12 = new(v));
+                _obs13 = new(this, Source13Bit, v => _val13 = new(v));
+                _obs14 = new(this, Source14Bit, v => _val14 = new(v));
             }
 
             /// <inheritdoc/>

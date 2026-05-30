@@ -21,27 +21,41 @@ internal struct Broadcaster<T> : IEquatable<Broadcaster<T>>
     public bool HasObservers => Volatile.Read(ref _observers) is not null;
 
     /// <summary>
-    /// Adds an observer to the broadcaster.
+    /// Adds an observer to the broadcaster. The update is a lock-free compare-and-swap, so the
+    /// broadcaster is self-contained and does not rely on an external lock for correctness.
     /// </summary>
     /// <param name="observer">Observer to add.</param>
     public void Add(IObserver<T> observer)
     {
-        if (_observers is IObserver<T>[] many)
+        while (true)
         {
-            var copy = new IObserver<T>[many.Length + 1];
-            Array.Copy(many, copy, many.Length);
-            copy[many.Length] = observer;
-            Volatile.Write(ref _observers, copy);
-            return;
-        }
+            var current = Volatile.Read(ref _observers);
+            object next;
+            if (current is IObserver<T>[] many)
+            {
+                var copy = new IObserver<T>[many.Length + 1];
+                Array.Copy(many, copy, many.Length);
+                copy[many.Length] = observer;
+                next = copy;
+            }
+            else if (current is IObserver<T> single)
+            {
+                next = new[] { single, observer };
+            }
+            else if (Interlocked.CompareExchange(ref _observers, observer, null) == null)
+            {
+                return;
+            }
+            else
+            {
+                continue;
+            }
 
-        if (_observers is IObserver<T> single)
-        {
-            Volatile.Write(ref _observers, new[] { single, observer });
-            return;
+            if (ReferenceEquals(Interlocked.CompareExchange(ref _observers, next, current), current))
+            {
+                return;
+            }
         }
-
-        Volatile.Write(ref _observers, observer);
     }
 
     /// <summary>
@@ -50,46 +64,24 @@ internal struct Broadcaster<T> : IEquatable<Broadcaster<T>>
     public void Clear() => Volatile.Write(ref _observers, null);
 
     /// <summary>
-    /// Removes an observer from the broadcaster.
+    /// Removes an observer from the broadcaster using a lock-free compare-and-swap.
     /// </summary>
     /// <param name="observer">Observer to remove.</param>
     public void Remove(IObserver<T> observer)
     {
-        if (ReferenceEquals(_observers, observer))
+        while (true)
         {
-            Volatile.Write(ref _observers, null);
-            return;
-        }
+            var current = Volatile.Read(ref _observers);
+            if (!TryComputeRemoval(current, observer, out var next))
+            {
+                return;
+            }
 
-        if (_observers is not IObserver<T>[] many)
-        {
-            return;
+            if (ReferenceEquals(Interlocked.CompareExchange(ref _observers, next, current), current))
+            {
+                return;
+            }
         }
-
-        var index = Array.IndexOf(many, observer);
-        if (index < 0)
-        {
-            return;
-        }
-
-        if (many.Length == 2)
-        {
-            Volatile.Write(ref _observers, many[index == 0 ? 1 : 0]);
-            return;
-        }
-
-        var copy = new IObserver<T>[many.Length - 1];
-        for (var i = 0; i < index; i++)
-        {
-            copy[i] = many[i];
-        }
-
-        for (var i = index + 1; i < many.Length; i++)
-        {
-            copy[i - 1] = many[i];
-        }
-
-        Volatile.Write(ref _observers, copy);
     }
 
     /// <summary>
@@ -174,4 +166,43 @@ internal struct Broadcaster<T> : IEquatable<Broadcaster<T>>
     /// <inheritdoc/>
     public override readonly int GetHashCode() =>
         _observers is null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_observers);
+
+    /// <summary>
+    /// Computes the observer-set value that results from removing an observer.
+    /// </summary>
+    /// <param name="current">The current observer-set snapshot.</param>
+    /// <param name="observer">The observer to remove.</param>
+    /// <param name="next">The replacement observer-set value when the observer is present.</param>
+    /// <returns><c>true</c> when the observer was found and a replacement was produced; otherwise, <c>false</c>.</returns>
+    private static bool TryComputeRemoval(object? current, IObserver<T> observer, out object? next)
+    {
+        next = null;
+        if (ReferenceEquals(current, observer))
+        {
+            return true;
+        }
+
+        if (current is not IObserver<T>[] many)
+        {
+            return false;
+        }
+
+        var index = Array.IndexOf(many, observer);
+        if (index < 0)
+        {
+            return false;
+        }
+
+        if (many.Length == 2)
+        {
+            next = many[index == 0 ? 1 : 0];
+            return true;
+        }
+
+        var copy = new IObserver<T>[many.Length - 1];
+        Array.Copy(many, 0, copy, 0, index);
+        Array.Copy(many, index + 1, copy, index, many.Length - index - 1);
+        next = copy;
+        return true;
+    }
 }

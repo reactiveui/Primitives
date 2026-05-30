@@ -2,12 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
-using TUnit.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -27,9 +23,9 @@ public class SignalCreateTests
     [Test]
     public void Create_ArgumentChecking()
     {
-        Assert.Throws<ArgumentNullException>(() => Signal.Create(default(Func<IObserver<int>, IDisposable>)));
+        Assert.Throws<ArgumentNullException>(() => Signal.Create(default(Func<IObserver<int>, IDisposable>)!));
 
-        Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(default).Subscribe(null));
+        Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(null!).Subscribe(null!));
     }
 
     /// <summary>
@@ -41,7 +37,7 @@ public class SignalCreateTests
         var xs = Signal.Create<int>(o =>
         {
             o.OnNext(CreatedValue);
-            return Disposable.Create(default!);
+            return Disposable.Create(null!);
         });
 
         var lst = new List<int>();
@@ -91,13 +87,13 @@ public class SignalCreateTests
     [Test]
     public void CreateWithDisposable_ArgumentChecking()
     {
-        Assert.Throws<ArgumentNullException>(() => Signal.Create(default(Func<IObserver<int>, IDisposable>)));
-        Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(_ => DummyDisposable.Instance).Subscribe(null));
+        Assert.Throws<ArgumentNullException>(() => Signal.Create(default(Func<IObserver<int>, IDisposable>)!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(_ => DummyDisposable.Instance).Subscribe(null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(o =>
         {
-            o.OnError(null);
+            o.OnError(null!);
             return DummyDisposable.Instance;
-        }).Subscribe(null));
+        }).Subscribe(null!));
     }
 
     /// <summary>
@@ -109,7 +105,7 @@ public class SignalCreateTests
         var xs = Signal.Create<int>(o =>
         {
             o.OnNext(CreatedValue);
-            return default!;
+            return null!;
         });
 
         var lst = new List<int>();

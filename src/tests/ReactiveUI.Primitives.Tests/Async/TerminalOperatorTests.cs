@@ -2,16 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
 using System.Threading.Channels;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -826,7 +817,7 @@ public partial class TerminalOperatorTests
         const int Third = 3;
         const int Fourth = 4;
         var result = await SignalAsync.Range(1, 4).ToListAsync();
-        await Assert.That(result).IsEquivalentTo([1, Second, Third, Fourth]);
+        await Assert.That(result).IsCollectionEqualTo([1, Second, Third, Fourth]);
     }
 
     /// <summary>Tests ToListAsync propagates error when source emits OnErrorResumeAsync.</summary>
@@ -957,7 +948,7 @@ public partial class TerminalOperatorTests
         const int Third = 3;
         var items = new List<int>();
         await SignalAsync.Range(1, SourceCount).ForEachAsync(items.Add);
-        await Assert.That(items).IsEquivalentTo([1, Second, Third]);
+        await Assert.That(items).IsCollectionEqualTo([1, Second, Third]);
     }
 
     /// <summary>Tests WaitCompletionAsync waits for completion.</summary>
@@ -1007,7 +998,7 @@ public partial class TerminalOperatorTests
             items.Add(item);
         }
 
-        await Assert.That(items).IsEquivalentTo([1, Second, Third]);
+        await Assert.That(items).IsCollectionEqualTo([1, Second, Third]);
     }
 
     /// <summary>Tests that ToAsyncEnumerable yields all elements from the source when completed.</summary>
@@ -1121,7 +1112,7 @@ public partial class TerminalOperatorTests
                 await source.ForEachAsync(x => items.Add(x)));
 
         await Assert.That(caughtException!.Message).IsEqualTo(ResumeErrorMessage);
-        await Assert.That(items).IsEquivalentTo([1]);
+        await Assert.That(items).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Tests that the async ForEachAsync overload throws ArgumentNullException when onNextAsync is null.</summary>
@@ -1156,7 +1147,7 @@ public partial class TerminalOperatorTests
             items.Add(x);
         });
 
-        await Assert.That(items).IsEquivalentTo([1, Second, Third]);
+        await Assert.That(items).IsCollectionEqualTo([1, Second, Third]);
     }
 
     /// <summary>Tests that the async ForEachAsync overload propagates errors from OnErrorResumeAsync.</summary>
@@ -1182,7 +1173,7 @@ public partial class TerminalOperatorTests
             }));
 
         await Assert.That(ex!.Message).IsEqualTo("async resume error");
-        await Assert.That(items).IsEquivalentTo([1]);
+        await Assert.That(items).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Tests that the async ForEachAsync overload propagates errors when source completes with failure.</summary>
@@ -1207,7 +1198,7 @@ public partial class TerminalOperatorTests
             }));
 
         await Assert.That(ex!.Message).IsEqualTo(SourceFailedMessage);
-        await Assert.That(items).IsEquivalentTo([1]);
+        await Assert.That(items).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Tests LongCountAsync propagates error from OnErrorResumeAsync through the observer.</summary>
@@ -1256,7 +1247,7 @@ public partial class TerminalOperatorTests
         });
 
         await Assert.That(ex!.Message).IsEqualTo("source error");
-        await Assert.That(items).IsEquivalentTo([1]);
+        await Assert.That(items).IsCollectionEqualTo([1]);
     }
 
     /// <summary>
@@ -1280,7 +1271,7 @@ public partial class TerminalOperatorTests
             items.Add(item);
         }
 
-        await Assert.That(items).IsEquivalentTo([First, Second, Third, Fourth, Fifth]);
+        await Assert.That(items).IsCollectionEqualTo([First, Second, Third, Fourth, Fifth]);
     }
 
     /// <summary>Tests AggregateAsync propagates source failure.</summary>

@@ -13,12 +13,17 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// </summary>
 /// <seealso cref="ISequencer" />
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class CurrentThreadSequencer : ISequencer
+public sealed class CurrentThreadSequencer : ISequencer
 {
+    /// <summary>
+    /// Initial capacity for a freshly created thread-local work queue.
+    /// </summary>
+    private const int InitialQueueCapacity = 4;
+
     /// <summary>
     /// Singleton holder for the current-thread sequencer.
     /// </summary>
-    private static readonly Lazy<CurrentThreadSequencer> StaticInstance = new(() => new CurrentThreadSequencer());
+    private static readonly Lazy<CurrentThreadSequencer> StaticInstance = new(() => new());
 
     /// <summary>
     /// Tracks whether the current thread is running scheduled work.
@@ -48,9 +53,7 @@ public sealed partial class CurrentThreadSequencer : ISequencer
     /// Gets a value indicating whether gets a value that indicates whether the caller must call a Schedule method.
     /// </summary>
     [EditorBrowsable(EditorBrowsableState.Advanced)]
-#pragma warning disable CA1822 // Mark members as static
-    public bool IsScheduleRequired => !_running;
-#pragma warning restore CA1822 // Mark members as static
+    public static bool IsScheduleRequired => !_running;
 
     /// <summary>
     /// Gets the scheduler's notion of current time.
@@ -61,6 +64,12 @@ public sealed partial class CurrentThreadSequencer : ISequencer
     /// Gets the scheduler's monotonic timestamp.
     /// </summary>
     public long Timestamp => Sequencer.Timestamp;
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Schedules an action to be executed on the current-thread trampoline.
@@ -186,7 +195,7 @@ public sealed partial class CurrentThreadSequencer : ISequencer
         // if there is a task running or there is a queue
         if (queue == null)
         {
-            queue = new SequencerQueue<long>(4);
+            queue = new(InitialQueueCapacity);
             SetQueue(queue);
         }
 

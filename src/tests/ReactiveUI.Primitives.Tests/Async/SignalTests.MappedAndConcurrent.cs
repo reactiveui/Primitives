@@ -2,16 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
 using System.Collections.Immutable;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -56,7 +47,7 @@ public partial class SignalTests
 
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        await Assert.That(items).IsEquivalentTo([FirstMapped, SecondMapped]);
+        await Assert.That(items).IsCollectionEqualTo([FirstMapped, SecondMapped]);
     }
 
     /// <summary>Tests that OnErrorResumeAsync on a serial stateless Signal delivers the error to the observer.</summary>
@@ -132,7 +123,7 @@ public partial class SignalTests
         // After dispose, observers are cleared so no further values should be delivered.
         await signal.OnNextAsync(PostDisposeValue, CancellationToken.None);
 
-        await Assert.That(items).IsEquivalentTo([1]);
+        await Assert.That(items).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Tests that DisposeAsync on a concurrent stateless Signal clears observers and completes without error.</summary>
@@ -164,7 +155,7 @@ public partial class SignalTests
         // After dispose, observers are cleared so no further values should be delivered.
         await signal.OnNextAsync(PostDisposeValue, CancellationToken.None);
 
-        await Assert.That(items).IsEquivalentTo([1]);
+        await Assert.That(items).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Tests that OnErrorResumeAsync on a concurrent stateful Signal delivers the error to observers.</summary>
@@ -320,7 +311,7 @@ public partial class SignalTests
 
         await signal.OnNextAsync(PostCompletionValue, CancellationToken.None);
 
-        await Assert.That(items).IsEquivalentTo([1]);
+        await Assert.That(items).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Tests that OnErrorResumeAsync forwards the error to observers when the Signal has not completed.</summary>
@@ -454,7 +445,7 @@ public partial class SignalTests
         await mapped.OnNextAsync(InputValue, CancellationToken.None);
         await mapped.OnCompletedAsync(Result.Success);
 
-        await Assert.That(items).IsEquivalentTo([MappedValue]);
+        await Assert.That(items).IsCollectionEqualTo([MappedValue]);
     }
 
     /// <summary>Tests that Mappedsignal.OnErrorResumeAsync forwards the error to the original Signal.</summary>
@@ -611,8 +602,8 @@ public partial class SignalTests
         await signal.OnNextAsync(PushedValue, CancellationToken.None);
         await signal.OnCompletedAsync(Result.Success);
 
-        await Assert.That(items1).IsEquivalentTo([PushedValue]);
-        await Assert.That(items2).IsEquivalentTo([PushedValue]);
+        await Assert.That(items1).IsCollectionEqualTo([PushedValue]);
+        await Assert.That(items2).IsCollectionEqualTo([PushedValue]);
     }
 
     /// <summary>Tests that concurrent Signal forwards OnErrorResume to multiple observers concurrently.</summary>

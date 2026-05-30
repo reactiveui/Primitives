@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System;
-
 namespace ReactiveUI.Primitives.Benchmarks;
 
 /// <summary>
@@ -30,25 +28,16 @@ internal sealed class BooleanSignalObserver : IObserver<bool>
     /// Called when a value is received.
     /// </summary>
     /// <param name="value">The value.</param>
-    public void OnNext(bool value)
-    {
-        Value = value;
-    }
+    public void OnNext(bool value) => Value = value;
 
     /// <summary>
     /// Called when an error is observed.
     /// </summary>
     /// <param name="error">The exception.</param>
-    public void OnError(Exception error)
-    {
-        ErrorCount++;
-    }
+    public void OnError(Exception error) => ErrorCount++;
 
     /// <summary>
     /// Called when sequence completed.
     /// </summary>
-    public void OnCompleted()
-    {
-        CompletionCount++;
-    }
+    public void OnCompleted() => CompletionCount++;
 }

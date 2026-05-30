@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives;
@@ -31,7 +30,7 @@ public static class ConnectableSignalMixins
             throw new ArgumentNullException(nameof(hub));
         }
 
-        return new ConnectableSignal<T>(source, hub);
+        return new(source, hub);
     }
 
     /// <summary>
@@ -115,8 +114,7 @@ public static class ConnectableSignalMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        var gate = AutoShareGate<T>.For(source);
-        return Signal.Create<T>(gate.Subscribe);
+        return AutoShareGate<T>.For(source);
     }
 
     /// <summary>
@@ -147,20 +145,19 @@ public static class ConnectableSignalMixins
             throw new ArgumentOutOfRangeException(nameof(subscriberCount));
         }
 
-        var gate = AutoConnectGate<T>.For(source, subscriberCount);
-        return Signal.Create<T>(gate.Subscribe);
+        return AutoConnectGate<T>.For(source, subscriberCount);
     }
 
     /// <summary>
     /// Tracks reference-counted connection state.
     /// </summary>
     /// <typeparam name="TValue">The value type.</typeparam>
-    private sealed class AutoShareGate<TValue>
+    private sealed class AutoShareGate<TValue> : IObservable<TValue>
     {
         /// <summary>
         /// Synchronizes reference-count state.
         /// </summary>
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// Connectable signal being reference-counted.
@@ -197,6 +194,11 @@ public static class ConnectableSignalMixins
         /// <returns>A disposable that removes the observer and may disconnect the source.</returns>
         public IDisposable Subscribe(IObserver<TValue> observer)
         {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
             IDisposable subscription;
             lock (_gate)
             {
@@ -205,19 +207,50 @@ public static class ConnectableSignalMixins
                 _connection ??= _source.Connect();
             }
 
-            return Disposable.Create(() =>
+            return new Subscription(this, subscription);
+        }
+
+        /// <summary>
+        /// Releases an observer subscription and disconnects the source when the last one leaves.
+        /// </summary>
+        /// <param name="subscription">The inner subscription to release.</param>
+        private void Release(IDisposable subscription)
+        {
+            subscription.Dispose();
+            lock (_gate)
             {
-                subscription.Dispose();
-                lock (_gate)
+                _count--;
+                if (_count == 0)
                 {
-                    _count--;
-                    if (_count == 0)
-                    {
-                        _connection?.Dispose();
-                        _connection = null;
-                    }
+                    _connection?.Dispose();
+                    _connection = null;
                 }
-            });
+            }
+        }
+
+        /// <summary>
+        /// Reference-counted subscription handle. A dedicated type avoids the closure that
+        /// <c>Disposable.Create</c> would allocate per subscription.
+        /// </summary>
+        private sealed class Subscription : IDisposable
+        {
+            /// <summary>The inner source subscription.</summary>
+            private readonly IDisposable _subscription;
+
+            /// <summary>The owning gate; nulled once on dispose.</summary>
+            private AutoShareGate<TValue>? _owner;
+
+            /// <summary>Initializes a new instance of the <see cref="Subscription"/> class.</summary>
+            /// <param name="owner">The owning gate.</param>
+            /// <param name="subscription">The inner source subscription.</param>
+            public Subscription(AutoShareGate<TValue> owner, IDisposable subscription)
+            {
+                _owner = owner;
+                _subscription = subscription;
+            }
+
+            /// <inheritdoc/>
+            public void Dispose() => Interlocked.Exchange(ref _owner, null)?.Release(_subscription);
         }
     }
 
@@ -225,13 +258,8 @@ public static class ConnectableSignalMixins
     /// Tracks auto-connect subscription state.
     /// </summary>
     /// <typeparam name="TValue">The value type.</typeparam>
-    private sealed class AutoConnectGate<TValue>
+    private sealed class AutoConnectGate<TValue> : IObservable<TValue>
     {
-        /// <summary>
-        /// Synchronizes auto-connect state.
-        /// </summary>
-        private readonly object _gate = new();
-
         /// <summary>
         /// Connectable signal being auto-connected.
         /// </summary>
@@ -248,9 +276,9 @@ public static class ConnectableSignalMixins
         private int _count;
 
         /// <summary>
-        /// Value indicating whether the source has connected.
+        /// Connect-once latch; 0 before connecting, 1 once connected.
         /// </summary>
-        private bool _connected;
+        private int _connected;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AutoConnectGate{TValue}"/> class.
@@ -279,15 +307,19 @@ public static class ConnectableSignalMixins
         /// <returns>A disposable that removes the observer subscription.</returns>
         public IDisposable Subscribe(IObserver<TValue> observer)
         {
-            var subscription = _source.Subscribe(observer);
-            lock (_gate)
+            if (observer == null)
             {
-                _count++;
-                if (!_connected && _count >= _subscriberCount)
-                {
-                    _connected = true;
-                    _source.Connect();
-                }
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            var subscription = _source.Subscribe(observer);
+
+            // Auto-connect only ever counts up and connects once, so no lock is needed: a single
+            // CompareExchange latches the connect once the threshold is reached.
+            var count = Interlocked.Increment(ref _count);
+            if (count >= _subscriberCount && Interlocked.CompareExchange(ref _connected, 1, 0) == 0)
+            {
+                _source.Connect();
             }
 
             return subscription;

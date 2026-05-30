@@ -3,10 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
-using System.Threading;
-
 using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -17,6 +14,29 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class OperatorHigherOrderBenchmarks
 {
+    /// <summary>
+    /// The inclusive start value of the primary range used by each benchmark.
+    /// </summary>
+    private const int Start = 1;
+
+    /// <summary>
+    /// The inclusive start value of the alternate range used by racing/switching benchmarks.
+    /// </summary>
+    private const int AltStart = 100;
+
+    /// <summary>
+    /// The inclusive start value of the right-hand range used by combining benchmarks.
+    /// </summary>
+    private const int RightStart = 10;
+
+    /// <summary>
+    /// The number of trailing elements retained by the fork-join-equivalent benchmarks.
+    /// </summary>
+    private const int TakeLastCount = 1;
+
+    /// <summary>
+    /// The number of elements produced by each range used by the benchmarks.
+    /// </summary>
     private const int Count = 16;
 
     /// <summary>
@@ -27,7 +47,7 @@ public class OperatorHigherOrderBenchmarks
     public int PrimitivesConcatRanges()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Chain(Signal.Sequence(1, Count), Signal.Sequence(1, Count)).Subscribe(observer);
+        using var subscription = Signal.Chain(Signal.Sequence(Start, Count), Signal.Sequence(Start, Count)).Subscribe(observer);
         return observer.Total;
     }
 
@@ -39,7 +59,7 @@ public class OperatorHigherOrderBenchmarks
     public int SystemReactiveConcatRanges()
     {
         var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Concat(RxObservable.Range(1, Count), RxObservable.Range(1, Count))
+        using var subscription = RxObservable.Concat(RxObservable.Range(Start, Count), RxObservable.Range(Start, Count))
             .Subscribe(observer);
         return observer.Total;
     }
@@ -52,7 +72,7 @@ public class OperatorHigherOrderBenchmarks
     public int R3ConcatRanges()
     {
         var observer = new IntR3Observer();
-        using var subscription = R3.Observable.Concat(R3.Observable.Range(1, Count), R3.Observable.Range(1, Count))
+        using var subscription = R3.Observable.Concat(R3.Observable.Range(Start, Count), R3.Observable.Range(Start, Count))
             .Subscribe(observer);
         return observer.Total;
     }
@@ -65,7 +85,7 @@ public class OperatorHigherOrderBenchmarks
     public int PrimitivesMergeRanges()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Blend(Signal.Sequence(1, Count), Signal.Sequence(1, Count)).Subscribe(observer);
+        using var subscription = Signal.Blend(Signal.Sequence(Start, Count), Signal.Sequence(Start, Count)).Subscribe(observer);
         return observer.Total;
     }
 
@@ -77,7 +97,7 @@ public class OperatorHigherOrderBenchmarks
     public int SystemReactiveMergeRanges()
     {
         var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Merge(RxObservable.Range(1, Count), RxObservable.Range(1, Count))
+        using var subscription = RxObservable.Merge(RxObservable.Range(Start, Count), RxObservable.Range(Start, Count))
             .Subscribe(observer);
         return observer.Total;
     }
@@ -90,7 +110,7 @@ public class OperatorHigherOrderBenchmarks
     public int R3MergeRanges()
     {
         var observer = new IntR3Observer();
-        using var subscription = R3.Observable.Merge(R3.Observable.Range(1, Count), R3.Observable.Range(1, Count))
+        using var subscription = R3.Observable.Merge(R3.Observable.Range(Start, Count), R3.Observable.Range(Start, Count))
             .Subscribe(observer);
         return observer.Total;
     }
@@ -103,7 +123,7 @@ public class OperatorHigherOrderBenchmarks
     public int PrimitivesRaceRanges()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Race(Signal.Sequence(1, Count), Signal.Sequence(100, Count)).Subscribe(observer);
+        using var subscription = Signal.Race(Signal.Sequence(Start, Count), Signal.Sequence(AltStart, Count)).Subscribe(observer);
         return observer.Total;
     }
 
@@ -115,7 +135,7 @@ public class OperatorHigherOrderBenchmarks
     public int SystemReactiveRaceRanges()
     {
         var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Amb(RxObservable.Range(1, Count), RxObservable.Range(100, Count))
+        using var subscription = RxObservable.Amb(RxObservable.Range(Start, Count), RxObservable.Range(AltStart, Count))
             .Subscribe(observer);
         return observer.Total;
     }
@@ -128,7 +148,7 @@ public class OperatorHigherOrderBenchmarks
     public int R3RaceRanges()
     {
         var observer = new IntR3Observer();
-        using var subscription = R3.Observable.Race(R3.Observable.Range(1, Count), R3.Observable.Range(100, Count))
+        using var subscription = R3.Observable.Race(R3.Observable.Range(Start, Count), R3.Observable.Range(AltStart, Count))
             .Subscribe(observer);
         return observer.Total;
     }
@@ -141,7 +161,7 @@ public class OperatorHigherOrderBenchmarks
     public int PrimitivesSwitchRanges()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.FromEnumerable([Signal.Sequence(1, Count), Signal.Sequence(100, Count)])
+        using var subscription = Signal.FromEnumerable([Signal.Sequence(Start, Count), Signal.Sequence(AltStart, Count)])
             .SwitchTo()
             .Subscribe(observer);
         return observer.Total;
@@ -156,7 +176,7 @@ public class OperatorHigherOrderBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = RxObservable.Switch(
-                RxObservable.ToObservable(new[] { RxObservable.Range(1, Count), RxObservable.Range(100, Count) }))
+                RxObservable.ToObservable([RxObservable.Range(Start, Count), RxObservable.Range(AltStart, Count)]))
             .Subscribe(observer);
         return observer.Total;
     }
@@ -171,7 +191,7 @@ public class OperatorHigherOrderBenchmarks
         var observer = new IntR3Observer();
         using var subscription = R3.ObservableExtensions.Switch(
                 R3.Observable.ToObservable(
-                    new[] { R3.Observable.Range(1, Count), R3.Observable.Range(100, Count) },
+                    [R3.Observable.Range(Start, Count), R3.Observable.Range(AltStart, Count)],
                     CancellationToken.None))
             .Subscribe(observer);
         return observer.Total;
@@ -186,8 +206,8 @@ public class OperatorHigherOrderBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = Signal.SyncLatest(
-            Signal.Sequence(1, Count),
-            Signal.Sequence(10, Count),
+            Signal.Sequence(Start, Count),
+            Signal.Sequence(RightStart, Count),
             static (left, right) => left + right).Subscribe(observer);
         return observer.Total;
     }
@@ -201,8 +221,8 @@ public class OperatorHigherOrderBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = RxObservable.CombineLatest(
-            RxObservable.Range(1, Count),
-            RxObservable.Range(10, Count),
+            RxObservable.Range(Start, Count),
+            RxObservable.Range(RightStart, Count),
             static (left, right) => left + right).Subscribe(observer);
         return observer.Total;
     }
@@ -216,9 +236,9 @@ public class OperatorHigherOrderBenchmarks
     {
         var observer = new IntR3Observer();
         using var subscription = R3.Observable.CombineLatest(
-            R3.Observable.Range(1, Count),
-            R3.Observable.Range(10, Count),
-            static (int left, int right) => left + right).Subscribe(observer);
+            R3.Observable.Range(Start, Count),
+            R3.Observable.Range(RightStart, Count),
+            static (left, right) => left + right).Subscribe(observer);
         return observer.Total;
     }
 
@@ -230,8 +250,8 @@ public class OperatorHigherOrderBenchmarks
     public int PrimitivesWithLatestRanges()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Sequence(1, Count)
-            .Latch(Signal.Sequence(10, Count), static (left, right) => left + right)
+        using var subscription = Signal.Sequence(Start, Count)
+            .Latch(Signal.Sequence(RightStart, Count), static (left, right) => left + right)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -245,8 +265,8 @@ public class OperatorHigherOrderBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = RxObservable.WithLatestFrom(
-            RxObservable.Range(1, Count),
-            RxObservable.Range(10, Count),
+            RxObservable.Range(Start, Count),
+            RxObservable.Range(RightStart, Count),
             static (left, right) => left + right).Subscribe(observer);
         return observer.Total;
     }
@@ -260,9 +280,9 @@ public class OperatorHigherOrderBenchmarks
     {
         var observer = new IntR3Observer();
         using var subscription = R3.ObservableExtensions.WithLatestFrom(
-            R3.Observable.Range(1, Count),
-            R3.Observable.Range(10, Count),
-            static (int left, int right) => left + right).Subscribe(observer);
+            R3.Observable.Range(Start, Count),
+            R3.Observable.Range(RightStart, Count),
+            static (left, right) => left + right).Subscribe(observer);
         return observer.Total;
     }
 
@@ -275,8 +295,8 @@ public class OperatorHigherOrderBenchmarks
     {
         var observer = new IntSignalObserver();
         using var subscription = Signal.ForkJoin(
-            Signal.Sequence(1, Count),
-            Signal.Sequence(10, Count),
+            Signal.Sequence(Start, Count),
+            Signal.Sequence(RightStart, Count),
             static (left, right) => left + right).Subscribe(observer);
         return observer.Total;
     }
@@ -291,10 +311,10 @@ public class OperatorHigherOrderBenchmarks
         var observer = new IntSignalObserver();
         using var subscription = RxObservable.TakeLast(
                 RxObservable.CombineLatest(
-                    RxObservable.Range(1, Count),
-                    RxObservable.Range(10, Count),
+                    RxObservable.Range(Start, Count),
+                    RxObservable.Range(RightStart, Count),
                     static (left, right) => left + right),
-                1)
+                TakeLastCount)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -309,10 +329,10 @@ public class OperatorHigherOrderBenchmarks
         var observer = new IntR3Observer();
         using var subscription = R3.ObservableExtensions.TakeLast(
                 R3.Observable.CombineLatest(
-                    R3.Observable.Range(1, Count),
-                    R3.Observable.Range(10, Count),
-                    static (int left, int right) => left + right),
-                1)
+                    R3.Observable.Range(Start, Count),
+                    R3.Observable.Range(RightStart, Count),
+                    static (left, right) => left + right),
+                TakeLastCount)
             .Subscribe(observer);
         return observer.Total;
     }

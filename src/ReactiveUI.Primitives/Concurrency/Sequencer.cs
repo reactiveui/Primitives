@@ -2,6 +2,10 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if !NET8_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
+
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>
@@ -30,9 +34,8 @@ public static partial class Sequencer
 #if NET8_0_OR_GREATER
     internal static DateTimeOffset Now => TimeProvider.System.GetUtcNow();
 #else
-#pragma warning disable S6354 // TimeProvider is not available on supported .NET Framework target frameworks.
+    [SuppressMessage("Major Code Smell", "S6354:Use a testable date/time provider", Justification = "Not available all platforms")]
     internal static DateTimeOffset Now => DateTimeOffset.UtcNow;
-#pragma warning restore S6354
 #endif
 
     /// <summary>

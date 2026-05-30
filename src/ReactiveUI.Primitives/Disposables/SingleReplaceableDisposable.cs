@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Disposables;
 /// SingleReplaceableDisposable.
 /// </summary>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public partial class SingleReplaceableDisposable : IsDisposed
+public class SingleReplaceableDisposable : IsDisposed
 {
     /// <summary>
     /// Marker used once the slot has been disposed.
@@ -72,6 +72,12 @@ public partial class SingleReplaceableDisposable : IsDisposed
             return ReferenceEquals(Volatile.Read(ref _disposable), DisposedSentinel);
         }
     }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Creates the specified disposable.

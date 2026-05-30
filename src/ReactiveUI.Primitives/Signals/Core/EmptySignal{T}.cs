@@ -47,7 +47,7 @@ internal sealed class EmptySignal<T> : SignalsBase<T>
     /// <summary>
     /// Represents the Empty class.
     /// </summary>
-    private sealed class Empty : WitnessBase<T, T>
+    internal sealed class Empty : WitnessBase<T, T>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Empty"/> class.

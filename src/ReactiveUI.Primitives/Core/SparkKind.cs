@@ -2,26 +2,25 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-namespace ReactiveUI.Primitives.Core
+namespace ReactiveUI.Primitives.Core;
+
+/// <summary>
+/// Indicates the type of a spark.
+/// </summary>
+public enum SparkKind
 {
     /// <summary>
-    /// Indicates the type of a spark.
+    /// Represents an OnNext spark.
     /// </summary>
-    public enum SparkKind
-    {
-        /// <summary>
-        /// Represents an OnNext spark.
-        /// </summary>
-        OnNext,
+    OnNext,
 
-        /// <summary>
-        /// Represents an OnError spark.
-        /// </summary>
-        OnError,
+    /// <summary>
+    /// Represents an OnError spark.
+    /// </summary>
+    OnError,
 
-        /// <summary>
-        /// Represents an OnCompleted spark.
-        /// </summary>
-        OnCompleted
-    }
+    /// <summary>
+    /// Represents an OnCompleted spark.
+    /// </summary>
+    OnCompleted
 }

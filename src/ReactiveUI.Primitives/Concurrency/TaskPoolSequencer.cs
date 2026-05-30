@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// </summary>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class TaskPoolSequencer : ISequencer
+public sealed class TaskPoolSequencer : ISequencer
 {
     /// <summary>
     /// Task factory used to schedule asynchronous work.
@@ -53,6 +53,12 @@ public sealed partial class TaskPoolSequencer : ISequencer
     public long Timestamp => Sequencer.Timestamp;
 
     /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
+
+    /// <summary>
     /// Schedules a work item to be executed through the task factory.
     /// </summary>
     /// <param name="item">Work item to execute.</param>
@@ -64,9 +70,12 @@ public sealed partial class TaskPoolSequencer : ISequencer
             throw new ArgumentNullException(nameof(item));
         }
 
-#pragma warning disable CA2008 // The caller supplied the factory; preserving its scheduler is intentional.
-        _taskFactory.StartNew(static state => ((DispatchState)state!).Run(), new DispatchState(this, item));
-#pragma warning restore CA2008
+        _taskFactory.StartNew(
+            static state => ((DispatchState)state!).Run(),
+            new DispatchState(this, item),
+            _taskFactory.CancellationToken,
+            _taskFactory.CreationOptions,
+            _taskFactory.Scheduler ?? TaskScheduler.Default);
     }
 
     /// <summary>

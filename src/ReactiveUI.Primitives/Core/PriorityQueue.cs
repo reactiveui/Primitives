@@ -99,7 +99,7 @@ internal sealed class PriorityQueue<T>
         }
 
         var index = Count++;
-        _items[index] = new IndexedItem { Value = item, Id = ++_count };
+        _items[index] = new() { Value = item, Id = ++_count };
         Percolate(index);
     }
 
@@ -233,7 +233,7 @@ internal sealed class PriorityQueue<T>
     /// <summary>
     /// Heap item with an insertion-order tie-breaker.
     /// </summary>
-    private struct IndexedItem : IComparable<IndexedItem>, IEquatable<IndexedItem>
+    internal struct IndexedItem : IComparable<IndexedItem>, IEquatable<IndexedItem>
     {
         /// <summary>
         /// Insertion order id.

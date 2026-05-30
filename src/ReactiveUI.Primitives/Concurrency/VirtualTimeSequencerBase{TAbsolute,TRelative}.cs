@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 /// <typeparam name="TRelative">Relative time representation type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public abstract partial class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequencer, IServiceProvider, IStopwatchProvider
+public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequencer, IServiceProvider, IStopwatchProvider
     where TAbsolute : IComparable<TAbsolute>
 {
     /// <summary>
@@ -71,6 +71,12 @@ public abstract partial class VirtualTimeSequencerBase<TAbsolute, TRelative> : I
     /// Gets the comparer used to compare absolute time values.
     /// </summary>
     protected IComparer<TAbsolute> Comparer { get; }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Advances the scheduler's clock by the specified relative time, running all work scheduled for that timespan.

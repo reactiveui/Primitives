@@ -24,7 +24,8 @@ public static partial class SignalAsync
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
     /// <param name="this">The source observable sequence.</param>
     /// <returns>An observable sequence that contains distinct elements from the source sequence.</returns>
-    public static IObservableAsync<T> Distinct<T>(this IObservableAsync<T> @this) => @this.Distinct(EqualityComparer<T>.Default);
+    public static IObservableAsync<T> Distinct<T>(this IObservableAsync<T> @this) =>
+        @this.Distinct(EqualityComparer<T>.Default);
 
     /// <summary>
     /// Returns an observable sequence that contains only distinct elements from the source sequence, using the
@@ -76,7 +77,10 @@ public static partial class SignalAsync
     /// <returns>An observable sequence that contains only the first occurrence of each distinct key as determined by the
     /// specified key selector and equality comparer.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="keySelector"/> or <paramref name="equalityComparer"/> is null.</exception>
-    public static IObservableAsync<T> DistinctBy<T, TKey>(this IObservableAsync<T> @this, Func<T, TKey> keySelector, IEqualityComparer<TKey> equalityComparer)
+    public static IObservableAsync<T> DistinctBy<T, TKey>(
+        this IObservableAsync<T> @this,
+        Func<T, TKey> keySelector,
+        IEqualityComparer<TKey> equalityComparer)
     {
         ArgumentExceptionHelper.ThrowIfNull(@this);
         ArgumentExceptionHelper.ThrowIfNull(keySelector);
@@ -118,7 +122,7 @@ public static partial class SignalAsync
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
         {
             /// <summary>Set of previously-forwarded values; <see cref="HashSet{T}.Add"/> returns <see langword="false"/> for duplicates.</summary>
-            private readonly HashSet<T> _seen = [with(comparer)];
+            private readonly HashSet<T> _seen = new(comparer);
 
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
@@ -174,7 +178,7 @@ public static partial class SignalAsync
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
         {
             /// <summary>Set of previously-seen keys.</summary>
-            private readonly HashSet<TKey> _seen = [with(comparer)];
+            private readonly HashSet<TKey> _seen = new(comparer);
 
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>

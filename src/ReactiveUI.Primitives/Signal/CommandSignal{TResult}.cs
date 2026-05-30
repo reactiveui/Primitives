@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="TResult">The command result type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class CommandSignal<TResult> : IObservable<TResult>, IDisposable
+public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
 {
     /// <summary>
     /// Stores asynchronous command execution.
@@ -139,7 +139,7 @@ public sealed partial class CommandSignal<TResult> : IObservable<TResult>, IDisp
                 return signal;
             }
 
-            signal = new StateSignal<bool>(Volatile.Read(ref _isRunning));
+            signal = new(Volatile.Read(ref _isRunning));
             var current = Interlocked.CompareExchange(ref _isRunningState, signal, null);
             if (current == null)
             {
@@ -150,6 +150,12 @@ public sealed partial class CommandSignal<TResult> : IObservable<TResult>, IDisp
             return current;
         }
     }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Executes the command if allowed and publishes the result or fault.
@@ -169,12 +175,12 @@ public sealed partial class CommandSignal<TResult> : IObservable<TResult>, IDisp
             ThrowIfDisposed();
 
             return _executeSync != null
-                ? new CommandExecution<TResult>(ExecuteSync(cancellationToken))
+                ? new(ExecuteSync(cancellationToken))
                 : new CommandExecution<TResult>(ExecuteAsyncCore(cancellationToken));
         }
         catch (Exception error)
         {
-            return new CommandExecution<TResult>(error);
+            return new(error);
         }
     }
 
@@ -225,7 +231,7 @@ public sealed partial class CommandSignal<TResult> : IObservable<TResult>, IDisp
             return signal;
         }
 
-        signal = new Signal<T>();
+        signal = new();
         var current = Interlocked.CompareExchange(ref field, signal, null);
         if (current == null)
         {

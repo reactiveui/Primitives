@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public partial class HistorySignal<T> : ReplaySignal<T>
+public class HistorySignal<T> : ReplaySignal<T>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="HistorySignal{T}"/> class.
@@ -87,4 +87,10 @@ public partial class HistorySignal<T> : ReplaySignal<T>
         : base(bufferSize, window, scheduler)
     {
     }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 }

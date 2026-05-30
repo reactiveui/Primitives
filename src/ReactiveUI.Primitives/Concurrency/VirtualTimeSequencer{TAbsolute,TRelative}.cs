@@ -10,13 +10,18 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 /// <typeparam name="TRelative">Relative time representation type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public abstract partial class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSequencerBase<TAbsolute, TRelative>
+public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSequencerBase<TAbsolute, TRelative>
     where TAbsolute : IComparable<TAbsolute>
 {
     /// <summary>
     /// Queue of scheduled virtual-time work.
     /// </summary>
     private readonly SequencerQueue<TAbsolute> _queue = new();
+
+    /// <summary>
+    /// Synchronization gate guarding the scheduled-work queue.
+    /// </summary>
+    private readonly Lock _gate = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="VirtualTimeSequencer{TAbsolute, TRelative}"/> class.
@@ -39,6 +44,12 @@ public abstract partial class VirtualTimeSequencer<TAbsolute, TRelative> : Virtu
     }
 
     /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
+
+    /// <summary>
     /// Schedules an action to be executed at dueTime.
     /// </summary>
     /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
@@ -59,7 +70,7 @@ public abstract partial class VirtualTimeSequencer<TAbsolute, TRelative> : Virtu
 
         var si = new VirtualScheduledItem<TState>(this, state, action, dueTime, Comparer);
 
-        lock (_queue)
+        lock (_gate)
         {
             _queue.Enqueue(si);
         }
@@ -73,7 +84,7 @@ public abstract partial class VirtualTimeSequencer<TAbsolute, TRelative> : Virtu
     /// <returns>The next scheduled item.</returns>
     protected override IScheduledItem<TAbsolute>? GetNext()
     {
-        lock (_queue)
+        lock (_gate)
         {
             while (_queue.Count > 0)
             {
@@ -98,7 +109,7 @@ public abstract partial class VirtualTimeSequencer<TAbsolute, TRelative> : Virtu
     /// <param name="scheduledItem">The item to remove.</param>
     private void Remove(ScheduledItem<TAbsolute> scheduledItem)
     {
-        lock (_queue)
+        lock (_gate)
         {
             _queue.Remove(scheduledItem);
         }

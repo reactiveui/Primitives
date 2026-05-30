@@ -2,10 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Reactive.Linq;
-using System.Threading;
 using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
 
 using RxObservable = System.Reactive.Linq.Observable;
@@ -18,6 +15,9 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class FactoryFromEnumerableBenchmarks
 {
+    /// <summary>
+    /// The source values streamed through each enumerable adapter under test.
+    /// </summary>
     private static readonly int[] Values =
     [
         0, 1, 2, 3, 4, 5, 6, 7,

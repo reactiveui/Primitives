@@ -2,13 +2,10 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
-using TUnit.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -18,16 +15,16 @@ namespace ReactiveUI.Primitives.Tests;
 public class CoreRuntimeContractTests
 {
     /// <summary>
-    /// Verifies completed spark instances are cached for each value type.
+    /// Verifies completed sparks compare equal by value for each value type.
     /// </summary>
     [Test]
-    public void CompletedSparksAreCachedPerValueType()
+    public void CompletedSparksAreEqualPerValueType()
     {
         var first = Spark.CreateOnCompleted<int>();
         var second = Spark.CreateOnCompleted<int>();
 
-        Assert.Same(first, second);
         Assert.True(first == second);
+        Assert.Equal(first, second);
     }
 
     /// <summary>
@@ -36,7 +33,7 @@ public class CoreRuntimeContractTests
     [Test]
     public void WitnessCreateRoutesCallbacks()
     {
-        const int observedValue = 7;
+        const int ObservedValue = 7;
         var calls = new List<string>();
         var error = new InvalidOperationException("boom");
         var witness = Witness.Create<int>(
@@ -44,11 +41,11 @@ public class CoreRuntimeContractTests
             ex => calls.Add("E" + ex.Message),
             () => calls.Add("C"));
 
-        witness.OnNext(observedValue);
+        witness.OnNext(ObservedValue);
         witness.OnError(error);
         witness.OnCompleted();
 
-        var expected = new[] { "N" + observedValue, "Eboom", "C" };
+        var expected = new[] { "N" + ObservedValue, "Eboom", "C" };
         Assert.Equal(expected, calls);
     }
 
@@ -58,8 +55,8 @@ public class CoreRuntimeContractTests
     [Test]
     public void SafeWitnessIgnoresSignalsAfterTerminalAndDisposesOnce()
     {
-        const int firstValue = 1;
-        const int lateValue = 2;
+        const int FirstValue = 1;
+        const int LateValue = 2;
         var calls = new List<string>();
         var disposed = 0;
         var witness = Witness.Safe(
@@ -69,13 +66,13 @@ public class CoreRuntimeContractTests
                 () => calls.Add("C")),
             Disposable.Create(() => disposed++));
 
-        witness.OnNext(firstValue);
+        witness.OnNext(FirstValue);
         witness.OnCompleted();
-        witness.OnNext(lateValue);
+        witness.OnNext(LateValue);
         witness.OnError(new InvalidOperationException("late"));
         witness.OnCompleted();
 
-        var expected = new[] { "N" + firstValue, "C" };
+        var expected = new[] { "N" + FirstValue, "C" };
         Assert.Equal(expected, calls);
         Assert.Equal(1, disposed);
     }
@@ -152,19 +149,19 @@ public class CoreRuntimeContractTests
     [Test]
     public void CurrentThreadSequencerQueuesNestedWorkUntilCurrentActionCompletes()
     {
-        const int firstCall = 1;
-        const int secondCall = 2;
-        const int thirdCall = 3;
+        const int FirstCall = 1;
+        const int SecondCall = 2;
+        const int ThirdCall = 3;
         var calls = new List<int>();
 
         Sequencer.CurrentThread.Schedule(() =>
         {
-            calls.Add(firstCall);
-            Sequencer.CurrentThread.Schedule(() => calls.Add(thirdCall));
-            calls.Add(secondCall);
+            calls.Add(FirstCall);
+            Sequencer.CurrentThread.Schedule(() => calls.Add(ThirdCall));
+            calls.Add(SecondCall);
         });
 
-        var expected = new[] { firstCall, secondCall, thirdCall };
+        var expected = new[] { FirstCall, SecondCall, ThirdCall };
         Assert.Equal(expected, calls);
     }
 
@@ -188,18 +185,18 @@ public class CoreRuntimeContractTests
     [Test]
     public void VirtualClockRunsScheduledWorkOnlyWhenAdvancedPastDueTime()
     {
-        const long dueTicks = 10;
-        const long beforeDueTicks = 9;
+        const long DueTicks = 10;
+        const long BeforeDueTicks = 9;
         var clock = new VirtualClock();
         var calls = new List<long>();
 
-        clock.Schedule(TimeSpan.FromTicks(dueTicks), () => calls.Add(clock.Clock.Ticks));
+        clock.Schedule(TimeSpan.FromTicks(DueTicks), () => calls.Add(clock.Clock.Ticks));
 
-        clock.AdvanceBy(TimeSpan.FromTicks(beforeDueTicks));
+        clock.AdvanceBy(TimeSpan.FromTicks(BeforeDueTicks));
         Assert.Equal(0, calls.Count);
 
         clock.AdvanceBy(TimeSpan.FromTicks(1));
-        var expected = new[] { dueTicks };
+        var expected = new[] { DueTicks };
         Assert.Equal(expected, calls);
     }
 
@@ -209,19 +206,19 @@ public class CoreRuntimeContractTests
     [Test]
     public void VirtualClockConvertsMonotonicTimestampDeltasToVirtualTime()
     {
-        const long dueTicks = 10;
-        const long beforeDueTicks = 9;
+        const long DueTicks = 10;
+        const long BeforeDueTicks = 9;
         var clock = new VirtualClock();
         var calls = new List<long>();
-        var dueTimestamp = Sequencer.AddTimestamp(clock.Timestamp, TimeSpan.FromTicks(dueTicks));
+        var dueTimestamp = Sequencer.AddTimestamp(clock.Timestamp, TimeSpan.FromTicks(DueTicks));
 
         clock.Schedule(new CallbackWorkItem(() => calls.Add(clock.Clock.Ticks)), dueTimestamp);
 
-        clock.AdvanceBy(TimeSpan.FromTicks(beforeDueTicks));
+        clock.AdvanceBy(TimeSpan.FromTicks(BeforeDueTicks));
         Assert.Equal(0, calls.Count);
 
         clock.AdvanceBy(TimeSpan.FromTicks(1));
-        var expected = new[] { dueTicks };
+        var expected = new[] { DueTicks };
         Assert.Equal(expected, calls);
     }
 
@@ -242,14 +239,14 @@ public class CoreRuntimeContractTests
     [Test]
     public void NullableValueTimeStructsUseDeterministicNullHashCodes()
     {
-        const int nullHashSeed = 1963;
+        const int NullHashSeed = 1963;
         var timestamp = new DateTimeOffset(2026, 5, 24, 22, 52, 0, TimeSpan.Zero);
         var moment = new Moment<string?>(null, timestamp);
         var interval = TimeSpan.FromMilliseconds(123);
         var timeInterval = new TimeInterval<string?>(null, interval);
 
-        Assert.Equal(timestamp.GetHashCode() ^ nullHashSeed, moment.GetHashCode());
-        Assert.Equal(interval.GetHashCode() ^ nullHashSeed, timeInterval.GetHashCode());
+        Assert.Equal(timestamp.GetHashCode() ^ NullHashSeed, moment.GetHashCode());
+        Assert.Equal(interval.GetHashCode() ^ NullHashSeed, timeInterval.GetHashCode());
     }
 
     /// <summary>
@@ -258,13 +255,13 @@ public class CoreRuntimeContractTests
     [Test]
     public void ScheduledItemConstructorValidatesSchedulerAndAction()
     {
-        const int state = 42;
+        const int State = 42;
 
         Assert.Throws<ArgumentNullException>(() =>
-            CreateScheduledItem(null!, state, (_, _) => Disposable.Empty));
+            CreateScheduledItem(null!, State, (_, _) => Disposable.Empty));
 
         Assert.Throws<ArgumentNullException>(() =>
-            CreateScheduledItem(Sequencer.Immediate, state, null!));
+            CreateScheduledItem(Sequencer.Immediate, State, null!));
 
         static void CreateScheduledItem(
             ISequencer scheduler,

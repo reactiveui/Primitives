@@ -2,9 +2,6 @@
 
   <PropertyGroup>
     <TargetFrameworks>$(BlazorTargetFrameworks)</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
     <PackageDescription>Blazor integration helpers for ReactiveUI.Primitives.</PackageDescription>
     <PackageTags>system.reactive;rx;reactive;primitives;blazor;components;subscriptions</PackageTags>
   </PropertyGroup>

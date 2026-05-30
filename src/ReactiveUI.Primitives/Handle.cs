@@ -28,9 +28,9 @@ internal static class Handle
     /// <param name="ex">Ignored exception.</param>
     /// <returns>An empty sequence.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Sonar Code Smell",
+        "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter determines the empty sequence value type.")]
+        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<TSource> CatchIgnore<TSource>(Exception ex) =>
         Signal.None<TSource>();
 }

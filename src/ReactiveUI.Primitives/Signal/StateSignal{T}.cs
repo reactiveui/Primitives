@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>
@@ -11,7 +9,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public partial class StateSignal<T> : BehaviorSignal<T>
+public class StateSignal<T> : BehaviorSignal<T>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="StateSignal{T}"/> class.
@@ -37,6 +35,12 @@ public partial class StateSignal<T> : BehaviorSignal<T>
     }
 
     /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
+
+    /// <summary>
     /// Emits the current value again without changing it.
     /// </summary>
     public void Refresh() => OnNext(Value);
@@ -54,6 +58,6 @@ public partial class StateSignal<T> : BehaviorSignal<T>
             throw new ArgumentNullException(nameof(selector));
         }
 
-        return new ProjectedReadOnlyState<T, TResult>(this, selector);
+        return ProjectedReadOnlyState<T, TResult>.Create(this, selector);
     }
 }

@@ -2,22 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.R3Bridge.Generator;
 using ReactiveUI.Primitives.Signals;
 using ReactiveUI.Primitives.SystemReactiveBridge.Generator;
-using TUnit.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -327,7 +318,7 @@ public class StatefulSharingAndBridgeContractTests
     [SuppressMessage("Major Code Smell", "S138:Functions should not have too many lines", Justification = "Embedded generator smoke source keeps the emitted API contract local to the test.")]
     public void BridgeGeneratorsEmitOnlyWhenExternalShapesArePresentAndCompileSmokeAdapters()
     {
-        const string source = """
+        const string Source = """
 using System;
 using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Concurrency;
@@ -420,7 +411,7 @@ public static class BridgeSmoke
 }
 """;
 
-        var (diagnostics, generatedSources) = RunGenerators(source);
+        var (diagnostics, generatedSources) = RunGenerators(Source);
 
         Assert.Equal(0, diagnostics.Length);
         Assert.True(Array.Exists(generatedSources, static text => text.Contains(SystemReactiveBridgeName, StringComparison.Ordinal)));
@@ -436,7 +427,7 @@ public static class BridgeSmoke
     [SuppressMessage("Major Code Smell", "S138:Functions should not have too many lines", Justification = "Embedded generator smoke source keeps the emitted API contract local to the test.")]
     public void SystemReactiveSchedulerBridgePreservesImmediateRecursiveOrdering()
     {
-        const string source = """
+        const string Source = """
 using System;
 using System.Collections.Generic;
 using ReactiveUI.Primitives.Concurrency;
@@ -539,8 +530,8 @@ public static class BridgeSchedulerRuntimeSmoke
 }
 """;
 
-        var systemToPrimitives = (int[])InvokeGeneratedBridge(source, "BridgeSchedulerRuntimeSmoke", "RunSystemSchedulerToSequencer");
-        var primitivesToSystem = (int[])InvokeGeneratedBridge(source, "BridgeSchedulerRuntimeSmoke", "RunSequencerToSystemScheduler");
+        var systemToPrimitives = (int[])InvokeGeneratedBridge(Source, "BridgeSchedulerRuntimeSmoke", "RunSystemSchedulerToSequencer");
+        var primitivesToSystem = (int[])InvokeGeneratedBridge(Source, "BridgeSchedulerRuntimeSmoke", "RunSequencerToSystemScheduler");
 
         Assert.Equal(ExpectedBridgeScheduleValues.AsEnumerable(), systemToPrimitives);
         Assert.Equal(ExpectedBridgeScheduleValues.AsEnumerable(), primitivesToSystem);
@@ -553,7 +544,7 @@ public static class BridgeSchedulerRuntimeSmoke
     [RequiresAssemblyFiles]
     public void BridgeGeneratorsDoNotEmitExternalAdaptersWhenExternalPackagesAreAbsent()
     {
-        const string source = """
+        const string Source = """
 using System;
 using ReactiveUI.Primitives.Signals;
 
@@ -563,7 +554,7 @@ public static class CoreOnlySmoke
 }
 """;
 
-        var (diagnostics, generatedSources) = RunGenerators(source);
+        var (diagnostics, generatedSources) = RunGenerators(Source);
 
         Assert.Equal(0, diagnostics.Length);
         Assert.False(Array.Exists(generatedSources, static text => text.Contains(SystemReactiveBridgeName, StringComparison.Ordinal)));
@@ -637,7 +628,7 @@ public static class CoreOnlySmoke
             "BridgeGeneratorSmoke",
             [CSharpSyntaxTree.ParseText(source, parseOptions)],
             references,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            new(OutputKind.DynamicallyLinkedLibrary));
 
         var driver = CSharpGeneratorDriver.Create(
             [

@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -103,7 +94,7 @@ public class TimeBasedOperatorTests
         await signal.OnNextAsync(SecondValue, CancellationToken.None);
         await secondReceived.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
-        await Assert.That(results).IsEquivalentTo([1, SecondValue]);
+        await Assert.That(results).IsCollectionEqualTo([1, SecondValue]);
     }
 
     /// <summary>Tests Throttle negative due time throws.</summary>
@@ -159,7 +150,7 @@ public class TimeBasedOperatorTests
             .Delay(TimeSpan.FromMilliseconds(30))
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, ExpectedSecond, ExpectedThird]);
+        await Assert.That(result).IsCollectionEqualTo([1, ExpectedSecond, ExpectedThird]);
     }
 
     /// <summary>Tests Timeout not exceeded completes normally.</summary>
@@ -902,7 +893,7 @@ public class TimeBasedOperatorTests
             .Timeout(TimeSpan.FromSeconds(5))
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, ExpectedSecond, ExpectedThird]);
+        await Assert.That(result).IsCollectionEqualTo([1, ExpectedSecond, ExpectedThird]);
     }
 
     /// <summary>Verifies that an exception thrown by the downstream observer's

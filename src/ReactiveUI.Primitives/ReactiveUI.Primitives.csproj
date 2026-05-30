@@ -2,9 +2,6 @@
 
   <PropertyGroup>
     <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(TargetFramework.Contains('-ios'))">
@@ -29,6 +26,24 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
     <PackageReference Include="System.ValueTuple" />
+  </ItemGroup>
+
+  <!-- Alias Lock to the dedicated System.Threading.Lock on .NET 9+ (faster EnterScope fast path),
+       and to a plain object elsewhere (the lock statement falls back to Monitor). -->
+  <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">
+    <Using Include="System.Threading.Lock" Alias="Lock" />
+  </ItemGroup>
+  <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">
+    <Using Include="System.Object" Alias="Lock" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Maui" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.WinUI" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.WinForms" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Wpf" />
   </ItemGroup>
 
   <ItemGroup>

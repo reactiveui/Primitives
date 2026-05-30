@@ -123,18 +123,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        return Signal.CreateSafe<T>(observer => source.Subscribe(
-            value =>
-            {
-                if (value == null)
-                {
-                    return;
-                }
-
-                observer.OnNext(value);
-            },
-            observer.OnError,
-            observer.OnCompleted));
+        return new KeepNotNullSignal<T>(source);
     }
 
     /// <summary>
@@ -147,7 +136,7 @@ public static partial class LinqMixins
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "KeepType requires the caller to provide the result type.")]
+        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<TResult> KeepType<TResult>(this IObservable<object?> source)
     {
         if (source == null)
@@ -155,18 +144,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        return Signal.CreateSafe<TResult>(observer => source.Subscribe(
-            value =>
-            {
-                if (value is not TResult result)
-                {
-                    return;
-                }
-
-                observer.OnNext(result);
-            },
-            observer.OnError,
-            observer.OnCompleted));
+        return new KeepTypeSignal<TResult>(source);
     }
 
     /// <summary>
@@ -179,7 +157,7 @@ public static partial class LinqMixins
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "CastTo requires the caller to provide the result type.")]
+        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<TResult> CastTo<TResult>(this IObservable<object?> source)
     {
         if (source == null)
@@ -254,18 +232,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(accumulator));
         }
 
-        return Signal.CreateSafe<TAccumulate>(observer =>
-        {
-            var current = seed;
-            return source.Subscribe(
-                value =>
-                {
-                    current = accumulator(current, value);
-                    observer.OnNext(current);
-                },
-                observer.OnError,
-                observer.OnCompleted);
-        });
+        return new FoldSignal<TSource, TAccumulate>(source, seed, accumulator);
     }
 
     /// <summary>
@@ -290,18 +257,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(accumulator));
         }
 
-        return Signal.CreateSafe<TAccumulate>(observer =>
-        {
-            var current = seed;
-            return source.Subscribe(
-                value => current = accumulator(current, value),
-                observer.OnError,
-                () =>
-                {
-                    observer.OnNext(current);
-                    observer.OnCompleted();
-                });
-        });
+        return new ReduceSignal<TSource, TAccumulate>(source, seed, accumulator);
     }
 
     /// <summary>
@@ -330,18 +286,7 @@ public static partial class LinqMixins
             return count == 0 ? Signal.None<T>() : new RepeatSignal<T>(loop.Value, count);
         }
 
-        return Signal.CreateSafe<T>(observer =>
-        {
-            if (count == 0)
-            {
-                observer.OnCompleted();
-                return Disposable.Empty;
-            }
-
-            var sink = new TakeObserver<T>(observer, count);
-            sink.SetSubscription(source.Subscribe(sink));
-            return sink;
-        });
+        return new TakeSignal<T>(source, count);
     }
 
     /// <summary>
@@ -365,23 +310,7 @@ public static partial class LinqMixins
             throw new ArgumentOutOfRangeException(nameof(count));
         }
 
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var remaining = count;
-            return source.Subscribe(
-                value =>
-                {
-                    if (remaining > 0)
-                    {
-                        remaining--;
-                        return;
-                    }
-
-                    observer.OnNext(value);
-                },
-                observer.OnError,
-                observer.OnCompleted);
-        });
+        return new SkipSignal<T>(source, count);
     }
 
     /// <summary>
@@ -409,22 +338,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var seen = new HashSet<T>(comparer);
-            return source.Subscribe(
-                value =>
-                {
-                    if (!seen.Add(value))
-                    {
-                        return;
-                    }
-
-                    observer.OnNext(value);
-                },
-                observer.OnError,
-                observer.OnCompleted);
-        });
+        return new DistinctSignal<T>(source, comparer);
     }
 
     /// <summary>
@@ -453,25 +367,7 @@ public static partial class LinqMixins
         }
 
         comparer ??= EqualityComparer<T>.Default;
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var hasLast = false;
-            var last = default(T);
-            return source.Subscribe(
-                value =>
-                {
-                    if (hasLast && comparer.Equals(last!, value))
-                    {
-                        return;
-                    }
-
-                    hasLast = true;
-                    last = value;
-                    observer.OnNext(value);
-                },
-                observer.OnError,
-                observer.OnCompleted);
-        });
+        return new UniqueSignal<T>(source, comparer);
     }
 
     /// <summary>
@@ -488,18 +384,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        return Signal.CreateSafe<Spark<T>>(observer => source.Subscribe(
-            value => observer.OnNext(ReactiveUI.Primitives.Core.Spark.CreateOnNext(value)),
-            error =>
-            {
-                observer.OnNext(ReactiveUI.Primitives.Core.Spark.CreateOnError<T>(error));
-                observer.OnCompleted();
-            },
-            () =>
-            {
-                observer.OnNext(ReactiveUI.Primitives.Core.Spark.CreateOnCompleted<T>());
-                observer.OnCompleted();
-            }));
+        return new SparkSignal<T>(source);
     }
 
     /// <summary>
@@ -516,10 +401,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        return Signal.CreateSafe<T>(observer => source.Subscribe(
-            spark => spark.Accept(observer),
-            observer.OnError,
-            observer.OnCompleted));
+        return new UnsparkSignal<T>(source);
     }
 
     /// <summary>
@@ -536,84 +418,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(sources));
         }
 
-        return Signal.Create<T>(observer =>
-        {
-            var gate = new OperatorGate();
-            var queue = new Queue<IObservable<T>>();
-            var pocket = new MultipleDisposable();
-            var active = false;
-            var outerCompleted = false;
-
-            void Drain()
-            {
-                IObservable<T>? next = null;
-                lock (gate.SyncRoot)
-                {
-                    if (active)
-                    {
-                        return;
-                    }
-
-                    if (queue.Count > 0)
-                    {
-                        active = true;
-                        next = queue.Dequeue();
-                    }
-                    else if (outerCompleted)
-                    {
-                        observer.OnCompleted();
-                        return;
-                    }
-                }
-
-                if (next == null)
-                {
-                    return;
-                }
-
-                pocket.Add(next.Subscribe(
-                    observer.OnNext,
-                    observer.OnError,
-                    () =>
-                    {
-                        lock (gate.SyncRoot)
-                        {
-                            active = false;
-                        }
-
-                        Drain();
-                    }));
-            }
-
-            pocket.Add(sources.Subscribe(
-                source =>
-                {
-                    if (source == null)
-                    {
-                        observer.OnError(new InvalidOperationException("Chain source contained null."));
-                        return;
-                    }
-
-                    lock (gate.SyncRoot)
-                    {
-                        queue.Enqueue(source);
-                    }
-
-                    Drain();
-                },
-                observer.OnError,
-                () =>
-                {
-                    lock (gate.SyncRoot)
-                    {
-                        outerCompleted = true;
-                    }
-
-                    Drain();
-                }));
-
-            return pocket;
-        });
+        return new ChainSignal<T>(sources);
     }
 
     /// <summary>
@@ -640,64 +445,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(sources));
         }
 
-        return Signal.Create<T>(observer =>
-        {
-            var gate = new OperatorGate();
-            var pocket = new MultipleDisposable();
-            var outerCompleted = false;
-            var active = 0;
-
-            void TryComplete()
-            {
-                lock (gate.SyncRoot)
-                {
-                    if (outerCompleted && active == 0)
-                    {
-                        observer.OnCompleted();
-                    }
-                }
-            }
-
-            pocket.Add(sources.Subscribe(
-                source =>
-                {
-                    if (source == null)
-                    {
-                        observer.OnError(new InvalidOperationException("Blend source contained null."));
-                        return;
-                    }
-
-                    lock (gate.SyncRoot)
-                    {
-                        active++;
-                    }
-
-                    pocket.Add(source.Subscribe(
-                        observer.OnNext,
-                        observer.OnError,
-                        () =>
-                        {
-                            lock (gate.SyncRoot)
-                            {
-                                active--;
-                            }
-
-                            TryComplete();
-                        }));
-                },
-                observer.OnError,
-                () =>
-                {
-                    lock (gate.SyncRoot)
-                    {
-                        outerCompleted = true;
-                    }
-
-                    TryComplete();
-                }));
-
-            return pocket;
-        });
+        return new BlendSignal<T>(sources);
     }
 
     /// <summary>
@@ -714,7 +462,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(sources));
         }
 
-        return Signal.Create<T>(observer => new RaceCoordinator<T>(observer).Run(sources));
+        return new RaceSignal<T>(sources);
     }
 
     /// <summary>
@@ -750,7 +498,7 @@ public static partial class LinqMixins
             return new RangeZipSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
         }
 
-        return Signal.CreateSafe<TResult>(observer => new ZipCoordinator<TLeft, TRight, TResult>(observer, selector).Run(left, right));
+        return new ZipSignal<TLeft, TRight, TResult>(left, right, selector);
     }
 
     /// <summary>
@@ -786,7 +534,7 @@ public static partial class LinqMixins
             return CreateRangeCombineLatestSignal(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
         }
 
-        return Signal.CreateSafe<TResult>(observer => new CombineLatestCoordinator<TLeft, TRight, TResult>(observer, selector).Run(left, right));
+        return new CombineLatestSignal<TLeft, TRight, TResult>(left, right, selector);
     }
 
     /// <summary>
@@ -823,42 +571,7 @@ public static partial class LinqMixins
             return CreateRangeWithLatestSignal(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
         }
 
-        return Signal.CreateSafe<TResult>(observer =>
-        {
-            var gate = new OperatorGate();
-            var hasRight = false;
-            var latestRight = default(TRight);
-            return MultipleDisposable.Create(
-                right.Subscribe(
-                    value =>
-                    {
-                        lock (gate.SyncRoot)
-                        {
-                            hasRight = true;
-                            latestRight = value;
-                        }
-                    },
-                    observer.OnError,
-                    () => { }),
-                left.Subscribe(
-                    value =>
-                    {
-                        TRight rightValue;
-                        lock (gate.SyncRoot)
-                        {
-                            if (!hasRight)
-                            {
-                                return;
-                            }
-
-                            rightValue = latestRight!;
-                        }
-
-                        observer.OnNext(selector(value, rightValue));
-                    },
-                    observer.OnError,
-                    observer.OnCompleted));
-        });
+        return new LatchSignal<TLeft, TRight, TResult>(left, right, selector);
     }
 
     /// <summary>
@@ -880,7 +593,7 @@ public static partial class LinqMixins
             return rangeSignal;
         }
 
-        return Signal.Create<T>(observer => new SwitchCoordinator<T>(observer).Run(sources));
+        return new SwitchSignal<T>(sources);
     }
 
     /// <summary>
@@ -904,33 +617,7 @@ public static partial class LinqMixins
             throw new ArgumentOutOfRangeException(nameof(retryCount));
         }
 
-        return Signal.Create<T>(observer =>
-        {
-            var pocket = new MultipleDisposable();
-            var attempts = 0;
-
-            void SubscribeNext()
-            {
-                var subscription = source.Subscribe(
-                    observer.OnNext,
-                    error =>
-                    {
-                        if (attempts++ < retryCount)
-                        {
-                            SubscribeNext();
-                        }
-                        else
-                        {
-                            observer.OnError(error);
-                        }
-                    },
-                    observer.OnCompleted);
-                pocket.Add(subscription);
-            }
-
-            SubscribeNext();
-            return pocket;
-        });
+        return new ReattemptSignal<T>(source, retryCount);
     }
 
     /// <summary>
@@ -999,22 +686,12 @@ public static partial class LinqMixins
         }
 
         scheduler ??= ThreadPoolSequencer.Instance;
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return CreateShiftedRangeSignal<T>(range, dueTime, scheduler);
+            return new ShiftedRangeSignal<T>(range, Sequencer.Normalize(dueTime), scheduler);
         }
 
-        return Signal.CreateSafe<T>(
-            observer =>
-            {
-                var pocket = new MultipleDisposable();
-                pocket.Add(source.Subscribe(
-                    value => pocket.Add(scheduler.Schedule(dueTime, () => observer.OnNext(value))),
-                    error => pocket.Add(scheduler.Schedule(dueTime, () => observer.OnError(error))),
-                    () => pocket.Add(scheduler.Schedule(dueTime, observer.OnCompleted))));
-                return pocket;
-            },
-            scheduler == Sequencer.CurrentThread);
+        return new ShiftSignal<T>(source, dueTime, scheduler);
     }
 
     /// <summary>
@@ -1059,23 +736,12 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return CreateRangeListSignal<T>(range);
+            return new RangeListSignal<T>(range);
         }
 
-        return Signal.CreateSafe<IList<T>>(observer =>
-        {
-            var values = new List<T>();
-            return source.Subscribe(
-                values.Add,
-                observer.OnError,
-                () =>
-                {
-                    observer.OnNext(values);
-                    observer.OnCompleted();
-                });
-        });
+        return new CollectListSignal<T>(source);
     }
 
     /// <summary>
@@ -1091,23 +757,12 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return CreateRangeArraySignal<T>(range);
+            return new RangeArraySignal<T>(range);
         }
 
-        return Signal.CreateSafe<T[]>(observer =>
-        {
-            var values = new List<T>();
-            return source.Subscribe(
-                values.Add,
-                observer.OnError,
-                () =>
-                {
-                    observer.OnNext([.. values]);
-                    observer.OnCompleted();
-                });
-        });
+        return new CollectArraySignal<T>(source);
     }
 
     /// <summary>
@@ -1144,21 +799,11 @@ public static partial class LinqMixins
     /// <param name="right">The right range source.</param>
     /// <param name="selector">The function that combines range values.</param>
     /// <returns>The optimized combine-latest sequence.</returns>
-    private static IObservable<TResult> CreateRangeCombineLatestSignal<TResult>(
+    private static RangeCombineLatestSignal<TResult> CreateRangeCombineLatestSignal<TResult>(
         RangeSignal left,
         RangeSignal right,
         Func<int, int, TResult> selector) =>
-        Signal.CreateSafe<TResult>(observer =>
-        {
-            var leftValue = left.Start + left.Count - 1;
-            for (var i = 0; i < right.Count; i++)
-            {
-                observer.OnNext(selector(leftValue, right.Start + i));
-            }
-
-            observer.OnCompleted();
-            return Disposable.Empty;
-        });
+        new(left, right, selector);
 
     /// <summary>
     /// Creates the optimized range-backed with-latest sequence.
@@ -1168,131 +813,18 @@ public static partial class LinqMixins
     /// <param name="right">The right range source.</param>
     /// <param name="selector">The function that combines range values.</param>
     /// <returns>The optimized with-latest sequence.</returns>
-    private static IObservable<TResult> CreateRangeWithLatestSignal<TResult>(
+    private static RangeWithLatestSignal<TResult> CreateRangeWithLatestSignal<TResult>(
         RangeSignal left,
         RangeSignal right,
         Func<int, int, TResult> selector) =>
-        Signal.CreateSafe<TResult>(observer =>
-        {
-            var rightValue = right.Start + right.Count - 1;
-            for (var i = 0; i < left.Count; i++)
-            {
-                observer.OnNext(selector(left.Start + i, rightValue));
-            }
-
-            observer.OnCompleted();
-            return Disposable.Empty;
-        });
-
-    /// <summary>
-    /// Creates a range-backed list signal without per-value subscriptions.
-    /// </summary>
-    /// <typeparam name="T">The result element type.</typeparam>
-    /// <param name="range">The source range.</param>
-    /// <returns>The list signal.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The generic type is validated by the caller before creating a range-backed signal.")]
-    private static IObservable<IList<T>> CreateRangeListSignal<T>(RangeSignal range)
-    {
-        if (typeof(T) == typeof(int))
-        {
-            return (IObservable<IList<T>>)(object)Signal.CreateSafe<IList<int>>(observer =>
-            {
-                var values = new List<int>(range.Count);
-                for (var i = 0; i < range.Count; i++)
-                {
-                    values.Add(range.Start + i);
-                }
-
-                observer.OnNext(values);
-                observer.OnCompleted();
-                return Disposable.Empty;
-            });
-        }
-
-        return Signal.CreateSafe<IList<T>>(observer =>
-        {
-            var values = new List<T>(range.Count);
-            for (var i = 0; i < range.Count; i++)
-            {
-                values.Add((T)(object)(range.Start + i));
-            }
-
-            observer.OnNext(values);
-            observer.OnCompleted();
-            return Disposable.Empty;
-        });
-    }
-
-    /// <summary>
-    /// Creates a range-backed array signal without per-value subscriptions.
-    /// </summary>
-    /// <typeparam name="T">The result element type.</typeparam>
-    /// <param name="range">The source range.</param>
-    /// <returns>The array signal.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The generic type is validated by the caller before creating a range-backed signal.")]
-    private static IObservable<T[]> CreateRangeArraySignal<T>(RangeSignal range)
-    {
-        if (typeof(T) == typeof(int))
-        {
-            return (IObservable<T[]>)(object)Signal.CreateSafe<int[]>(observer =>
-            {
-                var values = new int[range.Count];
-                for (var i = 0; i < values.Length; i++)
-                {
-                    values[i] = range.Start + i;
-                }
-
-                observer.OnNext(values);
-                observer.OnCompleted();
-                return Disposable.Empty;
-            });
-        }
-
-        return Signal.CreateSafe<T[]>(observer =>
-        {
-            var values = new T[range.Count];
-            for (var i = 0; i < values.Length; i++)
-            {
-                values[i] = (T)(object)(range.Start + i);
-            }
-
-            observer.OnNext(values);
-            observer.OnCompleted();
-            return Disposable.Empty;
-        });
-    }
+        new(left, right, selector);
 
     /// <summary>
     /// Determines whether a generic observer type can receive boxed range integers.
     /// </summary>
-    /// <typeparam name="T">The observer value type.</typeparam>
+    /// <param name="elementType">The observer value type.</param>
     /// <returns><see langword="true"/> when the cast is valid.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The method is a generic type test used by range fast paths.")]
-    private static bool CanReadRangeAs<T>() => typeof(T).IsAssignableFrom(typeof(int));
-
-    /// <summary>
-    /// Creates a range-backed delayed sequence using one scheduled batch.
-    /// </summary>
-    /// <typeparam name="T">The observer value type.</typeparam>
-    /// <param name="range">The source range.</param>
-    /// <param name="dueTime">The delay applied to the range notification batch.</param>
-    /// <param name="scheduler">The sequencer used to schedule the batch.</param>
-    /// <returns>A delayed range signal.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The generic type is validated by the caller before creating a range-backed signal.")]
-    private static ShiftedRangeSignal<T> CreateShiftedRangeSignal<T>(RangeSignal range, TimeSpan dueTime, ISequencer scheduler) =>
-        new(range, Sequencer.Normalize(dueTime), scheduler);
+    private static bool CanReadRangeAs(Type elementType) => elementType.IsAssignableFrom(typeof(int));
 
     /// <summary>
     /// Creates a range-concat signal for synchronous Switch over known range inners.
@@ -1301,10 +833,6 @@ public static partial class LinqMixins
     /// <param name="sources">Outer sources.</param>
     /// <param name="signal">Optimized signal when available.</param>
     /// <returns><see langword="true"/> when the fast path applies.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The generic type is validated before casting the integer range signal.")]
     private static bool TryCreateSynchronousSwitchRangeSignal<T>(IObservable<IObservable<T>> sources, out IObservable<T> signal)
     {
         signal = null!;
@@ -1344,7 +872,7 @@ public static partial class LinqMixins
     {
         for (var i = 0; i < range.Count; i++)
         {
-            observer.OnNext(CreateRangeValue<T>(range.Start + i));
+            observer.OnNext((T)(object)(range.Start + i));
         }
 
         observer.OnCompleted();
@@ -1363,7 +891,7 @@ public static partial class LinqMixins
     {
         for (var i = 0; i < range.Count; i++)
         {
-            onNext(CreateRangeValue<T>(range.Start + i));
+            onNext((T)(object)(range.Start + i));
         }
 
         onCompleted();

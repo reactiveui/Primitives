@@ -21,6 +21,6 @@ public static class DispatcherQueueSequencerMixins
     {
         ArgumentNullException.ThrowIfNull(dispatcherQueue);
 
-        return new DispatcherQueueSequencer(dispatcherQueue);
+        return new(dispatcherQueue);
     }
 }

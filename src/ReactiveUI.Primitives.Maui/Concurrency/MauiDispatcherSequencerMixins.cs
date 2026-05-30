@@ -24,6 +24,6 @@ public static class MauiDispatcherSequencerMixins
             throw new ArgumentNullException(nameof(dispatcher));
         }
 
-        return new MauiDispatcherSequencer(dispatcher);
+        return new(dispatcher);
     }
 }

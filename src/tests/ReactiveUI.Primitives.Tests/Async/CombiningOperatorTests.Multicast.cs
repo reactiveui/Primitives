@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -40,7 +31,7 @@ public partial class CombiningOperatorTests
 
         await using var conn = await connectable.ConnectAsync(CancellationToken.None);
 
-        await Assert.That(items).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3]);
+        await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 
     /// <summary>
@@ -119,7 +110,7 @@ public partial class CombiningOperatorTests
 
         await using var conn = await connectable.ConnectAsync(CancellationToken.None);
 
-        await Assert.That(items).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3]);
+        await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 
     /// <summary>
@@ -144,7 +135,7 @@ public partial class CombiningOperatorTests
 
         await using var conn = await connectable.ConnectAsync(CancellationToken.None);
 
-        await Assert.That(items).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3]);
+        await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 
     /// <summary>
@@ -169,7 +160,7 @@ public partial class CombiningOperatorTests
 
         await using var conn = await connectable.ConnectAsync(CancellationToken.None);
 
-        await Assert.That(items).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3]);
+        await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 
     /// <summary>
@@ -275,7 +266,7 @@ public partial class CombiningOperatorTests
 
         await using var conn = await connectable.ConnectAsync(CancellationToken.None);
 
-        await Assert.That(items).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3]);
+        await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 
     /// <summary>
@@ -300,7 +291,7 @@ public partial class CombiningOperatorTests
 
         await using var conn = await connectable.ConnectAsync(CancellationToken.None);
 
-        await Assert.That(items).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3]);
+        await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 
     /// <summary>
@@ -325,7 +316,7 @@ public partial class CombiningOperatorTests
 
         await using var conn = await connectable.ConnectAsync(CancellationToken.None);
 
-        await Assert.That(items).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3]);
+        await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 
     /// <summary>

@@ -21,11 +21,7 @@ internal sealed class CombineLatestLifecycle<TResult> : IAsyncDisposable
     private readonly CancellationTokenSource _disposeCts = new();
 
     /// <summary>Lock protecting <see cref="_doneFlags"/> updates.</summary>
-#if NET9_0_OR_GREATER
     private readonly Lock _completionLock = new();
-#else
-    private readonly object _completionLock = new();
-#endif
 
     /// <summary>The downstream observer that receives the projected results.</summary>
     private readonly IObserverAsync<TResult> _observer;

@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// </summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public abstract partial class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, IComparable<ScheduledItem<TAbsolute>>, IsDisposed, IComparable
+public abstract class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, IComparable<ScheduledItem<TAbsolute>>, IsDisposed, IComparable
     where TAbsolute : IComparable<TAbsolute>
 {
     /// <summary>
@@ -53,6 +53,12 @@ public abstract partial class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolut
     /// Gets a value indicating whether gets whether the work item has received a cancellation request.
     /// </summary>
     public bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Determines whether two specified <see cref="ScheduledItem{TAbsolute, TValue}" /> objects are inequal.

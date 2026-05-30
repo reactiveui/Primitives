@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -32,7 +23,7 @@ public class ErrorHandlingOperatorTests
 
         var result = await source.Catch(_ => fallback).ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([FallbackValue]);
+        await Assert.That(result).IsCollectionEqualTo([FallbackValue]);
     }
 
     /// <summary>Tests Catch on success completes original sequence.</summary>
@@ -46,7 +37,7 @@ public class ErrorHandlingOperatorTests
             .Catch(_ => SignalAsync.Return(99))
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondElement, ThirdElement]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondElement, ThirdElement]);
     }
 
     /// <summary>Tests CatchAndIgnoreErrorResume ignores and continues.</summary>
@@ -60,7 +51,7 @@ public class ErrorHandlingOperatorTests
 
         var result = await source.CatchAndIgnoreErrorResume(_ => fallback).ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([FallbackValue]);
+        await Assert.That(result).IsCollectionEqualTo([FallbackValue]);
     }
 
     /// <summary>Tests OnErrorResumeAsFailure converts error resume to failure.</summary>
@@ -124,7 +115,7 @@ public class ErrorHandlingOperatorTests
         const int ThirdElement = 3;
         var result = await source.OnErrorResumeAsFailure().ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, SecondElement, ThirdElement]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondElement, ThirdElement]);
     }
 
     /// <summary>Tests Retry on transient error succeeds after retry.</summary>
@@ -152,7 +143,7 @@ public class ErrorHandlingOperatorTests
 
         var result = await source.Retry(5).ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([SuccessValue]);
+        await Assert.That(result).IsCollectionEqualTo([SuccessValue]);
         await Assert.That(attempt).IsEqualTo(ExpectedAttempts);
     }
 
@@ -180,7 +171,7 @@ public class ErrorHandlingOperatorTests
         const int ExpectedValue = 7;
         var result = await SignalAsync.Return(7).Retry().ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([ExpectedValue]);
+        await Assert.That(result).IsCollectionEqualTo([ExpectedValue]);
     }
 
     /// <summary>Exercises <c>CatchObserver.OnErrorResumeAsyncCore</c>'s null-callback branch —
@@ -418,7 +409,7 @@ public class ErrorHandlingOperatorTests
             var handlerObservable = SignalAsync.Create<int>((_, _) =>
             {
                 handlerSubscribed.TrySetResult();
-                return new ValueTask<IAsyncDisposable>(new ThrowingDisposable(disposeFailure));
+                return new(new ThrowingDisposable(disposeFailure));
             });
 
             var sub = await source.Catch(_ => handlerObservable)
@@ -455,7 +446,7 @@ public class ErrorHandlingOperatorTests
         const int ExpectedFallback = 99;
         var result = await source.CatchAndIgnoreErrorResume(_ => SignalAsync.Return(99)).ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([ExpectedFallback]);
+        await Assert.That(result).IsCollectionEqualTo([ExpectedFallback]);
         await Assert.That(reportedExceptions).Count().IsEqualTo(1);
         await Assert.That(reportedExceptions[0].Message).IsEqualTo("resume error");
     }
@@ -566,7 +557,7 @@ public class ErrorHandlingOperatorTests
         const int ExpectedAttempts = 5;
         var result = await source.Retry().ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([SuccessValue]);
+        await Assert.That(result).IsCollectionEqualTo([SuccessValue]);
         await Assert.That(attempt).IsEqualTo(ExpectedAttempts);
     }
 

@@ -48,8 +48,6 @@ public static partial class Signal
         return RunAsync(source, cancellationToken);
     }
 
-#pragma warning disable RCS1047 // Non-asynchronous method name should not end with 'Async'.
-
     /// <summary>
     /// Executes the RunAsync operation.
     /// </summary>
@@ -58,7 +56,6 @@ public static partial class Signal
     /// <param name="cancellationToken">The cancellationToken value.</param>
     /// <returns>The result.</returns>
     private static IAwaitSignal<TSource> RunAsync<TSource>(IObservable<TSource> source, CancellationToken cancellationToken)
-#pragma warning restore RCS1047 // Non-asynchronous method name should not end with 'Async'.
     {
         var s = new FinalSignal<TSource>();
 

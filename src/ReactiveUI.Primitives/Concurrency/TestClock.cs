@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// Test-facing alias for <see cref="VirtualClock"/>.
 /// </summary>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class TestClock : VirtualClock
+public sealed class TestClock : VirtualClock
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="TestClock"/> class at the default clock value.
@@ -25,4 +25,10 @@ public sealed partial class TestClock : VirtualClock
         : base(initialClock)
     {
     }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 }

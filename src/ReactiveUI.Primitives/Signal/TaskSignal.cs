@@ -68,6 +68,6 @@ public static class TaskSignal
             throw new ArgumentNullException(nameof(observableFactory));
         }
 
-        return new TaskSignal<TResult>(observableFactory, scheduler, cancellationTokenSource);
+        return new(observableFactory, scheduler, cancellationTokenSource);
     }
 }

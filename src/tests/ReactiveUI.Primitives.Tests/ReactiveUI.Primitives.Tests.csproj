@@ -2,17 +2,8 @@
 
   <PropertyGroup>
     <TargetFrameworks>$(TestTargetFrameworks)</TargetFrameworks>
-    <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
-    <LangVersion>preview</LangVersion>
     <OutputType>Exe</OutputType>
-    <NoWarn>$(NoWarn);CS8625;CS8634;S109;S1128;S2333;S6354;S6566;CA1861;CA1812;CA1822;IDE0300;IL2026;RCS1043;RCS1196;SA1200;SA1208;SA1210;SA1516;TUnitAssertions0005</NoWarn>
-    <CollectCoverage Condition="'$(CollectCoverage)' == ''">false</CollectCoverage>
-    <CoverletOutput>$(MSBuildProjectDirectory)\TestResults\coverage\</CoverletOutput>
-    <CoverletOutputFormat>cobertura,json</CoverletOutputFormat>
-    <Threshold>95</Threshold>
-    <ThresholdType>line,branch</ThresholdType>
-    <ThresholdStat>total</ThresholdStat>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net462' or '$(TargetFramework)' == 'net472' or '$(TargetFramework)' == 'net481' or $(TargetFramework.Contains('-windows'))">

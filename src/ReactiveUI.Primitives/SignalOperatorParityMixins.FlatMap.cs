@@ -116,7 +116,7 @@ public static partial class LinqMixins
         /// <summary>
         /// Synchronizes subscription state.
         /// </summary>
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// The source observable.
@@ -197,8 +197,8 @@ public static partial class LinqMixins
             _source = source;
             _selector = selector;
             _observer = observer;
-            _outerObserver = new OuterObserver(this);
-            _innerObserver = new InnerObserver(this);
+            _outerObserver = new(this);
+            _innerObserver = new(this);
         }
 
         /// <inheritdoc/>
@@ -294,12 +294,12 @@ public static partial class LinqMixins
         /// <param name="value">The inner value.</param>
         private void OnInnerNext(TResult value)
         {
-            lock (_gate)
+            // Hot path: only one inner is active at a time (sequential concat semantics), so the
+            // forward is already serialized. A lock-free volatile read of the disposed flag avoids
+            // a monitor acquire on every value; the lock releases elsewhere publish the write.
+            if (Volatile.Read(ref _disposed))
             {
-                if (_disposed)
-                {
-                    return;
-                }
+                return;
             }
 
             _observer.OnNext(value);
@@ -382,7 +382,7 @@ public static partial class LinqMixins
                     return true;
                 }
 
-                (_queue ??= new Queue<IObservable<TResult>>()).Enqueue(inner);
+                (_queue ??= new()).Enqueue(inner);
                 return false;
             }
         }
@@ -581,7 +581,7 @@ public static partial class LinqMixins
             Func<TSource, IObservable<TCollection>> collectionSelector,
             Func<TSource, TCollection, TResult> resultSelector,
             IObserver<TResult> observer) =>
-            _inner = new FlatMapCoordinator<TSource, TResult>(
+            _inner = new(
                 source,
                 value => new FlatMapResultInnerSignal<TSource, TCollection, TResult>(
                     value,

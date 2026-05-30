@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -30,7 +21,7 @@ public partial class CombiningOperatorTests
 
         var result = await first.Zip(second, (n, s) => $"{n}{s}").ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(["1a", "2b", "3c"]);
+        await Assert.That(result).IsCollectionEqualTo(["1a", "2b", "3c"]);
     }
 
     /// <summary>Tests Zip tuple overload creates tuples.</summary>
@@ -57,7 +48,7 @@ public partial class CombiningOperatorTests
 
         var result = await first.Zip(second, (a, b) => a + b).ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([ZipPair11, ZipPair13]);
+        await Assert.That(result).IsCollectionEqualTo([ZipPair11, ZipPair13]);
     }
 
     /// <summary>Tests Zip null arguments throws.</summary>
@@ -148,7 +139,7 @@ public partial class CombiningOperatorTests
 
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
-        await Assert.That(items).IsEquivalentTo([RangeOffset101, RangeOffset103, RangeOffset105]);
+        await Assert.That(items).IsCollectionEqualTo([RangeOffset101, RangeOffset103, RangeOffset105]);
     }
 
     /// <summary>
@@ -182,7 +173,7 @@ public partial class CombiningOperatorTests
 
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
-        await Assert.That(items).IsEquivalentTo([RangeOffset101, RangeOffset103]);
+        await Assert.That(items).IsCollectionEqualTo([RangeOffset101, RangeOffset103]);
     }
 
     /// <summary>
@@ -318,7 +309,7 @@ public partial class CombiningOperatorTests
             () => items.Count >= 2,
             TimeSpan.FromSeconds(5));
 
-        await Assert.That(items).IsEquivalentTo(["1-a", "2-b"]);
+        await Assert.That(items).IsCollectionEqualTo(["1-a", "2-b"]);
     }
 
     /// <summary>
@@ -435,7 +426,7 @@ public partial class CombiningOperatorTests
 
         var result = await first.Zip(second, (a, b) => a + b).ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([ZipPair11]);
+        await Assert.That(result).IsCollectionEqualTo([ZipPair11]);
     }
 
     /// <summary>
@@ -451,7 +442,7 @@ public partial class CombiningOperatorTests
 
         var result = await first.Zip(second, (a, b) => a + b).ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([RangeOffset101]);
+        await Assert.That(result).IsCollectionEqualTo([RangeOffset101]);
     }
 
     /// <summary>
@@ -589,7 +580,7 @@ public partial class CombiningOperatorTests
             .Zip(SignalAsync.Range(10, 5), (a, b) => a + b)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([ZipPair11, ZipPair13]);
+        await Assert.That(result).IsCollectionEqualTo([ZipPair11, ZipPair13]);
     }
 
     /// <summary>Verifies that subscribing <c>Zip</c> with an already-cancelled token

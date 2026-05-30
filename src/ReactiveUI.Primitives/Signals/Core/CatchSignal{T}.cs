@@ -48,7 +48,7 @@ internal sealed class CatchSignal<T> : SignalsBase<T>
         /// Executes the new operation.
         /// </summary>
         /// <returns>The result.</returns>
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// Stores state for the signal implementation.
@@ -92,11 +92,11 @@ internal sealed class CatchSignal<T> : SignalsBase<T>
         {
             _isDisposed = false;
             _e = _parent._sources.GetEnumerator();
-            _subscription = new SingleReplaceableDisposable();
+            _subscription = new();
 
             var schedule = Sequencer.Immediate.Schedule(RecursiveRun);
 
-            return new MultipleDisposable(schedule, _subscription, Disposable.Create(() =>
+            return new(schedule, _subscription, Disposable.Create(() =>
             {
                 lock (_gate)
                 {

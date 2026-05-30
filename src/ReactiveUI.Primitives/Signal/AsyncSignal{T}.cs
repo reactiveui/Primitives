@@ -13,13 +13,13 @@ namespace ReactiveUI.Primitives.Signals;
 /// <typeparam name="T">The Type.</typeparam>
 /// <seealso cref="ISignal&lt;T&gt;" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public partial class AsyncSignal<T> : IAwaitSignal<T>
+public class AsyncSignal<T> : IAwaitSignal<T>
 {
     /// <summary>
     /// Executes the new operation.
     /// </summary>
     /// <returns>The result.</returns>
-    private readonly object _observerLock = new();
+    private readonly Lock _observerLock = new();
 
     /// <summary>
     /// Stores state for the signal implementation.
@@ -87,6 +87,12 @@ public partial class AsyncSignal<T> : IAwaitSignal<T>
     ///   <c>true</c> if this instance is completed; otherwise, <c>false</c>.
     /// </value>
     public bool IsCompleted { get; private set; }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Called when [completed].
@@ -199,9 +205,9 @@ public partial class AsyncSignal<T> : IAwaitSignal<T>
             throw new ArgumentNullException(nameof(observer));
         }
 
-        var ex = default(Exception);
-        var v = default(T);
-        var hv = false;
+        Exception? ex;
+        T? v;
+        bool hv;
 
         lock (_observerLock)
         {
@@ -215,14 +221,7 @@ public partial class AsyncSignal<T> : IAwaitSignal<T>
                 else
                 {
                     var current = _outObserver;
-                    if (current is EmptyWitness<T>)
-                    {
-                        _outObserver = new ListWitness<T>(new ImmutableList<IObserver<T>>([observer]));
-                    }
-                    else
-                    {
-                        _outObserver = new ListWitness<T>(new ImmutableList<IObserver<T>>([current, observer]));
-                    }
+                    _outObserver = current is EmptyWitness<T> ? new ListWitness<T>(new([observer])) : new ListWitness<T>(new([current, observer]));
                 }
 
                 return new ObserverHandler(this, observer);
@@ -409,7 +408,7 @@ public partial class AsyncSignal<T> : IAwaitSignal<T>
         /// Executes the new operation.
         /// </summary>
         /// <returns>The result.</returns>
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// Stores state for the signal implementation.

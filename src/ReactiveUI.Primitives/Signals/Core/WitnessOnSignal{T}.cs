@@ -56,10 +56,15 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
         private readonly WitnessOnSignal<T> _parent;
 
         /// <summary>
-        /// Executes the new operation.
+        /// Synchronization gate guarding the queued actions and scheduling state.
         /// </summary>
-        /// <returns>The result.</returns>
-        private readonly Queue<Spark<T>> _actions = new();
+        private readonly Lock _gate = new();
+
+        /// <summary>
+        /// Queued notifications awaiting dispatch on the scheduler. Stored as a value type so
+        /// queueing a notification does not allocate a <see cref="Spark{T}"/> per OnNext.
+        /// </summary>
+        private readonly Queue<Notification> _actions = new();
 
         /// <summary>
         /// Stores state for the signal implementation.
@@ -85,7 +90,7 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
         {
             get
             {
-                lock (_actions)
+                lock (_gate)
                 {
                     return _isDisposed;
                 }
@@ -102,25 +107,25 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
 
             var sourceDisposable = _parent._source.Subscribe(this);
 
-            return new MultipleDisposable(sourceDisposable, this);
+            return new(sourceDisposable, this);
         }
 
         /// <summary>
         /// Executes the OnNext operation.
         /// </summary>
         /// <param name="value">The value.</param>
-        public override void OnNext(T value) => QueueAction(new Spark<T>.OnNextSpark(value));
+        public override void OnNext(T value) => QueueAction(Notification.OnNext(value));
 
         /// <summary>
         /// Executes the OnError operation.
         /// </summary>
         /// <param name="error">The error value.</param>
-        public override void OnError(Exception error) => QueueAction(new Spark<T>.OnErrorSpark(error));
+        public override void OnError(Exception error) => QueueAction(Notification.OnError(error));
 
         /// <summary>
         /// Executes the OnCompleted operation.
         /// </summary>
-        public override void OnCompleted() => QueueAction(new Spark<T>.OnCompletedSpark());
+        public override void OnCompleted() => QueueAction(Notification.OnCompleted());
 
         /// <summary>
         /// Executes the scheduled queue drain.
@@ -129,8 +134,8 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
         {
             while (true)
             {
-                Spark<T> action;
-                lock (_actions)
+                Notification action;
+                lock (_gate)
                 {
                     if (_isDisposed)
                     {
@@ -147,7 +152,7 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
                     action = _actions.Dequeue();
                 }
 
-                Dispatch(action);
+                Dispatch(in action);
                 if (action.Kind == SparkKind.OnNext)
                 {
                     continue;
@@ -164,7 +169,7 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
         /// <param name="disposing">The disposing value.</param>
         protected override void Dispose(bool disposing)
         {
-            lock (_actions)
+            lock (_gate)
             {
                 _isDisposed = true;
                 _actions.Clear();
@@ -177,9 +182,9 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
         /// Executes the QueueAction operation.
         /// </summary>
         /// <param name="data">The data value.</param>
-        private void QueueAction(Spark<T> data)
+        private void QueueAction(in Notification data)
         {
-            lock (_actions)
+            lock (_gate)
             {
                 if (_isDisposed)
                 {
@@ -202,7 +207,7 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
         /// Executes the Dispatch operation.
         /// </summary>
         /// <param name="action">The action value.</param>
-        private void Dispatch(Spark<T> action)
+        private void Dispatch(in Notification action)
         {
             switch (action.Kind)
             {
@@ -224,6 +229,61 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
                         break;
                     }
             }
+        }
+
+        /// <summary>
+        /// Value-type observer notification used for the dispatch queue to avoid a per-OnNext
+        /// heap allocation.
+        /// </summary>
+        private readonly record struct Notification
+        {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="Notification"/> struct.
+            /// </summary>
+            /// <param name="kind">The notification kind.</param>
+            /// <param name="value">The OnNext value.</param>
+            /// <param name="exception">The OnError exception.</param>
+            private Notification(SparkKind kind, T value, Exception? exception)
+            {
+                Kind = kind;
+                Value = value;
+                Exception = exception!;
+            }
+
+            /// <summary>
+            /// Gets the notification kind.
+            /// </summary>
+            public SparkKind Kind { get; }
+
+            /// <summary>
+            /// Gets the value for an OnNext notification.
+            /// </summary>
+            public T Value { get; }
+
+            /// <summary>
+            /// Gets the exception for an OnError notification.
+            /// </summary>
+            public Exception Exception { get; }
+
+            /// <summary>
+            /// Creates an OnNext notification.
+            /// </summary>
+            /// <param name="value">The value.</param>
+            /// <returns>The notification.</returns>
+            public static Notification OnNext(T value) => new(SparkKind.OnNext, value, null);
+
+            /// <summary>
+            /// Creates an OnError notification.
+            /// </summary>
+            /// <param name="error">The error.</param>
+            /// <returns>The notification.</returns>
+            public static Notification OnError(Exception error) => new(SparkKind.OnError, default!, error);
+
+            /// <summary>
+            /// Creates an OnCompleted notification.
+            /// </summary>
+            /// <returns>The notification.</returns>
+            public static Notification OnCompleted() => new(SparkKind.OnCompleted, default!, null);
         }
     }
 }

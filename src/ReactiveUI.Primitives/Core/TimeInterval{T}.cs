@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Core;
 /// <typeparam name="T">The type of the value being annotated with time interval information.</typeparam>
 [Serializable]
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public readonly partial struct TimeInterval<T> : IEquatable<TimeInterval<T>>
+public readonly struct TimeInterval<T> : IEquatable<TimeInterval<T>>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="TimeInterval{T}"/> struct.
@@ -35,6 +35,12 @@ public readonly partial struct TimeInterval<T> : IEquatable<TimeInterval<T>>
     /// Gets the interval.
     /// </summary>
     public TimeSpan Interval { get; }
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Determines whether the two specified TimeInterval values have the same Value and Interval.

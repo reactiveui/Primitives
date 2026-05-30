@@ -209,217 +209,6 @@ public static partial class Signal
                 scheduler,
                 cancellationTokenSource);
 
-#pragma warning disable SA1201 // ImmediateTaskSignal is kept near the factory that selects it.
-    /// <summary>
-    /// Immediate task signal that subscribes directly instead of building a nested observable pipeline.
-    /// </summary>
-    /// <typeparam name="TResult">The result type.</typeparam>
-    private sealed class ImmediateTaskSignal<TResult> : ITaskSignal<TResult>
-    {
-        /// <summary>
-        /// Executes the task.
-        /// </summary>
-        private readonly Func<CancellationTokenSource, Task<TResult>> _execution;
-
-        /// <summary>
-        /// Filters successful task results.
-        /// </summary>
-        private readonly Func<TResult, bool> _shouldEmit;
-
-        /// <summary>
-        /// Gets the owned cancellation source.
-        /// </summary>
-        private CancellationTokenSource SourceCore { get; }
-
-        /// <summary>
-        /// Non-zero after disposal.
-        /// </summary>
-        private int _disposed;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ImmediateTaskSignal{TResult}"/> class.
-        /// </summary>
-        /// <param name="execution">Task factory.</param>
-        /// <param name="shouldEmit">Result filter.</param>
-        /// <param name="cancellationTokenSource">Optional cancellation source.</param>
-        public ImmediateTaskSignal(
-            Func<CancellationTokenSource, Task<TResult>> execution,
-            Func<TResult, bool> shouldEmit,
-            CancellationTokenSource? cancellationTokenSource)
-        {
-            _execution = execution ?? throw new ArgumentNullException(nameof(execution));
-            _shouldEmit = shouldEmit ?? throw new ArgumentNullException(nameof(shouldEmit));
-            SourceCore = cancellationTokenSource ?? new CancellationTokenSource();
-        }
-
-        /// <inheritdoc/>
-        CancellationTokenSource? ITaskSignal<TResult>.CancellationTokenSource => SourceCore;
-
-        /// <inheritdoc/>
-        public bool IsCancellationRequested => SourceCore.IsCancellationRequested;
-
-        /// <inheritdoc/>
-        public IObservable<TResult>? Source => this;
-
-        /// <inheritdoc/>
-        public bool IsDisposed => Volatile.Read(ref _disposed) != 0;
-
-        /// <inheritdoc/>
-        public void GetOperationCanceled(IObserver<Exception> observer)
-        {
-            if (observer == null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
-
-            SourceCore.Token.Register(
-                static state => ((IObserver<Exception>)state!).OnNext(new OperationCanceledException()),
-                observer,
-                useSynchronizationContext: false);
-        }
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<TResult> observer)
-        {
-            if (observer == null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
-
-            ThrowIfDisposed();
-            var token = SourceCore.Token;
-            token.ThrowIfCancellationRequested();
-
-            Task<TResult> task;
-            try
-            {
-                task = _execution(SourceCore) ?? throw new InvalidOperationException("The task factory returned null.");
-            }
-            catch (Exception error)
-            {
-                observer.OnError(error);
-                return Disposable.Empty;
-            }
-
-            if (task.Status == TaskStatus.RanToCompletion)
-            {
-#pragma warning disable S4462 // Completed-task fast path avoids async state machine allocation.
-                var result = task.GetAwaiter().GetResult();
-#pragma warning restore S4462
-                if (_shouldEmit(result))
-                {
-                    observer.OnNext(result);
-                    observer.OnCompleted();
-                    return Disposable.Empty;
-                }
-
-                observer.OnError(new OperationCanceledException());
-                return Disposable.Empty;
-            }
-
-            if (task.IsCanceled || token.IsCancellationRequested)
-            {
-                observer.OnError(new OperationCanceledException());
-                return Disposable.Empty;
-            }
-
-            if (task.IsFaulted)
-            {
-                observer.OnError(task.Exception!.InnerException ?? task.Exception);
-                return Disposable.Empty;
-            }
-
-            var subscription = new ImmediateTaskSubscription(SourceCore);
-            _ = ObserveTask(
-                task.WhenCancelled(token),
-                _shouldEmit,
-                observer,
-                subscription.MarkCompleted,
-                subscription.MarkFaulted,
-                token);
-
-            return subscription;
-        }
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            if (Interlocked.Exchange(ref _disposed, 1) != 0)
-            {
-                return;
-            }
-
-            Cancel(SourceCore);
-            SourceCore.Dispose();
-        }
-
-        /// <summary>
-        /// Throws when disposed.
-        /// </summary>
-        private void ThrowIfDisposed()
-        {
-            if (!IsDisposed)
-            {
-                return;
-            }
-
-            throw new ObjectDisposedException(nameof(ImmediateTaskSignal<TResult>));
-        }
-
-        /// <summary>
-        /// Subscription for pending immediate tasks.
-        /// </summary>
-        private sealed class ImmediateTaskSubscription : IDisposable
-        {
-            /// <summary>
-            /// Completed state marker.
-            /// </summary>
-            private const int Completed = 1;
-
-            /// <summary>
-            /// Faulted state marker.
-            /// </summary>
-            private const int Faulted = 2;
-
-            /// <summary>
-            /// Cancellation source to cancel while pending.
-            /// </summary>
-            private readonly CancellationTokenSource _source;
-
-            /// <summary>
-            /// Completion state.
-            /// </summary>
-            private int _state;
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="ImmediateTaskSubscription"/> class.
-            /// </summary>
-            /// <param name="source">Cancellation source.</param>
-            public ImmediateTaskSubscription(CancellationTokenSource source) => _source = source;
-
-            /// <summary>
-            /// Marks the task completed.
-            /// </summary>
-            public void MarkCompleted() => Volatile.Write(ref _state, Completed);
-
-            /// <summary>
-            /// Marks the task faulted.
-            /// </summary>
-            public void MarkFaulted() => Volatile.Write(ref _state, Faulted);
-
-            /// <inheritdoc/>
-            public void Dispose()
-            {
-                if (Volatile.Read(ref _state) == Completed)
-                {
-                    return;
-                }
-
-                Cancel(_source);
-            }
-        }
-    }
-
     /// <summary>
     /// Executes the SubscribeTask operation.
     /// </summary>
@@ -429,6 +218,10 @@ public static partial class Signal
     /// <param name="shouldEmit">The shouldEmit value.</param>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4462:Calls to \"async\" methods should not be blocking",
+        Justification = "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
     private static IDisposable SubscribeTask<TResult>(
         ITaskSignal<TResult> signal,
         Func<CancellationTokenSource, Task<TResult>> execution,
@@ -453,9 +246,7 @@ public static partial class Signal
 
         if (task.Status == TaskStatus.RanToCompletion)
         {
-#pragma warning disable S4462 // Completed-task fast path avoids async state machine allocation.
-            var result = task.GetAwaiter().GetResult();
-#pragma warning restore S4462
+            var result = task.Result;
             if (shouldEmit(result))
             {
                 observer.OnNext(result);
@@ -604,5 +395,216 @@ public static partial class Signal
 #endif
         }
     }
-#pragma warning restore SA1201
+
+    /// <summary>
+    /// Immediate task signal that subscribes directly instead of building a nested observable pipeline.
+    /// </summary>
+    /// <typeparam name="TResult">The result type.</typeparam>
+    private sealed class ImmediateTaskSignal<TResult> : ITaskSignal<TResult>
+    {
+        /// <summary>
+        /// Executes the task.
+        /// </summary>
+        private readonly Func<CancellationTokenSource, Task<TResult>> _execution;
+
+        /// <summary>
+        /// Filters successful task results.
+        /// </summary>
+        private readonly Func<TResult, bool> _shouldEmit;
+
+        /// <summary>
+        /// Non-zero after disposal.
+        /// </summary>
+        private int _disposed;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ImmediateTaskSignal{TResult}"/> class.
+        /// </summary>
+        /// <param name="execution">Task factory.</param>
+        /// <param name="shouldEmit">Result filter.</param>
+        /// <param name="cancellationTokenSource">Optional cancellation source.</param>
+        public ImmediateTaskSignal(
+            Func<CancellationTokenSource, Task<TResult>> execution,
+            Func<TResult, bool> shouldEmit,
+            CancellationTokenSource? cancellationTokenSource)
+        {
+            _execution = execution ?? throw new ArgumentNullException(nameof(execution));
+            _shouldEmit = shouldEmit ?? throw new ArgumentNullException(nameof(shouldEmit));
+            SourceCore = cancellationTokenSource ?? new CancellationTokenSource();
+        }
+
+        /// <inheritdoc/>
+        CancellationTokenSource? ITaskSignal<TResult>.CancellationTokenSource => SourceCore;
+
+        /// <inheritdoc/>
+        public bool IsCancellationRequested => SourceCore.IsCancellationRequested;
+
+        /// <inheritdoc/>
+        public IObservable<TResult>? Source => this;
+
+        /// <inheritdoc/>
+        public bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+
+        /// <summary>
+        /// Gets the owned cancellation source.
+        /// </summary>
+        private CancellationTokenSource SourceCore { get; }
+
+        /// <inheritdoc/>
+        public void GetOperationCanceled(IObserver<Exception> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            SourceCore.Token.Register(
+                static state => ((IObserver<Exception>)state!).OnNext(new OperationCanceledException()),
+                observer,
+                useSynchronizationContext: false);
+        }
+
+        /// <inheritdoc/>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Major Code Smell",
+            "S4462:Calls to \"async\" methods should not be blocking",
+            Justification = "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
+        public IDisposable Subscribe(IObserver<TResult> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            ThrowIfDisposed();
+            var token = SourceCore.Token;
+            token.ThrowIfCancellationRequested();
+
+            Task<TResult> task;
+            try
+            {
+                task = _execution(SourceCore) ?? throw new InvalidOperationException("The task factory returned null.");
+            }
+            catch (Exception error)
+            {
+                observer.OnError(error);
+                return Disposable.Empty;
+            }
+
+            if (task.Status == TaskStatus.RanToCompletion)
+            {
+                var result = task.Result;
+                if (_shouldEmit(result))
+                {
+                    observer.OnNext(result);
+                    observer.OnCompleted();
+                    return Disposable.Empty;
+                }
+
+                observer.OnError(new OperationCanceledException());
+                return Disposable.Empty;
+            }
+
+            if (task.IsCanceled || token.IsCancellationRequested)
+            {
+                observer.OnError(new OperationCanceledException());
+                return Disposable.Empty;
+            }
+
+            if (task.IsFaulted)
+            {
+                observer.OnError(task.Exception!.InnerException ?? task.Exception);
+                return Disposable.Empty;
+            }
+
+            var subscription = new ImmediateTaskSubscription(SourceCore);
+            _ = ObserveTask(
+                task.WhenCancelled(token),
+                _shouldEmit,
+                observer,
+                subscription.MarkCompleted,
+                subscription.MarkFaulted,
+                token);
+
+            return subscription;
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+
+            Cancel(SourceCore);
+            SourceCore.Dispose();
+        }
+
+        /// <summary>
+        /// Throws when disposed.
+        /// </summary>
+        private void ThrowIfDisposed()
+        {
+            if (!IsDisposed)
+            {
+                return;
+            }
+
+            throw new ObjectDisposedException(nameof(ImmediateTaskSignal<TResult>));
+        }
+
+        /// <summary>
+        /// Subscription for pending immediate tasks.
+        /// </summary>
+        private sealed class ImmediateTaskSubscription : IDisposable
+        {
+            /// <summary>
+            /// Completed state marker.
+            /// </summary>
+            private const int Completed = 1;
+
+            /// <summary>
+            /// Faulted state marker.
+            /// </summary>
+            private const int Faulted = 2;
+
+            /// <summary>
+            /// Cancellation source to cancel while pending.
+            /// </summary>
+            private readonly CancellationTokenSource _source;
+
+            /// <summary>
+            /// Completion state.
+            /// </summary>
+            private int _state;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ImmediateTaskSubscription"/> class.
+            /// </summary>
+            /// <param name="source">Cancellation source.</param>
+            public ImmediateTaskSubscription(CancellationTokenSource source) => _source = source;
+
+            /// <summary>
+            /// Marks the task completed.
+            /// </summary>
+            public void MarkCompleted() => Volatile.Write(ref _state, Completed);
+
+            /// <summary>
+            /// Marks the task faulted.
+            /// </summary>
+            public void MarkFaulted() => Volatile.Write(ref _state, Faulted);
+
+            /// <inheritdoc/>
+            public void Dispose()
+            {
+                if (Volatile.Read(ref _state) == Completed)
+                {
+                    return;
+                }
+
+                Cancel(_source);
+            }
+        }
+    }
 }

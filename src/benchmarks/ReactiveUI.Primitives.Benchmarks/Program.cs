@@ -2,9 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System;
 using System.Globalization;
-using System.IO;
 using System.Text;
 using BenchmarkDotNet.Running;
 
@@ -15,6 +13,51 @@ namespace ReactiveUI.Primitives.Benchmarks;
 /// </summary>
 internal static class Program
 {
+    /// <summary>
+    /// The expected Primitives value for the documented SwitchRanges scheduling difference.
+    /// </summary>
+    private const int SwitchRangesPrimitivesValue = 1856;
+
+    /// <summary>
+    /// The expected System.Reactive value for the documented SwitchRanges scheduling difference.
+    /// </summary>
+    private const int SwitchRangesSystemReactiveValue = 1721;
+
+    /// <summary>
+    /// The expected R3 value for the documented SwitchRanges scheduling difference.
+    /// </summary>
+    private const int SwitchRangesR3Value = 1856;
+
+    /// <summary>
+    /// The expected Primitives and R3 value for the documented CombineLatest/WithLatest differences.
+    /// </summary>
+    private const int CombineWithLatestPrimitivesValue = 536;
+
+    /// <summary>
+    /// The expected System.Reactive value for the documented CombineLatestRanges difference.
+    /// </summary>
+    private const int CombineLatestSystemReactiveValue = 806;
+
+    /// <summary>
+    /// The expected System.Reactive value for the documented WithLatestRanges difference.
+    /// </summary>
+    private const int WithLatestSystemReactiveValue = 416;
+
+    /// <summary>
+    /// The benchmark method-name prefix identifying the Primitives library row.
+    /// </summary>
+    private const string PrimitivesPrefix = "Primitives";
+
+    /// <summary>
+    /// The benchmark method-name prefix identifying the System.Reactive library row.
+    /// </summary>
+    private const string SystemReactivePrefix = "SystemReactive";
+
+    /// <summary>
+    /// The benchmark method-name prefix identifying the R3 library row.
+    /// </summary>
+    private const string R3Prefix = "R3";
+
     /// <summary>
     /// Maps comparator benchmark method suffixes onto the matching Primitives smoke scenario.
     /// </summary>
@@ -38,6 +81,12 @@ internal static class Program
     /// <returns>A task that completes when execution is finished.</returns>
     public static async Task Main(string[] args)
     {
+        if (args.Contains("--alloc", StringComparer.OrdinalIgnoreCase))
+        {
+            AllocationProbe.Run();
+            return;
+        }
+
         if (args.Contains("--smoke", StringComparer.OrdinalIgnoreCase))
         {
             var originalOutput = Console.Out;
@@ -60,6 +109,10 @@ internal static class Program
         BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
     }
 
+    /// <summary>
+    /// Runs the deterministic smoke benchmark scenarios and writes their results to the console.
+    /// </summary>
+    /// <returns>A task that completes when all smoke benchmarks have run.</returns>
     private static async Task RunSmokeBenchmarksAsync()
     {
         var scalar = new ScalarSignalBenchmarks();
@@ -141,7 +194,7 @@ internal static class Program
         Console.WriteLine($"SystemReactiveBehaviorSubject1024={stateful.SystemReactiveBehaviorSubject1024()}");
         Console.WriteLine($"R3BehaviorSubject1024={stateful.R3BehaviorSubject1024()}");
 
-        var history = new HistorySignalBenchmarks();
+        var history = new ReplaySignalBenchmarks();
         Console.WriteLine($"PrimitivesHistorySubscribe={history.PrimitivesHistorySubscribe()}");
         Console.WriteLine($"SystemReactiveReplaySubscribe={history.SystemReactiveReplaySubscribe()}");
         Console.WriteLine($"R3ReplaySubscribe={history.R3ReplaySubscribe()}");
@@ -156,15 +209,31 @@ internal static class Program
         RunCoreRuntimeSmokeBenchmarks();
     }
 
+    /// <summary>
+    /// Runs the expansion-coverage smoke benchmark scenarios and writes their results to the console.
+    /// </summary>
+    /// <returns>A task that completes when all expansion smoke benchmarks have run.</returns>
     private static async Task RunExpansionSmokeBenchmarksAsync()
+    {
+        await RunFactoryAdapterExpansionSmokeAsync();
+        RunTimeSchedulerSmoke();
+        RunHigherOrderSmoke();
+        await RunTerminalCollectionSmokeAsync();
+        RunConnectableShareSmoke();
+        await RunStateTaskCommandSmokeAsync();
+    }
+
+    /// <summary>
+    /// Runs the factory-adapter expansion smoke benchmarks and writes their results to the console.
+    /// </summary>
+    /// <returns>A task that completes when the factory-adapter smoke benchmarks have run.</returns>
+    private static async Task RunFactoryAdapterExpansionSmokeAsync()
     {
         var factoryAdapters = new FactoryAdapterExpansionBenchmarks();
         Console.WriteLine($"PrimitivesCreateSubscribe={factoryAdapters.PrimitivesCreateSubscribe()}");
         Console.WriteLine($"SystemReactiveCreateSubscribe={factoryAdapters.SystemReactiveCreateSubscribe()}");
         Console.WriteLine($"R3CreateSubscribe={factoryAdapters.R3CreateSubscribe()}");
         Console.WriteLine($"PrimitivesCreateSafeSubscribe={factoryAdapters.PrimitivesCreateSafeSubscribe()}");
-        Console.WriteLine($"SystemReactiveCreateSafeSubscribe={factoryAdapters.SystemReactiveCreateSafeSubscribe()}");
-        Console.WriteLine($"R3CreateSafeSubscribe={factoryAdapters.R3CreateSafeSubscribe()}");
         Console.WriteLine($"PrimitivesDeferSubscribe={factoryAdapters.PrimitivesDeferSubscribe()}");
         Console.WriteLine($"SystemReactiveDeferSubscribe={factoryAdapters.SystemReactiveDeferSubscribe()}");
         Console.WriteLine($"R3DeferSubscribe={factoryAdapters.R3DeferSubscribe()}");
@@ -186,7 +255,13 @@ internal static class Program
         Console.WriteLine($"PrimitivesNeverSubscribeDispose={factoryAdapters.PrimitivesNeverSubscribeDispose()}");
         Console.WriteLine($"SystemReactiveNeverSubscribeDispose={factoryAdapters.SystemReactiveNeverSubscribeDispose()}");
         Console.WriteLine($"R3NeverSubscribeDispose={factoryAdapters.R3NeverSubscribeDispose()}");
+    }
 
+    /// <summary>
+    /// Runs the time and scheduler operator smoke benchmarks and writes their results to the console.
+    /// </summary>
+    private static void RunTimeSchedulerSmoke()
+    {
         var timeSchedulers = new OperatorTimeSchedulerBenchmarks();
         Console.WriteLine($"PrimitivesDelayRange={timeSchedulers.PrimitivesDelayRange()}");
         Console.WriteLine($"SystemReactiveDelayRange={timeSchedulers.SystemReactiveDelayRange()}");
@@ -212,7 +287,13 @@ internal static class Program
         Console.WriteLine($"PrimitivesObserveOnImmediate={timeSchedulers.PrimitivesObserveOnImmediate()}");
         Console.WriteLine($"SystemReactiveObserveOnImmediate={timeSchedulers.SystemReactiveObserveOnImmediate()}");
         Console.WriteLine($"R3ObserveOnImmediate={timeSchedulers.R3ObserveOnImmediate()}");
+    }
 
+    /// <summary>
+    /// Runs the higher-order operator smoke benchmarks and writes their results to the console.
+    /// </summary>
+    private static void RunHigherOrderSmoke()
+    {
         var higherOrder = new OperatorHigherOrderBenchmarks();
         Console.WriteLine($"PrimitivesConcatRanges={higherOrder.PrimitivesConcatRanges()}");
         Console.WriteLine($"SystemReactiveConcatRanges={higherOrder.SystemReactiveConcatRanges()}");
@@ -235,13 +316,19 @@ internal static class Program
         Console.WriteLine($"PrimitivesForkJoinRanges={higherOrder.PrimitivesForkJoinRanges()}");
         Console.WriteLine($"SystemReactiveForkJoinRanges={higherOrder.SystemReactiveForkJoinRanges()}");
         Console.WriteLine($"R3ForkJoinRanges={higherOrder.R3ForkJoinRanges()}");
+    }
 
+    /// <summary>
+    /// Runs the terminal-collection smoke benchmarks and writes their results to the console.
+    /// </summary>
+    /// <returns>A task that completes when the terminal-collection smoke benchmarks have run.</returns>
+    private static async Task RunTerminalCollectionSmokeAsync()
+    {
         var terminalCollections = new TerminalCollectionBenchmarks();
         Console.WriteLine($"PrimitivesCollectList={terminalCollections.PrimitivesCollectList()}");
         Console.WriteLine($"SystemReactiveCollectList={terminalCollections.SystemReactiveCollectList()}");
         Console.WriteLine($"R3CollectList={await terminalCollections.R3CollectList()}");
-        Console.WriteLine($"PrimitivesCollectArray={terminalCollections.PrimitivesCollectArray()}");
-        Console.WriteLine($"SystemReactiveCollectArray={terminalCollections.SystemReactiveCollectArray()}");
+        WriteSynchronousCollectArrayResults(terminalCollections);
         Console.WriteLine($"R3CollectArray={await terminalCollections.R3CollectArray()}");
         Console.WriteLine($"PrimitivesCollectArrayAsync={await terminalCollections.PrimitivesCollectArrayAsync()}");
         Console.WriteLine($"SystemReactiveCollectArrayAsync={await terminalCollections.SystemReactiveCollectArrayAsync()}");
@@ -267,7 +354,24 @@ internal static class Program
         Console.WriteLine($"PrimitivesAllContains={terminalCollections.PrimitivesAllContains()}");
         Console.WriteLine($"SystemReactiveAllContains={terminalCollections.SystemReactiveAllContains()}");
         Console.WriteLine($"R3AllContains={await terminalCollections.R3AllContains()}");
+    }
 
+    /// <summary>
+    /// Writes the synchronous array-collection smoke results from a non-async method so the
+    /// synchronous CollectArray benchmarks are measured without awaiting their async overloads.
+    /// </summary>
+    /// <param name="terminalCollections">The terminal-collection benchmarks instance.</param>
+    private static void WriteSynchronousCollectArrayResults(TerminalCollectionBenchmarks terminalCollections)
+    {
+        Console.WriteLine($"PrimitivesCollectArray={terminalCollections.PrimitivesCollectArray()}");
+        Console.WriteLine($"SystemReactiveCollectArray={terminalCollections.SystemReactiveCollectArray()}");
+    }
+
+    /// <summary>
+    /// Runs the connectable/share smoke benchmarks and writes their results to the console.
+    /// </summary>
+    private static void RunConnectableShareSmoke()
+    {
         var connectableShare = new ConnectableShareBenchmarks();
         Console.WriteLine($"PrimitivesPublishLiveConnect={connectableShare.PrimitivesPublishLiveConnect()}");
         Console.WriteLine($"SystemReactivePublishLiveConnect={connectableShare.SystemReactivePublishLiveConnect()}");
@@ -279,12 +383,17 @@ internal static class Program
         Console.WriteLine($"SystemReactiveReplayLiveLateSubscribe={connectableShare.SystemReactiveReplayLiveLateSubscribe()}");
         Console.WriteLine($"R3ReplayLiveLateSubscribe={connectableShare.R3ReplayLiveLateSubscribe()}");
         Console.WriteLine($"PrimitivesRefCountSubscribe={connectableShare.PrimitivesRefCountSubscribe()}");
-        Console.WriteLine($"SystemReactiveRefCountSubscribe={connectableShare.SystemReactiveRefCountSubscribe()}");
         Console.WriteLine($"R3RefCountSubscribe={connectableShare.R3RefCountSubscribe()}");
         Console.WriteLine($"PrimitivesAutoConnectSubscribe={connectableShare.PrimitivesAutoConnectSubscribe()}");
         Console.WriteLine($"SystemReactiveAutoConnectSubscribe={connectableShare.SystemReactiveAutoConnectSubscribe()}");
-        Console.WriteLine($"R3AutoConnectSubscribe={connectableShare.R3AutoConnectSubscribe()}");
+    }
 
+    /// <summary>
+    /// Runs the state, task, and command smoke benchmarks and writes their results to the console.
+    /// </summary>
+    /// <returns>A task that completes when the state/task/command smoke benchmarks have run.</returns>
+    private static async Task RunStateTaskCommandSmokeAsync()
+    {
         var stateTaskCommand = new StateTaskCommandBenchmarks();
         Console.WriteLine($"PrimitivesStateSignalUpdates={stateTaskCommand.PrimitivesStateSignalUpdates()}");
         Console.WriteLine($"SystemReactiveStateSignalUpdates={stateTaskCommand.SystemReactiveStateSignalUpdates()}");
@@ -305,6 +414,9 @@ internal static class Program
         Console.WriteLine($"R3CommandResultSubscribe={stateTaskCommand.R3CommandResultSubscribe()}");
     }
 
+    /// <summary>
+    /// Runs the core-runtime smoke benchmark scenarios and writes their results to the console.
+    /// </summary>
     private static void RunCoreRuntimeSmokeBenchmarks()
     {
         var coreRuntime = new CoreRuntimeBenchmarks();
@@ -323,34 +435,42 @@ internal static class Program
         Console.WriteLine($"R3CompletedSpark={coreRuntime.R3CompletedSpark()}");
     }
 
+    /// <summary>
+    /// Validates the captured smoke output for parity across the participating libraries.
+    /// </summary>
+    /// <param name="output">The captured smoke benchmark console output.</param>
     private static void ValidateSmokeOutput(string output)
     {
         var results = output.Split([Environment.NewLine], StringSplitOptions.RemoveEmptyEntries);
-        if (results.Length % 3 != 0)
-        {
-            throw new InvalidOperationException(
-                $"Smoke rows must be emitted in Primitives/System.Reactive/R3 triples; found {results.Length} rows.");
-        }
-
         var failures = new List<string>();
-        for (var i = 0; i < results.Length; i += 3)
+        var groupCount = 0;
+        var index = 0;
+        while (index < results.Length)
         {
-            var (primitivesName, primitivesValue) = ParseSmokeResult(results[i]);
-            var (systemReactiveName, systemReactiveValue) = ParseSmokeResult(results[i + 1]);
-            var (r3Name, r3Value) = ParseSmokeResult(results[i + 2]);
+            var (firstName, firstValue) = ParseSmokeResult(results[index]);
+            var scenario = NormalizeSmokeScenarioName(firstName);
+            var rows = new List<(string Name, int Value)> { (firstName, firstValue) };
+            var next = index + 1;
+            while (next < results.Length)
+            {
+                var (name, value) = ParseSmokeResult(results[next]);
+                if (NormalizeSmokeScenarioName(name) != scenario)
+                {
+                    break;
+                }
 
-            var failure = ValidateSmokeTriple(
-                i + 1,
-                primitivesName,
-                primitivesValue,
-                systemReactiveName,
-                systemReactiveValue,
-                r3Name,
-                r3Value);
+                rows.Add((name, value));
+                next++;
+            }
+
+            var failure = ValidateSmokeGroup(index + 1, rows);
             if (failure is not null)
             {
                 failures.Add(failure);
             }
+
+            groupCount++;
+            index = next;
         }
 
         if (failures.Count > 0)
@@ -359,94 +479,161 @@ internal static class Program
                 "Benchmark smoke parity validation failed:" + Environment.NewLine + string.Join(Environment.NewLine, failures));
         }
 
-        Console.WriteLine($"Smoke parity validation passed for {results.Length / 3} benchmark groups.");
+        Console.WriteLine($"Smoke parity validation passed for {groupCount} benchmark groups.");
     }
 
-    private static string? ValidateSmokeTriple(
-        int firstRowNumber,
-        string primitivesName,
-        int primitivesValue,
-        string systemReactiveName,
-        int systemReactiveValue,
-        string r3Name,
-        int r3Value)
+    /// <summary>
+    /// Validates a group of consecutive smoke rows for one scenario, one row per participating library.
+    /// </summary>
+    /// <param name="firstRowNumber">The one-based row number of the first row in the group.</param>
+    /// <param name="rows">The library result rows for the scenario, in emission order.</param>
+    /// <returns>A failure description, or <see langword="null"/> when the group is valid.</returns>
+    private static string? ValidateSmokeGroup(int firstRowNumber, List<(string Name, int Value)> rows)
     {
-        if (!primitivesName.StartsWith("Primitives", StringComparison.Ordinal) ||
-            !systemReactiveName.StartsWith("SystemReactive", StringComparison.Ordinal) ||
-            !r3Name.StartsWith("R3", StringComparison.Ordinal))
+        string? primitivesName = null;
+        var primitivesValue = 0;
+        for (var i = 0; i < rows.Count; i++)
         {
-            return $"Rows {firstRowNumber}-{firstRowNumber + 2} are not ordered as Primitives/System.Reactive/R3.";
+            var name = rows[i].Name;
+            if (!HasKnownLibraryPrefix(name))
+            {
+                return $"Row {firstRowNumber} group contains an unrecognized library prefix: {name}.";
+            }
+
+            if (primitivesName is null && name.StartsWith(PrimitivesPrefix, StringComparison.Ordinal))
+            {
+                primitivesName = name;
+                primitivesValue = rows[i].Value;
+            }
         }
 
-        var primitivesScenario = NormalizeSmokeScenarioName(primitivesName);
-        var systemReactiveScenario = NormalizeSmokeScenarioName(systemReactiveName);
-        var r3Scenario = NormalizeSmokeScenarioName(r3Name);
-        if (primitivesScenario != systemReactiveScenario || primitivesScenario != r3Scenario)
+        if (primitivesName is null)
         {
-            return $"Rows {firstRowNumber}-{firstRowNumber + 2} are not the same smoke scenario: " +
-                   $"{primitivesName}, {systemReactiveName}, {r3Name}.";
+            return $"Row {firstRowNumber} group has no Primitives result.";
         }
 
-        if (IsDocumentedSmokeDifference(primitivesName))
-        {
-            return ValidateDocumentedSmokeDifference(primitivesName, primitivesValue, systemReactiveValue, r3Value);
-        }
-
-        return ValidateExpectedSmokeParity(primitivesName, primitivesValue, systemReactiveValue, r3Value);
+        return IsDocumentedSmokeDifference(primitivesName)
+            ? ValidateDocumentedSmokeDifference(rows)
+            : ValidateSmokeParity(primitivesName, primitivesValue, rows);
     }
 
+    /// <summary>
+    /// Determines whether the name carries a recognized library prefix.
+    /// </summary>
+    /// <param name="name">The benchmark result name.</param>
+    /// <returns><see langword="true"/> when the name has a known library prefix.</returns>
+    private static bool HasKnownLibraryPrefix(string name) =>
+        name.StartsWith(PrimitivesPrefix, StringComparison.Ordinal) ||
+        name.StartsWith(SystemReactivePrefix, StringComparison.Ordinal) ||
+        name.StartsWith(R3Prefix, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Validates that every library row in the group matches the Primitives value.
+    /// </summary>
+    /// <param name="primitivesName">The Primitives result name.</param>
+    /// <param name="primitivesValue">The Primitives result value.</param>
+    /// <param name="rows">The library result rows for the scenario.</param>
+    /// <returns>A failure description, or <see langword="null"/> when the values match.</returns>
+    private static string? ValidateSmokeParity(string primitivesName, int primitivesValue, List<(string Name, int Value)> rows)
+    {
+        for (var i = 0; i < rows.Count; i++)
+        {
+            if (rows[i].Value != primitivesValue)
+            {
+                var parts = new string[rows.Count];
+                for (var j = 0; j < rows.Count; j++)
+                {
+                    parts[j] = $"{rows[j].Name}={rows[j].Value}";
+                }
+
+                return $"{primitivesName}: expected parity but got {string.Join(", ", parts)}.";
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Normalizes a benchmark result name to its underlying smoke scenario name.
+    /// </summary>
+    /// <param name="name">The benchmark result name including its library prefix.</param>
+    /// <returns>The normalized smoke scenario name.</returns>
     private static string NormalizeSmokeScenarioName(string name)
     {
         string scenario;
-        if (name.StartsWith("SystemReactive", StringComparison.Ordinal))
+        if (name.StartsWith(SystemReactivePrefix, StringComparison.Ordinal))
         {
-            scenario = name["SystemReactive".Length..];
+            scenario = name[SystemReactivePrefix.Length..];
         }
-        else if (name.StartsWith("Primitives", StringComparison.Ordinal))
+        else if (name.StartsWith(PrimitivesPrefix, StringComparison.Ordinal))
         {
-            scenario = name["Primitives".Length..];
+            scenario = name[PrimitivesPrefix.Length..];
         }
         else
         {
-            scenario = name["R3".Length..];
+            scenario = name[R3Prefix.Length..];
         }
 
         return SmokeScenarioAliases.TryGetValue(scenario, out var normalized) ? normalized : scenario;
     }
 
-    private static string? ValidateExpectedSmokeParity(
-        string primitivesName,
-        int primitivesValue,
-        int systemReactiveValue,
-        int r3Value)
-    {
-        if (primitivesValue == systemReactiveValue && primitivesValue == r3Value)
-        {
-            return null;
-        }
-
-        return $"{primitivesName}: expected parity but got Primitives={primitivesValue}, " +
-               $"System.Reactive={systemReactiveValue}, R3={r3Value}.";
-    }
-
-    private static bool IsDocumentedSmokeDifference(string primitivesName)
-    {
-        return primitivesName is "PrimitivesSwitchRanges" or
+    /// <summary>
+    /// Determines whether the named scenario has a documented, expected parity difference.
+    /// </summary>
+    /// <param name="primitivesName">The Primitives result name.</param>
+    /// <returns><see langword="true"/> when the scenario is a documented difference; otherwise, <see langword="false"/>.</returns>
+    private static bool IsDocumentedSmokeDifference(string primitivesName) =>
+        primitivesName is "PrimitivesSwitchRanges" or
             "PrimitivesCombineLatestRanges" or
             "PrimitivesWithLatestRanges";
+
+    /// <summary>
+    /// Splits the scenario rows into the Primitives name and the per-library values.
+    /// </summary>
+    /// <param name="rows">The library result rows for the scenario.</param>
+    /// <returns>The Primitives name and the Primitives, System.Reactive, and R3 values.</returns>
+    private static (string? PrimitivesName, int PrimitivesValue, int SystemReactiveValue, int R3Value) SplitLibraryValues(
+        List<(string Name, int Value)> rows)
+    {
+        string? primitivesName = null;
+        var primitivesValue = 0;
+        var systemReactiveValue = 0;
+        var r3Value = 0;
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var (name, value) = rows[i];
+            if (name.StartsWith(SystemReactivePrefix, StringComparison.Ordinal))
+            {
+                systemReactiveValue = value;
+            }
+            else if (name.StartsWith(PrimitivesPrefix, StringComparison.Ordinal))
+            {
+                primitivesName = name;
+                primitivesValue = value;
+            }
+            else
+            {
+                r3Value = value;
+            }
+        }
+
+        return (primitivesName, primitivesValue, systemReactiveValue, r3Value);
     }
 
-    private static string? ValidateDocumentedSmokeDifference(
-        string primitivesName,
-        int primitivesValue,
-        int systemReactiveValue,
-        int r3Value)
+    /// <summary>
+    /// Validates a scenario with a documented, expected parity difference against its known values.
+    /// </summary>
+    /// <param name="rows">The library result rows for the scenario.</param>
+    /// <returns>A failure description, or <see langword="null"/> when the values match the documented difference.</returns>
+    private static string? ValidateDocumentedSmokeDifference(List<(string Name, int Value)> rows)
     {
+        var (primitivesName, primitivesValue, systemReactiveValue, r3Value) = SplitLibraryValues(rows);
+
         var expected = primitivesName switch
         {
-            "PrimitivesSwitchRanges" => (Primitives: 1856, SystemReactive: 1721, R3: 1856),
-            "PrimitivesCombineLatestRanges" => (Primitives: 536, SystemReactive: 806, R3: 536),
-            "PrimitivesWithLatestRanges" => (Primitives: 536, SystemReactive: 416, R3: 536),
+            "PrimitivesSwitchRanges" => (Primitives: SwitchRangesPrimitivesValue, SystemReactive: SwitchRangesSystemReactiveValue, R3: SwitchRangesR3Value),
+            "PrimitivesCombineLatestRanges" => (Primitives: CombineWithLatestPrimitivesValue, SystemReactive: CombineLatestSystemReactiveValue, R3: CombineWithLatestPrimitivesValue),
+            "PrimitivesWithLatestRanges" => (Primitives: CombineWithLatestPrimitivesValue, SystemReactive: WithLatestSystemReactiveValue, R3: CombineWithLatestPrimitivesValue),
             _ => default,
         };
 
@@ -464,6 +651,11 @@ internal static class Program
               $"but got Primitives={primitivesValue}, System.Reactive={systemReactiveValue}, R3={r3Value}.";
     }
 
+    /// <summary>
+    /// Parses a single <c>key=value</c> smoke output row into its name and integer value.
+    /// </summary>
+    /// <param name="line">The smoke output row to parse.</param>
+    /// <returns>A tuple containing the result name and its integer value.</returns>
     private static (string Name, int Value) ParseSmokeResult(string line)
     {
         var separator = line.IndexOf('=', StringComparison.Ordinal);
@@ -476,22 +668,42 @@ internal static class Program
         return (line[..separator], value);
     }
 
+    /// <summary>
+    /// A <see cref="TextWriter"/> that mirrors every write to a primary and a secondary writer.
+    /// </summary>
+    /// <param name="primary">The primary writer to forward writes to.</param>
+    /// <param name="secondary">The secondary writer to forward writes to.</param>
     private sealed class SmokeTeeTextWriter(TextWriter primary, TextWriter secondary) : TextWriter
     {
+        /// <summary>
+        /// Gets the character encoding of the primary writer.
+        /// </summary>
         public override Encoding Encoding => primary.Encoding;
 
+        /// <summary>
+        /// Writes a character to both the primary and secondary writers.
+        /// </summary>
+        /// <param name="value">The character to write.</param>
         public override void Write(char value)
         {
             primary.Write(value);
             secondary.Write(value);
         }
 
+        /// <summary>
+        /// Writes a string to both the primary and secondary writers.
+        /// </summary>
+        /// <param name="value">The string to write.</param>
         public override void Write(string? value)
         {
             primary.Write(value);
             secondary.Write(value);
         }
 
+        /// <summary>
+        /// Writes a string followed by a line terminator to both the primary and secondary writers.
+        /// </summary>
+        /// <param name="value">The string to write.</param>
         public override void WriteLine(string? value)
         {
             primary.WriteLine(value);

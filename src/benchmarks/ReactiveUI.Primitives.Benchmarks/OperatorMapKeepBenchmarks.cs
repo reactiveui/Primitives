@@ -2,13 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System;
-using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Signals;
 using System.Reactive.Linq;
-using System.Threading;
-
+using BenchmarkDotNet.Attributes;
+using ReactiveUI.Primitives.Signals;
 using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -19,8 +15,25 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class OperatorMapKeepBenchmarks
 {
+    /// <summary>
+    /// The starting value of each benchmarked sequence.
+    /// </summary>
     private const int StartValue = 0;
+
+    /// <summary>
+    /// The number of values produced by each benchmarked sequence.
+    /// </summary>
     private const int RangeCount = 32;
+
+    /// <summary>
+    /// The divisor used by the key-selector benchmarks.
+    /// </summary>
+    private const int KeyDivisor = 2;
+
+    /// <summary>
+    /// The value matched by the any-predicate benchmarks.
+    /// </summary>
+    private const int MatchValue = 31;
 
     /// <summary>
     /// Baseline map/where chain using primitives.
@@ -63,8 +76,8 @@ public class OperatorMapKeepBenchmarks
         using var subscription = R3.ObservableExtensions.Where(
                 R3.ObservableExtensions.Select(
                     R3.Observable.Range(StartValue, RangeCount),
-                    static (int x) => x + 1),
-                static (int x) => (x & 1) == 0)
+                    static x => x + 1),
+                static x => (x & 1) == 0)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -79,11 +92,11 @@ public class OperatorMapKeepBenchmarks
         var count = new IntSignalObserver();
         var any = new BooleanSignalObserver();
         using var countSubscription = Signal.Sequence(StartValue, RangeCount)
-            .DistinctBy(static x => x / 2)
+            .DistinctBy(static x => x / KeyDivisor)
             .Count()
             .Subscribe(count);
         using var anySubscription = Signal.Sequence(StartValue, RangeCount)
-            .Any(static x => x == 31)
+            .Any(static x => x == MatchValue)
             .Subscribe(any);
         return any.Value ? count.Total : -count.Total;
     }
@@ -98,11 +111,11 @@ public class OperatorMapKeepBenchmarks
         var count = new IntSignalObserver();
         var any = new BooleanSignalObserver();
         using var countSubscription = RxObservable.Range(StartValue, RangeCount)
-            .Select(static x => x / 2)
+            .Select(static x => x / KeyDivisor)
             .Distinct()
             .Count()
             .Subscribe(count);
-        using var anySubscription = RxObservable.Any(RxObservable.Range(StartValue, RangeCount), static x => x == 31)
+        using var anySubscription = RxObservable.Any(RxObservable.Range(StartValue, RangeCount), static x => x == MatchValue)
             .Subscribe(any);
         return any.Value ? count.Total : -count.Total;
     }
@@ -118,13 +131,13 @@ public class OperatorMapKeepBenchmarks
                 R3.ObservableExtensions.Distinct(
                     R3.ObservableExtensions.Select(
                         R3.Observable.Range(StartValue, RangeCount),
-                        static (int x) => x / 2)),
+                        static x => x / KeyDivisor)),
                 CancellationToken.None)
             .ConfigureAwait(false);
 
         var any = await R3.ObservableExtensions.AnyAsync(
                 R3.Observable.Range(StartValue, RangeCount),
-                static (int x) => x == 31,
+                static x => x == MatchValue,
                 CancellationToken.None)
             .ConfigureAwait(false);
 

@@ -616,11 +616,11 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
             || (existingDisposeToken.CanBeCanceled && cancellationToken == existingDisposeToken)
             || cancellationToken == _externalLinkedToken)
         {
-            return new LinkedTokenScope(null, existingDisposeToken);
+            return new(null, existingDisposeToken);
         }
 
         var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, GetOrCreateDisposeCts().Token);
-        return new LinkedTokenScope(linkedCts, linkedCts.Token);
+        return new(linkedCts, linkedCts.Token);
     }
 
     /// <summary>Returns the existing <see cref="_disposeCts"/> or lazily creates it. If <see cref="_disposed"/>

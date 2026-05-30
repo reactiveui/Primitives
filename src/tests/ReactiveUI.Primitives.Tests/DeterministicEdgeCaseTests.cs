@@ -2,44 +2,170 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 using ReactiveUI.Primitives.Signals.Core;
-using TUnit.Core;
 
 namespace ReactiveUI.Primitives.Tests;
-
-#pragma warning disable RCS1222
-#pragma warning disable SA1600, S109, S3400, S6354, CA1806, S3257, CA1861, IDE0300, RCS1196, S6966
-#pragma warning disable S103, CA1065, S138, IDE0034, RCS1151, S1764, S1944, RCS1208, RCS1215
-#pragma warning disable S3981, CA1849, SA1129, CA1823
 
 /// <summary>
 /// Targeted deterministic top-up tests for remaining production coverage gaps.
 /// </summary>
-public sealed class CoverageTopUpTests
+public sealed class DeterministicEdgeCaseTests
 {
+    /// <summary>
+    /// The integer constant one.
+    /// </summary>
     private const int One = 1;
+
+    /// <summary>
+    /// The integer constant two.
+    /// </summary>
     private const int Two = 2;
+
+    /// <summary>
+    /// The integer constant three.
+    /// </summary>
     private const int Three = 3;
+
+    /// <summary>
+    /// The integer constant four.
+    /// </summary>
     private const int Four = 4;
+
+    /// <summary>
+    /// The integer constant five.
+    /// </summary>
     private const int Five = 5;
+
+    /// <summary>
+    /// The integer constant six.
+    /// </summary>
     private const int Six = 6;
+
+    /// <summary>
+    /// The integer constant seven.
+    /// </summary>
     private const int Seven = 7;
 
+    /// <summary>
+    /// The integer constant nine.
+    /// </summary>
     private const int Nine = 9;
+
+    /// <summary>
+    /// The integer constant ten.
+    /// </summary>
     private const int Ten = 10;
+
+    /// <summary>
+    /// The integer constant twelve.
+    /// </summary>
     private const int Twelve = 12;
+
+    /// <summary>
+    /// The integer constant forty-two.
+    /// </summary>
     private const int FortyTwo = 42;
 
+    /// <summary>
+    /// The integer constant fifteen.
+    /// </summary>
+    private const int Fifteen = 15;
+
+    /// <summary>
+    /// The integer constant sixteen.
+    /// </summary>
+    private const int Sixteen = 16;
+
+    /// <summary>
+    /// The integer constant seventeen.
+    /// </summary>
+    private const int Seventeen = 17;
+
+    /// <summary>
+    /// The integer constant twenty.
+    /// </summary>
+    private const int Twenty = 20;
+
+    /// <summary>
+    /// The integer constant twenty-six.
+    /// </summary>
+    private const int TwentySix = 26;
+
+    /// <summary>
+    /// The integer constant thirty-two.
+    /// </summary>
+    private const int ThirtyTwo = 32;
+
+    /// <summary>
+    /// The long constant two.
+    /// </summary>
+    private const long TwoLong = 2L;
+
+    /// <summary>
+    /// The long constant three.
+    /// </summary>
+    private const long ThreeLong = 3L;
+
+    /// <summary>
+    /// The integer constant for the fixed timestamp year.
+    /// </summary>
+    private const int FixedTimestampYear = 2024;
+
+    /// <summary>
+    /// The expected single-element string sequence containing "value".
+    /// </summary>
+    private static readonly string[] ExpectedSingleValue = ["value"];
+
+    /// <summary>
+    /// The expected immediate and witness error messages.
+    /// </summary>
+    private static readonly string[] ExpectedImmediateWitness = ["immediate", "witness"];
+
+    /// <summary>
+    /// The expected contains-with-comparer results in subscription order.
+    /// </summary>
+    private static readonly bool[] ExpectedContainsResults = [true, false, true, false];
+
+    /// <summary>
+    /// The expected long count sequence containing a single two.
+    /// </summary>
+    private static readonly long[] ExpectedSingleTwoLong = [TwoLong];
+
+    /// <summary>
+    /// The error message produced when a FlatMap selector returns null.
+    /// </summary>
+    private static readonly string[] ExpectedFlatMapSelectorNull = ["The FlatMap selector returned null."];
+
+    /// <summary>
+    /// The error message produced when a FlatMap collection selector returns null.
+    /// </summary>
+    private static readonly string[] ExpectedFlatMapCollectionSelectorNull = ["The FlatMap collection selector returned null."];
+
+    /// <summary>
+    /// The error message produced when the FlatMap result inner sequence fails.
+    /// </summary>
+    private static readonly string[] ExpectedResultInner = ["result-inner"];
+
+    /// <summary>
+    /// The error message produced when the FlatMap inner subscription fails.
+    /// </summary>
+    private static readonly string[] ExpectedInnerSubscribe = ["inner-subscribe"];
+
+    /// <summary>
+    /// The fixed deterministic timestamp used in place of the current time.
+    /// </summary>
+    private static readonly DateTimeOffset FixedTimestamp = new(FixedTimestampYear, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+    /// <summary>
+    /// Verifies parity aliases, range async fast paths, and guard clauses cover remaining lines.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test.</returns>
     [Test]
+    [SuppressMessage("Major Code Smell", "S6966:Awaitable method should be used", Justification = "Synchronous CollectArray/CollectList operators are deliberately covered.")]
     public async Task ParityAliasesRangeAsyncFastPathsAndGuardsCoverRemainingLines()
     {
         IObservable<int> source = Signal.FromEnumerable([Three, Four]);
@@ -60,7 +186,7 @@ public sealed class CoverageTopUpTests
 
         var chainedStrings = new List<string>();
         Signal.Chain(Signal.Emit("value")).Subscribe(chainedStrings.Add);
-        Assert.Equal(new[] { "value" }, chainedStrings);
+        Assert.Equal(ExpectedSingleValue, chainedStrings);
 
         var ignoredCatchCompleted = 0;
         Signal.Fail<int>(new InvalidOperationException("ignored")).Recover<int, Exception>(Handle.CatchIgnore<int>).Subscribe(_ => { }, ex => throw ex, () => ignoredCatchCompleted++);
@@ -81,8 +207,8 @@ public sealed class CoverageTopUpTests
         Assert.Equal(Nine, await Signal.None<int>().LastOrDefaultAsync(Nine).ConfigureAwait(false));
         Assert.Equal(Three, await Signal.Sequence(One, Three).CountAsync(CancellationToken.None).ConfigureAwait(false));
         Assert.Equal(Two, await Signal.Sequence(One, Three).CountAsync(value => value > One, CancellationToken.None).ConfigureAwait(false));
-        Assert.Equal(3L, await Signal.Sequence(One, Three).LongCount().ToTask(CancellationToken.None).ConfigureAwait(false));
-        Assert.Equal(2L, await Signal.Sequence(One, Three).LongCount(value => value > One).ToTask(CancellationToken.None).ConfigureAwait(false));
+        Assert.Equal(ThreeLong, await Signal.Sequence(One, Three).LongCount().ToTask(CancellationToken.None).ConfigureAwait(false));
+        Assert.Equal(TwoLong, await Signal.Sequence(One, Three).LongCount(value => value > One).ToTask(CancellationToken.None).ConfigureAwait(false));
         Assert.True(await Signal.Sequence(One, Three).AnyAsync(CancellationToken.None).ConfigureAwait(false));
         Assert.True(await Signal.Sequence(One, Three).AnyAsync(value => value == Two, CancellationToken.None).ConfigureAwait(false));
         Assert.True(await Signal.Sequence(One, Three).All(value => value < Four).ToTask(CancellationToken.None).ConfigureAwait(false));
@@ -105,20 +231,23 @@ public sealed class CoverageTopUpTests
         Assert.Throws<ArgumentNullException>(() => SubscribeMixins.Subscribe<int>(null!, _ => { }, _ => { }));
         Assert.Throws<ArgumentNullException>(() => source.Subscribe(null!, _ => { }));
         Assert.Throws<ArgumentNullException>(() => source.Subscribe(_ => { }, (Action<Exception>)null!));
-        Assert.Throws<ArgumentNullException>(() => ReactiveUI.Primitives.Signals.Signal.Recover<int, InvalidOperationException>(Signal.None<int>(), null!));
-        Assert.Throws<ArgumentNullException>(() => ReactiveUI.Primitives.Signals.Signal.Recover<int>((IEnumerable<IObservable<int>>)null!));
-        Assert.Throws<ArgumentNullException>(() => ReactiveUI.Primitives.Signals.Signal.CreateSafe<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.None<int>().Recover<int, InvalidOperationException>(null!));
+        Assert.Throws<ArgumentNullException>(() => ((IEnumerable<IObservable<int>>)null!).Recover());
+        Assert.Throws<ArgumentNullException>(() => Signal.CreateSafe<int>(null!));
         Assert.Throws<ArgumentNullException>(() => StateSignalMixins.ToReadOnlyState<int, int>(null!, One, value => value));
         Assert.Throws<ArgumentNullException>(() => source.ToReadOnlyState(One, null!));
         Assert.Throws<ArgumentNullException>(() => TaskSignal.Create<int>(null!));
     }
 
+    /// <summary>
+    /// Verifies immediate core signals, range, zip, repeat, and observer failures cover remainders.
+    /// </summary>
     [Test]
     public void ImmediateCoreSignalsRangeZipRepeatAndObserverFailuresCoverRemainders()
     {
         var completed = 0;
         Signal.None<int>(Sequencer.Immediate).Subscribe(_ => { }, ex => throw ex, () => completed++);
-        Signal.None<int>(default(int)).Subscribe(_ => { }, ex => throw ex, () => completed++);
+        Signal.None(0).Subscribe(_ => { }, ex => throw ex, () => completed++);
         Assert.Equal(Two, completed);
 
         var returnValues = new List<int>();
@@ -127,14 +256,16 @@ public sealed class CoverageTopUpTests
 
         var throwErrors = new List<string>();
         Signal.Fail<int>(new InvalidOperationException("immediate"), Sequencer.Immediate).Subscribe(_ => { }, ex => throwErrors.Add(ex.Message));
-        Signal.Fail(new InvalidOperationException("witness"), Sequencer.Immediate, default(int)).Subscribe(_ => { }, ex => throwErrors.Add(ex.Message));
-        Assert.Equal(new[] { "immediate", "witness" }, throwErrors);
+        Signal.Fail(new InvalidOperationException("witness"), Sequencer.Immediate, 0).Subscribe(_ => { }, ex => throwErrors.Add(ex.Message));
+        Assert.Equal(ExpectedImmediateWitness, throwErrors);
 
-        var never = Signal.Silent<int>(default(int));
+        var never = Signal.Silent(0);
         Assert.False(((IRequireCurrentThread<int>)never).IsRequiredSubscribeOnCurrentThread());
         Assert.False(((IRequireCurrentThread<RxVoid>)Signal.EmitRxVoid()).IsRequiredSubscribeOnCurrentThread());
-        Assert.True(new RxVoid() == new RxVoid());
-        Assert.False(new RxVoid() != new RxVoid());
+        RxVoid firstRxVoid = default;
+        RxVoid secondRxVoid = default;
+        Assert.True(firstRxVoid == secondRxVoid);
+        Assert.False(firstRxVoid != secondRxVoid);
 
         var repeat = new RepeatSignal<int>(Seven, Three);
         var repeatValues = new List<int>();
@@ -154,7 +285,7 @@ public sealed class CoverageTopUpTests
         Assert.Throws<ArgumentNullException>(() => range.Subscribe((IObserver<int>)null!));
         Assert.Throws<ArgumentNullException>(() => range.Subscribe(null!, _ => { }, () => { }));
 
-        var zip = new RangeZipSignal<int>(new RangeSignal(One, Three), new RangeSignal(Four, Three), (left, right) => left + right);
+        var zip = new RangeZipSignal<int>(new(One, Three), new(Four, Three), (left, right) => left + right);
         var zipValues = new List<int>();
         Assert.False(zip.IsRequiredSubscribeOnCurrentThread());
         zip.Subscribe(new RecordingObserver<int>()).Dispose();
@@ -163,20 +294,26 @@ public sealed class CoverageTopUpTests
         Assert.Throws<ArgumentNullException>(() => zip.Subscribe((IObserver<int>)null!));
         Assert.Throws<ArgumentNullException>(() => zip.Subscribe(null!, _ => { }, () => { }));
 
-        Assert.False(((IRequireCurrentThread<int>)new ImmediateReturnSignal<int>(One)).IsRequiredSubscribeOnCurrentThread());
-        Assert.False(((IRequireCurrentThread<int>)new ImmediateThrowSignal<int>(new InvalidOperationException("fast"))).IsRequiredSubscribeOnCurrentThread());
-        Assert.False(((IRequireCurrentThread<int>)ImmutableEmptySignal<int>.Instance).IsRequiredSubscribeOnCurrentThread());
-        Assert.False(((IRequireCurrentThread<int>)ImmutableNeverSignal<int>.Instance).IsRequiredSubscribeOnCurrentThread());
+        Assert.False(new ImmediateReturnSignal<int>(One).IsRequiredSubscribeOnCurrentThread());
+        Assert.False(new ImmediateThrowSignal<int>(new InvalidOperationException("fast")).IsRequiredSubscribeOnCurrentThread());
+        Assert.False(ImmutableEmptySignal<int>.Instance.IsRequiredSubscribeOnCurrentThread());
+        Assert.False(ImmutableNeverSignal<int>.Instance.IsRequiredSubscribeOnCurrentThread());
         Assert.False(((IRequireCurrentThread<int>)ImmutableReturnInt32Signal.GetInt32Signals(One)).IsRequiredSubscribeOnCurrentThread());
-        Assert.False(new RangeConcatSignal([new RangeSignal(One, Two), new RangeSignal(Three, Two)]).IsRequiredSubscribeOnCurrentThread());
+        Assert.False(new RangeConcatSignal([new(One, Two), new(Three, Two)]).IsRequiredSubscribeOnCurrentThread());
         Assert.False(new SignalsBaseProbe<int>(false).IsRequiredSubscribeOnCurrentThread());
 
         Assert.Throws<InvalidOperationException>(() => Signal.Emit(One, Sequencer.Immediate).Subscribe(new ThrowingObserver<int>(throwOnNext: true)).Dispose());
         Assert.Throws<InvalidOperationException>(() => Signal.None<int>(Sequencer.Immediate).Subscribe(new ThrowingObserver<int>(throwOnCompleted: true)).Dispose());
-        Assert.Throws<InvalidOperationException>(() => Signal.Fail<int>(new InvalidOperationException("observer"), Sequencer.Immediate).Subscribe(new ThrowingObserver<int>(throwOnError: true)).Dispose());
+        Assert.Throws<InvalidOperationException>(() =>
+            Signal.Fail<int>(new InvalidOperationException("observer"), Sequencer.Immediate)
+                .Subscribe(new ThrowingObserver<int>(throwOnError: true))
+                .Dispose());
         Assert.Throws<ArgumentNullException>(() => new ImmediateThrowSignal<int>(new InvalidOperationException("null-observer")).Subscribe((IObserver<int>)null!));
     }
 
+    /// <summary>
+    /// Verifies subjects, replay, behavior, state, and connectable aliases cover late terminal branches.
+    /// </summary>
     [Test]
     public void SubjectsReplayBehaviorStateAndConnectableAliasesCoverLateTerminalBranches()
     {
@@ -202,7 +339,7 @@ public sealed class CoverageTopUpTests
         behaviorError.Dispose();
         Assert.False(behaviorError.TryGetValue(out _));
 
-        var replayCompleted = new ReplaySignal<int>(bufferSize: 2, window: TimeSpan.MaxValue, scheduler: Sequencer.CurrentThread);
+        var replayCompleted = new ReplaySignal<int>(bufferSize: Two, window: TimeSpan.MaxValue, scheduler: Sequencer.CurrentThread);
         replayCompleted.OnNext(One);
         replayCompleted.OnNext(Two);
         replayCompleted.OnNext(Three);
@@ -227,16 +364,16 @@ public sealed class CoverageTopUpTests
         Assert.Throws<ObjectDisposedException>(() => replayError.Subscribe(new RecordingObserver<int>()));
 
         var clock = new TestClock(DateTimeOffset.UnixEpoch);
-        var windowedReplay = new ReplaySignal<int>(bufferSize: 10, window: TimeSpan.FromTicks(2), scheduler: clock);
+        var windowedReplay = new ReplaySignal<int>(bufferSize: Ten, window: TimeSpan.FromTicks(Two), scheduler: clock);
         windowedReplay.OnNext(One);
-        clock.AdvanceBy(TimeSpan.FromTicks(3));
+        clock.AdvanceBy(TimeSpan.FromTicks(Three));
         windowedReplay.OnNext(Two);
         var windowedLate = new RecordingObserver<int>();
         windowedReplay.Subscribe(windowedLate).Dispose();
         Assert.Equal(new[] { Two }, windowedLate.Values);
 
         var shared = Signal.Sequence(One, Three).Share();
-        var replayed = Signal.Sequence(One, Three).Replay(2);
+        var replayed = Signal.Sequence(One, Three).Replay(Two);
         Assert.NotNull(shared);
         Assert.NotNull(replayed);
 
@@ -244,18 +381,21 @@ public sealed class CoverageTopUpTests
         Assert.Equal("selector", state.ParamName);
     }
 
+    /// <summary>
+    /// Verifies low-level disposables, collections, and schedulers cover deterministic edges.
+    /// </summary>
     [Test]
     public void LowLevelDisposablesCollectionsAndSchedulersCoverDeterministicEdges()
     {
         var multiple = new MultipleDisposable();
-        for (var i = 0; i < 20; i++)
+        for (var i = 0; i < Twenty; i++)
         {
             multiple.Add(Disposable.Empty);
         }
 
         Assert.True(multiple.Remove(Disposable.Empty));
         Assert.False(multiple.Remove(Disposable.Create(() => { })));
-        Assert.Throws<ArgumentNullException>(() => new MultipleDisposable((IDisposable[])null!));
+        Assert.Throws<ArgumentNullException>(() => _ = new MultipleDisposable((IDisposable[])null!));
         Assert.Throws<ArgumentNullException>(() => multiple.Add(null!));
         multiple.Dispose();
         multiple.Dispose();
@@ -298,16 +438,59 @@ public sealed class CoverageTopUpTests
             scheduled.Add(state);
             return Disposable.Empty;
         }).Dispose();
-        current.Schedule(One, DateTimeOffset.UtcNow.AddMilliseconds(1), (_, state) =>
+        current.Schedule(One, FixedTimestamp.AddMilliseconds(1), (_, state) =>
         {
             scheduled.Add(state + One);
             return Disposable.Empty;
         }).Dispose();
-        Assert.True(scheduled.Count >= 0);
+        Assert.Equal(Two, scheduled.Count);
     }
 
+    /// <summary>
+    /// Verifies remaining operator, factory, and observer failure branches are deterministic.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task RemainingOperatorFactoryAndObserverFailureBranchesAreDeterministic()
+    {
+        VerifyScheduledRangeAndTimingFactories();
+        await VerifyTaskSignalsCountAndContainsAsync().ConfigureAwait(false);
+        await VerifyAliasGuardsAndNullArgumentChecksAsync().ConfigureAwait(false);
+        VerifyObserverFailureBranchesAndMap();
+        VerifyMultiSubscriberOnErrorThrows();
+        VerifyFlatMapTerminalAndErrorBranches();
+    }
+
+    /// <summary>
+    /// Verifies optimized coordinator and async enumerable branches cover PR nine gaps.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task OptimizedCoordinatorAndAsyncEnumerableBranchesCoverPrNineGaps()
+    {
+        await VerifyAsyncEnumerableShiftAndExpireAsync().ConfigureAwait(false);
+        VerifyRaceSyncLatestAndSwitchBranches();
+        VerifyProbeBranches();
+        VerifyCalmAppendAndForkJoinBranches();
+    }
+
+    /// <summary>
+    /// Verifies range timing, queues, and thread pool cover PR ten coverage gaps.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task RangeTimingQueuesAndThreadPoolCoverPrTenCoverageGaps()
+    {
+        VerifyTimestampBranches();
+        VerifyTimeIntervalBranches();
+        VerifyDelayStartAndWorkItemBranches();
+        await VerifyThreadPoolWorkItemBranchesAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Verifies the scheduled range fast path and the timing factory aliases.
+    /// </summary>
+    private static void VerifyScheduledRangeAndTimingFactories()
     {
         var scheduledRangeClock = new TestClock(DateTimeOffset.UnixEpoch);
         var scheduledRange = new List<int>();
@@ -322,7 +505,7 @@ public sealed class CoverageTopUpTests
         Assert.NotNull(Signal.Pulse(TimeSpan.FromTicks(One)));
         Assert.NotNull(Signal.Pulse(TimeSpan.FromTicks(One), new TestClock(DateTimeOffset.UnixEpoch)));
         Assert.NotNull(Signal.After(TimeSpan.FromTicks(One)));
-        Assert.NotNull(Signal.After(DateTimeOffset.UtcNow.AddMilliseconds(1)));
+        Assert.NotNull(Signal.After(FixedTimestamp.AddMilliseconds(1)));
         Assert.NotNull(Signal.After(TimeSpan.FromTicks(One), TimeSpan.FromTicks(One)));
         Assert.NotNull(Signal.PairLatest(Signal.Sequence(One, Two), Signal.Sequence(Three, Two), (left, right) => left + right));
 
@@ -330,29 +513,43 @@ public sealed class CoverageTopUpTests
         new[] { One, Two }.ToSignal().Subscribe(toSignalValues.Add);
         new[] { Three, Four }.ToSignal(CancellationToken.None).Subscribe(toSignalValues.Add);
         Assert.Equal(new[] { One, Two, Three, Four }, toSignalValues);
+    }
 
-        var firstTaskSignal = await Signal.FromTask<int>(_ => Task.FromResult(Five)).FirstAsync().ConfigureAwait(false);
-        var secondTaskSignal = await Signal.FromTask<int>(_ => Task.FromResult(Six), Sequencer.Immediate).FirstAsync().ConfigureAwait(false);
+    /// <summary>
+    /// Verifies task-backed signals, long count, and contains operators.
+    /// </summary>
+    /// <returns>A task representing the asynchronous verification.</returns>
+    private static async Task VerifyTaskSignalsCountAndContainsAsync()
+    {
+        var firstTaskSignal = await Signal.FromTask(_ => Task.FromResult(Five)).FirstAsync().ConfigureAwait(false);
+        var secondTaskSignal = await Signal.FromTask(_ => Task.FromResult(Six), Sequencer.Immediate).FirstAsync().ConfigureAwait(false);
         Assert.Equal(Five, firstTaskSignal);
         Assert.Equal(Six, secondTaskSignal);
         Assert.Equal(Seven, await Task.FromResult(Seven).HandleCancellation().ConfigureAwait(false));
-        Assert.Equal(default(int), await Task.FromCanceled<int>(new CancellationToken(true)).HandleCancellation().ConfigureAwait(false));
+        Assert.Equal(0, await Task.FromCanceled<int>(new(true)).HandleCancellation().ConfigureAwait(false));
 
         var longCount = new List<long>();
-        Signal.Sequence(One, Four).LongCount(value => value % 2 == 0).Subscribe(longCount.Add);
-        Assert.Equal(new long[] { 2L }, longCount);
+        Signal.Sequence(One, Four).LongCount(value => value % Two == 0).Subscribe(longCount.Add);
+        Assert.Equal(ExpectedSingleTwoLong, longCount);
 
         var containsWithComparer = new List<bool>();
         Signal.Sequence(One, Three).Contains(Three, EqualityComparer<int>.Default).Subscribe(containsWithComparer.Add);
         Signal.Sequence(One, Three).Contains(Nine, EqualityComparer<int>.Default).Subscribe(containsWithComparer.Add);
         Signal.Sequence(One, Three).Contains(Three, new PassthroughComparer()).Subscribe(containsWithComparer.Add);
         Signal.Sequence(One, Three).Contains(Nine, new PassthroughComparer()).Subscribe(containsWithComparer.Add);
-        Assert.Equal(new[] { true, false, true, false }, containsWithComparer);
+        Assert.Equal(ExpectedContainsResults, containsWithComparer);
+    }
 
+    /// <summary>
+    /// Verifies alias operators, buffer guard clauses, null-argument guards, and cancellation.
+    /// </summary>
+    /// <returns>A task representing the asynchronous verification.</returns>
+    private static async Task VerifyAliasGuardsAndNullArgumentChecksAsync()
+    {
         var startWithAlias = new List<int>();
-        LinqMixins.Prepend(Signal.Emit(Two), One).Subscribe(startWithAlias.Add);
+        Signal.Emit(Two).Prepend(One).Subscribe(startWithAlias.Add);
         Assert.Equal(new[] { One, Two }, startWithAlias);
-        Assert.NotNull(LinqMixins.DelayStart(Signal.Emit(One), TimeSpan.Zero));
+        Assert.NotNull(Signal.Emit(One).DelayStart(TimeSpan.Zero));
         Assert.Equal(0, await Signal.None<int>().FirstOrDefaultAsync().ConfigureAwait(false));
         var noneWitnessCompleted = 0;
         Signal.None(Sequencer.Immediate, One).Subscribe(_ => { }, ex => throw ex, () => noneWitnessCompleted++);
@@ -378,19 +575,24 @@ public sealed class CoverageTopUpTests
         var pendingTask = pending.ToTask(cancelAfterSubscribe.Token);
         await cancelAfterSubscribe.CancelAsync().ConfigureAwait(false);
         Assert.True(pendingTask.IsCanceled);
+    }
 
+    /// <summary>
+    /// Verifies immediate signal observer failure branches and the map late-notification branch.
+    /// </summary>
+    private static void VerifyObserverFailureBranchesAndMap()
+    {
         Assert.Throws<InvalidOperationException>(() => new ReturnSignal<int>(One, Sequencer.Immediate).Subscribe(new ThrowingObserver<int>(throwOnNext: true)).Dispose());
         Assert.Throws<InvalidOperationException>(() => new ReturnSignal<int>(One, Sequencer.Immediate).Subscribe(new ThrowingObserver<int>(throwOnCompleted: true)).Dispose());
         Assert.Throws<InvalidOperationException>(() => new EmptySignal<int>(Sequencer.Immediate).Subscribe(new ThrowingObserver<int>(throwOnCompleted: true)).Dispose());
-        Assert.Throws<InvalidOperationException>(() => new ThrowSignal<int>(new InvalidOperationException("throw-signal"), Sequencer.Immediate).Subscribe(new ThrowingObserver<int>(throwOnError: true)).Dispose());
+        Assert.Throws<InvalidOperationException>(() =>
+            new ThrowSignal<int>(new InvalidOperationException("throw-signal"), Sequencer.Immediate)
+                .Subscribe(new ThrowingObserver<int>(throwOnError: true))
+                .Dispose());
 
-#pragma warning disable S3011, IL3050
-        var returnWitnessType = typeof(ReturnSignal<int>).GetNestedType("Return", BindingFlags.NonPublic)!.MakeGenericType(typeof(int));
-        var returnWitness = (IObserver<int>)Activator.CreateInstance(returnWitnessType, new RecordingObserver<int>(), Disposable.Empty)!;
+        var returnWitness = new ReturnSignal<int>.Return(new RecordingObserver<int>(), Disposable.Empty);
         returnWitness.OnError(new InvalidOperationException("return-inner"));
-        var emptyWitnessType = typeof(EmptySignal<int>).GetNestedType("Empty", BindingFlags.NonPublic)!.MakeGenericType(typeof(int));
-        var emptyWitness = (IObserver<int>)Activator.CreateInstance(emptyWitnessType, new RecordingObserver<int>(), Disposable.Empty)!;
-#pragma warning restore S3011, IL3050
+        var emptyWitness = new EmptySignal<int>.Empty(new RecordingObserver<int>(), Disposable.Empty);
         emptyWitness.OnNext(One);
         emptyWitness.OnError(new InvalidOperationException("empty-inner"));
 
@@ -406,7 +608,13 @@ public sealed class CoverageTopUpTests
         badSource.Map(value => value).Subscribe(mapObserver).Dispose();
         Assert.Equal(new[] { One }, mapObserver.Values);
         Assert.Equal(1, mapObserver.Completed);
+    }
 
+    /// <summary>
+    /// Verifies the multi-subscriber signal raises when it errors with many observers attached.
+    /// </summary>
+    private static void VerifyMultiSubscriberOnErrorThrows()
+    {
         var signal = new Signal<int>();
         Assert.Throws<ArgumentNullException>(() => signal.Subscribe((Action<int>)null!));
         var actionValues = new List<int>();
@@ -417,7 +625,13 @@ public sealed class CoverageTopUpTests
         using var s4 = signal.Subscribe(new RecordingObserver<int>());
         using var s5 = signal.Subscribe(new RecordingObserver<int>());
         Assert.Throws<InvalidOperationException>(() => signal.OnError(new InvalidOperationException("many")));
+    }
 
+    /// <summary>
+    /// Verifies FlatMap terminal completion, disposal, and the null-selector and inner-error branches.
+    /// </summary>
+    private static void VerifyFlatMapTerminalAndErrorBranches()
+    {
         var outer = new Signal<IObservable<int>>();
         var firstInner = new Signal<int>();
         var secondInner = new Signal<int>();
@@ -448,29 +662,32 @@ public sealed class CoverageTopUpTests
         Assert.Equal(0, disposedValues.Count);
 
         Assert.Throws<ArgumentNullException>(() => outer.FlatMap(inner => inner).Subscribe(null!));
-        Assert.Throws<ArgumentNullException>(() => outer.FlatMap(inner => inner, (left, right) => right).Subscribe(null!));
+        Assert.Throws<ArgumentNullException>(() => outer.FlatMap(inner => inner, (_, right) => right).Subscribe(null!));
 
         var nullSelectorErrors = new List<string>();
         Signal.Emit(One).FlatMap<int, int>(_ => null!).Subscribe(_ => { }, ex => nullSelectorErrors.Add(ex.Message));
-        Assert.Equal(new[] { "The FlatMap selector returned null." }, nullSelectorErrors);
+        Assert.Equal(ExpectedFlatMapSelectorNull, nullSelectorErrors);
 
         var nullCollectionErrors = new List<string>();
         Signal.Emit(One).FlatMap<int, int, int>(_ => null!, (left, right) => left + right).Subscribe(_ => { }, ex => nullCollectionErrors.Add(ex.Message));
-        Assert.Equal(new[] { "The FlatMap collection selector returned null." }, nullCollectionErrors);
+        Assert.Equal(ExpectedFlatMapCollectionSelectorNull, nullCollectionErrors);
 
         var resultInnerErrors = new List<string>();
         Signal.Emit(One).FlatMap(_ => Signal.Fail<int>(new InvalidOperationException("result-inner")), (left, right) => left + right).Subscribe(_ => { }, ex => resultInnerErrors.Add(ex.Message));
-        Assert.Equal(new[] { "result-inner" }, resultInnerErrors);
+        Assert.Equal(ExpectedResultInner, resultInnerErrors);
 
         var subscribeErrors = new List<string>();
         Signal.Emit(One)
             .FlatMap(_ => new ThrowOnSubscribeObservable<int>(new InvalidOperationException("inner-subscribe")))
             .Subscribe(_ => { }, ex => subscribeErrors.Add(ex.Message));
-        Assert.Equal(new[] { "inner-subscribe" }, subscribeErrors);
+        Assert.Equal(ExpectedInnerSubscribe, subscribeErrors);
     }
 
-    [Test]
-    public async Task OptimizedCoordinatorAndAsyncEnumerableBranchesCoverPrNineGaps()
+    /// <summary>
+    /// Verifies async enumerable subscription, shift timing, and expire timeout branches.
+    /// </summary>
+    /// <returns>A task representing the asynchronous verification.</returns>
+    private static async Task VerifyAsyncEnumerableShiftAndExpireAsync()
     {
         Assert.Throws<ArgumentNullException>(() => Signal.FromAsyncEnumerable(AsyncValues(One)).Subscribe(null!));
 
@@ -481,15 +698,15 @@ public sealed class CoverageTopUpTests
             asyncValues.Add,
             ex => asyncCompleted.TrySetException(ex),
             () => asyncCompleted.TrySetResult(null));
-        await asyncCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        await asyncCompleted.Task.WaitAsync(TimeSpan.FromSeconds(Five)).ConfigureAwait(false);
         Assert.Equal(new[] { 0, One, Two }, asyncValues);
 
-        var exact = await Signal.FromAsyncEnumerable(AsyncValues(16)).CollectArrayAsync().ConfigureAwait(false);
-        var grown = await Signal.FromAsyncEnumerable(AsyncValues(17)).CollectArrayAsync().ConfigureAwait(false);
-        Assert.Equal(16, exact.Length);
-        Assert.Equal(15, exact[15]);
-        Assert.Equal(17, grown.Length);
-        Assert.Equal(16, grown[16]);
+        var exact = await Signal.FromAsyncEnumerable(AsyncValues(Sixteen)).CollectArrayAsync().ConfigureAwait(false);
+        var grown = await Signal.FromAsyncEnumerable(AsyncValues(Seventeen)).CollectArrayAsync().ConfigureAwait(false);
+        Assert.Equal(Sixteen, exact.Length);
+        Assert.Equal(Fifteen, exact[Fifteen]);
+        Assert.Equal(Seventeen, grown.Length);
+        Assert.Equal(Sixteen, grown[Sixteen]);
 
         var shiftedClock = new TestClock(DateTimeOffset.UnixEpoch);
         var shifted = new List<int>();
@@ -522,7 +739,13 @@ public sealed class CoverageTopUpTests
         var expireError = new RecordingObserver<int>();
         Signal.Fail<int>(new InvalidOperationException("expire-error")).Expire(TimeSpan.FromTicks(Ten), new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(expireError);
         Assert.Equal("expire-error", expireError.Errors[0].Message);
+    }
 
+    /// <summary>
+    /// Verifies the race, synchronized-latest, and switch coordinator branches.
+    /// </summary>
+    private static void VerifyRaceSyncLatestAndSwitchBranches()
+    {
         var raceOuter = new Signal<IObservable<int>>();
         var raceWinner = new Signal<int>();
         var raceLoser = new Signal<int>();
@@ -583,7 +806,14 @@ public sealed class CoverageTopUpTests
 
         Assert.Equal(0, switched.Values.Count);
         Assert.Equal("current-switch", switched.Errors[0].Message);
+    }
 
+    /// <summary>
+    /// Verifies the probe operator error, disposal, and completion branches alongside the
+    /// direct and scheduled current-thread expire and probe branches.
+    /// </summary>
+    private static void VerifyProbeBranches()
+    {
         Assert.Throws<ArgumentNullException>(() => Signal.Silent<int>().Probe(TimeSpan.Zero).Subscribe(null!));
 
         var probeError = new RecordingObserver<int>();
@@ -624,7 +854,13 @@ public sealed class CoverageTopUpTests
         Assert.Equal(1, currentThreadExpire.Completed);
         Assert.Equal(0, currentThreadProbe.Values.Count);
         Assert.Equal(1, currentThreadProbe.Completed);
+    }
 
+    /// <summary>
+    /// Verifies the calm debounce, append observer failure, and fork-join completion branches.
+    /// </summary>
+    private static void VerifyCalmAppendAndForkJoinBranches()
+    {
         var calmError = new RecordingObserver<int>();
         Signal.Fail<int>(new InvalidOperationException("calm-error")).Calm(TimeSpan.FromTicks(One), new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(calmError);
         Assert.Equal("calm-error", calmError.Errors[0].Message);
@@ -644,10 +880,12 @@ public sealed class CoverageTopUpTests
         Assert.Throws<InvalidOperationException>(() => Signal.Emit(One).Prepend(0).Append(Two).Subscribe(
             value =>
             {
-                if (value == One)
+                if (value != One)
                 {
-                    throw new InvalidOperationException("append-next");
+                    return;
                 }
+
+                throw new InvalidOperationException("append-next");
             },
             _ => { },
             () => { }).Dispose());
@@ -685,72 +923,86 @@ public sealed class CoverageTopUpTests
         Assert.Equal(1, forkRightFirst.Completed);
     }
 
-    [Test]
-    public async Task RangeTimingQueuesAndThreadPoolCoverPrTenCoverageGaps()
+    /// <summary>
+    /// Verifies the timestamp operator immediate and clock-backed branches.
+    /// </summary>
+    private static void VerifyTimestampBranches()
     {
         var immediateMoments = new RecordingObserver<Moment<int>>();
         Signal.Sequence(One, Three).Timestamp(Sequencer.Immediate).Subscribe(immediateMoments).Dispose();
-        Assert.Equal<int>([One, Two, Three], [immediateMoments.Values[0].Value, immediateMoments.Values[1].Value, immediateMoments.Values[2].Value]);
+        Assert.Equal([One, Two, Three], [immediateMoments.Values[0].Value, immediateMoments.Values[1].Value, immediateMoments.Values[Two].Value]);
         Assert.Equal(1, immediateMoments.Completed);
 
         var clockMoments = new List<Moment<int>>();
         var clockMomentCompleted = 0;
         Signal.Sequence(Four, Two).Timestamp(new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(clockMoments.Add, ex => throw ex, () => clockMomentCompleted++);
-        Assert.Equal<int>([Four, Five], [clockMoments[0].Value, clockMoments[1].Value]);
+        Assert.Equal([Four, Five], [clockMoments[0].Value, clockMoments[1].Value]);
         Assert.Equal(1, clockMomentCompleted);
 
         var immediateMomentActions = new List<Moment<int>>();
         var immediateMomentCompleted = 0;
         var immediateTimestampSignal = (IInlineSignal<Moment<int>>)Signal.Sequence(Two, Two).Timestamp(Sequencer.Immediate);
         immediateTimestampSignal.Subscribe(immediateMomentActions.Add, ex => throw ex, () => immediateMomentCompleted++).Dispose();
-        Assert.Equal<int>([Two, Three], [immediateMomentActions[0].Value, immediateMomentActions[1].Value]);
+        Assert.Equal([Two, Three], [immediateMomentActions[0].Value, immediateMomentActions[1].Value]);
         Assert.Equal(1, immediateMomentCompleted);
 
         var clockMomentObserver = new RecordingObserver<Moment<int>>();
         var clockTimestampSignal = (IInlineSignal<Moment<int>>)Signal.Sequence(Two, Two).Timestamp(new TestClock(DateTimeOffset.UnixEpoch));
         clockTimestampSignal.Subscribe(clockMomentObserver).Dispose();
-        Assert.Equal<int>([Two, Three], [clockMomentObserver.Values[0].Value, clockMomentObserver.Values[1].Value]);
+        Assert.Equal([Two, Three], [clockMomentObserver.Values[0].Value, clockMomentObserver.Values[1].Value]);
         Assert.Equal(1, clockMomentObserver.Completed);
 
         Assert.Throws<ArgumentNullException>(() => immediateTimestampSignal.Subscribe((IObserver<Moment<int>>)null!));
         Assert.Throws<ArgumentNullException>(() => immediateTimestampSignal.Subscribe((Action<Moment<int>>)null!, _ => { }, () => { }));
+    }
 
+    /// <summary>
+    /// Verifies the time-interval operator immediate and clock-backed branches.
+    /// </summary>
+    private static void VerifyTimeIntervalBranches()
+    {
         var immediateIntervals = new RecordingObserver<TimeInterval<int>>();
         Signal.Sequence(One, Three).TimeInterval(Sequencer.Immediate).Subscribe(immediateIntervals).Dispose();
-        Assert.Equal<int>([One, Two, Three], [immediateIntervals.Values[0].Value, immediateIntervals.Values[1].Value, immediateIntervals.Values[2].Value]);
+        Assert.Equal([One, Two, Three], [immediateIntervals.Values[0].Value, immediateIntervals.Values[1].Value, immediateIntervals.Values[Two].Value]);
         Assert.Equal(TimeSpan.Zero, immediateIntervals.Values[0].Interval);
         Assert.Equal(TimeSpan.Zero, immediateIntervals.Values[1].Interval);
-        Assert.Equal(TimeSpan.Zero, immediateIntervals.Values[2].Interval);
+        Assert.Equal(TimeSpan.Zero, immediateIntervals.Values[Two].Interval);
         Assert.Equal(1, immediateIntervals.Completed);
 
         var clockIntervals = new List<TimeInterval<int>>();
         var clockIntervalCompleted = 0;
         Signal.Sequence(Four, Three).TimeInterval(new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(clockIntervals.Add, ex => throw ex, () => clockIntervalCompleted++);
-        Assert.Equal<int>([Four, Five, Six], [clockIntervals[0].Value, clockIntervals[1].Value, clockIntervals[2].Value]);
+        Assert.Equal([Four, Five, Six], [clockIntervals[0].Value, clockIntervals[1].Value, clockIntervals[Two].Value]);
         Assert.Equal(TimeSpan.Zero, clockIntervals[0].Interval);
         Assert.Equal(TimeSpan.Zero, clockIntervals[1].Interval);
-        Assert.Equal(TimeSpan.Zero, clockIntervals[2].Interval);
+        Assert.Equal(TimeSpan.Zero, clockIntervals[Two].Interval);
         Assert.Equal(1, clockIntervalCompleted);
 
         var immediateIntervalActions = new List<TimeInterval<int>>();
         var immediateIntervalCompleted = 0;
         var immediateIntervalSignal = (IInlineSignal<TimeInterval<int>>)Signal.Sequence(Two, Two).TimeInterval(Sequencer.Immediate);
         immediateIntervalSignal.Subscribe(immediateIntervalActions.Add, ex => throw ex, () => immediateIntervalCompleted++).Dispose();
-        Assert.Equal<int>([Two, Three], [immediateIntervalActions[0].Value, immediateIntervalActions[1].Value]);
+        Assert.Equal([Two, Three], [immediateIntervalActions[0].Value, immediateIntervalActions[1].Value]);
         Assert.Equal(1, immediateIntervalCompleted);
 
         var clockIntervalObserver = new RecordingObserver<TimeInterval<int>>();
         var clockIntervalSignal = (IInlineSignal<TimeInterval<int>>)Signal.Sequence(Two, Three).TimeInterval(new TestClock(DateTimeOffset.UnixEpoch));
         clockIntervalSignal.Subscribe(clockIntervalObserver).Dispose();
-        Assert.Equal<int>([Two, Three, Four], [clockIntervalObserver.Values[0].Value, clockIntervalObserver.Values[1].Value, clockIntervalObserver.Values[2].Value]);
+        Assert.Equal([Two, Three, Four], [clockIntervalObserver.Values[0].Value, clockIntervalObserver.Values[1].Value, clockIntervalObserver.Values[Two].Value]);
         Assert.Equal(TimeSpan.Zero, clockIntervalObserver.Values[0].Interval);
         Assert.Equal(TimeSpan.Zero, clockIntervalObserver.Values[1].Interval);
-        Assert.Equal(TimeSpan.Zero, clockIntervalObserver.Values[2].Interval);
+        Assert.Equal(TimeSpan.Zero, clockIntervalObserver.Values[Two].Interval);
         Assert.Equal(1, clockIntervalObserver.Completed);
 
         Assert.Throws<ArgumentNullException>(() => immediateIntervalSignal.Subscribe((IObserver<TimeInterval<int>>)null!));
         Assert.Throws<ArgumentNullException>(() => immediateIntervalSignal.Subscribe((Action<TimeInterval<int>>)null!, _ => { }, () => { }));
+    }
 
+    /// <summary>
+    /// Verifies delay-start signal branches, the sequencer work item, and queue guard clauses.
+    /// </summary>
+    private static void VerifyDelayStartAndWorkItemBranches()
+    {
         var shiftedObserver = new RecordingObserver<int>();
         Signal.Sequence(One, Two).DelayStart(TimeSpan.Zero, Sequencer.Immediate).Subscribe(shiftedObserver).Dispose();
         Assert.Equal(new[] { One, Two }, shiftedObserver.Values);
@@ -785,32 +1037,39 @@ public sealed class CoverageTopUpTests
 
         var unusedScheduled = new ScheduledItem<int, string>(Sequencer.Immediate, "unused", (_, _) => Disposable.Empty, One);
         Assert.False(new SequencerQueue<int>().Remove(unusedScheduled));
-        Assert.Throws<ArgumentOutOfRangeException>(() => new PriorityQueue<int>(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => _ = new PriorityQueue<int>(-1));
 
-        var shrink = new PriorityQueue<int>(32);
-        for (var i = 0; i < 32; i++)
+        var shrink = new PriorityQueue<int>(ThirtyTwo);
+        for (var i = 0; i < ThirtyTwo; i++)
         {
             shrink.Enqueue(i);
         }
 
-        for (var i = 0; i < 26; i++)
+        for (var i = 0; i < TwentySix; i++)
         {
             Assert.Equal(i, shrink.Dequeue());
         }
+    }
 
+    /// <summary>
+    /// Verifies the thread pool absolute scheduling and scheduled work item disposal branches.
+    /// </summary>
+    /// <returns>A task representing the asynchronous verification.</returns>
+    private static async Task VerifyThreadPoolWorkItemBranchesAsync()
+    {
         var absoluteRan = new TaskCompletionSource<int>();
-        var absolute = ThreadPoolSequencer.Instance.Schedule(Five, DateTimeOffset.UtcNow, (_, state) =>
+        var absolute = ThreadPoolSequencer.Instance.Schedule(Five, FixedTimestamp, (_, state) =>
         {
             absoluteRan.TrySetResult(state);
             return Disposable.Empty;
         });
-        Assert.Equal(Five, await absoluteRan.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false));
+        Assert.Equal(Five, await absoluteRan.Task.WaitAsync(TimeSpan.FromSeconds(Five)).ConfigureAwait(false));
         absolute.Dispose();
         absolute.Dispose();
 
         var delayedDisposed = CreateThreadPoolWorkItem(One, (_, _) => Disposable.Empty);
         delayedDisposed.Dispose();
-        QueueThreadPoolWorkItem(delayedDisposed, typeof(int), TimeSpan.FromMilliseconds(10));
+        QueueThreadPoolWorkItem(delayedDisposed, TimeSpan.FromMilliseconds(Ten));
 
         var skipped = false;
         var skippedItem = CreateThreadPoolWorkItem(Two, (_, _) =>
@@ -819,7 +1078,7 @@ public sealed class CoverageTopUpTests
             return Disposable.Empty;
         });
         skippedItem.Dispose();
-        InvokeThreadPoolWorkItem(skippedItem, typeof(int));
+        InvokeThreadPoolWorkItem(skippedItem);
         Assert.False(skipped);
 
         var disposedReturned = 0;
@@ -830,48 +1089,40 @@ public sealed class CoverageTopUpTests
             return Disposable.Create(() => disposedReturned++);
         });
         holder[0] = selfDisposing;
-        InvokeThreadPoolWorkItem(selfDisposing, typeof(object?[]));
+        InvokeThreadPoolWorkItem(selfDisposing);
         Assert.Equal(1, disposedReturned);
-
-        var rawDisposedReturned = 0;
-        object?[] rawHolder = [null];
-        var rawDisposing = CreateThreadPoolWorkItem(rawHolder, (_, state) =>
-        {
-            MarkThreadPoolWorkItemDisposed(state[0]!);
-            return Disposable.Create(() => rawDisposedReturned++);
-        });
-        rawHolder[0] = rawDisposing;
-        InvokeThreadPoolWorkItem(rawDisposing, typeof(object?[]));
-        Assert.Equal(1, rawDisposedReturned);
     }
 
-#pragma warning disable S3011, IL2072, IL2075, IL3050
-    private static IDisposable CreateThreadPoolWorkItem<TState>(TState state, Func<ISequencer, TState, IDisposable> action)
-    {
-        var type = ThreadPoolWorkItemType(typeof(TState));
-        return (IDisposable)Activator.CreateInstance(
-            type,
-            BindingFlags.Instance | BindingFlags.NonPublic,
-            binder: null,
-            args: [ThreadPoolSequencer.Instance, state, action],
-            culture: null)!;
-    }
+    /// <summary>
+    /// Creates a thread pool scheduled work item for the given state and action.
+    /// </summary>
+    /// <typeparam name="TState">The type of the work item state.</typeparam>
+    /// <param name="state">The state passed to the scheduled action.</param>
+    /// <param name="action">The action invoked when the work item runs.</param>
+    /// <returns>A new scheduled work item.</returns>
+    private static ThreadPoolSequencer.ScheduledWorkItem<TState> CreateThreadPoolWorkItem<TState>(TState state, Func<ISequencer, TState, IDisposable> action) =>
+        new(ThreadPoolSequencer.Instance, state, action);
 
-    private static void InvokeThreadPoolWorkItem(IDisposable item, Type stateType) =>
-        ThreadPoolWorkItemType(stateType).GetMethod("Run", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(item, null);
+    /// <summary>
+    /// Executes the supplied thread pool scheduled work item.
+    /// </summary>
+    /// <typeparam name="TState">The type of the work item state.</typeparam>
+    /// <param name="item">The work item to execute.</param>
+    private static void InvokeThreadPoolWorkItem<TState>(ThreadPoolSequencer.ScheduledWorkItem<TState> item) => item.Execute();
 
-    private static void QueueThreadPoolWorkItem(IDisposable item, Type stateType, TimeSpan dueTime) =>
-        ThreadPoolWorkItemType(stateType)
-            .GetMethod("Queue", BindingFlags.Instance | BindingFlags.NonPublic, binder: null, types: [typeof(TimeSpan)], modifiers: null)!
-            .Invoke(item, [dueTime]);
+    /// <summary>
+    /// Queues the supplied thread pool scheduled work item with the given due time.
+    /// </summary>
+    /// <typeparam name="TState">The type of the work item state.</typeparam>
+    /// <param name="item">The work item to queue.</param>
+    /// <param name="dueTime">The delay before the work item runs.</param>
+    private static void QueueThreadPoolWorkItem<TState>(ThreadPoolSequencer.ScheduledWorkItem<TState> item, TimeSpan dueTime) => item.Queue(dueTime);
 
-    private static void MarkThreadPoolWorkItemDisposed(object item) =>
-        item.GetType().GetField("_isDisposed", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(item, 1);
-
-    private static Type ThreadPoolWorkItemType(Type stateType) =>
-        typeof(ThreadPoolSequencer).GetNestedType("ScheduledWorkItem`1", BindingFlags.NonPublic)!.MakeGenericType(stateType);
-#pragma warning restore S3011, IL2072, IL2075, IL3050
-
+    /// <summary>
+    /// Produces an asynchronous sequence of integers from zero to the given count.
+    /// </summary>
+    /// <param name="count">The number of values to yield.</param>
+    /// <returns>An asynchronous enumerable of integers.</returns>
     private static async IAsyncEnumerable<int> AsyncValues(int count)
     {
         for (var i = 0; i < count; i++)
@@ -881,28 +1132,74 @@ public sealed class CoverageTopUpTests
         }
     }
 
+    /// <summary>
+    /// An observable that throws the supplied exception when subscribed to.
+    /// </summary>
+    /// <typeparam name="T">The type of the observable sequence elements.</typeparam>
     private sealed class ThrowOnSubscribeObservable<T> : IObservable<T>
     {
+        /// <summary>
+        /// The exception thrown on subscription.
+        /// </summary>
         private readonly Exception _error;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ThrowOnSubscribeObservable{T}"/> class.
+        /// </summary>
+        /// <param name="error">The exception to throw when subscribed to.</param>
         public ThrowOnSubscribeObservable(Exception error) => _error = error;
 
+        /// <summary>
+        /// Throws the configured exception instead of subscribing.
+        /// </summary>
+        /// <param name="observer">The observer that would receive notifications.</param>
+        /// <returns>This method never returns; it always throws.</returns>
         public IDisposable Subscribe(IObserver<T> observer) => throw _error;
     }
 
+    /// <summary>
+    /// An equality comparer that compares integers by value without optimization.
+    /// </summary>
     private sealed class PassthroughComparer : IEqualityComparer<int>
     {
+        /// <summary>
+        /// Determines whether two integers are equal.
+        /// </summary>
+        /// <param name="x">The first integer to compare.</param>
+        /// <param name="y">The second integer to compare.</param>
+        /// <returns><see langword="true"/> when the values are equal; otherwise, <see langword="false"/>.</returns>
         public bool Equals(int x, int y) => x == y;
 
+        /// <summary>
+        /// Returns the hash code for the supplied integer.
+        /// </summary>
+        /// <param name="obj">The integer to hash.</param>
+        /// <returns>The integer value itself as the hash code.</returns>
         public int GetHashCode(int obj) => obj;
     }
 
+    /// <summary>
+    /// An observable that replays a scripted sequence of notifications to subscribers.
+    /// </summary>
+    /// <typeparam name="T">The type of the observable sequence elements.</typeparam>
     private sealed class ScriptedObservable<T> : IObservable<T>
     {
+        /// <summary>
+        /// The script invoked with each subscribing observer.
+        /// </summary>
         private readonly Action<IObserver<T>> _script;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ScriptedObservable{T}"/> class.
+        /// </summary>
+        /// <param name="script">The script invoked with each subscribing observer.</param>
         public ScriptedObservable(Action<IObserver<T>> script) => _script = script;
 
+        /// <summary>
+        /// Runs the script against the supplied observer.
+        /// </summary>
+        /// <param name="observer">The observer to drive with the script.</param>
+        /// <returns>An empty disposable.</returns>
         public IDisposable Subscribe(IObserver<T> observer)
         {
             _script(observer);
@@ -910,10 +1207,22 @@ public sealed class CoverageTopUpTests
         }
     }
 
+    /// <summary>
+    /// An observable that captures the most recent subscribing observer.
+    /// </summary>
+    /// <typeparam name="T">The type of the observable sequence elements.</typeparam>
     private sealed class CapturingObservable<T> : IObservable<T>
     {
+        /// <summary>
+        /// Gets the most recently captured observer, if any.
+        /// </summary>
         public IObserver<T>? Observer { get; private set; }
 
+        /// <summary>
+        /// Captures the supplied observer for later use.
+        /// </summary>
+        /// <param name="observer">The observer to capture.</param>
+        /// <returns>An empty disposable.</returns>
         public IDisposable Subscribe(IObserver<T> observer)
         {
             Observer = observer;
@@ -921,22 +1230,57 @@ public sealed class CoverageTopUpTests
         }
     }
 
+    /// <summary>
+    /// A minimal <see cref="SignalsBase{T}"/> probe used to exercise base class behavior.
+    /// </summary>
+    /// <typeparam name="T">The type of the signal sequence elements.</typeparam>
     private sealed class SignalsBaseProbe<T> : SignalsBase<T>
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SignalsBaseProbe{T}"/> class.
+        /// </summary>
+        /// <param name="required">Whether subscription must occur on the current thread.</param>
         public SignalsBaseProbe(bool required)
             : base(required)
         {
         }
 
+        /// <summary>
+        /// Performs the core subscription by returning an empty disposable.
+        /// </summary>
+        /// <param name="observer">The observer to subscribe.</param>
+        /// <param name="cancel">The disposable used to cancel the subscription.</param>
+        /// <returns>An empty disposable.</returns>
         protected override IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) => Disposable.Empty;
     }
 
+    /// <summary>
+    /// An observer that throws on selected notifications to exercise failure handling.
+    /// </summary>
+    /// <typeparam name="T">The type of the observed sequence elements.</typeparam>
     private sealed class ThrowingObserver<T> : IObserver<T>
     {
+        /// <summary>
+        /// Whether to throw when a value is received.
+        /// </summary>
         private readonly bool _throwOnNext;
+
+        /// <summary>
+        /// Whether to throw when an error is received.
+        /// </summary>
         private readonly bool _throwOnError;
+
+        /// <summary>
+        /// Whether to throw when completion is received.
+        /// </summary>
         private readonly bool _throwOnCompleted;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ThrowingObserver{T}"/> class.
+        /// </summary>
+        /// <param name="throwOnNext">Whether to throw when a value is received.</param>
+        /// <param name="throwOnError">Whether to throw when an error is received.</param>
+        /// <param name="throwOnCompleted">Whether to throw when completion is received.</param>
         public ThrowingObserver(bool throwOnNext = false, bool throwOnError = false, bool throwOnCompleted = false)
         {
             _throwOnNext = throwOnNext;
@@ -944,43 +1288,84 @@ public sealed class CoverageTopUpTests
             _throwOnCompleted = throwOnCompleted;
         }
 
+        /// <summary>
+        /// Handles completion, throwing when configured to do so.
+        /// </summary>
         public void OnCompleted()
         {
-            if (_throwOnCompleted)
+            if (!_throwOnCompleted)
             {
-                throw new InvalidOperationException("observer-completed");
+                return;
             }
+
+            throw new InvalidOperationException("observer-completed");
         }
 
+        /// <summary>
+        /// Handles an error, throwing when configured to do so.
+        /// </summary>
+        /// <param name="error">The error received.</param>
         public void OnError(Exception error)
         {
-            if (_throwOnError)
+            if (!_throwOnError)
             {
-                throw new InvalidOperationException("observer-error");
+                return;
             }
+
+            throw new InvalidOperationException("observer-error");
         }
 
+        /// <summary>
+        /// Handles a value, throwing when configured to do so.
+        /// </summary>
+        /// <param name="value">The value received.</param>
         public void OnNext(T value)
         {
-            if (_throwOnNext)
+            if (!_throwOnNext)
             {
-                throw new InvalidOperationException("observer-next");
+                return;
             }
+
+            throw new InvalidOperationException("observer-next");
         }
     }
 
+    /// <summary>
+    /// An observer that records all received values, errors, and completions.
+    /// </summary>
+    /// <typeparam name="T">The type of the observed sequence elements.</typeparam>
     private sealed class RecordingObserver<T> : IObserver<T>
     {
+        /// <summary>
+        /// Gets the values received by the observer.
+        /// </summary>
         public List<T> Values { get; } = [];
 
+        /// <summary>
+        /// Gets the errors received by the observer.
+        /// </summary>
         public List<Exception> Errors { get; } = [];
 
+        /// <summary>
+        /// Gets the number of completion notifications received.
+        /// </summary>
         public int Completed { get; private set; }
 
+        /// <summary>
+        /// Records a completion notification.
+        /// </summary>
         public void OnCompleted() => Completed++;
 
+        /// <summary>
+        /// Records a received error.
+        /// </summary>
+        /// <param name="error">The error received.</param>
         public void OnError(Exception error) => Errors.Add(error);
 
+        /// <summary>
+        /// Records a received value.
+        /// </summary>
+        /// <param name="value">The value received.</param>
         public void OnNext(T value) => Values.Add(value);
     }
 }

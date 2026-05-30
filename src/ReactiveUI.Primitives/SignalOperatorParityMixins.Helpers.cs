@@ -18,7 +18,7 @@ public static partial class LinqMixins
     /// Prepends a single value without composing through concat and return signals.
     /// </summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class PrependSignal<T> : Signals.Core.IInlineSignal<T>
+    private sealed class PrependSignal<T> : IInlineSignal<T>
     {
         /// <summary>
         /// The source observable.
@@ -77,7 +77,7 @@ public static partial class LinqMixins
     /// Prepends an enumerable without composing through concat and enumerable signals.
     /// </summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class StartWithEnumerableSignal<T> : Signals.Core.IInlineSignal<T>
+    private sealed class StartWithEnumerableSignal<T> : IInlineSignal<T>
     {
         /// <summary>
         /// The source observable.
@@ -132,7 +132,7 @@ public static partial class LinqMixins
     /// Fuses a single prepended value and a single appended value around a source subscription.
     /// </summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class PrependAppendSignal<T> : Signals.Core.IInlineSignal<T>
+    private sealed class PrependAppendSignal<T> : IInlineSignal<T>
     {
         /// <summary>
         /// The source observable.
@@ -636,7 +636,7 @@ public static partial class LinqMixins
                 var timestamp = _sequencer.Now;
                 for (var i = 0; i < _range.Count; i++)
                 {
-                    onNext(new Moment<T>(CreateRangeValue<T>(_range.Start + i), timestamp));
+                    onNext(new((T)(object)(_range.Start + i), timestamp));
                 }
 
                 return;
@@ -644,7 +644,7 @@ public static partial class LinqMixins
 
             for (var i = 0; i < _range.Count; i++)
             {
-                onNext(new Moment<T>(CreateRangeValue<T>(_range.Start + i), _sequencer.Now));
+                onNext(new((T)(object)(_range.Start + i), _sequencer.Now));
             }
         }
 
@@ -659,7 +659,7 @@ public static partial class LinqMixins
                 var timestamp = _sequencer.Now;
                 for (var i = 0; i < _range.Count; i++)
                 {
-                    observer.OnNext(new Moment<T>(CreateRangeValue<T>(_range.Start + i), timestamp));
+                    observer.OnNext(new((T)(object)(_range.Start + i), timestamp));
                 }
 
                 return;
@@ -667,7 +667,7 @@ public static partial class LinqMixins
 
             for (var i = 0; i < _range.Count; i++)
             {
-                observer.OnNext(new Moment<T>(CreateRangeValue<T>(_range.Start + i), _sequencer.Now));
+                observer.OnNext(new((T)(object)(_range.Start + i), _sequencer.Now));
             }
         }
     }
@@ -735,7 +735,7 @@ public static partial class LinqMixins
             {
                 for (var i = 0; i < _range.Count; i++)
                 {
-                    onNext(new TimeInterval<T>(CreateRangeValue<T>(_range.Start + i), TimeSpan.Zero));
+                    onNext(new((T)(object)(_range.Start + i), TimeSpan.Zero));
                 }
 
                 return;
@@ -747,7 +747,7 @@ public static partial class LinqMixins
                 var now = _sequencer.Now;
                 var interval = i == 0 ? TimeSpan.Zero : now - last;
                 last = now;
-                onNext(new TimeInterval<T>(CreateRangeValue<T>(_range.Start + i), interval));
+                onNext(new((T)(object)(_range.Start + i), interval));
             }
         }
 
@@ -761,7 +761,7 @@ public static partial class LinqMixins
             {
                 for (var i = 0; i < _range.Count; i++)
                 {
-                    observer.OnNext(new TimeInterval<T>(CreateRangeValue<T>(_range.Start + i), TimeSpan.Zero));
+                    observer.OnNext(new((T)(object)(_range.Start + i), TimeSpan.Zero));
                 }
 
                 return;
@@ -773,7 +773,7 @@ public static partial class LinqMixins
                 var now = _sequencer.Now;
                 var interval = i == 0 ? TimeSpan.Zero : now - last;
                 last = now;
-                observer.OnNext(new TimeInterval<T>(CreateRangeValue<T>(_range.Start + i), interval));
+                observer.OnNext(new((T)(object)(_range.Start + i), interval));
             }
         }
     }
@@ -895,7 +895,7 @@ public static partial class LinqMixins
             }
 
             var coordinator = new ProbeCoordinator<T>(_source, _period, _sequencer, observer);
-            if (!IsRequiredSubscribeOnCurrentThread() || !Sequencer.CurrentThread.IsScheduleRequired)
+            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return coordinator.Run();
             }
@@ -910,10 +910,6 @@ public static partial class LinqMixins
     /// Coordinates a sampled observable sequence without the anonymous signal wrapper.
     /// </summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Usage",
-        "CA2213:Disposable fields should be disposed",
-        Justification = "Disposable fields are released through interlocked exchange in Dispose.")]
     private sealed class ProbeCoordinator<T> : IObserver<T>, IDisposable
     {
         /// <summary>
@@ -937,13 +933,18 @@ public static partial class LinqMixins
         private readonly IObserver<T> _observer;
 
         /// <summary>
-        /// The synchronization gate.
+        /// The synchronization gate. A reentrant monitor is used because emissions are serialized
+        /// while the gate is held, which a non-reentrant spin lock cannot do safely.
         /// </summary>
-        private SpinLock _gate = new(false);
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// The active source subscription.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Usage",
+            "CA2213:Disposable fields should be disposed",
+            Justification = "Disposed via the thread-safe Interlocked.Exchange teardown in Dispose; CA2213 does not recognize disposal of a field through Interlocked.Exchange.")]
         private IDisposable? _subscription;
 
         /// <summary>
@@ -999,11 +1000,9 @@ public static partial class LinqMixins
                 return;
             }
 
-            var timer = Interlocked.Exchange(ref _timer, null);
-            timer?.Dispose();
+            Interlocked.Exchange(ref _timer, null)?.Dispose();
 
-            var subscription = Interlocked.Exchange(ref _subscription, null);
-            subscription?.Dispose();
+            Interlocked.Exchange(ref _subscription, null)?.Dispose();
         }
 
         /// <summary>
@@ -1012,11 +1011,9 @@ public static partial class LinqMixins
         /// <param name="value">The source value.</param>
         public void OnNext(T value)
         {
-            var shouldSchedule = false;
-            var lockTaken = false;
-            try
+            bool shouldSchedule;
+            lock (_gate)
             {
-                _gate.Enter(ref lockTaken);
                 if (_done)
                 {
                     return;
@@ -1026,13 +1023,6 @@ public static partial class LinqMixins
                 _latest = value;
                 shouldSchedule = !_timerActive;
                 _timerActive = true;
-            }
-            finally
-            {
-                if (lockTaken)
-                {
-                    _gate.Exit();
-                }
             }
 
             if (!shouldSchedule)
@@ -1049,7 +1039,17 @@ public static partial class LinqMixins
         /// <param name="error">The source error.</param>
         public void OnError(Exception error)
         {
-            _observer.OnError(error);
+            lock (_gate)
+            {
+                if (_done)
+                {
+                    return;
+                }
+
+                _done = true;
+                _observer.OnError(error);
+            }
+
             Dispose();
         }
 
@@ -1058,21 +1058,17 @@ public static partial class LinqMixins
         /// </summary>
         public void OnCompleted()
         {
-            var lockTaken = false;
-            try
+            lock (_gate)
             {
-                _gate.Enter(ref lockTaken);
-                _done = true;
-            }
-            finally
-            {
-                if (lockTaken)
+                if (_done)
                 {
-                    _gate.Exit();
+                    return;
                 }
+
+                _done = true;
+                _observer.OnCompleted();
             }
 
-            _observer.OnCompleted();
             Dispose();
         }
 
@@ -1107,45 +1103,22 @@ public static partial class LinqMixins
         /// <returns>An empty disposable.</returns>
         private IDisposable Tick()
         {
-            if (!TryTake(out var value))
+            // Hold the gate across the emission so the sample cannot interleave with a terminal.
+            lock (_gate)
             {
-                return Disposable.Empty;
-            }
-
-            _observer.OnNext(value);
-            return Disposable.Empty;
-        }
-
-        /// <summary>
-        /// Attempts to take the latest value.
-        /// </summary>
-        /// <param name="value">The latest value.</param>
-        /// <returns><c>true</c> when a value should be emitted; otherwise, <c>false</c>.</returns>
-        private bool TryTake(out T value)
-        {
-            var lockTaken = false;
-            try
-            {
-                _gate.Enter(ref lockTaken);
                 if (_done || !_hasLatest)
                 {
                     _timerActive = false;
-                    value = default!;
-                    return false;
+                    return Disposable.Empty;
                 }
 
-                value = _latest!;
+                var value = _latest!;
                 _hasLatest = false;
                 _timerActive = false;
-                return true;
+                _observer.OnNext(value);
             }
-            finally
-            {
-                if (lockTaken)
-                {
-                    _gate.Exit();
-                }
-            }
+
+            return Disposable.Empty;
         }
     }
 
@@ -1173,7 +1146,7 @@ public static partial class LinqMixins
         /// <summary>
         /// The synchronization gate.
         /// </summary>
-        private readonly OperatorGate _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// Active subscription and timer resources.
@@ -1209,6 +1182,11 @@ public static partial class LinqMixins
         /// The virtual due time for the current quiet period.
         /// </summary>
         private DateTimeOffset _dueAt;
+
+        /// <summary>
+        /// A value indicating whether a terminal notification has been emitted.
+        /// </summary>
+        private bool _done;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CalmCoordinator{T}"/> class.
@@ -1272,7 +1250,7 @@ public static partial class LinqMixins
         private void OnNext(T value)
         {
             var shouldSchedule = false;
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _latest = value;
                 _hasLatest = true;
@@ -1298,7 +1276,17 @@ public static partial class LinqMixins
         /// <param name="error">The terminal error.</param>
         private void OnError(Exception error)
         {
-            _observer!.OnError(error);
+            lock (_gate)
+            {
+                if (_done)
+                {
+                    return;
+                }
+
+                _done = true;
+                _observer!.OnError(error);
+            }
+
             Dispose();
         }
 
@@ -1307,7 +1295,17 @@ public static partial class LinqMixins
         /// </summary>
         private void OnCompleted()
         {
-            _observer!.OnCompleted();
+            lock (_gate)
+            {
+                if (_done)
+                {
+                    return;
+                }
+
+                _done = true;
+                _observer!.OnCompleted();
+            }
+
             Dispose();
         }
 
@@ -1334,7 +1332,16 @@ public static partial class LinqMixins
                 return;
             }
 
-            _observer!.OnNext(value);
+            // Serialize the timer emission against a concurrent terminal notification.
+            lock (_gate)
+            {
+                if (_done)
+                {
+                    return;
+                }
+
+                _observer!.OnNext(value);
+            }
         }
 
         /// <summary>
@@ -1345,7 +1352,7 @@ public static partial class LinqMixins
         /// <returns>The timer action.</returns>
         private TimerAction GetTimerAction(out TimeSpan delay, out T value)
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 var remaining = _dueAt - _sequencer.Now;
                 if (remaining > TimeSpan.Zero)
@@ -1370,6 +1377,82 @@ public static partial class LinqMixins
         }
     }
 
+    /// <summary>Dedicated signal for <c>ForkJoin</c>; runs the coordinator without a Create closure.</summary>
+    /// <typeparam name="TLeft">The left value type.</typeparam>
+    /// <typeparam name="TRight">The right value type.</typeparam>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    private sealed class ForkJoinSignal<TLeft, TRight, TResult> : IObservable<TResult>
+    {
+        /// <summary>The left source.</summary>
+        private readonly IObservable<TLeft> _left;
+
+        /// <summary>The right source.</summary>
+        private readonly IObservable<TRight> _right;
+
+        /// <summary>The projection of the two final values.</summary>
+        private readonly Func<TLeft, TRight, TResult> _selector;
+
+        /// <summary>Initializes a new instance of the <see cref="ForkJoinSignal{TLeft, TRight, TResult}"/> class.</summary>
+        /// <param name="left">The left source.</param>
+        /// <param name="right">The right source.</param>
+        /// <param name="selector">The projection of the two final values.</param>
+        internal ForkJoinSignal(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
+        {
+            _left = left;
+            _right = right;
+            _selector = selector;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<TResult> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            return new ForkJoinCoordinator<TLeft, TRight, TResult>(observer, _selector).Run(_left, _right);
+        }
+    }
+
+    /// <summary>Range-specialized <c>ForkJoin</c>: emits the projection of each range's final value.</summary>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    private sealed class RangeForkJoinSignal<TResult> : IObservable<TResult>
+    {
+        /// <summary>The left source range.</summary>
+        private readonly RangeSignal _left;
+
+        /// <summary>The right source range.</summary>
+        private readonly RangeSignal _right;
+
+        /// <summary>The projection of the two final values.</summary>
+        private readonly Func<int, int, TResult> _selector;
+
+        /// <summary>Initializes a new instance of the <see cref="RangeForkJoinSignal{TResult}"/> class.</summary>
+        /// <param name="left">The left source range.</param>
+        /// <param name="right">The right source range.</param>
+        /// <param name="selector">The projection of the two final values.</param>
+        internal RangeForkJoinSignal(RangeSignal left, RangeSignal right, Func<int, int, TResult> selector)
+        {
+            _left = left;
+            _right = right;
+            _selector = selector;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<TResult> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            observer.OnNext(_selector(_left.Start + _left.Count - 1, _right.Start + _right.Count - 1));
+            observer.OnCompleted();
+            return Disposable.Empty;
+        }
+    }
+
     /// <summary>
     /// Coordinates a two-source fork-join operation.
     /// </summary>
@@ -1381,7 +1464,7 @@ public static partial class LinqMixins
         /// <summary>
         /// The synchronization gate.
         /// </summary>
-        private readonly OperatorGate _gate = new();
+        private readonly Lock _gate = new();
 
         /// <summary>
         /// The downstream observer.
@@ -1451,7 +1534,7 @@ public static partial class LinqMixins
         /// <param name="value">The left value.</param>
         private void OnLeftNext(TLeft value)
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _hasLeft = true;
                 _latestLeft = value;
@@ -1464,7 +1547,7 @@ public static partial class LinqMixins
         /// <param name="value">The right value.</param>
         private void OnRightNext(TRight value)
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _hasRight = true;
                 _latestRight = value;
@@ -1505,7 +1588,7 @@ public static partial class LinqMixins
         /// <returns><c>true</c> when fork-join is ready to finish; otherwise, <c>false</c>.</returns>
         private bool CompleteLeft(out TResult result, out bool emit)
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _leftDone = true;
                 return TryFinish(out result, out emit);
@@ -1520,7 +1603,7 @@ public static partial class LinqMixins
         /// <returns><c>true</c> when fork-join is ready to finish; otherwise, <c>false</c>.</returns>
         private bool CompleteRight(out TResult result, out bool emit)
         {
-            lock (_gate.SyncRoot)
+            lock (_gate)
             {
                 _rightDone = true;
                 return TryFinish(out result, out emit);

@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 /// <remarks>This type is not thread safe; users should ensure proper synchronization.</remarks>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public partial class SequencerQueue<TAbsolute>
+public class SequencerQueue<TAbsolute>
     where TAbsolute : IComparable<TAbsolute>
 {
     /// <summary>
@@ -47,13 +47,19 @@ public partial class SequencerQueue<TAbsolute>
             throw new ArgumentOutOfRangeException(nameof(capacity));
         }
 
-        _queue = new PriorityQueue<ScheduledItem<TAbsolute>>(capacity);
+        _queue = new(capacity);
     }
 
     /// <summary>
     /// Gets the number of scheduled items in the scheduler queue.
     /// </summary>
     public int Count => _queue.Count;
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Enqueues the specified work item to be scheduled.

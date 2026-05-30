@@ -2,16 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
-
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <content>
@@ -28,7 +18,7 @@ public partial class CombiningOperatorTests
             .Prepend(1)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
+        await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
     }
 
     /// <summary>Tests Prepend enumerable values come first.</summary>
@@ -40,7 +30,7 @@ public partial class CombiningOperatorTests
             .Prepend([1, 2])
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
+        await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
     }
 
     /// <summary>Tests StartWith value comes first.</summary>
@@ -52,7 +42,7 @@ public partial class CombiningOperatorTests
             .StartWith(1)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3]);
+        await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 
     /// <summary>Tests StartWith enumerable values come first.</summary>
@@ -64,7 +54,7 @@ public partial class CombiningOperatorTests
             .StartWith(SampleValue1, SampleValue2)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3]);
+        await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 
     /// <summary>Tests StartWith params values come first.</summary>
@@ -77,7 +67,7 @@ public partial class CombiningOperatorTests
             .StartWith(values)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
+        await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
     }
 
     /// <summary>
@@ -185,7 +175,7 @@ public partial class CombiningOperatorTests
     public async Task WhenPrepend_ThenEmitsPrependedValuesFirst()
     {
         var result = await SignalAsync.Range(4, 2).Prepend([1, 2, 3]).ToListAsync();
-        await Assert.That(result).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4, SampleValue5]);
+        await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4, SampleValue5]);
     }
 
     /// <summary>
@@ -196,7 +186,7 @@ public partial class CombiningOperatorTests
     public async Task WhenPrependSingleValue_ThenEmitsValueBeforeSource()
     {
         var result = await SignalAsync.Range(2, 2).Prepend(1).ToListAsync();
-        await Assert.That(result).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3]);
+        await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 
     /// <summary>
@@ -250,7 +240,7 @@ public partial class CombiningOperatorTests
             .StartWith(0)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([0, 1, SampleValue2, SampleValue3]);
+        await Assert.That(result).IsCollectionEqualTo([0, 1, SampleValue2, SampleValue3]);
     }
 
     /// <summary>
@@ -283,7 +273,7 @@ public partial class CombiningOperatorTests
 
         await sub.DisposeAsync();
 
-        await Assert.That(items).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4, SampleValue5]);
+        await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4, SampleValue5]);
     }
 
     /// <summary>
@@ -352,7 +342,7 @@ public partial class CombiningOperatorTests
         await sub.DisposeAsync();
 
         // Values before the cancellation should still have been emitted
-        await Assert.That(items).IsEquivalentTo([SampleValue1, SampleValue2]);
+        await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2]);
     }
 
     /// <summary>
@@ -367,6 +357,6 @@ public partial class CombiningOperatorTests
             .StartWith(prefix)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([SampleValue1, SampleValue2, SampleValue3]);
+        await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 }

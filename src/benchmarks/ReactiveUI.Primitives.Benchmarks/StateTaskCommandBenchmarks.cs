@@ -2,13 +2,10 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive.Concurrency;
 using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
-using System.Reactive.Concurrency;
-using System.Reactive.Linq;
-using System.Reactive.Threading.Tasks;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
@@ -18,7 +15,14 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class StateTaskCommandBenchmarks
 {
+    /// <summary>
+    /// The number of state updates performed by each benchmarked sequence.
+    /// </summary>
     private const int Count = 32;
+
+    /// <summary>
+    /// The scalar value used by the single-value state, task, and command benchmarks.
+    /// </summary>
     private const int Value = 42;
 
     /// <summary>
@@ -111,7 +115,7 @@ public class StateTaskCommandBenchmarks
     {
         using var state = new R3.BehaviorSubject<int>(Value);
         using var projected = R3.ReactivePropertyExtensions.ToReadOnlyReactiveProperty(
-            R3.ObservableExtensions.Select(state, static (int value) => value + 1),
+            R3.ObservableExtensions.Select(state, static value => value + 1),
             Value + 1);
         state.OnNext(Value + 1);
         return projected.CurrentValue;

@@ -41,7 +41,7 @@ public static partial class SignalAsync
         {
             var subscription = new ReturnSubscription(observer, value);
             subscription.Run();
-            return new ValueTask<IAsyncDisposable>(subscription);
+            return new(subscription);
         }
 
         /// <summary>Per-subscription task body that emits the captured value and signals completion.</summary>

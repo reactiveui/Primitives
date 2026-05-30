@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -19,7 +10,7 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>
 /// Multicast / RefCount tests.
 /// </summary>
-public partial class ResultAndInfrastructureTests
+public class ResultAndInfrastructureTests
 {
     /// <summary>
     /// Verifies that MulticastSignalAsync does not throw when ConnectAsync is called twice.
@@ -209,7 +200,7 @@ public partial class ResultAndInfrastructureTests
 
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        await Assert.That(items).IsEquivalentTo([FirstValue, SecondValue]);
+        await Assert.That(items).IsCollectionEqualTo([FirstValue, SecondValue]);
     }
 
     /// <summary>

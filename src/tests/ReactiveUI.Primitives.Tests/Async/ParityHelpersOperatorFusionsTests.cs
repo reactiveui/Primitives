@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -87,7 +78,7 @@ public class ParityHelpersOperatorFusionsTests
             One + Two,
             One + Two + Three
         ];
-        await Assert.That(result).IsEquivalentTo(expected);
+        await Assert.That(result).IsCollectionEqualTo(expected);
     }
 
     /// <summary>Verifies that <c>ThrottleDistinct</c> suppresses consecutive duplicates upstream
@@ -135,7 +126,7 @@ public class ParityHelpersOperatorFusionsTests
             .DebounceUntil(TimeSpan.FromSeconds(5), static _ => true)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(DebounceInputs);
+        await Assert.That(result).IsCollectionEqualTo(DebounceInputs);
     }
 
     /// <summary>Verifies that the array fast path of <c>ForEach</c> flattens an
@@ -150,7 +141,7 @@ public class ParityHelpersOperatorFusionsTests
             .ForEach()
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(ExpectedArrayFlat);
+        await Assert.That(result).IsCollectionEqualTo(ExpectedArrayFlat);
     }
 
     /// <summary>Verifies that the <see cref="IReadOnlyList{T}"/> fast path of <c>ForEach</c>
@@ -167,7 +158,7 @@ public class ParityHelpersOperatorFusionsTests
             .ForEach()
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(ExpectedListFlat);
+        await Assert.That(result).IsCollectionEqualTo(ExpectedListFlat);
     }
 
     /// <summary>Verifies that the general <see cref="IEnumerable{T}"/> path of <c>ForEach</c>
@@ -182,7 +173,7 @@ public class ParityHelpersOperatorFusionsTests
             .ForEach()
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(ExpectedListFlat);
+        await Assert.That(result).IsCollectionEqualTo(ExpectedListFlat);
     }
 
     /// <summary>Verifies that <c>Partition</c> broadcasts an upstream non-terminal error to both
@@ -312,7 +303,7 @@ public class ParityHelpersOperatorFusionsTests
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
-        await Assert.That(values).IsEquivalentTo([ScanSeed]);
+        await Assert.That(values).IsCollectionEqualTo([ScanSeed]);
     }
 
     /// <summary>Verifies that <c>ThrottleDistinct</c> forwards a non-terminal upstream error
@@ -475,7 +466,7 @@ public class ParityHelpersOperatorFusionsTests
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
-            .ScanWithInitial(ScanSeed, static (acc, x, _) => new ValueTask<int>(acc + x))
+            .ScanWithInitial(ScanSeed, static (acc, x, _) => new(acc + x))
             .SubscribeAsync(
                 static (_, _) => default,
                 (ex, _) =>
@@ -607,7 +598,7 @@ public class ParityHelpersOperatorFusionsTests
         await emitted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Task.Delay(ThrottleWindowMilliseconds);
 
-        await Assert.That(values).IsEquivalentTo([Two]);
+        await Assert.That(values).IsCollectionEqualTo([Two]);
     }
 
     /// <summary>Verifies that an unhandled exception thrown by the downstream observer inside
@@ -655,7 +646,7 @@ public class ParityHelpersOperatorFusionsTests
         // Even value: matches the true branch.
         await signal.OnNextAsync(Two, CancellationToken.None);
 
-        await Assert.That(values).IsEquivalentTo([Two]);
+        await Assert.That(values).IsCollectionEqualTo([Two]);
     }
 
     /// <summary>Verifies that <see cref="SignalAsync.ThrottleDistinctSignal{T}.ThrottleDistinctObserver.TryClaimEmission"/>

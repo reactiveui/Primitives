@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.ExceptionServices;
-using System.Threading;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
@@ -13,7 +12,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="T">The Type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public partial class Signal<T> : ISignal<T>
+public class Signal<T> : ISignal<T>
 {
     /// <summary>
     /// Stores state for the signal implementation.
@@ -21,10 +20,12 @@ public partial class Signal<T> : ISignal<T>
     private const int InitialSubscriptionCapacity = 4;
 
     /// <summary>
-    /// Executes the new operation.
+    /// Guards observer-set and terminal-state mutations. Dispatch (OnNext) reads the observer
+    /// slots lock-free via Volatile; only subscribe/remove/terminal take the lock, and they mutate
+    /// reusable array slots in place rather than copying, so subscribe/unsubscribe churn does not
+    /// allocate a new array per change.
     /// </summary>
-    /// <returns>The result.</returns>
-    private SpinLock _observerLock = new(false);
+    private readonly Lock _observerLock = new();
 
     /// <summary>
     /// Stores state for the signal implementation.
@@ -77,6 +78,12 @@ public partial class Signal<T> : ISignal<T>
     public virtual bool IsDisposed => _isDisposed;
 
     /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
+
+    /// <summary>
     /// Releases unmanaged and - optionally - managed resources.
     /// </summary>
     public void Dispose()
@@ -92,11 +99,9 @@ public partial class Signal<T> : ISignal<T>
     {
         SignalSubscription? singleObserver;
         SignalSubscription?[]? subscriptions;
-        var lockTaken = false;
 
-        try
+        lock (_observerLock)
         {
-            _observerLock.Enter(ref lockTaken);
             ThrowIfDisposed();
             if (_isStopped)
             {
@@ -106,13 +111,6 @@ public partial class Signal<T> : ISignal<T>
             singleObserver = _singleObserverSubscription;
             subscriptions = ClearObserversLocked();
             _isStopped = true;
-        }
-        finally
-        {
-            if (lockTaken)
-            {
-                _observerLock.Exit(false);
-            }
         }
 
         Completed(singleObserver, subscriptions);
@@ -131,12 +129,10 @@ public partial class Signal<T> : ISignal<T>
 
         SignalSubscription? singleObserver;
         SignalSubscription?[]? subscriptions;
-        var hasActionSubscribers = false;
-        var lockTaken = false;
+        bool hasActionSubscribers;
 
-        try
+        lock (_observerLock)
         {
-            _observerLock.Enter(ref lockTaken);
             ThrowIfDisposed();
             if (_isStopped)
             {
@@ -148,13 +144,6 @@ public partial class Signal<T> : ISignal<T>
             singleObserver = _singleObserverSubscription;
             subscriptions = ClearObserversLocked();
             _isStopped = true;
-        }
-        finally
-        {
-            if (lockTaken)
-            {
-                _observerLock.Exit(false);
-            }
         }
 
         Error(singleObserver, subscriptions, error);
@@ -212,11 +201,9 @@ public partial class Signal<T> : ISignal<T>
         Exception? ex;
         bool stopped;
         SignalSubscription? subscription = null;
-        var lockTaken = false;
 
-        try
+        lock (_observerLock)
         {
-            _observerLock.Enter(ref lockTaken);
             ThrowIfDisposed();
             stopped = _isStopped;
             ex = _exception;
@@ -224,23 +211,16 @@ public partial class Signal<T> : ISignal<T>
             {
                 if (_singleActionSubscription == null && _singleObserverSubscription == null && _subscriptionCount == 0)
                 {
-                    subscription = new SignalSubscription(this, observer);
+                    subscription = new(this, observer);
                     _singleObserverSubscription = subscription;
                 }
                 else
                 {
                     PromoteSingleObserverLocked();
                     PromoteSingleActionObserverLocked();
-                    subscription = new SignalSubscription(this, observer);
+                    subscription = new(this, observer);
                     AddSubscriptionLocked(subscription);
                 }
-            }
-        }
-        finally
-        {
-            if (lockTaken)
-            {
-                _observerLock.Exit(false);
             }
         }
 
@@ -276,17 +256,15 @@ public partial class Signal<T> : ISignal<T>
         Exception? ex;
         bool stopped;
         SignalSubscription? subscription = null;
-        var lockTaken = false;
 
-        try
+        lock (_observerLock)
         {
-            _observerLock.Enter(ref lockTaken);
             ThrowIfDisposed();
             stopped = _isStopped;
             ex = _exception;
             if (!stopped)
             {
-                subscription = new SignalSubscription(this, onNext);
+                subscription = new(this, onNext);
                 if (_singleActionSubscription == null && _singleObserverSubscription == null && _subscriptionCount == 0)
                 {
                     _singleActionSubscription = subscription;
@@ -297,13 +275,6 @@ public partial class Signal<T> : ISignal<T>
                     PromoteSingleActionObserverLocked();
                     AddSubscriptionLocked(subscription);
                 }
-            }
-        }
-        finally
-        {
-            if (lockTaken)
-            {
-                _observerLock.Exit(false);
             }
         }
 
@@ -339,22 +310,14 @@ public partial class Signal<T> : ISignal<T>
         SignalSubscription? singleActionSubscription;
         SignalSubscription? singleObserverSubscription;
         SignalSubscription?[]? subscriptions;
-        var lockTaken = false;
-        try
+
+        lock (_observerLock)
         {
-            _observerLock.Enter(ref lockTaken);
             singleActionSubscription = _singleActionSubscription;
             singleObserverSubscription = _singleObserverSubscription;
             subscriptions = ClearObserversLocked();
             _exception = null;
             _isDisposed = true;
-        }
-        finally
-        {
-            if (lockTaken)
-            {
-                _observerLock.Exit(false);
-            }
         }
 
         singleActionSubscription?.Dispose();
@@ -548,23 +511,14 @@ public partial class Signal<T> : ISignal<T>
     /// <param name="subscription">The subscription value.</param>
     private void Remove(SignalSubscription subscription)
     {
-        var lockTaken = false;
-        try
+        lock (_observerLock)
         {
-            _observerLock.Enter(ref lockTaken);
             if (RemoveSingleSubscriptionLocked(subscription))
             {
                 return;
             }
 
             RemoveArraySubscriptionLocked(subscription);
-        }
-        finally
-        {
-            if (lockTaken)
-            {
-                _observerLock.Exit(false);
-            }
         }
     }
 

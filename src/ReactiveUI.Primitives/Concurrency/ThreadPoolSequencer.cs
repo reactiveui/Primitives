@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using System.Threading;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 using Timer = System.Threading.Timer;
@@ -15,15 +14,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// </summary>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-[System.Diagnostics.CodeAnalysis.SuppressMessage(
-    "Major Code Smell",
-    "S2931:Classes with disposable fields should be disposable",
-    Justification = "The singleton sequencer owns one process-lifetime timer.")]
-[System.Diagnostics.CodeAnalysis.SuppressMessage(
-    "Usage",
-    "CA1001:Types that own disposable fields should be disposable",
-    Justification = "The singleton sequencer owns one process-lifetime timer.")]
-public sealed partial class ThreadPoolSequencer : ISequencer
+public sealed class ThreadPoolSequencer : ISequencer, IDisposable
 {
     /// <summary>
     /// Gets the shared thread-pool scheduler instance.
@@ -38,7 +29,7 @@ public sealed partial class ThreadPoolSequencer : ISequencer
     /// <summary>
     /// Guards access to delayed work.
     /// </summary>
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
 
     /// <summary>
     /// Pending delayed work, ordered by monotonic due timestamp.
@@ -54,7 +45,7 @@ public sealed partial class ThreadPoolSequencer : ISequencer
     /// Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class.
     /// </summary>
     private ThreadPoolSequencer() =>
-        _timer = new Timer(static state => ((ThreadPoolSequencer)state!).RunDue(), this, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        _timer = new(static state => ((ThreadPoolSequencer)state!).RunDue(), this, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
 
     /// <summary>
     /// Gets the scheduler's notion of current time.
@@ -65,6 +56,12 @@ public sealed partial class ThreadPoolSequencer : ISequencer
     /// Gets the scheduler's monotonic timestamp.
     /// </summary>
     public long Timestamp => Sequencer.Timestamp;
+
+    /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>
     /// Schedules a work item to be executed through the thread pool.
@@ -102,10 +99,15 @@ public sealed partial class ThreadPoolSequencer : ISequencer
 
         lock (_gate)
         {
-            _queue.Enqueue(new TimedWorkItem(item, dueTimestamp));
+            _queue.Enqueue(new(item, dueTimestamp));
             ArmTimerNoLock();
         }
     }
+
+    /// <summary>
+    /// Disposes the shared delay timer owned by this sequencer.
+    /// </summary>
+    public void Dispose() => _timer.Dispose();
 
     /// <summary>
     /// Executes a work item when it has not already been cancelled.
@@ -237,7 +239,7 @@ public sealed partial class ThreadPoolSequencer : ISequencer
     /// Compatibility work item retained for coverage and direct reflection tests.
     /// </summary>
     /// <typeparam name="TState">The scheduled state type.</typeparam>
-    private sealed class ScheduledWorkItem<TState> : IWorkItem, IsDisposed
+    internal sealed class ScheduledWorkItem<TState> : IWorkItem, IsDisposed
     {
         /// <summary>
         /// Owning sequencer.

@@ -2,17 +2,14 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System;
+using System.Reactive.Concurrency;
 using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
-using System.Reactive.Concurrency;
-using RxDisposable = System.Reactive.Disposables.Disposable;
 using RxCompositeDisposable = System.Reactive.Disposables.CompositeDisposable;
-
 using RxCurrentThreadScheduler = System.Reactive.Concurrency.CurrentThreadScheduler;
+using RxDisposable = System.Reactive.Disposables.Disposable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
@@ -22,6 +19,11 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class CoreRuntimeBenchmarks
 {
+    /// <summary>
+    /// The value forwarded through the witness and observer benchmarks.
+    /// </summary>
+    private const int ForwardedValue = 42;
+
     /// <summary>
     /// Baseline multi-action dispose path for <see cref="Pocket"/>.
     /// </summary>
@@ -118,7 +120,7 @@ public class CoreRuntimeBenchmarks
     {
         var value = 0;
         var witness = Witness.Safe(Witness.Create<int>(x => value = x));
-        witness.OnNext(42);
+        witness.OnNext(ForwardedValue);
         witness.OnCompleted();
         return value;
     }
@@ -132,22 +134,23 @@ public class CoreRuntimeBenchmarks
     {
         var value = 0;
         var observer = System.Reactive.Observer.Create<int>(x => value = x, _ => { }, () => { });
-        observer.OnNext(42);
+        observer.OnNext(ForwardedValue);
         observer.OnCompleted();
         return value;
     }
 
     /// <summary>
-    /// Notify an R3 observer.
+    /// Notify an R3 observer created from delegates.
     /// </summary>
     /// <returns>The forwarded value.</returns>
     [Benchmark]
     public int R3SafeWitness()
     {
-        var observer = new IntR3Observer();
-        observer.OnNext(42);
+        var value = 0;
+        var observer = new IntR3ActionObserver(x => value = x);
+        observer.OnNext(ForwardedValue);
         observer.OnCompleted(R3.Result.Success);
-        return observer.LastValue;
+        return value;
     }
 
     /// <summary>

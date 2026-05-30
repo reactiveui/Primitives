@@ -3,12 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
-using System.Reactive.Linq;
-using System.Reactive.Threading.Tasks;
-using System.Threading;
-
 using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -19,7 +14,15 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class TerminalCollectionBenchmarks
 {
+    /// <summary>
+    /// The number of values produced by each benchmarked sequence.
+    /// </summary>
     private const int Count = 32;
+
+    /// <summary>
+    /// The divisor used by the even-number predicate benchmarks.
+    /// </summary>
+    private const int EvenDivisor = 2;
 
     /// <summary>
     /// Benchmarks collecting into a list signal.
@@ -50,11 +53,9 @@ public class TerminalCollectionBenchmarks
     /// </summary>
     /// <returns>The collected count.</returns>
     [Benchmark]
-    public async Task<int> R3CollectList()
-    {
-        return (await R3.ObservableExtensions.ToListAsync(R3.Observable.Range(1, Count), CancellationToken.None)
+    public async Task<int> R3CollectList() =>
+        (await R3.ObservableExtensions.ToListAsync(R3.Observable.Range(1, Count), CancellationToken.None)
             .ConfigureAwait(false)).Count;
-    }
 
     /// <summary>
     /// Benchmarks collecting into an array signal.
@@ -85,42 +86,32 @@ public class TerminalCollectionBenchmarks
     /// </summary>
     /// <returns>The collected count.</returns>
     [Benchmark]
-    public async Task<int> R3CollectArray()
-    {
-        return (await R3.ObservableExtensions.ToArrayAsync(R3.Observable.Range(1, Count), CancellationToken.None)
+    public async Task<int> R3CollectArray() =>
+        (await R3.ObservableExtensions.ToArrayAsync(R3.Observable.Range(1, Count), CancellationToken.None)
             .ConfigureAwait(false)).Length;
-    }
 
     /// <summary>
     /// Benchmarks asynchronous array collection.
     /// </summary>
     /// <returns>The collected count.</returns>
     [Benchmark]
-    public async Task<int> PrimitivesCollectArrayAsync()
-    {
-        return (await Signal.Sequence(1, Count).CollectArrayAsync().ConfigureAwait(false)).Length;
-    }
+    public async Task<int> PrimitivesCollectArrayAsync() => (await Signal.Sequence(1, Count).CollectArrayAsync().ConfigureAwait(false)).Length;
 
     /// <summary>
     /// Benchmarks asynchronous array collection using System.Reactive.
     /// </summary>
     /// <returns>The collected count.</returns>
     [Benchmark]
-    public async Task<int> SystemReactiveCollectArrayAsync()
-    {
-        return (await RxObservable.Range(1, Count).ToArray().ToTask().ConfigureAwait(false)).Length;
-    }
+    public async Task<int> SystemReactiveCollectArrayAsync() => (await RxObservable.Range(1, Count).ToArrayAsync().ToTask().ConfigureAwait(false)).Length;
 
     /// <summary>
     /// Benchmarks asynchronous array collection using R3.
     /// </summary>
     /// <returns>The collected count.</returns>
     [Benchmark]
-    public async Task<int> R3CollectArrayAsync()
-    {
-        return (await R3.ObservableExtensions.ToArrayAsync(R3.Observable.Range(1, Count), CancellationToken.None)
+    public async Task<int> R3CollectArrayAsync() =>
+        (await R3.ObservableExtensions.ToArrayAsync(R3.Observable.Range(1, Count), CancellationToken.None)
             .ConfigureAwait(false)).Length;
-    }
 
     /// <summary>
     /// Benchmarks first-value task conversion.
@@ -178,7 +169,7 @@ public class TerminalCollectionBenchmarks
     public int PrimitivesCountPredicate()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Sequence(1, Count).Count(static value => value % 2 == 0).Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).Count(static value => value % EvenDivisor == 0).Subscribe(observer);
         return observer.Total;
     }
 
@@ -190,7 +181,7 @@ public class TerminalCollectionBenchmarks
     public int SystemReactiveCountPredicate()
     {
         var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Range(1, Count).Count(static value => value % 2 == 0).Subscribe(observer);
+        using var subscription = RxObservable.Range(1, Count).Count(static value => value % EvenDivisor == 0).Subscribe(observer);
         return observer.Total;
     }
 
@@ -202,7 +193,7 @@ public class TerminalCollectionBenchmarks
     public Task<int> R3CountPredicate() =>
         R3.ObservableExtensions.CountAsync(
             R3.Observable.Range(1, Count),
-            static (int value) => value % 2 == 0,
+            static value => value % EvenDivisor == 0,
             CancellationToken.None);
 
     /// <summary>
@@ -213,7 +204,7 @@ public class TerminalCollectionBenchmarks
     public long PrimitivesLongCountPredicate()
     {
         var observer = new LongSignalObserver();
-        using var subscription = Signal.Sequence(1, Count).LongCount(static value => value % 2 == 0).Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).LongCount(static value => value % EvenDivisor == 0).Subscribe(observer);
         return observer.Total;
     }
 
@@ -225,7 +216,7 @@ public class TerminalCollectionBenchmarks
     public long SystemReactiveLongCountPredicate()
     {
         var observer = new LongSignalObserver();
-        using var subscription = RxObservable.Range(1, Count).LongCount(static value => value % 2 == 0).Subscribe(observer);
+        using var subscription = RxObservable.Range(1, Count).LongCount(static value => value % EvenDivisor == 0).Subscribe(observer);
         return observer.Total;
     }
 
@@ -237,7 +228,7 @@ public class TerminalCollectionBenchmarks
     public async Task<long> R3LongCountPredicate() =>
         await R3.ObservableExtensions.CountAsync(
             R3.Observable.Range(1, Count),
-            static (int value) => value % 2 == 0,
+            static value => value % EvenDivisor == 0,
             CancellationToken.None).ConfigureAwait(false);
 
     /// <summary>
@@ -272,7 +263,7 @@ public class TerminalCollectionBenchmarks
     public async Task<int> R3AllRange() =>
         await R3.ObservableExtensions.AllAsync(
             R3.Observable.Range(1, Count),
-            static (int value) => value > 0,
+            static value => value > 0,
             CancellationToken.None).ConfigureAwait(false) ? 1 : 0;
 
     /// <summary>
@@ -347,7 +338,7 @@ public class TerminalCollectionBenchmarks
     {
         var all = await R3.ObservableExtensions.AllAsync(
                 R3.Observable.Range(1, Count),
-                static (int value) => value > 0,
+                static value => value > 0,
                 CancellationToken.None)
             .ConfigureAwait(false);
         var contains = await R3.ObservableExtensions.ContainsAsync(

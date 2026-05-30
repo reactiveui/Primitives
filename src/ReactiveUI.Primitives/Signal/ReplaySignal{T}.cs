@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="T">The Type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public partial class ReplaySignal<T> : ISignal<T>
+public class ReplaySignal<T> : ISignal<T>
 {
     /// <summary>
     /// Stores state for the signal implementation.
@@ -44,14 +44,12 @@ public partial class ReplaySignal<T> : ISignal<T>
     /// Executes the new operation.
     /// </summary>
     /// <returns>The result.</returns>
-    private readonly object _observerLock = new();
-#pragma warning disable S3459 // Broadcaster<T> is a mutable struct whose default value is the empty broadcaster.
+    private readonly Lock _observerLock = new();
 
     /// <summary>
     /// Stores state for the signal implementation.
     /// </summary>
     private Broadcaster<T> _broadcaster;
-#pragma warning restore S3459
 
     /// <summary>
     /// Stores state for the signal implementation.
@@ -112,9 +110,10 @@ public partial class ReplaySignal<T> : ISignal<T>
         _window = window;
         _usesWindow = window != TimeSpan.MaxValue;
         _startTime = _usesWindow ? scheduler.Now : DateTimeOffset.MinValue;
+        _broadcaster = default;
         if (_usesWindow || bufferSize == int.MaxValue)
         {
-            _queue = new Queue<TimeInterval<T>>();
+            _queue = new();
         }
         else
         {
@@ -202,6 +201,12 @@ public partial class ReplaySignal<T> : ISignal<T>
     public bool IsDisposed { get; private set; }
 
     /// <summary>
+    /// Gets the debugger display text.
+    /// </summary>
+    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay => ToString() ?? string.Empty;
+
+    /// <summary>
     /// Releases unmanaged and - optionally - managed resources.
     /// </summary>
     public void Dispose()
@@ -273,6 +278,8 @@ public partial class ReplaySignal<T> : ISignal<T>
     /// <param name="value">The value.</param>
     public void OnNext(T value)
     {
+        // Read the scheduler clock outside the lock; the window inputs are immutable.
+        var interval = _usesWindow ? _scheduler.Now - _startTime : TimeSpan.Zero;
         lock (_observerLock)
         {
             ThrowIfDisposed();
@@ -287,8 +294,7 @@ public partial class ReplaySignal<T> : ISignal<T>
             }
             else
             {
-                var interval = _usesWindow ? _scheduler.Now - _startTime : TimeSpan.Zero;
-                _queue!.Enqueue(new TimeInterval<T>(value, interval));
+                _queue!.Enqueue(new(value, interval));
                 Trim();
             }
         }
@@ -309,7 +315,7 @@ public partial class ReplaySignal<T> : ISignal<T>
             throw new ArgumentNullException(nameof(observer));
         }
 
-        var ex = default(Exception);
+        Exception? ex;
         var subscription = default(ObserverHandler);
 
         lock (_observerLock)
@@ -318,7 +324,7 @@ public partial class ReplaySignal<T> : ISignal<T>
             if (!_isStopped)
             {
                 _broadcaster.Add(observer);
-                subscription = new ObserverHandler(this, observer);
+                subscription = new(this, observer);
             }
 
             ex = _lastError;
@@ -480,7 +486,7 @@ public partial class ReplaySignal<T> : ISignal<T>
         /// Executes the new operation.
         /// </summary>
         /// <returns>The result.</returns>
-        private readonly object _lock = new();
+        private readonly Lock _lock = new();
 
         /// <summary>
         /// Stores state for the signal implementation.

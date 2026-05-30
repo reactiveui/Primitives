@@ -4,7 +4,6 @@
 
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
-using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 using ReactiveUI.Primitives.Signals.Core;
 
@@ -199,12 +198,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(scheduler));
         }
 
-        return Signal.Create<T>(observer =>
-        {
-            var subscription = new SingleReplaceableDisposable();
-            var scheduled = scheduler.Schedule(() => subscription.Create(source.Subscribe(observer)));
-            return MultipleDisposable.Create(scheduled, subscription);
-        });
+        return new SubscribeOnSignal<T>(source, scheduler);
     }
 
     /// <summary>
@@ -264,22 +258,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(onCompleted));
         }
 
-        return Signal.CreateSafe<T>(observer => source.Subscribe(
-            value =>
-            {
-                onNext(value);
-                observer.OnNext(value);
-            },
-            error =>
-            {
-                onError(error);
-                observer.OnError(error);
-            },
-            () =>
-            {
-                onCompleted();
-                observer.OnCompleted();
-            }));
+        return new TapSignal<T>(source, onNext, onError, onCompleted);
     }
 
     /// <summary>
@@ -296,7 +275,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        return Signal.CreateSafe<T>(observer => source.Subscribe(_ => { }, observer.OnError, observer.OnCompleted));
+        return new IgnoreValuesSignal<T>(source);
     }
 
     /// <summary>
@@ -409,26 +388,7 @@ public static partial class LinqMixins
         }
 
         comparer ??= EqualityComparer<TKey>.Default;
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var hasLast = false;
-            var last = default(TKey);
-            return source.Subscribe(
-                value =>
-                {
-                    var key = keySelector(value);
-                    if (hasLast && comparer.Equals(last!, key))
-                    {
-                        return;
-                    }
-
-                    hasLast = true;
-                    last = key;
-                    observer.OnNext(value);
-                },
-                observer.OnError,
-                observer.OnCompleted);
-        });
+        return new UniqueBySignal<T, TKey>(source, keySelector, comparer);
     }
 
     /// <summary>
@@ -451,30 +411,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(predicate));
         }
 
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var taking = true;
-            return source.Subscribe(
-                value =>
-                {
-                    if (!taking)
-                    {
-                        return;
-                    }
-
-                    if (predicate(value))
-                    {
-                        observer.OnNext(value);
-                    }
-                    else
-                    {
-                        taking = false;
-                        observer.OnCompleted();
-                    }
-                },
-                observer.OnError,
-                observer.OnCompleted);
-        });
+        return new TakeWhileSignal<T>(source, predicate);
     }
 
     /// <summary>
@@ -497,23 +434,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(predicate));
         }
 
-        return Signal.CreateSafe<T>(observer =>
-        {
-            var skipping = true;
-            return source.Subscribe(
-                value =>
-                {
-                    if (skipping && predicate(value))
-                    {
-                        return;
-                    }
-
-                    skipping = false;
-                    observer.OnNext(value);
-                },
-                observer.OnError,
-                observer.OnCompleted);
-        });
+        return new SkipWhileSignal<T>(source, predicate);
     }
 
     /// <summary>
@@ -791,17 +712,12 @@ public static partial class LinqMixins
         }
 
         scheduler ??= ThreadPoolSequencer.Instance;
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return CreateShiftedRangeSignal<T>(range, dueTime, scheduler);
+            return new ShiftedRangeSignal<T>(range, Sequencer.Normalize(dueTime), scheduler);
         }
 
-        return Signal.Create<T>(observer =>
-        {
-            var pocket = new MultipleDisposable();
-            pocket.Add(scheduler.Schedule(Sequencer.Normalize(dueTime), () => pocket.Add(source.Subscribe(observer))));
-            return pocket;
-        });
+        return new DelayStartSignal<T>(source, dueTime, scheduler);
     }
 
     /// <summary>
@@ -832,9 +748,7 @@ public static partial class LinqMixins
         }
 
         scheduler ??= ThreadPoolSequencer.Instance;
-        return Signal.CreateSafe<T>(
-            observer => new CalmCoordinator<T>(source, dueTime, scheduler).Run(observer),
-            scheduler == Sequencer.CurrentThread);
+        return new CalmSignal<T>(source, dueTime, scheduler);
     }
 
     /// <summary>
@@ -922,7 +836,7 @@ public static partial class LinqMixins
         }
 
         scheduler ??= Sequencer.Immediate;
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
             return new TimestampRangeSignal<T>(range, scheduler);
         }
@@ -956,27 +870,12 @@ public static partial class LinqMixins
         }
 
         scheduler ??= Sequencer.Immediate;
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
             return new TimeIntervalRangeSignal<T>(range, scheduler);
         }
 
-        return Signal.CreateSafe<TimeInterval<T>>(observer =>
-        {
-            var last = scheduler.Now;
-            var first = true;
-            return source.Subscribe(
-                value =>
-                {
-                    var now = scheduler.Now;
-                    var interval = first ? TimeSpan.Zero : now - last;
-                    first = false;
-                    last = now;
-                    observer.OnNext(new TimeInterval<T>(value, interval));
-                },
-                observer.OnError,
-                observer.OnCompleted);
-        });
+        return new TimeIntervalSignal<T>(source, scheduler);
     }
 
     /// <summary>
@@ -1037,17 +936,10 @@ public static partial class LinqMixins
 
         if (typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange && right is RangeSignal rightRange)
         {
-            return Signal.CreateSafe<TResult>(observer =>
-            {
-                observer.OnNext(((Func<int, int, TResult>)(object)selector)(
-                    leftRange.Start + leftRange.Count - 1,
-                    rightRange.Start + rightRange.Count - 1));
-                observer.OnCompleted();
-                return Disposable.Empty;
-            });
+            return new RangeForkJoinSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
         }
 
-        return Signal.CreateSafe<TResult>(observer => new ForkJoinCoordinator<TLeft, TRight, TResult>(observer, selector).Run(left, right));
+        return new ForkJoinSignal<TLeft, TRight, TResult>(left, right, selector);
     }
 
     /// <summary>
@@ -1065,9 +957,9 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return Task.FromResult(CreateRangeValue<T>(range.Start));
+            return Task.FromResult((T)(object)range.Start);
         }
 
         return source.FirstOrDefaultCoreAsync(false, default!);
@@ -1087,9 +979,9 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return Task.FromResult(CreateRangeValue<T>(range.Start));
+            return Task.FromResult((T)(object)range.Start);
         }
 
         return source.FirstOrDefaultCoreAsync(true, default!);
@@ -1110,9 +1002,9 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return Task.FromResult(CreateRangeValue<T>(range.Start));
+            return Task.FromResult((T)(object)range.Start);
         }
 
         return source.FirstOrDefaultCoreAsync(true, defaultValue);
@@ -1137,10 +1029,6 @@ public static partial class LinqMixins
     /// <returns>A task that completes with the final source value.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The source completes without producing a value.</exception>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S1541:Methods and properties should not be too complex",
-        Justification = "ToTask keeps cancellation, terminal, and synchronous fast paths together to avoid extra allocations.")]
     public static Task<T> ToTask<T>(this IObservable<T> source, CancellationToken cancellationToken)
     {
         if (source == null)
@@ -1153,9 +1041,10 @@ public static partial class LinqMixins
             return Task.FromCanceled<T>(cancellationToken);
         }
 
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        var rangeTask = TryCompleteFromRange(source);
+        if (rangeTask is not null)
         {
-            return Task.FromResult(CreateRangeValue<T>(range.Start + range.Count - 1));
+            return rangeTask;
         }
 
         var completion = new TaskCompletionSource<T>();
@@ -1351,9 +1240,26 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return Task.FromResult(CreateRangeArray<T>(range));
+            if (typeof(T) == typeof(int))
+            {
+                var integers = new int[range.Count];
+                for (var i = 0; i < integers.Length; i++)
+                {
+                    integers[i] = range.Start + i;
+                }
+
+                return Task.FromResult((T[])(object)integers);
+            }
+
+            var boxed = new T[range.Count];
+            for (var i = 0; i < boxed.Length; i++)
+            {
+                boxed[i] = (T)(object)(range.Start + i);
+            }
+
+            return Task.FromResult(boxed);
         }
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER
@@ -1399,9 +1305,26 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(source));
         }
 
-        if (source is RangeSignal range && CanReadRangeAs<T>())
+        if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
         {
-            return Task.FromResult((IList<T>)CreateRangeList<T>(range));
+            if (typeof(T) == typeof(int))
+            {
+                var integers = new List<int>(range.Count);
+                for (var i = 0; i < range.Count; i++)
+                {
+                    integers.Add(range.Start + i);
+                }
+
+                return Task.FromResult((IList<T>)(object)integers);
+            }
+
+            var rangeValues = new List<T>(range.Count);
+            for (var i = 0; i < range.Count; i++)
+            {
+                rangeValues.Add((T)(object)(range.Start + i));
+            }
+
+            return Task.FromResult((IList<T>)rangeValues);
         }
 
         var completion = new TaskCompletionSource<IList<T>>();
@@ -1520,82 +1443,265 @@ public static partial class LinqMixins
 #endif
 
     /// <summary>
-    /// Converts an integer value to the specified numeric type.
+    /// Returns the final value as a completed task when the source is a readable range, avoiding a subscription.
     /// </summary>
-    /// <remarks>Uses boxing and unboxing to perform the conversion. The generic type parameter is expected to
-    /// be validated by the caller.</remarks>
-    /// <typeparam name="T">The target numeric type.</typeparam>
-    /// <param name="value">The integer value to convert.</param>
-    /// <returns>The value converted to type <typeparamref name="T"/>.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The generic type is validated by the caller before reading range values.")]
-    private static T CreateRangeValue<T>(int value) => (T)(object)value;
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A completed task with the final range value, or <see langword="null"/> when not applicable.</returns>
+    private static Task<T>? TryCompleteFromRange<T>(IObservable<T> source) =>
+        source is RangeSignal range && CanReadRangeAs(typeof(T))
+            ? Task.FromResult((T)(object)(range.Start + range.Count - 1))
+            : null;
 
     /// <summary>
-    /// Creates an array of sequential values from the specified range signal.
+    /// Sink that suppresses adjacent values whose projected key matches the previous one.
     /// </summary>
-    /// <typeparam name="T">The element type of the array.</typeparam>
-    /// <param name="range">The range signal specifying the start value and count.</param>
-    /// <returns>An array containing sequential values from the range start to start + count - 1.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The generic type is validated by the caller before reading range values.")]
-    private static T[] CreateRangeArray<T>(RangeSignal range)
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <typeparam name="TKey">The key type.</typeparam>
+    private sealed class UniqueByObserver<T, TKey> : SingleSourceObserver<T>
     {
-        if (typeof(T) == typeof(int))
+        /// <summary>The downstream observer.</summary>
+        private readonly IObserver<T> _observer;
+
+        /// <summary>The key projection.</summary>
+        private readonly Func<T, TKey> _keySelector;
+
+        /// <summary>The comparer used to compare adjacent keys.</summary>
+        private readonly IEqualityComparer<TKey> _comparer;
+
+        /// <summary>A value indicating whether a previous key has been observed.</summary>
+        private bool _hasLast;
+
+        /// <summary>The most recently observed key.</summary>
+        private TKey? _last;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UniqueByObserver{T, TKey}"/> class.
+        /// </summary>
+        /// <param name="observer">The downstream observer.</param>
+        /// <param name="keySelector">The key projection.</param>
+        /// <param name="comparer">The comparer used to compare adjacent keys.</param>
+        internal UniqueByObserver(IObserver<T> observer, Func<T, TKey> keySelector, IEqualityComparer<TKey> comparer)
         {
-            var values = new int[range.Count];
-            for (var i = 0; i < values.Length; i++)
+            _observer = observer;
+            _keySelector = keySelector;
+            _comparer = comparer;
+        }
+
+        /// <inheritdoc/>
+        public override void OnNext(T value)
+        {
+            var key = _keySelector(value);
+            if (_hasLast && _comparer.Equals(_last!, key))
             {
-                values[i] = range.Start + i;
+                return;
             }
 
-            return (T[])(object)values;
+            _hasLast = true;
+            _last = key;
+            try
+            {
+                _observer.OnNext(value);
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
         }
 
-        var boxed = new T[range.Count];
-        for (var i = 0; i < boxed.Length; i++)
+        /// <inheritdoc/>
+        public override void OnError(Exception error)
         {
-            boxed[i] = CreateRangeValue<T>(range.Start + i);
+            try
+            {
+                _observer.OnError(error);
+            }
+            finally
+            {
+                Dispose();
+            }
         }
 
-        return boxed;
+        /// <inheritdoc/>
+        public override void OnCompleted()
+        {
+            try
+            {
+                _observer.OnCompleted();
+            }
+            finally
+            {
+                Dispose();
+            }
+        }
     }
 
     /// <summary>
-    /// Creates a list of values from the specified range signal.
+    /// Sink that forwards values while the predicate holds, then completes and unsubscribes.
     /// </summary>
-    /// <remarks>Optimized for integer types by directly incrementing values. For other types, uses
-    /// <c>CreateRangeValue</c> to generate each element.</remarks>
-    /// <typeparam name="T">The type of elements to create in the list.</typeparam>
-    /// <param name="range">The range signal containing the start value and count.</param>
-    /// <returns>A list containing the generated range values.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The generic type is validated by the caller before reading range values.")]
-    private static List<T> CreateRangeList<T>(RangeSignal range)
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class TakeWhileObserver<T> : SingleSourceObserver<T>
     {
-        if (typeof(T) == typeof(int))
+        /// <summary>The downstream observer.</summary>
+        private readonly IObserver<T> _observer;
+
+        /// <summary>The predicate that determines whether to keep taking values.</summary>
+        private readonly Func<T, bool> _predicate;
+
+        /// <summary>A value indicating whether completion has been emitted.</summary>
+        private bool _completed;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TakeWhileObserver{T}"/> class.
+        /// </summary>
+        /// <param name="observer">The downstream observer.</param>
+        /// <param name="predicate">The predicate that determines whether to keep taking values.</param>
+        internal TakeWhileObserver(IObserver<T> observer, Func<T, bool> predicate)
         {
-            var integers = new List<int>(range.Count);
-            for (var i = 0; i < range.Count; i++)
+            _observer = observer;
+            _predicate = predicate;
+        }
+
+        /// <inheritdoc/>
+        public override void OnNext(T value)
+        {
+            if (_completed)
             {
-                integers.Add(range.Start + i);
+                return;
             }
 
-            return (List<T>)(object)integers;
+            if (!_predicate(value))
+            {
+                Complete();
+                return;
+            }
+
+            try
+            {
+                _observer.OnNext(value);
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
         }
 
-        var values = new List<T>(range.Count);
-        for (var i = 0; i < range.Count; i++)
+        /// <inheritdoc/>
+        public override void OnError(Exception error)
         {
-            values.Add(CreateRangeValue<T>(range.Start + i));
+            if (_completed)
+            {
+                return;
+            }
+
+            _completed = true;
+            try
+            {
+                _observer.OnError(error);
+            }
+            finally
+            {
+                Dispose();
+            }
         }
 
-        return values;
+        /// <inheritdoc/>
+        public override void OnCompleted() => Complete();
+
+        /// <summary>
+        /// Completes the downstream observer once and releases the upstream subscription.
+        /// </summary>
+        private void Complete()
+        {
+            if (_completed)
+            {
+                return;
+            }
+
+            _completed = true;
+            try
+            {
+                _observer.OnCompleted();
+            }
+            finally
+            {
+                Dispose();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Sink that drops leading values while the predicate holds, then mirrors the source.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class SkipWhileObserver<T> : SingleSourceObserver<T>
+    {
+        /// <summary>The downstream observer.</summary>
+        private readonly IObserver<T> _observer;
+
+        /// <summary>The predicate that determines whether to keep skipping values.</summary>
+        private readonly Func<T, bool> _predicate;
+
+        /// <summary>A value indicating whether the skipping phase is still active.</summary>
+        private bool _skipping = true;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SkipWhileObserver{T}"/> class.
+        /// </summary>
+        /// <param name="observer">The downstream observer.</param>
+        /// <param name="predicate">The predicate that determines whether to keep skipping values.</param>
+        internal SkipWhileObserver(IObserver<T> observer, Func<T, bool> predicate)
+        {
+            _observer = observer;
+            _predicate = predicate;
+        }
+
+        /// <inheritdoc/>
+        public override void OnNext(T value)
+        {
+            if (_skipping && _predicate(value))
+            {
+                return;
+            }
+
+            _skipping = false;
+            try
+            {
+                _observer.OnNext(value);
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
+        }
+
+        /// <inheritdoc/>
+        public override void OnError(Exception error)
+        {
+            try
+            {
+                _observer.OnError(error);
+            }
+            finally
+            {
+                Dispose();
+            }
+        }
+
+        /// <inheritdoc/>
+        public override void OnCompleted()
+        {
+            try
+            {
+                _observer.OnCompleted();
+            }
+            finally
+            {
+                Dispose();
+            }
+        }
     }
 }

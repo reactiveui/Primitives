@@ -2,15 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using System.Reactive;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Signals;
 using AsyncObs = ReactiveUI.Primitives.Async.SignalAsync;
 
@@ -63,7 +54,7 @@ public class ParityOperatorTests
             .WhereIsNotNull()
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(["alpha", "beta"]);
+        await Assert.That(result).IsCollectionEqualTo(["alpha", "beta"]);
     }
 
     /// <summary>
@@ -157,7 +148,7 @@ public class ParityOperatorTests
             .ScanWithInitial(Seed, static (acc, value) => acc + value)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([Seed, 1, SumAfterTwo, SumAfterThree]);
+        await Assert.That(result).IsCollectionEqualTo([Seed, 1, SumAfterTwo, SumAfterThree]);
     }
 
     /// <summary>
@@ -236,8 +227,8 @@ public class ParityOperatorTests
 
         await Task.WhenAll(trueTask, falseTask);
 
-        await Assert.That(trueTask.Result).IsEquivalentTo([Emit2, Emit4, Emit6]);
-        await Assert.That(falseTask.Result).IsEquivalentTo([1, Emit3, Emit5]);
+        await Assert.That(trueTask.Result).IsCollectionEqualTo([Emit2, Emit4, Emit6]);
+        await Assert.That(falseTask.Result).IsCollectionEqualTo([1, Emit3, Emit5]);
     }
 
     /// <summary>
@@ -357,7 +348,7 @@ public class ParityOperatorTests
             .CatchAndReturn(FallbackSentinel)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([FallbackSentinel]);
+        await Assert.That(result).IsCollectionEqualTo([FallbackSentinel]);
     }
 
     /// <summary>
@@ -371,7 +362,7 @@ public class ParityOperatorTests
             .CatchAndReturn<string, InvalidOperationException>(static ex => $"caught: {ex.Message}")
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo(["caught: boom"]);
+        await Assert.That(result).IsCollectionEqualTo(["caught: boom"]);
     }
 
     /// <summary>
@@ -496,7 +487,7 @@ public class ParityOperatorTests
             .DropIfBusy(static (_, _) => default)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, Second, Third]);
+        await Assert.That(result).IsCollectionEqualTo([1, Second, Third]);
     }
 
     /// <summary>
@@ -513,7 +504,7 @@ public class ParityOperatorTests
             .ToListAsync();
 
         // StartWith(0) prepends 0, then DistinctUntilChanged suppresses the duplicate 0 from source
-        await Assert.That(result).IsEquivalentTo([0, 1, Third]);
+        await Assert.That(result).IsCollectionEqualTo([0, 1, Third]);
     }
 
     /// <summary>
@@ -530,7 +521,7 @@ public class ParityOperatorTests
             .LatestOrDefault(0)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([0, First, Second]);
+        await Assert.That(result).IsCollectionEqualTo([0, First, Second]);
     }
 
     /// <summary>
@@ -575,7 +566,7 @@ public class ParityOperatorTests
 
         await completed.Task;
 
-        await Assert.That(items).IsEquivalentTo([1, SecondValue]);
+        await Assert.That(items).IsCollectionEqualTo([1, SecondValue]);
         await Assert.That(logged).Count().IsEqualTo(1);
         await Assert.That(logged[0].Message).IsEqualTo("logged error");
     }
@@ -593,7 +584,7 @@ public class ParityOperatorTests
             .WaitUntil(static v => v > 3)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([FirstMatch]);
+        await Assert.That(result).IsCollectionEqualTo([FirstMatch]);
     }
 
     /// <summary>
@@ -790,7 +781,7 @@ public class ParityOperatorTests
                 static (acc, value, _) => new(acc + value))
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([Seed, 1, SumAfterTwo, SumAfterThree]);
+        await Assert.That(result).IsCollectionEqualTo([Seed, 1, SumAfterTwo, SumAfterThree]);
     }
 
     /// <summary>
@@ -950,7 +941,7 @@ public class ParityOperatorTests
             .ForEach()
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, Second, Third, Fourth]);
+        await Assert.That(result).IsCollectionEqualTo([1, Second, Third, Fourth]);
     }
 
     /// <summary>
@@ -965,7 +956,7 @@ public class ParityOperatorTests
             .Not()
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([false, true, false]);
+        await Assert.That(result).IsCollectionEqualTo([false, true, false]);
     }
 
     /// <summary>
@@ -983,7 +974,7 @@ public class ParityOperatorTests
             .ToListAsync();
 
         // SkipWhile skips while null, so once a non-null appears, all subsequent values pass through
-        await Assert.That(result).IsEquivalentTo(["first", null!, "second"]);
+        await Assert.That(result).IsCollectionEqualTo(["first", null!, "second"]);
     }
 
     /// <summary>
@@ -1052,7 +1043,7 @@ public class ParityOperatorTests
             .WhereFalse()
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([false, false, false]);
+        await Assert.That(result).IsCollectionEqualTo([false, false, false]);
     }
 
     /// <summary>
@@ -1067,7 +1058,7 @@ public class ParityOperatorTests
             .WhereTrue()
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([true, true, true]);
+        await Assert.That(result).IsCollectionEqualTo([true, true, true]);
     }
 
     /// <summary>
@@ -1120,7 +1111,7 @@ public class ParityOperatorTests
             .CatchAndReturn(FallbackSentinel)
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, Second, Third]);
+        await Assert.That(result).IsCollectionEqualTo([1, Second, Third]);
     }
 
     /// <summary>
@@ -1137,7 +1128,7 @@ public class ParityOperatorTests
             .CatchIgnore()
             .ToListAsync();
 
-        await Assert.That(result).IsEquivalentTo([1, Second, Third]);
+        await Assert.That(result).IsCollectionEqualTo([1, Second, Third]);
     }
 
     /// <summary>

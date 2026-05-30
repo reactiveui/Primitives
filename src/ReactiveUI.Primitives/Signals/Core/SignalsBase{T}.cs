@@ -46,7 +46,7 @@ internal abstract class SignalsBase<T> : IRequireCurrentThread<T>
 
         var subscription = new SingleDisposable();
 
-        if (IsCurrentThreadSubscriptionRequired && Sequencer.CurrentThread.IsScheduleRequired)
+        if (IsCurrentThreadSubscriptionRequired && CurrentThreadSequencer.IsScheduleRequired)
         {
             Sequencer.CurrentThread.Schedule(() => subscription.Create(SubscribeCore(observer, subscription)));
         }

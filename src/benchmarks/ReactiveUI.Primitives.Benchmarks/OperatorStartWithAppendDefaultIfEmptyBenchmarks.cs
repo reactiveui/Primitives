@@ -2,12 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System;
-using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Signals;
 using System.Reactive.Linq;
-
+using BenchmarkDotNet.Attributes;
+using ReactiveUI.Primitives.Signals;
 using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;

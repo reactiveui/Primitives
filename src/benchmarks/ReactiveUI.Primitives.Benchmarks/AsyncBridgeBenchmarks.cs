@@ -3,10 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
-using System.Reactive.Linq;
-
 using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -17,7 +14,14 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class AsyncBridgeBenchmarks
 {
+    /// <summary>
+    /// The value produced by the pre-completed task used as the bridge source.
+    /// </summary>
     private const int CompletedTaskValue = 42;
+
+    /// <summary>
+    /// A pre-completed task that yields <see cref="CompletedTaskValue"/>.
+    /// </summary>
     private static readonly Task<int> CompletedTask = Task.FromResult(CompletedTaskValue);
 
     /// <summary>
