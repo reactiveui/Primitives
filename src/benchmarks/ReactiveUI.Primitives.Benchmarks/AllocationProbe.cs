@@ -57,6 +57,8 @@ internal static class AllocationProbe
         Row("Map+Keep", () => Signal.Sequence(0, Count).Map(static x => x + 1).Keep(static x => (x & 1) == 0).Subscribe(observer).Dispose());
         Row("Zip", () => Signal.Pair(Signal.Sequence(0, Count), Signal.Sequence(0, Count), static (l, r) => l + r).Subscribe(observer).Dispose());
         Row("WithLatest (Latch)", () => Signal.Sequence(1, Count).Latch(Signal.Sequence(10, Count), static (l, r) => l + r).Subscribe(observer).Dispose());
+        Row("CombineLatest (SyncLatest)", () => Signal.Sequence(0, Count).SyncLatest(Signal.Sequence(10, Count), static (l, r) => l + r).Subscribe(observer).Dispose());
+        Row("ForkJoin", () => Signal.Sequence(0, Count).ForkJoin(Signal.Sequence(10, Count), static (l, r) => l + r).Subscribe(observer).Dispose());
         Row("FlatMap", () => Signal.Sequence(1, 8).FlatMap(static x => Signal.Sequence(x * 10, 2)).Subscribe(observer).Dispose());
 
         Section("Subjects (construct + subscribe + one emit)");

@@ -61,6 +61,128 @@ public static partial class LinqMixins
         }
     }
 
+    /// <summary>Dedicated signal for <c>Race</c>; runs the coordinator without a Create closure.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class RaceSignal<T> : IObservable<T>
+    {
+        /// <summary>The candidate sources.</summary>
+        private readonly IObservable<IObservable<T>> _sources;
+
+        /// <summary>Initializes a new instance of the <see cref="RaceSignal{T}"/> class.</summary>
+        /// <param name="sources">The candidate sources.</param>
+        internal RaceSignal(IObservable<IObservable<T>> sources) => _sources = sources;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            return new RaceCoordinator<T>(observer).Run(_sources);
+        }
+    }
+
+    /// <summary>Dedicated signal for <c>SwitchTo</c>; runs the coordinator without a Create closure.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class SwitchSignal<T> : IObservable<T>
+    {
+        /// <summary>The outer sequence of inner sources.</summary>
+        private readonly IObservable<IObservable<T>> _sources;
+
+        /// <summary>Initializes a new instance of the <see cref="SwitchSignal{T}"/> class.</summary>
+        /// <param name="sources">The outer sequence of inner sources.</param>
+        internal SwitchSignal(IObservable<IObservable<T>> sources) => _sources = sources;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            return new SwitchCoordinator<T>(observer).Run(_sources);
+        }
+    }
+
+    /// <summary>Dedicated signal for <c>Zip</c>; runs the coordinator without a Create closure.</summary>
+    /// <typeparam name="TLeft">The left value type.</typeparam>
+    /// <typeparam name="TRight">The right value type.</typeparam>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    private sealed class ZipSignal<TLeft, TRight, TResult> : IObservable<TResult>
+    {
+        /// <summary>The left source.</summary>
+        private readonly IObservable<TLeft> _left;
+
+        /// <summary>The right source.</summary>
+        private readonly IObservable<TRight> _right;
+
+        /// <summary>The projection function.</summary>
+        private readonly Func<TLeft, TRight, TResult> _selector;
+
+        /// <summary>Initializes a new instance of the <see cref="ZipSignal{TLeft, TRight, TResult}"/> class.</summary>
+        /// <param name="left">The left source.</param>
+        /// <param name="right">The right source.</param>
+        /// <param name="selector">The projection function.</param>
+        internal ZipSignal(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
+        {
+            _left = left;
+            _right = right;
+            _selector = selector;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<TResult> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            return new ZipCoordinator<TLeft, TRight, TResult>(observer, _selector).Run(_left, _right);
+        }
+    }
+
+    /// <summary>Dedicated signal for <c>CombineLatest</c>; runs the coordinator without a Create closure.</summary>
+    /// <typeparam name="TLeft">The left value type.</typeparam>
+    /// <typeparam name="TRight">The right value type.</typeparam>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    private sealed class CombineLatestSignal<TLeft, TRight, TResult> : IObservable<TResult>
+    {
+        /// <summary>The left source.</summary>
+        private readonly IObservable<TLeft> _left;
+
+        /// <summary>The right source.</summary>
+        private readonly IObservable<TRight> _right;
+
+        /// <summary>The projection function.</summary>
+        private readonly Func<TLeft, TRight, TResult> _selector;
+
+        /// <summary>Initializes a new instance of the <see cref="CombineLatestSignal{TLeft, TRight, TResult}"/> class.</summary>
+        /// <param name="left">The left source.</param>
+        /// <param name="right">The right source.</param>
+        /// <param name="selector">The projection function.</param>
+        internal CombineLatestSignal(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
+        {
+            _left = left;
+            _right = right;
+            _selector = selector;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<TResult> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            return new CombineLatestCoordinator<TLeft, TRight, TResult>(observer, _selector).Run(_left, _right);
+        }
+    }
+
     /// <summary>
     /// Timeout signal with a direct subscription path.
     /// </summary>

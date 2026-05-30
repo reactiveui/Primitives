@@ -979,17 +979,10 @@ public static partial class LinqMixins
 
         if (typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange && right is RangeSignal rightRange)
         {
-            return Signal.CreateSafe<TResult>(observer =>
-            {
-                observer.OnNext(((Func<int, int, TResult>)(object)selector)(
-                    leftRange.Start + leftRange.Count - 1,
-                    rightRange.Start + rightRange.Count - 1));
-                observer.OnCompleted();
-                return Disposable.Empty;
-            });
+            return new RangeForkJoinSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
         }
 
-        return Signal.CreateSafe<TResult>(observer => new ForkJoinCoordinator<TLeft, TRight, TResult>(observer, selector).Run(left, right));
+        return new ForkJoinSignal<TLeft, TRight, TResult>(left, right, selector);
     }
 
     /// <summary>

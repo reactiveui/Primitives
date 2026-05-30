@@ -650,7 +650,7 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(sources));
         }
 
-        return Signal.Create<T>(observer => new RaceCoordinator<T>(observer).Run(sources));
+        return new RaceSignal<T>(sources);
     }
 
     /// <summary>
@@ -686,7 +686,7 @@ public static partial class LinqMixins
             return new RangeZipSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
         }
 
-        return Signal.CreateSafe<TResult>(observer => new ZipCoordinator<TLeft, TRight, TResult>(observer, selector).Run(left, right));
+        return new ZipSignal<TLeft, TRight, TResult>(left, right, selector);
     }
 
     /// <summary>
@@ -722,7 +722,7 @@ public static partial class LinqMixins
             return CreateRangeCombineLatestSignal(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
         }
 
-        return Signal.CreateSafe<TResult>(observer => new CombineLatestCoordinator<TLeft, TRight, TResult>(observer, selector).Run(left, right));
+        return new CombineLatestSignal<TLeft, TRight, TResult>(left, right, selector);
     }
 
     /// <summary>
@@ -816,7 +816,7 @@ public static partial class LinqMixins
             return rangeSignal;
         }
 
-        return Signal.Create<T>(observer => new SwitchCoordinator<T>(observer).Run(sources));
+        return new SwitchSignal<T>(sources);
     }
 
     /// <summary>

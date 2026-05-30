@@ -1379,6 +1379,82 @@ public static partial class LinqMixins
         }
     }
 
+    /// <summary>Dedicated signal for <c>ForkJoin</c>; runs the coordinator without a Create closure.</summary>
+    /// <typeparam name="TLeft">The left value type.</typeparam>
+    /// <typeparam name="TRight">The right value type.</typeparam>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    private sealed class ForkJoinSignal<TLeft, TRight, TResult> : IObservable<TResult>
+    {
+        /// <summary>The left source.</summary>
+        private readonly IObservable<TLeft> _left;
+
+        /// <summary>The right source.</summary>
+        private readonly IObservable<TRight> _right;
+
+        /// <summary>The projection of the two final values.</summary>
+        private readonly Func<TLeft, TRight, TResult> _selector;
+
+        /// <summary>Initializes a new instance of the <see cref="ForkJoinSignal{TLeft, TRight, TResult}"/> class.</summary>
+        /// <param name="left">The left source.</param>
+        /// <param name="right">The right source.</param>
+        /// <param name="selector">The projection of the two final values.</param>
+        internal ForkJoinSignal(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
+        {
+            _left = left;
+            _right = right;
+            _selector = selector;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<TResult> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            return new ForkJoinCoordinator<TLeft, TRight, TResult>(observer, _selector).Run(_left, _right);
+        }
+    }
+
+    /// <summary>Range-specialized <c>ForkJoin</c>: emits the projection of each range's final value.</summary>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    private sealed class RangeForkJoinSignal<TResult> : IObservable<TResult>
+    {
+        /// <summary>The left source range.</summary>
+        private readonly RangeSignal _left;
+
+        /// <summary>The right source range.</summary>
+        private readonly RangeSignal _right;
+
+        /// <summary>The projection of the two final values.</summary>
+        private readonly Func<int, int, TResult> _selector;
+
+        /// <summary>Initializes a new instance of the <see cref="RangeForkJoinSignal{TResult}"/> class.</summary>
+        /// <param name="left">The left source range.</param>
+        /// <param name="right">The right source range.</param>
+        /// <param name="selector">The projection of the two final values.</param>
+        internal RangeForkJoinSignal(RangeSignal left, RangeSignal right, Func<int, int, TResult> selector)
+        {
+            _left = left;
+            _right = right;
+            _selector = selector;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<TResult> observer)
+        {
+            if (observer == null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            observer.OnNext(_selector(_left.Start + _left.Count - 1, _right.Start + _right.Count - 1));
+            observer.OnCompleted();
+            return Disposable.Empty;
+        }
+    }
+
     /// <summary>
     /// Coordinates a two-source fork-join operation.
     /// </summary>
