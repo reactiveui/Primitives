@@ -128,12 +128,18 @@ public class ContinuationTests
     public async Task WhenDisposeTwice_ThenSecondDisposeIsNoOp()
     {
         var continuation = new Continuation();
-        var disposedTwice = false;
+        Exception? caught = null;
 
-        continuation.Dispose();
-        continuation.Dispose();
-        disposedTwice = true;
+        try
+        {
+            continuation.Dispose();
+            continuation.Dispose();
+        }
+        catch (Exception ex)
+        {
+            caught = ex;
+        }
 
-        await Assert.That(disposedTwice).IsTrue();
+        await Assert.That(caught).IsNull();
     }
 }
