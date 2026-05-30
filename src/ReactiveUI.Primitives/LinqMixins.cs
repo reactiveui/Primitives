@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using ReactiveUI.Primitives.Disposables;
-using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives;
 
@@ -33,7 +32,7 @@ public static partial class LinqMixins
             throw new ArgumentOutOfRangeException(nameof(count));
         }
 
-        return new BufferSignal<TSource, IList<TSource>>(source, count, 0);
+        return new BufferCountSignal<TSource>(source, count, 0);
     }
 
     /// <summary>
@@ -67,7 +66,7 @@ public static partial class LinqMixins
             throw new ArgumentOutOfRangeException(nameof(skip));
         }
 
-        return new BufferSignal<TSource, IList<TSource>>(source, count, skip);
+        return new BufferCountSignal<TSource>(source, count, skip);
     }
 
     /// <summary>

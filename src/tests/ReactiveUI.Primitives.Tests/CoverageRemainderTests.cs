@@ -514,18 +514,27 @@ public class CoverageRemainderTests
         Assert.Throws<InvalidOperationException>(() => failedSignal.Subscribe(_ => { }).Dispose());
 
         var source = new Signal<int>();
-        var buffer = new BufferSignal<int, IList<int>>(source, Three, Two);
         var buffers = new List<IList<int>>();
-        buffer.Subscribe(buffers.Add);
-        source.OnNext(One);
-        source.OnNext(Two);
-        buffer.Dispose();
-        buffer.Dispose();
+        using (source.Buffer(Three, Two).Subscribe(buffers.Add))
+        {
+            source.OnNext(One);
+            source.OnNext(Two);
+
+            // The window (size 3) is incomplete; completion flushes the partial trailing window.
+            source.OnCompleted();
+        }
+
         Assert.Equal(1, buffers.Count);
         Assert.Equal<int>(new[] { One, Two }, buffers[0]);
 
-        var errorBuffer = new BufferSignal<int, IList<int>>(Signal.Fail<int>(new InvalidOperationException("buffer-error")), Two, One);
-        Assert.True(errorBuffer.IsDisposed || !errorBuffer.HasObservers);
+        var errorSource = new Signal<int>();
+        var bufferError = false;
+        using (errorSource.Buffer(Two, One).Subscribe(_ => { }, _ => bufferError = true, () => { }))
+        {
+            errorSource.OnError(new InvalidOperationException("buffer-error"));
+        }
+
+        Assert.True(bufferError);
     }
 
     /// <summary>
