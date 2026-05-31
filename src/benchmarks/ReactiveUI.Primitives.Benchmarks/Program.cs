@@ -106,7 +106,34 @@ internal static class Program
             return;
         }
 
+        if (args.Contains("--extensions-smoke", StringComparer.OrdinalIgnoreCase))
+        {
+            RunExtensionComparisonSmoke();
+            return;
+        }
+
         BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
+    }
+
+    private static void RunExtensionComparisonSmoke()
+    {
+        var benchmarks = new ReactiveExtensionsComparisonBenchmarks();
+        RunExtensionScenarioSet(nameof(benchmarks.PrimitivesScenarios), benchmarks.PrimitivesScenarios);
+        RunExtensionScenarioSet(nameof(benchmarks.ReactiveUIExtensionsScenarios), benchmarks.ReactiveUIExtensionsScenarios);
+        RunExtensionScenarioSet(nameof(benchmarks.SystemReactiveScenarios), benchmarks.SystemReactiveScenarios);
+        RunExtensionScenarioSet(nameof(benchmarks.R3Scenarios), benchmarks.R3Scenarios);
+        Console.WriteLine("Extensions scenario smoke validation passed.");
+    }
+
+    private static void RunExtensionScenarioSet(
+        string name,
+        IEnumerable<ReactiveExtensionsComparisonBenchmarks.ExtensionScenario> scenarios)
+    {
+        foreach (var scenario in scenarios)
+        {
+            Console.WriteLine($"{name}:{scenario}");
+            _ = scenario.Run();
+        }
     }
 
     /// <summary>
