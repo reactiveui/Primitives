@@ -43,13 +43,8 @@ internal sealed class SelectAsyncConcurrentObservable<TSource, TResult>(
         Func<TSource, Task<TResult>> selector,
         int maxConcurrency) : IObserver<TSource>, IDisposable
     {
-#if NET9_0_OR_GREATER
         /// <summary>The gate for state access.</summary>
         private readonly Lock _gate = new();
-#else
-        /// <summary>The gate for state access.</summary>
-        private readonly object _gate = new();
-#endif
 
         /// <summary>Queue of values to process.</summary>
         private readonly Queue<TSource> _queue = new();

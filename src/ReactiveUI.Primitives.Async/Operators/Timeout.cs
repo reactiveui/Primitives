@@ -141,11 +141,7 @@ public static partial class SignalAsync
             /// <summary>
             /// Synchronization gate protecting timer state.
             /// </summary>
-#if NET9_0_OR_GREATER
             private readonly Lock _gate = new();
-#else
-            private readonly object _gate = new();
-#endif
 
             /// <summary>
             /// Single pre-allocated timer rearmed via <see cref="ITimer.Change(TimeSpan, TimeSpan)"/>

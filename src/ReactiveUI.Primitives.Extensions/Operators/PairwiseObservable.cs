@@ -28,17 +28,10 @@ internal sealed class PairwiseObservable<T>(IObservable<T> source) : IObservable
     /// <param name="downstream">The downstream observer.</param>
     private sealed class PairwiseObserver(IObserver<(T Previous, T Current)> downstream) : IObserver<T>
     {
-#if NET9_0_OR_GREATER
         /// <summary>
         /// The gate for state access.
         /// </summary>
         private readonly Lock _gate = new();
-#else
-        /// <summary>
-        /// The gate for state access.
-        /// </summary>
-        private readonly object _gate = new();
-#endif
 
         /// <summary>
         /// The previous value.

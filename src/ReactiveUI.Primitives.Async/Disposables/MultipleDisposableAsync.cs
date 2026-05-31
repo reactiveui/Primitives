@@ -29,11 +29,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     /// <summary>
     /// The synchronization gate protecting all mutable state in this collection.
     /// </summary>
-#if NET9_0_OR_GREATER
     private readonly Lock _gate = new();
-#else
-    private readonly object _gate = new();
-#endif
 
     /// <summary>
     /// Backing array of disposables. Slots may be <see langword="null"/> after removal to avoid shifting elements;

@@ -17,11 +17,7 @@ namespace ReactiveUI.Primitives.Extensions.Internal;
 internal sealed class ConcurrencyLimiter<T> : IObservable<T>
 {
     /// <summary>The synchronization gate protecting task scheduling and completion state.</summary>
-#if NET9_0_OR_GREATER
     private readonly Lock _gate = new();
-#else
-    private readonly object _gate = new();
-#endif
 
     /// <summary>Source enumerable; the enumerator is pulled lazily on first <see cref="Subscribe"/>.</summary>
     private readonly IEnumerable<Task<T>> _taskFunctions;

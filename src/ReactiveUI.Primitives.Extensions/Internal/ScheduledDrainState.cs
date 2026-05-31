@@ -36,11 +36,7 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
 
     /// <summary>Gets the gate protecting the queue, drain flag, done flag, and the composing sink's own
     /// operator-specific state. Sinks lock this directly when guarding their extra fields.</summary>
-#if NET9_0_OR_GREATER
     public Lock Gate { get; } = new();
-#else
-    public object Gate { get; } = new();
-#endif
 
     /// <summary>Gets a value indicating whether the sink has reached a terminal state. Read inside
     /// <see cref="Gate"/> by callers that need to short-circuit once terminated.</summary>

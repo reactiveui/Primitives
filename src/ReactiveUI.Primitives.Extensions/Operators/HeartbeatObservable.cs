@@ -44,17 +44,10 @@ internal sealed class HeartbeatObservable<T>(
         TimeSpan heartbeatPeriod,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-#if NET9_0_OR_GREATER
         /// <summary>
         /// The gate to synchronize access to the sink's state.
         /// </summary>
         private readonly Lock _gate = new();
-#else
-        /// <summary>
-        /// The gate to synchronize access to the sink's state.
-        /// </summary>
-        private readonly object _gate = new();
-#endif
 
         /// <summary>
         /// The subscription to the periodic heartbeat timer.

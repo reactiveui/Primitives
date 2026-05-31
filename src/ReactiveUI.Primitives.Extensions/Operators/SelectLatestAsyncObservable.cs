@@ -39,13 +39,8 @@ internal sealed class SelectLatestAsyncObservable<TSource, TResult>(
         IObserver<TResult> downstream,
         Func<TSource, Task<TResult>> selector) : IObserver<TSource>, IDisposable
     {
-#if NET9_0_OR_GREATER
         /// <summary>The gate for state access.</summary>
         private readonly Lock _gate = new();
-#else
-        /// <summary>The gate for state access.</summary>
-        private readonly object _gate = new();
-#endif
 
         /// <summary>The current operation ID to track latest.</summary>
         private long _currentId;

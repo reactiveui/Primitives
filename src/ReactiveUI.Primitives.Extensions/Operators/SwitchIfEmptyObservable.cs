@@ -39,13 +39,8 @@ internal sealed class SwitchIfEmptyObservable<T>(
         IObserver<T> downstream,
         IObservable<T> fallback) : IObserver<T>, IDisposable
     {
-#if NET9_0_OR_GREATER
         /// <summary>The gate for state access.</summary>
         private readonly Lock _gate = new();
-#else
-        /// <summary>The gate for state access.</summary>
-        private readonly object _gate = new();
-#endif
 
         /// <summary>The current subscription.</summary>
         private readonly MutableDisposable _subscription = new();

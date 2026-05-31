@@ -138,13 +138,8 @@ public static partial class SignalAsync
             /// <summary>Cancellation source for disposal.</summary>
             private readonly CancellationTokenSource _disposeCts = new();
 
-#if NET9_0_OR_GREATER
             /// <summary>The completion lock.</summary>
             private readonly Lock _completionLock = new();
-#else
-            /// <summary>The completion lock.</summary>
-            private readonly object _completionLock = new();
-#endif
 
             /// <summary>Downstream observer.</summary>
             [SuppressMessage(

@@ -32,13 +32,8 @@ internal sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IOb
     private sealed class SynchronizeAsyncSink(IObserver<(T Value, IDisposable Sync)> downstream)
         : IObserver<T>, IDisposable
     {
-#if NET9_0_OR_GREATER
         /// <summary>The gate for state access.</summary>
         private readonly Lock _gate = new();
-#else
-        /// <summary>The gate for state access.</summary>
-        private readonly object _gate = new();
-#endif
 
         /// <summary>Whether the sink has completed.</summary>
         private bool _done;

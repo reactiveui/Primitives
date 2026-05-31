@@ -12,13 +12,8 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 internal sealed class SubscribeAsyncObservable<T> : IDisposable
 {
-#if NET9_0_OR_GREATER
     /// <summary>The gate for state access.</summary>
     private readonly Lock _gate = new();
-#else
-    /// <summary>The gate for state access.</summary>
-    private readonly object _gate = new();
-#endif
 
     /// <summary>Queue of values to process.</summary>
     private readonly Queue<T> _queue = new();

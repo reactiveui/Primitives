@@ -40,17 +40,10 @@ internal sealed class ThrottleFirstObservable<T>(
         TimeSpan window,
         ISequencer scheduler) : IObserver<T>
     {
-#if NET9_0_OR_GREATER
         /// <summary>
         /// The gate to synchronize access to the observer state.
         /// </summary>
         private readonly Lock _gate = new();
-#else
-        /// <summary>
-        /// The gate to synchronize access to the observer state.
-        /// </summary>
-        private readonly object _gate = new();
-#endif
 
         /// <summary>
         /// The last time an element was emitted.

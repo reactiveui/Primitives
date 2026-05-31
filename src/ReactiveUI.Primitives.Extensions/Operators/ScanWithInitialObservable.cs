@@ -42,17 +42,10 @@ internal sealed class ScanWithInitialObservable<TSource, TAccumulate>(
         TAccumulate initial,
         Func<TAccumulate, TSource, TAccumulate> accumulator) : IObserver<TSource>
     {
-#if NET9_0_OR_GREATER
         /// <summary>
         /// The gate to synchronize access to the sink state.
         /// </summary>
         private readonly Lock _gate = new();
-#else
-        /// <summary>
-        /// The gate to synchronize access to the sink state.
-        /// </summary>
-        private readonly object _gate = new();
-#endif
 
         /// <summary>
         /// The current accumulated value.

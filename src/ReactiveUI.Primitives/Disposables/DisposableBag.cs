@@ -24,17 +24,10 @@ public sealed class DisposableBag : IsDisposed
     /// <summary>Growth factor for the overflow array.</summary>
     private const int OverflowGrowthFactor = 2;
 
-#if NET9_0_OR_GREATER
     /// <summary>
     /// The synchronization object.
     /// </summary>
     private readonly Lock _gate = new();
-#else
-    /// <summary>
-    /// The synchronization object.
-    /// </summary>
-    private readonly object _gate = new();
-#endif
 
     /// <summary>
     /// The first disposable slot.

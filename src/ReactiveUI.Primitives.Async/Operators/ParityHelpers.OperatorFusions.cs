@@ -208,11 +208,7 @@ public static partial class SignalAsync
             private static readonly EqualityComparer<T> Comparer = EqualityComparer<T>.Default;
 
             /// <summary>Synchronization gate protecting throttle/distinct state.</summary>
-#if NET9_0_OR_GREATER
             private readonly Lock _gate = new();
-#else
-            private readonly object _gate = new();
-#endif
 
             /// <summary>Most-recent upstream value (for upstream DistinctUntilChanged).</summary>
             private T _lastUpstream = default!;
@@ -488,11 +484,7 @@ public static partial class SignalAsync
         }
 
         /// <summary>Synchronization gate protecting branch slots and the source-subscription lifecycle.</summary>
-#if NET9_0_OR_GREATER
         private readonly Lock _gate = new();
-#else
-        private readonly object _gate = new();
-#endif
 
         /// <summary>The active observer for the truthy branch, or <see langword="null"/> when nobody is subscribed.</summary>
         private IObserverAsync<T>? _trueObserver;
@@ -777,11 +769,7 @@ public static partial class SignalAsync
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
         {
             /// <summary>Synchronization gate protecting the id counter.</summary>
-#if NET9_0_OR_GREATER
             private readonly Lock _gate = new();
-#else
-            private readonly object _gate = new();
-#endif
 
             /// <summary>Monotonically increasing identifier used to detect supersession of pending delays.</summary>
             private long _id;

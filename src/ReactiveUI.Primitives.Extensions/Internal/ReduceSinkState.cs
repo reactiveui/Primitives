@@ -27,11 +27,7 @@ internal sealed class ReduceSinkState<TIn, TOut>
     }
 
     /// <summary>Gets the synchronization gate held across every state read/write and every downstream notification.</summary>
-#if NET9_0_OR_GREATER
     public Lock Gate { get; } = new();
-#else
-    public object Gate { get; } = new();
-#endif
 
     /// <summary>Gets the downstream observer that receives reduced values, error, and completion.</summary>
     public IObserver<TOut> Downstream { get; }

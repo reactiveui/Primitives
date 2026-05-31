@@ -47,13 +47,8 @@ internal sealed class RetryWithDelayObservable<T>(
         Func<int, TimeSpan> delaySelector,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-#if NET9_0_OR_GREATER
         /// <summary>The gate for state access.</summary>
         private readonly Lock _gate = new();
-#else
-        /// <summary>The gate for state access.</summary>
-        private readonly object _gate = new();
-#endif
 
         /// <summary>The subscription to the source sequence.</summary>
         private readonly MutableDisposable _subscription = new();

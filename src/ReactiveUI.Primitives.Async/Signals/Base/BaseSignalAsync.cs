@@ -23,11 +23,7 @@ public abstract class BaseSignalAsync<T> : SignalAsync<T>, ISignalAsync<T>
     /// <summary>
     /// The lock object used to synchronize access to the Signal's mutable state.
     /// </summary>
-#if NET9_0_OR_GREATER
     private readonly Lock _gate = new();
-#else
-    private readonly object _gate = new();
-#endif
 
     /// <summary>
     /// The immutable list of currently subscribed observers.

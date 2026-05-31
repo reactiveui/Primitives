@@ -18,11 +18,7 @@ namespace ReactiveUI.Primitives.Extensions.Internal;
 internal sealed class TimerSinkState<T>(IObserver<T> downstream)
 {
     /// <summary>Gets the gate protecting state transitions and downstream notification.</summary>
-#if NET9_0_OR_GREATER
     public Lock Gate { get; } = new();
-#else
-    public object Gate { get; } = new();
-#endif
 
     /// <summary>Gets the timer slot used by the operator's OnNext logic to schedule deferred emissions.</summary>
     public SwapDisposable Timer { get; } = new();

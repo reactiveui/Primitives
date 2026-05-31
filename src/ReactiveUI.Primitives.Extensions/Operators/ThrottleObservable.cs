@@ -48,13 +48,8 @@ internal sealed class ThrottleObservable<T>(
         TimeSpan dueTime,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-#if NET9_0_OR_GREATER
         /// <summary>The synchronization gate.</summary>
         private readonly Lock _gate = new();
-#else
-        /// <summary>The synchronization gate.</summary>
-        private readonly object _gate = new();
-#endif
 
         /// <summary>The pending scheduled emission.</summary>
         private readonly SwapDisposable _pending = new();

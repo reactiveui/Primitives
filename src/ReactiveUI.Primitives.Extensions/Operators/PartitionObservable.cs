@@ -23,17 +23,10 @@ internal sealed class PartitionObservable<T>
     /// </summary>
     private readonly Func<T, bool> _predicate;
 
-#if NET9_0_OR_GREATER
     /// <summary>
     /// The gate for synchronization.
     /// </summary>
     private readonly Lock _gate = new();
-#else
-    /// <summary>
-    /// The gate for synchronization.
-    /// </summary>
-    private readonly object _gate = new();
-#endif
 
     /// <summary>
     /// The source subscription.

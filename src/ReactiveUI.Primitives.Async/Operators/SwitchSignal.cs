@@ -59,17 +59,10 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         /// </summary>
         private readonly CancellationToken _disposeCancellationToken;
 
-#if NET9_0_OR_GREATER
         /// <summary>
         /// Lock that protects mutable state from concurrent access.
         /// </summary>
         private readonly Lock _gate = new();
-#else
-        /// <summary>
-        /// Lock that protects mutable state from concurrent access.
-        /// </summary>
-        private readonly object _gate = new();
-#endif
 
         /// <summary>
         /// Async gate that serializes observer callbacks to ensure thread-safe emission.

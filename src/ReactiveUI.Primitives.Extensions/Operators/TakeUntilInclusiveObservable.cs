@@ -36,13 +36,8 @@ internal sealed class TakeUntilInclusiveObservable<T>(
         IObserver<T> downstream,
         Func<T, bool> predicate) : IObserver<T>
     {
-#if NET9_0_OR_GREATER
         /// <summary>The gate for state access.</summary>
         private readonly Lock _gate = new();
-#else
-        /// <summary>The gate for state access.</summary>
-        private readonly object _gate = new();
-#endif
 
         /// <summary>Whether the observer is done.</summary>
         private bool _done;

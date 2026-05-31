@@ -39,13 +39,8 @@ internal sealed class SelectAsyncSequentialObservable<TSource, TResult>(
         IObserver<TResult> downstream,
         Func<TSource, Task<TResult>> selector) : IObserver<TSource>, IDisposable
     {
-#if NET9_0_OR_GREATER
         /// <summary>The gate for state access.</summary>
         private readonly Lock _gate = new();
-#else
-        /// <summary>The gate for state access.</summary>
-        private readonly object _gate = new();
-#endif
 
         /// <summary>Queue of values to process.</summary>
         private readonly Queue<TSource> _queue = new();

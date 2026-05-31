@@ -53,11 +53,7 @@ internal static class SyncTimerObservable
         private static readonly IObserver<DateTime>[] _emptyObservers = [];
 
         /// <summary>The gate for subscribe/unsubscribe writes.</summary>
-#if NET9_0_OR_GREATER
         private readonly Lock _gate = new();
-#else
-        private readonly object _gate = new();
-#endif
 
         /// <summary>
         /// Snapshot of currently active observers. Replaced (not mutated) on subscribe / unsubscribe under

@@ -19,11 +19,7 @@ namespace ReactiveUI.Primitives.Extensions.Internal;
 internal sealed class CurrentValueSubject<T> : IObservable<T>, IObserver<T>, IDisposable
 {
     /// <summary>Lock guarding state mutations; held only across snapshot reads and field writes.</summary>
-#if NET9_0_OR_GREATER
     private readonly Lock _gate = new();
-#else
-    private readonly object _gate = new();
-#endif
 
     /// <summary>Single-observer fast path; non-null when exactly one observer is subscribed.</summary>
     private IObserver<T>? _observer;
