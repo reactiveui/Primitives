@@ -42,6 +42,28 @@ public class DisposableTests
     }
 
     /// <summary>
+    /// Verifies cancellation disposable state transitions with the default owned token source.
+    /// </summary>
+    [Test]
+    public void CancellationDisposableDefaultConstructorCancelsOwnedToken()
+    {
+        var disposable = new CancellationDisposable();
+
+        Assert.False(disposable.Token.IsCancellationRequested);
+        Assert.False(disposable.IsDisposed);
+
+        disposable.Dispose();
+
+        Assert.True(disposable.Token.IsCancellationRequested);
+        Assert.True(disposable.IsDisposed);
+
+        disposable.Dispose();
+
+        Assert.True(disposable.Token.IsCancellationRequested);
+        Assert.True(disposable.IsDisposed);
+    }
+
+    /// <summary>
     /// Singles the disposable dispose.
     /// </summary>
     [Test]

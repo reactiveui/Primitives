@@ -193,6 +193,30 @@ public class MinMaxObservableTests
         await Assert.That(results).IsEmpty();
     }
 
+    /// <summary>Verifies the general three-source path drops notifications after terminal state.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenManySourceMinMaxTerminates_ThenLateSignalsAreDropped()
+    {
+        var a = new SyncDirectSource<int>();
+        var b = new SyncDirectSource<int>();
+        var c = new SyncDirectSource<int>();
+        var results = new List<int>();
+        var completions = 0;
+        Exception? caught = null;
+        var expected = new InvalidOperationException(SourceErrorMessage);
+
+        using var sub = a.GetMax(b, c).Subscribe(results.Add, ex => caught = ex, () => completions++);
+
+        a.Observer.OnError(expected);
+        b.Observer.OnNext(HighValue);
+        c.Observer.OnCompleted();
+
+        await Assert.That(caught).IsSameReferenceAs(expected);
+        await Assert.That(results).IsEmpty();
+        await Assert.That(completions).IsEqualTo(0);
+    }
+
     /// <summary>Verifies that a second error after termination is ignored by the binary fast path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
