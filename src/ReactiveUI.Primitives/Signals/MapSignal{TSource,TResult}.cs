@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="TSource">The TSource type.</typeparam>
 /// <typeparam name="TResult">The TResult type.</typeparam>
-internal sealed class MapSignal<TSource, TResult> : IRequireCurrentThread<TResult>
+public sealed class MapSignal<TSource, TResult> : IRequireCurrentThread<TResult>
 {
     /// <summary>
     /// Stores state for the signal implementation.
