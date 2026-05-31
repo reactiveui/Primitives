@@ -901,101 +901,249 @@ Latest artifact paths:
 - `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-31-15-10-19-report.html`
 - `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-31-15-10-19-report.csv`
 
-The joined run includes the complete `ReactiveUI.Primitives.Extensions` synchronous helper surface. Reflection over the public extension API and the benchmark smoke path both report 87 method families, with no missing or extra benchmark scenarios. The extension comparison rows are 87 `ReactiveUI.Primitives.Extensions`, 87 `ReactiveUI.Extensions` 4.0.0, 26 System.Reactive alternatives, and 12 R3 alternatives. Where System.Reactive or R3 has no direct alternative, the table uses `NA`.
+The joined run exports 610 raw BenchmarkDotNet rows: 235 ReactiveUI.Primitives or ReactiveUI.Primitives.Async cases, 155 System.Reactive cases, 130 R3 cases, and 90 ReactiveUI.Extensions cases. The previous 87-row README table covered only the `ReactiveExtensionsComparisonBenchmarks` synchronous extension slice; the remaining raw rows were present in the joined CSV but were not surfaced in the README table.
 
-External-baseline posture from this run: `ReactiveUI.Primitives.Extensions` is faster than System.Reactive in 26/26 measured extension comparisons and faster than R3 in 12/12 measured extension comparisons. Against `ReactiveUI.Extensions` 4.0.0, the Primitives implementation is faster in 64/87 comparisons; the remaining rows are migration-baseline parity or trade-offs and are listed directly below.
+The table below groups `ReactiveUI.Primitives` and `ReactiveUI.Primitives.Async` into the `ReactiveUI.Primitives` column, aligns each primitive benchmark with any System.Reactive, R3, or ReactiveUI.Extensions alternative from the same benchmark scenario, and uses `NA` where no alternative exists. It contains 235 alphabetically ordered scenario rows. Cells use `Mean / Allocated`, and long `scenario` parameter values from BenchmarkDotNet are restored to their full names.
 
-The table below is generated from the joined BenchmarkDotNet CSV and uses `Mean / Allocated` for each cell. Function names are restored to their full values where BenchmarkDotNet abbreviated long `scenario` parameter values in the raw report.
+External-baseline posture from this run: `ReactiveUI.Primitives` is faster than System.Reactive in 150/155 measured comparisons, faster than R3 in 128/130 measured comparisons, and faster than `ReactiveUI.Extensions` 4.0.0 in 64/90 measured comparisons. Rows that are not faster remain listed for direct comparison.
 
-| Function | ReactiveUI.Primitives | ReactiveUI.Extensions | System.Reactive | R3 |
+| Scenario | ReactiveUI.Primitives | System.Reactive | R3 | ReactiveUI.Extensions |
 |---|---:|---:|---:|---:|
-| `AsSignal` | 39.1343 ns / 112 B | 2,425.8592 ns / 2488 B | 2,497.5107 ns / 2536 B | 190.0920 ns / 160 B |
-| `BufferUntil` | 43.7569 ns / 264 B | 43.1834 ns / 264 B | NA | NA |
-| `BufferUntilIdle` | 1,872.8774 ns / 6504 B | 25,722.3674 ns / 21207 B | NA | NA |
-| `BufferUntilInactive` | 1,922.3653 ns / 6504 B | 25,821.9421 ns / 21207 B | NA | NA |
-| `CatchAndReturn` | 19.9923 ns / 128 B | 59.8265 ns / 184 B | 173.5006 ns / 368 B | 116.0415 ns / 264 B |
-| `CatchIgnore` | 18.1860 ns / 128 B | 59.7477 ns / 184 B | 168.1961 ns / 344 B | 113.0904 ns / 240 B |
-| `CatchReturn` | 14.5591 ns / 128 B | 60.1389 ns / 184 B | 174.3701 ns / 368 B | 118.1259 ns / 264 B |
-| `CatchReturnUnit` | 10.3368 ns / 88 B | 56.2182 ns / 144 B | NA | NA |
-| `CombineLatestValuesAreAllFalse` | 186.1148 ns / 848 B | 218.2402 ns / 1176 B | 346.7049 ns / 648 B | NA |
-| `CombineLatestValuesAreAllTrue` | 188.9175 ns / 848 B | 212.3348 ns / 1176 B | 332.3094 ns / 648 B | NA |
-| `Conflate` | 3,988.0580 ns / 2304 B | 32,870.4854 ns / 16969 B | NA | NA |
-| `Continuation.Dispose` | 24.1712 ns / 192 B | 24.2349 ns / 192 B | NA | NA |
-| `Continuation.Lock` | 1,015.9123 ns / 464 B | 1,158.6503 ns / 464 B | NA | NA |
-| `Continuation.LockValueTask` | 1,160.4224 ns / 464 B | 1,155.7749 ns / 464 B | NA | NA |
-| `DebounceImmediate` | 1,622.7895 ns / 4064 B | 27,081.5247 ns / 18065 B | NA | NA |
-| `DebounceUntil` | 1,094.9352 ns / 776 B | 7,205.8484 ns / 6132 B | NA | NA |
-| `DetectStale` | 192.7663 ns / 600 B | 835.0784 ns / 25128 B | NA | NA |
-| `DoOnDispose` | 71.1486 ns / 232 B | 70.9375 ns / 232 B | NA | NA |
-| `DoOnSubscribe` | 70.2411 ns / 192 B | 69.6332 ns / 192 B | NA | NA |
-| `DropIfBusy` | 349.7954 ns / 240 B | 358.5479 ns / 240 B | NA | NA |
-| `FastForEach` | 48.9880 ns / 40 B | 48.4052 ns / 40 B | NA | NA |
-| `Filter` | 124.5601 ns / 120 B | 123.2022 ns / 120 B | 736.4327 ns / 984 B | NA |
-| `FirstMatchFromCandidates` | 42.6804 ns / 216 B | 44.7428 ns / 216 B | NA | NA |
-| `ForEach` | 73.3841 ns / 160 B | 75.0841 ns / 160 B | 150.0873 ns / 200 B | NA |
-| `FromArray` | 61.9788 ns / 72 B | 70.7992 ns / 72 B | 2,519.9627 ns / 2504 B | 85.4346 ns / 88 B |
-| `GetMax` | 108.9092 ns / 408 B | 227.3460 ns / 1152 B | 181.7760 ns / 328 B | NA |
-| `GetMin` | 115.1313 ns / 408 B | 226.6057 ns / 1152 B | 179.6450 ns / 328 B | NA |
-| `Heartbeat` | 299.3094 ns / 800 B | 2,377.8947 ns / 26096 B | NA | NA |
-| `LatestOrDefault` | 53.9602 ns / 136 B | 58.1188 ns / 136 B | NA | NA |
-| `LogErrors` | 68.0775 ns / 224 B | 72.0710 ns / 224 B | NA | NA |
-| `Not` | 27.8941 ns / 120 B | 28.4602 ns / 120 B | 834.5748 ns / 1040 B | 92.3225 ns / 152 B |
-| `ObserveOnIf` | 64.2175 ns / 104 B | 66.5979 ns / 104 B | NA | NA |
-| `ObserveOnSafe` | 65.7747 ns / 104 B | 67.1360 ns / 104 B | NA | NA |
-| `OnErrorRetry` | 133.5035 ns / 424 B | 134.3144 ns / 424 B | NA | NA |
-| `OnNext` | 50.6179 ns / 40 B | 51.3304 ns / 40 B | NA | NA |
-| `Pairwise` | 511.8533 ns / 160 B | 536.1441 ns / 160 B | 2,840.1602 ns / 3072 B | NA |
-| `Partition` | 277.7601 ns / 440 B | 265.2119 ns / 440 B | NA | NA |
-| `ReplayLastOnSubscribe` | 63.6625 ns / 104 B | 63.7188 ns / 104 B | NA | NA |
-| `RetryForeverWithDelay` | 131.7468 ns / 352 B | 126.2633 ns / 352 B | NA | NA |
-| `RetryWithBackoff` | 127.8894 ns / 336 B | 122.5359 ns / 336 B | NA | NA |
-| `RetryWithDelay` | 112.6661 ns / 264 B | 114.9763 ns / 264 B | NA | NA |
-| `RetryWithFixedDelay` | 132.6439 ns / 336 B | 124.9002 ns / 336 B | NA | NA |
-| `Return` | 6.7822 ns / 64 B | 6.9682 ns / 64 B | 54.6806 ns / 120 B | 31.3894 ns / 56 B |
-| `RunAll` | 26.0295 ns / 136 B | 24.2351 ns / 136 B | NA | NA |
-| `SampleLatest` | 1,048.3322 ns / 488 B | 1,135.7206 ns / 840 B | NA | NA |
-| `ScanWithInitial` | 591.7863 ns / 200 B | 547.3744 ns / 200 B | 2,672.0292 ns / 2560 B | NA |
-| `Schedule` | 38.7331 ns / 216 B | 863.5171 ns / 677 B | NA | NA |
-| `ScheduleSafe` | 32.2703 ns / 144 B | 943.9625 ns / 597 B | NA | NA |
-| `SelectAsync` | 1,252.7429 ns / 2104 B | 1,292.9070 ns / 2104 B | 32,738.8855 ns / 32276 B | NA |
-| `SelectAsyncConcurrent` | 1,168.3446 ns / 2120 B | 1,191.4728 ns / 2120 B | NA | NA |
-| `SelectAsyncSequential` | 1,339.6799 ns / 2104 B | 1,302.4360 ns / 2104 B | NA | NA |
-| `SelectConstant` | 59.5848 ns / 136 B | 58.8155 ns / 136 B | 2,715.4348 ns / 2544 B | 198.1385 ns / 160 B |
-| `SelectLatestAsync` | 1,719.1326 ns / 2032 B | 1,731.7319 ns / 2032 B | NA | NA |
-| `SelectManyThen` | 34.6976 ns / 224 B | 37.1627 ns / 224 B | 423.6935 ns / 752 B | NA |
-| `Shuffle` | 152.0990 ns / 96 B | 154.7871 ns / 96 B | NA | NA |
-| `SkipWhileNull` | 26.8510 ns / 112 B | 26.3809 ns / 112 B | 652.5813 ns / 944 B | NA |
-| `Start` | 25.1025 ns / 96 B | 1,011.5645 ns / 535 B | NA | NA |
-| `SubscribeAndComplete` | 0.5452 ns / 0 B | 0.2295 ns / 0 B | NA | NA |
-| `SubscribeAsync` | 1,020.8799 ns / 544 B | 1,086.0720 ns / 544 B | NA | NA |
-| `SubscribeGetError` | 6.9580 ns / 48 B | 53.4505 ns / 104 B | NA | NA |
-| `SubscribeGetValue` | 17.8834 ns / 56 B | 18.5553 ns / 56 B | NA | NA |
-| `SubscribeSynchronous` | 1,041.8758 ns / 544 B | 1,002.4885 ns / 544 B | NA | NA |
-| `SwitchIfEmpty` | 69.8495 ns / 224 B | 111.8583 ns / 280 B | NA | NA |
-| `SynchronizeAsync` | 819.5469 ns / 1280 B | 825.0399 ns / 1280 B | NA | NA |
-| `SynchronizeSynchronous` | 832.0162 ns / 1280 B | 817.5703 ns / 1280 B | NA | NA |
-| `SyncTimer` | 2,596.8934 ns / 1080 B | 15,106.0211 ns / 26240 B | NA | NA |
-| `TakeUntil` | 512.1911 ns / 192 B | 516.0572 ns / 192 B | 2,662.6592 ns / 2520 B | NA |
-| `ThrottleDistinct` | 1,849.1563 ns / 4232 B | 30,604.1331 ns / 18701 B | NA | NA |
-| `ThrottleFirst` | 1,161.0701 ns / 224 B | 1,163.6336 ns / 224 B | NA | NA |
-| `ThrottleOnScheduler` | 1,912.9753 ns / 2400 B | 34,581.3985 ns / 16354 B | NA | NA |
-| `ThrottleUntilTrue` | 5,027.6983 ns / 1633 B | 6,217.3368 ns / 1378 B | NA | NA |
-| `ToHotTask` | 36.3653 ns / 112 B | 35.7259 ns / 112 B | 101.5059 ns / 240 B | NA |
-| `ToHotValueTask` | 27.0451 ns / 72 B | 27.8467 ns / 72 B | NA | NA |
-| `ToPropertyObservable` | 27,071.4355 ns / 4941 B | 27,486.0006 ns / 4941 B | NA | NA |
-| `ToReadOnlyBehavior` | 66.0075 ns / 192 B | 67.9050 ns / 192 B | NA | NA |
-| `TrySelect` | 101.8332 ns / 120 B | 110.8990 ns / 120 B | NA | NA |
-| `Using` | 7.6564 ns / 56 B | 9.4516 ns / 56 B | NA | NA |
-| `WaitForCompletion` | 25.1638 ns / 96 B | 24.6338 ns / 96 B | NA | NA |
-| `WaitForError` | 26.0917 ns / 96 B | 73.9819 ns / 152 B | NA | NA |
-| `WaitForValue` | 32.1534 ns / 104 B | 34.4935 ns / 104 B | NA | NA |
-| `WaitUntil` | 534.5543 ns / 224 B | 540.1772 ns / 224 B | 891.0865 ns / 1080 B | NA |
-| `WhereFalse` | 23.6723 ns / 120 B | 24.8538 ns / 120 B | 806.3629 ns / 1040 B | 91.3808 ns / 184 B |
-| `WhereIsNotNull` | 23.7931 ns / 104 B | 23.3656 ns / 104 B | 622.7868 ns / 904 B | 92.9625 ns / 264 B |
-| `WhereSelect` | 80.4235 ns / 152 B | 77.0247 ns / 152 B | 2,638.5579 ns / 2616 B | 193.5426 ns / 240 B |
-| `WhereTrue` | 23.7493 ns / 120 B | 26.0367 ns / 120 B | 804.6906 ns / 1040 B | 86.8553 ns / 184 B |
-| `While` | 127.7396 ns / 280 B | 127.4206 ns / 280 B | NA | NA |
-| `WithLimitedConcurrency` | 2,489.2455 ns / 5448 B | 2,604.7204 ns / 5448 B | NA | NA |
+| `After` | 155.3662 ns / 584 B | 1,001.4142 ns / 25056 B | 276.8260 ns / 552 B | NA |
+| `AggregateAnyCount (Operator core GC profile)` | 201.0841 ns / 824 B | 6,602.1945 ns / 5856 B | 620.6079 ns / 1280 B | NA |
+| `AggregateAnyCount (Operator map keep)` | 200.1816 ns / 824 B | 5,776.6805 ns / 5856 B | 611.5725 ns / 1280 B | NA |
+| `All` | 19.4142 ns / 96 B | 2,639.9900 ns / 2520 B | 89.7295 ns / 192 B | NA |
+| `AllContains` | 30.5337 ns / 192 B | 5,147.5512 ns / 5048 B | 231.7154 ns / 392 B | NA |
+| `AllRange` | 18.5571 ns / 96 B | 2,554.2953 ns / 2520 B | 87.1035 ns / 192 B | NA |
+| `AsSignal` | 39.1343 ns / 112 B | 2,497.5107 ns / 2536 B | 190.0920 ns / 160 B | 2,425.8592 ns / 2488 B |
+| `AutoConnect` | 171.2824 ns / 400 B | 2,887.7501 ns / 2736 B | NA | NA |
+| `AutoConnectSubscribe` | 140.2909 ns / 400 B | 2,842.0521 ns / 2736 B | NA | NA |
+| `BehaviorEmit` | 15,767.1692 ns / 160 B | NA | NA | NA |
+| `BufferRange` | 70.8486 ns / 304 B | 1,447.8858 ns / 1656 B | 118.2146 ns / 360 B | NA |
+| `BufferUntil` | 43.7569 ns / 264 B | NA | NA | 43.1834 ns / 264 B |
+| `BufferUntilIdle` | 1,872.8774 ns / 6504 B | NA | NA | 25,722.3674 ns / 21207 B |
+| `BufferUntilInactive` | 1,922.3653 ns / 6504 B | NA | NA | 25,821.9421 ns / 21207 B |
+| `CastTo` | 99.0222 ns / 200 B | 1,532.6529 ns / 1568 B | 167.3711 ns / 216 B | NA |
+| `CatchAndReturn` | 19.9923 ns / 128 B | 173.5006 ns / 368 B | 116.0415 ns / 264 B | 59.8265 ns / 184 B |
+| `CatchIgnore` | 18.1860 ns / 128 B | 168.1961 ns / 344 B | 113.0904 ns / 240 B | 59.7477 ns / 184 B |
+| `CatchReturn` | 14.5591 ns / 128 B | 174.3701 ns / 368 B | 118.1259 ns / 264 B | 60.1389 ns / 184 B |
+| `CatchReturnUnit` | 10.3368 ns / 88 B | NA | NA | 56.2182 ns / 144 B |
+| `CollectArray (Terminal collection GC profile)` | 39.7344 ns / 360 B | 2,807.2484 ns / 3144 B | 181.5774 ns / 784 B | NA |
+| `CollectArray (Terminal collection)` | 39.2840 ns / 360 B | 2,649.8519 ns / 3144 B | 196.2510 ns / 784 B | NA |
+| `CollectArrayAsync` | 44.1010 ns / 384 B | 2,741.1916 ns / 3384 B | 193.5212 ns / 784 B | NA |
+| `CollectList (Terminal collection GC profile)` | 77.6725 ns / 392 B | 2,731.9333 ns / 2992 B | 171.8614 ns / 632 B | NA |
+| `CollectList (Terminal collection)` | 77.1326 ns / 392 B | 2,661.1326 ns / 2992 B | 180.3147 ns / 632 B | NA |
+| `CollectListAsync` | 47.5884 ns / 352 B | 1,525.7612 ns / 2056 B | 125.6062 ns / 480 B | NA |
+| `CombineLatest` | 46.0690 ns / 192 B | 3,279.3736 ns / 2824 B | 678.1482 ns / 344 B | NA |
+| `CombineLatestRanges` | 39.7819 ns / 192 B | 3,319.2938 ns / 2824 B | 688.9252 ns / 344 B | NA |
+| `CombineLatestValuesAreAllFalse` | 186.1148 ns / 848 B | 346.7049 ns / 648 B | NA | 218.2402 ns / 1176 B |
+| `CombineLatestValuesAreAllTrue` | 188.9175 ns / 848 B | 332.3094 ns / 648 B | NA | 212.3348 ns / 1176 B |
+| `CommandExecuteAsync` | 35.1944 ns / 152 B | 740.3134 ns / 1089 B | 106.6560 ns / 296 B | NA |
+| `CommandResultSubscribeAsync` | 63.0803 ns / 224 B | 40.1994 ns / 136 B | 68.4171 ns / 160 B | NA |
+| `CompletedSpark` | 0.0292 ns / 0 B | 0.0065 ns / 0 B | 0.0000 ns / 0 B | NA |
+| `CompletedTaskBridge` | 12.1256 ns / 88 B | 882.4698 ns / 793 B | 43.4786 ns / 88 B | NA |
+| `Concat` | 77.7316 ns / 256 B | 3,073.5477 ns / 2856 B | 266.3856 ns / 360 B | NA |
+| `ConcatRanges` | 80.0323 ns / 256 B | 2,836.8918 ns / 2856 B | 264.9149 ns / 360 B | NA |
+| `Conflate` | 3,988.0580 ns / 2304 B | NA | NA | 32,870.4854 ns / 16969 B |
+| `Contains` | 12.8455 ns / 96 B | 2,785.3176 ns / 2528 B | 91.1712 ns / 200 B | NA |
+| `ContainsRange` | 11.2374 ns / 96 B | 2,552.2694 ns / 2528 B | 92.9637 ns / 200 B | NA |
+| `Continuation.Dispose` | 24.1712 ns / 192 B | NA | NA | 24.2349 ns / 192 B |
+| `Continuation.Lock` | 1,015.9123 ns / 464 B | NA | NA | 1,158.6503 ns / 464 B |
+| `Continuation.LockValueTask` | 1,160.4224 ns / 464 B | NA | NA | 1,155.7749 ns / 464 B |
+| `CountPredicate (Terminal collection GC profile)` | 23.6151 ns / 96 B | 2,644.9360 ns / 2520 B | 97.9358 ns / 200 B | NA |
+| `CountPredicate (Terminal collection)` | 19.8555 ns / 96 B | 2,541.2862 ns / 2520 B | 97.2371 ns / 200 B | NA |
+| `CreateSafeSubscribe` | 39.8372 ns / 112 B | NA | NA | NA |
+| `CreateSubscribe` | 40.0776 ns / 112 B | 52.0066 ns / 168 B | 59.6140 ns / 128 B | NA |
+| `CreateWithState` | 60.2325 ns / 192 B | 89.0048 ns / 256 B | 131.1856 ns / 216 B | NA |
+| `CurrentThreadSchedule` | 9.5961 ns / 88 B | 21.8966 ns / 88 B | 31.0668 ns / 56 B | NA |
+| `DebounceImmediate` | 1,622.7895 ns / 4064 B | NA | NA | 27,081.5247 ns / 18065 B |
+| `DebounceUntil` | 1,094.9352 ns / 776 B | NA | NA | 7,205.8484 ns / 6132 B |
+| `DefaultIfEmptyEmpty` | 7.0131 ns / 64 B | 69.8937 ns / 144 B | 69.2199 ns / 136 B | NA |
+| `DeferSubscribe` | 86.7555 ns / 240 B | 1,676.0302 ns / 1512 B | 123.6352 ns / 152 B | NA |
+| `DelayRange` | 169.3880 ns / 536 B | 6,256.1473 ns / 39584 B | 2,034.4247 ns / 2200 B | NA |
+| `DelayStartRange` | 174.1631 ns / 536 B | 2,673.2576 ns / 26456 B | 342.5660 ns / 552 B | NA |
+| `DematerializeRange` | 72.7926 ns / 184 B | 1,533.0044 ns / 1528 B | 199.5775 ns / 208 B | NA |
+| `DetectStale` | 192.7663 ns / 600 B | NA | NA | 835.0784 ns / 25128 B |
+| `DisposableCollectionDispose` | 78.7620 ns / 424 B | 99.6767 ns / 512 B | 89.6395 ns / 480 B | NA |
+| `DoOnDispose` | 71.1486 ns / 232 B | NA | NA | 70.9375 ns / 232 B |
+| `DoOnSubscribe` | 70.2411 ns / 192 B | NA | NA | 69.6332 ns / 192 B |
+| `DropIfBusy` | 349.7954 ns / 240 B | NA | NA | 358.5479 ns / 240 B |
+| `Emit1024` | 1,728.8903 ns / 184 B | 1,746.7394 ns / 136 B | 2,057.8585 ns / 160 B | NA |
+| `Empty` | 4.1186 ns / 40 B | 49.6034 ns / 96 B | 32.3730 ns / 56 B | NA |
+| `EmptySubscribe` | 3.5444 ns / 40 B | 45.9526 ns / 96 B | 30.7072 ns / 56 B | NA |
+| `Every` | 535.2985 ns / 1192 B | 3,066.3586 ns / 34001 B | 353.4427 ns / 552 B | NA |
+| `FastForEach` | 48.9880 ns / 40 B | NA | NA | 48.4052 ns / 40 B |
+| `Filter` | 124.5601 ns / 120 B | 736.4327 ns / 984 B | NA | 123.2022 ns / 120 B |
+| `FirstAsync` | 8.7337 ns / 56 B | 2,605.0640 ns / 2792 B | 78.7451 ns / 208 B | NA |
+| `FirstMatchFromCandidates` | 42.6804 ns / 216 B | NA | NA | 44.7428 ns / 216 B |
+| `FirstOrDefaultAsync` | 6.9475 ns / 56 B | 1,388.2233 ns / 1768 B | 65.4337 ns / 208 B | NA |
+| `FlatMap` | 732.1660 ns / 728 B | 3,839.0203 ns / 3872 B | 1,183.4716 ns / 1040 B | NA |
+| `FlatMapRange` | 720.1574 ns / 728 B | 3,724.1633 ns / 3872 B | 1,191.5244 ns / 1040 B | NA |
+| `Fold (Operator stateful filter GC profile)` | 1,829.4350 ns / 144 B | NA | NA | NA |
+| `Fold (Operator stateful filter)` | 104.7071 ns / 144 B | 2,692.9914 ns / 2560 B | NA | NA |
+| `ForEach` | 73.3841 ns / 160 B | 150.0873 ns / 200 B | NA | 75.0841 ns / 160 B |
+| `ForkJoin` | 25.4948 ns / 192 B | 4,002.9279 ns / 3136 B | 985.3837 ns / 504 B | NA |
+| `ForkJoinRanges` | 35.7868 ns / 192 B | 3,966.4459 ns / 3136 B | 973.5322 ns / 504 B | NA |
+| `FromArray` | 61.9788 ns / 72 B | 2,519.9627 ns / 2504 B | 85.4346 ns / 88 B | 70.7992 ns / 72 B |
+| `FromAsyncEnumerableSubscribeAsync` | 1,278.0260 ns / 600 B | 1,639.4955 ns / 1827 B | 1,442.5958 ns / 1023 B | NA |
+| `FromEnumerable` | 53.3886 ns / 40 B | 2,668.0614 ns / 2504 B | 80.7768 ns / 88 B | NA |
+| `FromEnumerableSubscribe` | 52.7429 ns / 40 B | 2,525.1923 ns / 2504 B | 79.2217 ns / 88 B | NA |
+| `FromEventPattern` | 159.9328 ns / 624 B | 1,930.1362 ns / 2422 B | NA | NA |
+| `GetMax` | 108.9092 ns / 408 B | 181.7760 ns / 328 B | NA | 227.3460 ns / 1152 B |
+| `GetMin` | 115.1313 ns / 408 B | 179.6450 ns / 328 B | NA | 226.6057 ns / 1152 B |
+| `Heartbeat` | 299.3094 ns / 800 B | NA | NA | 2,377.8947 ns / 26096 B |
+| `HistorySubscribe` | 342.4926 ns / 352 B | 720.4683 ns / 696 B | 433.0458 ns / 688 B | NA |
+| `IgnoreValuesRange` | 29.7856 ns / 128 B | 1,436.1516 ns / 1504 B | 82.7043 ns / 160 B | NA |
+| `Iterate` | 11.6964 ns / 0 B | 2,376.7106 ns / 2768 B | NA | NA |
+| `KeepNotNull` | 108.3266 ns / 192 B | 1,741.8934 ns / 1656 B | 231.0055 ns / 312 B | NA |
+| `KeepType` | 109.4705 ns / 192 B | 1,520.8447 ns / 1568 B | 177.0656 ns / 216 B | NA |
+| `KeepWith` | 63.4511 ns / 232 B | 1,474.3146 ns / 1608 B | 126.5203 ns / 280 B | NA |
+| `LastOrDefaultAsync` | 13.9226 ns / 192 B | 1,432.8369 ns / 1872 B | 80.8937 ns / 208 B | NA |
+| `LatestOrDefault` | 53.9602 ns / 136 B | NA | NA | 58.1188 ns / 136 B |
+| `LogErrors` | 68.0775 ns / 224 B | NA | NA | 72.0710 ns / 224 B |
+| `LongCountPredicate` | 25.2287 ns / 104 B | 2,608.8275 ns / 2536 B | 109.6102 ns / 272 B | NA |
+| `MapKeep` | 134.0625 ns / 208 B | 2,946.0442 ns / 2616 B | 320.7422 ns / 272 B | NA |
+| `MapWith` | 65.0591 ns / 232 B | 1,443.5638 ns / 1608 B | 136.9318 ns / 248 B | NA |
+| `MaterializeRange` | 46.8644 ns / 120 B | 1,506.6878 ns / 1880 B | 100.4292 ns / 136 B | NA |
+| `Merge` | 80.2232 ns / 256 B | 4,278.2346 ns / 3952 B | 793.7542 ns / 352 B | NA |
+| `MergeRanges` | 78.0233 ns / 256 B | 3,920.3102 ns / 3952 B | 732.4915 ns / 352 B | NA |
+| `MulticastConnect` | 159.3122 ns / 360 B | 2,789.8379 ns / 2696 B | 441.0353 ns / 368 B | NA |
+| `NeverSubscribeDispose` | 0.2446 ns / 0 B | 6.2409 ns / 40 B | 19.4228 ns / 56 B | NA |
+| `Not` | 27.8941 ns / 120 B | 834.5748 ns / 1040 B | 92.3225 ns / 152 B | 28.4602 ns / 120 B |
+| `ObserveOnIf` | 64.2175 ns / 104 B | NA | NA | 66.5979 ns / 104 B |
+| `ObserveOnImmediate` | 23.1313 ns / 96 B | 16,018.5333 ns / 11309 B | 905.3638 ns / 432 B | NA |
+| `ObserveOnSafe` | 65.7747 ns / 104 B | NA | NA | 67.1360 ns / 104 B |
+| `OnCleanup` | 127.6024 ns / 504 B | 1,466.0726 ns / 1528 B | 135.0002 ns / 216 B | NA |
+| `OnErrorRetry` | 133.5035 ns / 424 B | NA | NA | 134.3144 ns / 424 B |
+| `OnNext` | 50.6179 ns / 40 B | NA | NA | 51.3304 ns / 40 B |
+| `Pairwise` | 511.8533 ns / 160 B | 2,840.1602 ns / 3072 B | NA | 536.1441 ns / 160 B |
+| `Partition` | 277.7601 ns / 440 B | NA | NA | 265.2119 ns / 440 B |
+| `Publish` | 149.1594 ns / 360 B | 2,843.8596 ns / 2696 B | 407.4740 ns / 368 B | NA |
+| `PublishLiveConnect` | 147.7717 ns / 360 B | 2,765.0237 ns / 2696 B | 426.4617 ns / 368 B | NA |
+| `Race` | 42.3790 ns / 192 B | 1,633.0064 ns / 1760 B | 311.2532 ns / 360 B | NA |
+| `RaceRanges` | 40.0232 ns / 192 B | 1,578.4900 ns / 1760 B | 264.0182 ns / 360 B | NA |
+| `Range` | 53.6816 ns / 96 B | 2,791.1538 ns / 2472 B | 84.1106 ns / 80 B | NA |
+| `RangeMapKeep` | 155.3300 ns / 208 B | 2,674.9530 ns / 2616 B | 327.1681 ns / 272 B | NA |
+| `RangeSubscribe` | 56.5469 ns / 96 B | 2,598.6621 ns / 2472 B | 75.2467 ns / 80 B | NA |
+| `ReadOnlyStateProjection` | 103.6867 ns / 224 B | 90.8319 ns / 328 B | 174.2237 ns / 312 B | NA |
+| `ReattemptRange` | 93.4540 ns / 432 B | 1,482.2007 ns / 1664 B | NA | NA |
+| `Recover` | 89.5049 ns / 336 B | 1,454.6806 ns / 1560 B | 169.3545 ns / 264 B | NA |
+| `Reduce (Operator stateful filter GC profile)` | 641.4023 ns / 144 B | NA | NA | NA |
+| `Reduce (Operator stateful filter)` | 50.7020 ns / 144 B | 2,649.4832 ns / 2560 B | NA | NA |
+| `RefCount` | 192.5290 ns / 480 B | NA | 712.2789 ns / 488 B | NA |
+| `RefCountSubscribe` | 191.4625 ns / 480 B | NA | 562.0081 ns / 488 B | NA |
+| `Repeat` | 8.0617 ns / 0 B | 2,591.9693 ns / 2408 B | 82.4938 ns / 80 B | NA |
+| `RepeatSubscribe` | 8.0203 ns / 0 B | 2,519.3663 ns / 2408 B | 76.6248 ns / 80 B | NA |
+| `Replay (Connectable GC profile)` | 689.8670 ns / 512 B | 3,902.0874 ns / 3408 B | 931.1544 ns / 1360 B | NA |
+| `Replay (Subject GC profile)` | 371.6089 ns / 352 B | 740.9560 ns / 696 B | 435.6562 ns / 688 B | NA |
+| `ReplayEmit` | 15,921.0642 ns / 352 B | NA | NA | NA |
+| `ReplayLastOnSubscribe` | 63.6625 ns / 104 B | NA | NA | 63.7188 ns / 104 B |
+| `ReplayLiveLateSubscribe` | 637.8266 ns / 512 B | 3,865.4959 ns / 3408 B | 1,029.3317 ns / 1360 B | NA |
+| `Resume` | 96.2466 ns / 424 B | 1,677.1264 ns / 1720 B | NA | NA |
+| `RetryForeverWithDelay` | 131.7468 ns / 352 B | NA | NA | 126.2633 ns / 352 B |
+| `RetryWithBackoff` | 127.8894 ns / 336 B | NA | NA | 122.5359 ns / 336 B |
+| `RetryWithDelay` | 112.6661 ns / 264 B | NA | NA | 114.9763 ns / 264 B |
+| `RetryWithFixedDelay` | 132.6439 ns / 336 B | NA | NA | 124.9002 ns / 336 B |
+| `Return (Factory GC profile)` | 0.7472 ns / 0 B | 54.9276 ns / 120 B | 34.2162 ns / 80 B | NA |
+| `Return (Reactive extensions)` | 6.7822 ns / 64 B | 54.6806 ns / 120 B | 31.3894 ns / 56 B | 6.9682 ns / 64 B |
+| `ReturnSubscribe` | 0.2191 ns / 0 B | 50.4895 ns / 120 B | 32.2581 ns / 80 B | NA |
+| `RunAll` | 26.0295 ns / 136 B | NA | NA | 24.2351 ns / 136 B |
+| `SafeWitness` | 21.4309 ns / 136 B | 15.1710 ns / 136 B | 26.0649 ns / 128 B | NA |
+| `SampleLatest (Operator time scheduler)` | 257.2775 ns / 776 B | 2,892.3456 ns / 26264 B | 359.7949 ns / 664 B | NA |
+| `SampleLatest (Reactive extensions)` | 1,048.3322 ns / 488 B | NA | NA | 1,135.7206 ns / 840 B |
+| `ScanWithInitial` | 591.7863 ns / 200 B | 2,672.0292 ns / 2560 B | NA | 547.3744 ns / 200 B |
+| `Schedule` | 38.7331 ns / 216 B | NA | NA | 863.5171 ns / 677 B |
+| `ScheduleSafe` | 32.2703 ns / 144 B | NA | NA | 943.9625 ns / 597 B |
+| `SelectAsync` | 1,252.7429 ns / 2104 B | 32,738.8855 ns / 32276 B | NA | 1,292.9070 ns / 2104 B |
+| `SelectAsyncConcurrent` | 1,168.3446 ns / 2120 B | NA | NA | 1,191.4728 ns / 2120 B |
+| `SelectAsyncSequential` | 1,339.6799 ns / 2104 B | NA | NA | 1,302.4360 ns / 2104 B |
+| `SelectConstant` | 59.5848 ns / 136 B | 2,715.4348 ns / 2544 B | 198.1385 ns / 160 B | 58.8155 ns / 136 B |
+| `SelectLatestAsync` | 1,719.1326 ns / 2032 B | NA | NA | 1,731.7319 ns / 2032 B |
+| `SelectManyThen` | 34.6976 ns / 224 B | 423.6935 ns / 752 B | NA | 37.1627 ns / 224 B |
+| `SequenceCountAsync` | 816.4266 ns / 704 B | NA | NA | 799.9606 ns / 704 B |
+| `SequenceMapKeepToListAsync` | 2,009.7575 ns / 1600 B | NA | NA | 1,944.0266 ns / 1600 B |
+| `Share` | 193.6808 ns / 480 B | 3,045.8913 ns / 2880 B | 504.3583 ns / 488 B | NA |
+| `ShareLiveSubscribe` | 204.3741 ns / 480 B | 3,020.7905 ns / 2880 B | 534.5208 ns / 488 B | NA |
+| `Shuffle` | 152.0990 ns / 96 B | NA | NA | 154.7871 ns / 96 B |
+| `SignalBroadcastAsync` | 7,179.9438 ns / 2320 B | NA | NA | 6,977.3867 ns / 2320 B |
+| `SignalEmit` | 1,749.7628 ns / 184 B | NA | NA | NA |
+| `SignalFanOutChurn` | 39,454.1463 ns / 33064 B | NA | NA | NA |
+| `SignalSubscribeDisposeChurn` | 38,197.5708 ns / 32920 B | NA | NA | NA |
+| `Skip (Operator stateful filter GC profile)` | 1,806.9367 ns / 136 B | NA | NA | NA |
+| `Skip (Operator stateful filter)` | 83.9017 ns / 136 B | 2,629.1569 ns / 2512 B | NA | NA |
+| `SkipWhile (Operator stateful filter GC profile)` | 1,886.5043 ns / 144 B | NA | NA | NA |
+| `SkipWhile (Operator stateful filter)` | 94.8720 ns / 144 B | 2,755.9981 ns / 2520 B | NA | NA |
+| `SkipWhileNull` | 26.8510 ns / 112 B | 652.5813 ns / 944 B | NA | 26.3809 ns / 112 B |
+| `Start` | 25.1025 ns / 96 B | NA | NA | 1,011.5645 ns / 535 B |
+| `StartSubscribe` | 51.1140 ns / 208 B | 892.2476 ns / 751 B | 61.2631 ns / 160 B | NA |
+| `StartWithAppend` | 36.6330 ns / 168 B | 1,225.1370 ns / 1283 B | 162.2376 ns / 288 B | NA |
+| `StartWithAppendDefaultIfEmpty` | 36.9278 ns / 168 B | 1,061.6973 ns / 1283 B | 152.9743 ns / 288 B | NA |
+| `State1024` | 15,745.6177 ns / 160 B | 17,003.8483 ns / 200 B | 17,026.8046 ns / 192 B | NA |
+| `StateEmit` | 16,305.4321 ns / 160 B | NA | NA | NA |
+| `StateSignal1024` | 15,226.0101 ns / 160 B | 16,860.4563 ns / 200 B | 16,525.8596 ns / 192 B | NA |
+| `StateSignal32` | 555.0760 ns / 160 B | 619.2484 ns / 200 B | 629.6037 ns / 192 B | NA |
+| `StateSignalUpdates` | 559.4035 ns / 160 B | 586.0605 ns / 200 B | 638.8654 ns / 192 B | NA |
+| `SubjectEmit1024` | 1,741.3116 ns / 184 B | 1,767.3735 ns / 136 B | 1,988.2607 ns / 160 B | NA |
+| `SubjectEmit32` | 91.5766 ns / 184 B | 97.2691 ns / 136 B | 123.9790 ns / 160 B | NA |
+| `SubjectSubscribeDispose64` | 3,442.9656 ns / 3848 B | 4,184.0096 ns / 38472 B | 3,923.8215 ns / 6728 B | NA |
+| `SubjectSubscribeDispose8` | 353.1304 ns / 640 B | 313.9104 ns / 1288 B | 485.8430 ns / 904 B | NA |
+| `SubscribeAndComplete` | 0.5452 ns / 0 B | NA | NA | 0.2295 ns / 0 B |
+| `SubscribeAsync` | 1,020.8799 ns / 544 B | NA | NA | 1,086.0720 ns / 544 B |
+| `SubscribeDispose64` | 3,514.5795 ns / 3848 B | 4,330.8894 ns / 38472 B | 3,776.1935 ns / 6728 B | NA |
+| `SubscribeGetError` | 6.9580 ns / 48 B | NA | NA | 53.4505 ns / 104 B |
+| `SubscribeGetValue` | 17.8834 ns / 56 B | NA | NA | 18.5553 ns / 56 B |
+| `SubscribeOnImmediate` | 92.8357 ns / 384 B | 2,088.8631 ns / 2257 B | 143.1142 ns / 200 B | NA |
+| `SubscribeSynchronous` | 1,041.8758 ns / 544 B | NA | NA | 1,002.4885 ns / 544 B |
+| `Switch` | 85.8795 ns / 312 B | 2,390.3422 ns / 2360 B | 799.1355 ns / 448 B | NA |
+| `SwitchIfEmpty` | 69.8495 ns / 224 B | NA | NA | 111.8583 ns / 280 B |
+| `SwitchRanges` | 86.2799 ns / 312 B | 2,403.2789 ns / 2360 B | 794.1218 ns / 448 B | NA |
+| `SynchronizeAsync` | 819.5469 ns / 1280 B | NA | NA | 825.0399 ns / 1280 B |
+| `SynchronizeSynchronous` | 832.0162 ns / 1280 B | NA | NA | 817.5703 ns / 1280 B |
+| `SyncTimer` | 2,596.8934 ns / 1080 B | NA | NA | 15,106.0211 ns / 26240 B |
+| `TakeRange` | 72.9409 ns / 200 B | 1,440.9925 ns / 1552 B | 103.1167 ns / 160 B | NA |
+| `TakeUntil` | 512.1911 ns / 192 B | 2,662.6592 ns / 2520 B | NA | 516.0572 ns / 192 B |
+| `TakeWhile (Operator stateful filter GC profile)` | 1,859.1993 ns / 144 B | NA | NA | NA |
+| `TakeWhile (Operator stateful filter)` | 95.4222 ns / 144 B | 2,717.1335 ns / 2520 B | NA | NA |
+| `TapRange` | 77.2577 ns / 224 B | 1,568.4737 ns / 1520 B | 135.1513 ns / 216 B | NA |
+| `TapWith` | 78.4952 ns / 320 B | 1,476.9664 ns / 1608 B | 146.3279 ns / 304 B | NA |
+| `TaskSignalSubscribe` | 37.9870 ns / 240 B | 779.9820 ns / 886 B | 39.5601 ns / 160 B | NA |
+| `ThrottleBurst` | 612.2450 ns / 1176 B | 2,778.8308 ns / 36480 B | 1,667.2384 ns / 1512 B | NA |
+| `ThrottleDistinct` | 1,849.1563 ns / 4232 B | NA | NA | 30,604.1331 ns / 18701 B |
+| `ThrottleFirst` | 1,161.0701 ns / 224 B | NA | NA | 1,163.6336 ns / 224 B |
+| `ThrottleOnScheduler` | 1,912.9753 ns / 2400 B | NA | NA | 34,581.3985 ns / 16354 B |
+| `ThrottleUntilTrue` | 5,027.6983 ns / 1633 B | NA | NA | 6,217.3368 ns / 1378 B |
+| `Throw` | 63.0707 ns / 120 B | 128.1170 ns / 240 B | 96.0727 ns / 200 B | NA |
+| `ThrowSubscribe` | 64.2616 ns / 120 B | 118.8961 ns / 240 B | 103.2737 ns / 200 B | NA |
+| `TimeIntervalRange` | 27.1561 ns / 120 B | 1,784.3594 ns / 1616 B | 454.4125 ns / 160 B | NA |
+| `TimeoutIdle` | 293.2704 ns / 800 B | 1,294.2879 ns / 29776 B | 414.6542 ns / 784 B | NA |
+| `TimestampRange` | 42.6172 ns / 144 B | 1,749.8641 ns / 1512 B | 360.3036 ns / 152 B | NA |
+| `ToHotTask` | 36.3653 ns / 112 B | 101.5059 ns / 240 B | NA | 35.7259 ns / 112 B |
+| `ToHotValueTask` | 27.0451 ns / 72 B | NA | NA | 27.8467 ns / 72 B |
+| `ToPropertyObservable` | 27,071.4355 ns / 4941 B | NA | NA | 27,486.0006 ns / 4941 B |
+| `ToReadOnlyBehavior` | 66.0075 ns / 192 B | NA | NA | 67.9050 ns / 192 B |
+| `ToTask` | 13.3485 ns / 192 B | 2,572.0790 ns / 2824 B | 97.3992 ns / 208 B | NA |
+| `TrySelect` | 101.8332 ns / 120 B | NA | NA | 110.8990 ns / 120 B |
+| `UnfoldSubscribe` | 12.8181 ns / 0 B | 2,345.7369 ns / 2768 B | 100.1733 ns / 128 B | NA |
+| `Unique (Operator stateful filter GC profile)` | 1,839.5060 ns / 144 B | NA | NA | NA |
+| `Unique (Operator stateful filter)` | 109.1269 ns / 144 B | 2,863.5156 ns / 2568 B | NA | NA |
+| `UniqueBy (Operator stateful filter GC profile)` | 2,029.5043 ns / 152 B | NA | NA | NA |
+| `UniqueBy (Operator stateful filter)` | 109.3574 ns / 152 B | 2,735.0480 ns / 2568 B | NA | NA |
+| `UseSubscribe` | 40.9663 ns / 144 B | 88.1730 ns / 168 B | 63.0011 ns / 128 B | NA |
+| `Using` | 7.6564 ns / 56 B | NA | NA | 9.4516 ns / 56 B |
+| `WaitForCompletion` | 25.1638 ns / 96 B | NA | NA | 24.6338 ns / 96 B |
+| `WaitForError` | 26.0917 ns / 96 B | NA | NA | 73.9819 ns / 152 B |
+| `WaitForValue` | 32.1534 ns / 104 B | NA | NA | 34.4935 ns / 104 B |
+| `WaitUntil` | 534.5543 ns / 224 B | 891.0865 ns / 1080 B | NA | 540.1772 ns / 224 B |
+| `WhereFalse` | 23.6723 ns / 120 B | 806.3629 ns / 1040 B | 91.3808 ns / 184 B | 24.8538 ns / 120 B |
+| `WhereIsNotNull` | 23.7931 ns / 104 B | 622.7868 ns / 904 B | 92.9625 ns / 264 B | 23.3656 ns / 104 B |
+| `WhereSelect` | 80.4235 ns / 152 B | 2,638.5579 ns / 2616 B | 193.5426 ns / 240 B | 77.0247 ns / 152 B |
+| `WhereTrue` | 23.7493 ns / 120 B | 804.6906 ns / 1040 B | 86.8553 ns / 184 B | 26.0367 ns / 120 B |
+| `While` | 127.7396 ns / 280 B | NA | NA | 127.4206 ns / 280 B |
+| `WithLatest` | 40.7850 ns / 192 B | 3,451.6327 ns / 2824 B | 274.0358 ns / 248 B | NA |
+| `WithLatestRanges` | 45.1321 ns / 192 B | 3,505.9546 ns / 2824 B | 345.9029 ns / 248 B | NA |
+| `WithLimitedConcurrency` | 2,489.2455 ns / 5448 B | NA | NA | 2,604.7204 ns / 5448 B |
+| `Zip (Operator core GC profile)` | 39.0931 ns / 192 B | 3,389.6512 ns / 2976 B | 765.7075 ns / 656 B | NA |
+| `Zip (Operator zip)` | 37.0413 ns / 192 B | 3,060.4356 ns / 2976 B | 687.6359 ns / 656 B | NA |
 
 BenchmarkDotNet emitted `ZeroMeasurement` warnings for several singleton or empty-method-scale paths, including `Return`, `CompletedSpark`, and `Never`-style subscriptions. Those warnings mean the measured duration is indistinguishable from empty method overhead; the benchmark run still completed and exported all 610 rows.
 
