@@ -115,6 +115,9 @@ internal static class Program
         BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
     }
 
+    /// <summary>
+    /// Runs the extension comparison scenarios once to validate benchmark delegates.
+    /// </summary>
     private static void RunExtensionComparisonSmoke()
     {
         var benchmarks = new ReactiveExtensionsComparisonBenchmarks();
@@ -125,6 +128,11 @@ internal static class Program
         Console.WriteLine("Extensions scenario smoke validation passed.");
     }
 
+    /// <summary>
+    /// Runs a named extension scenario set.
+    /// </summary>
+    /// <param name="name">The scenario set name.</param>
+    /// <param name="scenarios">The scenarios to run.</param>
     private static void RunExtensionScenarioSet(
         string name,
         IEnumerable<ReactiveExtensionsComparisonBenchmarks.ExtensionScenario> scenarios)
