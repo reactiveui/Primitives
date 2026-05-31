@@ -68,4 +68,18 @@ public sealed class DispatcherQueueSequencer : DispatchSequencerBase
 
         throw new InvalidOperationException("The dispatcher queue is no longer accepting work.");
     }
+
+    /// <inheritdoc/>
+    protected override void ScheduleDelayed(IWorkItem item, long dueTimestamp)
+    {
+        var timer = DispatcherQueue.CreateTimer();
+        timer.Interval = DelayUntil(dueTimestamp);
+        timer.IsRepeating = false;
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            RunIfActive(item);
+        };
+        timer.Start();
+    }
 }

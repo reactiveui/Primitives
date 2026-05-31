@@ -34,4 +34,8 @@ public sealed class MauiDispatcherSequencer : DispatchSequencerBase
 
     /// <inheritdoc/>
     protected override bool Post(Action drain) => Dispatcher.Dispatch(drain);
+
+    /// <inheritdoc/>
+    protected override void ScheduleDelayed(IWorkItem item, long dueTimestamp) =>
+        _ = Dispatcher.DispatchDelayed(DelayUntil(dueTimestamp), () => RunIfActive(item));
 }

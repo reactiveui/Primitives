@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(BlazorTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PublicApiGenerator" />
+    <Compile Include="..\Shared\ApiApprovalExtensions.cs" Link="ApiApprovalExtensions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Blazor\ReactiveUI.Primitives.Blazor.csproj" />
+  </ItemGroup>
+
+</Project>

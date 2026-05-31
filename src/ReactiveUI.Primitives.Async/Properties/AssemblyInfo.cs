@@ -5,3 +5,4 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("ReactiveUI.Primitives.Tests")]
+[assembly: InternalsVisibleTo("ReactiveUI.Primitives.Async.Tests")]

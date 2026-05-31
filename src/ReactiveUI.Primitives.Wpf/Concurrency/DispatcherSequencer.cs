@@ -57,4 +57,16 @@ public class DispatcherSequencer : DispatchSequencerBase
         Dispatcher.BeginInvoke(drain, Priority);
         return true;
     }
+
+    /// <inheritdoc/>
+    protected override void ScheduleDelayed(IWorkItem item, long dueTimestamp)
+    {
+        var timer = new DispatcherTimer(Priority, Dispatcher) { Interval = DelayUntil(dueTimestamp) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            RunIfActive(item);
+        };
+        timer.Start();
+    }
 }

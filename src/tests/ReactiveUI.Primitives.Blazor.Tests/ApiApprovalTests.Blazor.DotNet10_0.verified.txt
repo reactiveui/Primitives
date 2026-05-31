@@ -1,0 +1,27 @@
+﻿namespace ReactiveUI.Primitives.Blazor.Components
+{
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public abstract class ReactiveComponentBase : Microsoft.AspNetCore.Components.ComponentBase, System.IDisposable
+    {
+        protected ReactiveComponentBase() { }
+        protected bool IsDisposed { get; }
+        protected ReactiveUI.Primitives.Concurrency.ISequencer RendererSequencer { get; }
+        public void Dispose() { }
+        protected virtual void Dispose(bool disposing) { }
+        protected System.Threading.Tasks.Task InvalidateAsync() { }
+        protected System.IDisposable Observe<T>(System.IObservable<T> source, System.Action<T> onNext) { }
+        protected System.IDisposable Observe<T>(System.IObservable<T> source, System.Action<T> onNext, System.Action<System.Exception>? onError, System.Action? onCompleted) { }
+        protected System.IDisposable Observe<T>(System.IObservable<T> source, System.Action<T> onNext, System.Action<System.Exception>? onError, System.Action? onCompleted, bool refreshAfterCallbacks) { }
+        protected virtual void OnObservedError(System.Exception error) { }
+        protected System.IDisposable Track(System.IDisposable subscription) { }
+    }
+}
+namespace ReactiveUI.Primitives.Blazor.Concurrency
+{
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class BlazorRendererSequencer : ReactiveUI.Primitives.Concurrency.DispatchSequencerBase
+    {
+        public BlazorRendererSequencer(System.Func<System.Action, System.Threading.Tasks.Task> invokeAsync) { }
+        protected override bool Post(System.Action drain) { }
+    }
+}

@@ -39,51 +39,6 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>Sink that buffers values and emits them as a list on completion.</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    private sealed class CollectListObserver<T> : SingleSourceObserver<T>
-    {
-        /// <summary>The downstream observer.</summary>
-        private readonly IObserver<IList<T>> _observer;
-
-        /// <summary>The accumulated values.</summary>
-        private readonly List<T> _values = [];
-
-        /// <summary>Initializes a new instance of the <see cref="CollectListObserver{T}"/> class.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        internal CollectListObserver(IObserver<IList<T>> observer) => _observer = observer;
-
-        /// <inheritdoc/>
-        public override void OnNext(T value) => _values.Add(value);
-
-        /// <inheritdoc/>
-        public override void OnError(Exception error)
-        {
-            try
-            {
-                _observer.OnError(error);
-            }
-            finally
-            {
-                Dispose();
-            }
-        }
-
-        /// <inheritdoc/>
-        public override void OnCompleted()
-        {
-            try
-            {
-                _observer.OnNext(_values);
-                _observer.OnCompleted();
-            }
-            finally
-            {
-                Dispose();
-            }
-        }
-    }
-
     /// <summary>Dedicated signal for <c>CollectArray</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     private sealed class CollectArraySignal<T> : IObservable<T[]>
@@ -106,51 +61,6 @@ public static partial class LinqMixins
             var sink = new CollectArrayObserver<T>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
-        }
-    }
-
-    /// <summary>Sink that buffers values and emits them as an array on completion.</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    private sealed class CollectArrayObserver<T> : SingleSourceObserver<T>
-    {
-        /// <summary>The downstream observer.</summary>
-        private readonly IObserver<T[]> _observer;
-
-        /// <summary>The accumulated values.</summary>
-        private readonly List<T> _values = [];
-
-        /// <summary>Initializes a new instance of the <see cref="CollectArrayObserver{T}"/> class.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        internal CollectArrayObserver(IObserver<T[]> observer) => _observer = observer;
-
-        /// <inheritdoc/>
-        public override void OnNext(T value) => _values.Add(value);
-
-        /// <inheritdoc/>
-        public override void OnError(Exception error)
-        {
-            try
-            {
-                _observer.OnError(error);
-            }
-            finally
-            {
-                Dispose();
-            }
-        }
-
-        /// <inheritdoc/>
-        public override void OnCompleted()
-        {
-            try
-            {
-                _observer.OnNext([.. _values]);
-                _observer.OnCompleted();
-            }
-            finally
-            {
-                Dispose();
-            }
         }
     }
 
