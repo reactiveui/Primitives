@@ -907,7 +907,7 @@ External-baseline posture from this run: `ReactiveUI.Primitives.Extensions` is f
 
 The table below is generated from the joined BenchmarkDotNet CSV and uses `Mean / Allocated` for each cell. Function names are restored to their full values where BenchmarkDotNet abbreviated long `scenario` parameter values in the raw report.
 
-| Function | ReactiveUI.Primitives.Extensions | ReactiveUI.Extensions 4.0.0 | System.Reactive | R3 |
+| Function | ReactiveUI.Primitives | ReactiveUI.Extensions | System.Reactive | R3 |
 |---|---:|---:|---:|---:|
 | `AsSignal` | 39.1343 ns / 112 B | 2,425.8592 ns / 2488 B | 2,497.5107 ns / 2536 B | 190.0920 ns / 160 B |
 | `BufferUntil` | 43.7569 ns / 264 B | 43.1834 ns / 264 B | NA | NA |
