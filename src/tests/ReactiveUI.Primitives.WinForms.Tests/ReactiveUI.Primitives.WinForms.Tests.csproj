@@ -1,28 +1,35 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- ControlSequencer wraps a concrete System.Windows.Forms.Control, so this project targets the Windows
-       TFMs and builds anywhere (EnableWindowsTargeting). The dispatcher tests need a real Windows desktop
-       runtime, so they are compiled only on Windows builds (windows CI leg, or under a Wine .NET-windows
-       runtime). On non-Windows builds only the API approval test is compiled. -->
+  <!-- ControlSequencer wraps a concrete System.Windows.Forms.Control. The project targets plain .NET
+       everywhere and adds the -windows TFMs only on Windows, so the test host launches on the
+       cross-platform CI leg. The windows TFM (via the Choose below) turns on UseWindowsForms, references
+       the WinForms library, and compiles the real dispatcher tests + API approval; the cross-platform
+       build compiles only the API approval test, which is a no-op there. -->
   <PropertyGroup>
-    <TargetFrameworks>$(WindowsNetTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks>$(NetTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(WindowsNetTargetFrameworks)</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <OutputType>Exe</OutputType>
-    <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
+  <!-- The dispatcher tests need WinForms types; include them only on the windows TFM (see the Choose). -->
   <ItemGroup>
-    <PackageReference Include="PublicApiGenerator" />
-    <Compile Include="..\Shared\ApiApprovalExtensions.cs" Link="ApiApprovalExtensions.cs" />
-  </ItemGroup>
-
-  <!-- Exclude the real-dispatcher tests from non-Windows builds. -->
-  <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
     <Compile Remove="ControlSequencerTests.cs" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\ReactiveUI.Primitives.WinForms\ReactiveUI.Primitives.WinForms.csproj" />
-  </ItemGroup>
+  <Choose>
+    <When Condition="$(TargetFramework.EndsWith('-windows'))">
+      <PropertyGroup>
+        <UseWindowsForms>true</UseWindowsForms>
+        <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+      </PropertyGroup>
+      <ItemGroup>
+        <PackageReference Include="PublicApiGenerator" />
+        <Compile Include="..\Shared\ApiApprovalExtensions.cs" Link="ApiApprovalExtensions.cs" />
+        <ProjectReference Include="..\..\ReactiveUI.Primitives.WinForms\ReactiveUI.Primitives.WinForms.csproj" />
+        <Compile Include="ControlSequencerTests.cs" />
+      </ItemGroup>
+    </When>
+  </Choose>
 
 </Project>

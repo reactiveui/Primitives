@@ -1,54 +1,39 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- DispatcherQueueSequencer wraps the concrete WinUI Microsoft.UI.Dispatching.DispatcherQueue, so this
-       project targets the WinUI TFMs and builds anywhere (EnableWindowsTargeting). The dispatcher tests
-       need a real DispatcherQueue runtime, so they are compiled only on Windows builds (windows CI leg).
-       On non-Windows builds only the API approval test is compiled (it reflects the assembly and runs on
-       the cross-platform leg). -->
+  <!-- DispatcherQueueSequencer wraps the concrete WinUI Microsoft.UI.Dispatching.DispatcherQueue. The
+       project targets plain .NET everywhere and adds the WinUI TFMs only on Windows, so the test host
+       launches on the cross-platform CI leg. The WinUI TFM (via the Choose below) turns on UseWinUI,
+       references the WinUI library, and compiles the real dispatcher tests + API approval (self-contained
+       so DispatcherQueueController activation works without a machine-wide runtime); the cross-platform
+       build compiles only the API approval test, which is a no-op there. -->
   <PropertyGroup>
-    <TargetFrameworks>$(WinUITargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks>$(NetTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(WinUITargetFrameworks)</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <OutputType>Exe</OutputType>
-    <UseWinUI>true</UseWinUI>
-
-    <!-- Run unpackaged so the Windows App SDK bootstrapper auto-initializes (no MSIX identity required). -->
-    <WindowsPackageType>None</WindowsPackageType>
   </PropertyGroup>
 
-  <!-- Self-contained packaging makes the unpackaged test host carry + auto-bootstrap its own
-       WindowsAppRuntime, so DispatcherQueueController activation works on a bare CI runner without a
-       machine-wide runtime install. It runs mt.exe (a native Windows manifest tool), so it is only
-       enabled on real Windows. -->
-  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
-    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-  </PropertyGroup>
-
-  <!-- Off-Windows the native MSIX/PRI tooling cannot run; disable it so the managed assembly still
-       compiles for the cross-platform build leg. Mirrors the WinUI integration library.
-       Also disable the Windows App SDK bootstrap auto-initializer: it injects a module initializer that
-       P/Invokes Microsoft.WindowsAppRuntime.Bootstrap.dll, which does not exist off-Windows and would crash
-       the test host at load. The dispatcher tests are excluded from non-Windows builds anyway; the API
-       approval test reflects the assembly without needing the runtime. -->
-  <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
-    <AppxGeneratePriEnabled>false</AppxGeneratePriEnabled>
-    <IncludePriFilesOutputGroup>false</IncludePriFilesOutputGroup>
-    <IncludeProjectPriFile>false</IncludeProjectPriFile>
-    <WindowsAppSdkBootstrapInitialize>false</WindowsAppSdkBootstrapInitialize>
-  </PropertyGroup>
-
+  <!-- The dispatcher tests need WinUI types; include them only on the WinUI TFM (see the Choose). -->
   <ItemGroup>
-    <PackageReference Include="PublicApiGenerator" />
-    <Compile Include="..\Shared\ApiApprovalExtensions.cs" Link="ApiApprovalExtensions.cs" />
-  </ItemGroup>
-
-  <!-- Exclude the real-dispatcher tests from non-Windows builds. -->
-  <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
     <Compile Remove="DispatcherQueueSequencerTests.cs" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\ReactiveUI.Primitives.WinUI\ReactiveUI.Primitives.WinUI.csproj" />
-  </ItemGroup>
+  <Choose>
+    <When Condition="$(TargetFramework.EndsWith('-windows10.0.19041.0'))">
+      <PropertyGroup>
+        <UseWinUI>true</UseWinUI>
+        <WindowsPackageType>None</WindowsPackageType>
+        <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+      </PropertyGroup>
+      <ItemGroup>
+        <PackageReference Include="PublicApiGenerator" />
+        <Compile Include="..\Shared\ApiApprovalExtensions.cs" Link="ApiApprovalExtensions.cs" />
+        <ProjectReference Include="..\..\ReactiveUI.Primitives.WinUI\ReactiveUI.Primitives.WinUI.csproj" />
+        <Compile Include="DispatcherQueueSequencerTests.cs" />
+      </ItemGroup>
+    </When>
+  </Choose>
 
 </Project>
