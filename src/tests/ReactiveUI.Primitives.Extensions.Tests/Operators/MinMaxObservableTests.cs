@@ -110,6 +110,22 @@ public class MinMaxObservableTests
         await Assert.That(results).IsCollectionEqualTo([LowValue, MidValue, HighValue]);
     }
 
+    /// <summary>Verifies <c>GetMin</c> with no additional sources still emits the source's own values verbatim.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenGetMinSingleSource_ThenEmitsSourceValues()
+    {
+        var subject = new Subject<int>();
+        var results = new List<int>();
+        using var sub = subject.GetMin().Subscribe(results.Add);
+
+        subject.OnNext(HighValue);
+        subject.OnNext(MidValue);
+        subject.OnNext(LowValue);
+
+        await Assert.That(results).IsCollectionEqualTo([HighValue, MidValue, LowValue]);
+    }
+
     /// <summary>Verifies that <see cref="MinMaxObservable{T}"/>
     /// with an empty source list completes immediately without emitting.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -175,5 +191,111 @@ public class MinMaxObservableTests
 
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(results).IsEmpty();
+    }
+
+    /// <summary>Verifies that a second error after termination is ignored by the binary fast path.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenBinarySourceErrorsAfterError_ThenDropped()
+    {
+        var a = new SyncDirectSource<int>();
+        var b = new SyncDirectSource<int>();
+        var receivedErrors = 0;
+        Exception? caught = null;
+        var expected = new InvalidOperationException(SourceErrorMessage);
+
+        using var sub = a.GetMax(b).Subscribe(
+            static _ => { },
+            ex =>
+            {
+                receivedErrors++;
+                caught = ex;
+            });
+
+        a.Observer.OnError(expected);
+        b.Observer.OnError(new InvalidOperationException("late error"));
+
+        await Assert.That(caught).IsSameReferenceAs(expected);
+        await Assert.That(receivedErrors).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies that completion from an empty left source completes the binary fast path.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenBinaryLeftCompletesEmpty_ThenCompletesAndDropsLaterCompletion()
+    {
+        var a = new SyncDirectSource<int>();
+        var b = new SyncDirectSource<int>();
+        var completions = 0;
+
+        using var sub = a.GetMax(b).Subscribe(static _ => { }, () => completions++);
+
+        a.Observer.OnCompleted();
+        b.Observer.OnCompleted();
+
+        await Assert.That(completions).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies that completion from an empty right source completes the binary fast path.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenBinaryRightCompletesEmpty_ThenCompletesAndDropsLaterCompletion()
+    {
+        var a = new SyncDirectSource<int>();
+        var b = new SyncDirectSource<int>();
+        var completions = 0;
+
+        using var sub = a.GetMin(b).Subscribe(static _ => { }, () => completions++);
+
+        b.Observer.OnCompleted();
+        a.Observer.OnCompleted();
+
+        await Assert.That(completions).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies duplicate left completion is ignored until the right source completes.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenBinaryLeftCompletesTwiceBeforeRight_ThenDuplicateIgnored()
+    {
+        var a = new SyncDirectSource<int>();
+        var b = new SyncDirectSource<int>();
+        var completions = 0;
+
+        using var sub = a.GetMax(b).Subscribe(static _ => { }, () => completions++);
+
+        a.Observer.OnNext(LowValue);
+        b.Observer.OnNext(MidValue);
+        a.Observer.OnCompleted();
+        a.Observer.OnCompleted();
+
+        await Assert.That(completions).IsEqualTo(0);
+
+        b.Observer.OnCompleted();
+
+        await Assert.That(completions).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies duplicate right completion is ignored until the left source completes.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenBinaryRightCompletesTwiceBeforeLeft_ThenDuplicateIgnored()
+    {
+        var a = new SyncDirectSource<int>();
+        var b = new SyncDirectSource<int>();
+        var completions = 0;
+
+        using var sub = a.GetMin(b).Subscribe(static _ => { }, () => completions++);
+
+        a.Observer.OnNext(MidValue);
+        b.Observer.OnNext(HighValue);
+        b.Observer.OnCompleted();
+        b.Observer.OnCompleted();
+
+        await Assert.That(completions).IsEqualTo(0);
+
+        a.Observer.OnCompleted();
+
+        await Assert.That(completions).IsEqualTo(1);
     }
 }
