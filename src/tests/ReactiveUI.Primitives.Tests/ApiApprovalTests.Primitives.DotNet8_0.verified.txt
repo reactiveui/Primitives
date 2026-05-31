@@ -1,11 +1,7 @@
 ﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Async.Tests")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Blazor")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Blazor.Tests")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Maui")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Extensions.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Tests")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.WinForms")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.WinUI")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Wpf")]
 namespace ReactiveUI.Primitives
 {
     public sealed class AllPredicateObserver<T> : ReactiveUI.Primitives.BooleanTerminalObserver<T>

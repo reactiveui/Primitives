@@ -2,19 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Concurrency;
-using ReactiveUI.Primitives.Extensions;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-
-using System.IO;
-using ReactiveUI.Primitives.Extensions.Internal;
-using ReactiveUI.Primitives.Extensions.Operators;
-using ReactiveUI.Primitives.Extensions.Tests;
-using System.Reactive;
-using System.Reactive.Disposables;
-using System.Reactive.Threading.Tasks;
+using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
@@ -23,20 +13,26 @@ namespace ReactiveUI.Primitives.Extensions.Tests;
 /// </summary>
 public sealed class ReactiveExtensionsPortedTests
 {
+    /// <summary>Candidate keys probed by the first-match test.</summary>
+    private static readonly int[] MatchCandidates = [1, 2, 3];
+
     /// <summary>Verifies signal data wrappers keep their update/signal semantics.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task DataWrappersExposeUpdateAndSignalState()
     {
+        const int HeartbeatUpdate = 42;
+        const int StaleUpdate = 7;
+
         var heartbeat = new Heartbeat<int>();
-        var heartbeatUpdate = new Heartbeat<int>(42);
+        var heartbeatUpdate = new Heartbeat<int>(HeartbeatUpdate);
         var stale = new Stale<int>();
-        var staleUpdate = new Stale<int>(7);
+        var staleUpdate = new Stale<int>(StaleUpdate);
 
         await Assert.That(heartbeat.IsHeartbeat).IsTrue();
-        await Assert.That(heartbeatUpdate.Update).IsEqualTo(42);
+        await Assert.That(heartbeatUpdate.Update).IsEqualTo(HeartbeatUpdate);
         await Assert.That(stale.IsStale).IsTrue();
-        await Assert.That(staleUpdate.Update).IsEqualTo(7);
+        await Assert.That(staleUpdate.Update).IsEqualTo(StaleUpdate);
         Assert.Throws<InvalidOperationException>(() => _ = stale.Update);
     }
 
@@ -77,6 +73,10 @@ public sealed class ReactiveExtensionsPortedTests
     [Test]
     public async Task BufferAndCombineHelpersPreserveLegacyBehavior()
     {
+        const int MaxAInitial = 1;
+        const int MaxBInitial = 5;
+        const int MaxAUpdate = 9;
+
         var chars = new Subject<char>();
         var frames = new List<string>();
         using var frameSub = chars.BufferUntil('[', ']').Subscribe(frames.Add);
@@ -91,15 +91,15 @@ public sealed class ReactiveExtensionsPortedTests
         using var allFalseSub = new[] { first, second }.CombineLatestValuesAreAllFalse().Subscribe(allFalse.Add);
         first.OnNext(true);
 
-        var maxA = new BehaviorSubject<int>(1);
-        var maxB = new BehaviorSubject<int>(5);
+        var maxA = new BehaviorSubject<int>(MaxAInitial);
+        var maxB = new BehaviorSubject<int>(MaxBInitial);
         var maxValues = new List<int>();
         using var maxSub = maxA.GetMax(maxB).Subscribe(maxValues.Add);
-        maxA.OnNext(9);
+        maxA.OnNext(MaxAUpdate);
 
         await Assert.That(frames).IsCollectionEqualTo(["[abc]"]);
         await Assert.That(allFalse).IsCollectionEqualTo([true, false]);
-        await Assert.That(maxValues).IsCollectionEqualTo([5, 9]);
+        await Assert.That(maxValues).IsCollectionEqualTo([MaxBInitial, MaxAUpdate]);
     }
 
     /// <summary>Verifies virtual-time operators use <see cref="ISequencer"/> instead of Rx schedulers.</summary>
@@ -107,24 +107,30 @@ public sealed class ReactiveExtensionsPortedTests
     [Test]
     public async Task TimeBasedOperatorsUsePrimitiveSequencer()
     {
+        const int FirstValue = 1;
+        const int SecondValue = 2;
+        const int StaleWindowSeconds = 2;
+        const int ExpectedStaleCount = 3;
+        const int ThirdEmissionIndex = 2;
+
         var clock = new VirtualClock();
         var source = new Subject<int>();
         var batches = new List<IList<int>>();
         var stale = new List<Stale<int>>();
         using var bufferSub = source.BufferUntilInactive(TimeSpan.FromSeconds(1), clock).Subscribe(batches.Add);
-        using var staleSub = source.DetectStale(TimeSpan.FromSeconds(2), clock).Subscribe(stale.Add);
+        using var staleSub = source.DetectStale(TimeSpan.FromSeconds(StaleWindowSeconds), clock).Subscribe(stale.Add);
 
-        source.OnNext(1);
-        source.OnNext(2);
+        source.OnNext(FirstValue);
+        source.OnNext(SecondValue);
         clock.AdvanceBy(TimeSpan.FromSeconds(1));
         clock.AdvanceBy(TimeSpan.FromSeconds(1));
 
         await Assert.That(batches.Count).IsEqualTo(1);
-        await Assert.That(batches[0]).IsCollectionEqualTo([1, 2]);
-        await Assert.That(stale.Count).IsEqualTo(3);
-        await Assert.That(stale[0].Update).IsEqualTo(1);
-        await Assert.That(stale[1].Update).IsEqualTo(2);
-        await Assert.That(stale[2].IsStale).IsTrue();
+        await Assert.That(batches[0]).IsCollectionEqualTo([FirstValue, SecondValue]);
+        await Assert.That(stale.Count).IsEqualTo(ExpectedStaleCount);
+        await Assert.That(stale[0].Update).IsEqualTo(FirstValue);
+        await Assert.That(stale[1].Update).IsEqualTo(SecondValue);
+        await Assert.That(stale[ThirdEmissionIndex].IsStale).IsTrue();
     }
 
     /// <summary>Verifies scheduling and throttling helpers use primitive clocks.</summary>
@@ -132,21 +138,26 @@ public sealed class ReactiveExtensionsPortedTests
     [Test]
     public async Task SchedulingOperatorsUsePrimitiveSequencer()
     {
+        const int ScheduledValue = 5;
+        const int FirstThrottled = 1;
+        const int SuppressedThrottled = 2;
+        const int EmittedThrottled = 3;
+
         var clock = new VirtualClock();
         var scheduled = new List<int>();
-        using var scheduledSub = 5.Schedule(TimeSpan.FromSeconds(1), clock).Subscribe(scheduled.Add);
+        using var scheduledSub = ScheduledValue.Schedule(TimeSpan.FromSeconds(1), clock).Subscribe(scheduled.Add);
 
         var throttledSource = new Subject<int>();
         var throttled = new List<int>();
         using var throttleSub = throttledSource.ThrottleFirst(TimeSpan.FromSeconds(1), clock).Subscribe(throttled.Add);
-        throttledSource.OnNext(1);
-        throttledSource.OnNext(2);
+        throttledSource.OnNext(FirstThrottled);
+        throttledSource.OnNext(SuppressedThrottled);
         clock.AdvanceBy(TimeSpan.FromSeconds(1));
-        throttledSource.OnNext(3);
+        throttledSource.OnNext(EmittedThrottled);
         clock.AdvanceBy(TimeSpan.FromSeconds(1));
 
-        await Assert.That(scheduled).IsCollectionEqualTo([5]);
-        await Assert.That(throttled).IsCollectionEqualTo([1, 3]);
+        await Assert.That(scheduled).IsCollectionEqualTo([ScheduledValue]);
+        await Assert.That(throttled).IsCollectionEqualTo([FirstThrottled, EmittedThrottled]);
     }
 
     /// <summary>Verifies fused projection/filter helpers.</summary>
@@ -154,16 +165,20 @@ public sealed class ReactiveExtensionsPortedTests
     [Test]
     public async Task FusedProjectionOperatorsEmitExpectedValues()
     {
+        const int EvenDivisor = 2;
+        const int OddInput = 1;
+        const int EvenInput = 2;
+
         var values = new Subject<int>();
         var whereSelect = new List<string>();
         var trySelect = new List<string>();
         var constants = new List<string>();
 
-        using var whereSelectSub = values.WhereSelect(x => x % 2 == 0, x => $"even-{x}").Subscribe(whereSelect.Add);
-        using var trySelectSub = values.TrySelect(x => x > 1 ? $"value-{x}" : null).Subscribe(trySelect.Add);
+        using var whereSelectSub = values.WhereSelect(x => x % EvenDivisor == 0, x => $"even-{x}").Subscribe(whereSelect.Add);
+        using var trySelectSub = values.TrySelect(x => x > OddInput ? $"value-{x}" : null).Subscribe(trySelect.Add);
         using var constantsSub = values.SelectConstant("tick").Subscribe(constants.Add);
-        values.OnNext(1);
-        values.OnNext(2);
+        values.OnNext(OddInput);
+        values.OnNext(EvenInput);
 
         await Assert.That(whereSelect).IsCollectionEqualTo(["even-2"]);
         await Assert.That(trySelect).IsCollectionEqualTo(["value-2"]);
@@ -175,19 +190,21 @@ public sealed class ReactiveExtensionsPortedTests
     [Test]
     public async Task ErrorFallbackOperatorsHandleFailures()
     {
+        const int CatchReturnValue = 7;
+
         var catchReturn = new List<int>();
         var catchIgnoreCompleted = false;
         Exception? caught = null;
 
         using var returnSub = Observable.Throw<int>(new InvalidOperationException())
-            .CatchReturn(7)
+            .CatchReturn(CatchReturnValue)
             .Subscribe(catchReturn.Add);
 
         using var ignoreSub = Observable.Throw<int>(new InvalidOperationException("handled"))
             .CatchIgnore<int, InvalidOperationException>(ex => caught = ex)
             .Subscribe(static _ => { }, () => catchIgnoreCompleted = true);
 
-        await Assert.That(catchReturn).IsCollectionEqualTo([7]);
+        await Assert.That(catchReturn).IsCollectionEqualTo([CatchReturnValue]);
         await Assert.That(caught).IsNotNull();
         await Assert.That(catchIgnoreCompleted).IsTrue();
     }
@@ -197,6 +214,12 @@ public sealed class ReactiveExtensionsPortedTests
     [Test]
     public async Task StateAndRoutingOperatorsEmitExpectedValues()
     {
+        const int DefaultValue = -1;
+        const int PartitionDivisor = 2;
+        const int FirstValue = 1;
+        const int SecondValue = 2;
+        const int FallbackValue = 99;
+
         var source = new Subject<int>();
         var latest = new List<int>();
         var pairwise = new List<(int Previous, int Current)>();
@@ -205,27 +228,27 @@ public sealed class ReactiveExtensionsPortedTests
         var sampled = new List<int>();
         var trigger = new Subject<object>();
 
-        using var latestSub = source.LatestOrDefault(-1).Subscribe(latest.Add);
+        using var latestSub = source.LatestOrDefault(DefaultValue).Subscribe(latest.Add);
         using var pairwiseSub = source.Pairwise().Subscribe(pairwise.Add);
-        var (truePartition, falsePartition) = source.Partition(x => x % 2 == 0);
+        var (truePartition, falsePartition) = source.Partition(x => x % PartitionDivisor == 0);
         using var evenSub = truePartition.Subscribe(even.Add);
         using var oddSub = falsePartition.Subscribe(odd.Add);
         using var sampledSub = source.SampleLatest(trigger).Subscribe(sampled.Add);
 
-        source.OnNext(1);
+        source.OnNext(FirstValue);
         trigger.OnNext(new object());
-        source.OnNext(2);
+        source.OnNext(SecondValue);
         trigger.OnNext(new object());
 
         var switched = new List<int>();
-        using var switchSub = Observable.Empty<int>().SwitchIfEmpty(Observable.Return(99)).Subscribe(switched.Add);
+        using var switchSub = Observable.Empty<int>().SwitchIfEmpty(Observable.Return(FallbackValue)).Subscribe(switched.Add);
 
-        await Assert.That(latest).IsCollectionEqualTo([-1, 1, 2]);
-        await Assert.That(pairwise).IsCollectionEqualTo([(1, 2)]);
-        await Assert.That(even).IsCollectionEqualTo([2]);
-        await Assert.That(odd).IsCollectionEqualTo([1]);
-        await Assert.That(sampled).IsCollectionEqualTo([1, 2]);
-        await Assert.That(switched).IsCollectionEqualTo([99]);
+        await Assert.That(latest).IsCollectionEqualTo([DefaultValue, FirstValue, SecondValue]);
+        await Assert.That(pairwise).IsCollectionEqualTo([(FirstValue, SecondValue)]);
+        await Assert.That(even).IsCollectionEqualTo([SecondValue]);
+        await Assert.That(odd).IsCollectionEqualTo([FirstValue]);
+        await Assert.That(sampled).IsCollectionEqualTo([FirstValue, SecondValue]);
+        await Assert.That(switched).IsCollectionEqualTo([FallbackValue]);
     }
 
     /// <summary>Verifies async projection and sequential run helpers.</summary>
@@ -233,14 +256,22 @@ public sealed class ReactiveExtensionsPortedTests
     [Test]
     public async Task AsyncAndSequentialHelpersEmitExpectedValues()
     {
+        const int InputValue = 2;
+        const int SequentialMultiplier = 2;
+        const int ConcurrentMultiplier = 3;
+        const int MaxConcurrency = 2;
+        const int DelayMilliseconds = 50;
+        const int SequentialResult = 4;
+        const int ConcurrentResult = 6;
+
         var source = new Subject<int>();
         var sequential = new List<int>();
         var concurrent = new List<int>();
-        using var seqSub = source.SelectAsyncSequential(x => Task.FromResult(x * 2)).Subscribe(sequential.Add);
-        using var conSub = source.SelectAsyncConcurrent(x => Task.FromResult(x * 3), maxConcurrency: 2).Subscribe(concurrent.Add);
+        using var seqSub = source.SelectAsyncSequential(x => Task.FromResult(x * SequentialMultiplier)).Subscribe(sequential.Add);
+        using var conSub = source.SelectAsyncConcurrent(x => Task.FromResult(x * ConcurrentMultiplier), maxConcurrency: MaxConcurrency).Subscribe(concurrent.Add);
 
-        source.OnNext(2);
-        await Task.Delay(50);
+        source.OnNext(InputValue);
+        await Task.Delay(DelayMilliseconds);
 
         var runAll = new List<RxVoid>();
         using var runAllSub = new[]
@@ -249,8 +280,8 @@ public sealed class ReactiveExtensionsPortedTests
             Observable.Return(RxVoid.Default)
         }.RunAll().Subscribe(runAll.Add);
 
-        await Assert.That(sequential).IsCollectionEqualTo([4]);
-        await Assert.That(concurrent).IsCollectionEqualTo([6]);
+        await Assert.That(sequential).IsCollectionEqualTo([SequentialResult]);
+        await Assert.That(concurrent).IsCollectionEqualTo([ConcurrentResult]);
         await Assert.That(runAll).IsCollectionEqualTo([RxVoid.Default]);
     }
 
@@ -260,7 +291,7 @@ public sealed class ReactiveExtensionsPortedTests
     public async Task FirstMatchFromCandidatesEmitsFirstMatch()
     {
         var results = new List<string>();
-        using var sub = new[] { 1, 2, 3 }
+        using var sub = MatchCandidates
             .FirstMatchFromCandidates(
                 key => Observable.Return(key),
                 value => $"value-{value}",

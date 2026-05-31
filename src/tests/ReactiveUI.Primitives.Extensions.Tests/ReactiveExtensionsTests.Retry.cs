@@ -2,20 +2,10 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.Extensions;
-using ReactiveUI.Primitives.Async.Tests;
-
-using System.IO;
-using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Concurrency;
-using ReactiveUI.Primitives.Extensions.Internal;
-using ReactiveUI.Primitives.Extensions.Operators;
-using ReactiveUI.Primitives.Extensions.Tests;
-using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
+using ReactiveUI.Primitives.Async.Tests;
+using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 

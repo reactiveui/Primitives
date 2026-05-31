@@ -22,10 +22,11 @@ public class SequencerPeriodicMixinsTests
         var ticks = 0;
         var subscription = scheduler.SchedulePeriodic(Period, Period, () => ticks++);
 
+        const int PeriodsToAdvance = 3;
         subscription.Dispose();
         subscription.Dispose();
         InvokeTick(subscription);
-        scheduler.AdvanceBy(TimeSpan.FromTicks(Period.Ticks * 3));
+        scheduler.AdvanceBy(TimeSpan.FromTicks(Period.Ticks * PeriodsToAdvance));
 
         await Assert.That(ticks).IsEqualTo(0);
     }

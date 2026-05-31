@@ -1,0 +1,229 @@
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Extensions.Tests")]
+namespace ReactiveUI.Primitives.Extensions
+{
+    public class Continuation : System.IDisposable
+    {
+        public Continuation() { }
+        public long CompletedPhases { get; }
+        public void Dispose() { }
+        protected virtual void Dispose(bool disposing) { }
+        public System.Threading.Tasks.Task Lock<T>(T item, [System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "value",
+                "Sync"})] System.IObserver<System.ValueTuple<T, System.IDisposable>>? observer) { }
+        public System.Threading.Tasks.ValueTask LockValueTask<T>(T item, [System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "value",
+                "Sync"})] System.IObserver<System.ValueTuple<T, System.IDisposable>>? observer) { }
+    }
+    public readonly struct Heartbeat<T> : ReactiveUI.Primitives.Extensions.IHeartbeat<T>, System.IEquatable<ReactiveUI.Primitives.Extensions.Heartbeat<T>>
+    {
+        public Heartbeat() { }
+        public Heartbeat(T? update) { }
+        public bool IsHeartbeat { get; }
+        public T Update { get; }
+    }
+    public interface IHeartbeat<out T>
+    {
+        bool IsHeartbeat { get; }
+        T Update { get; }
+    }
+    public interface IStale<out T>
+    {
+        bool IsStale { get; }
+        T Update { get; }
+    }
+    public static class ObservableSubscriptionExtensions
+    {
+        public static void SubscribeAndComplete(this System.IObservable<ReactiveUI.Primitives.RxVoid> source) { }
+        public static System.Exception? SubscribeGetError(this System.IObservable<ReactiveUI.Primitives.RxVoid> source) { }
+        public static System.Exception? SubscribeGetError<T>(this System.IObservable<T> source) { }
+        public static T? SubscribeGetValue<T>(this System.IObservable<T> source) { }
+        public static void WaitForCompletion(this System.IObservable<ReactiveUI.Primitives.RxVoid> source) { }
+        public static void WaitForCompletion(this System.IObservable<ReactiveUI.Primitives.RxVoid> source, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static void WaitForCompletion(this System.IObservable<ReactiveUI.Primitives.RxVoid> source, System.TimeSpan timeout) { }
+        public static void WaitForCompletion(this System.IObservable<ReactiveUI.Primitives.RxVoid> source, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.TimeSpan timeout) { }
+        public static System.Exception? WaitForError<T>(this System.IObservable<T> source) { }
+        public static System.Exception? WaitForError<T>(this System.IObservable<T> source, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.Exception? WaitForError<T>(this System.IObservable<T> source, System.TimeSpan timeout) { }
+        public static System.Exception? WaitForError<T>(this System.IObservable<T> source, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.TimeSpan timeout) { }
+        public static T? WaitForValue<T>(this System.IObservable<T> source) { }
+        public static T? WaitForValue<T>(this System.IObservable<T> source, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static T? WaitForValue<T>(this System.IObservable<T> source, System.TimeSpan timeout) { }
+        public static T? WaitForValue<T>(this System.IObservable<T> source, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.TimeSpan timeout) { }
+    }
+    public static class Observables
+    {
+        public static System.IObservable<T> Return<T>(T value) { }
+    }
+    public static class ObserverExtensions
+    {
+        public static void FastForEach<T>(this System.IObserver<T> observer, System.Collections.Generic.IEnumerable<T> source) { }
+    }
+    public static class ReactiveExtensions
+    {
+        public static System.IObservable<ReactiveUI.Primitives.RxVoid> AsSignal<T>(this System.IObservable<T> observable) { }
+        public static System.IObservable<string> BufferUntil(this System.IObservable<char> @this, char startsWith, char endsWith) { }
+        public static System.IObservable<System.Collections.Generic.IList<T>> BufferUntilIdle<T>(this System.IObservable<T> source, System.TimeSpan idleTime) { }
+        public static System.IObservable<System.Collections.Generic.IList<T>> BufferUntilIdle<T>(this System.IObservable<T> source, System.TimeSpan idleTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public static System.IObservable<System.Collections.Generic.IList<T>> BufferUntilInactive<T>(this System.IObservable<T> source, System.TimeSpan inactivityPeriod) { }
+        public static System.IObservable<System.Collections.Generic.IList<T>> BufferUntilInactive<T>(this System.IObservable<T> source, System.TimeSpan inactivityPeriod, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public static System.IObservable<T> CatchAndReturn<T>(this System.IObservable<T> source, T fallback) { }
+        public static System.IObservable<T> CatchAndReturn<T, TException>(this System.IObservable<T> source, System.Func<TException, T> fallbackFactory)
+            where TException : System.Exception { }
+        public static System.IObservable<TSource?> CatchIgnore<TSource>(this System.IObservable<TSource?> source) { }
+        public static System.IObservable<TSource> CatchIgnore<TSource, TException>(this System.IObservable<TSource> source, System.Action<TException> errorAction)
+            where TException : System.Exception { }
+        public static System.IObservable<T> CatchReturn<T>(this System.IObservable<T> source, T fallback) { }
+        public static System.IObservable<ReactiveUI.Primitives.RxVoid> CatchReturnUnit(this System.IObservable<ReactiveUI.Primitives.RxVoid> source) { }
+        public static System.IObservable<bool> CombineLatestValuesAreAllFalse(this System.Collections.Generic.IEnumerable<System.IObservable<bool>> sources) { }
+        public static System.IObservable<bool> CombineLatestValuesAreAllTrue(this System.Collections.Generic.IEnumerable<System.IObservable<bool>> sources) { }
+        public static System.IObservable<T> Conflate<T>(this System.IObservable<T> source, System.TimeSpan minimumUpdatePeriod, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> DebounceImmediate<T>(this System.IObservable<T> source, System.TimeSpan dueTime) { }
+        public static System.IObservable<T> DebounceImmediate<T>(this System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public static System.IObservable<T> DebounceUntil<T>(this System.IObservable<T> source, System.TimeSpan debounce, System.Func<T, bool> condition) { }
+        public static System.IObservable<T> DebounceUntil<T>(this System.IObservable<T> source, System.TimeSpan debounce, System.Func<T, bool> condition, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public static System.IObservable<ReactiveUI.Primitives.Extensions.Stale<T>> DetectStale<T>(this System.IObservable<T> source, System.TimeSpan stalenessPeriod, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> DoOnDispose<T>(this System.IObservable<T> source, System.Action disposeAction) { }
+        public static System.IObservable<T> DoOnSubscribe<T>(this System.IObservable<T> source, System.Action action) { }
+        public static System.IObservable<T> DropIfBusy<T>(this System.IObservable<T> source, System.Func<T, System.Threading.Tasks.ValueTask> asyncAction) { }
+        public static System.IObservable<string> Filter(this System.IObservable<string> source, System.Text.RegularExpressions.Regex regex) { }
+        public static System.IObservable<string> Filter(this System.IObservable<string> source, string regexPattern) { }
+        public static System.IObservable<TResult> FirstMatchFromCandidates<TKey, TRaw, TResult>(this System.Collections.Generic.IReadOnlyList<TKey> candidates, System.Func<TKey, System.IObservable<TRaw>> project, System.Func<TRaw, TResult> transform, System.Func<TResult, bool> predicate, TResult fallback) { }
+        public static System.IObservable<T> ForEach<T>(this System.IObservable<System.Collections.Generic.IEnumerable<T>> source) { }
+        public static System.IObservable<T> ForEach<T>(this System.IObservable<System.Collections.Generic.IEnumerable<T>> source, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public static System.IObservable<T> FromArray<T>(this System.Collections.Generic.IEnumerable<T> source) { }
+        public static System.IObservable<T> FromArray<T>(this System.Collections.Generic.IEnumerable<T> source, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public static System.IObservable<T> GetMax<T>(this System.IObservable<T> @this, params System.IObservable<T>[] sources)
+            where T :  struct, System.IComparable<T> { }
+        public static System.IObservable<T> GetMin<T>(this System.IObservable<T> @this, params System.IObservable<T>[] sources)
+            where T :  struct, System.IComparable<T> { }
+        public static System.IObservable<ReactiveUI.Primitives.Extensions.Heartbeat<T>> Heartbeat<T>(this System.IObservable<T> source, System.TimeSpan heartbeatPeriod, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> LatestOrDefault<T>(this System.IObservable<T> source, T defaultValue) { }
+        public static System.IObservable<T> LogErrors<T>(this System.IObservable<T> source, System.Action<System.Exception> logger) { }
+        public static System.IObservable<bool> Not(this System.IObservable<bool> source) { }
+        public static System.IObservable<T> ObserveOnIf<T>(this System.IObservable<T> source, System.IObservable<bool> condition, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> ObserveOnIf<T>(this System.IObservable<T> source, bool condition, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> ObserveOnIf<T>(this System.IObservable<T> source, System.IObservable<bool> condition, ReactiveUI.Primitives.Concurrency.ISequencer trueScheduler, ReactiveUI.Primitives.Concurrency.ISequencer falseScheduler) { }
+        public static System.IObservable<T> ObserveOnIf<T>(this System.IObservable<T> source, bool condition, ReactiveUI.Primitives.Concurrency.ISequencer trueScheduler, ReactiveUI.Primitives.Concurrency.ISequencer falseScheduler) { }
+        public static System.IObservable<TSource> ObserveOnSafe<TSource>(this System.IObservable<TSource> source, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public static System.IObservable<TSource> OnErrorRetry<TSource>(this System.IObservable<TSource> source) { }
+        public static System.IObservable<TSource> OnErrorRetry<TSource, TException>(this System.IObservable<TSource> source, System.Action<TException> onError)
+            where TException : System.Exception { }
+        public static System.IObservable<TSource> OnErrorRetry<TSource, TException>(this System.IObservable<TSource> source, System.Action<TException> onError, System.TimeSpan delay)
+            where TException : System.Exception { }
+        public static System.IObservable<TSource> OnErrorRetry<TSource, TException>(this System.IObservable<TSource> source, System.Action<TException> onError, int retryCount)
+            where TException : System.Exception { }
+        public static System.IObservable<TSource> OnErrorRetry<TSource, TException>(this System.IObservable<TSource> source, System.Action<TException> onError, int retryCount, System.TimeSpan delay)
+            where TException : System.Exception { }
+        public static System.IObservable<TSource> OnErrorRetry<TSource, TException>(this System.IObservable<TSource> source, System.Action<TException> onError, int retryCount, System.TimeSpan delay, ReactiveUI.Primitives.Concurrency.ISequencer delayScheduler)
+            where TException : System.Exception { }
+        public static void OnNext<T>(this System.IObserver<T> observer, params T[] events) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Previous",
+                "Current"})]
+        public static System.IObservable<System.ValueTuple<T, T>> Pairwise<T>(this System.IObservable<T> source) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "True",
+                "False"})]
+        public static System.ValueTuple<System.IObservable<T>, System.IObservable<T>> Partition<T>(this System.IObservable<T> source, System.Func<T, bool> predicate) { }
+        public static System.IObservable<T> ReplayLastOnSubscribe<T>(this System.IObservable<T> source, T initialValue) { }
+        public static System.IObservable<T> RetryForeverWithDelay<T>(this System.IObservable<T> source, System.TimeSpan delay) { }
+        public static System.IObservable<T> RetryWithBackoff<T>(this System.IObservable<T> source, int maxRetries, System.TimeSpan initialDelay) { }
+        public static System.IObservable<T> RetryWithBackoff<T>(this System.IObservable<T> source, int maxRetries, System.TimeSpan initialDelay, double backoffFactor, System.TimeSpan? maxDelay, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public static System.IObservable<T> RetryWithDelay<T>(this System.IObservable<T> source, int retryCount, System.Func<int, System.TimeSpan> delaySelector) { }
+        public static System.IObservable<T> RetryWithFixedDelay<T>(this System.IObservable<T> source, int retryCount, System.TimeSpan delay) { }
+        public static System.IObservable<ReactiveUI.Primitives.RxVoid> RunAll(this System.Collections.Generic.IReadOnlyList<System.IObservable<ReactiveUI.Primitives.RxVoid>> sources) { }
+        public static System.IObservable<T> SampleLatest<T>(this System.IObservable<T> source, System.IObservable<object> trigger) { }
+        public static System.IObservable<TAccumulate> ScanWithInitial<TSource, TAccumulate>(this System.IObservable<TSource> source, TAccumulate initial, System.Func<TAccumulate, TSource, TAccumulate> accumulator) { }
+        public static System.IObservable<T> Schedule<T>(this System.IObservable<T> source, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Func<T, T> function) { }
+        public static System.IObservable<T> Schedule<T>(this System.IObservable<T> source, System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> Schedule<T>(this System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> Schedule<T>(this T value, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Func<T, T> function) { }
+        public static System.IObservable<T> Schedule<T>(this T value, System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> Schedule<T>(this T value, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> Schedule<T>(this System.IObservable<T> source, System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Action<T> action) { }
+        public static System.IObservable<T> Schedule<T>(this System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Action<T> action) { }
+        public static System.IObservable<T> Schedule<T>(this System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Func<T, T> function) { }
+        public static System.IObservable<T> Schedule<T>(this T value, System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Action<T> action) { }
+        public static System.IObservable<T> Schedule<T>(this T value, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Action<T> action) { }
+        public static System.IObservable<T> Schedule<T>(this T value, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Func<T, T> function) { }
+        public static System.IDisposable ScheduleSafe(this ReactiveUI.Primitives.Concurrency.ISequencer? scheduler, System.Action action) { }
+        public static System.IDisposable ScheduleSafe(this ReactiveUI.Primitives.Concurrency.ISequencer? scheduler, System.TimeSpan dueTime, System.Action action) { }
+        public static System.IObservable<TResult> SelectAsync<TSource, TResult>(this System.IObservable<TSource> source, System.Func<TSource, System.Threading.Tasks.Task<TResult>> asyncSelector) { }
+        public static System.IObservable<TResult> SelectAsync<TSource, TResult>(this System.IObservable<TSource> source, System.Func<TSource, System.Threading.CancellationToken, System.Threading.Tasks.Task<TResult>> asyncSelector) { }
+        public static System.IObservable<TResult> SelectAsyncConcurrent<TSource, TResult>(this System.IObservable<TSource> source, System.Func<TSource, System.Threading.Tasks.Task<TResult>> selector, int maxConcurrency) { }
+        public static System.IObservable<TResult> SelectAsyncSequential<TSource, TResult>(this System.IObservable<TSource> source, System.Func<TSource, System.Threading.Tasks.Task<TResult>> selector) { }
+        public static System.IObservable<TResult> SelectConstant<TSource, TResult>(this System.IObservable<TSource> source, TResult constant) { }
+        public static System.IObservable<TResult> SelectLatestAsync<TSource, TResult>(this System.IObservable<TSource> source, System.Func<TSource, System.Threading.Tasks.Task<TResult>> selector) { }
+        public static System.IObservable<TResult> SelectManyThen<TSource, TMid, TResult>(this System.IObservable<TSource> source, System.Func<TSource, System.IObservable<TMid>> first, System.Func<TMid, System.IObservable<TResult>> second) { }
+        public static System.IObservable<T[]> Shuffle<T>(this System.IObservable<T[]> source) { }
+        public static System.IObservable<T> SkipWhileNull<T>(this System.IObservable<T> source)
+            where T :  class { }
+        public static System.IObservable<ReactiveUI.Primitives.RxVoid> Start(System.Action action, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public static System.IObservable<TResult> Start<TResult>(System.Func<TResult> function, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public static System.IDisposable SubscribeAsync<T>(this System.IObservable<T> source, System.Func<T, System.Threading.Tasks.ValueTask> onNext) { }
+        public static System.IDisposable SubscribeAsync<T>(this System.IObservable<T> source, System.Func<T, System.Threading.Tasks.ValueTask> onNext, System.Action onCompleted) { }
+        public static System.IDisposable SubscribeAsync<T>(this System.IObservable<T> source, System.Func<T, System.Threading.Tasks.ValueTask> onNext, System.Action<System.Exception> onError) { }
+        public static System.IDisposable SubscribeAsync<T>(this System.IObservable<T> source, System.Func<T, System.Threading.Tasks.ValueTask> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+        public static System.IDisposable SubscribeSynchronous<T>(this System.IObservable<T> source, System.Func<T, System.Threading.Tasks.ValueTask> onNext) { }
+        public static System.IDisposable SubscribeSynchronous<T>(this System.IObservable<T> source, System.Func<T, System.Threading.Tasks.ValueTask> onNext, System.Action onCompleted) { }
+        public static System.IDisposable SubscribeSynchronous<T>(this System.IObservable<T> source, System.Func<T, System.Threading.Tasks.ValueTask> onNext, System.Action<System.Exception> onError) { }
+        public static System.IDisposable SubscribeSynchronous<T>(this System.IObservable<T> source, System.Func<T, System.Threading.Tasks.ValueTask> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+        public static System.IObservable<T> SwitchIfEmpty<T>(this System.IObservable<T> source, System.IObservable<T> fallback) { }
+        public static System.IObservable<System.DateTime> SyncTimer(System.TimeSpan timeSpan) { }
+        public static System.IObservable<System.DateTime> SyncTimer(System.TimeSpan timeSpan, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Value",
+                "Sync"})]
+        public static System.IObservable<System.ValueTuple<T, System.IDisposable>> SynchronizeAsync<T>(this System.IObservable<T> source) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Value",
+                "Sync"})]
+        public static System.IObservable<System.ValueTuple<T, System.IDisposable>> SynchronizeSynchronous<T>(this System.IObservable<T> source) { }
+        public static System.IObservable<TSource> TakeUntil<TSource>(this System.IObservable<TSource> source, System.Func<TSource, bool> predicate) { }
+        public static System.IObservable<T> ThrottleDistinct<T>(this System.IObservable<T> source, System.TimeSpan throttle) { }
+        public static System.IObservable<T> ThrottleDistinct<T>(this System.IObservable<T> source, System.TimeSpan throttle, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> ThrottleFirst<T>(this System.IObservable<T> source, System.TimeSpan window) { }
+        public static System.IObservable<T> ThrottleFirst<T>(this System.IObservable<T> source, System.TimeSpan window, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public static System.IObservable<T> ThrottleOnScheduler<T>(this System.IObservable<T> source, System.TimeSpan timeSpan, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> ThrottleUntilTrue<T>(this System.IObservable<T> source, System.TimeSpan throttle, System.Func<T, bool> predicate) { }
+        public static System.Threading.Tasks.Task<T> ToHotTask<T>(this System.IObservable<T> source) { }
+        public static System.Threading.Tasks.ValueTask<T> ToHotValueTask<T>(this System.IObservable<T> source) { }
+        public static System.IObservable<TProperty> ToPropertyObservable<T, TProperty>(this T source, System.Linq.Expressions.Expression<System.Func<T, TProperty>> propertyExpression)
+            where T : System.ComponentModel.INotifyPropertyChanged { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Observable",
+                "Observer"})]
+        public static System.ValueTuple<System.IObservable<T>, System.IObserver<T>> ToReadOnlyBehavior<T>(T initialValue) { }
+        public static System.IObservable<TOut> TrySelect<TIn, TOut>(this System.IObservable<TIn> source, System.Func<TIn, TOut?> selector) { }
+        public static System.IObservable<ReactiveUI.Primitives.RxVoid> Using<T>(this T obj, System.Action<T>? action)
+            where T : System.IDisposable { }
+        public static System.IObservable<ReactiveUI.Primitives.RxVoid> Using<T>(this T obj, System.Action<T>? action, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler)
+            where T : System.IDisposable { }
+        public static System.IObservable<TResult> Using<T, TResult>(this T obj, System.Func<T, TResult> function)
+            where T : System.IDisposable { }
+        public static System.IObservable<TResult> Using<T, TResult>(this T obj, System.Func<T, TResult> function, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler)
+            where T : System.IDisposable { }
+        public static System.IObservable<T> WaitUntil<T>(this System.IObservable<T> source, System.Func<T, bool> predicate) { }
+        public static System.IObservable<bool> WhereFalse(this System.IObservable<bool> source) { }
+        public static System.IObservable<T> WhereIsNotNull<T>(this System.IObservable<T> observable) { }
+        public static System.IObservable<TOut> WhereSelect<TIn, TOut>(this System.IObservable<TIn> source, System.Func<TIn, bool> predicate, System.Func<TIn, TOut> selector) { }
+        public static System.IObservable<bool> WhereTrue(this System.IObservable<bool> source) { }
+        public static System.IObservable<ReactiveUI.Primitives.RxVoid> While(System.Func<bool> condition, System.Action action) { }
+        public static System.IObservable<ReactiveUI.Primitives.RxVoid> While(System.Func<bool> condition, System.Action action, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public static System.IObservable<T> WithLimitedConcurrency<T>(this System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task<T>> taskFunctions, int maxConcurrency) { }
+    }
+    public readonly struct Stale<T> : ReactiveUI.Primitives.Extensions.IStale<T>, System.IEquatable<ReactiveUI.Primitives.Extensions.Stale<T>>
+    {
+        public Stale() { }
+        public Stale(T? update) { }
+        public bool IsStale { get; }
+        public T Update { get; }
+    }
+}
+namespace ReactiveUI.Primitives.Extensions.Operators
+{
+    public static class CachedObservables
+    {
+        public static System.IObservable<ReactiveUI.Primitives.RxVoid> UnitDefault { get; }
+    }
+}
