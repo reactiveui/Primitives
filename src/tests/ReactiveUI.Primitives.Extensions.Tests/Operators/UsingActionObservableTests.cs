@@ -84,6 +84,15 @@ public partial class UsingActionObservableTests
 
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(actionRan).IsTrue();
+
+        // OnCompleted is signalled before the resource is disposed on the scheduler
+        // thread, so wait briefly for the dispose to land.
+        var deadline = Environment.TickCount64 + 5000;
+        while (resource.DisposeCount == 0 && Environment.TickCount64 < deadline)
+        {
+            await Task.Yield();
+        }
+
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }
 
