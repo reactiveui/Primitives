@@ -121,11 +121,7 @@ public static partial class SignalAsync
             /// <summary>
             /// The synchronization gate protecting shared throttle state.
             /// </summary>
-#if NET9_0_OR_GREATER
             private readonly Lock _gate = new();
-#else
-            private readonly object _gate = new();
-#endif
 
             /// <summary>
             /// A monotonically increasing identifier used to detect whether a newer element has superseded the current timer.

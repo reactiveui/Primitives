@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <Compile Include="..\Shared\ApiApprovalExtensions.cs" Link="ApiApprovalExtensions.cs" />
+    <Compile Include="..\Shared\AsyncTestHelpers.cs" Link="AsyncTestHelpers.cs" />
   </ItemGroup>
 
   <ItemGroup>

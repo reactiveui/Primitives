@@ -27,7 +27,13 @@ internal static class ApiApprovalExtensions
         [CallerFilePath] string filePath = "")
     {
         var generatorOptions = new ApiGeneratorOptions();
-        var apiText = assembly.GeneratePublicApi(generatorOptions);
+
+        // Normalise line endings so the approval is resilient to CRLF/LF differences between
+        // the checked-in baseline (committed via .gitattributes as CRLF) and the value produced
+        // on whichever platform the tests run (LF on Linux/macOS, CRLF on Windows).
+        var apiText = assembly.GeneratePublicApi(generatorOptions)
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n');
         _ = await Verifier.Verify(apiText, null, filePath)
             .UniqueForRuntimeAndVersion()
             .ScrubEmptyLines()

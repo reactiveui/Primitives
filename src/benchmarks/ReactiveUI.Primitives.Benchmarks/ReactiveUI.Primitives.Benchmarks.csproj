@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj" />
     <ProjectReference Include="..\..\ReactiveUI.Primitives.Async\ReactiveUI.Primitives.Async.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Extensions\ReactiveUI.Primitives.Extensions.csproj" />
   </ItemGroup>
 
 </Project>

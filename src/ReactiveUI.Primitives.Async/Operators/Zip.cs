@@ -111,11 +111,7 @@ public static partial class SignalAsync
             /// <summary>
             /// The synchronization gate protecting shared state access.
             /// </summary>
-#if NET9_0_OR_GREATER
             private readonly Lock _gate = new();
-#else
-            private readonly object _gate = new();
-#endif
 
             /// <summary>
             /// Queue of buffered elements from the first source awaiting a pair from the second source.

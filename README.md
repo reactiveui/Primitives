@@ -16,18 +16,21 @@ ReactiveUI.Primitives is designed to:
 ## Table of contents
 
 1. [Install](#install)
-2. [Target frameworks and dependencies](#target-frameworks-and-dependencies)
-3. [Core model](#core-model)
-4. [Creation factories](#creation-factories)
-5. [Operators](#operators)
-6. [Stateful signals and subject-like types](#stateful-signals-and-subject-like-types)
-7. [Sequencers](#sequencers)
-8. [Threading, disposal, and error semantics](#threading-disposal-and-error-semantics)
-9. [Source-generator bridge behavior](#source-generator-bridge-behavior)
-10. [Migration guides](#systemreactive-to-reactiveuiprimitives-migration-guide)
-11. [Benchmarks and performance posture](#benchmarks-and-performance-posture)
-12. [Repository layout](#repository-layout)
-13. [Validation commands](#validation-commands)
+2. [Agent Skills](#agent-skills)
+3. [Target frameworks and dependencies](#target-frameworks-and-dependencies)
+4. [Core model](#core-model)
+5. [Creation factories](#creation-factories)
+6. [Operators](#operators)
+7. [ReactiveUI.Primitives.Async](#reactiveuiprimitivesasync)
+8. [ReactiveUI.Primitives.Extensions](#reactiveuiprimitivesextensions)
+9. [Stateful signals and subject-like types](#stateful-signals-and-subject-like-types)
+10. [Sequencers](#sequencers)
+11. [Threading, disposal, and error semantics](#threading-disposal-and-error-semantics)
+12. [Source-generator bridge behavior](#source-generator-bridge-behavior)
+13. [Migration guides](#systemreactive-to-reactiveuiprimitives-migration-guide)
+14. [Benchmarks and performance posture](#benchmarks-and-performance-posture)
+15. [Repository layout](#repository-layout)
+16. [Validation commands](#validation-commands)
 
 ## Install
 
@@ -37,9 +40,11 @@ When the package is available on your configured NuGet feed:
 dotnet add package ReactiveUI.Primitives
 ```
 
-Optional UI/platform integration packages are split out so the base package stays free of UI framework references:
+Optional Async, Extensions, and UI/platform integration packages are split out so the base package stays free of async-helper and UI framework references:
 
 ```bash
+dotnet add package ReactiveUI.Primitives.Async
+dotnet add package ReactiveUI.Primitives.Extensions
 dotnet add package ReactiveUI.Primitives.Wpf
 dotnet add package ReactiveUI.Primitives.WinForms
 dotnet add package ReactiveUI.Primitives.WinUI
@@ -51,8 +56,11 @@ Then import the namespaces you need:
 
 ```csharp
 using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Extensions;
+using ReactiveUI.Primitives.Async.Signals;
 using ReactiveUI.Primitives.Signals;
 ```
 
@@ -63,6 +71,36 @@ The package metadata is configured to include this README in the NuGet package v
 
 Those generators are analyzers. They do not add runtime System.Reactive or R3 dependencies to ReactiveUI.Primitives. They emit bridge code only when the consuming compilation already references the relevant external library symbols.
 
+## Agent Skills
+
+The base `ReactiveUI.Primitives` NuGet package includes `Skills.md` at the package root. It is an agent-oriented guide for using ReactiveUI.Primitives, Async, Extensions, UI sequencers, bridge source generators, and migration from System.Reactive or R3 while assuming the libraries are consumed from NuGet packages.
+
+After package restore, locate the file in the local NuGet package cache:
+
+```powershell
+$version = "<version>"
+$skill = "$env:USERPROFILE\.nuget\packages\reactiveui.primitives\$version\Skills.md"
+```
+
+On macOS or Linux:
+
+```bash
+version="<version>"
+skill="$HOME/.nuget/packages/reactiveui.primitives/$version/Skills.md"
+```
+
+Install the skill by copying the contents of `Skills.md` into the instruction location supported by the agent. Agents that expect a `SKILL.md` file should use a `reactiveui-primitives` directory and rename the copied file to `SKILL.md`.
+
+| Agent | Recommended project-local install | Notes |
+|---|---|---|
+| [OpenAI Codex](https://developers.openai.com/codex/skills) | `.agents/skills/reactiveui-primitives/SKILL.md` | Codex also supports user-level skills under `$HOME/.agents/skills`. |
+| [Claude Code](https://code.claude.com/docs/en/skills) | `.claude/skills/reactiveui-primitives/SKILL.md` | Claude Code also supports personal skills under `~/.claude/skills`. |
+| [Cline](https://docs.cline.bot/customization/skills) | `.cline/skills/reactiveui-primitives/SKILL.md` | Cline skills must be enabled in Cline's feature settings. |
+| [GitHub Copilot](https://docs.github.com/en/copilot/concepts/prompting/response-customization) | `.github/instructions/reactiveui-primitives.instructions.md` | For repository-wide behavior, summarize or link the skill from `.github/copilot-instructions.md`. |
+| [Cursor](https://docs.cursor.com/en/context) | `.cursor/rules/reactiveui-primitives.mdc` | Cursor project rules are version-controlled under `.cursor/rules`; `AGENTS.md` is also supported. |
+| [Windsurf](https://docs.windsurf.com/windsurf/cascade/memories) | `.windsurf/rules/reactiveui-primitives.md` | Windsurf also reads `AGENTS.md` through the same rules engine. |
+| [Gemini CLI](https://google-gemini.github.io/gemini-cli/docs/cli/gemini-md.html) | `GEMINI.md` or an imported file referenced from `GEMINI.md` | Gemini CLI loads hierarchical context files and supports importing other markdown files with `@file.md`. |
+
 ## Target frameworks and dependencies
 
 The base production `ReactiveUI.Primitives` library uses `$(LibraryTargetFrameworks)` from `src/Directory.Build.props` and currently targets:
@@ -72,19 +110,22 @@ The base production `ReactiveUI.Primitives` library uses `$(LibraryTargetFramewo
 - `net10.0`
 - `net462`
 - `net472`
+- `net48`
 - `net481`
 
 Windows UI and platform-integration projects in this repository use their own TFM properties (for example `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, or MAUI/platform-focused TFMs where applicable). Those platform TFMs are not target frameworks of the base `ReactiveUI.Primitives` package.
 
 The optional package TFMs are:
 
-- `ReactiveUI.Primitives.Wpf`: `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net462`, `net472`, `net481`
-- `ReactiveUI.Primitives.WinForms`: `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net462`, `net472`, `net481`
+- `ReactiveUI.Primitives.Wpf`: `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net462`, `net472`, `net48`, `net481`
+- `ReactiveUI.Primitives.WinForms`: `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net462`, `net472`, `net48`, `net481`
 - `ReactiveUI.Primitives.WinUI`: `net8.0-windows10.0.19041.0`, `net9.0-windows10.0.19041.0`, `net10.0-windows10.0.19041.0`
 - `ReactiveUI.Primitives.Blazor`: `net8.0`, `net9.0`, `net10.0`
 - `ReactiveUI.Primitives.Maui`: `net9.0`, `net10.0`
+- `ReactiveUI.Primitives.Async`: `net8.0`, `net9.0`, `net10.0`, `net462`, `net472`, `net48`, `net481`
+- `ReactiveUI.Primitives.Extensions`: `net8.0`, `net9.0`, `net10.0`, `net462`, `net472`, `net48`, `net481`
 
-Runtime package dependencies are intentionally small. The base production package does not depend on System.Reactive or R3. The only runtime package reference declared directly by `src/ReactiveUI.Primitives/ReactiveUI.Primitives.csproj` is `System.ValueTuple` for `net462`; the bridge source generators are packed as analyzers in the base package rather than shipped as separate NuGet packages. `ReactiveUI.Primitives.Blazor` references `Microsoft.AspNetCore.Components`, `ReactiveUI.Primitives.Maui` references `Microsoft.Maui.Core`, and `ReactiveUI.Primitives.WinUI` references `Microsoft.WindowsAppSDK`. The remaining shared package references are analyzer, SourceLink, versioning, ILLink, reference-assembly, or build-time support packages such as Blazor.Common.Analyzers, Microsoft.SourceLink.GitHub, MinVer, Roslynator.Analyzers, SonarAnalyzer.CSharp, stylecop.analyzers, Microsoft.NET.ILLink.Tasks, and Microsoft.NETFramework.ReferenceAssemblies. Benchmark projects may reference System.Reactive and R3 as comparison baselines, but those references are not production dependencies.
+Runtime package dependencies are intentionally small. The base production package does not depend on System.Reactive or R3. The only runtime package reference declared directly by `src/ReactiveUI.Primitives/ReactiveUI.Primitives.csproj` is `System.ValueTuple` for `net462`; the bridge source generators are packed as analyzers in the base package rather than shipped as separate NuGet packages. `ReactiveUI.Primitives.Async` and `ReactiveUI.Primitives.Extensions` reference `ReactiveUI.Primitives`; their additional package references are limited to .NET Framework compatibility/support packages such as `System.ValueTuple`, Polyfill, Microsoft.Bcl.TimeProvider, System.Threading.Channels, System.Runtime.CompilerServices.Unsafe, System.ComponentModel.Annotations, System.Buffers, System.Memory, and System.Collections.Immutable for `net4x` targets. `ReactiveUI.Primitives.Async` also packs the bridge source generators as analyzers so async bridge methods are generated for consumers that reference System.Reactive or R3. `ReactiveUI.Primitives.Extensions` has no production System.Reactive or R3 dependency. `ReactiveUI.Primitives.Blazor` references `Microsoft.AspNetCore.Components`, `ReactiveUI.Primitives.Maui` references `Microsoft.Maui.Core`, and `ReactiveUI.Primitives.WinUI` references `Microsoft.WindowsAppSDK`. The remaining shared package references are analyzer, SourceLink, versioning, ILLink, reference-assembly, or build-time support packages such as Blazor.Common.Analyzers, Microsoft.SourceLink.GitHub, MinVer, Roslynator.Analyzers, SonarAnalyzer.CSharp, stylecop.analyzers, Microsoft.NET.ILLink.Tasks, and Microsoft.NETFramework.ReferenceAssemblies. Benchmark projects may reference System.Reactive, R3, and ReactiveUI.Extensions as comparison baselines, but those references are not production dependencies.
 
 ## Core model
 
@@ -366,6 +407,163 @@ IObservable<Spark<int>> sparks = Signal.Sequence(1, 3).Spark();
 IObservable<int> values = sparks.Unspark();
 ```
 
+## ReactiveUI.Primitives.Async
+
+`ReactiveUI.Primitives.Async` is the async counterpart to the base `ReactiveUI.Primitives` surface. It keeps the Primitives vocabulary and adds `ValueTask`/`CancellationToken`-aware observer calls for producers and consumers that need asynchronous notification, asynchronous disposal, or async stream collection.
+
+Core async contracts and data types:
+
+| API | Purpose |
+|---|---|
+| `IObservableAsync<T>` | Async observable contract. `SubscribeAsync` receives an `IObserverAsync<T>` and returns an `IAsyncDisposable`. |
+| `IObserverAsync<T>` | Async observer contract with `OnNextAsync`, `OnErrorResumeAsync`, `OnCompletedAsync`, and `DisposeAsync`. |
+| `ObserverAsync<T>` | Base observer type for implementing async observers. |
+| `ISignalAsync<T>` | Pushable async signal that combines `IObserverAsync<T>`, `IObservableAsync<T>`, and a `Values` observable. |
+| `SignalAsync<T>` | Abstract base and static factory/operator host for async observables. |
+| `ConnectableSignalAsync<T>` | Async connectable sequence returned by multicast/publish operators. |
+| `Result` | Completion result that represents success or terminal failure. |
+| `Optional<T>` | Allocation-free optional value used by replay/latest async signals. |
+| `AsyncContext` | Dispatch abstraction over `SynchronizationContext`, `TaskScheduler`, or `ISequencer`. |
+| `ConcurrentObserverCallsException` | Raised when a serial signal detects concurrent observer calls. |
+| `UnhandledExceptionHandler` | Central handler for async fire-and-forget failures. |
+
+Async signal factories live in two places. Use `ReactiveUI.Primitives.Async.Signals.Signal` when you need a mutable signal, and use `SignalAsync` when you need a sequence factory or operator:
+
+| Factory group | APIs |
+|---|---|
+| Mutable signals | `Signal.Create<T>()`, `Signal.Create<T>(SignalCreationOptions)`, `Signal.CreateBehavior<T>(startValue)`, `Signal.CreateBehavior<T>(startValue, BehaviorSignalCreationOptions)`, `Signal.CreateReplayLatest<T>()`, `Signal.CreateReplayLatest<T>(ReplayLatestSignalCreationOptions)` |
+| Signal options | `SignalCreationOptions`, `BehaviorSignalCreationOptions`, `ReplayLatestSignalCreationOptions`, `PublishingOption` |
+| Stateless factories | `SignalAsync.Emit`, `EmitRxVoid`, `None`, `Fail`, `Return`, `Empty`, `Never`, `Throw` |
+| Sequence factories | `Sequence`, `Range`, `FromEnumerable`, `FromAsyncEnumerable`, `ToAsyncSignal`, `Create`, `CreateAsBackgroundJob`, `Defer`, `FromAsync`, `Use`, `Using` |
+| Time factories | `After`, `Every`, `Pulse`, `Timer`, `Interval` |
+| Async disposables | `DisposableAsync.Empty`, `DisposableAsync.Create`, `DisposableAsyncSlot`, `SingleAssignmentDisposableAsync`, `SingleReplaceableDisposableAsync`, `MultipleDisposableAsync` |
+
+Async operators follow the same naming style as the core package where that avoids collisions with System.Reactive/R3, while preserving familiar aliases for compatibility:
+
+| Category | APIs |
+|---|---|
+| Projection/filtering | `Map`, `MapWith`, `Keep`, `KeepWith`, `KeepNotNull`, `KeepType`, `CastTo`, `Select`, `Where`, `OfType`, `Cast`, `Tap`, `Do`, `Fold`, `Scan`, `ReduceAsync`, `AggregateAsync`, `Distinct`, `Unique`, `DistinctBy`, `UniqueBy`, `DistinctUntilChanged`, `DistinctUntilChangedBy`, `SkipWhileNull`, `WhereIsNotNull`, `WhereTrue`, `WhereFalse`, `Not`, `GetMin`, `GetMax`, `ForEach` |
+| Composition | `Bind`, `FlatMap`, `SelectMany`, `Chain`, `Concat`, `Blend`, `Merge`, `SwitchTo`, `Switch`, `Pair`, `Zip`, `SyncLatest`, `PairLatest`, `CombineLatest`, `CombineLatestValuesAreAllTrue`, `CombineLatestValuesAreAllFalse`, `GroupBy` |
+| Error/retry/recovery | `Reattempt`, `Retry`, `Recover`, `Rescue`, `Resume`, `Catch`, `OnErrorResumeAsFailure` |
+| Time/scheduling | `Shift`, `Delay`, `Expire`, `Timeout`, `Throttle`, `ObserveOn`, `Yield` |
+| Lifetime/multicast | `Multicast`, `Publish`, `StatelessPublish`, `ReplayLatestPublish`, `StatelessReplayLatestPublish`, `RefCount`, `OnDispose`, `TakeUntil`, `TakeUntilOptions`, `CompletionSignalDelegate`, `Wrap` |
+| Sequence boundaries | `Take`, `Skip`, `TakeWhile`, `SkipWhile`, `Lead`, `Prepend`, `StartWith` |
+| Terminal helpers | `FirstAsync`, `FirstOrDefaultAsync`, `LastAsync`, `LastOrDefaultAsync`, `SingleAsync`, `SingleOrDefaultAsync`, `AnyAsync`, `AllAsync`, `ContainsAsync`, `CountAsync`, `LongCountAsync`, `ToListAsync`, `CollectListAsync`, `CollectArrayAsync`, `ToDictionaryAsync`, `ToAsyncEnumerable`, `WaitCompletionAsync`, `ForEachAsync`, `SubscribeAsync` |
+
+Basic async sequence example:
+
+```csharp
+using ReactiveUI.Primitives.Async;
+
+List<string> labels = await SignalAsync.Sequence(1, 12)
+    .Keep(static value => value % 2 == 0)
+    .Map(static value => $"even:{value}")
+    .ToListAsync();
+```
+
+Mutable async signal example:
+
+```csharp
+using ReactiveUI.Primitives.Async;
+using ReactiveUI.Primitives.Async.Signals;
+
+ISignalAsync<int> requests = Signal.Create<int>();
+
+await using IAsyncDisposable subscription = await requests.Values
+    .Map(static value => value * 2)
+    .SubscribeAsync(value => Console.WriteLine(value));
+
+await requests.OnNextAsync(21, CancellationToken.None);
+await requests.OnCompletedAsync(Result.Success);
+```
+
+Async context example:
+
+```csharp
+using ReactiveUI.Primitives.Async;
+
+AsyncContext context = AsyncContext.From(TaskScheduler.Default);
+
+await using IAsyncDisposable subscription = await SignalAsync.Sequence(1, 3)
+    .ObserveOn(context)
+    .SubscribeAsync(static value => Console.WriteLine(value));
+```
+
+`ReactiveUI.Primitives.Async` also packs the bridge source generators as analyzers. A consumer that references System.Reactive can use generated `ToObservableAsync<T>(this System.IObservable<T>)` and `ToObservable<T>(this IObservableAsync<T>)` adapters. A consumer that references R3 can use generated `AsPrimitivesAsyncObservable<T>(this R3.Observable<T>)` and `AsR3Observable<T>(this IObservableAsync<T>)` adapters.
+
+## ReactiveUI.Primitives.Extensions
+
+`ReactiveUI.Primitives.Extensions` migrates the non-async helper surface from `ReactiveUI.Extensions` onto `ReactiveUI.Primitives`. It is still based on the BCL `IObservable<T>` contract, but it uses `ISequencer` for scheduling and production references only `ReactiveUI.Primitives` plus framework compatibility packages. It does not reference System.Reactive or R3.
+
+Core utility surface:
+
+| API | Purpose |
+|---|---|
+| `Heartbeat<T>` / `IHeartbeat<T>` | Value plus heartbeat metadata from heartbeat operators. |
+| `Stale<T>` / `IStale<T>` | Value plus stale/fresh state from stale-detection operators. |
+| `Continuation` | Disposable continuation helper for bridging synchronous waits. |
+| `Observables.Return<T>(value)` | Single-value observable factory. |
+| `ObserverExtensions.FastForEach` | Pushes enumerable values into an observer with array/list fast paths. |
+| `ObservableSubscriptionExtensions` | Synchronous test/utility helpers: `SubscribeGetValue`, `SubscribeAndComplete`, `SubscribeGetError`, `WaitForValue`, `WaitForCompletion`, `WaitForError`. |
+
+Extension operators are grouped below by feature area:
+
+| Category | APIs |
+|---|---|
+| Filtering/projection | `WhereIsNotNull`, `SkipWhileNull`, `Not`, `WhereTrue`, `WhereFalse`, `WhereSelect`, `SelectConstant`, `TrySelect`, `SelectManyThen`, `Pairwise`, `Partition`, `Filter`, `ForEach`, `Shuffle`, `LatestOrDefault`, `GetMin`, `GetMax`, `CombineLatestValuesAreAllTrue`, `CombineLatestValuesAreAllFalse` |
+| Error/retry | `CatchIgnore`, `CatchAndReturn`, `CatchReturn`, `CatchReturnUnit`, `LogErrors`, `OnErrorRetry`, `RetryWithBackoff`, `RetryWithDelay`, `RetryForeverWithDelay`, `RetryWithFixedDelay` |
+| Time/scheduling | `SyncTimer`, `ObserveOnIf`, `ScheduleSafe`, `Schedule`, `SampleLatest`, `DetectStale`, `Conflate`, `Heartbeat`, `ThrottleFirst`, `ThrottleUntilTrue`, `ThrottleOnScheduler`, `ThrottleDistinct`, `DebounceImmediate`, `DebounceUntil`, `WaitUntil` |
+| Buffer/collection | `BufferUntil`, `BufferUntilIdle`, `BufferUntilInactive`, `FromArray`, `RunAll`, `FirstMatchFromCandidates` |
+| Async/sync interaction | `SynchronizeSynchronous`, `SubscribeSynchronous`, `SynchronizeAsync`, `SubscribeAsync`, `SelectAsync`, `SelectAsyncSequential`, `SelectLatestAsync`, `SelectAsyncConcurrent`, `DropIfBusy`, `WithLimitedConcurrency` |
+| State/property/lifetime | `AsSignal`, `ToReadOnlyBehavior`, `ReplayLastOnSubscribe`, `SwitchIfEmpty`, `TakeUntil`, `Start`, `Using`, `While`, `ScanWithInitial`, `ToHotTask`, `ToHotValueTask`, `ToPropertyObservable`, `OnNext(params)`, `DoOnSubscribe`, `DoOnDispose` |
+
+Filtering and projection example:
+
+```csharp
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Extensions;
+using ReactiveUI.Primitives.Signals;
+
+IObservable<string> labels = Signal.Sequence(1, 10)
+    .WhereSelect(
+        static value => value % 2 == 0,
+        static value => $"even:{value}");
+
+using IDisposable subscription = labels.Subscribe(Console.WriteLine);
+```
+
+Scheduling example:
+
+```csharp
+using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Extensions;
+
+ISequencer sequencer = ThreadPoolSequencer.Instance;
+
+using IDisposable work = "ready"
+    .Schedule(TimeSpan.FromMilliseconds(50), sequencer)
+    .Subscribe(Console.WriteLine);
+```
+
+Async selector example over a BCL observable:
+
+```csharp
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Extensions;
+using ReactiveUI.Primitives.Signals;
+
+IObservable<string> names = Signal.Sequence(1, 3)
+    .SelectAsyncSequential(static async value =>
+    {
+        await Task.Yield();
+        return $"item:{value}";
+    });
+
+using IDisposable subscription = names.Subscribe(Console.WriteLine);
+```
+
+The Extensions project is intended for applications that already use the helper operators from `ReactiveUI.Extensions` and want the same shapes without pulling System.Reactive or R3 into the production dependency graph.
+
 ## Stateful signals and subject-like types
 
 ReactiveUI.Primitives uses explicit names instead of cloning every System.Reactive subject type name.
@@ -498,16 +696,21 @@ Generated System.Reactive bridge methods:
 - `AsSystemObservable<T>(this System.IObservable<T> source)`
 - `AsSequencer(this System.Reactive.Concurrency.IScheduler scheduler)`
 - `AsSystemScheduler(this ReactiveUI.Primitives.Concurrency.ISequencer sequencer)`
+- `ToObservableAsync<T>(this System.IObservable<T> source)` when `ReactiveUI.Primitives.Async` is referenced
+- `ToObservable<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source)` when `ReactiveUI.Primitives.Async` is referenced
 
 Generated R3 bridge methods:
 
 - `AsPrimitivesSignal<T>(this R3.Observable<T> source)`
 - `AsR3Observable<T>(this System.IObservable<T> source)`
+- `AsPrimitivesAsyncObservable<T>(this R3.Observable<T> source)` when `ReactiveUI.Primitives.Async` is referenced
+- `AsR3Observable<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source)` when `ReactiveUI.Primitives.Async` is referenced
 
 System.Reactive bridge example, when the consuming project already references System.Reactive:
 
 ```csharp
 using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Signals;
 using ReactiveUI.Primitives.SystemReactiveBridge;
 using System.Reactive.Linq;
@@ -520,6 +723,9 @@ using var subscription = PrimitivesSource
     .Subscribe(Console.WriteLine);
 
 IObservable<int> systemObservable = Signal.Sequence(1, 3).AsSystemObservable();
+
+IObservableAsync<int> asyncSource = rxSource.ToObservableAsync();
+IObservable<int> rxAgain = asyncSource.ToObservable();
 ```
 
 The scheduler bridge is a compatibility boundary. Its generated adapters carry the recursive `IScheduler.Schedule` callback and `IDisposable` return shape so native `ISequencer`/`IWorkItem` paths stay on the lean core scheduler contract.
@@ -659,13 +865,28 @@ R3 uses its own `Observable<T>` type and observer model. ReactiveUI.Primitives s
 | R3 subject | `Signal<T>` / `StateSignal<T>` / `HistorySignal<T>` depending on state/replay needs. |
 | R3 `Select` / `Where` | `Map` / `Keep`. |
 | R3 time operators | `Signal.After`, `Signal.Pulse`, `Calm`, `Probe`, `Shift`, scheduler overloads. |
-| R3 bridge | Generated `AsPrimitivesSignal` / `AsR3Observable` when R3 is referenced by the consumer. |
+| R3 bridge | Generated `AsPrimitivesSignal` / `AsR3Observable`; async bridge methods add `AsPrimitivesAsyncObservable` / `AsR3Observable` when R3 and `ReactiveUI.Primitives.Async` are referenced by the consumer. |
 
 Use the generated bridge only at boundaries. Prefer native ReactiveUI.Primitives operators inside new code.
 
+## ReactiveUI.Extensions migration notes
+
+`ReactiveUI.Primitives.Extensions` is the migration target for the non-async helpers that previously lived in `ReactiveUI.Extensions`. The package intentionally keeps the helper names where those names already describe the behavior and do not collide with the core Primitives vocabulary. Scheduling overloads use `ISequencer` instead of System.Reactive schedulers.
+
+| ReactiveUI.Extensions usage | ReactiveUI.Primitives.Extensions usage |
+|---|---|
+| `WhereIsNotNull`, `SkipWhileNull`, `WhereTrue`, `WhereFalse`, `Not` | Same names over BCL `IObservable<T>`. |
+| `WhereSelect`, `SelectConstant`, `TrySelect`, `SelectManyThen`, `Pairwise`, `Partition` | Same helper names; implemented with direct observers and fused operator shapes where useful. |
+| `SyncTimer`, `ObserveOnIf`, `Schedule`, `ScheduleSafe`, throttle/debounce helpers | Same helper names; use `ISequencer` overloads for scheduling. |
+| `CatchIgnore`, `CatchAndReturn`, `CatchReturn`, retry helpers | Same helper names; no System.Reactive dependency. |
+| `SubscribeAsync`, `SelectAsync`, `SelectLatestAsync`, `DropIfBusy` | Same BCL observable helper names for Task/ValueTask interop. |
+| `RunAll`, `BufferUntil`, `FirstMatchFromCandidates`, `ToHotTask`, `ToHotValueTask` | Same helper names; backed by ReactiveUI.Primitives runtime utilities. |
+
+For async-native streams, prefer `ReactiveUI.Primitives.Async` and its `IObservableAsync<T>` operators. For existing BCL observable helpers, migrate to `ReactiveUI.Primitives.Extensions`.
+
 ## Benchmarks and performance posture
 
-Benchmarks live in `src/benchmarks/ReactiveUI.Primitives.Benchmarks`. The benchmark project may reference System.Reactive and R3 to compare throughput and allocation behavior; the production package must not.
+Benchmarks live in `src/benchmarks/ReactiveUI.Primitives.Benchmarks`. The benchmark project may reference System.Reactive, R3, and ReactiveUI.Extensions to compare throughput and allocation behavior; the production packages must not.
 
 The latest complete BenchmarkDotNet run finished on 2026-05-29 at 06:37:05 Europe/London with .NET SDK 10.0.300 and .NET runtime 10.0.8 on Windows 11. It executed 201 benchmarks with no skipped suites in 00:21:37:
 
@@ -686,7 +907,34 @@ Smoke validation for deterministic benchmark behavior passed for 67 benchmark gr
 dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --smoke
 ```
 
-The latest direct test/coverage validation passed 181/181 net10.0 tests and reports 91.74% line coverage and 86.01% branch coverage from `.tmp/test-results-20260529-net10-readme/coverage.cobertura.xml`. The full solution test pass also passed 558/558 tests across net8.0, net9.0, and net10.0.
+The latest direct test/coverage validation passed 2032/2032 net8.0 tests and reports 99.28% line coverage and 97.22% branch coverage for `ReactiveUI.Primitives.Extensions` from `src/tests/ReactiveUI.Primitives.Tests/TestResults/extensions-optimization/coverage.cobertura.xml`. Direct executable validation also passed 2032/2032 tests on net9.0 and 2032/2032 tests on net10.0.
+
+Focused Async and Extensions BenchmarkDotNet runs were added on 2026-05-30 on Windows 11 with .NET SDK 10.0.300 and .NET runtime 10.0.8. They used `LaunchCount=1`, `WarmupCount=1`, and `IterationCount=3`.
+
+```powershell
+dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter "*ReactiveExtensionsComparisonBenchmarks*" --launchCount 1 --warmupCount 1 --iterationCount 3
+dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter "*AsyncExtensionsComparisonBenchmarks*" --launchCount 1 --warmupCount 1 --iterationCount 3
+```
+
+Extensions comparison against `ReactiveUI.Extensions` 4.0.0:
+
+| Scenario | ReactiveUI.Primitives.Extensions | ReactiveUI.Extensions 4.0.0 |
+|---|---:|---:|
+| `WhereSelect` range | 75.87 ns / 136 B | 2,655.97 ns / 2512 B |
+| `FromArray` subscribe | 58.42 ns / 40 B | 59.15 ns / 40 B |
+| `Pairwise` range | 515.51 ns / 160 B | 3,016.54 ns / 2536 B |
+| `BufferUntil` chars | 52.81 ns / 264 B | 53.01 ns / 264 B |
+| `Not` + `WhereTrue` | 28.81 ns / 144 B | 30.42 ns / 144 B |
+
+Async comparison against `ReactiveUI.Extensions.Async` 4.0.0:
+
+| Scenario | ReactiveUI.Primitives.Async | ReactiveUI.Extensions.Async 4.0.0 |
+|---|---:|---:|
+| `Sequence` + `Map` + `Keep` + `ToListAsync` | 2,109.7 ns / 1600 B | 2,085.6 ns / 1600 B |
+| Async `CountAsync` | 817.2 ns / 704 B | 808.0 ns / 704 B |
+| Async signal/subject broadcast | 6,822.4 ns / 2320 B | 6,802.5 ns / 2320 B |
+
+The focused Extensions results show the fused and direct-observer operators winning the high-value migrated scenarios while preserving allocations where both implementations use equivalent buffering. The Async results are allocation-equivalent to the baseline and within measurement noise on the selected parity paths.
 
 The table below is generated from the joined BenchmarkDotNet CSV and uses `Mean / Allocated` for each cell.
 
@@ -806,6 +1054,8 @@ Performance constraints used by the project:
 | Path | Purpose |
 |---|---|
 | `src/ReactiveUI.Primitives` | Production runtime library. |
+| `src/ReactiveUI.Primitives.Async` | Async observable/signal library built on `IObservableAsync<T>` and `IObserverAsync<T>`. |
+| `src/ReactiveUI.Primitives.Extensions` | Migrated non-async ReactiveUI.Extensions helper operators backed by ReactiveUI.Primitives. |
 | `src/ReactiveUI.Primitives.Wpf` | Optional WPF dispatcher integration library. |
 | `src/ReactiveUI.Primitives.WinForms` | Optional Windows Forms control integration library. |
 | `src/ReactiveUI.Primitives.WinUI` | Optional WinUI dispatcher queue integration library. |
@@ -822,22 +1072,23 @@ Performance constraints used by the project:
 
 ```powershell
 # Build solution.
-dotnet build .\src\ReactiveUI.Primitives.slnx -c Release --no-restore -v:minimal -p:UseSharedCompilation=false -p:BuildInParallel=false -maxcpucount:1
+dotnet build .\src\ReactiveUI.Primitives.slnx -c Release -v minimal /nr:false -p:UseSharedCompilation=false -p:BuildInParallel=false -maxcpucount:1
 
-# Net10 coverage run through the Microsoft Testing Platform/TUnit executable.
-dotnet .\src\tests\ReactiveUI.Primitives.Tests\bin\Release\net10.0\ReactiveUI.Primitives.Tests.dll --results-directory .\.tmp\test-results-20260529-net10-readme --report-trx --report-trx-filename net10.trx --coverage --coverage-output coverage.cobertura.xml --coverage-output-format cobertura --no-progress --maximum-parallel-tests 1 --timeout 10m --output Normal --show-stdout Failed --show-stderr Failed --disable-logo
+# Net8 coverage run through the Microsoft Testing Platform/TUnit executable.
+dotnet .\src\tests\ReactiveUI.Primitives.Tests\bin\Release\net8.0\ReactiveUI.Primitives.Tests.dll --coverage --coverage-output coverage.cobertura.xml --coverage-output-format cobertura --results-directory .\src\tests\ReactiveUI.Primitives.Tests\TestResults\extensions-optimization --no-ansi --no-progress --output Normal --timeout 10m
 
-# All target-framework tests.
-Push-Location .\src
-dotnet test .\ReactiveUI.Primitives.slnx -c Release --no-build -v:minimal --results-directory ..\.tmp\test-results-20260529-solution-readme -- --report-trx --report-trx-filename solution.trx --no-progress --maximum-parallel-tests 1 --timeout 10m --disable-logo
-Pop-Location
+# Remaining test target frameworks through the generated TUnit executables.
+dotnet .\src\tests\ReactiveUI.Primitives.Tests\bin\Release\net9.0\ReactiveUI.Primitives.Tests.dll --results-directory .\src\tests\ReactiveUI.Primitives.Tests\TestResults\extensions-optimization-net9 --no-ansi --no-progress --output Normal --timeout 10m
+dotnet .\src\tests\ReactiveUI.Primitives.Tests\bin\Release\net10.0\ReactiveUI.Primitives.Tests.dll --results-directory .\src\tests\ReactiveUI.Primitives.Tests\TestResults\extensions-optimization-net10 --no-ansi --no-progress --output Normal --timeout 10m
 
-# Benchmark smoke and complete joined comparison run.
+# Benchmark smoke, focused Async/Extensions comparisons, and complete joined comparison run.
 dotnet run --project .\src\benchmarks\ReactiveUI.Primitives.Benchmarks\ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --smoke
+dotnet run --project .\src\benchmarks\ReactiveUI.Primitives.Benchmarks\ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter "*ReactiveExtensionsComparisonBenchmarks*" --launchCount 1 --warmupCount 1 --iterationCount 3
+dotnet run --project .\src\benchmarks\ReactiveUI.Primitives.Benchmarks\ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter "*AsyncExtensionsComparisonBenchmarks*" --launchCount 1 --warmupCount 1 --iterationCount 3
 dotnet run --project .\src\benchmarks\ReactiveUI.Primitives.Benchmarks\ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter "*" --join --launchCount 1 --warmupCount 1 --iterationCount 3
 ```
 
-Results: build passed with 0 warnings/0 errors; the net10.0 coverage run passed 181/181 tests; `dotnet test` passed 558/558 tests across net8.0, net9.0, and net10.0; benchmark smoke parity passed for 67 groups; the joined BenchmarkDotNet run executed 201 benchmarks. The latest coverage snapshot reported 91.74% line (10740/11707) and 86.01% branch (4280/4976) coverage.
+Results: build passed with 0 warnings/0 errors; the net8.0 coverage run passed 2032/2032 tests; direct TUnit executable validation passed 2032/2032 tests on net9.0 and 2032/2032 tests on net10.0. The latest `ReactiveUI.Primitives.Extensions` coverage snapshot reported 99.28% line (3171/3194) and 97.22% branch (875/900) coverage. Benchmark smoke parity passed for 67 groups; the joined BenchmarkDotNet run executed 201 benchmarks, and the focused Async/Extensions BenchmarkDotNet runs produced the comparison tables above.
 
 ### Package verification
 

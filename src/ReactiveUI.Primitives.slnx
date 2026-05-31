@@ -19,6 +19,7 @@
     </Folder>
     <Folder Name="/tests/">
         <Project Path="tests/ReactiveUI.Primitives.Tests/ReactiveUI.Primitives.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.Extensions.Tests/ReactiveUI.Primitives.Extensions.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Async.Tests/ReactiveUI.Primitives.Async.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Blazor.Tests/ReactiveUI.Primitives.Blazor.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Maui.Tests/ReactiveUI.Primitives.Maui.Tests.csproj" />
@@ -30,6 +31,7 @@
     <Project Path="ReactiveUI.Primitives.SystemReactiveBridge.Generator/ReactiveUI.Primitives.SystemReactiveBridge.Generator.csproj" />
     <Project Path="ReactiveUI.Primitives/ReactiveUI.Primitives.csproj" />
     <Project Path="ReactiveUI.Primitives.Async/ReactiveUI.Primitives.Async.csproj" />
+    <Project Path="ReactiveUI.Primitives.Extensions/ReactiveUI.Primitives.Extensions.csproj" />
     <Project Path="ReactiveUI.Primitives.Blazor/ReactiveUI.Primitives.Blazor.csproj" />
     <Project Path="ReactiveUI.Primitives.Maui/ReactiveUI.Primitives.Maui.csproj" />
     <Project Path="ReactiveUI.Primitives.WinUI/ReactiveUI.Primitives.WinUI.csproj" />

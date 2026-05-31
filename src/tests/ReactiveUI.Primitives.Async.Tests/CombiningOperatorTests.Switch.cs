@@ -496,7 +496,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenSwitchNewInnerArrives_ThenEmitsFromLatest()
     {
-        var result = await SignalAsync.Return<IObservableAsync<int>>(SignalAsync.Return(42))
+        var result = await SignalAsync.Return(SignalAsync.Return(42))
             .Switch()
             .FirstAsync();
 
@@ -525,7 +525,7 @@ public partial class CombiningOperatorTests
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
-        await using var sub = await SignalAsync.Return<IObservableAsync<int>>(SignalAsync.Return(1))
+        await using var sub = await SignalAsync.Return(SignalAsync.Return(1))
             .Switch()
             .SubscribeAsync(static (_, _) => default, cts.Token);
 

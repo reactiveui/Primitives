@@ -670,7 +670,7 @@ public class PublicApiBehaviorTests
         Assert.True(next.ToString().Contains(FortyTwo.ToString(), StringComparison.Ordinal));
         Assert.Equal(next.GetHashCode(), sameNext.GetHashCode());
         next.Accept((IObserver<int>)observer);
-        Assert.Equal("next:42", next.Accept<string>((IObserver<int, string>)observer));
+        Assert.Equal("next:42", next.Accept((IObserver<int, string>)observer));
         next.Accept(value => observer.Events.Add("delegate-next:" + value), ex => observer.Events.Add(ex.Message), () => observer.Events.Add("delegate-completed"));
         Assert.Equal("fn-next:42", next.Accept(value => "fn-next:" + value, ex => ex.Message, () => FunctionCompletedText));
         Assert.Throws<ArgumentNullException>(() => next.Accept((IObserver<int>)null!));
@@ -678,7 +678,7 @@ public class PublicApiBehaviorTests
         Assert.Throws<ArgumentNullException>(() => next.Accept(null!, ex => { }, () => { }));
         Assert.Throws<ArgumentNullException>(() => next.Accept(value => { }, null!, () => { }));
         Assert.Throws<ArgumentNullException>(() => next.Accept(value => { }, ex => { }, null!));
-        Assert.Throws<ArgumentNullException>(() => next.Accept<string>(null!, ex => ex.Message, () => "done"));
+        Assert.Throws<ArgumentNullException>(() => next.Accept(null!, ex => ex.Message, () => "done"));
         Assert.Throws<ArgumentNullException>(() => next.Accept(value => value.ToString(), null!, () => "done"));
         Assert.Throws<ArgumentNullException>(() => next.Accept(value => value.ToString(), ex => ex.Message, null!));
 
@@ -700,7 +700,7 @@ public class PublicApiBehaviorTests
         Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(null!, ex => { }, () => { }));
         Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(value => { }, null!, () => { }));
         Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(value => { }, ex => { }, null!));
-        Assert.Throws<ArgumentNullException>(() => errorSpark.Accept<string>(null!, ex => ex.Message, () => "done"));
+        Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(null!, ex => ex.Message, () => "done"));
         Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(value => value.ToString(), null!, () => "done"));
         Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(value => value.ToString(), ex => ex.Message, null!));
 
@@ -719,7 +719,7 @@ public class PublicApiBehaviorTests
         Assert.Throws<ArgumentNullException>(() => completed.Accept(null!, ex => { }, () => { }));
         Assert.Throws<ArgumentNullException>(() => completed.Accept(value => { }, null!, () => { }));
         Assert.Throws<ArgumentNullException>(() => completed.Accept(value => { }, ex => { }, null!));
-        Assert.Throws<ArgumentNullException>(() => completed.Accept<string>(null!, ex => ex.Message, () => "done"));
+        Assert.Throws<ArgumentNullException>(() => completed.Accept(null!, ex => ex.Message, () => "done"));
         Assert.Throws<ArgumentNullException>(() => completed.Accept(value => value.ToString(), null!, () => "done"));
         Assert.Throws<ArgumentNullException>(() => completed.Accept(value => value.ToString(), ex => ex.Message, null!));
         Assert.Throws<ArgumentNullException>(() => completed.ToObservable(null!));

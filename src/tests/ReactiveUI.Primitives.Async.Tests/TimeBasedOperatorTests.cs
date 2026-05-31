@@ -977,7 +977,7 @@ public class TimeBasedOperatorTests
 
         /// <summary>
         /// A timer that performs no operations. Used as the return value from
-        /// <see cref="ImmediateFireTimeProvider.CreateTimer"/>.
+        /// <see cref="CreateTimer"/>.
         /// </summary>
         private sealed class NoOpTimer : ITimer
         {

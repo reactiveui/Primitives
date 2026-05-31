@@ -12,7 +12,7 @@ public static class Disposable
     /// <summary>
     /// Gets the disposable that does nothing when disposed.
     /// </summary>
-    public static IDisposable Empty { get; } = new EmptyDisposable();
+    public static IDisposable Empty { get; } = EmptyDisposable.Instance;
 
     /// <summary>
     /// Creates a disposable object that invokes the specified action when disposed.
@@ -21,5 +21,5 @@ public static class Disposable
     /// <returns>The disposable object that runs the given action upon disposal.</returns>
     /// <remarks>A <see langword="null"/> action returns <see cref="Empty"/> for backward compatibility with existing ReactiveUI.Primitives create pipelines.</remarks>
     public static IDisposable Create(Action dispose) =>
-        dispose == null ? Empty : new AnonymousDisposable(dispose);
+        dispose == null ? Empty : new ActionDisposable(dispose);
 }

@@ -342,7 +342,7 @@ public class ErrorHandlingOperatorTests
         var source = SignalAsync.Throw<int>(new InvalidOperationException("source error"));
 
         await using var sub = await source
-            .Catch<int>(_ => throw new ArithmeticException("handler error"))
+            .Catch(_ => throw new ArithmeticException("handler error"))
             .SubscribeAsync(
                 (_, _) => default,
                 null,

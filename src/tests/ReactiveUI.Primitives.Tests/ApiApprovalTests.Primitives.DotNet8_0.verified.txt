@@ -1,11 +1,7 @@
 ﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Async.Tests")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Blazor")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Blazor.Tests")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Maui")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Extensions.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Tests")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.WinForms")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.WinUI")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Wpf")]
 namespace ReactiveUI.Primitives
 {
     public sealed class AllPredicateObserver<T> : ReactiveUI.Primitives.BooleanTerminalObserver<T>
@@ -742,9 +738,11 @@ namespace ReactiveUI.Primitives.Core
 }
 namespace ReactiveUI.Primitives.Disposables
 {
-    public sealed class AnonymousDisposable : System.IDisposable
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class ActionDisposable : ReactiveUI.Primitives.Disposables.IsDisposed, System.IDisposable
     {
-        public AnonymousDisposable(System.Action dispose) { }
+        public ActionDisposable(System.Action action) { }
+        public bool IsDisposed { get; }
         public void Dispose() { }
     }
     [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
@@ -776,9 +774,20 @@ namespace ReactiveUI.Primitives.Disposables
         public static System.IDisposable Empty { get; }
         public static System.IDisposable Create(System.Action dispose) { }
     }
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class DisposableBag : ReactiveUI.Primitives.Disposables.IsDisposed, System.IDisposable
+    {
+        public DisposableBag() { }
+        public DisposableBag(System.IDisposable first, System.IDisposable second) { }
+        public DisposableBag(System.IDisposable first, System.IDisposable second, System.IDisposable third) { }
+        public bool IsDisposed { get; }
+        public void Add(System.IDisposable disposable) { }
+        public void Dispose() { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
     public sealed class EmptyDisposable : System.IDisposable
     {
-        public EmptyDisposable() { }
+        public static ReactiveUI.Primitives.Disposables.EmptyDisposable Instance { get; }
         public void Dispose() { }
     }
     public interface IsDisposed : System.IDisposable
@@ -798,6 +807,23 @@ namespace ReactiveUI.Primitives.Disposables
         protected virtual void Dispose(bool disposing) { }
         public bool Remove(System.IDisposable? item) { }
         public static System.IDisposable Create(params System.IDisposable[] disposables) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class MutableDisposable : ReactiveUI.Primitives.Disposables.IsDisposed, System.IDisposable
+    {
+        public MutableDisposable() { }
+        public System.IDisposable? Disposable { get; set; }
+        public bool IsDisposed { get; }
+        public void Dispose() { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class OnceDisposable : ReactiveUI.Primitives.Disposables.IsDisposed, System.IDisposable
+    {
+        public OnceDisposable() { }
+        public System.IDisposable? Disposable { get; set; }
+        public bool IsAssigned { get; }
+        public bool IsDisposed { get; }
+        public void Dispose() { }
     }
     [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
     public sealed class Pocket : ReactiveUI.Primitives.Disposables.MultipleDisposable
@@ -838,6 +864,14 @@ namespace ReactiveUI.Primitives.Disposables
         public Slot(System.Action? action) { }
         public Slot(System.IDisposable disposable) { }
         public Slot(System.IDisposable disposable, System.Action? action) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class SwapDisposable : ReactiveUI.Primitives.Disposables.IsDisposed, System.IDisposable
+    {
+        public SwapDisposable() { }
+        public System.IDisposable? Disposable { get; set; }
+        public bool IsDisposed { get; }
+        public void Dispose() { }
     }
 }
 namespace ReactiveUI.Primitives.Signals

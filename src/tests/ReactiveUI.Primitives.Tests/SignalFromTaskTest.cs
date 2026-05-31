@@ -32,6 +32,14 @@ public class SignalFromTaskTest
     private const int CleanupDelayMilliseconds = 5000;
 
     /// <summary>
+    /// Time spent performing synchronous cancellation cleanup work. Kept short so the
+    /// blocking <see cref="Thread.Sleep(int)"/> does not occupy a thread-pool thread long
+    /// enough to delay the timer-driven cancellation callbacks the tests wait on (which
+    /// previously tipped the loaded CI runners over <see cref="CancellationCallbackTimeoutMilliseconds"/>).
+    /// </summary>
+    private const int CleanupWorkMilliseconds = 250;
+
+    /// <summary>
     /// Delay used to wait for cancellation cleanup to finish.
     /// </summary>
     private const int CancellationWaitDelayMilliseconds = 6000;
@@ -601,7 +609,7 @@ public class SignalFromTaskTest
     private static void RecordCancellationCleanup(StatusTrail statusTrail, ref int position)
     {
         RecordStatus(statusTrail, ref position, StartingCancellingCommand);
-        Thread.Sleep(CleanupDelayMilliseconds);
+        Thread.Sleep(CleanupWorkMilliseconds);
         RecordStatus(statusTrail, ref position, FinishedCancellingCommand);
     }
 

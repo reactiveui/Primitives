@@ -323,7 +323,7 @@ public partial class CombineLatestOperatorTests
         // First source triggers disposal when subscribed
         var disposeTrigger =
             new TaskCompletionSource<IAsyncDisposable>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var slowSource = SignalAsync.Create<int>(async (_, ct) =>
+        var slowSource = AsyncObs.Create<int>(async (_, ct) =>
         {
             var disp = await disposeTrigger.Task.WaitAsync(ct);
             await disp.DisposeAsync();
@@ -365,7 +365,7 @@ public partial class CombineLatestOperatorTests
         var secondSourceSubscribed = false;
 
         // Second source records whether it was ever subscribed.
-        var trackingSource = SignalAsync.Create<int>((_, _) =>
+        var trackingSource = AsyncObs.Create<int>((_, _) =>
         {
             secondSourceSubscribed = true;
             return new(DisposableAsync.Empty);

@@ -50,9 +50,9 @@
     <NetTargetFrameworks>net8.0;net9.0;net10.0</NetTargetFrameworks>
 
     <!-- .NET Framework TFMs - EnableWindowsTargeting allows cross-platform compilation -->
-    <NetFrameworkTargetFrameworks>net462;net472;net481</NetFrameworkTargetFrameworks>
+    <NetFrameworkTargetFrameworks>net462;net472;net48;net481</NetFrameworkTargetFrameworks>
 
-    <!-- Library projects: net8.0, net9.0, net10.0, net462, net472, net481 -->
+    <!-- Library projects: net8.0, net9.0, net10.0, net462, net472, net48, net481 -->
     <LibraryTargetFrameworks>$(NetTargetFrameworks);$(NetFrameworkTargetFrameworks)</LibraryTargetFrameworks>
 
     <!-- Windows UI integration projects: modern Windows TFMs plus supported .NET Framework TFMs -->

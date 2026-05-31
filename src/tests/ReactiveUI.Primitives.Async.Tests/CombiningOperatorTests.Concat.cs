@@ -789,7 +789,7 @@ public partial class CombiningOperatorTests
     public async Task WhenConcatObservablesInnerFails_ThenErrorPropagated()
     {
         var error = new InvalidOperationException("obs-concat-fail");
-        var outer = SignalAsync.Return<IObservableAsync<int>>(SignalAsync.Throw<int>(error));
+        var outer = SignalAsync.Return(SignalAsync.Throw<int>(error));
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await outer.Concat().FirstAsync());
