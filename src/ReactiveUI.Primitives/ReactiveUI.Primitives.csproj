@@ -19,13 +19,9 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="ReactiveUI.Primitives.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Extensions.Tests" />
     <InternalsVisibleTo Include="ReactiveUI.Primitives.Async.Tests" />
     <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor.Tests" />
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor" />
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.Maui" />
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.WinUI" />
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.WinForms" />
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.Wpf" />
   </ItemGroup>
 
   <ItemGroup>

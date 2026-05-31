@@ -36,7 +36,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="$(AssemblyName).Tests" />
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.Tests" />
   </ItemGroup>
 
   <ItemGroup>
