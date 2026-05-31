@@ -73,7 +73,6 @@ public partial class ReactiveExtensionsTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage("Microsoft.Design", "CA2201", Justification = "Deliberately uses a generic exception type to verify operator error-handling pathways with arbitrary exception kinds.")]
     public async Task CatchAndReturn_OnError_ReturnsFallback()
     {
         var subject = new Subject<int>();
@@ -82,7 +81,7 @@ public partial class ReactiveExtensionsTests
 
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
-        subject.OnError(new Exception());
+        subject.OnError(new InvalidOperationException());
 
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2, SampleValue99]);
     }

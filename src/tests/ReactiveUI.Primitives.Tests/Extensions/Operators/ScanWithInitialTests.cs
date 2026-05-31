@@ -92,13 +92,12 @@ public partial class ScanWithInitialTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage("Usage", "CA2201:Do not raise reserved exception types", Justification = "Exception is expected for testing purposes")]
     public async Task AccumulatorError_PropagatesError()
     {
         // Arrange
         var source = new Subject<int>();
         const int Initial = 0;
-        var exception = new Exception("Accumulator failed");
+        Exception exception = new InvalidOperationException("Accumulator failed");
         Func<int, int, int> accumulator = (_, _) =>
             throw exception;
         var observable = new ScanWithInitialObservable<int, int>(source, Initial, accumulator);

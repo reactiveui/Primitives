@@ -69,10 +69,11 @@ internal static class SequencerPeriodicMixins
     }
 
     /// <summary>
-    /// Disposable state for one periodic schedule.
+    /// Disposable state for one periodic schedule. Internal (rather than private) so coverage tests can
+    /// drive <see cref="Tick"/> directly instead of via reflection.
     /// </summary>
     /// <typeparam name="TState">The state type.</typeparam>
-    private sealed class PeriodicSubscription<TState> : IDisposable
+    internal sealed class PeriodicSubscription<TState> : IDisposable
     {
         /// <summary>The scheduler used for each tick.</summary>
         private readonly ISequencer _scheduler;
@@ -139,7 +140,7 @@ internal static class SequencerPeriodicMixins
         /// <summary>
         /// Runs a tick and schedules the next one when still active.
         /// </summary>
-        private void Tick()
+        internal void Tick()
         {
             if (Volatile.Read(ref _disposed) != 0)
             {
