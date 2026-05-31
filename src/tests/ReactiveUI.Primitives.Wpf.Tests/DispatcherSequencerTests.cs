@@ -11,6 +11,7 @@ namespace ReactiveUI.Primitives.Wpf.Tests;
 /// <summary>
 /// Tests for <see cref="DispatcherSequencer"/>, exercised against a real WPF <see cref="Dispatcher"/>
 /// pumped on a dedicated STA thread so both the immediate and timer-based dispatch paths run end to end.
+/// Compiled only on Windows builds (see the csproj); the API approval test runs everywhere.
 /// </summary>
 public sealed class DispatcherSequencerTests
 {

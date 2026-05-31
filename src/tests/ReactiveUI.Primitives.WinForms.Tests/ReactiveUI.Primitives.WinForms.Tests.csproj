@@ -1,10 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- ControlSequencer wraps a concrete System.Windows.Forms.Control, so this project targets the Windows
-       TFMs. It builds anywhere (EnableWindowsTargeting), but the dispatcher tests only run on Windows (the
-       windows-latest CI leg, or locally under a Wine .NET-windows runtime); on other platforms the
-       [SkipIfNotWindows]-style guard marks them skipped. The API approval test runs everywhere the host
-       launches. -->
+       TFMs and builds anywhere (EnableWindowsTargeting). The dispatcher tests need a real Windows desktop
+       runtime, so they are compiled only on Windows builds (windows CI leg, or under a Wine .NET-windows
+       runtime). On non-Windows builds only the API approval test is compiled. -->
   <PropertyGroup>
     <TargetFrameworks>$(WindowsNetTargetFrameworks)</TargetFrameworks>
     <IsPackable>false</IsPackable>
@@ -15,6 +14,11 @@
   <ItemGroup>
     <PackageReference Include="PublicApiGenerator" />
     <Compile Include="..\Shared\ApiApprovalExtensions.cs" Link="ApiApprovalExtensions.cs" />
+  </ItemGroup>
+
+  <!-- Exclude the real-dispatcher tests from non-Windows builds. -->
+  <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+    <Compile Remove="ControlSequencerTests.cs" />
   </ItemGroup>
 
   <ItemGroup>

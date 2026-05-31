@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Windows.Forms;
 using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.WinForms.Tests;
@@ -10,6 +9,7 @@ namespace ReactiveUI.Primitives.WinForms.Tests;
 /// <summary>
 /// Tests for <see cref="ControlSequencer"/>, exercised against a real Windows Forms <see cref="Control"/>
 /// whose handle is created on a dedicated STA thread running a message loop, so posted work runs end to end.
+/// Compiled only on Windows builds (see the csproj); the API approval test runs everywhere.
 /// </summary>
 public sealed class ControlSequencerTests
 {

@@ -11,7 +11,8 @@ namespace ReactiveUI.Primitives.WinUI.Tests;
 /// <summary>
 /// Tests for <see cref="DispatcherQueueSequencer"/>, exercised against a real WinUI
 /// <see cref="DispatcherQueue"/> running on a dedicated thread so both the immediate and timer-based
-/// dispatch paths run end to end.
+/// dispatch paths run end to end. Compiled only on Windows builds (see the csproj); the API approval test
+/// runs everywhere.
 /// </summary>
 public sealed class DispatcherQueueSequencerTests
 {

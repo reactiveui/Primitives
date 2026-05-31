@@ -1,9 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- DispatcherQueueSequencer wraps the concrete WinUI Microsoft.UI.Dispatching.DispatcherQueue, so this
-       project targets the WinUI TFMs. It builds anywhere (EnableWindowsTargeting), but the tests only run
-       on Windows (the windows-latest CI leg); on other platforms the [SkipIfNotWindows] conditional marks
-       them skipped. -->
+       project targets the WinUI TFMs and builds anywhere (EnableWindowsTargeting). The dispatcher tests
+       need a real DispatcherQueue runtime, so they are compiled only on Windows builds (windows CI leg).
+       On non-Windows builds only the API approval test is compiled (it reflects the assembly and runs on
+       the cross-platform leg). -->
   <PropertyGroup>
     <TargetFrameworks>$(WinUITargetFrameworks)</TargetFrameworks>
     <IsPackable>false</IsPackable>
@@ -24,16 +25,26 @@
   </PropertyGroup>
 
   <!-- Off-Windows the native MSIX/PRI tooling cannot run; disable it so the managed assembly still
-       compiles for the cross-platform build leg. Mirrors the WinUI integration library. -->
+       compiles for the cross-platform build leg. Mirrors the WinUI integration library.
+       Also disable the Windows App SDK bootstrap auto-initializer: it injects a module initializer that
+       P/Invokes Microsoft.WindowsAppRuntime.Bootstrap.dll, which does not exist off-Windows and would crash
+       the test host at load. The dispatcher tests are excluded from non-Windows builds anyway; the API
+       approval test reflects the assembly without needing the runtime. -->
   <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
     <AppxGeneratePriEnabled>false</AppxGeneratePriEnabled>
     <IncludePriFilesOutputGroup>false</IncludePriFilesOutputGroup>
     <IncludeProjectPriFile>false</IncludeProjectPriFile>
+    <WindowsAppSdkBootstrapInitialize>false</WindowsAppSdkBootstrapInitialize>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="PublicApiGenerator" />
     <Compile Include="..\Shared\ApiApprovalExtensions.cs" Link="ApiApprovalExtensions.cs" />
+  </ItemGroup>
+
+  <!-- Exclude the real-dispatcher tests from non-Windows builds. -->
+  <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+    <Compile Remove="DispatcherQueueSequencerTests.cs" />
   </ItemGroup>
 
   <ItemGroup>
