@@ -3,241 +3,367 @@
 // See the LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
-using ReactiveUI.Primitives.Signals;
-using PackageExtensions = ReactiveUI.Extensions.ReactiveExtensions;
-using PrimitivesExtensions = ReactiveUI.Primitives.Extensions.ReactiveExtensions;
-using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
 /// <summary>
-/// Benchmarks the synchronous extension-operator package against ReactiveUI.Extensions 4.0.0.
+/// Benchmarks the complete synchronous ReactiveUI.Primitives.Extensions public helper surface.
 /// </summary>
 [MemoryDiagnoser]
-public class ReactiveExtensionsComparisonBenchmarks
+public partial class ReactiveExtensionsComparisonBenchmarks
 {
     /// <summary>
-    /// The number of values produced by range-based benchmarks.
+    /// The number of values emitted by range-based scenarios.
     /// </summary>
     private const int Count = 32;
 
     /// <summary>
-    /// Source array used by FromArray/FastForEach style benchmarks.
+    /// The multiplier used by candidate projection scenarios.
     /// </summary>
-    private static readonly int[] Values = CreateValues();
+    private const int CandidateMultiplier = 2;
 
     /// <summary>
-    /// Source characters used by delimiter-buffer benchmarks.
+    /// The divisor used by even-number predicates.
     /// </summary>
-    private static readonly char[] BufferCharacters = "xx[abc]yy[de]".ToCharArray();
+    private const int EvenDivisor = 2;
 
     /// <summary>
-    /// Source booleans used by boolean extension benchmarks.
+    /// The fallback value used by catch and latest scenarios.
+    /// </summary>
+    private const int Fallback = 42;
+
+    /// <summary>
+    /// The first scalar value used by min and max comparisons.
+    /// </summary>
+    private const int FirstValue = 1;
+
+    /// <summary>
+    /// The match threshold used by predicate scenarios.
+    /// </summary>
+    private const int Match = 8;
+
+    /// <summary>
+    /// The concurrency cap used by concurrent scenarios.
+    /// </summary>
+    private const int MaxConcurrency = 4;
+
+    /// <summary>
+    /// The multiplier used by where-select scenarios.
+    /// </summary>
+    private const int ResultMultiplier = 3;
+
+    /// <summary>
+    /// The second scalar value used by min and max comparisons.
+    /// </summary>
+    private const int SecondValue = 2;
+
+    /// <summary>
+    /// The scalar payload used by single-value scenarios.
+    /// </summary>
+    private const int Value = 7;
+
+    /// <summary>
+    /// The scheduler tick used by virtual-time scenarios.
+    /// </summary>
+    private static readonly TimeSpan Tick = TimeSpan.FromTicks(1);
+
+    /// <summary>
+    /// The timeout used by blocking subscription helpers.
+    /// </summary>
+    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// The exception instance used by error-path scenarios.
+    /// </summary>
+    private static readonly Exception Boom = new InvalidOperationException("benchmark");
+
+    /// <summary>
+    /// Boolean payloads used by predicate and combine-latest scenarios.
     /// </summary>
     private static readonly bool[] BooleanValues = [true, false, false, true, false, true, false, false];
 
     /// <summary>
-    /// Compares the fused filter/projection operator over a finite range.
+    /// Character payloads used by buffer-until scenarios.
     /// </summary>
-    /// <returns>The observed value total.</returns>
-    [Benchmark(Baseline = true)]
-    public int PrimitivesWhereSelectRange()
-    {
-        var observer = new IntSignalObserver();
-        using var subscription = PrimitivesExtensions.WhereSelect(
-                Signal.Sequence(0, Count),
-                static value => (value & 1) == 0,
-                static value => value * 3)
-            .Subscribe(observer);
-        return observer.Total;
-    }
+    private static readonly char[] BufferCharacters = "xx[abc]yy[de]".ToCharArray();
 
     /// <summary>
-    /// Compares the ReactiveUI.Extensions 4.0.0 fused filter/projection operator over a finite range.
+    /// Integer payloads used by array-backed scenarios.
     /// </summary>
-    /// <returns>The observed value total.</returns>
-    [Benchmark]
-    public int PackageWhereSelectRange()
-    {
-        var observer = new IntSignalObserver();
-        using var subscription = PackageExtensions.WhereSelect(
-                RxObservable.Range(0, Count),
-                static value => (value & 1) == 0,
-                static value => value * 3)
-            .Subscribe(observer);
-        return observer.Total;
-    }
+    private static readonly int[] Values = CreateValues();
 
     /// <summary>
-    /// Compares the array-to-observable helper over an integer array.
+    /// Nullable string payloads used by null-filtering scenarios.
     /// </summary>
-    /// <returns>The observed value total.</returns>
-    [Benchmark]
-    public int PrimitivesFromArraySubscribe()
-    {
-        var observer = new IntSignalObserver();
-        using var subscription = PrimitivesExtensions.FromArray(Values).Subscribe(observer);
-        return observer.Total;
-    }
+    private static readonly string?[] NullableStrings = ["one", null, "two", null, "three"];
 
     /// <summary>
-    /// Compares the ReactiveUI.Extensions 4.0.0 array-to-observable helper.
+    /// String payloads used by skip-while-null scenarios.
     /// </summary>
-    /// <returns>The observed value total.</returns>
-    [Benchmark]
-    public int PackageFromArraySubscribe()
-    {
-        var observer = new IntSignalObserver();
-        using var subscription = PackageExtensions.FromArray(Values).Subscribe(observer);
-        return observer.Total;
-    }
+    private static readonly string[] SkipStrings = ["one", null!, "two", null!, "three"];
 
     /// <summary>
-    /// Compares the pairwise operator over a finite range.
+    /// String payloads used by regex filter scenarios.
     /// </summary>
-    /// <returns>The aggregate of observed pair values.</returns>
-    [Benchmark]
-    public int PrimitivesPairwiseRange()
-    {
-        var observer = new PairObserver();
-        using var subscription = PrimitivesExtensions.Pairwise(Signal.Sequence(0, Count)).Subscribe(observer);
-        return observer.Total;
-    }
+    private static readonly string[] StringValues = ["0", "1", "2", "3", "4", "5"];
 
     /// <summary>
-    /// Compares the ReactiveUI.Extensions 4.0.0 pairwise operator over a finite range.
+    /// The ReactiveUI.Primitives benchmark scenario list.
     /// </summary>
-    /// <returns>The aggregate of observed pair values.</returns>
-    [Benchmark]
-    public int PackagePairwiseRange()
-    {
-        var observer = new PairObserver();
-        using var subscription = PackageExtensions.Pairwise(RxObservable.Range(0, Count)).Subscribe(observer);
-        return observer.Total;
-    }
+    private static readonly ExtensionScenario[] PrimitivesScenarioItems =
+        CreateLibraryScenarios(ExtensionsLibrary.Primitives);
 
     /// <summary>
-    /// Compares the delimiter-buffer operator over a finite character stream.
+    /// The ReactiveUI.Extensions benchmark scenario list.
     /// </summary>
-    /// <returns>The total length of emitted buffers.</returns>
-    [Benchmark]
-    public int PrimitivesBufferUntil()
-    {
-        var observer = new StringLengthObserver();
-        using var subscription = PrimitivesExtensions.BufferUntil(
-                PrimitivesExtensions.FromArray(BufferCharacters),
-                '[',
-                ']')
-            .Subscribe(observer);
-        return observer.TotalLength;
-    }
+    private static readonly ExtensionScenario[] PackageScenarioItems =
+        CreateLibraryScenarios(ExtensionsLibrary.ReactiveUIExtensions);
 
     /// <summary>
-    /// Compares the ReactiveUI.Extensions 4.0.0 delimiter-buffer operator.
+    /// The System.Reactive comparison scenario list.
     /// </summary>
-    /// <returns>The total length of emitted buffers.</returns>
-    [Benchmark]
-    public int PackageBufferUntil()
-    {
-        var observer = new StringLengthObserver();
-        using var subscription = PackageExtensions.BufferUntil(
-                PackageExtensions.FromArray(BufferCharacters),
-                '[',
-                ']')
-            .Subscribe(observer);
-        return observer.TotalLength;
-    }
+    private static readonly ExtensionScenario[] SystemReactiveScenarioItems =
+    [
+        Scenario("AsSignal", SystemReactiveAsSignal),
+        Scenario("CatchAndReturn", SystemReactiveCatchAndReturn),
+        Scenario("CatchIgnore", SystemReactiveCatchIgnore),
+        Scenario("CatchReturn", SystemReactiveCatchAndReturn),
+        Scenario("CombineLatestValuesAreAllFalse", SystemReactiveCombineLatestValuesAreAllFalse),
+        Scenario("CombineLatestValuesAreAllTrue", SystemReactiveCombineLatestValuesAreAllTrue),
+        Scenario("Filter", SystemReactiveFilter),
+        Scenario("ForEach", SystemReactiveForEach),
+        Scenario("FromArray", SystemReactiveFromArray),
+        Scenario("GetMax", SystemReactiveGetMax),
+        Scenario("GetMin", SystemReactiveGetMin),
+        Scenario("Not", SystemReactiveNot),
+        Scenario("Pairwise", SystemReactivePairwise),
+        Scenario("Return", SystemReactiveReturn),
+        Scenario("ScanWithInitial", SystemReactiveScanWithInitial),
+        Scenario("SelectAsync", SystemReactiveSelectAsyncScenario),
+        Scenario("SelectConstant", SystemReactiveSelectConstant),
+        Scenario("SelectManyThen", SystemReactiveSelectManyThen),
+        Scenario("SkipWhileNull", SystemReactiveSkipWhileNull),
+        Scenario("TakeUntil", SystemReactiveTakeUntil),
+        Scenario("ToHotTask", SystemReactiveToHotTask),
+        Scenario("WaitUntil", SystemReactiveWaitUntil),
+        Scenario("WhereFalse", SystemReactiveWhereFalse),
+        Scenario("WhereIsNotNull", SystemReactiveWhereIsNotNull),
+        Scenario("WhereSelect", SystemReactiveWhereSelect),
+        Scenario("WhereTrue", SystemReactiveWhereTrue),
+    ];
 
     /// <summary>
-    /// Compares the boolean negation operator over a finite stream.
+    /// The R3 comparison scenario list.
     /// </summary>
-    /// <returns>The number of true values emitted after negation.</returns>
-    [Benchmark]
-    public int PrimitivesNotWhereTrue()
-    {
-        var observer = new BoolSignalObserver();
-        using var subscription = PrimitivesExtensions.WhereTrue(
-                PrimitivesExtensions.Not(
-                    PrimitivesExtensions.FromArray(BooleanValues)))
-            .Subscribe(observer);
-        return observer.Total;
-    }
+    private static readonly ExtensionScenario[] R3ScenarioItems =
+    [
+        Scenario("AsSignal", R3AsSignal),
+        Scenario("CatchAndReturn", R3CatchAndReturn),
+        Scenario("CatchIgnore", R3CatchIgnore),
+        Scenario("CatchReturn", R3CatchAndReturn),
+        Scenario("FromArray", R3FromArray),
+        Scenario("Not", R3Not),
+        Scenario("Return", R3Return),
+        Scenario("SelectConstant", R3SelectConstant),
+        Scenario("WhereFalse", R3WhereFalse),
+        Scenario("WhereIsNotNull", R3WhereIsNotNull),
+        Scenario("WhereSelect", R3WhereSelect),
+        Scenario("WhereTrue", R3WhereTrue),
+    ];
 
     /// <summary>
-    /// Compares the ReactiveUI.Extensions 4.0.0 boolean negation and true-filter operators.
+    /// Identifies the library implementation used by paired scenario runners.
     /// </summary>
-    /// <returns>The number of true values emitted after negation.</returns>
-    [Benchmark]
-    public int PackageNotWhereTrue()
-    {
-        var observer = new BoolSignalObserver();
-        using var subscription = PackageExtensions.WhereTrue(
-                PackageExtensions.Not(
-                    PackageExtensions.FromArray(BooleanValues)))
-            .Subscribe(observer);
-        return observer.Total;
-    }
-
-    /// <summary>
-    /// Creates the shared source array.
-    /// </summary>
-    /// <returns>An array containing values 0..31.</returns>
-    private static int[] CreateValues()
-    {
-        var values = new int[Count];
-        for (var i = 0; i < values.Length; i++)
-        {
-            values[i] = i;
-        }
-
-        return values;
-    }
-
-    /// <summary>
-    /// Observer that aggregates pairwise tuple values.
-    /// </summary>
-    private sealed class PairObserver : IObserver<(int Previous, int Current)>
+    private enum ExtensionsLibrary
     {
         /// <summary>
-        /// Gets the aggregate total.
+        /// The ReactiveUI.Primitives.Extensions implementation.
         /// </summary>
-        public int Total { get; private set; }
+        Primitives,
 
-        /// <inheritdoc/>
-        public void OnNext((int Previous, int Current) value) => Total += value.Previous + value.Current;
-
-        /// <inheritdoc/>
-        public void OnError(Exception error)
-        {
-        }
-
-        /// <inheritdoc/>
-        public void OnCompleted()
-        {
-        }
+        /// <summary>
+        /// The ReactiveUI.Extensions implementation.
+        /// </summary>
+        ReactiveUIExtensions,
     }
 
     /// <summary>
-    /// Observer that aggregates emitted string lengths.
+    /// Gets the ReactiveUI.Primitives scenarios.
     /// </summary>
-    private sealed class StringLengthObserver : IObserver<string>
-    {
-        /// <summary>
-        /// Gets the combined string length.
-        /// </summary>
-        public int TotalLength { get; private set; }
+    public IEnumerable<ExtensionScenario> PrimitivesScenarios => PrimitivesScenarioItems;
 
-        /// <inheritdoc/>
-        public void OnNext(string value) => TotalLength += value.Length;
+    /// <summary>
+    /// Gets the ReactiveUI.Extensions scenarios.
+    /// </summary>
+    public IEnumerable<ExtensionScenario> ReactiveUIExtensionsScenarios => PackageScenarioItems;
 
-        /// <inheritdoc/>
-        public void OnError(Exception error)
-        {
-        }
+    /// <summary>
+    /// Gets the System.Reactive comparison scenarios.
+    /// </summary>
+    public IEnumerable<ExtensionScenario> SystemReactiveScenarios => SystemReactiveScenarioItems;
 
-        /// <inheritdoc/>
-        public void OnCompleted()
-        {
-        }
-    }
+    /// <summary>
+    /// Gets the R3 comparison scenarios.
+    /// </summary>
+    public IEnumerable<ExtensionScenario> R3Scenarios => R3ScenarioItems;
+
+    /// <summary>
+    /// Runs a ReactiveUI.Primitives scenario.
+    /// </summary>
+    /// <param name="scenario">The scenario to run.</param>
+    /// <returns>The benchmark checksum.</returns>
+    [Benchmark]
+    [ArgumentsSource(nameof(PrimitivesScenarios))]
+    public int Primitives(ExtensionScenario scenario) => scenario.Run();
+
+    /// <summary>
+    /// Runs a ReactiveUI.Extensions scenario.
+    /// </summary>
+    /// <param name="scenario">The scenario to run.</param>
+    /// <returns>The benchmark checksum.</returns>
+    [Benchmark]
+    [ArgumentsSource(nameof(ReactiveUIExtensionsScenarios))]
+    public int ReactiveUIExtensions(ExtensionScenario scenario) => scenario.Run();
+
+    /// <summary>
+    /// Runs a System.Reactive comparison scenario.
+    /// </summary>
+    /// <param name="scenario">The scenario to run.</param>
+    /// <returns>The benchmark checksum.</returns>
+    [Benchmark]
+    [ArgumentsSource(nameof(SystemReactiveScenarios))]
+    public int SystemReactive(ExtensionScenario scenario) => scenario.Run();
+
+    /// <summary>
+    /// Runs an R3 comparison scenario.
+    /// </summary>
+    /// <param name="scenario">The scenario to run.</param>
+    /// <returns>The benchmark checksum.</returns>
+    [Benchmark]
+    [ArgumentsSource(nameof(R3Scenarios))]
+    public int R3Library(ExtensionScenario scenario) => scenario.Run();
+
+    /// <summary>
+    /// Creates the full paired library scenario list.
+    /// </summary>
+    /// <param name="library">The paired library to benchmark.</param>
+    /// <returns>The scenario list.</returns>
+    private static ExtensionScenario[] CreateLibraryScenarios(ExtensionsLibrary library) =>
+    [
+        ..CreateCoreLibraryScenarios(library),
+        ..CreateSupplementalLibraryScenarios(library),
+    ];
+
+    /// <summary>
+    /// Creates the core paired library scenario list.
+    /// </summary>
+    /// <param name="library">The paired library to benchmark.</param>
+    /// <returns>The core scenario list.</returns>
+    private static ExtensionScenario[] CreateCoreLibraryScenarios(ExtensionsLibrary library) =>
+    [
+        Scenario("AsSignal", () => RunAsSignal(library)),
+        Scenario("BufferUntil", () => RunBufferUntil(library)),
+        Scenario("BufferUntilIdle", () => RunBufferUntilIdle(library)),
+        Scenario("BufferUntilInactive", () => RunBufferUntilInactive(library)),
+        Scenario("CatchAndReturn", () => RunCatchAndReturn(library)),
+        Scenario("CatchIgnore", () => RunCatchIgnore(library)),
+        Scenario("CatchReturn", () => RunCatchReturn(library)),
+        Scenario("CatchReturnUnit", () => RunCatchReturnUnit(library)),
+        Scenario("CombineLatestValuesAreAllFalse", () => RunCombineLatestValuesAreAllFalse(library)),
+        Scenario("CombineLatestValuesAreAllTrue", () => RunCombineLatestValuesAreAllTrue(library)),
+        Scenario("Conflate", () => RunConflate(library)),
+        Scenario("Continuation.Dispose", () => RunContinuationDispose(library)),
+        Scenario("Continuation.Lock", () => RunContinuationLock(library)),
+        Scenario("Continuation.LockValueTask", () => RunContinuationLockValueTask(library)),
+        Scenario("DebounceImmediate", () => RunDebounceImmediate(library)),
+        Scenario("DebounceUntil", () => RunDebounceUntil(library)),
+        Scenario("DetectStale", () => RunDetectStale(library)),
+        Scenario("DoOnDispose", () => RunDoOnDispose(library)),
+        Scenario("DoOnSubscribe", () => RunDoOnSubscribe(library)),
+        Scenario("DropIfBusy", () => RunDropIfBusy(library)),
+        Scenario("FastForEach", () => RunFastForEach(library)),
+        Scenario("Filter", () => RunFilter(library)),
+        Scenario("FirstMatchFromCandidates", () => RunFirstMatchFromCandidates(library)),
+        Scenario("ForEach", () => RunForEach(library)),
+        Scenario("FromArray", () => RunFromArray(library)),
+        Scenario("GetMax", () => RunGetMax(library)),
+        Scenario("GetMin", () => RunGetMin(library)),
+        Scenario("Heartbeat", () => RunHeartbeat(library)),
+        Scenario("LatestOrDefault", () => RunLatestOrDefault(library)),
+        Scenario("LogErrors", () => RunLogErrors(library)),
+        Scenario("Not", () => RunNot(library)),
+        Scenario("ObserveOnIf", () => RunObserveOnIf(library)),
+        Scenario("ObserveOnSafe", () => RunObserveOnSafe(library)),
+        Scenario("OnErrorRetry", () => RunOnErrorRetry(library)),
+        Scenario("OnNext", () => RunOnNext(library)),
+        Scenario("Pairwise", () => RunPairwise(library)),
+    ];
+
+    /// <summary>
+    /// Creates the supplemental paired library scenario list.
+    /// </summary>
+    /// <param name="library">The paired library to benchmark.</param>
+    /// <returns>The supplemental scenario list.</returns>
+    private static ExtensionScenario[] CreateSupplementalLibraryScenarios(ExtensionsLibrary library) =>
+    [
+        Scenario("Partition", () => RunPartition(library)),
+        Scenario("ReplayLastOnSubscribe", () => RunReplayLastOnSubscribe(library)),
+        Scenario("RetryForeverWithDelay", () => RunRetryForeverWithDelay(library)),
+        Scenario("RetryWithBackoff", () => RunRetryWithBackoff(library)),
+        Scenario("RetryWithDelay", () => RunRetryWithDelay(library)),
+        Scenario("RetryWithFixedDelay", () => RunRetryWithFixedDelay(library)),
+        Scenario("Return", () => RunReturn(library)),
+        Scenario("RunAll", () => RunRunAll(library)),
+        Scenario("SampleLatest", () => RunSampleLatest(library)),
+        Scenario("ScanWithInitial", () => RunScanWithInitial(library)),
+        Scenario("Schedule", () => RunSchedule(library)),
+        Scenario("ScheduleSafe", () => RunScheduleSafe(library)),
+        Scenario("SelectAsync", () => RunSelectAsyncScenario(library)),
+        Scenario("SelectAsyncConcurrent", () => RunSelectAsyncConcurrent(library)),
+        Scenario("SelectAsyncSequential", () => RunSelectAsyncSequential(library)),
+        Scenario("SelectConstant", () => RunSelectConstant(library)),
+        Scenario("SelectLatestAsync", () => RunSelectLatestAsyncScenario(library)),
+        Scenario("SelectManyThen", () => RunSelectManyThen(library)),
+        Scenario("Shuffle", () => RunShuffle(library)),
+        Scenario("SkipWhileNull", () => RunSkipWhileNull(library)),
+        Scenario("Start", () => RunStart(library)),
+        Scenario("SubscribeAndComplete", () => RunSubscribeAndComplete(library)),
+        Scenario("SubscribeAsync", () => RunSubscribeAsyncScenario(library)),
+        Scenario("SubscribeGetError", () => RunSubscribeGetError(library)),
+        Scenario("SubscribeGetValue", () => RunSubscribeGetValue(library)),
+        Scenario("SubscribeSynchronous", () => RunSubscribeSynchronous(library)),
+        Scenario("SwitchIfEmpty", () => RunSwitchIfEmpty(library)),
+        Scenario("SyncTimer", () => RunSyncTimer(library)),
+        Scenario("SynchronizeAsync", () => RunSynchronizeAsyncScenario(library)),
+        Scenario("SynchronizeSynchronous", () => RunSynchronizeSynchronous(library)),
+        Scenario("TakeUntil", () => RunTakeUntil(library)),
+        Scenario("ThrottleDistinct", () => RunThrottleDistinct(library)),
+        Scenario("ThrottleFirst", () => RunThrottleFirst(library)),
+        Scenario("ThrottleOnScheduler", () => RunThrottleOnScheduler(library)),
+        Scenario("ThrottleUntilTrue", () => RunThrottleUntilTrue(library)),
+        Scenario("ToHotTask", () => RunToHotTask(library)),
+        Scenario("ToHotValueTask", () => RunToHotValueTask(library)),
+        Scenario("ToPropertyObservable", () => RunToPropertyObservable(library)),
+        Scenario("ToReadOnlyBehavior", () => RunToReadOnlyBehavior(library)),
+        Scenario("TrySelect", () => RunTrySelect(library)),
+        Scenario("Using", () => RunUsing(library)),
+        Scenario("WaitForCompletion", () => RunWaitForCompletion(library)),
+        Scenario("WaitForError", () => RunWaitForError(library)),
+        Scenario("WaitForValue", () => RunWaitForValue(library)),
+        Scenario("WaitUntil", () => RunWaitUntil(library)),
+        Scenario("WhereFalse", () => RunWhereFalse(library)),
+        Scenario("WhereIsNotNull", () => RunWhereIsNotNull(library)),
+        Scenario("WhereSelect", () => RunWhereSelect(library)),
+        Scenario("WhereTrue", () => RunWhereTrue(library)),
+        Scenario("While", () => RunWhile(library)),
+        Scenario("WithLimitedConcurrency", () => RunWithLimitedConcurrency(library)),
+    ];
+
+    /// <summary>
+    /// Creates a named benchmark scenario.
+    /// </summary>
+    /// <param name="name">The scenario name.</param>
+    /// <param name="run">The delegate that runs the scenario.</param>
+    /// <returns>The benchmark scenario.</returns>
+    private static ExtensionScenario Scenario(string name, Func<int> run) => new(name, run);
 }

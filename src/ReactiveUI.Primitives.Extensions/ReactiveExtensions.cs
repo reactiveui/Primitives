@@ -145,6 +145,16 @@ public static class ReactiveExtensions
     public static IObservable<T> GetMax<T>(this IObservable<T> @this, params IObservable<T>[] sources)
         where T : struct, IComparable<T>
     {
+        if (sources.Length == 0)
+        {
+            return @this;
+        }
+
+        if (sources.Length == 1)
+        {
+            return new BinaryMinMaxObservable<T>(@this, sources[0], emitMaximum: true);
+        }
+
         var allSources = new IObservable<T>[sources.Length + 1];
         allSources[0] = @this;
         Array.Copy(sources, 0, allSources, 1, sources.Length);
@@ -161,6 +171,16 @@ public static class ReactiveExtensions
     public static IObservable<T> GetMin<T>(this IObservable<T> @this, params IObservable<T>[] sources)
         where T : struct, IComparable<T>
     {
+        if (sources.Length == 0)
+        {
+            return @this;
+        }
+
+        if (sources.Length == 1)
+        {
+            return new BinaryMinMaxObservable<T>(@this, sources[0], emitMaximum: false);
+        }
+
         var allSources = new IObservable<T>[sources.Length + 1];
         allSources[0] = @this;
         Array.Copy(sources, 0, allSources, 1, sources.Length);

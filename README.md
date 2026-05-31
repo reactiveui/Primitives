@@ -888,7 +888,7 @@ For async-native streams, prefer `ReactiveUI.Primitives.Async` and its `IObserva
 
 Benchmarks live in `src/benchmarks/ReactiveUI.Primitives.Benchmarks`. The benchmark project may reference System.Reactive, R3, and ReactiveUI.Extensions to compare throughput and allocation behavior; the production packages must not.
 
-The latest complete BenchmarkDotNet run finished on 2026-05-29 at 06:37:05 Europe/London with .NET SDK 10.0.300 and .NET runtime 10.0.8 on Windows 11. It executed 201 benchmarks with no skipped suites in 00:21:37:
+The latest complete BenchmarkDotNet run finished on 2026-05-31 at 15:10:19 Europe/London with .NET SDK 10.0.300 and .NET runtime 10.0.8 on Windows 11. It executed 610 benchmarks with no failed suites in 01:16:19:
 
 ```powershell
 dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter "*" --join --launchCount 1 --warmupCount 1 --iterationCount 3
@@ -896,158 +896,256 @@ dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.
 
 Latest artifact paths:
 
-- `BenchmarkDotNet.Artifacts/BenchmarkRun-20260529-061525.log`
-- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-29-06-37-05-report-github.md`
-- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-29-06-37-05-report.html`
-- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-29-06-37-05-report.csv`
+- `BenchmarkDotNet.Artifacts/BenchmarkRun-20260531-135415.log`
+- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-31-15-10-19-report-github.md`
+- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-31-15-10-19-report.html`
+- `BenchmarkDotNet.Artifacts/results/BenchmarkRun-joined-2026-05-31-15-10-19-report.csv`
 
-Smoke validation for deterministic benchmark behavior passed for 67 benchmark groups with:
+The joined run exports 610 raw BenchmarkDotNet rows: 235 ReactiveUI.Primitives or ReactiveUI.Primitives.Async cases, 155 System.Reactive cases, 130 R3 cases, and 90 ReactiveUI.Extensions cases. The previous 87-row README table covered only the `ReactiveExtensionsComparisonBenchmarks` synchronous extension slice; the remaining raw rows were present in the joined CSV but were not surfaced in the README table.
 
-```powershell
-dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --smoke
-```
+The table below groups `ReactiveUI.Primitives` and `ReactiveUI.Primitives.Async` into the `ReactiveUI.Primitives` column, aligns each primitive benchmark with any System.Reactive, R3, or ReactiveUI.Extensions alternative from the same benchmark scenario, and uses `NA` where no alternative exists. It contains 235 alphabetically ordered scenario rows. Cells use `Mean / Allocated`, and long `scenario` parameter values from BenchmarkDotNet are restored to their full names.
 
-The latest direct test/coverage validation passed 2032/2032 net8.0 tests and reports 99.28% line coverage and 97.22% branch coverage for `ReactiveUI.Primitives.Extensions` from `src/tests/ReactiveUI.Primitives.Tests/TestResults/extensions-optimization/coverage.cobertura.xml`. Direct executable validation also passed 2032/2032 tests on net9.0 and 2032/2032 tests on net10.0.
+External-baseline posture from this run: `ReactiveUI.Primitives` is faster than System.Reactive in 150/155 measured comparisons, faster than R3 in 128/130 measured comparisons, and faster than `ReactiveUI.Extensions` 4.0.0 in 64/90 measured comparisons. Rows that are not faster remain listed for direct comparison.
 
-Focused Async and Extensions BenchmarkDotNet runs were added on 2026-05-30 on Windows 11 with .NET SDK 10.0.300 and .NET runtime 10.0.8. They used `LaunchCount=1`, `WarmupCount=1`, and `IterationCount=3`.
+| Scenario | ReactiveUI.Primitives | System.Reactive | R3 | ReactiveUI.Extensions |
+|---|---:|---:|---:|---:|
+| `After` | 155.3662 ns / 584 B | 1,001.4142 ns / 25056 B | 276.8260 ns / 552 B | NA |
+| `AggregateAnyCount (Operator core GC profile)` | 201.0841 ns / 824 B | 6,602.1945 ns / 5856 B | 620.6079 ns / 1280 B | NA |
+| `AggregateAnyCount (Operator map keep)` | 200.1816 ns / 824 B | 5,776.6805 ns / 5856 B | 611.5725 ns / 1280 B | NA |
+| `All` | 19.4142 ns / 96 B | 2,639.9900 ns / 2520 B | 89.7295 ns / 192 B | NA |
+| `AllContains` | 30.5337 ns / 192 B | 5,147.5512 ns / 5048 B | 231.7154 ns / 392 B | NA |
+| `AllRange` | 18.5571 ns / 96 B | 2,554.2953 ns / 2520 B | 87.1035 ns / 192 B | NA |
+| `AsSignal` | 39.1343 ns / 112 B | 2,497.5107 ns / 2536 B | 190.0920 ns / 160 B | 2,425.8592 ns / 2488 B |
+| `AutoConnect` | 171.2824 ns / 400 B | 2,887.7501 ns / 2736 B | NA | NA |
+| `AutoConnectSubscribe` | 140.2909 ns / 400 B | 2,842.0521 ns / 2736 B | NA | NA |
+| `BehaviorEmit` | 15,767.1692 ns / 160 B | NA | NA | NA |
+| `BufferRange` | 70.8486 ns / 304 B | 1,447.8858 ns / 1656 B | 118.2146 ns / 360 B | NA |
+| `BufferUntil` | 43.7569 ns / 264 B | NA | NA | 43.1834 ns / 264 B |
+| `BufferUntilIdle` | 1,872.8774 ns / 6504 B | NA | NA | 25,722.3674 ns / 21207 B |
+| `BufferUntilInactive` | 1,922.3653 ns / 6504 B | NA | NA | 25,821.9421 ns / 21207 B |
+| `CastTo` | 99.0222 ns / 200 B | 1,532.6529 ns / 1568 B | 167.3711 ns / 216 B | NA |
+| `CatchAndReturn` | 19.9923 ns / 128 B | 173.5006 ns / 368 B | 116.0415 ns / 264 B | 59.8265 ns / 184 B |
+| `CatchIgnore` | 18.1860 ns / 128 B | 168.1961 ns / 344 B | 113.0904 ns / 240 B | 59.7477 ns / 184 B |
+| `CatchReturn` | 14.5591 ns / 128 B | 174.3701 ns / 368 B | 118.1259 ns / 264 B | 60.1389 ns / 184 B |
+| `CatchReturnUnit` | 10.3368 ns / 88 B | NA | NA | 56.2182 ns / 144 B |
+| `CollectArray (Terminal collection GC profile)` | 39.7344 ns / 360 B | 2,807.2484 ns / 3144 B | 181.5774 ns / 784 B | NA |
+| `CollectArray (Terminal collection)` | 39.2840 ns / 360 B | 2,649.8519 ns / 3144 B | 196.2510 ns / 784 B | NA |
+| `CollectArrayAsync` | 44.1010 ns / 384 B | 2,741.1916 ns / 3384 B | 193.5212 ns / 784 B | NA |
+| `CollectList (Terminal collection GC profile)` | 77.6725 ns / 392 B | 2,731.9333 ns / 2992 B | 171.8614 ns / 632 B | NA |
+| `CollectList (Terminal collection)` | 77.1326 ns / 392 B | 2,661.1326 ns / 2992 B | 180.3147 ns / 632 B | NA |
+| `CollectListAsync` | 47.5884 ns / 352 B | 1,525.7612 ns / 2056 B | 125.6062 ns / 480 B | NA |
+| `CombineLatest` | 46.0690 ns / 192 B | 3,279.3736 ns / 2824 B | 678.1482 ns / 344 B | NA |
+| `CombineLatestRanges` | 39.7819 ns / 192 B | 3,319.2938 ns / 2824 B | 688.9252 ns / 344 B | NA |
+| `CombineLatestValuesAreAllFalse` | 186.1148 ns / 848 B | 346.7049 ns / 648 B | NA | 218.2402 ns / 1176 B |
+| `CombineLatestValuesAreAllTrue` | 188.9175 ns / 848 B | 332.3094 ns / 648 B | NA | 212.3348 ns / 1176 B |
+| `CommandExecuteAsync` | 35.1944 ns / 152 B | 740.3134 ns / 1089 B | 106.6560 ns / 296 B | NA |
+| `CommandResultSubscribeAsync` | 63.0803 ns / 224 B | 40.1994 ns / 136 B | 68.4171 ns / 160 B | NA |
+| `CompletedSpark` | 0.0292 ns / 0 B | 0.0065 ns / 0 B | 0.0000 ns / 0 B | NA |
+| `CompletedTaskBridge` | 12.1256 ns / 88 B | 882.4698 ns / 793 B | 43.4786 ns / 88 B | NA |
+| `Concat` | 77.7316 ns / 256 B | 3,073.5477 ns / 2856 B | 266.3856 ns / 360 B | NA |
+| `ConcatRanges` | 80.0323 ns / 256 B | 2,836.8918 ns / 2856 B | 264.9149 ns / 360 B | NA |
+| `Conflate` | 3,988.0580 ns / 2304 B | NA | NA | 32,870.4854 ns / 16969 B |
+| `Contains` | 12.8455 ns / 96 B | 2,785.3176 ns / 2528 B | 91.1712 ns / 200 B | NA |
+| `ContainsRange` | 11.2374 ns / 96 B | 2,552.2694 ns / 2528 B | 92.9637 ns / 200 B | NA |
+| `Continuation.Dispose` | 24.1712 ns / 192 B | NA | NA | 24.2349 ns / 192 B |
+| `Continuation.Lock` | 1,015.9123 ns / 464 B | NA | NA | 1,158.6503 ns / 464 B |
+| `Continuation.LockValueTask` | 1,160.4224 ns / 464 B | NA | NA | 1,155.7749 ns / 464 B |
+| `CountPredicate (Terminal collection GC profile)` | 23.6151 ns / 96 B | 2,644.9360 ns / 2520 B | 97.9358 ns / 200 B | NA |
+| `CountPredicate (Terminal collection)` | 19.8555 ns / 96 B | 2,541.2862 ns / 2520 B | 97.2371 ns / 200 B | NA |
+| `CreateSafeSubscribe` | 39.8372 ns / 112 B | NA | NA | NA |
+| `CreateSubscribe` | 40.0776 ns / 112 B | 52.0066 ns / 168 B | 59.6140 ns / 128 B | NA |
+| `CreateWithState` | 60.2325 ns / 192 B | 89.0048 ns / 256 B | 131.1856 ns / 216 B | NA |
+| `CurrentThreadSchedule` | 9.5961 ns / 88 B | 21.8966 ns / 88 B | 31.0668 ns / 56 B | NA |
+| `DebounceImmediate` | 1,622.7895 ns / 4064 B | NA | NA | 27,081.5247 ns / 18065 B |
+| `DebounceUntil` | 1,094.9352 ns / 776 B | NA | NA | 7,205.8484 ns / 6132 B |
+| `DefaultIfEmptyEmpty` | 7.0131 ns / 64 B | 69.8937 ns / 144 B | 69.2199 ns / 136 B | NA |
+| `DeferSubscribe` | 86.7555 ns / 240 B | 1,676.0302 ns / 1512 B | 123.6352 ns / 152 B | NA |
+| `DelayRange` | 169.3880 ns / 536 B | 6,256.1473 ns / 39584 B | 2,034.4247 ns / 2200 B | NA |
+| `DelayStartRange` | 174.1631 ns / 536 B | 2,673.2576 ns / 26456 B | 342.5660 ns / 552 B | NA |
+| `DematerializeRange` | 72.7926 ns / 184 B | 1,533.0044 ns / 1528 B | 199.5775 ns / 208 B | NA |
+| `DetectStale` | 192.7663 ns / 600 B | NA | NA | 835.0784 ns / 25128 B |
+| `DisposableCollectionDispose` | 78.7620 ns / 424 B | 99.6767 ns / 512 B | 89.6395 ns / 480 B | NA |
+| `DoOnDispose` | 71.1486 ns / 232 B | NA | NA | 70.9375 ns / 232 B |
+| `DoOnSubscribe` | 70.2411 ns / 192 B | NA | NA | 69.6332 ns / 192 B |
+| `DropIfBusy` | 349.7954 ns / 240 B | NA | NA | 358.5479 ns / 240 B |
+| `Emit1024` | 1,728.8903 ns / 184 B | 1,746.7394 ns / 136 B | 2,057.8585 ns / 160 B | NA |
+| `Empty` | 4.1186 ns / 40 B | 49.6034 ns / 96 B | 32.3730 ns / 56 B | NA |
+| `EmptySubscribe` | 3.5444 ns / 40 B | 45.9526 ns / 96 B | 30.7072 ns / 56 B | NA |
+| `Every` | 535.2985 ns / 1192 B | 3,066.3586 ns / 34001 B | 353.4427 ns / 552 B | NA |
+| `FastForEach` | 48.9880 ns / 40 B | NA | NA | 48.4052 ns / 40 B |
+| `Filter` | 124.5601 ns / 120 B | 736.4327 ns / 984 B | NA | 123.2022 ns / 120 B |
+| `FirstAsync` | 8.7337 ns / 56 B | 2,605.0640 ns / 2792 B | 78.7451 ns / 208 B | NA |
+| `FirstMatchFromCandidates` | 42.6804 ns / 216 B | NA | NA | 44.7428 ns / 216 B |
+| `FirstOrDefaultAsync` | 6.9475 ns / 56 B | 1,388.2233 ns / 1768 B | 65.4337 ns / 208 B | NA |
+| `FlatMap` | 732.1660 ns / 728 B | 3,839.0203 ns / 3872 B | 1,183.4716 ns / 1040 B | NA |
+| `FlatMapRange` | 720.1574 ns / 728 B | 3,724.1633 ns / 3872 B | 1,191.5244 ns / 1040 B | NA |
+| `Fold (Operator stateful filter GC profile)` | 1,829.4350 ns / 144 B | NA | NA | NA |
+| `Fold (Operator stateful filter)` | 104.7071 ns / 144 B | 2,692.9914 ns / 2560 B | NA | NA |
+| `ForEach` | 73.3841 ns / 160 B | 150.0873 ns / 200 B | NA | 75.0841 ns / 160 B |
+| `ForkJoin` | 25.4948 ns / 192 B | 4,002.9279 ns / 3136 B | 985.3837 ns / 504 B | NA |
+| `ForkJoinRanges` | 35.7868 ns / 192 B | 3,966.4459 ns / 3136 B | 973.5322 ns / 504 B | NA |
+| `FromArray` | 61.9788 ns / 72 B | 2,519.9627 ns / 2504 B | 85.4346 ns / 88 B | 70.7992 ns / 72 B |
+| `FromAsyncEnumerableSubscribeAsync` | 1,278.0260 ns / 600 B | 1,639.4955 ns / 1827 B | 1,442.5958 ns / 1023 B | NA |
+| `FromEnumerable` | 53.3886 ns / 40 B | 2,668.0614 ns / 2504 B | 80.7768 ns / 88 B | NA |
+| `FromEnumerableSubscribe` | 52.7429 ns / 40 B | 2,525.1923 ns / 2504 B | 79.2217 ns / 88 B | NA |
+| `FromEventPattern` | 159.9328 ns / 624 B | 1,930.1362 ns / 2422 B | NA | NA |
+| `GetMax` | 108.9092 ns / 408 B | 181.7760 ns / 328 B | NA | 227.3460 ns / 1152 B |
+| `GetMin` | 115.1313 ns / 408 B | 179.6450 ns / 328 B | NA | 226.6057 ns / 1152 B |
+| `Heartbeat` | 299.3094 ns / 800 B | NA | NA | 2,377.8947 ns / 26096 B |
+| `HistorySubscribe` | 342.4926 ns / 352 B | 720.4683 ns / 696 B | 433.0458 ns / 688 B | NA |
+| `IgnoreValuesRange` | 29.7856 ns / 128 B | 1,436.1516 ns / 1504 B | 82.7043 ns / 160 B | NA |
+| `Iterate` | 11.6964 ns / 0 B | 2,376.7106 ns / 2768 B | NA | NA |
+| `KeepNotNull` | 108.3266 ns / 192 B | 1,741.8934 ns / 1656 B | 231.0055 ns / 312 B | NA |
+| `KeepType` | 109.4705 ns / 192 B | 1,520.8447 ns / 1568 B | 177.0656 ns / 216 B | NA |
+| `KeepWith` | 63.4511 ns / 232 B | 1,474.3146 ns / 1608 B | 126.5203 ns / 280 B | NA |
+| `LastOrDefaultAsync` | 13.9226 ns / 192 B | 1,432.8369 ns / 1872 B | 80.8937 ns / 208 B | NA |
+| `LatestOrDefault` | 53.9602 ns / 136 B | NA | NA | 58.1188 ns / 136 B |
+| `LogErrors` | 68.0775 ns / 224 B | NA | NA | 72.0710 ns / 224 B |
+| `LongCountPredicate` | 25.2287 ns / 104 B | 2,608.8275 ns / 2536 B | 109.6102 ns / 272 B | NA |
+| `MapKeep` | 134.0625 ns / 208 B | 2,946.0442 ns / 2616 B | 320.7422 ns / 272 B | NA |
+| `MapWith` | 65.0591 ns / 232 B | 1,443.5638 ns / 1608 B | 136.9318 ns / 248 B | NA |
+| `MaterializeRange` | 46.8644 ns / 120 B | 1,506.6878 ns / 1880 B | 100.4292 ns / 136 B | NA |
+| `Merge` | 80.2232 ns / 256 B | 4,278.2346 ns / 3952 B | 793.7542 ns / 352 B | NA |
+| `MergeRanges` | 78.0233 ns / 256 B | 3,920.3102 ns / 3952 B | 732.4915 ns / 352 B | NA |
+| `MulticastConnect` | 159.3122 ns / 360 B | 2,789.8379 ns / 2696 B | 441.0353 ns / 368 B | NA |
+| `NeverSubscribeDispose` | 0.2446 ns / 0 B | 6.2409 ns / 40 B | 19.4228 ns / 56 B | NA |
+| `Not` | 27.8941 ns / 120 B | 834.5748 ns / 1040 B | 92.3225 ns / 152 B | 28.4602 ns / 120 B |
+| `ObserveOnIf` | 64.2175 ns / 104 B | NA | NA | 66.5979 ns / 104 B |
+| `ObserveOnImmediate` | 23.1313 ns / 96 B | 16,018.5333 ns / 11309 B | 905.3638 ns / 432 B | NA |
+| `ObserveOnSafe` | 65.7747 ns / 104 B | NA | NA | 67.1360 ns / 104 B |
+| `OnCleanup` | 127.6024 ns / 504 B | 1,466.0726 ns / 1528 B | 135.0002 ns / 216 B | NA |
+| `OnErrorRetry` | 133.5035 ns / 424 B | NA | NA | 134.3144 ns / 424 B |
+| `OnNext` | 50.6179 ns / 40 B | NA | NA | 51.3304 ns / 40 B |
+| `Pairwise` | 511.8533 ns / 160 B | 2,840.1602 ns / 3072 B | NA | 536.1441 ns / 160 B |
+| `Partition` | 277.7601 ns / 440 B | NA | NA | 265.2119 ns / 440 B |
+| `Publish` | 149.1594 ns / 360 B | 2,843.8596 ns / 2696 B | 407.4740 ns / 368 B | NA |
+| `PublishLiveConnect` | 147.7717 ns / 360 B | 2,765.0237 ns / 2696 B | 426.4617 ns / 368 B | NA |
+| `Race` | 42.3790 ns / 192 B | 1,633.0064 ns / 1760 B | 311.2532 ns / 360 B | NA |
+| `RaceRanges` | 40.0232 ns / 192 B | 1,578.4900 ns / 1760 B | 264.0182 ns / 360 B | NA |
+| `Range` | 53.6816 ns / 96 B | 2,791.1538 ns / 2472 B | 84.1106 ns / 80 B | NA |
+| `RangeMapKeep` | 155.3300 ns / 208 B | 2,674.9530 ns / 2616 B | 327.1681 ns / 272 B | NA |
+| `RangeSubscribe` | 56.5469 ns / 96 B | 2,598.6621 ns / 2472 B | 75.2467 ns / 80 B | NA |
+| `ReadOnlyStateProjection` | 103.6867 ns / 224 B | 90.8319 ns / 328 B | 174.2237 ns / 312 B | NA |
+| `ReattemptRange` | 93.4540 ns / 432 B | 1,482.2007 ns / 1664 B | NA | NA |
+| `Recover` | 89.5049 ns / 336 B | 1,454.6806 ns / 1560 B | 169.3545 ns / 264 B | NA |
+| `Reduce (Operator stateful filter GC profile)` | 641.4023 ns / 144 B | NA | NA | NA |
+| `Reduce (Operator stateful filter)` | 50.7020 ns / 144 B | 2,649.4832 ns / 2560 B | NA | NA |
+| `RefCount` | 192.5290 ns / 480 B | NA | 712.2789 ns / 488 B | NA |
+| `RefCountSubscribe` | 191.4625 ns / 480 B | NA | 562.0081 ns / 488 B | NA |
+| `Repeat` | 8.0617 ns / 0 B | 2,591.9693 ns / 2408 B | 82.4938 ns / 80 B | NA |
+| `RepeatSubscribe` | 8.0203 ns / 0 B | 2,519.3663 ns / 2408 B | 76.6248 ns / 80 B | NA |
+| `Replay (Connectable GC profile)` | 689.8670 ns / 512 B | 3,902.0874 ns / 3408 B | 931.1544 ns / 1360 B | NA |
+| `Replay (Subject GC profile)` | 371.6089 ns / 352 B | 740.9560 ns / 696 B | 435.6562 ns / 688 B | NA |
+| `ReplayEmit` | 15,921.0642 ns / 352 B | NA | NA | NA |
+| `ReplayLastOnSubscribe` | 63.6625 ns / 104 B | NA | NA | 63.7188 ns / 104 B |
+| `ReplayLiveLateSubscribe` | 637.8266 ns / 512 B | 3,865.4959 ns / 3408 B | 1,029.3317 ns / 1360 B | NA |
+| `Resume` | 96.2466 ns / 424 B | 1,677.1264 ns / 1720 B | NA | NA |
+| `RetryForeverWithDelay` | 131.7468 ns / 352 B | NA | NA | 126.2633 ns / 352 B |
+| `RetryWithBackoff` | 127.8894 ns / 336 B | NA | NA | 122.5359 ns / 336 B |
+| `RetryWithDelay` | 112.6661 ns / 264 B | NA | NA | 114.9763 ns / 264 B |
+| `RetryWithFixedDelay` | 132.6439 ns / 336 B | NA | NA | 124.9002 ns / 336 B |
+| `Return (Factory GC profile)` | 0.7472 ns / 0 B | 54.9276 ns / 120 B | 34.2162 ns / 80 B | NA |
+| `Return (Reactive extensions)` | 6.7822 ns / 64 B | 54.6806 ns / 120 B | 31.3894 ns / 56 B | 6.9682 ns / 64 B |
+| `ReturnSubscribe` | 0.2191 ns / 0 B | 50.4895 ns / 120 B | 32.2581 ns / 80 B | NA |
+| `RunAll` | 26.0295 ns / 136 B | NA | NA | 24.2351 ns / 136 B |
+| `SafeWitness` | 21.4309 ns / 136 B | 15.1710 ns / 136 B | 26.0649 ns / 128 B | NA |
+| `SampleLatest (Operator time scheduler)` | 257.2775 ns / 776 B | 2,892.3456 ns / 26264 B | 359.7949 ns / 664 B | NA |
+| `SampleLatest (Reactive extensions)` | 1,048.3322 ns / 488 B | NA | NA | 1,135.7206 ns / 840 B |
+| `ScanWithInitial` | 591.7863 ns / 200 B | 2,672.0292 ns / 2560 B | NA | 547.3744 ns / 200 B |
+| `Schedule` | 38.7331 ns / 216 B | NA | NA | 863.5171 ns / 677 B |
+| `ScheduleSafe` | 32.2703 ns / 144 B | NA | NA | 943.9625 ns / 597 B |
+| `SelectAsync` | 1,252.7429 ns / 2104 B | 32,738.8855 ns / 32276 B | NA | 1,292.9070 ns / 2104 B |
+| `SelectAsyncConcurrent` | 1,168.3446 ns / 2120 B | NA | NA | 1,191.4728 ns / 2120 B |
+| `SelectAsyncSequential` | 1,339.6799 ns / 2104 B | NA | NA | 1,302.4360 ns / 2104 B |
+| `SelectConstant` | 59.5848 ns / 136 B | 2,715.4348 ns / 2544 B | 198.1385 ns / 160 B | 58.8155 ns / 136 B |
+| `SelectLatestAsync` | 1,719.1326 ns / 2032 B | NA | NA | 1,731.7319 ns / 2032 B |
+| `SelectManyThen` | 34.6976 ns / 224 B | 423.6935 ns / 752 B | NA | 37.1627 ns / 224 B |
+| `SequenceCountAsync` | 816.4266 ns / 704 B | NA | NA | 799.9606 ns / 704 B |
+| `SequenceMapKeepToListAsync` | 2,009.7575 ns / 1600 B | NA | NA | 1,944.0266 ns / 1600 B |
+| `Share` | 193.6808 ns / 480 B | 3,045.8913 ns / 2880 B | 504.3583 ns / 488 B | NA |
+| `ShareLiveSubscribe` | 204.3741 ns / 480 B | 3,020.7905 ns / 2880 B | 534.5208 ns / 488 B | NA |
+| `Shuffle` | 152.0990 ns / 96 B | NA | NA | 154.7871 ns / 96 B |
+| `SignalBroadcastAsync` | 7,179.9438 ns / 2320 B | NA | NA | 6,977.3867 ns / 2320 B |
+| `SignalEmit` | 1,749.7628 ns / 184 B | NA | NA | NA |
+| `SignalFanOutChurn` | 39,454.1463 ns / 33064 B | NA | NA | NA |
+| `SignalSubscribeDisposeChurn` | 38,197.5708 ns / 32920 B | NA | NA | NA |
+| `Skip (Operator stateful filter GC profile)` | 1,806.9367 ns / 136 B | NA | NA | NA |
+| `Skip (Operator stateful filter)` | 83.9017 ns / 136 B | 2,629.1569 ns / 2512 B | NA | NA |
+| `SkipWhile (Operator stateful filter GC profile)` | 1,886.5043 ns / 144 B | NA | NA | NA |
+| `SkipWhile (Operator stateful filter)` | 94.8720 ns / 144 B | 2,755.9981 ns / 2520 B | NA | NA |
+| `SkipWhileNull` | 26.8510 ns / 112 B | 652.5813 ns / 944 B | NA | 26.3809 ns / 112 B |
+| `Start` | 25.1025 ns / 96 B | NA | NA | 1,011.5645 ns / 535 B |
+| `StartSubscribe` | 51.1140 ns / 208 B | 892.2476 ns / 751 B | 61.2631 ns / 160 B | NA |
+| `StartWithAppend` | 36.6330 ns / 168 B | 1,225.1370 ns / 1283 B | 162.2376 ns / 288 B | NA |
+| `StartWithAppendDefaultIfEmpty` | 36.9278 ns / 168 B | 1,061.6973 ns / 1283 B | 152.9743 ns / 288 B | NA |
+| `State1024` | 15,745.6177 ns / 160 B | 17,003.8483 ns / 200 B | 17,026.8046 ns / 192 B | NA |
+| `StateEmit` | 16,305.4321 ns / 160 B | NA | NA | NA |
+| `StateSignal1024` | 15,226.0101 ns / 160 B | 16,860.4563 ns / 200 B | 16,525.8596 ns / 192 B | NA |
+| `StateSignal32` | 555.0760 ns / 160 B | 619.2484 ns / 200 B | 629.6037 ns / 192 B | NA |
+| `StateSignalUpdates` | 559.4035 ns / 160 B | 586.0605 ns / 200 B | 638.8654 ns / 192 B | NA |
+| `SubjectEmit1024` | 1,741.3116 ns / 184 B | 1,767.3735 ns / 136 B | 1,988.2607 ns / 160 B | NA |
+| `SubjectEmit32` | 91.5766 ns / 184 B | 97.2691 ns / 136 B | 123.9790 ns / 160 B | NA |
+| `SubjectSubscribeDispose64` | 3,442.9656 ns / 3848 B | 4,184.0096 ns / 38472 B | 3,923.8215 ns / 6728 B | NA |
+| `SubjectSubscribeDispose8` | 353.1304 ns / 640 B | 313.9104 ns / 1288 B | 485.8430 ns / 904 B | NA |
+| `SubscribeAndComplete` | 0.5452 ns / 0 B | NA | NA | 0.2295 ns / 0 B |
+| `SubscribeAsync` | 1,020.8799 ns / 544 B | NA | NA | 1,086.0720 ns / 544 B |
+| `SubscribeDispose64` | 3,514.5795 ns / 3848 B | 4,330.8894 ns / 38472 B | 3,776.1935 ns / 6728 B | NA |
+| `SubscribeGetError` | 6.9580 ns / 48 B | NA | NA | 53.4505 ns / 104 B |
+| `SubscribeGetValue` | 17.8834 ns / 56 B | NA | NA | 18.5553 ns / 56 B |
+| `SubscribeOnImmediate` | 92.8357 ns / 384 B | 2,088.8631 ns / 2257 B | 143.1142 ns / 200 B | NA |
+| `SubscribeSynchronous` | 1,041.8758 ns / 544 B | NA | NA | 1,002.4885 ns / 544 B |
+| `Switch` | 85.8795 ns / 312 B | 2,390.3422 ns / 2360 B | 799.1355 ns / 448 B | NA |
+| `SwitchIfEmpty` | 69.8495 ns / 224 B | NA | NA | 111.8583 ns / 280 B |
+| `SwitchRanges` | 86.2799 ns / 312 B | 2,403.2789 ns / 2360 B | 794.1218 ns / 448 B | NA |
+| `SynchronizeAsync` | 819.5469 ns / 1280 B | NA | NA | 825.0399 ns / 1280 B |
+| `SynchronizeSynchronous` | 832.0162 ns / 1280 B | NA | NA | 817.5703 ns / 1280 B |
+| `SyncTimer` | 2,596.8934 ns / 1080 B | NA | NA | 15,106.0211 ns / 26240 B |
+| `TakeRange` | 72.9409 ns / 200 B | 1,440.9925 ns / 1552 B | 103.1167 ns / 160 B | NA |
+| `TakeUntil` | 512.1911 ns / 192 B | 2,662.6592 ns / 2520 B | NA | 516.0572 ns / 192 B |
+| `TakeWhile (Operator stateful filter GC profile)` | 1,859.1993 ns / 144 B | NA | NA | NA |
+| `TakeWhile (Operator stateful filter)` | 95.4222 ns / 144 B | 2,717.1335 ns / 2520 B | NA | NA |
+| `TapRange` | 77.2577 ns / 224 B | 1,568.4737 ns / 1520 B | 135.1513 ns / 216 B | NA |
+| `TapWith` | 78.4952 ns / 320 B | 1,476.9664 ns / 1608 B | 146.3279 ns / 304 B | NA |
+| `TaskSignalSubscribe` | 37.9870 ns / 240 B | 779.9820 ns / 886 B | 39.5601 ns / 160 B | NA |
+| `ThrottleBurst` | 612.2450 ns / 1176 B | 2,778.8308 ns / 36480 B | 1,667.2384 ns / 1512 B | NA |
+| `ThrottleDistinct` | 1,849.1563 ns / 4232 B | NA | NA | 30,604.1331 ns / 18701 B |
+| `ThrottleFirst` | 1,161.0701 ns / 224 B | NA | NA | 1,163.6336 ns / 224 B |
+| `ThrottleOnScheduler` | 1,912.9753 ns / 2400 B | NA | NA | 34,581.3985 ns / 16354 B |
+| `ThrottleUntilTrue` | 5,027.6983 ns / 1633 B | NA | NA | 6,217.3368 ns / 1378 B |
+| `Throw` | 63.0707 ns / 120 B | 128.1170 ns / 240 B | 96.0727 ns / 200 B | NA |
+| `ThrowSubscribe` | 64.2616 ns / 120 B | 118.8961 ns / 240 B | 103.2737 ns / 200 B | NA |
+| `TimeIntervalRange` | 27.1561 ns / 120 B | 1,784.3594 ns / 1616 B | 454.4125 ns / 160 B | NA |
+| `TimeoutIdle` | 293.2704 ns / 800 B | 1,294.2879 ns / 29776 B | 414.6542 ns / 784 B | NA |
+| `TimestampRange` | 42.6172 ns / 144 B | 1,749.8641 ns / 1512 B | 360.3036 ns / 152 B | NA |
+| `ToHotTask` | 36.3653 ns / 112 B | 101.5059 ns / 240 B | NA | 35.7259 ns / 112 B |
+| `ToHotValueTask` | 27.0451 ns / 72 B | NA | NA | 27.8467 ns / 72 B |
+| `ToPropertyObservable` | 27,071.4355 ns / 4941 B | NA | NA | 27,486.0006 ns / 4941 B |
+| `ToReadOnlyBehavior` | 66.0075 ns / 192 B | NA | NA | 67.9050 ns / 192 B |
+| `ToTask` | 13.3485 ns / 192 B | 2,572.0790 ns / 2824 B | 97.3992 ns / 208 B | NA |
+| `TrySelect` | 101.8332 ns / 120 B | NA | NA | 110.8990 ns / 120 B |
+| `UnfoldSubscribe` | 12.8181 ns / 0 B | 2,345.7369 ns / 2768 B | 100.1733 ns / 128 B | NA |
+| `Unique (Operator stateful filter GC profile)` | 1,839.5060 ns / 144 B | NA | NA | NA |
+| `Unique (Operator stateful filter)` | 109.1269 ns / 144 B | 2,863.5156 ns / 2568 B | NA | NA |
+| `UniqueBy (Operator stateful filter GC profile)` | 2,029.5043 ns / 152 B | NA | NA | NA |
+| `UniqueBy (Operator stateful filter)` | 109.3574 ns / 152 B | 2,735.0480 ns / 2568 B | NA | NA |
+| `UseSubscribe` | 40.9663 ns / 144 B | 88.1730 ns / 168 B | 63.0011 ns / 128 B | NA |
+| `Using` | 7.6564 ns / 56 B | NA | NA | 9.4516 ns / 56 B |
+| `WaitForCompletion` | 25.1638 ns / 96 B | NA | NA | 24.6338 ns / 96 B |
+| `WaitForError` | 26.0917 ns / 96 B | NA | NA | 73.9819 ns / 152 B |
+| `WaitForValue` | 32.1534 ns / 104 B | NA | NA | 34.4935 ns / 104 B |
+| `WaitUntil` | 534.5543 ns / 224 B | 891.0865 ns / 1080 B | NA | 540.1772 ns / 224 B |
+| `WhereFalse` | 23.6723 ns / 120 B | 806.3629 ns / 1040 B | 91.3808 ns / 184 B | 24.8538 ns / 120 B |
+| `WhereIsNotNull` | 23.7931 ns / 104 B | 622.7868 ns / 904 B | 92.9625 ns / 264 B | 23.3656 ns / 104 B |
+| `WhereSelect` | 80.4235 ns / 152 B | 2,638.5579 ns / 2616 B | 193.5426 ns / 240 B | 77.0247 ns / 152 B |
+| `WhereTrue` | 23.7493 ns / 120 B | 804.6906 ns / 1040 B | 86.8553 ns / 184 B | 26.0367 ns / 120 B |
+| `While` | 127.7396 ns / 280 B | NA | NA | 127.4206 ns / 280 B |
+| `WithLatest` | 40.7850 ns / 192 B | 3,451.6327 ns / 2824 B | 274.0358 ns / 248 B | NA |
+| `WithLatestRanges` | 45.1321 ns / 192 B | 3,505.9546 ns / 2824 B | 345.9029 ns / 248 B | NA |
+| `WithLimitedConcurrency` | 2,489.2455 ns / 5448 B | NA | NA | 2,604.7204 ns / 5448 B |
+| `Zip (Operator core GC profile)` | 39.0931 ns / 192 B | 3,389.6512 ns / 2976 B | 765.7075 ns / 656 B | NA |
+| `Zip (Operator zip)` | 37.0413 ns / 192 B | 3,060.4356 ns / 2976 B | 687.6359 ns / 656 B | NA |
 
-```powershell
-dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter "*ReactiveExtensionsComparisonBenchmarks*" --launchCount 1 --warmupCount 1 --iterationCount 3
-dotnet run --project src/benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter "*AsyncExtensionsComparisonBenchmarks*" --launchCount 1 --warmupCount 1 --iterationCount 3
-```
-
-Extensions comparison against `ReactiveUI.Extensions` 4.0.0:
-
-| Scenario | ReactiveUI.Primitives.Extensions | ReactiveUI.Extensions 4.0.0 |
-|---|---:|---:|
-| `WhereSelect` range | 75.87 ns / 136 B | 2,655.97 ns / 2512 B |
-| `FromArray` subscribe | 58.42 ns / 40 B | 59.15 ns / 40 B |
-| `Pairwise` range | 515.51 ns / 160 B | 3,016.54 ns / 2536 B |
-| `BufferUntil` chars | 52.81 ns / 264 B | 53.01 ns / 264 B |
-| `Not` + `WhereTrue` | 28.81 ns / 144 B | 30.42 ns / 144 B |
-
-Async comparison against `ReactiveUI.Extensions.Async` 4.0.0:
-
-| Scenario | ReactiveUI.Primitives.Async | ReactiveUI.Extensions.Async 4.0.0 |
-|---|---:|---:|
-| `Sequence` + `Map` + `Keep` + `ToListAsync` | 2,109.7 ns / 1600 B | 2,085.6 ns / 1600 B |
-| Async `CountAsync` | 817.2 ns / 704 B | 808.0 ns / 704 B |
-| Async signal/subject broadcast | 6,822.4 ns / 2320 B | 6,802.5 ns / 2320 B |
-
-The focused Extensions results show the fused and direct-observer operators winning the high-value migrated scenarios while preserving allocations where both implementations use equivalent buffering. The Async results are allocation-equivalent to the baseline and within measurement noise on the selected parity paths.
-
-The table below is generated from the joined BenchmarkDotNet CSV and uses `Mean / Allocated` for each cell.
-
-| Scenario | ReactiveUI.Primitives | System.Reactive | R3 |
-|---|---:|---:|---:|
-| Emit subscribe | 0.2230 ns / 0 B | 47.3735 ns / 120 B | 28.3341 ns / 80 B |
-| None subscribe | 2.9952 ns / 40 B | 42.0283 ns / 96 B | 27.3123 ns / 56 B |
-| Sequence subscribe | 46.4699 ns / 96 B | 2,389.8479 ns / 2472 B | 69.8169 ns / 80 B |
-| Loop subscribe | 6.7140 ns / 0 B | 2,278.0993 ns / 2408 B | 67.8307 ns / 80 B |
-| Fail subscribe | 55.9618 ns / 120 B | 104.6122 ns / 240 B | 83.5704 ns / 200 B |
-| FromEnumerable subscribe | 49.9427 ns / 40 B | 2,242.8721 ns / 2504 B | 75.4156 ns / 88 B |
-| Completed task bridge | 9.6957 ns / 88 B | 762.3672 ns / 793 B | 33.7027 ns / 88 B |
-| Create subscribe | 33.3256 ns / 112 B | 44.6606 ns / 168 B | 52.2479 ns / 128 B |
-| CreateSafe subscribe | 33.3246 ns / 112 B | 44.1128 ns / 168 B | 51.0502 ns / 128 B |
-| Lazy subscribe | 66.2262 ns / 240 B | 1,287.3555 ns / 1512 B | 106.8332 ns / 152 B |
-| Start subscribe | 39.6918 ns / 208 B | 769.3907 ns / 751 B | 55.2220 ns / 160 B |
-| Unfold subscribe | 10.0288 ns / 0 B | 2,128.0362 ns / 2768 B | 91.3892 ns / 128 B |
-| Use subscribe | 36.4206 ns / 144 B | 78.9546 ns / 168 B | 51.2890 ns / 128 B |
-| FromAsyncEnumerable subscribe | 1,006.7269 ns / 600 B | 1,645.8238 ns / 2311 B | 1,136.1530 ns / 1023 B |
-| Silent subscribe/dispose | 0.2315 ns / 0 B | 5.4195 ns / 40 B | 16.9768 ns / 56 B |
-| Map + Keep over range | 124.3913 ns / 208 B | 2,472.8123 ns / 2616 B | 286.3641 ns / 272 B |
-| Reduce + Any + Count | 174.3840 ns / 824 B | 5,174.9387 ns / 6216 B | 598.8228 ns / 1280 B |
-| Prepend + Append + DefaultIfEmpty | 30.1072 ns / 168 B | 843.4910 ns / 1282 B | 127.8896 ns / 288 B |
-| DefaultIfEmpty(empty) | 5.6240 ns / 64 B | 59.9335 ns / 144 B | 59.1663 ns / 136 B |
-| FlatMap over ranges | 946.5697 ns / 712 B | 3,506.1713 ns / 3872 B | 1,003.7753 ns / 1040 B |
-| Pair over ranges | 38.5910 ns / 232 B | 2,915.9901 ns / 2976 B | 652.8988 ns / 656 B |
-| Chain ranges | 69.5590 ns / 256 B | 2,594.3044 ns / 2856 B | 232.0761 ns / 360 B |
-| Blend ranges | 68.7321 ns / 256 B | 3,543.2549 ns / 3953 B | 642.6874 ns / 352 B |
-| Race ranges | 33.5591 ns / 192 B | 1,404.2164 ns / 1760 B | 261.6344 ns / 360 B |
-| SwitchTo ranges | 73.2220 ns / 336 B | 1,970.9442 ns / 2336 B | 704.1251 ns / 392 B |
-| SyncLatest ranges | 79.4395 ns / 368 B | 2,944.0282 ns / 2824 B | 622.3868 ns / 344 B |
-| Latch ranges | 81.0008 ns / 368 B | 3,225.7811 ns / 2824 B | 243.9050 ns / 248 B |
-| ForkJoin ranges | 50.8807 ns / 344 B | 3,269.8635 ns / 3136 B | 907.5060 ns / 504 B |
-| Shift range | 144.9936 ns / 528 B | 5,006.6565 ns / 39584 B | 1,842.7436 ns / 2200 B |
-| DelayStart range | 134.7077 ns / 528 B | 2,128.8455 ns / 26456 B | 301.3397 ns / 552 B |
-| Calm burst | 576.4417 ns / 1184 B | 2,324.6424 ns / 36480 B | 1,507.2980 ns / 1512 B |
-| Probe latest | 209.6742 ns / 640 B | 1,811.5047 ns / 26264 B | 299.8862 ns / 664 B |
-| Timestamp range | 34.7496 ns / 144 B | 1,578.6798 ns / 1512 B | 332.1624 ns / 152 B |
-| TimeInterval range | 25.4590 ns / 152 B | 1,603.1043 ns / 1616 B | 419.3172 ns / 160 B |
-| Expire idle | 231.4570 ns / 704 B | 1,137.3182 ns / 29776 B | 378.0569 ns / 784 B |
-| ObserveOn immediate | 21.4403 ns / 96 B | 14,471.7122 ns / 11310 B | 885.3536 ns / 432 B |
-| History subscribe | 322.3987 ns / 320 B | 670.2288 ns / 696 B | 387.4820 ns / 688 B |
-| StateSignal 32 values | 237.1878 ns / 120 B | 565.4464 ns / 200 B | 594.9903 ns / 192 B |
-| StateSignal 1024 values | 6,730.9924 ns / 120 B | 15,726.8158 ns / 200 B | 15,691.3635 ns / 192 B |
-| Signal emit, 32 values | 65.5355 ns / 136 B | 89.1690 ns / 136 B | 111.8446 ns / 160 B |
-| Signal emit, 1024 values | 1,637.7626 ns / 136 B | 1,673.6031 ns / 136 B | 1,986.4624 ns / 160 B |
-| Signal subscribe/dispose, 8 observers | 228.5621 ns / 592 B | 283.1068 ns / 1288 B | 436.3383 ns / 840 B |
-| Signal subscribe/dispose, 64 observers | 2,662.1290 ns / 3800 B | 3,546.0312 ns / 38472 B | 3,455.8392 ns / 6216 B |
-| ShareLive connect | 130.7828 ns / 384 B | 2,528.9932 ns / 2696 B | 426.6950 ns / 368 B |
-| Share live subscribe | 199.5178 ns / 712 B | 2,700.8301 ns / 2880 B | 471.9188 ns / 488 B |
-| Replay live late subscribe | 608.7132 ns / 568 B | 3,480.7842 ns / 3408 B | 812.3979 ns / 1360 B |
-| AutoShare subscribe | 202.3044 ns / 712 B | 2,697.0149 ns / 2880 B | 482.7859 ns / 488 B |
-| AutoConnect subscribe | 155.5013 ns / 592 B | 2,502.8542 ns / 2736 B | 372.7091 ns / 368 B |
-| StateSignal updates | 238.1559 ns / 120 B | 548.4785 ns / 200 B | 594.8021 ns / 192 B |
-| ReadOnlyState projection | 52.5724 ns / 144 B | 84.4462 ns / 328 B | 161.3650 ns / 312 B |
-| TaskSignal subscribe | 34.0054 ns / 240 B | 665.1771 ns / 886 B | 37.2785 ns / 160 B |
-| Command execute | 32.5825 ns / 152 B | 645.0811 ns / 1089 B | 103.4041 ns / 296 B |
-| Command result subscribe | 57.1177 ns / 224 B | 36.0275 ns / 136 B | 61.6326 ns / 160 B |
-| CollectList range | 102.0529 ns / 552 B | 2,463.1842 ns / 3352 B | 149.5652 ns / 632 B |
-| CollectArray range | 63.5489 ns / 520 B | 2,470.4433 ns / 3504 B | 158.9210 ns / 784 B |
-| CollectArrayAsync range | 33.3098 ns / 384 B | 2,595.1312 ns / 3848 B | 155.9081 ns / 784 B |
-| FirstAsync range | 5.8384 ns / 56 B | 2,353.8883 ns / 2792 B | 67.9760 ns / 208 B |
-| ToTask range | 13.6859 ns / 192 B | 2,403.5159 ns / 2824 B | 88.2610 ns / 208 B |
-| Count(predicate) range | 18.8970 ns / 96 B | 2,369.8963 ns / 2520 B | 92.8400 ns / 200 B |
-| LongCount(predicate) range | 19.5172 ns / 104 B | 2,323.6443 ns / 2536 B | 98.4867 ns / 272 B |
-| All range | 17.0983 ns / 96 B | 2,362.4686 ns / 2520 B | 80.4268 ns / 192 B |
-| Contains range | 9.2651 ns / 96 B | 2,388.1732 ns / 2528 B | 86.6274 ns / 200 B |
-| All + Contains range | 27.3462 ns / 192 B | 4,757.9435 ns / 5048 B | 210.3620 ns / 392 B |
-| Pocket dispose | 60.8709 ns / 408 B | 91.0020 ns / 512 B | 68.8285 ns / 480 B |
-| CurrentThread schedule | 6.6194 ns / 88 B | 16.0136 ns / 88 B | 27.2022 ns / 56 B |
-| Safe witness | 16.9332 ns / 136 B | 11.8405 ns / 136 B | 16.9656 ns / 56 B |
-| Completed Spark | 0.0056 ns / 0 B | 0.0000 ns / 0 B | 0.0271 ns / 0 B |
-
-The five rows selected from the improvement review as the main time/scheduler optimization gate were `Shift range`, `DelayStart range`, `Calm burst`, `Probe latest`, and `Expire idle`. In the complete run all five beat both System.Reactive and R3 on mean time and allocation. The same optimization pass also brought `Timestamp range`, `TimeInterval range`, `ObserveOn immediate`, `SwitchTo ranges`, `StateSignal updates`, and `ReadOnlyState projection` below both alternatives on mean time and allocation.
-
-Interpretation notes:
-
-- ReactiveUI.Primitives leads on mean time in 64 of the 67 listed groups. The remaining material time gaps are `Command result subscribe` against a System.Reactive subject-only baseline and `Safe witness` against a less guarded delegate observer; `Completed Spark` measures at empty-method scale with zero allocation for every implementation.
-- The public API/operator matrix above is backed by deterministic smoke coverage in `Program.RunSmokeBenchmarksAsync`: every row has matching ReactiveUI.Primitives, System.Reactive, and R3 calls where alternatives exist, and the smoke run validates each benchmark path returns the same observable result before BenchmarkDotNet measures throughput and allocation unless the row is one of the documented scheduling-total exceptions below.
-- The only intentional smoke output differences are `SwitchTo ranges`, `SyncLatest ranges`, and `Latch ranges`: System.Reactive produces different synchronous range totals for those coordinator operators, while ReactiveUI.Primitives and R3 agree on the emitted totals. `--smoke` permits only those System.Reactive differences and still fails if ReactiveUI.Primitives diverges from R3 or if any other benchmark group loses parity.
-- Candidate scenarios where ReactiveUI.Primitives is not strictly both faster and lower-allocation than both alternatives are tracked explicitly below. Most remaining rows are allocation-only gaps where ReactiveUI.Primitives is still faster on mean time; rows marked as exceptions are retained because the extra cost buys ReactiveUI.Primitives semantics (safe terminal/disposal behavior, `IObservable<T>`/`IObserver<T>` compatibility, deterministic `ISequencer` scheduling, or live-signal lifecycle ownership) while preserving the project rule that System.Reactive/R3 are benchmark-only dependencies.
-- Near-zero singleton measurements (`Emit`, `Silent`, and `Spark` paths) may trigger BenchmarkDotNet `ZeroMeasurement` warnings; those warnings mean the method duration is indistinguishable from the empty-method overhead, not that the benchmark failed.
-
-Candidate/performance exception matrix:
-
-| Scenario | Observed gap | Decision and trade-off |
-|---|---|---|
-| `Sequence subscribe` | allocation >= R3 (96 B vs 80 B). | Accepted exception: the range path keeps BCL observable compatibility and explicit disposal ownership; mean time remains ahead of R3. |
-| `Completed task bridge` | allocation ties R3 (88 B vs 88 B). | Accepted exception: the bridge has the lowest mean time and ties R3 allocation while preserving task-observer completion semantics. |
-| `Lazy subscribe` | allocation >= R3 (240 B vs 152 B). | Accepted exception: lazy factory ownership keeps the BCL subscription and disposal contract; mean time remains ahead of R3. |
-| `Start subscribe` | allocation >= R3 (208 B vs 160 B). | Accepted exception: start uses the Primitives scheduling/result surface; mean time remains ahead of R3. |
-| `Use subscribe` | allocation >= R3 (144 B vs 128 B). | Accepted exception: resource ownership is explicit and BCL-compatible; mean time remains ahead of R3. |
-| `SyncLatest ranges` | allocation >= R3 (368 B vs 344 B). | Accepted exception: coordinator operators keep general `IObservable<T>` subscription ownership and terminal arbitration while leading on mean time. |
-| `Latch ranges` | allocation >= R3 (368 B vs 248 B). | Accepted exception: coordinator operators keep general `IObservable<T>` subscription ownership and terminal arbitration while leading on mean time. |
-| `Signal emit, 32 values` | allocation ties System.Reactive (136 B vs 136 B). | Accepted exception: emit loops lead on throughput and tie System.Reactive allocation; strict lower allocation is not meaningful for this BCL-compatible shape. |
-| `Signal emit, 1024 values` | allocation ties System.Reactive (136 B vs 136 B). | Accepted exception: emit loops lead on throughput and tie System.Reactive allocation; strict lower allocation is not meaningful for this BCL-compatible shape. |
-| `ShareLive connect` | allocation >= R3 (384 B vs 368 B). | Accepted exception: live sharing owns connection/ref-count lifecycle and safe disconnect state while leading on mean time. |
-| `Share live subscribe` | allocation >= R3 (712 B vs 488 B). | Accepted exception: live sharing owns connection/ref-count lifecycle and safe disconnect state while leading on mean time. |
-| `AutoShare subscribe` | allocation >= R3 (712 B vs 488 B). | Accepted exception: live sharing owns connection/ref-count lifecycle and safe disconnect state while leading on mean time. |
-| `AutoConnect subscribe` | allocation >= R3 (592 B vs 368 B). | Accepted exception: live sharing owns connection/ref-count lifecycle and safe disconnect state while leading on mean time. |
-| `TaskSignal subscribe` | allocation >= R3 (240 B vs 160 B). | Accepted exception: `TaskSignal` preserves BCL signal completion semantics while leading on mean time. |
-| `Command result subscribe` | time >= System.Reactive (57.1177 ns vs 36.0275 ns); allocation >= System.Reactive (224 B vs 136 B); allocation >= R3 (224 B vs 160 B). | Accepted exception: the System.Reactive row is subject-only synchronous publication, while `CommandSignal` includes command execution gating plus result publication and still beats R3 on mean time. |
-| `CurrentThread schedule` | allocation ties System.Reactive (88 B vs 88 B); allocation >= R3 (88 B vs 56 B). | Accepted exception: current-thread scheduling uses the project sequencer queue contract; throughput leads both alternatives. |
-| `Safe witness` | time >= System.Reactive (16.9332 ns vs 11.8405 ns); allocation ties System.Reactive (136 B vs 136 B); allocation >= R3 (136 B vs 56 B). | Accepted exception: the wrapper enforces safe observer/terminal behavior; the System.Reactive row is a less guarded delegate observer. |
-| `Completed Spark` | time >= System.Reactive (0.0056 ns vs 0.0000 ns); allocation ties System.Reactive and R3 (0 B). | Accepted exception: all implementations allocate zero and measure at empty-method scale, so a strict lower-allocation win is not meaningful. |
-
-Performance constraints used by the project:
-
-- Preserve observer and terminal notification semantics.
-- Preserve safe unsubscription and disposal behavior.
-- Avoid reflection and dynamic code generation in runtime hot paths.
-- Prefer sealed helpers, direct fast paths, and predictable branch behavior.
-- Keep allocations minimal in emit loops and single-subscriber cases.
+BenchmarkDotNet emitted `ZeroMeasurement` warnings for several singleton or empty-method-scale paths, including `Return`, `CompletedSpark`, and `Never`-style subscriptions. Those warnings mean the measured duration is indistinguishable from empty method overhead; the benchmark run still completed and exported all 610 rows.
 
 ## Repository layout
 
@@ -1074,22 +1172,17 @@ Performance constraints used by the project:
 # Build solution.
 dotnet build .\src\ReactiveUI.Primitives.slnx -c Release -v minimal /nr:false -p:UseSharedCompilation=false -p:BuildInParallel=false -maxcpucount:1
 
-# Net8 coverage run through the Microsoft Testing Platform/TUnit executable.
-dotnet .\src\tests\ReactiveUI.Primitives.Tests\bin\Release\net8.0\ReactiveUI.Primitives.Tests.dll --coverage --coverage-output coverage.cobertura.xml --coverage-output-format cobertura --results-directory .\src\tests\ReactiveUI.Primitives.Tests\TestResults\extensions-optimization --no-ansi --no-progress --output Normal --timeout 10m
+# ReactiveUI.Primitives.Extensions TUnit executable validation.
+dotnet .\src\tests\ReactiveUI.Primitives.Extensions.Tests\bin\Release\net8.0\ReactiveUI.Primitives.Extensions.Tests.dll --results-directory .\src\tests\ReactiveUI.Primitives.Extensions.Tests\TestResults\benchmark-validation-net8 --no-ansi --no-progress --output Normal --timeout 10m
+dotnet .\src\tests\ReactiveUI.Primitives.Extensions.Tests\bin\Release\net9.0\ReactiveUI.Primitives.Extensions.Tests.dll --results-directory .\src\tests\ReactiveUI.Primitives.Extensions.Tests\TestResults\benchmark-validation-net9 --no-ansi --no-progress --output Normal --timeout 10m
+dotnet .\src\tests\ReactiveUI.Primitives.Extensions.Tests\bin\Release\net10.0\ReactiveUI.Primitives.Extensions.Tests.dll --results-directory .\src\tests\ReactiveUI.Primitives.Extensions.Tests\TestResults\benchmark-validation-net10 --no-ansi --no-progress --output Normal --timeout 10m
 
-# Remaining test target frameworks through the generated TUnit executables.
-dotnet .\src\tests\ReactiveUI.Primitives.Tests\bin\Release\net9.0\ReactiveUI.Primitives.Tests.dll --results-directory .\src\tests\ReactiveUI.Primitives.Tests\TestResults\extensions-optimization-net9 --no-ansi --no-progress --output Normal --timeout 10m
-dotnet .\src\tests\ReactiveUI.Primitives.Tests\bin\Release\net10.0\ReactiveUI.Primitives.Tests.dll --results-directory .\src\tests\ReactiveUI.Primitives.Tests\TestResults\extensions-optimization-net10 --no-ansi --no-progress --output Normal --timeout 10m
-
-# Benchmark smoke, focused Async/Extensions comparisons, and complete joined comparison run.
-dotnet run --project .\src\benchmarks\ReactiveUI.Primitives.Benchmarks\ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --smoke
-dotnet run --project .\src\benchmarks\ReactiveUI.Primitives.Benchmarks\ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter "*ReactiveExtensionsComparisonBenchmarks*" --launchCount 1 --warmupCount 1 --iterationCount 3
-dotnet run --project .\src\benchmarks\ReactiveUI.Primitives.Benchmarks\ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter "*AsyncExtensionsComparisonBenchmarks*" --launchCount 1 --warmupCount 1 --iterationCount 3
+# Extension scenario smoke and complete joined comparison run.
+dotnet run --project .\src\benchmarks\ReactiveUI.Primitives.Benchmarks\ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --extensions-smoke
 dotnet run --project .\src\benchmarks\ReactiveUI.Primitives.Benchmarks\ReactiveUI.Primitives.Benchmarks.csproj --configuration Release --no-build -- --filter "*" --join --launchCount 1 --warmupCount 1 --iterationCount 3
 ```
 
-Results: build passed with 0 warnings/0 errors; the net8.0 coverage run passed 2032/2032 tests; direct TUnit executable validation passed 2032/2032 tests on net9.0 and 2032/2032 tests on net10.0. The latest `ReactiveUI.Primitives.Extensions` coverage snapshot reported 99.28% line (3171/3194) and 97.22% branch (875/900) coverage. Benchmark smoke parity passed for 67 groups; the joined BenchmarkDotNet run executed 201 benchmarks, and the focused Async/Extensions BenchmarkDotNet runs produced the comparison tables above.
-
+Results: release solution build passed with 0 warnings/0 errors; `ReactiveUI.Primitives.Extensions.Tests` passed 681/681 tests on net8.0, net9.0, and net10.0; extension scenario smoke validated 212 scenario paths; reflection/API coverage confirmed 87/87 public `ReactiveUI.Primitives.Extensions` method families have Primitives benchmark scenarios; the joined BenchmarkDotNet run executed 610 benchmarks in 01:16:19. The Mtpunittest MCP read existing solution coverage reports after validation and reported 69.88% line coverage and 74.21% branch coverage; coverage was not regenerated during this benchmark refresh.
 ### Package verification
 
 For NuGet package verification, inspect the generated `.nupkg` and confirm:
