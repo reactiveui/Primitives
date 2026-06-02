@@ -39,6 +39,14 @@ public static partial class LinqMixins
             throw new ArgumentNullException(nameof(sources));
         }
 
+        for (var i = 0; i < sources.Length; i++)
+        {
+            if (sources[i] == null)
+            {
+                throw new ArgumentNullException(nameof(sources));
+            }
+        }
+
         return new BlendUniqueSignal<T>(sources, comparer ?? EqualityComparer<T>.Default);
     }
 
@@ -116,27 +124,31 @@ public static partial class LinqMixins
         /// <param name="sources">The sources to merge.</param>
         public void Run(IObservable<T>[] sources)
         {
+            // Sources and their elements are validated eagerly by the public entry point, so no null check here.
+            if (sources.Length == 0)
+            {
+                lock (_gate)
+                {
+                    if (_done)
+                    {
+                        return;
+                    }
+
+                    _done = true;
+                }
+
+                _downstream.OnCompleted();
+                return;
+            }
+
             lock (_gate)
             {
                 _active = sources.Length;
             }
 
-            if (sources.Length == 0)
-            {
-                Complete();
-                return;
-            }
-
             for (var i = 0; i < sources.Length; i++)
             {
-                var source = sources[i];
-                if (source == null)
-                {
-                    ForwardError(new InvalidOperationException("BlendUnique source contained null."));
-                    return;
-                }
-
-                _pocket.Add(source.Subscribe(new Element(this)));
+                _pocket.Add(sources[i].Subscribe(new Element(this)));
             }
         }
 

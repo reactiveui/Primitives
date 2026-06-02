@@ -108,11 +108,12 @@ public class BlendUniqueTests
         Assert.True(error is InvalidOperationException);
     }
 
-    /// <summary>Verifies argument validation for the sources array and the observer.</summary>
+    /// <summary>Verifies argument validation for the sources array, a null source element, and the observer.</summary>
     [Test]
     public void NullArgumentsThrow()
     {
         Assert.Throws<ArgumentNullException>(() => LinqMixins.BlendUnique<int>(null!, comparer: null));
+        Assert.Throws<ArgumentNullException>(() => LinqMixins.BlendUnique(Signal.FromEnumerable(_single), null!));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.BlendUnique(Signal.FromEnumerable(_single)).Subscribe(null!));
     }
 }
