@@ -189,6 +189,8 @@ namespace ReactiveUI.Primitives
         public static System.IObservable<T> AsObservable<T>(this System.IObservable<T> source) { }
         public static System.IObservable<TResult> Bind<TSource, TResult>(this System.IObservable<TSource> source, System.Func<TSource, System.IObservable<TResult>> selector) { }
         public static System.IObservable<T> Blend<T>(this System.IObservable<System.IObservable<T>> sources) { }
+        public static System.IObservable<T> BlendUnique<T>(params System.IObservable<T>[] sources) { }
+        public static System.IObservable<T> BlendUnique<T>(System.IObservable<T>[] sources, System.Collections.Generic.IEqualityComparer<T>? comparer) { }
         public static System.IObservable<System.Collections.Generic.IList<TSource>> Buffer<TSource>(this System.IObservable<TSource> source, int count) { }
         public static System.IObservable<System.Collections.Generic.IList<TSource>> Buffer<TSource>(this System.IObservable<TSource> source, int count, int skip) { }
         public static System.IObservable<T> Calm<T>(this System.IObservable<T> source, System.TimeSpan dueTime) { }
