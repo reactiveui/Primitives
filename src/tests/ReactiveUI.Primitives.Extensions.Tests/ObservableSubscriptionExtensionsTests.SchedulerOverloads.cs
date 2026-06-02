@@ -25,7 +25,7 @@ public partial class ObservableSubscriptionExtensionsTests
     public async Task WhenWaitForValueWithSchedulerOnly_ThenReturnsEmittedValue()
     {
         var result = Observable.Return(SchedulerSentinelValue)
-            .WaitForValue(TaskPoolSequencer.Default);
+            .WaitForValue(ImmediateSequencer.Instance);
 
         await Assert.That(result).IsEqualTo(SchedulerSentinelValue);
     }
@@ -36,7 +36,7 @@ public partial class ObservableSubscriptionExtensionsTests
     public async Task WhenWaitForValueWithSchedulerAndTimeout_ThenReturnsEmittedValue()
     {
         var result = Observable.Return(SchedulerSentinelValue)
-            .WaitForValue(TaskPoolSequencer.Default, SchedulerWaitTimeout);
+            .WaitForValue(ImmediateSequencer.Instance, SchedulerWaitTimeout);
 
         await Assert.That(result).IsEqualTo(SchedulerSentinelValue);
     }
@@ -47,7 +47,7 @@ public partial class ObservableSubscriptionExtensionsTests
     public async Task WhenWaitForValueWithSchedulerTimesOut_ThenTimeoutException()
     {
         Action call = () => Observable.Never<int>()
-            .WaitForValue(TaskPoolSequencer.Default, TimeSpan.FromMilliseconds(50));
+            .WaitForValue(ImmediateSequencer.Instance, TimeSpan.FromMilliseconds(50));
         var ex = Assert.Throws<TimeoutException>(call);
         await Assert.That(ex).IsNotNull();
     }
@@ -58,7 +58,7 @@ public partial class ObservableSubscriptionExtensionsTests
     public async Task WhenWaitForCompletionWithSchedulerOnly_ThenReturnsAfterTerminal()
     {
         Observable.Return(RxVoid.Default)
-            .WaitForCompletion(TaskPoolSequencer.Default);
+            .WaitForCompletion(ImmediateSequencer.Instance);
 
         // Sentinel follow-up to give TUnit a real assertion.
         var sentinel = Observable.Return(SchedulerSentinelValue).SubscribeGetValue();
@@ -71,7 +71,7 @@ public partial class ObservableSubscriptionExtensionsTests
     public async Task WhenWaitForCompletionWithSchedulerAndTimeout_ThenReturnsAfterTerminal()
     {
         Observable.Return(RxVoid.Default)
-            .WaitForCompletion(TaskPoolSequencer.Default, SchedulerWaitTimeout);
+            .WaitForCompletion(ImmediateSequencer.Instance, SchedulerWaitTimeout);
 
         var sentinel = Observable.Return(SchedulerSentinelValue).SubscribeGetValue();
         await Assert.That(sentinel).IsEqualTo(SchedulerSentinelValue);
@@ -83,7 +83,7 @@ public partial class ObservableSubscriptionExtensionsTests
     public async Task WhenWaitForErrorWithSchedulerOnly_ThenReturnsNullOnNormalCompletion()
     {
         var error = Observable.Return(SchedulerSentinelValue)
-            .WaitForError(TaskPoolSequencer.Default);
+            .WaitForError(ImmediateSequencer.Instance);
 
         await Assert.That(error).IsNull();
     }
@@ -95,7 +95,7 @@ public partial class ObservableSubscriptionExtensionsTests
     {
         var expected = new InvalidOperationException("scheduler-captured");
         var error = Observable.Throw<int>(expected)
-            .WaitForError(TaskPoolSequencer.Default, SchedulerWaitTimeout);
+            .WaitForError(ImmediateSequencer.Instance, SchedulerWaitTimeout);
 
         await Assert.That(error).IsEqualTo(expected);
     }
