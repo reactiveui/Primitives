@@ -605,9 +605,14 @@ public class Signal<T> : ISignal<T>
     private sealed class SignalSubscription : IDisposable
     {
         /// <summary>
-        /// Stores the observer or action target.
+        /// The observer target, or <see langword="null"/> when this subscription stores an action callback.
         /// </summary>
-        private readonly object _target;
+        private readonly IObserver<T>? _observer;
+
+        /// <summary>
+        /// The action target, or <see langword="null"/> when this subscription stores an observer.
+        /// </summary>
+        private readonly Action<T>? _action;
 
         /// <summary>
         /// Stores state for the signal implementation.
@@ -622,7 +627,7 @@ public class Signal<T> : ISignal<T>
         public SignalSubscription(Signal<T> subject, IObserver<T> observer)
         {
             _subject = subject;
-            _target = observer;
+            _observer = observer;
         }
 
         /// <summary>
@@ -633,23 +638,23 @@ public class Signal<T> : ISignal<T>
         public SignalSubscription(Signal<T> subject, Action<T> onNext)
         {
             _subject = subject;
-            _target = onNext;
+            _action = onNext;
         }
 
         /// <summary>
         /// Gets a value indicating whether this subscription stores an action callback.
         /// </summary>
-        public bool IsAction => _target is Action<T>;
+        public bool IsAction => _action is not null;
 
         /// <summary>
         /// Gets the observer target.
         /// </summary>
-        public IObserver<T> Observer => (IObserver<T>)_target;
+        public IObserver<T> Observer => _observer!;
 
         /// <summary>
         /// Gets the action target.
         /// </summary>
-        public Action<T> Action => (Action<T>)_target;
+        public Action<T> Action => _action!;
 
         /// <summary>
         /// Sends a value to the subscription target.
@@ -657,41 +662,28 @@ public class Signal<T> : ISignal<T>
         /// <param name="value">The value.</param>
         public void OnNext(T value)
         {
-            if (IsAction)
+            // Branch on a null check of the typed fields rather than an `is Action<T>` test plus cast: this runs
+            // once per observer per value on the multicast dispatch hot path, where that overhead is measurable.
+            var observer = _observer;
+            if (observer is not null)
             {
-                Action(value);
+                observer.OnNext(value);
                 return;
             }
 
-            Observer.OnNext(value);
+            _action!(value);
         }
 
         /// <summary>
         /// Sends an error to observer subscriptions.
         /// </summary>
         /// <param name="exception">The exception.</param>
-        public void OnError(Exception exception)
-        {
-            if (IsAction)
-            {
-                return;
-            }
-
-            Observer.OnError(exception);
-        }
+        public void OnError(Exception exception) => _observer?.OnError(exception);
 
         /// <summary>
         /// Sends completion to observer subscriptions.
         /// </summary>
-        public void OnCompleted()
-        {
-            if (IsAction)
-            {
-                return;
-            }
-
-            Observer.OnCompleted();
-        }
+        public void OnCompleted() => _observer?.OnCompleted();
 
         /// <summary>
         /// Executes the Dispose operation.
