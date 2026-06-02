@@ -127,17 +127,13 @@ public static partial class LinqMixins
             // Sources and their elements are validated eagerly by the public entry point, so no null check here.
             if (sources.Length == 0)
             {
+                // Runs once during subscription before any source can notify, so no _done check is needed.
                 lock (_gate)
                 {
-                    if (_done)
-                    {
-                        return;
-                    }
-
                     _done = true;
+                    _downstream.OnCompleted();
                 }
 
-                _downstream.OnCompleted();
                 return;
             }
 
