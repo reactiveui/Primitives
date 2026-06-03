@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -34,6 +35,12 @@ public class RxNameParityTests
 
     /// <summary>The value thirty, pushed by the binary drive scripts.</summary>
     private const int Thirty = 30;
+
+    /// <summary>An invalid negative count/interval used by the out-of-range tests.</summary>
+    private const int NegativeOne = -1;
+
+    /// <summary>A shared error message.</summary>
+    private const string Boom = "boom";
 
     /// <summary>The fixed delay/timeout in ticks.</summary>
     private const long DueTicks = 1;
@@ -91,6 +98,12 @@ public class RxNameParityTests
 
     /// <summary>Expected output for the WithLatestFrom drive script.</summary>
     private static readonly int[] _latched = [11, 12, 23];
+
+    /// <summary>A single forwarded value before a terminal notification.</summary>
+    private static readonly int[] _tenOnly = [10];
+
+    /// <summary>A source value followed by the fallback sequence after Resume switches.</summary>
+    private static readonly int[] _tenThenFallback = [10, 1, 2, 3];
 
     /// <summary>Provides the unary <c>IObservable&lt;int&gt; -&gt; IObservable&lt;int&gt;</c> parity cases.</summary>
     /// <returns>The unary parity cases.</returns>
@@ -221,6 +234,156 @@ public class RxNameParityTests
         Signal.FromEnumerable(_oneToThree).Concat(Signal.FromEnumerable(_oneToThree)).Subscribe(concat.Add);
 
         Assert.Equal<int>(chain, concat);
+    }
+
+    /// <summary>Verifies every Rx name throws <see cref="ArgumentNullException"/> for a null source.</summary>
+    [Test]
+    public void RxNamesThrowOnNullSource()
+    {
+        var other = Signal.FromEnumerable(_oneToThree);
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Select(Double));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.SelectWith(Ten, AddState));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Where(IsEven));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.WhereWith(Two, IsMultiple));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<string?>)!.WhereNotNull());
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Do(Ignore));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.DoWith(Ten, IgnoreState));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Scan(Seed, Add));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Aggregate(Seed, Add));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.DistinctUntilChanged());
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.DistinctUntilChangedBy(Identity));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.IgnoreElements());
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.SelectMany(Fan));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<IObservable<int>>)!.Merge());
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<IObservable<int>>)!.Concat());
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Concat(other));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<IObservable<int>>)!.Amb());
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<IObservable<int>>)!.Switch());
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Zip(other, Add));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.CombineLatest(other, Add));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.WithLatestFrom(other, Add));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Delay(TimeSpan.FromTicks(DueTicks)));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Timeout(TimeSpan.FromTicks(DueTicks)));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Sample(TimeSpan.FromTicks(DueTicks)));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Retry(Two));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Materialize());
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<Spark<int>>)!.Dematerialize());
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Resume(other));
+        Assert.Throws<ArgumentNullException>(() => other.Resume(null!));
+    }
+
+    /// <summary>Verifies the Rx names throw <see cref="ArgumentNullException"/> for a null projection/predicate.</summary>
+    [Test]
+    public void RxNamesThrowOnNullSelector()
+    {
+        var source = Signal.FromEnumerable(_oneToFive);
+        Assert.Throws<ArgumentNullException>(() => source.Select<int, int>(null!));
+        Assert.Throws<ArgumentNullException>(() => source.SelectWith<int, int, int>(Ten, null!));
+        Assert.Throws<ArgumentNullException>(() => source.Where(null!));
+        Assert.Throws<ArgumentNullException>(() => source.WhereWith<int, int>(Two, null!));
+        Assert.Throws<ArgumentNullException>(() => source.Do(null!));
+        Assert.Throws<ArgumentNullException>(() => source.DoWith<int, int>(Ten, null!));
+        Assert.Throws<ArgumentNullException>(() => source.Scan<int, int>(Seed, null!));
+        Assert.Throws<ArgumentNullException>(() => source.Aggregate<int, int>(Seed, null!));
+        Assert.Throws<ArgumentNullException>(() => source.DistinctUntilChangedBy<int, int>(null!));
+        Assert.Throws<ArgumentNullException>(() => source.SelectMany<int, int>(null!));
+        Assert.Throws<ArgumentNullException>(() => source.Zip<int, int, int>(source, null!));
+        Assert.Throws<ArgumentNullException>(() => source.CombineLatest<int, int, int>(source, null!));
+        Assert.Throws<ArgumentNullException>(() => source.WithLatestFrom<int, int, int>(source, null!));
+    }
+
+    /// <summary>Verifies the count/interval guards throw <see cref="ArgumentOutOfRangeException"/>.</summary>
+    [Test]
+    public void RxNamesThrowOnNegativeArguments()
+    {
+        var source = Signal.FromEnumerable(_oneToFive);
+        Assert.Throws<ArgumentOutOfRangeException>(() => source.Retry(NegativeOne));
+        Assert.Throws<ArgumentOutOfRangeException>(() => source.Sample(TimeSpan.FromTicks(NegativeOne)));
+    }
+
+    /// <summary>Verifies the stateful sinks forward a value and then an error (covers their error path).</summary>
+    [Test]
+    public void StatefulSinksForwardValueThenError()
+    {
+        Assert.True(RunStatefulError(s => s.SelectWith(Ten, AddState)));
+        Assert.True(RunStatefulError(s => s.WhereWith(Two, IsMultiple)));
+        Assert.True(RunStatefulError(s => s.DoWith(Ten, IgnoreState)));
+    }
+
+    /// <summary>Verifies the stateful projection sinks forward an exception thrown by the projection (covers their catch path).</summary>
+    [Test]
+    public void StatefulProjectionForwardsThrownError()
+    {
+        Assert.True(RunStatefulThrow(s => s.SelectWith<int, int, int>(Ten, ThrowProjection)));
+        Assert.True(RunStatefulThrow(s => s.WhereWith<int, int>(Two, ThrowPredicate)));
+    }
+
+    /// <summary>Verifies Resume switches to the fallback sequence after the source errors.</summary>
+    [Test]
+    public void ResumeSwitchesToFallbackOnError()
+    {
+        var source = new Signal<int>();
+        var values = new List<int>();
+        var completed = 0;
+
+        using var subscription = source.Resume(Signal.FromEnumerable(_oneToThree)).Subscribe(values.Add, static ex => throw ex, () => completed++);
+        source.OnNext(Ten);
+        source.OnError(new InvalidOperationException(Boom));
+
+        Assert.Equal<int>(_tenThenFallback, values);
+        Assert.Equal(One, completed);
+    }
+
+    /// <summary>Verifies Resume forwards source completion without subscribing the fallback.</summary>
+    [Test]
+    public void ResumeForwardsCompletionWithoutFallback()
+    {
+        var source = new Signal<int>();
+        var values = new List<int>();
+        var completed = 0;
+
+        using var subscription = source.Resume(Signal.FromEnumerable(_oneToThree)).Subscribe(values.Add, static ex => throw ex, () => completed++);
+        source.OnNext(Ten);
+        source.OnCompleted();
+
+        Assert.Equal<int>(_tenOnly, values);
+        Assert.Equal(One, completed);
+    }
+
+    /// <summary>Verifies disposing Resume stops forwarding from the source.</summary>
+    [Test]
+    public void ResumeDisposeStopsForwarding()
+    {
+        var source = new Signal<int>();
+        var values = new List<int>();
+
+        var subscription = source.Resume(Signal.FromEnumerable(_oneToThree)).Subscribe(values.Add);
+        source.OnNext(Ten);
+        subscription.Dispose();
+        source.OnNext(Twenty);
+
+        Assert.Equal<int>(_tenOnly, values);
+    }
+
+    /// <summary>Verifies <c>Sample</c> mirrors <c>Probe</c> when sampled against an identical virtual clock drive.</summary>
+    [Test]
+    public void SampleMatchesProbe()
+    {
+        Assert.Equal<int>(RunSampling((s, c) => s.Probe(TimeSpan.FromTicks(Two), c)), RunSampling((s, c) => s.Sample(TimeSpan.FromTicks(Two), c)));
+    }
+
+    /// <summary>Verifies the 3-arg <c>SelectMany</c> mirrors the 3-arg <c>FlatMap</c>.</summary>
+    [Test]
+    public void SelectManyWithResultSelectorMatchesFlatMap()
+    {
+        var flatMap = new List<int>();
+        var selectMany = new List<int>();
+
+        Signal.FromEnumerable(_oneToThree).FlatMap(Fan, AddPair).Subscribe(flatMap.Add);
+        Signal.FromEnumerable(_oneToThree).SelectMany(Fan, AddPair).Subscribe(selectMany.Add);
+
+        Assert.Equal<int>(flatMap, selectMany);
+        Assert.True(selectMany.Count > 0);
     }
 
     /// <summary>Doubles a value.</summary>
@@ -375,6 +538,66 @@ public class RxNameParityTests
         clock.AdvanceBy(TimeSpan.FromTicks(AdvanceTicks));
         return (values, error);
     }
+
+    /// <summary>Pushes one value then an error through a stateful sink and reports whether both were forwarded.</summary>
+    /// <param name="op">The stateful operator under test.</param>
+    /// <returns><see langword="true"/> when one value and the error were forwarded.</returns>
+    private static bool RunStatefulError(Func<IObservable<int>, IObservable<int>> op)
+    {
+        var source = new Signal<int>();
+        var values = new List<int>();
+        Exception? error = null;
+        using var subscription = op(source).Subscribe(values.Add, captured => error = captured, () => { });
+        source.OnNext(Two);
+        source.OnError(new InvalidOperationException(Boom));
+        return values.Count == One && error is InvalidOperationException;
+    }
+
+    /// <summary>Pushes a value through a sink whose projection throws and reports whether the error was forwarded.</summary>
+    /// <param name="op">The stateful operator under test.</param>
+    /// <returns><see langword="true"/> when the thrown error was forwarded downstream.</returns>
+    private static bool RunStatefulThrow(Func<IObservable<int>, IObservable<int>> op)
+    {
+        var source = new Signal<int>();
+        Exception? error = null;
+        using var subscription = op(source).Subscribe(static _ => { }, captured => error = captured, () => { });
+        source.OnNext(One);
+        return error is InvalidOperationException;
+    }
+
+    /// <summary>A stateful projection that always throws (drives the sink catch path).</summary>
+    /// <param name="state">The unused state.</param>
+    /// <param name="value">The unused value.</param>
+    /// <returns>Never returns; always throws.</returns>
+    private static int ThrowProjection(int state, int value) => throw new InvalidOperationException(Boom);
+
+    /// <summary>A stateful predicate that always throws (drives the sink catch path).</summary>
+    /// <param name="state">The unused state.</param>
+    /// <param name="value">The unused value.</param>
+    /// <returns>Never returns; always throws.</returns>
+    private static bool ThrowPredicate(int state, int value) => throw new InvalidOperationException(Boom);
+
+    /// <summary>Runs a sampling operator against a virtual clock with a fixed drive and collects the sampled values.</summary>
+    /// <param name="op">The sampling operator under test.</param>
+    /// <returns>The sampled values.</returns>
+    private static List<int> RunSampling(Func<IObservable<int>, ISequencer, IObservable<int>> op)
+    {
+        var clock = new TestClock(DateTimeOffset.UnixEpoch);
+        var source = new Signal<int>();
+        var values = new List<int>();
+        using var subscription = op(source, clock).Subscribe(values.Add);
+        source.OnNext(One);
+        clock.AdvanceBy(TimeSpan.FromTicks(Two));
+        source.OnNext(Three);
+        clock.AdvanceBy(TimeSpan.FromTicks(Two));
+        return values;
+    }
+
+    /// <summary>Combines a source value with an inner value (result selector for the 3-arg SelectMany/FlatMap).</summary>
+    /// <param name="source">The source value.</param>
+    /// <param name="inner">The inner value.</param>
+    /// <returns>The combined value.</returns>
+    private static int AddPair(int source, int inner) => source + inner;
 
     /// <summary>A unary parity case: a Primitives-named builder and its Rx-named twin over one source.</summary>
     /// <param name="Name">The pair name.</param>
