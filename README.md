@@ -287,6 +287,7 @@ Operators are extension methods over `IObservable<T>`. ReactiveUI.Primitives use
 | `Where` | `Keep` |
 | stateful `Where` without closure | `KeepWith` |
 | non-null filtering | `KeepNotNull` |
+| fused `Where` + `Select` | `Choose` | Chooser returns `(HasValue, Value)`; the explicit flag lets a non-nullable value type be skipped in one sink. |
 | `OfType` / `Cast` | `KeepType<TResult>` / `CastTo<TResult>` |
 | side effects | `Tap`, `TapWith` |
 | `Scan` | `Fold` |
@@ -319,8 +320,10 @@ using var subscription = labels.Subscribe(Console.WriteLine);
 |---|---|
 | sequential concatenation | `Chain` |
 | concurrent merge | `Blend` |
+| fused merge + adjacent distinct | `BlendUnique` |
 | first source wins | `Race` |
 | latest inner source wins | `SwitchTo` |
+| filter-null + project + switch to latest inner | `SwitchSelect` |
 | pairwise zip | `Pair` |
 | latest-value combination | `SyncLatest` |
 | combine left emission with latest right value | `Latch` |
@@ -357,6 +360,29 @@ using var area = Signal.SyncLatest(width, height, (w, h) => w * h)
 
 width.Value = 800;
 height.Value = 600;
+```
+
+Fused projection example (`Choose` and `SwitchSelect`):
+
+```csharp
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
+
+// Choose folds Where + Select into one sink. The explicit HasValue flag lets a
+// non-nullable value type be dropped without a nullable wrapper.
+using var evens = Signal.Sequence(1, 6)
+    .Choose(value => (value % 2 == 0, value * 10))
+    .Subscribe(value => Console.WriteLine($"even*10={value}"));
+
+// SwitchSelect folds WhereNotNull + Select + Switch: skips null keys, projects each
+// to an inner source, and mirrors only the latest inner.
+var key = new StateSignal<string?>(null);
+using var latest = key
+    .SwitchSelect(selectedKey => Signal.Sequence(selectedKey.Length, 3))
+    .Subscribe(value => Console.WriteLine($"latest={value}"));
+
+key.Value = "ab";
+key.Value = "abcd";
 ```
 
 ### Time, buffering, and async helpers
@@ -798,10 +824,13 @@ ReactiveUI.Primitives is not a byte-for-byte clone of System.Reactive. It keeps 
 | `OfType` / `Cast` | `KeepType` / `CastTo` | Object-source projections. |
 | `Materialize` | `Spark` | Converts notifications into `Spark<T>`. |
 | `Dematerialize` | `Unspark` | Converts `Spark<T>` values back into notifications. |
+| `Where` + `Select` | `Choose` | Single fused sink; chooser returns `(HasValue, Value)` so a non-nullable value type can be skipped. |
 | `Merge` | `Blend` or `Signal.Blend` | Works over source-of-sources and params factories. |
+| `Merge` + `DistinctUntilChanged` | `BlendUnique` | Single fused merge + adjacent dedupe over a params source set. |
 | `Concat` | `Chain` or `Signal.Chain` | Sequential composition. |
 | `Amb` | `Race` | First source to produce a value or terminal signal wins. |
 | `Switch` | `SwitchTo` | Latest inner observable wins. |
+| `Select` + `Switch` | `SwitchSelect` | Filters null source values, projects each to an inner observable, and mirrors only the latest. |
 | `Zip` | `Pair` or `Signal.Pair` | Pair values by index. |
 | `CombineLatest` | `SyncLatest` or `Signal.SyncLatest` | Latest values after both sources have emitted. |
 | `WithLatestFrom` | `Latch` | Left emission paired with latest right value. |
