@@ -1,0 +1,7 @@
+# The SystemReactive competitor benchmarks call System.Reactive operators in their static form
+# (e.g. RxObservable.Select(source, selector)) on purpose: the benchmark namespace nests under
+# ReactiveUI.Primitives, so an instance-style call (source.Select(...)) would bind to the
+# ReactiveUI.Primitives name-layer extensions instead of System.Reactive and silently benchmark the
+# wrong library. RCS1196 (call extension method as instance method) is therefore disabled here.
+[*.cs]
+dotnet_diagnostic.RCS1196.severity = none

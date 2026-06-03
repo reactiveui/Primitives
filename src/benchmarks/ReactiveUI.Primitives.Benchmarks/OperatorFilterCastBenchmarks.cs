@@ -90,7 +90,7 @@ public class OperatorFilterCastBenchmarks
     public int SystemReactiveKeepType()
     {
         var observer = new CountingSignalObserver<string>();
-        using var subscription = RxObservable.Range(1, Count).Select(static _ => (object)Shared).OfType<string>().Subscribe(observer);
+        using var subscription = RxObservable.Select(RxObservable.Range(1, Count), static _ => (object)Shared).OfType<string>().Subscribe(observer);
         return observer.Count;
     }
 
@@ -127,7 +127,7 @@ public class OperatorFilterCastBenchmarks
     public int SystemReactiveCastTo()
     {
         var observer = new CountingSignalObserver<string>();
-        using var subscription = RxObservable.Range(1, Count).Select(static _ => (object)Shared).Cast<string>().Subscribe(observer);
+        using var subscription = RxObservable.Select(RxObservable.Range(1, Count), static _ => (object)Shared).Cast<string>().Subscribe(observer);
         return observer.Count;
     }
 
