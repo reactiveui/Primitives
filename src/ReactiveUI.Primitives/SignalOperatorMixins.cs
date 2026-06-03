@@ -55,12 +55,17 @@ public static partial class LinqMixins
     /// <exception cref="ArgumentNullException"><paramref name="selector"/> is <see langword="null"/>.</exception>
     public static IObservable<TResult> MapWith<TSource, TState, TResult>(this IObservable<TSource> source, TState state, Func<TState, TSource, TResult> selector)
     {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
         if (selector == null)
         {
             throw new ArgumentNullException(nameof(selector));
         }
 
-        return source.Map(value => selector(state, value));
+        return new MapWithSignal<TSource, TState, TResult>(source, state, selector);
     }
 
     /// <summary>
@@ -100,12 +105,17 @@ public static partial class LinqMixins
     /// <exception cref="ArgumentNullException"><paramref name="predicate"/> is <see langword="null"/>.</exception>
     public static IObservable<T> KeepWith<T, TState>(this IObservable<T> source, TState state, Func<TState, T, bool> predicate)
     {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
         if (predicate == null)
         {
             throw new ArgumentNullException(nameof(predicate));
         }
 
-        return source.Keep(value => predicate(state, value));
+        return new KeepWithSignal<T, TState>(source, state, predicate);
     }
 
     /// <summary>
@@ -178,16 +188,17 @@ public static partial class LinqMixins
     /// <exception cref="ArgumentNullException"><paramref name="onNext"/> is <see langword="null"/>.</exception>
     public static IObservable<T> Tap<T>(this IObservable<T> source, Action<T> onNext)
     {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
         if (onNext == null)
         {
             throw new ArgumentNullException(nameof(onNext));
         }
 
-        return source.Map(value =>
-        {
-            onNext(value);
-            return value;
-        });
+        return new TapSignal<T>(source, onNext, static _ => { }, static () => { });
     }
 
     /// <summary>
@@ -202,12 +213,17 @@ public static partial class LinqMixins
     /// <exception cref="ArgumentNullException"><paramref name="onNext"/> is <see langword="null"/>.</exception>
     public static IObservable<T> TapWith<T, TState>(this IObservable<T> source, TState state, Action<TState, T> onNext)
     {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
         if (onNext == null)
         {
             throw new ArgumentNullException(nameof(onNext));
         }
 
-        return source.Tap(value => onNext(state, value));
+        return new TapWithSignal<T, TState>(source, state, onNext);
     }
 
     /// <summary>
@@ -428,8 +444,21 @@ public static partial class LinqMixins
     /// <param name="first">The first sequence.</param>
     /// <param name="second">The second sequence.</param>
     /// <returns>A sequence that emits <paramref name="second"/> after <paramref name="first"/> completes.</returns>
-    public static IObservable<T> Chain<T>(this IObservable<T> first, IObservable<T> second) =>
-        Signal.Chain(first, second);
+    /// <exception cref="ArgumentNullException"><paramref name="first"/> or <paramref name="second"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Chain<T>(this IObservable<T> first, IObservable<T> second)
+    {
+        if (first == null)
+        {
+            throw new ArgumentNullException(nameof(first));
+        }
+
+        if (second == null)
+        {
+            throw new ArgumentNullException(nameof(second));
+        }
+
+        return new ChainSignal<T>(first, second);
+    }
 
     /// <summary>
     /// Subscribes to all inner sequences and forwards their values as they arrive.
@@ -652,12 +681,17 @@ public static partial class LinqMixins
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="fallback"/> is <see langword="null"/>.</exception>
     public static IObservable<T> Resume<T>(this IObservable<T> source, IObservable<T> fallback)
     {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
         if (fallback == null)
         {
             throw new ArgumentNullException(nameof(fallback));
         }
 
-        return source.Recover<T, Exception>(_ => fallback);
+        return new ResumeSignal<T>(source, fallback);
     }
 
     /// <summary>

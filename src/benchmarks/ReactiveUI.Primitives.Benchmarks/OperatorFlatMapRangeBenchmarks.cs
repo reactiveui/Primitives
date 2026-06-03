@@ -36,8 +36,7 @@ public class OperatorFlatMapRangeBenchmarks
     public int SystemReactiveSelectManyRange()
     {
         var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Range(1, 8)
-            .SelectMany(static x => RxObservable.Range(x * 10, 2))
+        using var subscription = RxObservable.SelectMany(RxObservable.Range(1, 8), static x => RxObservable.Range(x * 10, 2))
             .Subscribe(observer);
         return observer.Total;
     }

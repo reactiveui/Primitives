@@ -9,28 +9,26 @@ using ReactiveUI.Primitives.Disposables;
 namespace ReactiveUI.Primitives.Signals.Core;
 
 /// <summary>
-/// Dedicated cold signal for <c>Recover</c>/<c>Resume</c> (catch a typed error and switch to a
-/// handler-selected sequence). Replaces the witness-framework subject with a lightweight sink that
-/// holds its source and fallback subscriptions in two interlocked slots, with no composite disposable.
+/// Dedicated cold signal for <c>Resume</c> (continue with a fixed fallback sequence after any error). Holds the
+/// fallback observable directly so no per-subscription closure is allocated, mirroring the slot-based subscription
+/// management of <see cref="RecoverSignal{T, TException}"/>.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
-/// <typeparam name="TException">The handled exception type.</typeparam>
-internal sealed class RecoverSignal<T, TException> : IRequireCurrentThread<T>
-    where TException : Exception
+internal sealed class ResumeSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>The source observable.</summary>
     private readonly IObservable<T> _source;
 
-    /// <summary>The handler that selects the fallback sequence for a caught error.</summary>
-    private readonly Func<TException, IObservable<T>> _handler;
+    /// <summary>The fallback observable subscribed to after the source errors.</summary>
+    private readonly IObservable<T> _fallback;
 
-    /// <summary>Initializes a new instance of the <see cref="RecoverSignal{T, TException}"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="ResumeSignal{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
-    /// <param name="handler">The handler that selects the fallback sequence for a caught error.</param>
-    internal RecoverSignal(IObservable<T> source, Func<TException, IObservable<T>> handler)
+    /// <param name="fallback">The fallback observable subscribed to after the source errors.</param>
+    internal ResumeSignal(IObservable<T> source, IObservable<T> fallback)
     {
         _source = source;
-        _handler = handler;
+        _fallback = fallback;
     }
 
     /// <inheritdoc/>
@@ -57,73 +55,37 @@ internal sealed class RecoverSignal<T, TException> : IRequireCurrentThread<T>
     /// <summary>Builds the sink and subscribes it to the source.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <returns>The sink, which is the subscription.</returns>
-    private RecoverObserver Run(IObserver<T> observer) => new RecoverObserver(observer, _handler).Run(_source);
+    private ResumeObserver Run(IObserver<T> observer) => new ResumeObserver(observer, _fallback).Run(_source);
 
-    /// <summary>Forwards source values and, on a caught error, switches to the fallback sequence.</summary>
-    private sealed class RecoverObserver : IObserver<T>, IDisposable
+    /// <summary>Forwards source values and, on any error, switches to the fallback sequence.</summary>
+    private sealed class ResumeObserver : IObserver<T>, IDisposable
     {
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer;
 
-        /// <summary>The handler that selects the fallback sequence.</summary>
-        private readonly Func<TException, IObservable<T>> _handler;
+        /// <summary>The fallback observable.</summary>
+        private readonly IObservable<T> _fallback;
 
         /// <summary>The source subscription slot.</summary>
         private IDisposable? _sourceSubscription;
 
-        /// <summary>The fallback subscription slot, populated after a caught error.</summary>
+        /// <summary>The fallback subscription slot, populated after an error.</summary>
         private IDisposable? _fallbackSubscription;
 
-        /// <summary>Initializes a new instance of the <see cref="RecoverObserver"/> class.</summary>
+        /// <summary>Initializes a new instance of the <see cref="ResumeObserver"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
-        /// <param name="handler">The handler that selects the fallback sequence.</param>
-        internal RecoverObserver(IObserver<T> observer, Func<TException, IObservable<T>> handler)
+        /// <param name="fallback">The fallback observable.</param>
+        internal ResumeObserver(IObserver<T> observer, IObservable<T> fallback)
         {
             _observer = observer;
-            _handler = handler;
+            _fallback = fallback;
         }
 
         /// <inheritdoc/>
         public void OnNext(T value) => _observer.OnNext(value);
 
         /// <inheritdoc/>
-        public void OnError(Exception error)
-        {
-            if (error is TException typed)
-            {
-                IObservable<T> next;
-                try
-                {
-                    next = _handler == Handle.CatchIgnore<T> ? Signal.None<T>() : _handler(typed);
-                }
-                catch (Exception handlerError)
-                {
-                    try
-                    {
-                        _observer.OnError(handlerError);
-                    }
-                    finally
-                    {
-                        Dispose();
-                    }
-
-                    return;
-                }
-
-                SetFallback(next.Subscribe(_observer));
-            }
-            else
-            {
-                try
-                {
-                    _observer.OnError(error);
-                }
-                finally
-                {
-                    Dispose();
-                }
-            }
-        }
+        public void OnError(Exception error) => SetFallback(_fallback.Subscribe(_observer));
 
         /// <inheritdoc/>
         public void OnCompleted()
@@ -148,7 +110,7 @@ internal sealed class RecoverSignal<T, TException> : IRequireCurrentThread<T>
         /// <summary>Subscribes to the source and returns the sink.</summary>
         /// <param name="source">The source observable.</param>
         /// <returns>This sink, which is the subscription.</returns>
-        internal RecoverObserver Run(IObservable<T> source)
+        internal ResumeObserver Run(IObservable<T> source)
         {
             SubscriptionSlots.Assign(ref _sourceSubscription, source.Subscribe(this));
             return this;

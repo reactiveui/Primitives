@@ -54,7 +54,7 @@ public class OperatorStatefulVariantBenchmarks
     {
         var factor = _factor;
         var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Range(1, Count).Select(x => x * factor).Subscribe(observer);
+        using var subscription = RxObservable.Select(RxObservable.Range(1, Count), x => x * factor).Subscribe(observer);
         return observer.Total;
     }
 
@@ -92,7 +92,7 @@ public class OperatorStatefulVariantBenchmarks
     {
         var threshold = _threshold;
         var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Range(1, Count).Where(x => x > threshold).Subscribe(observer);
+        using var subscription = RxObservable.Where(RxObservable.Range(1, Count), x => x > threshold).Subscribe(observer);
         return observer.Total;
     }
 
@@ -130,7 +130,7 @@ public class OperatorStatefulVariantBenchmarks
     {
         var factor = _factor;
         var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Range(1, Count).Do(x => _ = x * factor).Subscribe(observer);
+        using var subscription = RxObservable.Do(RxObservable.Range(1, Count), x => _ = x * factor).Subscribe(observer);
         return observer.Total;
     }
 

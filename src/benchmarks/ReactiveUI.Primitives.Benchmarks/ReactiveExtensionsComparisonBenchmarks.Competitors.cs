@@ -17,7 +17,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// </summary>
     /// <returns>The <c>SystemReactiveAsSignal</c> result.</returns>
     private static int SystemReactiveAsSignal() =>
-        DrainPrimitiveUnit(RxObservable.Range(0, Count).Select(static _ => RxVoid.Default));
+        DrainPrimitiveUnit(RxObservable.Select(RxObservable.Range(0, Count), static _ => RxVoid.Default));
 
     /// <summary>
     /// Executes the <c>SystemReactiveCatchAndReturn</c> benchmark helper.
@@ -54,7 +54,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     private static int SystemReactiveFilter()
     {
         var regex = EvenRegex();
-        return DrainString(RxObservable.ToObservable(StringValues).Where(value => regex.IsMatch(value)));
+        return DrainString(RxObservable.Where(RxObservable.ToObservable(StringValues), value => regex.IsMatch(value)));
     }
 
     /// <summary>
@@ -76,21 +76,21 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// </summary>
     /// <returns>The <c>SystemReactiveGetMax</c> result.</returns>
     private static int SystemReactiveGetMax() =>
-        DrainInt(RxObservable.Return(FirstValue).CombineLatest(RxObservable.Return(SecondValue), static (left, right) => Math.Max(left, right)));
+        DrainInt(RxObservable.CombineLatest(RxObservable.Return(FirstValue), RxObservable.Return(SecondValue), static (left, right) => Math.Max(left, right)));
 
     /// <summary>
     /// Executes the <c>SystemReactiveGetMin</c> benchmark helper.
     /// </summary>
     /// <returns>The <c>SystemReactiveGetMin</c> result.</returns>
     private static int SystemReactiveGetMin() =>
-        DrainInt(RxObservable.Return(FirstValue).CombineLatest(RxObservable.Return(SecondValue), static (left, right) => Math.Min(left, right)));
+        DrainInt(RxObservable.CombineLatest(RxObservable.Return(FirstValue), RxObservable.Return(SecondValue), static (left, right) => Math.Min(left, right)));
 
     /// <summary>
     /// Executes the <c>SystemReactiveNot</c> benchmark helper.
     /// </summary>
     /// <returns>The <c>SystemReactiveNot</c> result.</returns>
     private static int SystemReactiveNot() =>
-        DrainBool(RxObservable.ToObservable(BooleanValues).Select(static value => !value));
+        DrainBool(RxObservable.Select(RxObservable.ToObservable(BooleanValues), static value => !value));
 
     /// <summary>
     /// Executes the <c>SystemReactivePairwise</c> benchmark helper.
@@ -99,10 +99,11 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     private static int SystemReactivePairwise()
     {
         var observer = new PairObserver();
-        using var subscription = RxObservable.Range(0, Count)
-            .Buffer(2, 1)
-            .Where(static values => values.Count == 2)
-            .Select(static values => (Previous: values[0], Current: values[1]))
+        using var subscription = RxObservable.Select(
+                RxObservable.Where(
+                    RxObservable.Buffer(RxObservable.Range(0, Count), 2, 1),
+                    static values => values.Count == 2),
+                static values => (Previous: values[0], Current: values[1]))
             .Subscribe(observer);
         return observer.Total;
     }
@@ -119,37 +120,35 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// </summary>
     /// <returns>The <c>SystemReactiveScanWithInitial</c> result.</returns>
     private static int SystemReactiveScanWithInitial() =>
-        DrainInt(RxObservable.Range(0, Count).Scan(0, static (acc, value) => acc + value));
+        DrainInt(RxObservable.Scan(RxObservable.Range(0, Count), 0, static (acc, value) => acc + value));
 
     /// <summary>
     /// Executes the <c>SystemReactiveSelectAsyncScenario</c> benchmark helper.
     /// </summary>
     /// <returns>The <c>SystemReactiveSelectAsyncScenario</c> result.</returns>
     private static int SystemReactiveSelectAsyncScenario() =>
-        DrainInt(RxObservable.Range(0, Count).SelectMany(static value => RxObservable.FromAsync(() => Task.FromResult(value + 1))));
+        DrainInt(RxObservable.SelectMany(RxObservable.Range(0, Count), static value => RxObservable.FromAsync(() => Task.FromResult(value + 1))));
 
     /// <summary>
     /// Executes the <c>SystemReactiveSelectConstant</c> benchmark helper.
     /// </summary>
     /// <returns>The <c>SystemReactiveSelectConstant</c> result.</returns>
     private static int SystemReactiveSelectConstant() =>
-        DrainInt(RxObservable.Range(0, Count).Select(static _ => Value));
+        DrainInt(RxObservable.Select(RxObservable.Range(0, Count), static _ => Value));
 
     /// <summary>
     /// Executes the <c>SystemReactiveSelectManyThen</c> benchmark helper.
     /// </summary>
     /// <returns>The <c>SystemReactiveSelectManyThen</c> result.</returns>
     private static int SystemReactiveSelectManyThen() =>
-        DrainInt(RxObservable.Return(Value)
-            .SelectMany(static value => RxObservable.Return(value + 1))
-            .SelectMany(static value => RxObservable.Return(value + 1)));
+        DrainInt(RxObservable.SelectMany(RxObservable.SelectMany(RxObservable.Return(Value), static value => RxObservable.Return(value + 1)), static value => RxObservable.Return(value + 1)));
 
     /// <summary>
     /// Executes the <c>SystemReactiveSkipWhileNull</c> benchmark helper.
     /// </summary>
     /// <returns>The <c>SystemReactiveSkipWhileNull</c> result.</returns>
     private static int SystemReactiveSkipWhileNull() =>
-        DrainString(RxObservable.ToObservable(NullableStrings).SkipWhile(static value => value is null).Select(static value => value!));
+        DrainString(RxObservable.Select(RxObservable.ToObservable(NullableStrings).SkipWhile(static value => value is null), static value => value!));
 
     /// <summary>
     /// Executes the <c>SystemReactiveTakeUntil</c> benchmark helper.
@@ -177,28 +176,28 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// </summary>
     /// <returns>The <c>SystemReactiveWhereFalse</c> result.</returns>
     private static int SystemReactiveWhereFalse() =>
-        DrainBool(RxObservable.ToObservable(BooleanValues).Where(static value => !value));
+        DrainBool(RxObservable.Where(RxObservable.ToObservable(BooleanValues), static value => !value));
 
     /// <summary>
     /// Executes the <c>SystemReactiveWhereIsNotNull</c> benchmark helper.
     /// </summary>
     /// <returns>The <c>SystemReactiveWhereIsNotNull</c> result.</returns>
     private static int SystemReactiveWhereIsNotNull() =>
-        DrainString(RxObservable.ToObservable(NullableStrings).Where(static value => value is not null).Select(static value => value!));
+        DrainString(RxObservable.Select(RxObservable.Where(RxObservable.ToObservable(NullableStrings), static value => value is not null), static value => value!));
 
     /// <summary>
     /// Executes the <c>SystemReactiveWhereSelect</c> benchmark helper.
     /// </summary>
     /// <returns>The <c>SystemReactiveWhereSelect</c> result.</returns>
     private static int SystemReactiveWhereSelect() =>
-        DrainInt(RxObservable.Range(0, Count).Where(static value => (value & 1) == 0).Select(static value => value * ResultMultiplier));
+        DrainInt(RxObservable.Select(RxObservable.Where(RxObservable.Range(0, Count), static value => (value & 1) == 0), static value => value * ResultMultiplier));
 
     /// <summary>
     /// Executes the <c>SystemReactiveWhereTrue</c> benchmark helper.
     /// </summary>
     /// <returns>The <c>SystemReactiveWhereTrue</c> result.</returns>
     private static int SystemReactiveWhereTrue() =>
-        DrainBool(RxObservable.ToObservable(BooleanValues).Where(static value => value));
+        DrainBool(RxObservable.Where(RxObservable.ToObservable(BooleanValues), static value => value));
 
     /// <summary>
     /// Executes the <c>R3AsSignal</c> benchmark helper.

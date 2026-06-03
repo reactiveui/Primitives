@@ -49,7 +49,7 @@ public class OperatorPassThroughBenchmarks
     public int SystemReactiveTapRange()
     {
         var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Range(1, Count).Do(static _ => { }).Subscribe(observer);
+        using var subscription = RxObservable.Do(RxObservable.Range(1, Count), static _ => { }).Subscribe(observer);
         return observer.Total;
     }
 
@@ -86,7 +86,7 @@ public class OperatorPassThroughBenchmarks
     public int SystemReactiveIgnoreValuesRange()
     {
         var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Range(1, Count).IgnoreElements().Subscribe(observer);
+        using var subscription = RxObservable.IgnoreElements(RxObservable.Range(1, Count)).Subscribe(observer);
         return observer.CompletionCount;
     }
 
@@ -122,7 +122,7 @@ public class OperatorPassThroughBenchmarks
     public int SystemReactiveMaterializeRange()
     {
         var observer = new CountingSignalObserver<System.Reactive.Notification<int>>();
-        using var subscription = RxObservable.Range(1, Count).Materialize().Subscribe(observer);
+        using var subscription = RxObservable.Materialize(RxObservable.Range(1, Count)).Subscribe(observer);
         return observer.Count;
     }
 
@@ -158,7 +158,7 @@ public class OperatorPassThroughBenchmarks
     public int SystemReactiveDematerializeRange()
     {
         var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Range(1, Count).Materialize().Dematerialize().Subscribe(observer);
+        using var subscription = RxObservable.Dematerialize(RxObservable.Materialize(RxObservable.Range(1, Count))).Subscribe(observer);
         return observer.Total;
     }
 
@@ -235,7 +235,7 @@ public class OperatorPassThroughBenchmarks
     public int SystemReactiveReattemptRange()
     {
         var observer = new IntSignalObserver();
-        using var subscription = RxObservable.Range(1, Count).Retry(RetryCount).Subscribe(observer);
+        using var subscription = RxObservable.Retry(RxObservable.Range(1, Count), RetryCount).Subscribe(observer);
         return observer.Total;
     }
 

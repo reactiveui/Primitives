@@ -841,7 +841,7 @@ public static partial class LinqMixins
             return new TimestampRangeSignal<T>(range, scheduler);
         }
 
-        return source.Map(value => new Moment<T>(value, scheduler.Now));
+        return new MapWithSignal<T, ISequencer, Moment<T>>(source, scheduler, CreateMoment);
     }
 
     /// <summary>
@@ -1452,4 +1452,11 @@ public static partial class LinqMixins
         source is RangeSignal range && CanReadRangeAs(typeof(T))
             ? Task.FromResult((T)(object)(range.Start + range.Count - 1))
             : null;
+
+    /// <summary>Stamps a value with the supplied scheduler's current time. A non-capturing selector reused by <c>Timestamp</c> via <c>MapWith</c>.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="scheduler">The sequencer that supplies the timestamp.</param>
+    /// <param name="value">The value to stamp.</param>
+    /// <returns>The value paired with the scheduler timestamp.</returns>
+    private static Moment<T> CreateMoment<T>(ISequencer scheduler, T value) => new(value, scheduler.Now);
 }
