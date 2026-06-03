@@ -841,7 +841,7 @@ public static partial class LinqMixins
             return new TimestampRangeSignal<T>(range, scheduler);
         }
 
-        return source.Map(value => new Moment<T>(value, scheduler.Now));
+        return new TimestampSignal<T>(source, scheduler);
     }
 
     /// <summary>

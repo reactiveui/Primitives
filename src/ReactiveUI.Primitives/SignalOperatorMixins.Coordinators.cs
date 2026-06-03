@@ -757,7 +757,7 @@ public static partial class LinqMixins
         /// <returns>The coordinator that owns the subscription cleanup.</returns>
         internal ExpireCoordinator<T> Run()
         {
-            _timer = _sequencer.Schedule(this, _dueTime, static (_, coordinator) => coordinator.Timeout());
+            _timer = _sequencer.Schedule(this, _dueTime, static (_, coordinator) => coordinator.EmitTimeout());
             _subscription = _source.Subscribe(this);
             if (Volatile.Read(ref _done) == 0)
             {
@@ -772,7 +772,7 @@ public static partial class LinqMixins
         /// Emits the timeout error.
         /// </summary>
         /// <returns>An empty disposable.</returns>
-        private IDisposable Timeout()
+        private IDisposable EmitTimeout()
         {
             if (Interlocked.Exchange(ref _done, 1) != 0)
             {

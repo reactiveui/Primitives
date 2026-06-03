@@ -276,7 +276,41 @@ IObservable<string> source = Signal.CreateSafe<string>(observer =>
 
 ## Operators
 
-Operators are extension methods over `IObservable<T>`. ReactiveUI.Primitives uses a distinct vocabulary for operators that would otherwise collide with System.Reactive or R3.
+Operators are extension methods over `IObservable<T>`. ReactiveUI.Primitives has a distinct vocabulary (`Map`, `Keep`, `Fold`, `Blend`, `SwitchTo`, …) that avoids ambiguous-call collisions with System.Reactive or R3 — but the familiar System.Reactive / LINQ names are also available (see below), so you can write whichever reads best.
+
+### System.Reactive / LINQ name layer
+
+The everyday System.Reactive / LINQ names are first-class operators that build the **same sink** as their Primitives-named counterpart — identical behavior and allocation profile, not wrappers. Both name sets are fully supported and interchangeable; pick whichever reads best for your code.
+
+| LINQ / System.Reactive name | Primitives name | | LINQ / System.Reactive name | Primitives name |
+|---|---|---|---|---|
+| `Select` | `Map` | | `Merge` | `Blend` |
+| `SelectWith` | `MapWith` | | `Concat` | `Chain` |
+| `Where` | `Keep` | | `Amb` | `Race` |
+| `WhereWith` | `KeepWith` | | `Switch` | `SwitchTo` |
+| `WhereNotNull` | `KeepNotNull` | | `Zip` | `Pair` |
+| `Do` | `Tap` | | `CombineLatest` | `SyncLatest` |
+| `DoWith` | `TapWith` | | `WithLatestFrom` | `Latch` |
+| `Scan` | `Fold` | | `SelectMany` | `FlatMap` |
+| `Aggregate` | `Reduce` | | `Delay` | `Shift` |
+| `DistinctUntilChanged` | `Unique` | | `Timeout` | `Expire` |
+| `DistinctUntilChangedBy` | `UniqueBy` | | `Sample` | `Probe` |
+| `IgnoreElements` | `IgnoreValues` | | `Retry` | `Reattempt` |
+| `Materialize` | `Spark` | | `Dematerialize` | `Unspark` |
+
+```csharp
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
+
+// Reads exactly like System.Reactive — and builds the identical sinks as Map/Keep/Fold.
+using var subscription = Signal.Sequence(1, 10)
+    .Where(value => value % 2 == 0)
+    .Select(value => value * value)
+    .Scan(0, (total, value) => total + value)
+    .Subscribe(Console.WriteLine);
+```
+
+> Caveat: because these names live in the `ReactiveUI.Primitives` namespace, a file that *also* imports `System.Reactive.Linq` will get ambiguous-call errors on shared names like `.Select`/`.Where`. Use the Primitives names (`Map`/`Keep`) in those mixed files, or migrate the file fully off System.Reactive.
 
 ### Transformation and filtering
 

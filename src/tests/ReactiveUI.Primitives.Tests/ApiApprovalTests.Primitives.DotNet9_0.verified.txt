@@ -178,7 +178,9 @@ namespace ReactiveUI.Primitives
     }
     public static class LinqMixins
     {
+        public static System.IObservable<TAccumulate> Aggregate<TSource, TAccumulate>(this System.IObservable<TSource> source, TAccumulate seed, System.Func<TAccumulate, TSource, TAccumulate> accumulator) { }
         public static System.IObservable<bool> All<T>(this System.IObservable<T> source, System.Func<T, bool> predicate) { }
+        public static System.IObservable<T> Amb<T>(this System.IObservable<System.IObservable<T>> sources) { }
         public static System.IObservable<bool> Any<T>(this System.IObservable<T> source) { }
         public static System.IObservable<bool> Any<T>(this System.IObservable<T> source, System.Func<T, bool> predicate) { }
         public static System.Threading.Tasks.Task<bool> AnyAsync<T>(this System.IObservable<T> source) { }
@@ -205,6 +207,9 @@ namespace ReactiveUI.Primitives
         public static System.Threading.Tasks.Task<T[]> CollectArrayAsync<T>(this System.IObservable<T> source) { }
         public static System.IObservable<System.Collections.Generic.IList<T>> CollectList<T>(this System.IObservable<T> source) { }
         public static System.Threading.Tasks.Task<System.Collections.Generic.IList<T>> CollectListAsync<T>(this System.IObservable<T> source) { }
+        public static System.IObservable<TResult> CombineLatest<TLeft, TRight, TResult>(this System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+        public static System.IObservable<T> Concat<T>(this System.IObservable<System.IObservable<T>> sources) { }
+        public static System.IObservable<T> Concat<T>(this System.IObservable<T> first, System.IObservable<T> second) { }
         public static System.IObservable<bool> Contains<T>(this System.IObservable<T> source, T value) { }
         public static System.IObservable<bool> Contains<T>(this System.IObservable<T> source, T value, System.Collections.Generic.IEqualityComparer<T>? comparer) { }
         public static System.IObservable<int> Count<T>(this System.IObservable<T> source) { }
@@ -215,10 +220,13 @@ namespace ReactiveUI.Primitives
         public static System.Threading.Tasks.Task<int> CountAsync<T>(this System.IObservable<T> source, System.Func<T, bool> predicate, System.Threading.CancellationToken cancellationToken) { }
         public static System.IObservable<T> DefaultIfEmpty<T>(this System.IObservable<T> source) { }
         public static System.IObservable<T> DefaultIfEmpty<T>(this System.IObservable<T> source, T defaultValue) { }
+        public static System.IObservable<T> Delay<T>(this System.IObservable<T> source, System.TimeSpan dueTime) { }
+        public static System.IObservable<T> Delay<T>(this System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
         public static System.IObservable<T> DelayStart<T>(this System.IObservable<T> source, System.TimeSpan dueTime) { }
         public static System.IObservable<T> DelayStart<T>(this System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
         public static System.IObservable<T> DelaySubscription<T>(this System.IObservable<T> source, System.TimeSpan dueTime) { }
         public static System.IObservable<T> DelaySubscription<T>(this System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public static System.IObservable<T> Dematerialize<T>(this System.IObservable<ReactiveUI.Primitives.Core.Spark<T>> source) { }
         public static ReactiveUI.Primitives.Disposables.SingleDisposable DisposeWith(this System.IDisposable disposable) { }
         public static System.IDisposable DisposeWith(this System.IDisposable disposable, ReactiveUI.Primitives.Disposables.MultipleDisposable disposables) { }
         public static ReactiveUI.Primitives.Disposables.SingleDisposable DisposeWith(this System.IDisposable disposable, System.Action? action) { }
@@ -226,6 +234,12 @@ namespace ReactiveUI.Primitives
         public static System.IObservable<T> Distinct<T>(this System.IObservable<T> source, System.Collections.Generic.IEqualityComparer<T>? comparer) { }
         public static System.IObservable<T> DistinctBy<T, TKey>(this System.IObservable<T> source, System.Func<T, TKey> keySelector) { }
         public static System.IObservable<T> DistinctBy<T, TKey>(this System.IObservable<T> source, System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer) { }
+        public static System.IObservable<T> DistinctUntilChanged<T>(this System.IObservable<T> source) { }
+        public static System.IObservable<T> DistinctUntilChanged<T>(this System.IObservable<T> source, System.Collections.Generic.IEqualityComparer<T>? comparer) { }
+        public static System.IObservable<T> DistinctUntilChangedBy<T, TKey>(this System.IObservable<T> source, System.Func<T, TKey> keySelector) { }
+        public static System.IObservable<T> DistinctUntilChangedBy<T, TKey>(this System.IObservable<T> source, System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer) { }
+        public static System.IObservable<T> Do<T>(this System.IObservable<T> source, System.Action<T> onNext) { }
+        public static System.IObservable<T> DoWith<T, TState>(this System.IObservable<T> source, TState state, System.Action<TState, T> onNext) { }
         public static System.IObservable<T> Expire<T>(this System.IObservable<T> source, System.TimeSpan dueTime) { }
         public static System.IObservable<T> Expire<T>(this System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
         public static System.Threading.Tasks.Task<T> FirstAsync<T>(this System.IObservable<T> source) { }
@@ -236,6 +250,7 @@ namespace ReactiveUI.Primitives
         public static System.IObservable<TAccumulate> Fold<TSource, TAccumulate>(this System.IObservable<TSource> source, TAccumulate seed, System.Func<TAccumulate, TSource, TAccumulate> accumulator) { }
         public static System.IObservable<TResult> ForkJoin<TLeft, TRight, TResult>(this System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
         public static System.IObservable<TResult> FuseLatest<TLeft, TRight, TResult>(this System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+        public static System.IObservable<T> IgnoreElements<T>(this System.IObservable<T> source) { }
         public static System.IObservable<T> IgnoreValues<T>(this System.IObservable<T> source) { }
         public static System.IObservable<bool> IsEmpty<T>(this System.IObservable<T> source) { }
         public static System.IObservable<T> Keep<T>(this System.IObservable<T> source, System.Func<T, bool> predicate) { }
@@ -252,6 +267,8 @@ namespace ReactiveUI.Primitives
         public static System.IObservable<long> LongCount<T>(this System.IObservable<T> source, System.Func<T, bool> predicate) { }
         public static System.IObservable<TResult> Map<TSource, TResult>(this System.IObservable<TSource> source, System.Func<TSource, TResult> selector) { }
         public static System.IObservable<TResult> MapWith<TSource, TState, TResult>(this System.IObservable<TSource> source, TState state, System.Func<TState, TSource, TResult> selector) { }
+        public static System.IObservable<ReactiveUI.Primitives.Core.Spark<T>> Materialize<T>(this System.IObservable<T> source) { }
+        public static System.IObservable<T> Merge<T>(this System.IObservable<System.IObservable<T>> sources) { }
         public static System.IObservable<T> ObserveOn<T>(this System.IObservable<T> source, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
         public static System.IObservable<TResult> Pair<TLeft, TRight, TResult>(this System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
         public static System.IObservable<TResult> PairLatest<TLeft, TRight, TResult>(this System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
@@ -266,6 +283,14 @@ namespace ReactiveUI.Primitives
         public static System.IObservable<TAccumulate> Reduce<TSource, TAccumulate>(this System.IObservable<TSource> source, TAccumulate seed, System.Func<TAccumulate, TSource, TAccumulate> accumulator) { }
         public static System.IObservable<T> Rescue<T>(this System.IObservable<T> source, System.Func<System.Exception, System.IObservable<T>> handler) { }
         public static System.IObservable<T> Resume<T>(this System.IObservable<T> source, System.IObservable<T> fallback) { }
+        public static System.IObservable<T> Retry<T>(this System.IObservable<T> source, int retryCount) { }
+        public static System.IObservable<T> Sample<T>(this System.IObservable<T> source, System.TimeSpan interval) { }
+        public static System.IObservable<T> Sample<T>(this System.IObservable<T> source, System.TimeSpan interval, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public static System.IObservable<TAccumulate> Scan<TSource, TAccumulate>(this System.IObservable<TSource> source, TAccumulate seed, System.Func<TAccumulate, TSource, TAccumulate> accumulator) { }
+        public static System.IObservable<TResult> Select<TSource, TResult>(this System.IObservable<TSource> source, System.Func<TSource, TResult> selector) { }
+        public static System.IObservable<TResult> SelectMany<TSource, TResult>(this System.IObservable<TSource> source, System.Func<TSource, System.IObservable<TResult>> selector) { }
+        public static System.IObservable<TResult> SelectMany<TSource, TCollection, TResult>(this System.IObservable<TSource> source, System.Func<TSource, System.IObservable<TCollection>> collectionSelector, System.Func<TSource, TCollection, TResult> resultSelector) { }
+        public static System.IObservable<TResult> SelectWith<TSource, TState, TResult>(this System.IObservable<TSource> source, TState state, System.Func<TState, TSource, TResult> selector) { }
         public static System.IObservable<T> Shift<T>(this System.IObservable<T> source, System.TimeSpan dueTime) { }
         public static System.IObservable<T> Shift<T>(this System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
         public static System.IObservable<T> Skip<T>(this System.IObservable<T> source, int count) { }
@@ -274,6 +299,7 @@ namespace ReactiveUI.Primitives
         public static System.IObservable<T> Stabilize<T>(this System.IObservable<T> source, System.TimeSpan dueTime) { }
         public static System.IObservable<T> Stabilize<T>(this System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
         public static System.IObservable<T> SubscribeOn<T>(this System.IObservable<T> source, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> Switch<T>(this System.IObservable<System.IObservable<T>> sources) { }
         public static System.IObservable<TResult> SwitchSelect<TSource, TResult>(this System.IObservable<TSource?> source, System.Func<TSource, System.IObservable<TResult>> selector) { }
         public static System.IObservable<T> SwitchTo<T>(this System.IObservable<System.IObservable<T>> sources) { }
         public static System.IObservable<TResult> SyncLatest<TLeft, TRight, TResult>(this System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
@@ -284,6 +310,8 @@ namespace ReactiveUI.Primitives
         public static System.IObservable<T> TapWith<T, TState>(this System.IObservable<T> source, TState state, System.Action<TState, T> onNext) { }
         public static System.IObservable<ReactiveUI.Primitives.Core.TimeInterval<T>> TimeInterval<T>(this System.IObservable<T> source) { }
         public static System.IObservable<ReactiveUI.Primitives.Core.TimeInterval<T>> TimeInterval<T>(this System.IObservable<T> source, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public static System.IObservable<T> Timeout<T>(this System.IObservable<T> source, System.TimeSpan dueTime) { }
+        public static System.IObservable<T> Timeout<T>(this System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
         public static System.IObservable<ReactiveUI.Primitives.Core.Moment<T>> Timestamp<T>(this System.IObservable<T> source) { }
         public static System.IObservable<ReactiveUI.Primitives.Core.Moment<T>> Timestamp<T>(this System.IObservable<T> source, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
         public static System.IObservable<T[]> ToArray<T>(this System.IObservable<T> source) { }
@@ -303,6 +331,12 @@ namespace ReactiveUI.Primitives
         public static System.IObservable<T> UniqueBy<T, TKey>(this System.IObservable<T> source, System.Func<T, TKey> keySelector) { }
         public static System.IObservable<T> UniqueBy<T, TKey>(this System.IObservable<T> source, System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer) { }
         public static System.IObservable<T> Unspark<T>(this System.IObservable<ReactiveUI.Primitives.Core.Spark<T>> source) { }
+        public static System.IObservable<T> Where<T>(this System.IObservable<T> source, System.Func<T, bool> predicate) { }
+        public static System.IObservable<T> WhereNotNull<T>(this System.IObservable<T?> source)
+            where T :  class { }
+        public static System.IObservable<T> WhereWith<T, TState>(this System.IObservable<T> source, TState state, System.Func<TState, T, bool> predicate) { }
+        public static System.IObservable<TResult> WithLatestFrom<TLeft, TRight, TResult>(this System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+        public static System.IObservable<TResult> Zip<TLeft, TRight, TResult>(this System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
     }
     public sealed class LongCountObserver<T> : ReactiveUI.Primitives.SingleSourceObserver<T>
     {
