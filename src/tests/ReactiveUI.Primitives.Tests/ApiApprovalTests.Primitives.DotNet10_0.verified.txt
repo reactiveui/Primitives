@@ -198,6 +198,9 @@ namespace ReactiveUI.Primitives
         public static System.IObservable<TResult> CastTo<TResult>(this System.IObservable<object?> source) { }
         public static System.IObservable<T> Chain<T>(this System.IObservable<System.IObservable<T>> sources) { }
         public static System.IObservable<T> Chain<T>(this System.IObservable<T> first, System.IObservable<T> second) { }
+        public static System.IObservable<TOut> Choose<TIn, TOut>(this System.IObservable<TIn> source, [System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "HasValue",
+                "Value"})] System.Func<TIn, System.ValueTuple<bool, TOut>> chooser) { }
         public static System.IObservable<T[]> CollectArray<T>(this System.IObservable<T> source) { }
         public static System.Threading.Tasks.Task<T[]> CollectArrayAsync<T>(this System.IObservable<T> source) { }
         public static System.IObservable<System.Collections.Generic.IList<T>> CollectList<T>(this System.IObservable<T> source) { }
@@ -271,6 +274,7 @@ namespace ReactiveUI.Primitives
         public static System.IObservable<T> Stabilize<T>(this System.IObservable<T> source, System.TimeSpan dueTime) { }
         public static System.IObservable<T> Stabilize<T>(this System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
         public static System.IObservable<T> SubscribeOn<T>(this System.IObservable<T> source, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<TResult> SwitchSelect<TSource, TResult>(this System.IObservable<TSource?> source, System.Func<TSource, System.IObservable<TResult>> selector) { }
         public static System.IObservable<T> SwitchTo<T>(this System.IObservable<System.IObservable<T>> sources) { }
         public static System.IObservable<TResult> SyncLatest<TLeft, TRight, TResult>(this System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
         public static System.IObservable<T> Take<T>(this System.IObservable<T> source, int count) { }
