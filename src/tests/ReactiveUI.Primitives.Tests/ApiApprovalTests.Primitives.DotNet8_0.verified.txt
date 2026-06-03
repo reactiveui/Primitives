@@ -876,12 +876,6 @@ namespace ReactiveUI.Primitives.Disposables
         public Pocket(System.IDisposable first, System.IDisposable second) { }
         public Pocket(System.IDisposable first, System.IDisposable second, System.IDisposable third) { }
     }
-    public sealed class SerialDisposable : System.IDisposable
-    {
-        public SerialDisposable() { }
-        public System.IDisposable? Disposable { get; set; }
-        public void Dispose() { }
-    }
     [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
     public class SingleDisposable : ReactiveUI.Primitives.Disposables.IsDisposed, System.IDisposable
     {
