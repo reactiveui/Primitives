@@ -187,12 +187,27 @@ public static partial class LinqMixins
     /// <typeparam name="T">The value type.</typeparam>
     private sealed class ChainSignal<T> : IObservable<T>
     {
-        /// <summary>The outer sequence of inner sources.</summary>
-        private readonly IObservable<IObservable<T>> _sources;
+        /// <summary>The outer sequence of inner sources, when constructed from a source-of-sources.</summary>
+        private readonly IObservable<IObservable<T>>? _sources;
 
-        /// <summary>Initializes a new instance of the <see cref="ChainSignal{T}"/> class.</summary>
+        /// <summary>The first inner source, when constructed from two sources.</summary>
+        private readonly IObservable<T>? _first;
+
+        /// <summary>The second inner source, when constructed from two sources.</summary>
+        private readonly IObservable<T>? _second;
+
+        /// <summary>Initializes a new instance of the <see cref="ChainSignal{T}"/> class from a source-of-sources.</summary>
         /// <param name="sources">The outer sequence of inner sources.</param>
         internal ChainSignal(IObservable<IObservable<T>> sources) => _sources = sources;
+
+        /// <summary>Initializes a new instance of the <see cref="ChainSignal{T}"/> class from two sources.</summary>
+        /// <param name="first">The first source.</param>
+        /// <param name="second">The second source.</param>
+        internal ChainSignal(IObservable<T> first, IObservable<T> second)
+        {
+            _first = first;
+            _second = second;
+        }
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
@@ -202,7 +217,8 @@ public static partial class LinqMixins
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            return new ChainCoordinator<T>(observer).Run(_sources);
+            var coordinator = new ChainCoordinator<T>(observer);
+            return _sources is not null ? coordinator.Run(_sources) : coordinator.Run(_first!, _second!);
         }
     }
 
@@ -241,6 +257,23 @@ public static partial class LinqMixins
         internal ChainCoordinator<T> Run(IObservable<IObservable<T>> sources)
         {
             _pocket.Add(sources.Subscribe(OnSource, _observer.OnError, OnOuterCompleted));
+            return this;
+        }
+
+        /// <summary>Subscribes the two fixed inner sources in order.</summary>
+        /// <param name="first">The first source.</param>
+        /// <param name="second">The second source.</param>
+        /// <returns>The coordinator that owns the subscription cleanup.</returns>
+        internal ChainCoordinator<T> Run(IObservable<T> first, IObservable<T> second)
+        {
+            lock (_gate)
+            {
+                _queue.Enqueue(first);
+                _queue.Enqueue(second);
+                _outerCompleted = true;
+            }
+
+            Drain();
             return this;
         }
 

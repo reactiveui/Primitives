@@ -444,8 +444,21 @@ public static partial class LinqMixins
     /// <param name="first">The first sequence.</param>
     /// <param name="second">The second sequence.</param>
     /// <returns>A sequence that emits <paramref name="second"/> after <paramref name="first"/> completes.</returns>
-    public static IObservable<T> Chain<T>(this IObservable<T> first, IObservable<T> second) =>
-        Signal.Chain(first, second);
+    /// <exception cref="ArgumentNullException"><paramref name="first"/> or <paramref name="second"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Chain<T>(this IObservable<T> first, IObservable<T> second)
+    {
+        if (first == null)
+        {
+            throw new ArgumentNullException(nameof(first));
+        }
+
+        if (second == null)
+        {
+            throw new ArgumentNullException(nameof(second));
+        }
+
+        return new ChainSignal<T>(first, second);
+    }
 
     /// <summary>
     /// Subscribes to all inner sequences and forwards their values as they arrive.

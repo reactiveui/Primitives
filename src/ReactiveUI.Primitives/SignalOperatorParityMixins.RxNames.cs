@@ -408,8 +408,21 @@ public static partial class LinqMixins
     /// <param name="first">The first sequence.</param>
     /// <param name="second">The second sequence.</param>
     /// <returns>A sequence that emits <paramref name="second"/> after <paramref name="first"/> completes.</returns>
-    public static IObservable<T> Concat<T>(this IObservable<T> first, IObservable<T> second) =>
-        Signal.Chain(first, second);
+    /// <exception cref="ArgumentNullException"><paramref name="first"/> or <paramref name="second"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Concat<T>(this IObservable<T> first, IObservable<T> second)
+    {
+        if (first == null)
+        {
+            throw new ArgumentNullException(nameof(first));
+        }
+
+        if (second == null)
+        {
+            throw new ArgumentNullException(nameof(second));
+        }
+
+        return new ChainSignal<T>(first, second);
+    }
 
     /// <summary>
     /// Mirrors the first inner sequence to produce any notification. System.Reactive name for <c>Race</c>.
