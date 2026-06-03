@@ -821,21 +821,23 @@ public partial class ReactiveExtensionsTests
     {
         // Given — source always fails
         var source = Observable.Throw<int>(new InvalidOperationException("permanent"));
-        Exception? caught = null;
+        var completion = new TaskCompletionSource<Exception>();
 
         // When
         using var sub = source
             .RetryWithDelay(2, _ => TimeSpan.FromMilliseconds(1))
             .Subscribe(
                 static _ => { },
-                ex => caught = ex);
+                ex => completion.TrySetResult(ex));
 
-        // Allow time for the retry attempts to complete
-        await AsyncTestHelpers.WaitForConditionAsync(() => caught is not null, TimeSpan.FromSeconds(5));
+        // Await the error propagation directly rather than polling a flag against a wall-clock
+        // deadline — the retries run on the default (thread-pool) scheduler, so a fixed budget is
+        // racy under CI load.
+        var caught = await completion.Task;
 
         // Then
         await Assert.That(caught).IsNotNull();
         await Assert.That(caught).IsTypeOf<InvalidOperationException>();
-        await Assert.That(caught!.Message).IsEqualTo("permanent");
+        await Assert.That(caught.Message).IsEqualTo("permanent");
     }
 }
