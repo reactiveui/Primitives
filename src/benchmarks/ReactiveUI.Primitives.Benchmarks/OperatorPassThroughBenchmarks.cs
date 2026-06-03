@@ -122,7 +122,7 @@ public class OperatorPassThroughBenchmarks
     public int SystemReactiveMaterializeRange()
     {
         var observer = new CountingSignalObserver<System.Reactive.Notification<int>>();
-        using var subscription = RxObservable.Range(1, Count).Materialize().Subscribe(observer);
+        using var subscription = RxObservable.Materialize(RxObservable.Range(1, Count)).Subscribe(observer);
         return observer.Count;
     }
 

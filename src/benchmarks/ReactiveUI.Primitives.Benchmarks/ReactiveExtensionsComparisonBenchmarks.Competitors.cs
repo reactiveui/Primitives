@@ -54,7 +54,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     private static int SystemReactiveFilter()
     {
         var regex = EvenRegex();
-        return DrainString(RxObservable.ToObservable(StringValues).Where(value => regex.IsMatch(value)));
+        return DrainString(RxObservable.Where(RxObservable.ToObservable(StringValues), value => regex.IsMatch(value)));
     }
 
     /// <summary>
