@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -224,6 +225,49 @@ public class ChooseSwitchSelectTests
         Assert.Equal(Once, completed);
     }
 
+    /// <summary>
+    /// Verifies the SwitchSelect race guards drop notifications from a superseded inner observable and
+    /// from the outer/active-inner sources after disposal — the defensive early-returns that a
+    /// well-behaved (unsubscribing) source would otherwise hide.
+    /// </summary>
+    [Test]
+    public void SwitchSelectGuardsIgnoreStaleAndPostDisposeNotifications()
+    {
+        var outer = new ManualObservable<string?>();
+        var inner1 = new ManualObservable<int>();
+        var inner2 = new ManualObservable<int>();
+        var values = new List<int>();
+        Exception? error = null;
+        var completed = 0;
+
+        var subscription = outer
+            .SwitchSelect(key => key == KeyA ? inner1 : inner2)
+            .Subscribe(values.Add, ex => error = ex, () => completed++);
+
+        outer.Next(KeyA); // inner1 active
+        outer.Next(KeyB); // inner2 active; inner1 now superseded
+
+        // Superseded inner1 (its id != the latest): every notification hits the stale guard.
+        inner1.Next(Eleven);
+        inner1.Error(new InvalidOperationException(Boom));
+        inner1.Complete();
+
+        subscription.Dispose();
+        subscription.Dispose(); // idempotent: the second dispose hits the disposed guard
+
+        // After disposal every outer and active-inner notification hits the disposed guard.
+        outer.Next(KeyA);
+        outer.Error(new InvalidOperationException(Boom));
+        outer.Complete();
+        inner2.Next(Twenty);
+        inner2.Error(new InvalidOperationException(Boom));
+        inner2.Complete();
+
+        Assert.Equal(0, values.Count);
+        Assert.True(error is null);
+        Assert.Equal(0, completed);
+    }
+
     /// <summary>Verifies argument validation for both operators and their subscriptions.</summary>
     [Test]
     public void NullArgumentsThrow()
@@ -234,5 +278,36 @@ public class ChooseSwitchSelectTests
         Assert.Throws<ArgumentNullException>(() => default(IObservable<string?>)!.SwitchSelect(_ => Signal.None<int>()));
         Assert.Throws<ArgumentNullException>(() => new Signal<string?>().SwitchSelect<string, int>(null!));
         Assert.Throws<ArgumentNullException>(() => new Signal<string?>().SwitchSelect(_ => Signal.None<int>()).Subscribe((IObserver<int>)null!));
+    }
+
+    /// <summary>
+    /// An observable whose subscription deliberately ignores disposal, retaining its observer so a test
+    /// can keep pushing notifications after the operator has switched away from it or disposed it. A
+    /// well-behaved source unsubscribes on either event; this misbehaving source is what the operator's
+    /// race guards exist to defend against.
+    /// </summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    private sealed class ManualObservable<T> : IObservable<T>
+    {
+        /// <summary>The observer retained from the most recent subscription.</summary>
+        private IObserver<T>? _observer;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            _observer = observer;
+            return Disposable.Empty;
+        }
+
+        /// <summary>Pushes a value to the retained observer.</summary>
+        /// <param name="value">The value to push.</param>
+        public void Next(T value) => _observer?.OnNext(value);
+
+        /// <summary>Pushes an error to the retained observer.</summary>
+        /// <param name="exception">The error to push.</param>
+        public void Error(Exception exception) => _observer?.OnError(exception);
+
+        /// <summary>Pushes completion to the retained observer.</summary>
+        public void Complete() => _observer?.OnCompleted();
     }
 }
