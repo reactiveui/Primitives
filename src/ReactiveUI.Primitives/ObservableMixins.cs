@@ -42,61 +42,116 @@ internal static class ObservableMixins
 
         return Signal.Create<T>(observer =>
         {
-            var subscriptions = new MultipleDisposable();
-            var gate = new Lock();
-            var stopped = 0;
+            var coordinator = new TakeUntilCoordinator<T>(observer);
 
-            void Complete()
+            coordinator.Add(other.Subscribe(_ => coordinator.Complete(), coordinator.Error));
+            if (coordinator.IsStopped)
             {
-                if (Interlocked.Exchange(ref stopped, 1) != 0)
-                {
-                    return;
-                }
-
-                lock (gate)
-                {
-                    observer.OnCompleted();
-                }
-
-                subscriptions.Dispose();
+                return coordinator;
             }
 
-            void Error(Exception error)
-            {
-                if (Interlocked.Exchange(ref stopped, 1) != 0)
-                {
-                    return;
-                }
+            coordinator.Add(source.Subscribe(coordinator.Next, coordinator.Error, coordinator.Complete));
 
-                lock (gate)
-                {
-                    observer.OnError(error);
-                }
-
-                subscriptions.Dispose();
-            }
-
-            subscriptions.Add(other.Subscribe(_ => Complete(), Error));
-            if (Volatile.Read(ref stopped) != 0)
-            {
-                return subscriptions;
-            }
-
-            subscriptions.Add(source.Subscribe(
-                value =>
-                {
-                    lock (gate)
-                    {
-                        if (Volatile.Read(ref stopped) == 0)
-                        {
-                            observer.OnNext(value);
-                        }
-                    }
-                },
-                Error,
-                Complete));
-
-            return subscriptions;
+            return coordinator;
         });
+    }
+
+    /// <summary>
+    /// Coordinates serialized observer callbacks and subscription lifetime for <see cref="TakeUntil{T, TOther}"/>.
+    /// </summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    private sealed class TakeUntilCoordinator<T> : IDisposable
+    {
+        /// <summary>
+        /// The downstream observer.
+        /// </summary>
+        private readonly IObserver<T> _observer;
+
+        /// <summary>
+        /// Serializes downstream observer callbacks.
+        /// </summary>
+        private readonly Lock _gate = new();
+
+        /// <summary>
+        /// Tracks the source and cancellation subscriptions.
+        /// </summary>
+        private readonly MultipleDisposable _subscriptions = new();
+
+        /// <summary>
+        /// Indicates whether the sequence has already stopped.
+        /// </summary>
+        private int _stopped;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TakeUntilCoordinator{T}"/> class.
+        /// </summary>
+        /// <param name="observer">The downstream observer.</param>
+        public TakeUntilCoordinator(IObserver<T> observer) => _observer = observer;
+
+        /// <summary>
+        /// Gets a value indicating whether the sequence has stopped.
+        /// </summary>
+        public bool IsStopped => Volatile.Read(ref _stopped) != 0;
+
+        /// <summary>
+        /// Adds a subscription to the coordinator lifetime.
+        /// </summary>
+        /// <param name="subscription">The subscription to add.</param>
+        public void Add(IDisposable subscription) => _subscriptions.Add(subscription);
+
+        /// <summary>
+        /// Completes the downstream observer once and disposes all subscriptions.
+        /// </summary>
+        public void Complete()
+        {
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
+            lock (_gate)
+            {
+                _observer.OnCompleted();
+            }
+
+            _subscriptions.Dispose();
+        }
+
+        /// <summary>
+        /// Sends an error to the downstream observer once and disposes all subscriptions.
+        /// </summary>
+        /// <param name="exception">The exception to forward.</param>
+        public void Error(Exception exception)
+        {
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
+            lock (_gate)
+            {
+                _observer.OnError(exception);
+            }
+
+            _subscriptions.Dispose();
+        }
+
+        /// <summary>
+        /// Forwards a source value when the sequence has not stopped.
+        /// </summary>
+        /// <param name="value">The source value.</param>
+        public void Next(T value)
+        {
+            lock (_gate)
+            {
+                if (!IsStopped)
+                {
+                    _observer.OnNext(value);
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public void Dispose() => _subscriptions.Dispose();
     }
 }
