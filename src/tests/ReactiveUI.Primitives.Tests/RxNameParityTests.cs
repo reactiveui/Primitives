@@ -4,7 +4,9 @@
 
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
+using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
+using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -290,6 +292,12 @@ public class RxNameParityTests
         Assert.Throws<ArgumentNullException>(() => source.Zip<int, int, int>(source, null!));
         Assert.Throws<ArgumentNullException>(() => source.CombineLatest<int, int, int>(source, null!));
         Assert.Throws<ArgumentNullException>(() => source.WithLatestFrom<int, int, int>(source, null!));
+        Assert.Throws<ArgumentNullException>(() => source.Zip((IObservable<int>)null!, Add));
+        Assert.Throws<ArgumentNullException>(() => source.CombineLatest((IObservable<int>)null!, Add));
+        Assert.Throws<ArgumentNullException>(() => source.WithLatestFrom((IObservable<int>)null!, Add));
+        Assert.Throws<ArgumentNullException>(() => source.Concat((IObservable<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => source.SelectMany<int, int, int>(null!, AddPair));
+        Assert.Throws<ArgumentNullException>(() => source.SelectMany<int, int, int>(Fan, null!));
     }
 
     /// <summary>Verifies the count/interval guards throw <see cref="ArgumentOutOfRangeException"/>.</summary>
@@ -384,6 +392,88 @@ public class RxNameParityTests
 
         Assert.Equal<int>(flatMap, selectMany);
         Assert.True(selectMany.Count > 0);
+    }
+
+    /// <summary>Verifies the int-range fast paths of the binary/higher-order names match their counterparts.</summary>
+    [Test]
+    public void RxNamesRangeFastPathsMatchCounterparts()
+    {
+        Assert.Equal<int>(
+            Collect(Signal.Sequence(One, Three).Pair(Signal.Sequence(Ten, Three), Add)),
+            Collect(Signal.Sequence(One, Three).Zip(Signal.Sequence(Ten, Three), Add)));
+        Assert.Equal<int>(
+            Collect(Signal.Sequence(One, Three).SyncLatest(Signal.Sequence(Ten, Three), Add)),
+            Collect(Signal.Sequence(One, Three).CombineLatest(Signal.Sequence(Ten, Three), Add)));
+        Assert.Equal<int>(
+            Collect(Signal.Sequence(One, Three).Latch(Signal.Sequence(Ten, Three), Add)),
+            Collect(Signal.Sequence(One, Three).WithLatestFrom(Signal.Sequence(Ten, Three), Add)));
+        Assert.Equal<int>(
+            Collect(RangeInners().SwitchTo()),
+            Collect(RangeInners().Switch()));
+    }
+
+    /// <summary>Verifies <c>Retry</c> mirrors the source when no error occurs (covers the happy path).</summary>
+    [Test]
+    public void RetryMirrorsSourceWhenNoError()
+    {
+        Assert.Equal<int>(_oneToThree, Collect(Signal.FromEnumerable(_oneToThree).Retry(Two)));
+    }
+
+    /// <summary>Exercises the default-sequencer (no-scheduler) overloads of the time operators.</summary>
+    [Test]
+    public void TimeOperatorsAcceptDefaultSequencer()
+    {
+        Signal.Sequence(One, Three).Delay(TimeSpan.FromTicks(DueTicks)).Subscribe(static _ => { }).Dispose();
+        Signal.FromEnumerable(_oneToThree).Timeout(TimeSpan.FromSeconds(AdvanceTicks)).Subscribe(static _ => { }).Dispose();
+        Signal.FromEnumerable(_oneToThree).Sample(TimeSpan.FromTicks(DueTicks)).Subscribe(static _ => { }).Dispose();
+        Assert.True(true);
+    }
+
+    /// <summary>Verifies the stateful sinks drop notifications that arrive after a terminal notification.</summary>
+    [Test]
+    public void StatefulSinksDropNotificationsAfterTerminal()
+    {
+        Assert.True(RunStopGuards(s => s.SelectWith(Ten, AddState)));
+        Assert.True(RunStopGuards(s => s.WhereWith(Two, IsMultiple)));
+        Assert.True(RunStopGuards(s => s.DoWith(Ten, IgnoreState)));
+    }
+
+    /// <summary>Verifies the stateful sinks reject a null observer.</summary>
+    [Test]
+    public void StatefulSinksThrowOnNullObserver()
+    {
+        var source = Signal.FromEnumerable(_oneToFive);
+        Assert.Throws<ArgumentNullException>(() => source.SelectWith(Ten, AddState).Subscribe((IObserver<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => source.WhereWith(Two, IsMultiple).Subscribe((IObserver<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => source.DoWith(Ten, IgnoreState).Subscribe((IObserver<int>)null!));
+    }
+
+    /// <summary>Verifies the stateful sinks propagate the source's current-thread subscription requirement.</summary>
+    [Test]
+    public void StatefulSinksReportCurrentThreadRequirement()
+    {
+        Assert.True(new MapWithSignal<int, int, int>(new CurrentThreadSource<int>(), Ten, AddState).IsRequiredSubscribeOnCurrentThread());
+        Assert.True(new KeepWithSignal<int, int>(new CurrentThreadSource<int>(), Two, IsMultiple).IsRequiredSubscribeOnCurrentThread());
+        Assert.True(new TapWithSignal<int, int>(new CurrentThreadSource<int>(), Ten, IgnoreState).IsRequiredSubscribeOnCurrentThread());
+        Assert.True(!new MapWithSignal<int, int, int>(new ManualSource<int>(), Ten, AddState).IsRequiredSubscribeOnCurrentThread());
+        Assert.True(!new KeepWithSignal<int, int>(new ManualSource<int>(), Two, IsMultiple).IsRequiredSubscribeOnCurrentThread());
+        Assert.True(!new TapWithSignal<int, int>(new ManualSource<int>(), Ten, IgnoreState).IsRequiredSubscribeOnCurrentThread());
+    }
+
+    /// <summary>Verifies Resume rejects a null observer.</summary>
+    [Test]
+    public void ResumeThrowsOnNullObserver() =>
+        Assert.Throws<ArgumentNullException>(() => Signal.FromEnumerable(_oneToFive).Resume(Signal.FromEnumerable(_oneToThree)).Subscribe((IObserver<int>)null!));
+
+    /// <summary>Verifies Resume takes the scheduled subscription path when a current-thread sequencer is already active.</summary>
+    [Test]
+    public void ResumeSchedulesWhenCurrentThreadSequencerActive()
+    {
+        var values = new List<int>();
+        Sequencer.CurrentThread.Schedule(() =>
+            new Signal<int>().Resume(Signal.FromEnumerable(_oneToThree)).Subscribe(values.Add));
+        Assert.Equal(0, values.Count);
+        Assert.True(new ResumeSignal<int>(Signal.FromEnumerable(_oneToThree), Signal.FromEnumerable(_oneToThree)).IsRequiredSubscribeOnCurrentThread());
     }
 
     /// <summary>Doubles a value.</summary>
@@ -598,6 +688,81 @@ public class RxNameParityTests
     /// <param name="inner">The inner value.</param>
     /// <returns>The combined value.</returns>
     private static int AddPair(int source, int inner) => source + inner;
+
+    /// <summary>Subscribes to a source and collects its forwarded values.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>The forwarded values.</returns>
+    private static List<int> Collect(IObservable<int> source)
+    {
+        var values = new List<int>();
+        source.Subscribe(values.Add);
+        return values;
+    }
+
+    /// <summary>Builds a source of two int-range inner sources (exercises the synchronous Switch range fast path).</summary>
+    /// <returns>An outer source of two range inners.</returns>
+    private static IObservable<IObservable<int>> RangeInners() =>
+        Signal.FromEnumerable<IObservable<int>>([Signal.Sequence(One, Two), Signal.Sequence(Three, Two)]);
+
+    /// <summary>
+    /// Drives a stateful sink through a value, a terminal completion, and then further notifications, reporting
+    /// whether the post-terminal notifications were dropped (exactly one completion, no leaked error).
+    /// </summary>
+    /// <param name="op">The stateful operator under test.</param>
+    /// <returns><see langword="true"/> when notifications after the terminal were dropped.</returns>
+    private static bool RunStopGuards(Func<IObservable<int>, IObservable<int>> op)
+    {
+        var source = new ManualSource<int>();
+        var completed = 0;
+        Exception? error = null;
+        using var subscription = op(source).Subscribe(static _ => { }, captured => error = captured, () => completed++);
+        source.Next(Two);
+        source.Complete();
+        source.Next(Three);
+        source.Error(new InvalidOperationException(Boom));
+        source.Complete();
+        return completed == One && error is null;
+    }
+
+    /// <summary>
+    /// An observable whose subscription retains its observer and ignores disposal, letting a test push raw
+    /// notifications (including ones after a terminal notification) to exercise a sink's terminal guards.
+    /// </summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    private sealed class ManualSource<T> : IObservable<T>
+    {
+        /// <summary>The observer retained from the most recent subscription.</summary>
+        private IObserver<T>? _observer;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            _observer = observer;
+            return Disposable.Empty;
+        }
+
+        /// <summary>Pushes a value to the retained observer.</summary>
+        /// <param name="value">The value to push.</param>
+        public void Next(T value) => _observer?.OnNext(value);
+
+        /// <summary>Pushes an error to the retained observer.</summary>
+        /// <param name="exception">The error to push.</param>
+        public void Error(Exception exception) => _observer?.OnError(exception);
+
+        /// <summary>Pushes completion to the retained observer.</summary>
+        public void Complete() => _observer?.OnCompleted();
+    }
+
+    /// <summary>A source that reports it requires current-thread subscription (drives the sink's propagation check).</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    private sealed class CurrentThreadSource<T> : IRequireCurrentThread<T>
+    {
+        /// <inheritdoc/>
+        public bool IsRequiredSubscribeOnCurrentThread() => true;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer) => Disposable.Empty;
+    }
 
     /// <summary>A unary parity case: a Primitives-named builder and its Rx-named twin over one source.</summary>
     /// <param name="Name">The pair name.</param>
