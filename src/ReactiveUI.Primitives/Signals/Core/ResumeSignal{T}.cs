@@ -60,9 +60,6 @@ internal sealed class ResumeSignal<T> : IRequireCurrentThread<T>
     /// <summary>Forwards source values and, on any error, switches to the fallback sequence.</summary>
     private sealed class ResumeObserver : IObserver<T>, IDisposable
     {
-        /// <summary>Marker stored in a slot once the sink is disposed.</summary>
-        private static readonly IDisposable Disposed = new DisposedMarker();
-
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer;
 
@@ -106,8 +103,8 @@ internal sealed class ResumeSignal<T> : IRequireCurrentThread<T>
         /// <inheritdoc/>
         public void Dispose()
         {
-            Release(ref _sourceSubscription);
-            Release(ref _fallbackSubscription);
+            SubscriptionSlots.Release(ref _sourceSubscription);
+            SubscriptionSlots.Release(ref _fallbackSubscription);
         }
 
         /// <summary>Subscribes to the source and returns the sink.</summary>
@@ -115,47 +112,12 @@ internal sealed class ResumeSignal<T> : IRequireCurrentThread<T>
         /// <returns>This sink, which is the subscription.</returns>
         internal ResumeObserver Run(IObservable<T> source)
         {
-            Assign(ref _sourceSubscription, source.Subscribe(this));
+            SubscriptionSlots.Assign(ref _sourceSubscription, source.Subscribe(this));
             return this;
-        }
-
-        /// <summary>Exchanges a slot for the disposed marker and releases any live subscription.</summary>
-        /// <param name="slot">The slot to release.</param>
-        private static void Release(ref IDisposable? slot)
-        {
-            var current = Interlocked.Exchange(ref slot, Disposed);
-            if (current == null || ReferenceEquals(current, Disposed))
-            {
-                return;
-            }
-
-            current.Dispose();
-        }
-
-        /// <summary>Stores a subscription into an empty slot, disposing it instead if the sink is already disposed.</summary>
-        /// <param name="slot">The target slot.</param>
-        /// <param name="subscription">The subscription to store.</param>
-        private static void Assign(ref IDisposable? slot, IDisposable subscription)
-        {
-            if (Interlocked.CompareExchange(ref slot, subscription, null) == null)
-            {
-                return;
-            }
-
-            subscription.Dispose();
         }
 
         /// <summary>Stores the fallback subscription.</summary>
         /// <param name="subscription">The fallback subscription.</param>
-        private void SetFallback(IDisposable subscription) => Assign(ref _fallbackSubscription, subscription);
-
-        /// <summary>No-op disposable used as the disposed-slot sentinel.</summary>
-        private sealed class DisposedMarker : IDisposable
-        {
-            /// <inheritdoc/>
-            public void Dispose()
-            {
-            }
-        }
+        private void SetFallback(IDisposable subscription) => SubscriptionSlots.Assign(ref _fallbackSubscription, subscription);
     }
 }
