@@ -272,6 +272,8 @@ public class RxNameParityTests
         Assert.Throws<ArgumentNullException>(() => default(IObservable<Spark<int>>)!.Dematerialize());
         Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Resume(other));
         Assert.Throws<ArgumentNullException>(() => other.Resume(null!));
+        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Chain(other));
+        Assert.Throws<ArgumentNullException>(() => other.Chain((IObservable<int>)null!));
     }
 
     /// <summary>Verifies the Rx names throw <see cref="ArgumentNullException"/> for a null projection/predicate.</summary>
