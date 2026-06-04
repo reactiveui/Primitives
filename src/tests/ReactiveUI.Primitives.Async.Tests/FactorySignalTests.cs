@@ -483,7 +483,7 @@ public class FactorySignalTests
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
-        var observer = new AnonymousObserverAsync<int>((x, _) =>
+        var observer = new DelegateAsyncWitness<int>((x, _) =>
         {
             items.Add(x);
             return default;

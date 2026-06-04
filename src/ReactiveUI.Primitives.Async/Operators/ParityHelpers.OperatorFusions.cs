@@ -47,7 +47,7 @@ public static partial class SignalAsync
             await observer.OnNextAsync(initial, cancellationToken).ConfigureAwait(false);
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
@@ -110,7 +110,7 @@ public static partial class SignalAsync
             await observer.OnNextAsync(initial, cancellationToken).ConfigureAwait(false);
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
@@ -189,7 +189,7 @@ public static partial class SignalAsync
             }
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
@@ -309,7 +309,7 @@ public static partial class SignalAsync
 
             /// <summary>Waits the debounce window, then forwards the value if
             /// <see cref="TryClaimEmission"/> approves it. The single catch routes everything
-            /// through <see cref="UnhandledExceptionHandler.OnUnhandledException"/>, which
+            /// through <see cref="UnhandledExceptionHandler.ReportUnhandledException"/>, which
             /// already filters out <see cref="OperationCanceledException"/> internally —
             /// so a separate OCE-only catch would just duplicate the same silent-drop behavior.</summary>
             /// <param name="value">The candidate value.</param>
@@ -331,7 +331,7 @@ public static partial class SignalAsync
                 }
                 catch (Exception e)
                 {
-                    UnhandledExceptionHandler.OnUnhandledException(e);
+                    UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
             }
         }
@@ -362,7 +362,7 @@ public static partial class SignalAsync
             }
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
@@ -751,7 +751,7 @@ public static partial class SignalAsync
             }
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
@@ -849,7 +849,7 @@ public static partial class SignalAsync
             /// <summary>Waits the debounce window, then forwards the value if
             /// <see cref="IsCurrentEmission"/> confirms the emission was not superseded.
             /// The single catch routes everything through
-            /// <see cref="UnhandledExceptionHandler.OnUnhandledException"/>, which already
+            /// <see cref="UnhandledExceptionHandler.ReportUnhandledException"/>, which already
             /// filters out <see cref="OperationCanceledException"/> internally.</summary>
             /// <param name="value">The candidate value.</param>
             /// <param name="id">The id stamped when this delay was started.</param>
@@ -870,7 +870,7 @@ public static partial class SignalAsync
                 }
                 catch (Exception e)
                 {
-                    UnhandledExceptionHandler.OnUnhandledException(e);
+                    UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
             }
         }
@@ -900,7 +900,7 @@ public static partial class SignalAsync
             }
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 

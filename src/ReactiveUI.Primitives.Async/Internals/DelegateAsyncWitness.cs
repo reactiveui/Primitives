@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Async.Internals;
 /// <param name="onNextAsync">The asynchronous function invoked for each element.</param>
 /// <param name="onErrorResumeAsync">An optional asynchronous function invoked when a resumable error occurs.</param>
 /// <param name="onCompletedAsync">An optional asynchronous function invoked when the sequence completes.</param>
-internal sealed class AnonymousObserverAsync<T>(
+internal sealed class DelegateAsyncWitness<T>(
     Func<T, CancellationToken, ValueTask> onNextAsync,
     Func<Exception, CancellationToken, ValueTask>? onErrorResumeAsync = null,
     Func<Result, ValueTask>? onCompletedAsync = null) : ObserverAsync<T>
@@ -25,7 +25,7 @@ internal sealed class AnonymousObserverAsync<T>(
     {
         if (onErrorResumeAsync is null)
         {
-            UnhandledExceptionHandler.OnUnhandledException(error);
+            UnhandledExceptionHandler.ReportUnhandledException(error);
             return default;
         }
 
@@ -40,7 +40,7 @@ internal sealed class AnonymousObserverAsync<T>(
             var exception = result.Exception;
             if (exception is not null)
             {
-                UnhandledExceptionHandler.OnUnhandledException(exception);
+                UnhandledExceptionHandler.ReportUnhandledException(exception);
             }
 
             return default;

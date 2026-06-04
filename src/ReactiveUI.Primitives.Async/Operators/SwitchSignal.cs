@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Async;
 internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> source) : SignalAsync<T>
 {
     /// <summary>
-    /// Subscribes the specified observer by creating a <see cref="SwitchSubscription"/> that manages
+    /// Subscribes the specified observer by creating a <see cref="SwitchCoordinator"/> that manages
     /// the outer and inner observable lifetimes.
     /// </summary>
     /// <param name="observer">The observer to receive elements from the most recent inner sequence.</param>
@@ -26,7 +26,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)
     {
-        var subscription = new SwitchSubscription(observer);
+        var subscription = new SwitchCoordinator(observer);
         subscription.LinkExternalCancellation(cancellationToken);
         return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
             subscription,
@@ -37,7 +37,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
     /// Manages the lifetime of the outer subscription and the currently active inner subscription,
     /// switching to new inner sequences as they arrive.
     /// </summary>
-    internal sealed class SwitchSubscription : IAsyncDisposable
+    internal sealed class SwitchCoordinator : IAsyncDisposable
     {
         /// <summary>
         /// The downstream observer to forward elements to.
@@ -67,7 +67,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         /// <summary>
         /// Async gate that serializes observer callbacks to ensure thread-safe emission.
         /// </summary>
-        private readonly AsyncGate _observerOnSomethingGate = new();
+        private readonly AsyncSerialGate _observerOnSomethingGate = new();
 
         /// <summary>Registration that propagates the original subscribe-token cancellation into <see cref="_disposeCts"/>.</summary>
         private CancellationTokenRegistration _externalLinkRegistration;
@@ -88,10 +88,10 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         private bool _disposed;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SwitchSubscription"/> class.
+        /// Initializes a new instance of the <see cref="SwitchCoordinator"/> class.
         /// </summary>
         /// <param name="observer">The downstream observer to forward elements to.</param>
-        public SwitchSubscription(IObserverAsync<T> observer)
+        public SwitchCoordinator(IObserverAsync<T> observer)
         {
             _observer = observer;
             _disposeCancellationToken = _disposeCts.Token;
@@ -107,7 +107,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             IObservableAsync<IObservableAsync<T>> source,
             CancellationToken subscriptionToken)
         {
-            var outerSubscription = await source.SubscribeAsync(new SwitchOuterObserver(this), subscriptionToken).ConfigureAwait(false);
+            var outerSubscription = await source.SubscribeAsync(new SwitchOuterWitness(this), subscriptionToken).ConfigureAwait(false);
             await _outerDisposable.SetDisposableAsync(outerSubscription).ConfigureAwait(false);
         }
 
@@ -117,7 +117,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         /// </summary>
         /// <param name="inner">The new inner observable to switch to.</param>
         /// <returns>A task representing the asynchronous switch operation.</returns>
-        public ValueTask OnNextOuterAsync(IObservableAsync<T> inner)
+        public ValueTask AcceptOuterValueAsync(IObservableAsync<T> inner)
         {
             IAsyncDisposable? previousSubscription;
             lock (_gate)
@@ -126,7 +126,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
                 _currentInnerSubscription = null;
             }
 
-            return SubscribeToInnerAfterDisposingPrevious(inner, previousSubscription);
+            return SubscribeReplacementInnerAsync(inner, previousSubscription);
         }
 
         /// <summary>
@@ -135,11 +135,11 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         /// </summary>
         /// <param name="result">The completion result from the outer sequence.</param>
         /// <returns>A task representing the asynchronous completion operation.</returns>
-        public ValueTask OnCompletedOuterAsync(Result result)
+        public ValueTask AcceptOuterCompletionAsync(Result result)
         {
             if (result.IsFailure)
             {
-                return CompleteAsync(result);
+                return FinishAsync(result);
             }
 
             bool shouldComplete;
@@ -149,7 +149,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
                 shouldComplete = _currentInnerSubscription is null;
             }
 
-            return shouldComplete ? CompleteAsync(Result.Success) : default;
+            return shouldComplete ? FinishAsync(Result.Success) : default;
         }
 
         /// <summary>
@@ -158,7 +158,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         /// </summary>
         /// <param name="result">The completion result from the inner sequence.</param>
         /// <returns>A task representing the asynchronous completion operation.</returns>
-        public ValueTask OnCompletedInnerAsync(Result result)
+        public ValueTask AcceptInnerCompletionAsync(Result result)
         {
             Result? actualResult = null;
             lock (_gate)
@@ -174,7 +174,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
                 }
             }
 
-            return actualResult is not null ? CompleteAsync(actualResult) : default;
+            return actualResult is not null ? FinishAsync(actualResult) : default;
         }
 
         /// <summary>
@@ -183,10 +183,10 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         /// <param name="value">The element to forward.</param>
         /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>A task representing the asynchronous forward operation.</returns>
-        public async ValueTask OnNextInnerAsync(T value, CancellationToken cancellationToken)
+        public async ValueTask AcceptInnerValueAsync(T value, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
-            using (await _observerOnSomethingGate.LockAsync(_disposeCancellationToken).ConfigureAwait(false))
+            using (await _observerOnSomethingGate.EnterAsync(_disposeCancellationToken).ConfigureAwait(false))
             {
                 await _observer.OnNextAsync(value, _disposeCancellationToken).ConfigureAwait(false);
             }
@@ -198,17 +198,17 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         /// <param name="error">The error to forward.</param>
         /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>A task representing the asynchronous error forwarding operation.</returns>
-        public async ValueTask OnErrorInnerAsync(Exception error, CancellationToken cancellationToken)
+        public async ValueTask AcceptInnerErrorAsync(Exception error, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
-            using (await _observerOnSomethingGate.LockAsync(_disposeCancellationToken).ConfigureAwait(false))
+            using (await _observerOnSomethingGate.EnterAsync(_disposeCancellationToken).ConfigureAwait(false))
             {
                 await _observer.OnErrorResumeAsync(error, _disposeCancellationToken).ConfigureAwait(false);
             }
         }
 
         /// <inheritdoc/>
-        public ValueTask DisposeAsync() => CompleteAsync(null);
+        public ValueTask DisposeAsync() => FinishAsync(null);
 
         /// <summary>
         /// Links the original subscribe-time cancellation token into this subscription's dispose chain so
@@ -240,7 +240,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         /// <param name="inner">The new inner observable to subscribe to.</param>
         /// <param name="previousSubscription">The previous inner subscription to dispose, or <see langword="null"/> if none.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        internal async ValueTask SubscribeToInnerAfterDisposingPrevious(
+        internal async ValueTask SubscribeReplacementInnerAsync(
             IObservableAsync<T> inner,
             IAsyncDisposable? previousSubscription)
         {
@@ -254,12 +254,12 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
                     }
                     catch (Exception e)
                     {
-                        await CompleteAsync(Result.Failure(e)).ConfigureAwait(false);
+                        await FinishAsync(Result.Failure(e)).ConfigureAwait(false);
                         return;
                     }
                 }
 
-                var innerObserver = new SwitchInnerObserver(this);
+                var innerObserver = new SwitchInnerWitness(this);
                 var innerSubscription = await inner.SubscribeAsync(innerObserver, _disposeCancellationToken).ConfigureAwait(false);
                 var shouldDispose = false;
                 lock (_gate)
@@ -281,7 +281,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             }
             catch (Exception e)
             {
-                await CompleteAsync(Result.Failure(e)).ConfigureAwait(false);
+                await FinishAsync(Result.Failure(e)).ConfigureAwait(false);
             }
         }
 
@@ -291,7 +291,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         /// </summary>
         /// <param name="result">The completion result to forward, or <see langword="null"/> if disposing without signaling completion.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        internal async ValueTask CompleteAsync(Result? result)
+        internal async ValueTask FinishAsync(Result? result)
         {
             IAsyncDisposable? toDispose;
             lock (_gate)
@@ -329,10 +329,10 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         }
 
         /// <summary>
-        /// Observer for the outer observable sequence that delegates to the parent <see cref="SwitchSubscription"/>.
+        /// Observer for the outer observable sequence that delegates to the parent <see cref="SwitchCoordinator"/>.
         /// </summary>
         /// <param name="subscription">The parent switch subscription.</param>
-        internal sealed class SwitchOuterObserver(SwitchSubscription subscription) : ObserverAsync<IObservableAsync<T>>
+        internal sealed class SwitchOuterWitness(SwitchCoordinator subscription) : ObserverAsync<IObservableAsync<T>>
         {
             /// <summary>
             /// Forwards a new inner observable to the parent subscription for switching.
@@ -341,7 +341,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override ValueTask OnNextAsyncCore(IObservableAsync<T> value, CancellationToken cancellationToken)
-                => subscription.OnNextOuterAsync(value);
+                => subscription.AcceptOuterValueAsync(value);
 
             /// <summary>
             /// Forwards a non-fatal error from the outer sequence to the downstream observer.
@@ -354,7 +354,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
                 CancellationToken cancellationToken)
             {
                 _ = cancellationToken;
-                using (await subscription._observerOnSomethingGate.LockAsync(subscription._disposeCancellationToken).ConfigureAwait(false))
+                using (await subscription._observerOnSomethingGate.EnterAsync(subscription._disposeCancellationToken).ConfigureAwait(false))
                 {
                     await subscription._observer.OnErrorResumeAsync(error, subscription._disposeCancellationToken).ConfigureAwait(false);
                 }
@@ -366,14 +366,14 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override ValueTask OnCompletedAsyncCore(Result result)
-                => subscription.OnCompletedOuterAsync(result);
+                => subscription.AcceptOuterCompletionAsync(result);
         }
 
         /// <summary>
-        /// Observer for the currently active inner observable sequence that delegates to the parent <see cref="SwitchSubscription"/>.
+        /// Observer for the currently active inner observable sequence that delegates to the parent <see cref="SwitchCoordinator"/>.
         /// </summary>
         /// <param name="subscription">The parent switch subscription.</param>
-        internal sealed class SwitchInnerObserver(SwitchSubscription subscription) : ObserverAsync<T>
+        internal sealed class SwitchInnerWitness(SwitchCoordinator subscription) : ObserverAsync<T>
         {
             /// <summary>
             /// Forwards an element from the inner sequence to the downstream observer.
@@ -382,7 +382,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
-                => subscription.OnNextInnerAsync(value, cancellationToken);
+                => subscription.AcceptInnerValueAsync(value, cancellationToken);
 
             /// <summary>
             /// Forwards a non-fatal error from the inner sequence to the downstream observer.
@@ -391,7 +391,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
-                => subscription.OnErrorInnerAsync(error, cancellationToken);
+                => subscription.AcceptInnerErrorAsync(error, cancellationToken);
 
             /// <summary>
             /// Handles the inner sequence completing.
@@ -399,7 +399,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override ValueTask OnCompletedAsyncCore(Result result)
-                => subscription.OnCompletedInnerAsync(result);
+                => subscription.AcceptInnerCompletionAsync(result);
         }
     }
 }

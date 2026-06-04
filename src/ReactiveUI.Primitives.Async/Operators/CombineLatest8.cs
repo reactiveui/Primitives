@@ -104,7 +104,7 @@ public static partial class SignalAsync
             IObserverAsync<TResult> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new CombineLatestSubscription(observer, sources, selector);
+            var subscription = new CombineLatestCoordinator(observer, sources, selector);
             subscription.Lifecycle.LinkExternalCancellation(cancellationToken);
             return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
                 subscription,
@@ -115,10 +115,10 @@ public static partial class SignalAsync
         /// Per-arity subscription holding the typed Optional slots, the pre-built indexed
         /// observers, the SubscribeAtAsync switch, and the selector invocation. Shared scaffolding
         /// (gate, lifecycle, ValuesLock, OnErrorResume, SubscribeSourcesAsync, DisposeAsync) lives
-        /// in <see cref="CombineLatestSubscriptionBase{TResult}"/>; the per-source OnNext / OnError /
+        /// in <see cref="CombineLatestCoordinatorBase{TResult}"/>; the per-source OnNext / OnError /
         /// OnCompleted forwarding lives in <see cref="CombineLatestIndexedObserver{TSource, TResult}"/>.
         /// </summary>
-        internal sealed class CombineLatestSubscription : CombineLatestSubscriptionBase<TResult>
+        internal sealed class CombineLatestCoordinator : CombineLatestCoordinatorBase<TResult>
         {
             /// <summary>Bit owned by source 1 inside the lifecycle's completion bitmask.</summary>
             private const int Source1Bit = 1 << 0;
@@ -218,12 +218,12 @@ public static partial class SignalAsync
                 T8 V8);
 
             /// <summary>
-            /// Initializes a new instance of the <see cref="CombineLatestSubscription"/> class.
+            /// Initializes a new instance of the <see cref="CombineLatestCoordinator"/> class.
             /// </summary>
             /// <param name="observer">The downstream observer.</param>
             /// <param name="sources">The bundled source observables.</param>
             /// <param name="selector">The selector that projects the latest values.</param>
-            public CombineLatestSubscription(
+            public CombineLatestCoordinator(
                 IObserverAsync<TResult> observer,
                 Sources sources,
                 Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> selector)

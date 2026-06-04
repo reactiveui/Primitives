@@ -60,7 +60,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests FirstAsync on empty throws InvalidOperationException with the no-elements
-    /// message — exercises the predicate-null branch of <c>FirstAsyncObserver.OnCompletedAsyncCore</c>.</summary>
+    /// message — exercises the predicate-null branch of <c>FirstTaskWitness.OnCompletedAsyncCore</c>.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstAsyncOnEmpty_ThenThrowsInvalidOperation()

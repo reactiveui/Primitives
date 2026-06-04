@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <param name="source">The source observable whose notifications will be context-switched.</param>
 /// <param name="asyncContext">The async context to switch notifications onto.</param>
 /// <param name="forceYielding">Whether to force yielding even if already on the target context.</param>
-internal sealed class ObserveOnAsyncSignal<T>(
+internal sealed class WitnessOnAsyncSignal<T>(
     IObservableAsync<T> source,
     AsyncContext asyncContext,
     bool forceYielding) : SignalAsync<T>
@@ -21,8 +21,8 @@ internal sealed class ObserveOnAsyncSignal<T>(
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)
     {
-        var observeOnObserver = new ObserveOnObserver(observer, asyncContext, forceYielding);
-        return source.SubscribeAsync(observeOnObserver, cancellationToken);
+        var contextSwitchObserver = new ContextSwitchObserver(observer, asyncContext, forceYielding);
+        return source.SubscribeAsync(contextSwitchObserver, cancellationToken);
     }
 
     /// <summary>
@@ -31,7 +31,7 @@ internal sealed class ObserveOnAsyncSignal<T>(
     /// <param name="observer">The downstream observer to forward notifications to.</param>
     /// <param name="asyncContext">The async context to switch onto.</param>
     /// <param name="forceYielding">Whether to force yielding even if already on the target context.</param>
-    internal sealed class ObserveOnObserver(IObserverAsync<T> observer, AsyncContext asyncContext, bool forceYielding)
+    internal sealed class ContextSwitchObserver(IObserverAsync<T> observer, AsyncContext asyncContext, bool forceYielding)
         : ObserverAsync<T>
     {
         /// <summary>Slow path: switch to the target context then forward the value.
@@ -40,7 +40,7 @@ internal sealed class ObserveOnAsyncSignal<T>(
         /// <param name="value">The value to forward.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A task that completes after the context switch and downstream forward.</returns>
-        internal async ValueTask SwitchThenForwardAsync(T value, CancellationToken cancellationToken)
+        internal async ValueTask ForwardAfterContextSwitchAsync(T value, CancellationToken cancellationToken)
         {
             await asyncContext.SwitchContextAsync(forceYielding, cancellationToken);
             await observer.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
@@ -51,7 +51,7 @@ internal sealed class ObserveOnAsyncSignal<T>(
         /// <param name="error">The error to forward.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A task that completes after the context switch and downstream forward.</returns>
-        internal async ValueTask SwitchThenErrorAsync(Exception error, CancellationToken cancellationToken)
+        internal async ValueTask ForwardErrorAfterContextSwitchAsync(Exception error, CancellationToken cancellationToken)
         {
             await asyncContext.SwitchContextAsync(forceYielding, cancellationToken);
             await observer.OnErrorResumeAsync(error, cancellationToken).ConfigureAwait(false);
@@ -61,7 +61,7 @@ internal sealed class ObserveOnAsyncSignal<T>(
         /// Exposed as <see langword="internal"/> for direct unit testing.</summary>
         /// <param name="result">The completion result.</param>
         /// <returns>A task that completes after the context switch and downstream forward.</returns>
-        internal async ValueTask SwitchThenCompletedAsync(Result result)
+        internal async ValueTask ForwardCompletionAfterContextSwitchAsync(Result result)
         {
             await asyncContext.SwitchContextAsync(forceYielding, CancellationToken.None);
             await observer.OnCompletedAsync(result).ConfigureAwait(false);
@@ -77,7 +77,7 @@ internal sealed class ObserveOnAsyncSignal<T>(
                 return observer.OnNextAsync(value, cancellationToken);
             }
 
-            return SwitchThenForwardAsync(value, cancellationToken);
+            return ForwardAfterContextSwitchAsync(value, cancellationToken);
         }
 
         /// <inheritdoc/>
@@ -88,7 +88,7 @@ internal sealed class ObserveOnAsyncSignal<T>(
                 return observer.OnErrorResumeAsync(error, cancellationToken);
             }
 
-            return SwitchThenErrorAsync(error, cancellationToken);
+            return ForwardErrorAfterContextSwitchAsync(error, cancellationToken);
         }
 
         /// <inheritdoc/>
@@ -99,7 +99,7 @@ internal sealed class ObserveOnAsyncSignal<T>(
                 return observer.OnCompletedAsync(result);
             }
 
-            return SwitchThenCompletedAsync(result);
+            return ForwardCompletionAfterContextSwitchAsync(result);
         }
     }
 }

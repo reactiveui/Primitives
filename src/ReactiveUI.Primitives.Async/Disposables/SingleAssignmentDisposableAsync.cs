@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -24,7 +24,7 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
     /// <summary>
     /// Gets a value indicating whether the object has been disposed.
     /// </summary>
-    public bool IsDisposed => ReferenceEquals(Volatile.Read(ref _current), DisposedSentinel.Instance);
+    public bool IsDisposed => ReferenceEquals(Volatile.Read(ref _current), DisposedSlotMarker.Instance);
 
     /// <summary>
     /// Gets the current asynchronous disposable resource, or an empty disposable if the resource has already been
@@ -35,7 +35,7 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
     public IAsyncDisposable? GetDisposable()
     {
         var field = Volatile.Read(ref _current);
-        if (ReferenceEquals(field, DisposedSentinel.Instance))
+        if (ReferenceEquals(field, DisposedSlotMarker.Instance))
         {
             return DisposableAsync.Empty;
         }
@@ -50,7 +50,7 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
     /// <param name="value">The new <see cref="IAsyncDisposable"/> instance to set as the current resource, or <see langword="null"/> to
     /// clear the current resource.</param>
     /// <returns>A <see cref="ValueTask"/> that represents the asynchronous operation.</returns>
-    public ValueTask SetDisposableAsync(IAsyncDisposable? value) => SetDisposableAsync(ref _current, value);
+    public ValueTask SetDisposableAsync(IAsyncDisposable? value) => AssignDisposableAsync(ref _current, value);
 
     /// <summary>
     /// Asynchronously releases the unmanaged resources used by the object.
@@ -69,7 +69,7 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
     /// <param name="value">The <see cref="IAsyncDisposable"/> instance to assign to the field, or null to leave the field unset.</param>
     /// <returns>A <see cref="ValueTask"/> that represents the asynchronous dispose operation if the field was already disposed;
     /// otherwise, a default <see cref="ValueTask"/>.</returns>
-    internal static ValueTask SetDisposableAsync(ref IAsyncDisposable? field, IAsyncDisposable? value)
+    internal static ValueTask AssignDisposableAsync(ref IAsyncDisposable? field, IAsyncDisposable? value)
     {
         var current = Interlocked.CompareExchange(ref field, value, null);
         if (current == null)
@@ -78,7 +78,7 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
             return default;
         }
 
-        if (ReferenceEquals(current, DisposedSentinel.Instance))
+        if (ReferenceEquals(current, DisposedSlotMarker.Instance))
         {
             if (value is not null)
             {
@@ -104,8 +104,8 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
     [DebuggerStepThrough]
     internal static ValueTask DisposeAsync(ref IAsyncDisposable? field)
     {
-        var current = Interlocked.Exchange(ref field, DisposedSentinel.Instance);
-        if (ReferenceEquals(current, DisposedSentinel.Instance) || current is null)
+        var current = Interlocked.Exchange(ref field, DisposedSlotMarker.Instance);
+        if (ReferenceEquals(current, DisposedSlotMarker.Instance) || current is null)
         {
             return default;
         }
@@ -123,12 +123,12 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
     /// <summary>
     /// A sentinel object used to indicate that the <see cref="SingleAssignmentDisposableAsync"/> has been disposed.
     /// </summary>
-    internal sealed class DisposedSentinel : IAsyncDisposable
+    internal sealed class DisposedSlotMarker : IAsyncDisposable
     {
         /// <summary>
-        /// Gets the singleton instance of <see cref="DisposedSentinel"/>.
+        /// Gets the singleton instance of <see cref="DisposedSlotMarker"/>.
         /// </summary>
-        public static readonly DisposedSentinel Instance = new();
+        public static readonly DisposedSlotMarker Instance = new();
 
         /// <inheritdoc/>
         ValueTask IAsyncDisposable.DisposeAsync() => default;

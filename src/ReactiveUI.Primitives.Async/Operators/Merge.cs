@@ -88,7 +88,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new MergeSubscription<T>(observer);
+            var subscription = new MergeCoordinator<T>(observer);
             subscription.LinkExternalCancellation(cancellationToken);
             return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
                 subscription,
@@ -109,7 +109,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new MergeSubscriptionWithMaxConcurrency<T>(observer, maxConcurrent);
+            var subscription = new BoundedMergeCoordinator<T>(observer, maxConcurrent);
             subscription.LinkExternalCancellation(cancellationToken);
             return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
                 subscription,
@@ -121,7 +121,7 @@ public static partial class SignalAsync
     /// Manages subscriptions for merged observable sequences, forwarding items from all inner sources to a single observer.
     /// </summary>
     /// <typeparam name="T">The type of the elements in the merged sequence.</typeparam>
-    internal class MergeSubscription<T> : IAsyncDisposable
+    internal class MergeCoordinator<T> : IAsyncDisposable
     {
         /// <summary>The cancellation token source backing <see cref="DisposedCancellationToken"/>.</summary>
         private readonly CancellationTokenSource _disposeCts = new();
@@ -136,7 +136,7 @@ public static partial class SignalAsync
         private readonly MultipleDisposableAsync _innerDisposables = new();
 
         /// <summary>Serializes observer notifications to prevent concurrent calls.</summary>
-        private readonly AsyncGate _onSomethingGate = new();
+        private readonly AsyncSerialGate _onSomethingGate = new();
 
         /// <summary>The downstream observer that receives merged items.</summary>
         private readonly IObserverAsync<T> _observer;
@@ -154,10 +154,10 @@ public static partial class SignalAsync
         private int _disposed;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MergeSubscription{T}"/> class.
+        /// Initializes a new instance of the <see cref="MergeCoordinator{T}"/> class.
         /// </summary>
         /// <param name="observer">The downstream observer to forward merged items to.</param>
-        public MergeSubscription(IObserverAsync<T> observer) => _observer = observer;
+        public MergeCoordinator(IObserverAsync<T> observer) => _observer = observer;
 
         /// <summary>
         /// Subscribes to the outer observable and begins merging inner observable sequences.
@@ -171,8 +171,8 @@ public static partial class SignalAsync
         {
             _ = cancellationToken;
             var outerSubscription = await @this.SubscribeAsync(
-                (x, _) => SubscribeInnerAsync(x),
-                ForwardOnErrorResume,
+                (x, _) => SubscribeBranchAsync(x),
+                RelayErrorAsync,
                 result =>
                 {
                     bool shouldComplete;
@@ -182,7 +182,7 @@ public static partial class SignalAsync
                         shouldComplete = _innerActiveCount == 0 || result.IsFailure;
                     }
 
-                    return shouldComplete ? CompleteAsync(result) : default;
+                    return shouldComplete ? FinishAsync(result) : default;
                 },
                 DisposedCancellationToken).ConfigureAwait(false);
 
@@ -193,7 +193,7 @@ public static partial class SignalAsync
         /// Asynchronously releases resources used by this subscription.
         /// </summary>
         /// <returns>A task representing the asynchronous dispose operation.</returns>
-        public ValueTask DisposeAsync() => CompleteAsync(null);
+        public ValueTask DisposeAsync() => FinishAsync(null);
 
         /// <summary>
         /// Links the original subscribe-time cancellation token into this subscription's dispose chain so
@@ -226,9 +226,9 @@ public static partial class SignalAsync
         /// </summary>
         /// <param name="value">The value to forward.</param>
         /// <returns>A task representing the asynchronous forward operation.</returns>
-        internal ValueTask ForwardOnNextLocked(T value)
+        internal ValueTask RelayNextIfActiveAsync(T value)
         {
-            if (DisposalHelper.IsDisposed(_disposed))
+            if (DisposalHelper.HasDisposed(_disposed))
             {
                 return default;
             }
@@ -243,9 +243,9 @@ public static partial class SignalAsync
         /// </summary>
         /// <param name="exception">The error to forward.</param>
         /// <returns>A task representing the asynchronous forward operation.</returns>
-        internal ValueTask ForwardOnErrorResumeLocked(Exception exception)
+        internal ValueTask RelayErrorIfActiveAsync(Exception exception)
         {
-            if (DisposalHelper.IsDisposed(_disposed))
+            if (DisposalHelper.HasDisposed(_disposed))
             {
                 return default;
             }
@@ -259,17 +259,17 @@ public static partial class SignalAsync
         /// <param name="value">The value to forward.</param>
         /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>A task representing the asynchronous forward operation.</returns>
-        protected internal async ValueTask ForwardOnNext(T value, CancellationToken cancellationToken)
+        protected internal async ValueTask RelayNextAsync(T value, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
-            if (DisposalHelper.IsDisposed(_disposed))
+            if (DisposalHelper.HasDisposed(_disposed))
             {
                 return;
             }
 
-            using (await _onSomethingGate.LockAsync(DisposedCancellationToken).ConfigureAwait(false))
+            using (await _onSomethingGate.EnterAsync(DisposedCancellationToken).ConfigureAwait(false))
             {
-                await ForwardOnNextLocked(value).ConfigureAwait(false);
+                await RelayNextIfActiveAsync(value).ConfigureAwait(false);
             }
         }
 
@@ -279,19 +279,19 @@ public static partial class SignalAsync
         /// <param name="exception">The error to forward.</param>
         /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>A task representing the asynchronous forward operation.</returns>
-        protected internal async ValueTask ForwardOnErrorResume(
+        protected internal async ValueTask RelayErrorAsync(
             Exception exception,
             CancellationToken cancellationToken)
         {
             _ = cancellationToken;
-            if (DisposalHelper.IsDisposed(_disposed))
+            if (DisposalHelper.HasDisposed(_disposed))
             {
                 return;
             }
 
-            using (await _onSomethingGate.LockAsync(DisposedCancellationToken).ConfigureAwait(false))
+            using (await _onSomethingGate.EnterAsync(DisposedCancellationToken).ConfigureAwait(false))
             {
-                await ForwardOnErrorResumeLocked(exception).ConfigureAwait(false);
+                await RelayErrorIfActiveAsync(exception).ConfigureAwait(false);
             }
         }
 
@@ -300,16 +300,16 @@ public static partial class SignalAsync
         /// </summary>
         /// <param name="inner">The inner observable to subscribe to.</param>
         /// <returns>A task representing the asynchronous subscribe operation.</returns>
-        protected internal virtual async ValueTask SubscribeInnerAsync(IObservableAsync<T> inner)
+        protected internal virtual async ValueTask SubscribeBranchAsync(IObservableAsync<T> inner)
         {
             try
             {
-                var innerObserver = CreateInnerObserver();
+                var innerObserver = CreateBranchObserver();
                 await innerObserver.SubscribeSourcesAsync(inner, DisposedCancellationToken).ConfigureAwait(false);
             }
             catch (Exception e)
             {
-                await CompleteAsync(Result.Failure(e)).ConfigureAwait(false);
+                await FinishAsync(Result.Failure(e)).ConfigureAwait(false);
             }
         }
 
@@ -317,14 +317,14 @@ public static partial class SignalAsync
         /// Creates a new inner observer for subscribing to an inner observable sequence.
         /// </summary>
         /// <returns>A new inner async observer instance.</returns>
-        protected internal virtual InnerAsyncObserver CreateInnerObserver() => new(this);
+        protected internal virtual MergeBranchObserver CreateBranchObserver() => new(this);
 
         /// <summary>
         /// Completes the merged sequence, disposes all subscriptions, and optionally signals the downstream observer.
         /// </summary>
         /// <param name="result">The completion result to forward, or null if disposing without signaling completion.</param>
         /// <returns>A task representing the asynchronous completion operation.</returns>
-        protected internal async ValueTask CompleteAsync(Result? result)
+        protected internal async ValueTask FinishAsync(Result? result)
         {
             if (DisposalHelper.TrySetDisposed(ref _disposed))
             {
@@ -351,7 +351,7 @@ public static partial class SignalAsync
         /// <summary>
         /// Observer that forwards items from an inner observable to the parent merge subscription.
         /// </summary>
-        internal class InnerAsyncObserver(MergeSubscription<T> parent) : ObserverAsync<T>
+        internal class MergeBranchObserver(MergeCoordinator<T> parent) : ObserverAsync<T>
         {
             /// <summary>
             /// Subscribes this observer to an inner observable sequence.
@@ -372,11 +372,11 @@ public static partial class SignalAsync
 
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
-                parent.ForwardOnNext(value, cancellationToken);
+                parent.RelayNextAsync(value, cancellationToken);
 
             /// <inheritdoc/>
             protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-                parent.ForwardOnErrorResume(error, cancellationToken);
+                parent.RelayErrorAsync(error, cancellationToken);
 
             /// <inheritdoc/>
             protected override ValueTask OnCompletedAsyncCore(Result result)
@@ -388,13 +388,13 @@ public static partial class SignalAsync
                     shouldComplete = result.IsFailure || (count == 0 && parent._outerCompleted);
                 }
 
-                return shouldComplete ? parent.CompleteAsync(result) : default;
+                return shouldComplete ? parent.FinishAsync(result) : default;
             }
 
             /// <inheritdoc/>
             protected override async ValueTask DisposeAsyncCore()
             {
-                await OnDisposeAsync().ConfigureAwait(false);
+                await CleanupBranchAsync().ConfigureAwait(false);
                 await parent._innerDisposables.Remove(this).ConfigureAwait(false);
                 await base.DisposeAsyncCore().ConfigureAwait(false);
             }
@@ -403,25 +403,25 @@ public static partial class SignalAsync
             /// Called during disposal to perform subclass-specific cleanup such as releasing semaphore slots.
             /// </summary>
             /// <returns>A task representing the asynchronous cleanup operation.</returns>
-            protected virtual ValueTask OnDisposeAsync() => default;
+            protected virtual ValueTask CleanupBranchAsync() => default;
         }
     }
 
     /// <summary>
-    /// Extends <see cref="MergeSubscription{T}"/> to limit the number of concurrently subscribed inner observables.
+    /// Extends <see cref="MergeCoordinator{T}"/> to limit the number of concurrently subscribed inner observables.
     /// </summary>
     /// <typeparam name="T">The type of the elements in the merged sequence.</typeparam>
-    internal sealed class MergeSubscriptionWithMaxConcurrency<T>(IObserverAsync<T> observer, int maxConcurrent)
-        : MergeSubscription<T>(observer)
+    internal sealed class BoundedMergeCoordinator<T>(IObserverAsync<T> observer, int maxConcurrent)
+        : MergeCoordinator<T>(observer)
     {
         /// <summary>Limits the number of concurrently subscribed inner observables.</summary>
         private readonly SemaphoreSlim _semaphore = new(maxConcurrent, maxConcurrent);
 
         /// <inheritdoc/>
-        protected internal override async ValueTask SubscribeInnerAsync(IObservableAsync<T> inner)
+        protected internal override async ValueTask SubscribeBranchAsync(IObservableAsync<T> inner)
         {
             await _semaphore.WaitAsync(DisposedCancellationToken).ConfigureAwait(false);
-            var innerObserver = (InnerAsyncObserverWithSemaphore)CreateInnerObserver();
+            var innerObserver = (MergeBranchObserverWithPermit)CreateBranchObserver();
             var subscribed = false;
             try
             {
@@ -430,13 +430,13 @@ public static partial class SignalAsync
             }
             catch (Exception e)
             {
-                await CompleteAsync(Result.Failure(e)).ConfigureAwait(false);
+                await FinishAsync(Result.Failure(e)).ConfigureAwait(false);
             }
             finally
             {
                 // On success the observer owns its semaphore slot and releases it on its own disposal
-                // (auto-dispose after OnCompletedAsync, or via parent CompleteAsync). On failure we dispose
-                // the observer here so its idempotent OnDisposeAsync returns the slot exactly once,
+                // (auto-dispose after OnCompletedAsync, or via parent FinishAsync). On failure we dispose
+                // the observer here so its idempotent CleanupBranchAsync returns the slot exactly once,
                 // regardless of whether the observer also gets disposed again through _innerDisposables.
                 if (!subscribed)
                 {
@@ -446,20 +446,20 @@ public static partial class SignalAsync
         }
 
         /// <inheritdoc/>
-        protected internal override InnerAsyncObserver CreateInnerObserver() =>
-            new InnerAsyncObserverWithSemaphore(this);
+        protected internal override MergeBranchObserver CreateBranchObserver() =>
+            new MergeBranchObserverWithPermit(this);
 
         /// <summary>
         /// Inner observer that releases a semaphore slot on disposal.
         /// </summary>
-        internal sealed class InnerAsyncObserverWithSemaphore(MergeSubscriptionWithMaxConcurrency<T> parent)
-            : InnerAsyncObserver(parent)
+        internal sealed class MergeBranchObserverWithPermit(BoundedMergeCoordinator<T> parent)
+            : MergeBranchObserver(parent)
         {
             /// <summary>Tracks whether the semaphore slot has already been released for this observer.</summary>
             /// <remarks>
             /// <see cref="ObserverAsync{T}.DisposeAsync"/> can be invoked more than once for the same observer
             /// (auto-dispose after <c>OnCompletedAsync</c>, then again from <c>CompositeDisposableAsync.Remove</c>
-            /// and from the parent's <c>CompleteAsync</c> path). Without this guard, <see cref="SemaphoreSlim.Release()"/>
+            /// and from the parent's <c>FinishAsync</c> path). Without this guard, <see cref="SemaphoreSlim.Release()"/>
             /// would be called multiple times per observer, exceeding <c>maxCount</c> and throwing
             /// <see cref="SemaphoreFullException"/> — which interrupts the parent's completion chain and leaves
             /// downstream observers waiting forever.
@@ -467,7 +467,7 @@ public static partial class SignalAsync
             private int _released;
 
             /// <inheritdoc/>
-            protected override ValueTask OnDisposeAsync()
+            protected override ValueTask CleanupBranchAsync()
             {
                 if (Interlocked.Exchange(ref _released, 1) != 0)
                 {
@@ -491,16 +491,16 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new MergeEnumerableSubscription(observer, sources);
+            var subscription = new MergeSequenceCoordinator(observer, sources);
             subscription.LinkExternalCancellation(cancellationToken);
-            subscription.StartAsync();
+            subscription.BeginSubscribing();
             return new(subscription);
         }
 
         /// <summary>
         /// Manages subscriptions to all sources in the enumerable and forwards their items to a single observer.
         /// </summary>
-        internal sealed class MergeEnumerableSubscription : IAsyncDisposable
+        internal sealed class MergeSequenceCoordinator : IAsyncDisposable
         {
             /// <summary>The collection of source observables to merge.</summary>
             private readonly IEnumerable<IObservableAsync<T>> _sources;
@@ -515,7 +515,7 @@ public static partial class SignalAsync
             private readonly CancellationToken _disposedCancellationToken;
 
             /// <summary>Serializes observer notifications to prevent concurrent calls.</summary>
-            private readonly AsyncGate _onSomethingGate = new();
+            private readonly AsyncSerialGate _onSomethingGate = new();
 
             /// <summary>Signals when the initial subscription loop has finished.</summary>
             private readonly TaskCompletionSource<bool> _subscriptionFinished =
@@ -537,11 +537,11 @@ public static partial class SignalAsync
             private int _disposed;
 
             /// <summary>
-            /// Initializes a new instance of the <see cref="MergeEnumerableSubscription"/> class.
+            /// Initializes a new instance of the <see cref="MergeSequenceCoordinator"/> class.
             /// </summary>
             /// <param name="observer">The downstream observer to forward merged items to.</param>
             /// <param name="sources">The enumerable of observable sources to merge.</param>
-            public MergeEnumerableSubscription(IObserverAsync<T> observer, IEnumerable<IObservableAsync<T>> sources)
+            public MergeSequenceCoordinator(IObserverAsync<T> observer, IEnumerable<IObservableAsync<T>> sources)
             {
                 _observer = observer;
                 _sources = sources;
@@ -555,7 +555,7 @@ public static partial class SignalAsync
                 "Roslynator",
                 "RCS1047:Non-asynchronous method name should not end with \'Async\'",
                 Justification = "Method already named with Async")]
-            public void StartAsync() => FireAndForgetHelper.Run(async () =>
+            public void BeginSubscribing() => FireAndForgetHelper.Run(async () =>
             {
                 _reentrant.Value = true;
                 try
@@ -569,7 +569,7 @@ public static partial class SignalAsync
                     {
                         Interlocked.Increment(ref _active);
 
-                        var innerObserver = new InnerAsyncObserver(this);
+                        var innerObserver = new MergeBranchObserver(this);
                         await _innerDisposables.AddAsync(innerObserver).ConfigureAwait(false);
                         try
                         {
@@ -581,7 +581,7 @@ public static partial class SignalAsync
                         }
                         catch (Exception ex)
                         {
-                            await CompleteAsync(Result.Failure(ex)).ConfigureAwait(false);
+                            await FinishAsync(Result.Failure(ex)).ConfigureAwait(false);
                             return;
                         }
                     }
@@ -589,12 +589,12 @@ public static partial class SignalAsync
                     // Remove sentinel: if all inner sources completed during the loop, this triggers final completion.
                     if (Interlocked.Decrement(ref _active) == 0)
                     {
-                        await CompleteAsync(Result.Success).ConfigureAwait(false);
+                        await FinishAsync(Result.Success).ConfigureAwait(false);
                     }
                 }
                 catch (Exception e)
                 {
-                    await CompleteAsync(Result.Failure(e)).ConfigureAwait(false);
+                    await FinishAsync(Result.Failure(e)).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -606,7 +606,7 @@ public static partial class SignalAsync
             /// Asynchronously releases resources used by this subscription.
             /// </summary>
             /// <returns>A task representing the asynchronous dispose operation.</returns>
-            public ValueTask DisposeAsync() => CompleteAsync(null);
+            public ValueTask DisposeAsync() => FinishAsync(null);
 
             /// <summary>
             /// Routes an exception from a post-disposal completion result to the unhandled exception handler.
@@ -621,7 +621,7 @@ public static partial class SignalAsync
                     return;
                 }
 
-                UnhandledExceptionHandler.OnUnhandledException(ex);
+                UnhandledExceptionHandler.ReportUnhandledException(ex);
             }
 
             /// <summary>
@@ -654,17 +654,17 @@ public static partial class SignalAsync
             /// <param name="value">The value to forward.</param>
             /// <param name="token">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous forward operation.</returns>
-            internal async ValueTask OnNextAsync(T value, CancellationToken token)
+            internal async ValueTask RelayNextAsync(T value, CancellationToken token)
             {
                 _ = token;
-                if (DisposalHelper.IsDisposed(_disposed))
+                if (DisposalHelper.HasDisposed(_disposed))
                 {
                     return;
                 }
 
-                using (await _onSomethingGate.LockAsync(_disposedCancellationToken).ConfigureAwait(false))
+                using (await _onSomethingGate.EnterAsync(_disposedCancellationToken).ConfigureAwait(false))
                 {
-                    await OnNextAsyncLocked(value).ConfigureAwait(false);
+                    await RelayNextIfActiveAsync(value).ConfigureAwait(false);
                 }
             }
 
@@ -675,9 +675,9 @@ public static partial class SignalAsync
             /// </summary>
             /// <param name="value">The value to forward.</param>
             /// <returns>A task representing the asynchronous forward operation.</returns>
-            internal ValueTask OnNextAsyncLocked(T value)
+            internal ValueTask RelayNextIfActiveAsync(T value)
             {
-                if (DisposalHelper.IsDisposed(_disposed))
+                if (DisposalHelper.HasDisposed(_disposed))
                 {
                     return default;
                 }
@@ -691,17 +691,17 @@ public static partial class SignalAsync
             /// <param name="ex">The error to forward.</param>
             /// <param name="token">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous forward operation.</returns>
-            internal async ValueTask OnErrorResumeAsync(Exception ex, CancellationToken token)
+            internal async ValueTask RelayErrorAsync(Exception ex, CancellationToken token)
             {
                 _ = token;
-                if (DisposalHelper.IsDisposed(_disposed))
+                if (DisposalHelper.HasDisposed(_disposed))
                 {
                     return;
                 }
 
-                using (await _onSomethingGate.LockAsync(_disposedCancellationToken).ConfigureAwait(false))
+                using (await _onSomethingGate.EnterAsync(_disposedCancellationToken).ConfigureAwait(false))
                 {
-                    await OnErrorResumeAsyncLocked(ex).ConfigureAwait(false);
+                    await RelayErrorIfActiveAsync(ex).ConfigureAwait(false);
                 }
             }
 
@@ -712,9 +712,9 @@ public static partial class SignalAsync
             /// </summary>
             /// <param name="ex">The error to forward.</param>
             /// <returns>A task representing the asynchronous forward operation.</returns>
-            internal ValueTask OnErrorResumeAsyncLocked(Exception ex)
+            internal ValueTask RelayErrorIfActiveAsync(Exception ex)
             {
-                if (DisposalHelper.IsDisposed(_disposed))
+                if (DisposalHelper.HasDisposed(_disposed))
                 {
                     return default;
                 }
@@ -727,11 +727,11 @@ public static partial class SignalAsync
             /// </summary>
             /// <param name="result">The completion result from the inner source.</param>
             /// <returns>A task representing the asynchronous completion operation.</returns>
-            internal ValueTask OnCompletedAsync(Result result)
+            internal ValueTask AcceptBranchCompletionAsync(Result result)
             {
                 if (result.IsFailure)
                 {
-                    return CompleteAsync(result);
+                    return FinishAsync(result);
                 }
 
                 if (Interlocked.Decrement(ref _active) != 0)
@@ -739,7 +739,7 @@ public static partial class SignalAsync
                     return default;
                 }
 
-                return CompleteAsync(Result.Success);
+                return FinishAsync(Result.Success);
             }
 
             /// <summary>
@@ -747,7 +747,7 @@ public static partial class SignalAsync
             /// </summary>
             /// <param name="result">The completion result to forward, or <see langword="null"/> if disposing without signaling completion.</param>
             /// <returns>A task representing the asynchronous completion operation.</returns>
-            internal async ValueTask CompleteAsync(Result? result)
+            internal async ValueTask FinishAsync(Result? result)
             {
                 if (DisposalHelper.TrySetDisposed(ref _disposed))
                 {
@@ -779,21 +779,21 @@ public static partial class SignalAsync
             /// <summary>
             /// Observer that forwards items from an inner source to the parent enumerable merge subscription.
             /// </summary>
-            internal sealed class InnerAsyncObserver(MergeEnumerableSubscription parent) : ObserverAsync<T>
+            internal sealed class MergeBranchObserver(MergeSequenceCoordinator parent) : ObserverAsync<T>
             {
                 /// <inheritdoc/>
                 protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
-                    => parent.OnNextAsync(value, cancellationToken);
+                    => parent.RelayNextAsync(value, cancellationToken);
 
                 /// <inheritdoc/>
                 protected override ValueTask OnErrorResumeAsyncCore(
                     Exception error,
                     CancellationToken cancellationToken)
-                    => parent.OnErrorResumeAsync(error, cancellationToken);
+                    => parent.RelayErrorAsync(error, cancellationToken);
 
                 /// <inheritdoc/>
                 protected override ValueTask OnCompletedAsyncCore(Result result)
-                    => parent.OnCompletedAsync(result);
+                    => parent.AcceptBranchCompletionAsync(result);
 
                 /// <inheritdoc/>
                 protected override async ValueTask DisposeAsyncCore()

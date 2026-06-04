@@ -77,7 +77,7 @@ public class CombineLatestIndexedObserverTests
     /// <summary>Minimal concrete subclass exposing the base's EmitLatestAsync invocation count.</summary>
     /// <param name="observer">The downstream observer.</param>
     private sealed class TestSubscription(IObserverAsync<int> observer)
-        : CombineLatestSubscriptionBase<int>(observer, sourceCount: 1)
+        : CombineLatestCoordinatorBase<int>(observer, sourceCount: 1)
     {
         /// <summary>Gets the number of times <see cref="EmitLatestAsync"/> has been invoked.</summary>
         public int EmitLatestCount { get; private set; }

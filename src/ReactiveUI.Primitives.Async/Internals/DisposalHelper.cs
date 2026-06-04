@@ -19,7 +19,7 @@ internal static class DisposalHelper
     /// <param name="disposed">The disposed flag value.</param>
     /// <returns><see langword="true"/> if disposed; otherwise <see langword="false"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static bool IsDisposed(int disposed) => disposed == 1;
+    internal static bool HasDisposed(int disposed) => disposed == 1;
 
     /// <summary>
     /// Atomically sets the disposed flag and returns whether it was already set.

@@ -84,7 +84,7 @@ public static partial class SignalAsync
             }
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
@@ -111,7 +111,7 @@ public static partial class SignalAsync
                 _remaining--;
                 if (_remaining == 0)
                 {
-                    return ForwardThenCompleteAsync(value, cancellationToken);
+                    return ForwardThenFinishAsync(value, cancellationToken);
                 }
 
                 return downstream.OnNextAsync(value, cancellationToken);
@@ -129,7 +129,7 @@ public static partial class SignalAsync
             /// <param name="value">The final value.</param>
             /// <param name="cancellationToken">The cancellation token.</param>
             /// <returns>A task that completes after both the value and the completion are forwarded.</returns>
-            private async ValueTask ForwardThenCompleteAsync(T value, CancellationToken cancellationToken)
+            private async ValueTask ForwardThenFinishAsync(T value, CancellationToken cancellationToken)
             {
                 await downstream.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
                 await downstream.OnCompletedAsync(Result.Success).ConfigureAwait(false);

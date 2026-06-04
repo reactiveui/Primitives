@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -19,7 +19,7 @@ public static class DisposableAsync
     /// </summary>
     /// <remarks>Use this property when an <see cref="IAsyncDisposable"/> is required but no disposal logic is
     /// necessary. This can be useful as a default or placeholder implementation.</remarks>
-    public static IAsyncDisposable Empty { get; } = new EmptyAsyncDisposable();
+    public static IAsyncDisposable Empty { get; } = new NoopAsyncDisposable();
 
     /// <summary>
     /// Creates a new asynchronous disposable object that invokes the specified delegate when disposed asynchronously.
@@ -31,7 +31,7 @@ public static class DisposableAsync
     {
         ArgumentExceptionHelper.ThrowIfNull(disposeAsync);
 
-        return new AnonymousAsyncDisposable(disposeAsync);
+        return new DelegateAsyncDisposable(disposeAsync);
     }
 
     /// <summary>
@@ -48,13 +48,13 @@ public static class DisposableAsync
     {
         ArgumentExceptionHelper.ThrowIfNull(disposeAsync);
 
-        return new AnonymousAsyncDisposable<TState>(state, disposeAsync);
+        return new DelegateAsyncDisposable<TState>(state, disposeAsync);
     }
 
     /// <summary>
     /// An asynchronous disposable that invokes a delegate when disposed.
     /// </summary>
-    internal sealed class AnonymousAsyncDisposable(Func<ValueTask> disposeAsync) : IAsyncDisposable
+    internal sealed class DelegateAsyncDisposable(Func<ValueTask> disposeAsync) : IAsyncDisposable
     {
         /// <summary>
         /// A flag indicating whether <see cref="DisposeAsync"/> has already been called (0 = not disposed, 1 = disposed).
@@ -71,7 +71,7 @@ public static class DisposableAsync
     /// name="TState"/>.
     /// </summary>
     /// <typeparam name="TState">The type of the state passed to the dispose delegate.</typeparam>
-    internal sealed class AnonymousAsyncDisposable<TState>(TState state, Func<TState, ValueTask> disposeAsync) : IAsyncDisposable
+    internal sealed class DelegateAsyncDisposable<TState>(TState state, Func<TState, ValueTask> disposeAsync) : IAsyncDisposable
     {
         /// <summary>
         /// A flag indicating whether <see cref="DisposeAsync"/> has already been called (0 = not disposed, 1 = disposed).
@@ -85,7 +85,7 @@ public static class DisposableAsync
     /// <summary>
     /// An asynchronous disposable that performs no action when disposed.
     /// </summary>
-    internal sealed class EmptyAsyncDisposable : IAsyncDisposable
+    internal sealed class NoopAsyncDisposable : IAsyncDisposable
     {
         /// <inheritdoc/>
         public ValueTask DisposeAsync() => default;

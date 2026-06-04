@@ -20,7 +20,7 @@ namespace ReactiveUI.Primitives.Async.Internals;
 /// <param name="sourceBit">The completion bitmask bit owned by this source (1 &lt;&lt; index).</param>
 /// <param name="recordValue">Stores the freshly-emitted value into the parent's typed <c>_valN</c> slot.</param>
 internal sealed class CombineLatestIndexedObserver<TSource, TResult>(
-    CombineLatestSubscriptionBase<TResult> parent,
+    CombineLatestCoordinatorBase<TResult> parent,
     int sourceBit,
     Action<TSource> recordValue) : ObserverAsync<TSource>
 {

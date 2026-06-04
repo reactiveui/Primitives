@@ -145,7 +145,7 @@ public partial class TakeUntilOperatorTests
         await source.OnNextAsync(1, CancellationToken.None);
         await other.OnCompletedAsync(Result.Success);
 
-        // Other completed with success � according to OtherObserver.OnCompletedAsyncCore, success returns default (no-op)
+        // Other completed with success � according to StopSignalWitness.OnCompletedAsyncCore, success returns default (no-op)
         // Source should still be active
         await source.OnNextAsync(SecondItem, CancellationToken.None);
 
@@ -233,7 +233,7 @@ public partial class TakeUntilOperatorTests
 
     /// <summary>Tests that TakeUntil(Task) with null source throws.</summary>
     [Test]
-    public void WhenTakeUntilTaskNullSource_ThenThrowsArgumentNull()
+    public void WhenTaskStopSignalNullSource_ThenThrowsArgumentNull()
     {
         const IObservableAsync<int> Source = null!;
         Assert.Throws<ArgumentNullException>(() =>
@@ -243,7 +243,7 @@ public partial class TakeUntilOperatorTests
     /// <summary>Tests that task failure with SourceFailsWhenOtherFails=true completes with failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilTaskFailsAndOptionTrue_ThenCompletesWithFailure()
+    public async Task WhenTaskStopSignalFailsAndOptionTrue_ThenCompletesWithFailure()
     {
         var tcs = new TaskCompletionSource();
         var source = Signal.Create<int>();
@@ -270,7 +270,7 @@ public partial class TakeUntilOperatorTests
     /// <summary>Tests that task failure with default options sends error resume instead of failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilTaskFailsAndOptionFalse_ThenSendsErrorResume()
+    public async Task WhenTaskStopSignalFailsAndOptionFalse_ThenSendsErrorResume()
     {
         var tcs = new TaskCompletionSource();
         var source = Signal.Create<int>();
@@ -318,7 +318,7 @@ public partial class TakeUntilOperatorTests
     /// <summary>Tests disposal of TakeUntil(Task) stops emissions.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilTaskDisposed_ThenStopsEmissions()
+    public async Task WhenTaskStopSignalDisposed_ThenStopsEmissions()
     {
         var tcs = new TaskCompletionSource();
         var source = Signal.Create<int>();
@@ -346,7 +346,7 @@ public partial class TakeUntilOperatorTests
     /// <summary>Tests that source error resume is forwarded through TakeUntil(Task).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilTaskSourceErrorResume_ThenForwarded()
+    public async Task WhenTaskStopSignalSourceErrorResume_ThenForwarded()
     {
         var tcs = new TaskCompletionSource();
         var source = Signal.Create<int>();
@@ -396,7 +396,7 @@ public partial class TakeUntilOperatorTests
     /// <summary>Tests that source error resume is forwarded through TakeUntil(CancellationToken).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilCancellationTokenSourceErrorResume_ThenForwarded()
+    public async Task WhenCancellationStopSignalSourceErrorResume_ThenForwarded()
     {
         using var cts = new CancellationTokenSource();
         await using var source = Signal.Create<int>();
@@ -420,7 +420,7 @@ public partial class TakeUntilOperatorTests
     /// <summary>Tests that source completion is forwarded through TakeUntil(CancellationToken).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilCancellationTokenSourceCompletes_ThenCompletionForwarded()
+    public async Task WhenCancellationStopSignalSourceCompletes_ThenCompletionForwarded()
     {
         using var cts = new CancellationTokenSource();
         var source = Signal.Create<int>();
@@ -446,7 +446,7 @@ public partial class TakeUntilOperatorTests
     /// <summary>Tests that disposal of TakeUntil(CancellationToken) stops emissions.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilCancellationTokenDisposed_ThenStopsEmissions()
+    public async Task WhenCancellationStopSignalDisposed_ThenStopsEmissions()
     {
         using var cts = new CancellationTokenSource();
         var source = Signal.Create<int>();
@@ -474,7 +474,7 @@ public partial class TakeUntilOperatorTests
     /// <summary>Tests that predicate never returning true emits all elements.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilPredicateNeverTrue_ThenEmitsAllElements()
+    public async Task WhenPredicateStopSignalNeverTrue_ThenEmitsAllElements()
     {
         var result = await SignalAsync.Range(1, 5)
             .TakeUntil(_ => false)
@@ -486,7 +486,7 @@ public partial class TakeUntilOperatorTests
     /// <summary>Tests that predicate returning true on first element emits nothing.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilPredicateTrueOnFirst_ThenEmitsNothing()
+    public async Task WhenPredicateStopSignalTrueOnFirst_ThenEmitsNothing()
     {
         var result = await SignalAsync.Range(1, 5)
             .TakeUntil(_ => true)
@@ -498,7 +498,7 @@ public partial class TakeUntilOperatorTests
     /// <summary>Tests that source error resume is forwarded through TakeUntil(predicate).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilPredicateSourceErrorResume_ThenForwarded()
+    public async Task WhenPredicateStopSignalSourceErrorResume_ThenForwarded()
     {
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
@@ -533,7 +533,7 @@ public partial class TakeUntilOperatorTests
     /// <summary>Tests that source completion with failure is forwarded through TakeUntil(predicate).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilPredicateSourceFails_ThenFailureForwarded()
+    public async Task WhenPredicateStopSignalSourceFails_ThenFailureForwarded()
     {
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
@@ -729,7 +729,7 @@ public partial class TakeUntilOperatorTests
     /// <summary>Verifies the two-argument <c>TakeUntil(task, cancellationToken)</c> overload.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilTaskWithCancellationToken_ThenCompletesOnCancellation()
+    public async Task WhenTaskStopSignalWithCancellationToken_ThenCompletesOnCancellation()
     {
         using var cts = new CancellationTokenSource();
         var source = Signal.Create<int>();
@@ -753,7 +753,7 @@ public partial class TakeUntilOperatorTests
     /// CT-linked branch.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilPredicateWithCancellationToken_ThenCompletesOnCancellation()
+    public async Task WhenPredicateStopSignalWithCancellationToken_ThenCompletesOnCancellation()
     {
         using var cts = new CancellationTokenSource();
         var source = Signal.Create<int>();

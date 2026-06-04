@@ -778,7 +778,7 @@ public class PublicApiBehaviorTests
         Assert.Throws<ArgumentNullException>(() => ((IObservable<IObservable<int>>)null!).Chain());
         Assert.Throws<ArgumentNullException>(() => Signal.Chain<int>(null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Chain(source, null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Blend<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Blend<int>((IObservable<int>[])null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Blend(source, null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Race<int>(null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Race(source, null!));

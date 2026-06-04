@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Async.Internals;
 /// </summary>
 /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
 /// <param name="subscribeAsync">The asynchronous function invoked when an observer subscribes.</param>
-internal sealed class AnonymousSignalAsync<T>(
+internal sealed class DelegateSignalAsync<T>(
     Func<IObserverAsync<T>, CancellationToken, ValueTask<IAsyncDisposable>> subscribeAsync) : SignalAsync<T>
 {
     /// <inheritdoc/>

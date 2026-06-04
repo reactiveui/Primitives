@@ -39,9 +39,9 @@ public static partial class SignalAsync
         ArgumentExceptionHelper.ThrowIfNull(@this);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var observer = new WaitCompletionAsyncObserver<T>(cancellationToken);
+        var observer = new CompletionTaskWitness<T>(cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        await observer.WaitValueAsync().ConfigureAwait(false);
+        await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -49,18 +49,18 @@ public static partial class SignalAsync
     /// </summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class WaitCompletionAsyncObserver<T>(CancellationToken cancellationToken)
-        : TaskObserverAsyncBase<T, object?>(cancellationToken)
+    internal sealed class CompletionTaskWitness<T>(CancellationToken cancellationToken)
+        : TaskWitnessAsyncBase<T, object?>(cancellationToken)
     {
         /// <inheritdoc/>
         protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) => default;
 
         /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            TrySetException(error);
+            SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result) =>
-            !result.IsSuccess ? TrySetException(result.Exception) : TrySetCompleted(null);
+            !result.IsSuccess ? SetExceptionAndDisposeAsync(result.Exception) : SetResultAndDisposeAsync(null);
     }
 }

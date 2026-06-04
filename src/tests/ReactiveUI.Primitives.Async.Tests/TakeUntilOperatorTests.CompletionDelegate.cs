@@ -188,7 +188,7 @@ public partial class TakeUntilOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilPredicateSourceThrowsOnSubscribe_ThenDisposesAndRethrows()
+    public async Task WhenPredicateStopSignalSourceThrowsOnSubscribe_ThenDisposesAndRethrows()
     {
         var throwingSource = SignalAsync.Create<int>((_, _) =>
             throw new InvalidOperationException(SubscribeFailedMessage));
@@ -202,7 +202,7 @@ public partial class TakeUntilOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilPredicateBecomesTrueMidStream_ThenStopsEmitting()
+    public async Task WhenPredicateStopSignalBecomesTrueMidStream_ThenStopsEmitting()
     {
         var result = await SignalAsync.Range(1, 10)
             .TakeUntil(x => x > 3)
@@ -216,7 +216,7 @@ public partial class TakeUntilOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilCancellationTokenSourceThrowsOnSubscribe_ThenDisposesAndRethrows()
+    public async Task WhenCancellationStopSignalSourceThrowsOnSubscribe_ThenDisposesAndRethrows()
     {
         using var cts = new CancellationTokenSource();
         var throwingSource = SignalAsync.Create<int>((_, _) =>
@@ -286,7 +286,7 @@ public partial class TakeUntilOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilTaskSourceThrowsOnSubscribe_ThenDisposesAndRethrows()
+    public async Task WhenTaskStopSignalSourceThrowsOnSubscribe_ThenDisposesAndRethrows()
     {
         var tcs = new TaskCompletionSource();
         var throwingSource = SignalAsync.Create<int>((_, _) =>
@@ -301,7 +301,7 @@ public partial class TakeUntilOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilTaskCompletesMidStream_ThenStopsEmissions()
+    public async Task WhenTaskStopSignalCompletesMidStream_ThenStopsEmissions()
     {
         var tcs = new TaskCompletionSource();
         var source = Signal.Create<int>();
@@ -426,7 +426,7 @@ public partial class TakeUntilOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilTask_ThenStopsWhenTaskCompletes()
+    public async Task WhenTaskStopSignal_ThenStopsWhenTaskCompletes()
     {
         var tcs = new TaskCompletionSource<bool>();
         var signal = Signal.Create<int>();
@@ -456,7 +456,7 @@ public partial class TakeUntilOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilCancellationToken_ThenStopsWhenCanceled()
+    public async Task WhenCancellationStopSignal_ThenStopsWhenCanceled()
     {
         using var cts = new CancellationTokenSource();
         var signal = Signal.Create<int>();
@@ -517,7 +517,7 @@ public partial class TakeUntilOperatorTests
 
     /// <summary>
     /// Tests TakeUntil(CompletionSignalDelegate) where the stop signal fails and option is false,
-    /// exercising the error resume path in WaitAndComplete.
+    /// exercising the error resume path in AwaitStopThenComplete.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -564,11 +564,11 @@ public partial class TakeUntilOperatorTests
 
     /// <summary>
     /// Tests TakeUntil(Task) where the task fails and option is false,
-    /// exercising the error resume path in WaitAndComplete.
+    /// exercising the error resume path in AwaitStopThenComplete.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilTaskFailsAndOptionFalse_ThenErrorResumeForwardedViaWaitAndComplete()
+    public async Task WhenTaskStopSignalFailsAndOptionFalse_ThenErrorResumeForwardedViaAwaitStopThenComplete()
     {
         var source = Signal.Create<int>();
         var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);

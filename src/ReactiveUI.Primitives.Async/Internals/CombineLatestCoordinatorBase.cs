@@ -6,20 +6,20 @@ namespace ReactiveUI.Primitives.Async.Internals;
 
 /// <summary>
 /// Shared scaffolding for the arity-specific <c>CombineLatestN</c> subscription types. Each
-/// per-arity <c>CombineLatestSubscription</c> derives from this class so the otherwise-identical
+/// per-arity <c>CombineLatestCoordinator</c> derives from this class so the otherwise-identical
 /// <see cref="CombineLatestLifecycle{TResult}"/> wiring (gate / dispose CTS / external link),
 /// the values-lock, the source-subscribe loop, the error-resume forwarder, and
 /// <see cref="DisposeAsync"/> live here once instead of repeated 15× across <c>CombineLatest2..16</c>.
 /// </summary>
 /// <typeparam name="TResult">The downstream element type.</typeparam>
-internal abstract class CombineLatestSubscriptionBase<TResult> : IAsyncDisposable
+internal abstract class CombineLatestCoordinatorBase<TResult> : IAsyncDisposable
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="CombineLatestSubscriptionBase{TResult}"/> class.
+    /// Initializes a new instance of the <see cref="CombineLatestCoordinatorBase{TResult}"/> class.
     /// </summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="sourceCount">The number of upstream sources (e.g. 2 for arity-2).</param>
-    protected CombineLatestSubscriptionBase(IObserverAsync<TResult> observer, int sourceCount)
+    protected CombineLatestCoordinatorBase(IObserverAsync<TResult> observer, int sourceCount)
     {
         Lifecycle = new(observer, sourceCount);
     }
@@ -52,13 +52,13 @@ internal abstract class CombineLatestSubscriptionBase<TResult> : IAsyncDisposabl
     public ValueTask DisposeAsync() => Lifecycle.DisposeAsync();
 
     /// <summary>
-    /// Forwards an upstream error to the downstream observer; thin shim with the
+    /// Relays an upstream error to the downstream observer; thin shim with the
     /// <c>(error, ct)</c> signature that <see cref="IObservableAsync{T}.SubscribeAsync"/> expects.
     /// </summary>
     /// <param name="error">The error to forward.</param>
     /// <param name="cancellationToken">Ignored — the lifecycle uses its own dispose token.</param>
     /// <returns>A ValueTask representing the asynchronous forward.</returns>
-    internal ValueTask OnErrorResume(Exception error, CancellationToken cancellationToken)
+    internal ValueTask RelaySourceErrorAsync(Exception error, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
         return Lifecycle.OnErrorResumeAsync(error);
@@ -75,7 +75,7 @@ internal abstract class CombineLatestSubscriptionBase<TResult> : IAsyncDisposabl
 
     /// <summary>
     /// Subscribes to a single source by 0-based index. Implemented per-arity by the derived
-    /// <c>CombineLatestSubscription</c> with a typed switch dispatch over the bundled sources.
+    /// <c>CombineLatestCoordinator</c> with a typed switch dispatch over the bundled sources.
     /// </summary>
     /// <param name="index">0-based source index.</param>
     /// <param name="cancellationToken">A token to cancel the subscription.</param>

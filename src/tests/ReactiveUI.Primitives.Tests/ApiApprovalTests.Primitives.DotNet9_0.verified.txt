@@ -1086,6 +1086,8 @@ namespace ReactiveUI.Primitives.Signals
         public static System.IObservable<long> After(System.TimeSpan dueTime, System.TimeSpan period) { }
         public static System.IObservable<long> After(System.TimeSpan dueTime, System.TimeSpan period, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
         public static System.IObservable<T> Blend<T>(params System.IObservable<T>[] sources) { }
+        public static System.IObservable<System.Collections.Generic.IList<TSource>> Buffer<TSource>(this System.IObservable<TSource> source, System.TimeSpan timeSpan) { }
+        public static System.IObservable<System.Collections.Generic.IList<TSource>> Buffer<TSource>(this System.IObservable<TSource> source, System.TimeSpan timeSpan, ReactiveUI.Primitives.Concurrency.ISequencer sequencer) { }
         public static System.IObservable<T> Chain<T>(params System.IObservable<T>[] sources) { }
         public static System.IObservable<T> Create<T>(System.Func<System.IObserver<T>, System.IDisposable> subscribe) { }
         public static System.IObservable<T> Create<T>(System.Func<System.IObserver<T>, System.IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread) { }
@@ -1093,6 +1095,7 @@ namespace ReactiveUI.Primitives.Signals
         public static System.IObservable<T> CreateSafe<T>(System.Func<System.IObserver<T>, System.IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread) { }
         public static System.IObservable<T> CreateWithState<T, TState>(TState state, System.Func<TState, System.IObserver<T>, System.IDisposable> subscribe) { }
         public static System.IObservable<T> CreateWithState<T, TState>(TState state, System.Func<TState, System.IObserver<T>, System.IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread) { }
+        public static System.IObservable<T> Defer<T>(System.Func<System.IObservable<T>> observableFactory) { }
         public static System.IObservable<ReactiveUI.Primitives.RxVoid> Emit(ReactiveUI.Primitives.RxVoid value) { }
         public static System.IObservable<bool> Emit(bool value) { }
         public static System.IObservable<int> Emit(int value) { }
@@ -1105,6 +1108,7 @@ namespace ReactiveUI.Primitives.Signals
         public static System.IObservable<T> Fail<T>(System.Exception error, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
         public static System.IObservable<T> Fail<T>(System.Exception error, T witness) { }
         public static System.IObservable<T> Fail<T>(System.Exception error, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, T witness) { }
+        public static System.IObservable<TResult> FlatMap<TSource, TResult>(this System.IObservable<TSource> source, System.Func<TSource, System.Collections.Generic.IEnumerable<TResult>> selector) { }
         public static System.IObservable<TResult> ForkJoin<TLeft, TRight, TResult>(System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
         public static System.IObservable<T> FromAsync<T>(System.Func<System.Threading.Tasks.Task<T>> taskFactory) { }
         public static System.IObservable<T> FromAsync<T>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> taskFactory) { }
@@ -1113,6 +1117,9 @@ namespace ReactiveUI.Primitives.Signals
         public static System.IObservable<T> FromAsyncEnumerable<T>(System.Collections.Generic.IAsyncEnumerable<T> values, System.Threading.CancellationToken cancellationToken) { }
         public static System.IObservable<T> FromEnumerable<T>(System.Collections.Generic.IEnumerable<T> values) { }
         public static System.IObservable<T> FromEnumerable<T>(System.Collections.Generic.IEnumerable<T> values, System.Threading.CancellationToken cancellationToken) { }
+        public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> FromEventHandler<TEventHandler, TEventArgs>(System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler)
+            where TEventHandler : System.Delegate
+            where TEventArgs : System.EventArgs { }
         public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<System.EventArgs>> FromEventPattern(System.Action<System.EventHandler> addHandler, System.Action<System.EventHandler> removeHandler) { }
         public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> FromEventPattern<TEventArgs>(System.Action<System.EventHandler<TEventArgs>> addHandler, System.Action<System.EventHandler<TEventArgs>> removeHandler)
             where TEventArgs : System.EventArgs { }
@@ -1158,6 +1165,9 @@ namespace ReactiveUI.Primitives.Signals
         public static System.IObservable<T> Start<T>(System.Func<T> function) { }
         public static System.IObservable<T> Start<T>(System.Func<T> function, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
         public static System.IObservable<TResult> SyncLatest<TLeft, TRight, TResult>(System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+        public static System.IObservable<TSource> Throttle<TSource>(this System.IObservable<TSource> source, System.TimeSpan dueTime) { }
+        public static System.IObservable<TSource> Throttle<TSource>(this System.IObservable<TSource> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer sequencer) { }
+        public static System.Collections.Generic.IEnumerable<TSource> ToEnumerable<TSource>(this System.IObservable<TSource> source) { }
         public static System.IObservable<TResult> Unfold<TState, TResult>(TState initialState, System.Func<TState, bool> condition, System.Func<TState, TState> iterate, System.Func<TState, TResult> resultSelector) { }
         public static System.IObservable<T> Use<TResource, T>(System.Func<TResource> resourceFactory, System.Func<TResource, System.IObservable<T>> signalFactory)
             where TResource : System.IDisposable { }

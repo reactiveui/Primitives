@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Async.Internals;
 /// <typeparam name="T">The type of elements received from the observable sequence.</typeparam>
 /// <typeparam name="TTaskValue">The type of the result value produced by this observer.</typeparam>
 /// <param name="cancellationToken">A cancellation token used to cancel the waiting operation.</param>
-internal abstract class TaskObserverAsyncBase<T, TTaskValue>(CancellationToken cancellationToken) : ObserverAsync<T>
+internal abstract class TaskWitnessAsyncBase<T, TTaskValue>(CancellationToken cancellationToken) : ObserverAsync<T>
 {
     /// <summary>
     /// The task completion source used to produce the observer's single result value.
@@ -28,7 +28,7 @@ internal abstract class TaskObserverAsyncBase<T, TTaskValue>(CancellationToken c
     /// Asynchronously waits for the observer to produce its result value.
     /// </summary>
     /// <returns>A task representing the asynchronous operation, containing the result value.</returns>
-    public async ValueTask<TTaskValue> WaitValueAsync()
+    public async ValueTask<TTaskValue> AwaitResultAsync()
     {
         try
         {
@@ -36,7 +36,7 @@ internal abstract class TaskObserverAsyncBase<T, TTaskValue>(CancellationToken c
             await using var ct = _cancellationToken.Register(
                 static x =>
                 {
-                    var @this = (TaskObserverAsyncBase<T, TTaskValue>)x!;
+                    var @this = (TaskWitnessAsyncBase<T, TTaskValue>)x!;
                     @this._tcs.TrySetException(new OperationCanceledException(@this._cancellationToken));
                 },
                 this);
@@ -44,7 +44,7 @@ internal abstract class TaskObserverAsyncBase<T, TTaskValue>(CancellationToken c
             using var ct = _cancellationToken.Register(
                 static x =>
                 {
-                    var @this = (TaskObserverAsyncBase<T, TTaskValue>)x!;
+                    var @this = (TaskWitnessAsyncBase<T, TTaskValue>)x!;
                     @this._tcs.TrySetException(new OperationCanceledException(@this._cancellationToken));
                 },
                 this);
@@ -64,7 +64,7 @@ internal abstract class TaskObserverAsyncBase<T, TTaskValue>(CancellationToken c
     /// <param name="value">The result value to set.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     [DebuggerStepThrough]
-    protected async ValueTask TrySetCompleted(TTaskValue value)
+    protected async ValueTask SetResultAndDisposeAsync(TTaskValue value)
     {
         try
         {
@@ -81,7 +81,7 @@ internal abstract class TaskObserverAsyncBase<T, TTaskValue>(CancellationToken c
     /// </summary>
     /// <param name="e">The exception that caused the fault.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    protected async ValueTask TrySetException(Exception e)
+    protected async ValueTask SetExceptionAndDisposeAsync(Exception e)
     {
         try
         {

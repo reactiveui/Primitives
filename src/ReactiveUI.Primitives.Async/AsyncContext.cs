@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -58,7 +58,7 @@ public record AsyncContext
     /// Gets a value indicating whether the current context uses the default task scheduler and no synchronization
     /// context.
     /// </summary>
-    internal bool IsDefaultContext => SynchronizationContext is null &&
+    internal bool UsesDefaultSequencer => SynchronizationContext is null &&
                                       Sequencer is null &&
                                       (TaskScheduler is null || TaskScheduler == TaskScheduler.Default);
 
@@ -250,7 +250,7 @@ public record AsyncContext
         "Performance",
         "CA1812:Avoid uninstantiated internal classes",
         Justification = "Kept as an internal adapter for generator and test smoke scenarios that need TaskScheduler-shaped sequencer execution.")]
-    internal sealed class SchedulerTaskScheduler(ISequencer scheduler) : TaskScheduler
+    internal sealed class SequencerTaskScheduler(ISequencer scheduler) : TaskScheduler
     {
         /// <summary>
         /// Gets the sequencer used by this task-scheduler adapter.

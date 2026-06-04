@@ -50,9 +50,9 @@ public static partial class SignalAsync
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var observer = new LastOrDefaultObserver<T>(predicate, defaultValue, cancellationToken);
+        var observer = new LastOrDefaultTaskWitness<T>(predicate, defaultValue, cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -103,9 +103,9 @@ public static partial class SignalAsync
     public static async ValueTask<T?> LastOrDefaultAsync<T>(this IObservableAsync<T> @this, T? defaultValue, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var observer = new LastOrDefaultObserver<T>(null, defaultValue, cancellationToken);
+        var observer = new LastOrDefaultTaskWitness<T>(null, defaultValue, cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -115,10 +115,10 @@ public static partial class SignalAsync
     /// <param name="predicate">An optional predicate to filter elements.</param>
     /// <param name="defaultValue">The default value to return if no element matches.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class LastOrDefaultObserver<T>(
+    internal sealed class LastOrDefaultTaskWitness<T>(
         Func<T, bool>? predicate,
         T? defaultValue,
-        CancellationToken cancellationToken) : TaskObserverAsyncBase<T, T>(cancellationToken)
+        CancellationToken cancellationToken) : TaskWitnessAsyncBase<T, T>(cancellationToken)
     {
         /// <summary>
         /// The most recently observed matching element, or the default value if no match has been found.
@@ -140,10 +140,10 @@ public static partial class SignalAsync
 
         /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            TrySetException(error);
+            SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result) =>
-            result.IsSuccess ? TrySetCompleted(_last!) : TrySetException(result.Exception);
+            result.IsSuccess ? SetResultAndDisposeAsync(_last!) : SetExceptionAndDisposeAsync(result.Exception);
     }
 }

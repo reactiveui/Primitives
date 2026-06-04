@@ -77,7 +77,7 @@ public static partial class SignalAsync
     public static IObservableAsync<T> CatchAndIgnoreErrorResume<T>(this IObservableAsync<T> source, Func<Exception, IObservableAsync<T>> handler) =>
         source.Catch(handler, static (error, _) =>
         {
-            UnhandledExceptionHandler.OnUnhandledException(error);
+            UnhandledExceptionHandler.ReportUnhandledException(error);
             return default;
         });
 
@@ -111,7 +111,7 @@ public static partial class SignalAsync
             }
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
@@ -177,7 +177,7 @@ public static partial class SignalAsync
                 }
                 catch (Exception e)
                 {
-                    UnhandledExceptionHandler.OnUnhandledException(e);
+                    UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
 
                 await base.DisposeAsyncCore().ConfigureAwait(false);

@@ -19,7 +19,7 @@ internal sealed class TakeUntilLifecycle<T> : IAsyncDisposable
     private readonly CancellationTokenSource _cts = new();
 
     /// <summary>Serializes downstream notifications so OnNext / OnError / OnCompleted never overlap.</summary>
-    private readonly AsyncGate _gate = new();
+    private readonly AsyncSerialGate _gate = new();
 
     /// <summary>The downstream observer that receives values, errors, and the terminal completion.</summary>
     private readonly IObserverAsync<T> _observer;
@@ -67,9 +67,9 @@ internal sealed class TakeUntilLifecycle<T> : IAsyncDisposable
     /// <summary>Forwards a value to the downstream observer under the serialization gate.</summary>
     /// <param name="value">The value to forward.</param>
     /// <returns>A ValueTask representing the asynchronous forward.</returns>
-    public async ValueTask ForwardOnNextAsync(T value)
+    public async ValueTask RelayNextAsync(T value)
     {
-        using (await _gate.LockAsync(DisposeToken).ConfigureAwait(false))
+        using (await _gate.EnterAsync(DisposeToken).ConfigureAwait(false))
         {
             await _observer.OnNextAsync(value, DisposeToken).ConfigureAwait(false);
         }
@@ -78,9 +78,9 @@ internal sealed class TakeUntilLifecycle<T> : IAsyncDisposable
     /// <summary>Forwards a non-terminal error to the downstream observer under the serialization gate.</summary>
     /// <param name="error">The error to forward.</param>
     /// <returns>A ValueTask representing the asynchronous forward.</returns>
-    public async ValueTask ForwardOnErrorResumeAsync(Exception error)
+    public async ValueTask RelayErrorAsync(Exception error)
     {
-        using (await _gate.LockAsync(DisposeToken).ConfigureAwait(false))
+        using (await _gate.EnterAsync(DisposeToken).ConfigureAwait(false))
         {
             await _observer.OnErrorResumeAsync(error, DisposeToken).ConfigureAwait(false);
         }
@@ -89,9 +89,9 @@ internal sealed class TakeUntilLifecycle<T> : IAsyncDisposable
     /// <summary>Forwards the completion signal to the downstream observer under the serialization gate.</summary>
     /// <param name="result">The completion result.</param>
     /// <returns>A ValueTask representing the asynchronous forward.</returns>
-    public async ValueTask ForwardOnCompletedAsync(Result result)
+    public async ValueTask RelayCompletionAsync(Result result)
     {
-        using (await _gate.LockAsync().ConfigureAwait(false))
+        using (await _gate.EnterAsync().ConfigureAwait(false))
         {
             await _observer.OnCompletedAsync(result).ConfigureAwait(false);
         }

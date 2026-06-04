@@ -24,7 +24,7 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
     /// <summary>
     /// The asynchronous gate used to synchronize access to the Signal's mutable state.
     /// </summary>
-    private readonly AsyncGate _gate = new();
+    private readonly AsyncSerialGate _gate = new();
 
     /// <summary>
     /// The cancellation token source that is cancelled when this instance is disposed.
@@ -87,7 +87,7 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
         try
         {
             ImmutableArray<IObserverAsync<T>> observers;
-            using (await _gate.LockAsync(token).ConfigureAwait(false))
+            using (await _gate.EnterAsync(token).ConfigureAwait(false))
             {
                 if (_result is not null)
                 {
@@ -138,7 +138,7 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
         try
         {
             ImmutableArray<IObserverAsync<T>> observers;
-            using (await _gate.LockAsync(token).ConfigureAwait(false))
+            using (await _gate.EnterAsync(token).ConfigureAwait(false))
             {
                 if (_result is not null)
                 {
@@ -167,7 +167,7 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
     public async ValueTask OnCompletedAsync(Result result)
     {
         ImmutableArray<IObserverAsync<T>> observers;
-        using (await _gate.LockAsync(DisposedCancellationToken).ConfigureAwait(false))
+        using (await _gate.EnterAsync(DisposedCancellationToken).ConfigureAwait(false))
         {
             if (_result is not null)
             {
@@ -260,7 +260,7 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
 
         token.ThrowIfCancellationRequested();
         Result? result;
-        using (await _gate.LockAsync(token).ConfigureAwait(false))
+        using (await _gate.EnterAsync(token).ConfigureAwait(false))
         {
             result = _result;
             if (result is null)
@@ -283,7 +283,7 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
             (signal: this, observer, token),
             static async state =>
             {
-                using (await state.signal._gate.LockAsync(state.token).ConfigureAwait(false))
+                using (await state.signal._gate.EnterAsync(state.token).ConfigureAwait(false))
                 {
                     state.signal._observers = state.signal._observers.Remove(state.observer);
                 }

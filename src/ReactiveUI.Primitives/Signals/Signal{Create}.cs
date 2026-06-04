@@ -2,7 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.ExceptionServices;
 using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives.Signals;
@@ -158,4 +160,72 @@ public static partial class Signal
     /// <returns>An Observable.</returns>
     public static IObservable<T> WitnessOn<T>(this IObservable<T> source, ISequencer scheduler) =>
         new WitnessOnSignal<T>(source, scheduler);
+
+    /// <summary>
+    /// Creates a signal whose source is produced separately for each subscription.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="observableFactory">The factory that creates the source signal for a subscription.</param>
+    /// <returns>A signal that subscribes to the factory-produced source for each observer.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="observableFactory"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Defer<T>(Func<IObservable<T>> observableFactory)
+    {
+        if (observableFactory == null)
+        {
+            throw new ArgumentNullException(nameof(observableFactory));
+        }
+
+        return Create<T>(observer =>
+        {
+            IObservable<T> source;
+            try
+            {
+                source = observableFactory();
+            }
+            catch (Exception ex)
+            {
+                observer.OnError(ex);
+                return Disposable.Empty;
+            }
+
+            return source.Subscribe(observer);
+        });
+    }
+
+    /// <summary>
+    /// Blocks until the signal completes and returns the observed values.
+    /// </summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <param name="source">The source signal.</param>
+    /// <returns>The values observed before completion.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    /// <exception cref="Exception">Rethrows the source error if the signal terminates with an error.</exception>
+    public static IEnumerable<TSource> ToEnumerable<TSource>(this IObservable<TSource> source)
+    {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        var values = new List<TSource>();
+        Exception? error = null;
+        using var completed = new ManualResetEventSlim();
+        using var subscription = source.Subscribe(
+            values.Add,
+            ex =>
+            {
+                error = ex;
+                completed.Set();
+            },
+            completed.Set);
+
+        completed.Wait();
+
+        if (error is not null)
+        {
+            ExceptionDispatchInfo.Capture(error).Throw();
+        }
+
+        return values;
+    }
 }

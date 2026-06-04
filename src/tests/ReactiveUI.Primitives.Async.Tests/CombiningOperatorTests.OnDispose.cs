@@ -133,7 +133,7 @@ public partial class CombiningOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenOnDisposeAsyncOnNext_ThenForwardsValues()
+    public async Task WhenCleanupBranchAsyncOnNext_ThenForwardsValues()
     {
         var items = new List<int>();
         var disposed = false;
@@ -169,7 +169,7 @@ public partial class CombiningOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenOnDisposeAsyncOnErrorResume_ThenForwardsError()
+    public async Task WhenCleanupBranchAsyncOnErrorResume_ThenForwardsError()
     {
         var errors = new List<Exception>();
 
@@ -199,7 +199,7 @@ public partial class CombiningOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenOnDisposeAsyncOnCompletedFailure_ThenForwardsFailure()
+    public async Task WhenCleanupBranchAsyncOnCompletedFailure_ThenForwardsFailure()
     {
         Result? completionResult = null;
 
@@ -229,7 +229,7 @@ public partial class CombiningOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenOnDisposeAsyncExplicitDispose_ThenCallbackInvoked()
+    public async Task WhenCleanupBranchAsyncExplicitDispose_ThenCallbackInvoked()
     {
         var disposed = false;
         var signal = Signal.Create<int>();
@@ -252,46 +252,46 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies MergeSubscription.ForwardOnNext pre-gate disposed guard returns early.
+    /// Verifies MergeCoordinator.RelayNextAsync pre-gate disposed guard returns early.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMergeSubscriptionDisposed_ThenForwardOnNextReturnsDirectly()
+    public async Task WhenMergeCoordinatorDisposed_ThenRelayNextAsyncReturnsDirectly()
     {
-        var observer = new AnonymousObserverAsync<int>((_, _) => default);
-        var subscription = new SignalAsync.MergeSubscription<int>(observer);
+        var observer = new DelegateAsyncWitness<int>((_, _) => default);
+        var subscription = new SignalAsync.MergeCoordinator<int>(observer);
         await subscription.DisposeAsync();
 
-        await subscription.ForwardOnNext(Sentinel99, CancellationToken.None);
+        await subscription.RelayNextAsync(Sentinel99, CancellationToken.None);
     }
 
     /// <summary>
-    /// Verifies MergeSubscription.ForwardOnErrorResume pre-gate disposed guard returns early.
+    /// Verifies MergeCoordinator.RelayErrorAsync pre-gate disposed guard returns early.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMergeSubscriptionDisposed_ThenForwardOnErrorResumeReturnsDirectly()
+    public async Task WhenMergeCoordinatorDisposed_ThenRelayErrorAsyncReturnsDirectly()
     {
-        var observer = new AnonymousObserverAsync<int>((_, _) => default);
-        var subscription = new SignalAsync.MergeSubscription<int>(observer);
+        var observer = new DelegateAsyncWitness<int>((_, _) => default);
+        var subscription = new SignalAsync.MergeCoordinator<int>(observer);
         await subscription.DisposeAsync();
 
-        await subscription.ForwardOnErrorResume(new InvalidOperationException("test"), CancellationToken.None);
+        await subscription.RelayErrorAsync(new InvalidOperationException("test"), CancellationToken.None);
     }
 
     /// <summary>
-    /// Verifies MergeSubscription.ForwardOnNext post-gate disposed guard.
-    /// Directly calls ForwardOnNext on the subscription while CompleteAsync blocks on downstream completion.
+    /// Verifies MergeCoordinator.RelayNextAsync post-gate disposed guard.
+    /// Directly calls OnNextAsync on the subscription while FinishAsync blocks on downstream completion.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMergeSubscriptionDisposedWhileGateHeld_ThenForwardOnNextPostGateReturns()
+    public async Task WhenMergeCoordinatorDisposedWhileGateHeld_ThenRelayNextAsyncPostGateReturns()
     {
         var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var items = new List<int>();
 
-        var observer = new AnonymousObserverAsync<int>(
+        var observer = new DelegateAsyncWitness<int>(
             (x, _) =>
             {
                 items.Add(x);
@@ -304,15 +304,15 @@ public partial class CombiningOperatorTests
                 await allowCompletion.Task;
             });
 
-        var subscription = new SignalAsync.MergeSubscription<int>(observer);
+        var subscription = new SignalAsync.MergeCoordinator<int>(observer);
 
-        // Trigger CompleteAsync with failure - blocks on observer.OnCompletedAsync
+        // Trigger FinishAsync with failure - blocks on observer.OnCompletedAsync
         var failTask = Task.Run(() =>
-            subscription.CompleteAsync(Result.Failure(new InvalidOperationException("fail"))));
+            subscription.FinishAsync(Result.Failure(new InvalidOperationException("fail"))));
         await completionBlocked.Task;
 
-        // _disposed is 1, gate is still alive → ForwardOnNext acquires gate and hits post-gate check
-        await subscription.ForwardOnNext(Sentinel99, CancellationToken.None);
+        // _disposed is 1, gate is still alive → OnNextAsync acquires gate and hits post-gate check
+        await subscription.RelayNextAsync(Sentinel99, CancellationToken.None);
 
         await Assert.That(items).IsEmpty();
 
@@ -321,17 +321,17 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies MergeSubscription.ForwardOnErrorResume post-gate disposed guard.
+    /// Verifies MergeCoordinator.RelayErrorAsync post-gate disposed guard.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMergeSubscriptionDisposedWhileGateHeld_ThenForwardOnErrorResumePostGateReturns()
+    public async Task WhenMergeCoordinatorDisposedWhileGateHeld_ThenRelayErrorAsyncPostGateReturns()
     {
         var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var errors = new List<Exception>();
 
-        var observer = new AnonymousObserverAsync<int>(
+        var observer = new DelegateAsyncWitness<int>(
             (_, _) => default,
             (ex, _) =>
             {
@@ -344,13 +344,13 @@ public partial class CombiningOperatorTests
                 await allowCompletion.Task;
             });
 
-        var subscription = new SignalAsync.MergeSubscription<int>(observer);
+        var subscription = new SignalAsync.MergeCoordinator<int>(observer);
 
         var failTask = Task.Run(() =>
-            subscription.CompleteAsync(Result.Failure(new InvalidOperationException("fail"))));
+            subscription.FinishAsync(Result.Failure(new InvalidOperationException("fail"))));
         await completionBlocked.Task;
 
-        await subscription.ForwardOnErrorResume(new InvalidOperationException("post-dispose"), CancellationToken.None);
+        await subscription.RelayErrorAsync(new InvalidOperationException("post-dispose"), CancellationToken.None);
 
         await Assert.That(errors).IsEmpty();
 
@@ -359,36 +359,36 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that MergeEnumerableSubscription.OnNextAsync returns early when called directly after disposal.
+    /// Verifies that MergeSequenceCoordinator.RelayNextAsync returns early when called directly after disposal.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMergeEnumerableSubscriptionDisposed_ThenOnNextReturnsDirectly()
+    public async Task WhenMergeSequenceCoordinatorDisposed_ThenOnNextReturnsDirectly()
     {
-        var observer = new AnonymousObserverAsync<int>((_, _) => default);
+        var observer = new DelegateAsyncWitness<int>((_, _) => default);
         IObservableAsync<int>[] sources = [];
         var subscription =
-            new SignalAsync.MergeEnumerableSignal<int>.MergeEnumerableSubscription(observer, sources);
-        subscription.StartAsync();
+            new SignalAsync.MergeEnumerableSignal<int>.MergeSequenceCoordinator(observer, sources);
+        subscription.BeginSubscribing();
         await subscription.DisposeAsync();
 
-        await subscription.OnNextAsync(Sentinel99, CancellationToken.None);
+        await subscription.RelayNextAsync(Sentinel99, CancellationToken.None);
     }
 
     /// <summary>
-    /// Verifies that MergeEnumerableSubscription.OnErrorResumeAsync returns early when called directly after disposal.
+    /// Verifies that MergeSequenceCoordinator.RelayErrorAsync returns early when called directly after disposal.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMergeEnumerableSubscriptionDisposed_ThenOnErrorResumeReturnsDirectly()
+    public async Task WhenMergeSequenceCoordinatorDisposed_ThenOnErrorResumeReturnsDirectly()
     {
-        var observer = new AnonymousObserverAsync<int>((_, _) => default);
+        var observer = new DelegateAsyncWitness<int>((_, _) => default);
         IObservableAsync<int>[] sources = [];
         var subscription =
-            new SignalAsync.MergeEnumerableSignal<int>.MergeEnumerableSubscription(observer, sources);
-        subscription.StartAsync();
+            new SignalAsync.MergeEnumerableSignal<int>.MergeSequenceCoordinator(observer, sources);
+        subscription.BeginSubscribing();
         await subscription.DisposeAsync();
 
-        await subscription.OnErrorResumeAsync(new InvalidOperationException("test"), CancellationToken.None);
+        await subscription.RelayErrorAsync(new InvalidOperationException("test"), CancellationToken.None);
     }
 }

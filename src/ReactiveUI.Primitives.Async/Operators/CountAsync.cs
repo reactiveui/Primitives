@@ -37,9 +37,9 @@ public static partial class SignalAsync
     public static async ValueTask<int> CountAsync<T>(this IObservableAsync<T> @this, Func<T, bool>? predicate, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var observer = new CountAsyncObserver<T>(predicate, cancellationToken);
+        var observer = new CountTaskWitness<T>(predicate, cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -69,8 +69,8 @@ public static partial class SignalAsync
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="predicate">An optional predicate to filter elements. If null, all elements are counted.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class CountAsyncObserver<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
-        : TaskObserverAsyncBase<T, int>(cancellationToken)
+    internal sealed class CountTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
+        : TaskWitnessAsyncBase<T, int>(cancellationToken)
     {
         /// <summary>
         /// The running count of elements that satisfy the predicate.
@@ -92,10 +92,10 @@ public static partial class SignalAsync
 
         /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            TrySetException(error);
+            SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result) =>
-            !result.IsSuccess ? TrySetException(result.Exception) : TrySetCompleted(_count);
+            !result.IsSuccess ? SetExceptionAndDisposeAsync(result.Exception) : SetResultAndDisposeAsync(_count);
     }
 }

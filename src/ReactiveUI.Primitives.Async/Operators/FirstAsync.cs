@@ -39,9 +39,9 @@ public static partial class SignalAsync
     public static async ValueTask<T> FirstAsync<T>(this IObservableAsync<T> @this, Func<T, bool> predicate, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var observer = new FirstAsyncObserver<T>(predicate, cancellationToken);
+        var observer = new FirstTaskWitness<T>(predicate, cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -69,9 +69,9 @@ public static partial class SignalAsync
     public static async ValueTask<T> FirstAsync<T>(this IObservableAsync<T> @this, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var observer = new FirstAsyncObserver<T>(null, cancellationToken);
+        var observer = new FirstTaskWitness<T>(null, cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -80,21 +80,21 @@ public static partial class SignalAsync
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="predicate">An optional predicate to filter elements.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class FirstAsyncObserver<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
-        : TaskObserverAsyncBase<T, T>(cancellationToken)
+    internal sealed class FirstTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
+        : TaskWitnessAsyncBase<T, T>(cancellationToken)
     {
         /// <inheritdoc/>
         protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
             if (predicate is null || predicate(value))
             {
-                await TrySetCompleted(value).ConfigureAwait(false);
+                await SetResultAndDisposeAsync(value).ConfigureAwait(false);
             }
         }
 
         /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            TrySetException(error);
+            SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result)
@@ -112,7 +112,7 @@ public static partial class SignalAsync
                 exception = result.Exception;
             }
 
-            return TrySetException(exception);
+            return SetExceptionAndDisposeAsync(exception);
         }
     }
 }

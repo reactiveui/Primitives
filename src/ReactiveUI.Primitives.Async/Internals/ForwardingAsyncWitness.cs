@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Async.Internals;
 /// </summary>
 /// <typeparam name="T">The type of elements received by the observer.</typeparam>
 /// <param name="observer">The inner observer to delegate notifications to.</param>
-internal sealed class WrappedObserverAsync<T>(IObserverAsync<T> observer) : ObserverAsync<T>
+internal sealed class ForwardingAsyncWitness<T>(IObserverAsync<T> observer) : ObserverAsync<T>
 {
     /// <inheritdoc/>
     protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>

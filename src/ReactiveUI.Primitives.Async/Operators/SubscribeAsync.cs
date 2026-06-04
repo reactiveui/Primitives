@@ -48,7 +48,7 @@ public static partial class SignalAsync
         ArgumentExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(onNextAsync);
 
-        var observer = new AnonymousObserverAsync<T>(onNextAsync, onErrorResumeAsync, onCompletedAsync);
+        var observer = new DelegateAsyncWitness<T>(onNextAsync, onErrorResumeAsync, onCompletedAsync);
         return source.SubscribeAsync(observer, cancellationToken);
     }
 
@@ -105,7 +105,7 @@ public static partial class SignalAsync
     {
         ArgumentExceptionHelper.ThrowIfNull(onNext);
 
-        var observer = new AnonymousObserverAsync<T>((x, _) =>
+        var observer = new DelegateAsyncWitness<T>((x, _) =>
         {
             onNext(x);
             return default;
@@ -166,7 +166,7 @@ public static partial class SignalAsync
             return ValueTask.CompletedTask;
         }
 
-        var observer = new AnonymousObserverAsync<T>(
+        var observer = new DelegateAsyncWitness<T>(
             (x, _) =>
             {
                 onNext(x);
@@ -220,7 +220,7 @@ public static partial class SignalAsync
         ArgumentExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(onNextAsync);
 
-        var observer = new AnonymousObserverAsync<T>(onNextAsync);
+        var observer = new DelegateAsyncWitness<T>(onNextAsync);
         return source.SubscribeAsync(observer, cancellationToken);
     }
 }

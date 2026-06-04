@@ -24,7 +24,7 @@ public class ConcurrentSignalBaseTests
     /// <summary>Verifies that <c>ForwardOnNextConcurrently</c> with an empty observer list returns immediately.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenForwardOnNextEmpty_ThenCompletesImmediately()
+    public async Task WhenRelayNextAsyncEmpty_ThenCompletesImmediately()
     {
         var empty = ImmutableArray<IObserverAsync<int>>.Empty;
 
@@ -37,7 +37,7 @@ public class ConcurrentSignalBaseTests
     /// <summary>Verifies that <c>ForwardOnNextConcurrently</c> with a single observer forwards once.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenForwardOnNextSingleObserver_ThenForwardsOnce()
+    public async Task WhenRelayNextAsyncSingleObserver_ThenForwardsOnce()
     {
         var capture = new IntCapture();
         var observers = ImmutableArray.Create<IObserverAsync<int>>(MakeSync(capture));
@@ -51,7 +51,7 @@ public class ConcurrentSignalBaseTests
     /// returns a synchronously-completed <see cref="ValueTask"/>.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenForwardOnNextMultipleSync_ThenAllReceive()
+    public async Task WhenRelayNextAsyncMultipleSync_ThenAllReceive()
     {
         var a = new IntCapture();
         var b = new IntCapture();
@@ -73,7 +73,7 @@ public class ConcurrentSignalBaseTests
     /// any of them returns a non-completed <see cref="ValueTask"/>.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenForwardOnNextSlowPath_ThenWhenAllForwarded()
+    public async Task WhenRelayNextAsyncSlowPath_ThenWhenAllForwarded()
     {
         var a = new IntCapture();
         var b = new IntCapture();
@@ -94,14 +94,14 @@ public class ConcurrentSignalBaseTests
     /// <summary>Verifies the empty / single / slow-path branches of <c>ForwardOnErrorResumeConcurrently</c>.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenForwardOnErrorResume_ThenAllBranchesForward()
+    public async Task WhenRelayErrorAsync_ThenAllBranchesForward()
     {
         var emptyObservers = ImmutableArray<IObserverAsync<int>>.Empty;
         await Concurrent.ForwardOnErrorResumeConcurrently(emptyObservers, new InvalidOperationException("empty"), default);
 
         var singleCaught = new ErrorCapture();
         var single = ImmutableArray.Create<IObserverAsync<int>>(
-            new AnonymousObserverAsync<int>(static (_, _) => default, MakeErrorSync(singleCaught)));
+            new DelegateAsyncWitness<int>(static (_, _) => default, MakeErrorSync(singleCaught)));
         var singleError = new InvalidOperationException("single");
         await Concurrent.ForwardOnErrorResumeConcurrently(single, singleError, default);
         await Assert.That(singleCaught.Error).IsSameReferenceAs(singleError);
@@ -109,8 +109,8 @@ public class ConcurrentSignalBaseTests
         var a = new ErrorCapture();
         var b = new ErrorCapture();
         var multi = ImmutableArray.Create<IObserverAsync<int>>(
-            new AnonymousObserverAsync<int>(static (_, _) => default, MakeErrorSlow(a)),
-            new AnonymousObserverAsync<int>(static (_, _) => default, MakeErrorSync(b)));
+            new DelegateAsyncWitness<int>(static (_, _) => default, MakeErrorSlow(a)),
+            new DelegateAsyncWitness<int>(static (_, _) => default, MakeErrorSync(b)));
         var multiError = new InvalidOperationException("multi");
         await Concurrent.ForwardOnErrorResumeConcurrently(multi, multiError, default);
         await Assert.That(a.Error).IsSameReferenceAs(multiError);
@@ -127,15 +127,15 @@ public class ConcurrentSignalBaseTests
 
         var singleResult = new ResultCapture();
         var single = ImmutableArray.Create<IObserverAsync<int>>(
-            new AnonymousObserverAsync<int>(static (_, _) => default, null, MakeCompletedSync(singleResult)));
+            new DelegateAsyncWitness<int>(static (_, _) => default, null, MakeCompletedSync(singleResult)));
         await Concurrent.ForwardOnCompletedConcurrently(single, Result.Success);
         await Assert.That(singleResult.Result).IsEqualTo(Result.Success);
 
         var a = new ResultCapture();
         var b = new ResultCapture();
         var multi = ImmutableArray.Create<IObserverAsync<int>>(
-            new AnonymousObserverAsync<int>(static (_, _) => default, null, MakeCompletedSlow(a)),
-            new AnonymousObserverAsync<int>(static (_, _) => default, null, MakeCompletedSync(b)));
+            new DelegateAsyncWitness<int>(static (_, _) => default, null, MakeCompletedSlow(a)),
+            new DelegateAsyncWitness<int>(static (_, _) => default, null, MakeCompletedSync(b)));
         await Concurrent.ForwardOnCompletedConcurrently(multi, Result.Success);
         await Assert.That(a.Result).IsEqualTo(Result.Success);
         await Assert.That(b.Result).IsEqualTo(Result.Success);
@@ -144,7 +144,7 @@ public class ConcurrentSignalBaseTests
     /// <summary>Creates a synchronously-completing OnNext observer that captures the value.</summary>
     /// <param name="capture">The capture sink.</param>
     /// <returns>An observer whose <c>OnNextAsync</c> completes synchronously.</returns>
-    private static AnonymousObserverAsync<int> MakeSync(IntCapture capture) =>
+    private static DelegateAsyncWitness<int> MakeSync(IntCapture capture) =>
         new((x, _) =>
         {
             capture.Value = x;
@@ -154,7 +154,7 @@ public class ConcurrentSignalBaseTests
     /// <summary>Creates an OnNext observer that delays before capturing — forces the slow path.</summary>
     /// <param name="capture">The capture sink.</param>
     /// <returns>An observer whose <c>OnNextAsync</c> completes asynchronously.</returns>
-    private static AnonymousObserverAsync<int> MakeSlow(IntCapture capture) =>
+    private static DelegateAsyncWitness<int> MakeSlow(IntCapture capture) =>
         new(async (x, ct) =>
         {
             await Task.Delay(SlowPathDelayMilliseconds, ct).ConfigureAwait(false);

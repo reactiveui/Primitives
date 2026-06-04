@@ -42,7 +42,7 @@ public static partial class SignalAsync
         /// <summary>
         /// The asynchronous gate used to serialize subscribe and dispose operations.
         /// </summary>
-        private readonly AsyncGate _gate = new();
+        private readonly AsyncSerialGate _gate = new();
 
         /// <summary>
         /// The current number of active subscribers.
@@ -100,14 +100,14 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            using (await _gate.LockAsync(cancellationToken).ConfigureAwait(false))
+            using (await _gate.EnterAsync(cancellationToken).ConfigureAwait(false))
             {
                 // incr refCount before Subscribe(completed source decrement refCxount in Subscribe)
                 ++_refCount;
                 var needConnect = _refCount == 1;
-                var coObserver = new RefCountObsever(this, observer);
+                var coObserver = new RefCountWitness(this, observer);
                 var subcription = await source.SubscribeAsync(coObserver, cancellationToken).ConfigureAwait(false);
-                if (needConnect && !coObserver.IsDisposed)
+                if (needConnect && !coObserver.HasDisposed)
                 {
                     SingleAssignmentDisposableAsync connection = new();
                     _connection = connection;
@@ -124,7 +124,7 @@ public static partial class SignalAsync
         /// </summary>
         /// <param name="parent">The parent ref-count observable.</param>
         /// <param name="observer">The downstream observer to forward notifications to.</param>
-        internal sealed class RefCountObsever(RefCountSignal<T> parent, IObserverAsync<T> observer)
+        internal sealed class RefCountWitness(RefCountSignal<T> parent, IObserverAsync<T> observer)
             : ObserverAsync<T>
         {
             /// <summary>
@@ -159,7 +159,7 @@ public static partial class SignalAsync
             [DebuggerStepThrough]
             protected override async ValueTask DisposeAsyncCore()
             {
-                using (await parent._gate.LockAsync().ConfigureAwait(false))
+                using (await parent._gate.EnterAsync().ConfigureAwait(false))
                 {
                     if (--parent._refCount == 0)
                     {

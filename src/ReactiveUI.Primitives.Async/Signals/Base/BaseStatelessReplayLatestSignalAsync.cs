@@ -33,7 +33,7 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
     /// <summary>
     /// The asynchronous gate used to synchronize access to the Signal's mutable state.
     /// </summary>
-    private readonly AsyncGate _gate = new();
+    private readonly AsyncSerialGate _gate = new();
 
     /// <summary>
     /// The cancellation token source that is cancelled when this instance is disposed.
@@ -91,7 +91,7 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
         try
         {
             ImmutableArray<IObserverAsync<T>> observers;
-            using (await _gate.LockAsync(token).ConfigureAwait(false))
+            using (await _gate.EnterAsync(token).ConfigureAwait(false))
             {
                 _value = new(value);
                 observers = _observers;
@@ -124,7 +124,7 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
         var token = linkedCts.Token;
 
         ImmutableArray<IObserverAsync<T>> observers;
-        using (await _gate.LockAsync(token).ConfigureAwait(false))
+        using (await _gate.EnterAsync(token).ConfigureAwait(false))
         {
             observers = _observers;
         }
@@ -142,7 +142,7 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
     public async ValueTask OnCompletedAsync(Result result)
     {
         ImmutableArray<IObserverAsync<T>> observers;
-        using (await _gate.LockAsync(DisposedCancellationToken).ConfigureAwait(false))
+        using (await _gate.EnterAsync(DisposedCancellationToken).ConfigureAwait(false))
         {
             observers = _observers;
             _observers = [];
@@ -196,7 +196,7 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
             (signal: this, observer, token),
             static async state =>
             {
-                using (await state.signal._gate.LockAsync(state.token).ConfigureAwait(false))
+                using (await state.signal._gate.EnterAsync(state.token).ConfigureAwait(false))
                 {
                     state.signal._observers = state.signal._observers.Remove(state.observer);
                     if (state.signal._observers.IsEmpty)
@@ -206,7 +206,7 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
                 }
             });
 
-        using (await _gate.LockAsync(token).ConfigureAwait(false))
+        using (await _gate.EnterAsync(token).ConfigureAwait(false))
         {
             _observers = _observers.Add(observer);
             if (_value.TryGetValue(out var value))

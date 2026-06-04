@@ -151,7 +151,7 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that MergeEnumerable CompleteAsync handles second error after disposal.
+    /// Verifies that MergeEnumerable FinishAsync handles second error after disposal.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -169,7 +169,7 @@ public partial class CombiningOperatorTests
                 (_, _) => default,
                 null);
 
-        // First source fails - triggers CompleteAsync
+        // First source fails - triggers FinishAsync
         await signal1.OnCompletedAsync(Result.Failure(new InvalidOperationException(FirstLiteral)));
 
         // Second source fails - already disposed, error goes to UnhandledExceptionHandler
@@ -212,7 +212,7 @@ public partial class CombiningOperatorTests
         await sub.DisposeAsync();
 
         // DirectSource retains the inner observer, so this call reaches
-        // MergeEnumerableSubscription.OnNextAsync which checks _disposed.
+        // MergeSequenceCoordinator.RelayNextAsync which checks _disposed.
         try
         {
             await directSource.EmitNext(SampleValue2, CancellationToken.None);
@@ -255,7 +255,7 @@ public partial class CombiningOperatorTests
         await sub.DisposeAsync();
 
         // DirectSource retains the inner observer, so this call reaches
-        // MergeEnumerableSubscription.OnErrorResumeAsync which checks _disposed.
+        // MergeSequenceCoordinator.RelayErrorAsync which checks _disposed.
         try
         {
             await directSource.EmitError(new InvalidOperationException(LateErrorMessage), CancellationToken.None);
@@ -269,7 +269,7 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that MergeEnumerable CompleteAsync handles a second completion with
+    /// Verifies that MergeEnumerable FinishAsync handles a second completion with
     /// an error by routing it to UnhandledExceptionHandler, using DirectSource to
     /// ensure both completions reach the subscription.
     /// </summary>
@@ -289,7 +289,7 @@ public partial class CombiningOperatorTests
                 (_, _) => default,
                 null);
 
-        // First source fails – triggers CompleteAsync and disposes subscription
+        // First source fails – triggers FinishAsync and disposes subscription
         await directSource1.Complete(Result.Failure(new InvalidOperationException(FirstLiteral)));
 
         // Second source fails – already disposed, error goes to UnhandledExceptionHandler
@@ -303,7 +303,7 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that when the completion handler itself throws in MergeEnumerable StartAsync,
+    /// Verifies that when the completion handler itself throws in MergeEnumerable BeginSubscribing,
     /// the outer catch routes the exception to UnhandledExceptionHandler.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -314,9 +314,9 @@ public partial class CombiningOperatorTests
         UnhandledExceptionHandler.Register(ex => unhandledException = ex);
 
         // Use a single Return source that completes synchronously during subscription.
-        // The sentinel decrement triggers CompleteAsync(Result.Success), and we make the
+        // The sentinel decrement triggers FinishAsync(Result.Success), and we make the
         // observer's OnCompletedAsync throw, which escapes the inner try/finally and is
-        // caught by the outer try in StartAsync.
+        // caught by the outer try in BeginSubscribing.
         IObservableAsync<int>[] sources = [SignalAsync.Return(1)];
 
         await using var sub = await sources.Merge()
@@ -335,8 +335,8 @@ public partial class CombiningOperatorTests
 
     /// <summary>
     /// Verifies that when the enumerable throws during iteration in MergeEnumerable,
-    /// the exception propagates through the StartAsync outer catch and is routed to
-    /// UnhandledExceptionHandler. This exercises the defensive error path in StartAsync.
+    /// the exception propagates through the BeginSubscribing outer catch and is routed to
+    /// UnhandledExceptionHandler. This exercises the defensive error path in BeginSubscribing.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -345,7 +345,7 @@ public partial class CombiningOperatorTests
         using var unhandled = new UnhandledExceptionCapture();
 
         // Use an enumerable whose GetEnumerator throws, triggering the error path
-        // inside StartAsync's inner try block.
+        // inside BeginSubscribing's inner try block.
         var throwingEnumerable = new ThrowingEnumerable<int>();
 
         await using var sub = await throwingEnumerable.Merge()
@@ -485,11 +485,11 @@ public partial class CombiningOperatorTests
 
     /// <summary>
     /// Verifies that MergeEnumerable outer catch routes exception
-    /// to UnhandledExceptionHandler when StartAsync itself throws.
+    /// to UnhandledExceptionHandler when BeginSubscribing itself throws.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMergeEnumerableStartAsyncThrows_ThenRoutesToUnhandled()
+    public async Task WhenMergeEnumerableBeginSubscribingThrows_ThenRoutesToUnhandled()
     {
         Exception? unhandled = null;
         UnhandledExceptionHandler.Register(ex => unhandled = ex);
@@ -545,7 +545,7 @@ public partial class CombiningOperatorTests
         Exception? unhandled = null;
         UnhandledExceptionHandler.Register(ex => unhandled = ex);
 
-        SignalAsync.MergeEnumerableSignal<int>.MergeEnumerableSubscription.RoutePostDisposalException(
+        SignalAsync.MergeEnumerableSignal<int>.MergeSequenceCoordinator.RoutePostDisposalException(
             Result.Failure(new InvalidOperationException("post-dispose error")));
 
         await Assert.That(unhandled).IsNotNull();
@@ -554,7 +554,7 @@ public partial class CombiningOperatorTests
 
     /// <summary>
     /// Verifies that MergeEnumerable drops values after disposal.
-    /// Covers the disposed-early-return guard in MergeEnumerableSubscription.OnNextAsync.
+    /// Covers the disposed-early-return guard in MergeSequenceCoordinator.RelayNextAsync.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -589,7 +589,7 @@ public partial class CombiningOperatorTests
 
     /// <summary>
     /// Verifies that MergeEnumerable drops error-resume after disposal.
-    /// Covers the disposed-early-return guard in MergeEnumerableSubscription.OnErrorResumeAsync.
+    /// Covers the disposed-early-return guard in MergeSequenceCoordinator.RelayErrorAsync.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]

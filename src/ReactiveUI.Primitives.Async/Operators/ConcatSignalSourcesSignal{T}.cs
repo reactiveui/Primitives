@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Async;
 internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableAsync<T>> source) : SignalAsync<T>
 {
     /// <summary>
-    /// Subscribes the specified observer by creating a <see cref="ConcatSubscription"/> that manages
+    /// Subscribes the specified observer by creating a <see cref="ConcatCoordinator"/> that manages
     /// sequential subscription to inner observables.
     /// </summary>
     /// <param name="observer">The observer to receive elements from the concatenated sequences.</param>
@@ -27,7 +27,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)
     {
-        var subscription = new ConcatSubscription(observer);
+        var subscription = new ConcatCoordinator(observer);
         return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
             subscription,
             () => subscription.SubscribeAsync(source, cancellationToken));
@@ -37,7 +37,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
     /// Manages the lifetime of the outer subscription and buffers inner observables,
     /// subscribing to each one sequentially as the previous completes.
     /// </summary>
-    internal sealed class ConcatSubscription : IAsyncDisposable
+    internal sealed class ConcatCoordinator : IAsyncDisposable
     {
         /// <summary>
         /// Concurrent queue that buffers inner observables waiting to be subscribed to.
@@ -72,7 +72,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
         /// <summary>
         /// Async gate that serializes observer callbacks to ensure thread-safe emission.
         /// </summary>
-        private readonly AsyncGate _observerOnSomethingGate = new();
+        private readonly AsyncSerialGate _observerOnSomethingGate = new();
 
         /// <summary>
         /// Indicates whether the outer observable sequence has completed.
@@ -85,10 +85,10 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
         private int _disposed;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ConcatSubscription"/> class.
+        /// Initializes a new instance of the <see cref="ConcatCoordinator"/> class.
         /// </summary>
         /// <param name="observer">The downstream observer to forward elements to.</param>
-        public ConcatSubscription(IObserverAsync<T> observer)
+        public ConcatCoordinator(IObserverAsync<T> observer)
         {
             _observer = observer;
             _disposedCancellationToken = _disposeCts.Token;
@@ -104,7 +104,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
             IObservableAsync<IObservableAsync<T>> source,
             CancellationToken subscriptionToken)
         {
-            var outerSubscription = await source.SubscribeAsync(new ConcatOuterObserver(this), subscriptionToken).ConfigureAwait(false);
+            var outerSubscription = await source.SubscribeAsync(new ConcatOuterWitness(this), subscriptionToken).ConfigureAwait(false);
             await _outerDisposable.SetDisposableAsync(outerSubscription).ConfigureAwait(false);
         }
 
@@ -114,7 +114,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
         /// </summary>
         /// <param name="inner">The inner observable to enqueue.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        public ValueTask OnNextOuterAsync(IObservableAsync<T> inner)
+        public ValueTask AcceptOuterValueAsync(IObservableAsync<T> inner)
         {
             var shouldSubscribe = false;
             lock (_buffer)
@@ -131,7 +131,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
                 return default;
             }
 
-            return SubscribeToInnerLoop(inner);
+            return SubscribeCurrentInnerAsync(inner);
         }
 
         /// <summary>
@@ -140,7 +140,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
         /// </summary>
         /// <param name="result">The completion result from the outer sequence.</param>
         /// <returns>A task representing the asynchronous completion operation.</returns>
-        public ValueTask OnCompletedOuterAsync(Result result)
+        public ValueTask AcceptOuterCompletionAsync(Result result)
         {
             var shouldComplete = false;
             Result? completeResult = null;
@@ -154,7 +154,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
                 }
             }
 
-            return shouldComplete ? CompleteAsync(completeResult) : default;
+            return shouldComplete ? FinishAsync(completeResult) : default;
         }
 
         /// <summary>
@@ -163,11 +163,11 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
         /// </summary>
         /// <param name="result">The completion result from the inner sequence.</param>
         /// <returns>A task representing the asynchronous completion operation.</returns>
-        public ValueTask OnCompletedInnerAsync(Result result)
+        public ValueTask AcceptInnerCompletionAsync(Result result)
         {
             if (result.IsFailure)
             {
-                return CompleteAsync(result);
+                return FinishAsync(result);
             }
 
             IObservableAsync<T>? nextInner;
@@ -181,17 +181,17 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
 
             if (nextInner is null)
             {
-                return outerCompleted ? CompleteAsync(Result.Success) : default;
+                return outerCompleted ? FinishAsync(Result.Success) : default;
             }
 
-            return SubscribeToInnerLoop(nextInner);
+            return SubscribeCurrentInnerAsync(nextInner);
         }
 
         /// <inheritdoc/>
-        public ValueTask DisposeAsync() => CompleteAsync(null);
+        public ValueTask DisposeAsync() => FinishAsync(null);
 
         /// <summary>
-        /// Handles a second call to <see cref="CompleteAsync"/> when already disposed,
+        /// Handles a second call to <see cref="FinishAsync"/> when already disposed,
         /// routing any failure exception to the unhandled exception handler.
         /// </summary>
         /// <param name="result">The completion result from the second call.</param>
@@ -202,7 +202,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
                 return;
             }
 
-            UnhandledExceptionHandler.OnUnhandledException(exception);
+            UnhandledExceptionHandler.ReportUnhandledException(exception);
         }
 
         /// <summary>
@@ -210,17 +210,17 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
         /// </summary>
         /// <param name="currentInner">The inner observable to subscribe to.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        internal async ValueTask SubscribeToInnerLoop(IObservableAsync<T> currentInner)
+        internal async ValueTask SubscribeCurrentInnerAsync(IObservableAsync<T> currentInner)
         {
             try
             {
                 var innerSubscription =
-                    await currentInner.SubscribeAsync(new ConcatInnerObserver(this), _disposedCancellationToken).ConfigureAwait(false);
+                    await currentInner.SubscribeAsync(new ConcatInnerWitness(this), _disposedCancellationToken).ConfigureAwait(false);
                 await _innerSubscription.SetDisposableAsync(innerSubscription).ConfigureAwait(false);
             }
             catch (Exception e)
             {
-                await CompleteAsync(Result.Failure(e)).ConfigureAwait(false);
+                await FinishAsync(Result.Failure(e)).ConfigureAwait(false);
             }
         }
 
@@ -230,7 +230,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
         /// </summary>
         /// <param name="result">The completion result to forward, or <see langword="null"/> if disposing without signaling completion.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        internal async ValueTask CompleteAsync(Result? result)
+        internal async ValueTask FinishAsync(Result? result)
         {
             if (DisposalHelper.TrySetDisposed(ref _disposed))
             {
@@ -251,10 +251,10 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
         }
 
         /// <summary>
-        /// Observer for the outer observable sequence that delegates to the parent <see cref="ConcatSubscription"/>.
+        /// Observer for the outer observable sequence that delegates to the parent <see cref="ConcatCoordinator"/>.
         /// </summary>
         /// <param name="subscription">The parent concat subscription.</param>
-        internal sealed class ConcatOuterObserver(ConcatSubscription subscription) : ObserverAsync<IObservableAsync<T>>
+        internal sealed class ConcatOuterWitness(ConcatCoordinator subscription) : ObserverAsync<IObservableAsync<T>>
         {
             /// <summary>
             /// Forwards a new inner observable to the parent subscription for buffering and sequential subscription.
@@ -263,7 +263,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override ValueTask OnNextAsyncCore(IObservableAsync<T> value, CancellationToken cancellationToken)
-                => subscription.OnNextOuterAsync(value);
+                => subscription.AcceptOuterValueAsync(value);
 
             /// <summary>
             /// Forwards a non-fatal error from the outer sequence to the downstream observer.
@@ -281,7 +281,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
                 // provided, without the per-emission Linked2CancellationTokenSource alloc.
                 _ = cancellationToken;
                 var token = subscription._disposedCancellationToken;
-                using (await subscription._observerOnSomethingGate.LockAsync(token).ConfigureAwait(false))
+                using (await subscription._observerOnSomethingGate.EnterAsync(token).ConfigureAwait(false))
                 {
                     await subscription._observer.OnErrorResumeAsync(error, token).ConfigureAwait(false);
                 }
@@ -293,14 +293,14 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override ValueTask OnCompletedAsyncCore(Result result)
-                => subscription.OnCompletedOuterAsync(result);
+                => subscription.AcceptOuterCompletionAsync(result);
         }
 
         /// <summary>
-        /// Observer for the currently active inner observable sequence that delegates to the parent <see cref="ConcatSubscription"/>.
+        /// Observer for the currently active inner observable sequence that delegates to the parent <see cref="ConcatCoordinator"/>.
         /// </summary>
         /// <param name="subscription">The parent concat subscription.</param>
-        internal sealed class ConcatInnerObserver(ConcatSubscription subscription) : ObserverAsync<T>
+        internal sealed class ConcatInnerWitness(ConcatCoordinator subscription) : ObserverAsync<T>
         {
             /// <summary>
             /// Forwards an element from the inner sequence to the downstream observer.
@@ -312,7 +312,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
             {
                 _ = cancellationToken;
                 var token = subscription._disposedCancellationToken;
-                using (await subscription._observerOnSomethingGate.LockAsync(token).ConfigureAwait(false))
+                using (await subscription._observerOnSomethingGate.EnterAsync(token).ConfigureAwait(false))
                 {
                     await subscription._observer.OnNextAsync(value, token).ConfigureAwait(false);
                 }
@@ -330,7 +330,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
             {
                 _ = cancellationToken;
                 var token = subscription._disposedCancellationToken;
-                using (await subscription._observerOnSomethingGate.LockAsync(token).ConfigureAwait(false))
+                using (await subscription._observerOnSomethingGate.EnterAsync(token).ConfigureAwait(false))
                 {
                     await subscription._observer.OnErrorResumeAsync(error, token).ConfigureAwait(false);
                 }
@@ -342,7 +342,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override ValueTask OnCompletedAsyncCore(Result result)
-                => subscription.OnCompletedInnerAsync(result);
+                => subscription.AcceptInnerCompletionAsync(result);
         }
     }
 }
