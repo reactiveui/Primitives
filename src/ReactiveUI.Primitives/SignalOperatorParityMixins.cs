@@ -473,40 +473,6 @@ public static partial class LinqMixins
     }
 
     /// <summary>
-    /// Projects each value into an enumerable and emits every projected item.
-    /// </summary>
-    /// <typeparam name="TSource">The source value type.</typeparam>
-    /// <typeparam name="TResult">The projected item type.</typeparam>
-    /// <param name="source">The source signal.</param>
-    /// <param name="selector">The projection that returns items for each source value.</param>
-    /// <returns>A signal that emits every item returned by <paramref name="selector"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
-    public static IObservable<TResult> FlatMap<TSource, TResult>(this IObservable<TSource> source, Func<TSource, IEnumerable<TResult>> selector)
-    {
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
-
-        if (selector == null)
-        {
-            throw new ArgumentNullException(nameof(selector));
-        }
-
-        return Signal.Create<TResult>(observer =>
-            source.Subscribe(
-                value =>
-                {
-                    foreach (var item in selector(value))
-                    {
-                        observer.OnNext(item);
-                    }
-                },
-                observer.OnError,
-                observer.OnCompleted));
-    }
-
-    /// <summary>
     /// Projects each source value to an inner signal and maps outer/inner values with a result selector.
     /// </summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
@@ -533,6 +499,40 @@ public static partial class LinqMixins
         }
 
         return new FlatMapResultSignal<TSource, TCollection, TResult>(source, collectionSelector, resultSelector);
+    }
+
+    /// <summary>
+    /// Projects each value into an enumerable and emits every projected item.
+    /// </summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <typeparam name="TResult">The projected item type.</typeparam>
+    /// <param name="source">The source signal.</param>
+    /// <param name="selector">The projection that returns items for each source value.</param>
+    /// <returns>A signal that emits every item returned by <paramref name="selector"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+    public static IObservable<TResult> FlatMapValues<TSource, TResult>(this IObservable<TSource> source, Func<TSource, IEnumerable<TResult>> selector)
+    {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        if (selector == null)
+        {
+            throw new ArgumentNullException(nameof(selector));
+        }
+
+        return Signal.Create<TResult>(observer =>
+            source.Subscribe(
+                value =>
+                {
+                    foreach (var item in selector(value))
+                    {
+                        observer.OnNext(item);
+                    }
+                },
+                observer.OnError,
+                observer.OnCompleted));
     }
 
     /// <summary>
