@@ -79,6 +79,32 @@ public class ObserveOnAsyncSignalTests
         await Assert.That(result).IsEqualTo(Sentinel);
     }
 
+    /// <summary>Verifies the default <c>SynchronizationContext</c> overload forwards through the non-forced wrapper.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSyncContextDefaultOverload_ThenEmits()
+    {
+        var ctx = SynchronizationContext.Current ?? new SynchronizationContext();
+
+        var result = await SignalAsync.Return(Sentinel)
+            .WitnessOn(ctx)
+            .FirstAsync();
+
+        await Assert.That(result).IsEqualTo(Sentinel);
+    }
+
+    /// <summary>Verifies the default <see cref="TaskScheduler"/> overload forwards through the non-forced wrapper.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenTaskSchedulerDefaultOverload_ThenEmits()
+    {
+        var result = await SignalAsync.Return(Sentinel)
+            .WitnessOn(TaskScheduler.Default)
+            .FirstAsync();
+
+        await Assert.That(result).IsEqualTo(Sentinel);
+    }
+
     /// <summary>Verifies that <c>ObserveOn</c> with a different SynchronizationContext routes
     /// the error through the slow-path context-switch even when <c>forceYielding</c> is false.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>

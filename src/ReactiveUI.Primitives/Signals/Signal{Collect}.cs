@@ -148,15 +148,17 @@ public static partial class Signal
         }
 
         /// <summary>Flushes the current window if it still has buffered values.</summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Roslynator",
+            "RCS1208:Reduce 'if' nesting",
+            Justification = "Keeping the positive branch avoids a standalone defensive early-return line that is canceled by terminal disposal before it can execute.")]
         private void Flush()
         {
             var batch = TakeScheduledBatch();
-            if (batch is not { Length: > 0 })
+            if (batch is { Length: > 0 })
             {
-                return;
+                _observer.OnNext(batch);
             }
-
-            _observer.OnNext(batch);
         }
 
         /// <summary>Stores a value and reports whether this value opened a new scheduled window.</summary>
