@@ -49,7 +49,7 @@ public static partial class SignalAsync
             IObserverAsync<TResult> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new CastObserver(observer, cancellationToken);
+            var sink = new CastWitness(observer, cancellationToken);
 
             if (observer is ObserverAsync<TResult> downstreamBase)
             {
@@ -61,10 +61,10 @@ public static partial class SignalAsync
             return sink;
         }
 
-        /// <summary>Per-subscription observer that casts each value to <typeparamref name="TResult"/>.</summary>
-        /// <param name="downstream">The downstream observer.</param>
+        /// <summary>Per-subscription witness that casts each value to <typeparamref name="TResult"/>.</summary>
+        /// <param name="downstream">The downstream witness.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class CastObserver(
+        internal sealed class CastWitness(
             IObserverAsync<TResult> downstream,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
         {

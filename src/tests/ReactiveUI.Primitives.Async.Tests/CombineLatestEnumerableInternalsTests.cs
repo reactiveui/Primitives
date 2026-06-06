@@ -23,7 +23,7 @@ public class CombineLatestEnumerableInternalsTests
             sources,
             downstream,
             static s => s[0]);
-        var indexed = new SignalAsync.CombineLatestEnumerableSignal<int, int>.IndexedObserver(subscription, 0);
+        var indexed = new SignalAsync.CombineLatestEnumerableSignal<int, int>.IndexedWitness(subscription, 0);
 
         await indexed.DisposeAsync();
 

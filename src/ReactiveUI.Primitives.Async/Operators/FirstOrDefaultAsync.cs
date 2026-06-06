@@ -110,7 +110,7 @@ public static partial class SignalAsync
     }
 
     /// <summary>
-    /// Observer that captures the first element matching an optional predicate, or returns a default value.
+    /// A witness that captures the first element matching an optional predicate, or returns a default value.
     /// </summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="predicate">An optional predicate to filter elements.</param>
@@ -119,7 +119,7 @@ public static partial class SignalAsync
     internal sealed class FirstOrDefaultTaskWitness<T>(
         Func<T, bool>? predicate,
         T? defaultValue,
-        CancellationToken cancellationToken) : TaskWitnessAsyncBase<T, T>(cancellationToken)
+        CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, T>(cancellationToken)
     {
         /// <inheritdoc/>
         protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)

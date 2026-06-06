@@ -164,7 +164,7 @@ public static partial class SignalAsync
         /// observers, the SubscribeAtAsync switch, and the selector invocation. Shared scaffolding
         /// (gate, lifecycle, ValuesLock, OnErrorResume, SubscribeSourcesAsync, DisposeAsync) lives
         /// in <see cref="CombineLatestCoordinatorBase{TResult}"/>; the per-source OnNext / OnError /
-        /// OnCompleted forwarding lives in <see cref="CombineLatestIndexedObserver{TSource, TResult}"/>.
+        /// OnCompleted forwarding lives in <see cref="CombineLatestIndexedWitness{TSource, TResult}"/>.
         /// </summary>
         internal sealed class CombineLatestCoordinator : CombineLatestCoordinatorBase<TResult>
         {
@@ -223,52 +223,52 @@ public static partial class SignalAsync
             private readonly Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> _selector;
 
             /// <summary>Indexed observer for source 1.</summary>
-            private readonly CombineLatestIndexedObserver<T1, TResult> _obs1;
+            private readonly CombineLatestIndexedWitness<T1, TResult> _obs1;
 
             /// <summary>Indexed observer for source 2.</summary>
-            private readonly CombineLatestIndexedObserver<T2, TResult> _obs2;
+            private readonly CombineLatestIndexedWitness<T2, TResult> _obs2;
 
             /// <summary>Indexed observer for source 3.</summary>
-            private readonly CombineLatestIndexedObserver<T3, TResult> _obs3;
+            private readonly CombineLatestIndexedWitness<T3, TResult> _obs3;
 
             /// <summary>Indexed observer for source 4.</summary>
-            private readonly CombineLatestIndexedObserver<T4, TResult> _obs4;
+            private readonly CombineLatestIndexedWitness<T4, TResult> _obs4;
 
             /// <summary>Indexed observer for source 5.</summary>
-            private readonly CombineLatestIndexedObserver<T5, TResult> _obs5;
+            private readonly CombineLatestIndexedWitness<T5, TResult> _obs5;
 
             /// <summary>Indexed observer for source 6.</summary>
-            private readonly CombineLatestIndexedObserver<T6, TResult> _obs6;
+            private readonly CombineLatestIndexedWitness<T6, TResult> _obs6;
 
             /// <summary>Indexed observer for source 7.</summary>
-            private readonly CombineLatestIndexedObserver<T7, TResult> _obs7;
+            private readonly CombineLatestIndexedWitness<T7, TResult> _obs7;
 
             /// <summary>Indexed observer for source 8.</summary>
-            private readonly CombineLatestIndexedObserver<T8, TResult> _obs8;
+            private readonly CombineLatestIndexedWitness<T8, TResult> _obs8;
 
             /// <summary>Indexed observer for source 9.</summary>
-            private readonly CombineLatestIndexedObserver<T9, TResult> _obs9;
+            private readonly CombineLatestIndexedWitness<T9, TResult> _obs9;
 
             /// <summary>Indexed observer for source 10.</summary>
-            private readonly CombineLatestIndexedObserver<T10, TResult> _obs10;
+            private readonly CombineLatestIndexedWitness<T10, TResult> _obs10;
 
             /// <summary>Indexed observer for source 11.</summary>
-            private readonly CombineLatestIndexedObserver<T11, TResult> _obs11;
+            private readonly CombineLatestIndexedWitness<T11, TResult> _obs11;
 
             /// <summary>Indexed observer for source 12.</summary>
-            private readonly CombineLatestIndexedObserver<T12, TResult> _obs12;
+            private readonly CombineLatestIndexedWitness<T12, TResult> _obs12;
 
             /// <summary>Indexed observer for source 13.</summary>
-            private readonly CombineLatestIndexedObserver<T13, TResult> _obs13;
+            private readonly CombineLatestIndexedWitness<T13, TResult> _obs13;
 
             /// <summary>Indexed observer for source 14.</summary>
-            private readonly CombineLatestIndexedObserver<T14, TResult> _obs14;
+            private readonly CombineLatestIndexedWitness<T14, TResult> _obs14;
 
             /// <summary>Indexed observer for source 15.</summary>
-            private readonly CombineLatestIndexedObserver<T15, TResult> _obs15;
+            private readonly CombineLatestIndexedWitness<T15, TResult> _obs15;
 
             /// <summary>Indexed observer for source 16.</summary>
-            private readonly CombineLatestIndexedObserver<T16, TResult> _obs16;
+            private readonly CombineLatestIndexedWitness<T16, TResult> _obs16;
 
             /// <summary>Latest value from source 1.</summary>
             private Optional<T1> _val1 = Optional<T1>.Empty;

@@ -30,7 +30,7 @@ public static partial class SignalAsync
             IObserverAsync<(T Previous, T Current)> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new PairwiseObserver(observer, cancellationToken);
+            var sink = new PairwiseWitness(observer, cancellationToken);
 
             if (observer is ObserverAsync<(T Previous, T Current)> downstreamBase)
             {
@@ -42,10 +42,10 @@ public static partial class SignalAsync
             return sink;
         }
 
-        /// <summary>Per-subscription observer that emits <c>(previous, current)</c> tuples once primed.</summary>
+        /// <summary>Per-subscription witness that emits <c>(previous, current)</c> tuples once primed.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class PairwiseObserver(
+        internal sealed class PairwiseWitness(
             IObserverAsync<(T Previous, T Current)> downstream,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
         {
@@ -96,7 +96,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new SkipWhileNullObserver(observer, cancellationToken);
+            var sink = new SkipWhileNullWitness(observer, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -111,7 +111,7 @@ public static partial class SignalAsync
         /// <summary>Per-subscription observer that skips leading nulls then forwards every subsequent value.</summary>
         /// <param name="downstream">The downstream observer expecting non-nullable values.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
-        internal sealed class SkipWhileNullObserver(
+        internal sealed class SkipWhileNullWitness(
             IObserverAsync<T> downstream,
             CancellationToken subscribeToken) : ObserverAsync<T?>(subscribeToken)
         {
@@ -160,7 +160,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new WhereIsNotNullObserver(observer, cancellationToken);
+            var sink = new WhereIsNotNullWitness(observer, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so its hot path recognises
             // this token without allocating a per-emission linked CTS.
@@ -177,7 +177,7 @@ public static partial class SignalAsync
         /// <summary>Per-subscription observer that strips nulls and forwards the rest as non-nullable.</summary>
         /// <param name="downstream">The downstream observer expecting non-nullable values.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
-        internal sealed class WhereIsNotNullObserver(
+        internal sealed class WhereIsNotNullWitness(
             IObserverAsync<T> downstream,
             CancellationToken subscribeToken) : ObserverAsync<T?>(subscribeToken)
         {
@@ -219,7 +219,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new LatestOrDefaultObserver(observer, defaultValue, cancellationToken);
+            var sink = new LatestOrDefaultWitness(observer, defaultValue, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -237,7 +237,7 @@ public static partial class SignalAsync
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="seed">The seed value already emitted from <see cref="SubscribeAsyncCore"/>; treated as the initial "last forwarded value".</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
-        internal sealed class LatestOrDefaultObserver(
+        internal sealed class LatestOrDefaultWitness(
             IObserverAsync<T> downstream,
             T seed,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
@@ -287,7 +287,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new WaitUntilObserver(observer, predicate, cancellationToken);
+            var sink = new WaitUntilWitness(observer, predicate, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -299,11 +299,11 @@ public static partial class SignalAsync
             return sink;
         }
 
-        /// <summary>Per-subscription observer that matches the predicate, forwards the first hit, and completes.</summary>
+        /// <summary>Per-subscription witness that matches the predicate, forwards the first hit, and completes.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="predicate">The predicate matched against each value.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
-        internal sealed class WaitUntilObserver(
+        internal sealed class WaitUntilWitness(
             IObserverAsync<T> downstream,
             Func<T, bool> predicate,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
@@ -347,7 +347,7 @@ public static partial class SignalAsync
             IObserverAsync<RxVoid> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new AsSignalObserver(observer, cancellationToken);
+            var sink = new AsSignalWitness(observer, cancellationToken);
 
             if (observer is ObserverAsync<RxVoid> downstreamBase)
             {
@@ -362,7 +362,7 @@ public static partial class SignalAsync
         /// <summary>Forwards <see cref="RxVoid.Default"/> for every upstream emission.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class AsSignalObserver(
+        internal sealed class AsSignalWitness(
             IObserverAsync<RxVoid> downstream,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
         {
@@ -391,7 +391,7 @@ public static partial class SignalAsync
             IObserverAsync<bool> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new NotObserver(observer, cancellationToken);
+            var sink = new NotWitness(observer, cancellationToken);
 
             if (observer is ObserverAsync<bool> downstreamBase)
             {
@@ -406,7 +406,7 @@ public static partial class SignalAsync
         /// <summary>Negates every upstream emission.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class NotObserver(
+        internal sealed class NotWitness(
             IObserverAsync<bool> downstream,
             CancellationToken subscribeToken) : ObserverAsync<bool>(subscribeToken)
         {
@@ -435,7 +435,7 @@ public static partial class SignalAsync
             IObserverAsync<bool> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new WhereTrueObserver(observer, cancellationToken);
+            var sink = new WhereTrueWitness(observer, cancellationToken);
 
             if (observer is ObserverAsync<bool> downstreamBase)
             {
@@ -450,7 +450,7 @@ public static partial class SignalAsync
         /// <summary>Forwards only <see langword="true"/> values.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class WhereTrueObserver(
+        internal sealed class WhereTrueWitness(
             IObserverAsync<bool> downstream,
             CancellationToken subscribeToken) : ObserverAsync<bool>(subscribeToken)
         {
@@ -479,7 +479,7 @@ public static partial class SignalAsync
             IObserverAsync<bool> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new WhereFalseObserver(observer, cancellationToken);
+            var sink = new WhereFalseWitness(observer, cancellationToken);
 
             if (observer is ObserverAsync<bool> downstreamBase)
             {
@@ -494,7 +494,7 @@ public static partial class SignalAsync
         /// <summary>Forwards only <see langword="false"/> values.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class WhereFalseObserver(
+        internal sealed class WhereFalseWitness(
             IObserverAsync<bool> downstream,
             CancellationToken subscribeToken) : ObserverAsync<bool>(subscribeToken)
         {

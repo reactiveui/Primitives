@@ -251,7 +251,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
         }
 
         /// <summary>
-        /// Observer for the outer observable sequence that delegates to the parent <see cref="ConcatCoordinator"/>.
+        /// A witness for the outer observable sequence that delegates to the parent <see cref="ConcatCoordinator"/>.
         /// </summary>
         /// <param name="subscription">The parent concat subscription.</param>
         internal sealed class ConcatOuterWitness(ConcatCoordinator subscription) : ObserverAsync<IObservableAsync<T>>
@@ -297,7 +297,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
         }
 
         /// <summary>
-        /// Observer for the currently active inner observable sequence that delegates to the parent <see cref="ConcatCoordinator"/>.
+        /// A witness for the currently active inner observable sequence that delegates to the parent <see cref="ConcatCoordinator"/>.
         /// </summary>
         /// <param name="subscription">The parent concat subscription.</param>
         internal sealed class ConcatInnerWitness(ConcatCoordinator subscription) : ObserverAsync<T>

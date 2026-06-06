@@ -98,12 +98,12 @@ public static partial class SignalAsync
         }
 
         /// <summary>
-        /// Per-source observer that forwards to the parent subscription with its own index. Replaces the three
+        /// Per-source witness that forwards to the parent subscription with its own index. Replaces the three
         /// captured-index lambdas the previous shape allocated per source.
         /// </summary>
         /// <param name="parent">The parent coordinator.</param>
         /// <param name="index">The source index.</param>
-        internal sealed class IndexedObserver(EnumerableCombineLatestCoordinator parent, int index) : IObserverAsync<TSource>
+        internal sealed class IndexedWitness(EnumerableCombineLatestCoordinator parent, int index) : IObserverAsync<TSource>
         {
             /// <inheritdoc/>
             public ValueTask OnNextAsync(TSource value, CancellationToken cancellationToken) =>
@@ -191,7 +191,7 @@ public static partial class SignalAsync
                     }
 
                     _subscriptions[index] = await _sources[index]
-                        .SubscribeAsync(new IndexedObserver(this, index), cancellationToken)
+                        .SubscribeAsync(new IndexedWitness(this, index), cancellationToken)
                         .ConfigureAwait(false);
                 }
             }

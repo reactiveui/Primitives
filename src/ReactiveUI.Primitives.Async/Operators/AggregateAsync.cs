@@ -163,7 +163,7 @@ public static partial class SignalAsync
     internal sealed class AggregateTaskWitness<T, TAcc>(
         TAcc seed,
         Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator,
-        CancellationToken cancellationToken) : TaskWitnessAsyncBase<T, TAcc>(cancellationToken)
+        CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, TAcc>(cancellationToken)
     {
         /// <summary>
         /// The current accumulated value.

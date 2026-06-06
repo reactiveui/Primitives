@@ -41,12 +41,12 @@ public static partial class SignalAsync
     }
 
     /// <summary>
-    /// Observer that collects all elements from a sequence into a list.
+    /// Witness that collects all elements from a sequence into a list.
     /// </summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     internal sealed class ToListTaskWitness<T>(CancellationToken cancellationToken)
-        : TaskWitnessAsyncBase<T, List<T>>(cancellationToken)
+        : TaskResultWitnessAsyncBase<T, List<T>>(cancellationToken)
     {
         /// <summary>
         /// The list that accumulates all elements received from the source sequence.

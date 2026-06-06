@@ -144,7 +144,7 @@ internal sealed class MulticastSignalAsync<T>(IObservableAsync<T> source, ISigna
         // linked-CTS allocation that the downstream's TryEnter would otherwise produce. The wrap
         // itself benefits from SignalAsyncObserver forwarding CancellationToken.None to the
         // signal (the wrap's TryEnter sees None and fast-paths), so no wrap-side link is needed.
-        var wrap = new ForwardingAsyncWitness<T>(observer);
+        var wrap = new RelayWitnessAsync<T>(observer);
         if (observer is ObserverAsync<T> downstream)
         {
             downstream.LinkUpstreamCancellation(wrap.InternalDisposedToken);

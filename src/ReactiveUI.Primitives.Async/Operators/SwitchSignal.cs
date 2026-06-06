@@ -329,7 +329,7 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         }
 
         /// <summary>
-        /// Observer for the outer observable sequence that delegates to the parent <see cref="SwitchCoordinator"/>.
+        /// Witness for the outer observable sequence that delegates to the parent <see cref="SwitchCoordinator"/>.
         /// </summary>
         /// <param name="subscription">The parent switch subscription.</param>
         internal sealed class SwitchOuterWitness(SwitchCoordinator subscription) : ObserverAsync<IObservableAsync<T>>
@@ -370,13 +370,13 @@ internal sealed class SwitchSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         }
 
         /// <summary>
-        /// Observer for the currently active inner observable sequence that delegates to the parent <see cref="SwitchCoordinator"/>.
+        /// Witness for the currently active inner observable sequence that delegates to the parent <see cref="SwitchCoordinator"/>.
         /// </summary>
         /// <param name="subscription">The parent switch subscription.</param>
         internal sealed class SwitchInnerWitness(SwitchCoordinator subscription) : ObserverAsync<T>
         {
             /// <summary>
-            /// Forwards an element from the inner sequence to the downstream observer.
+            /// Forwards an element from the inner sequence to the downstream witness.
             /// </summary>
             /// <param name="value">The element to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>

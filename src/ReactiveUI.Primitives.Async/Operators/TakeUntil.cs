@@ -396,7 +396,7 @@ public static partial class SignalAsync
             public async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
             {
                 _tokenRegistration = _parent._cancellationToken.Register(CompleteFromCancellation);
-                _subscription = await _parent._source.SubscribeAsync(new TakeUntilSourceObserver<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
+                _subscription = await _parent._source.SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
             }
 
             /// <summary>
@@ -501,7 +501,7 @@ public static partial class SignalAsync
             public async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
             {
                 AwaitStopThenComplete();
-                _subscription = await _parent._source.SubscribeAsync(new TakeUntilSourceObserver<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
+                _subscription = await _parent._source.SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
             }
 
             /// <summary>
@@ -645,7 +645,7 @@ public static partial class SignalAsync
             {
                 var task = _parent._task;
                 AwaitStopThenComplete(task);
-                _subscription = await _parent._source.SubscribeAsync(new TakeUntilSourceObserver<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
+                _subscription = await _parent._source.SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
             }
 
             /// <summary>
@@ -764,7 +764,7 @@ public static partial class SignalAsync
                 await _otherDisposable.SetDisposableAsync(otherSubscription).ConfigureAwait(false);
 
                 var sourceSubscription =
-                    await _parent._source.SubscribeAsync(new TakeUntilSourceObserver<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
+                    await _parent._source.SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
                 await _disposable.SetDisposableAsync(sourceSubscription).ConfigureAwait(false);
 
                 return this;

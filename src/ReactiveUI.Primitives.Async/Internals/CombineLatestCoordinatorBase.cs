@@ -28,7 +28,7 @@ internal abstract class CombineLatestCoordinatorBase<TResult> : IAsyncDisposable
     internal CombineLatestLifecycle<TResult> Lifecycle { get; }
 
     /// <summary>Gets the lock protecting per-arity latest-values caches. Internal so the shared
-    /// <see cref="CombineLatestIndexedObserver{TSource, TResult}"/> can lock on it without deriving
+    /// <see cref="CombineLatestIndexedWitness{TSource, TResult}"/> can lock on it without deriving
     /// from this base.</summary>
     internal Lock ValuesLock { get; } = new();
 
@@ -67,7 +67,7 @@ internal abstract class CombineLatestCoordinatorBase<TResult> : IAsyncDisposable
     /// <summary>
     /// Reads the per-arity Optional slots, projects them through the selector when every source
     /// has produced a value, and forwards the result downstream via the lifecycle. Invoked by
-    /// <see cref="CombineLatestIndexedObserver{TSource, TResult}"/> after a per-source OnNext has
+    /// <see cref="CombineLatestIndexedWitness{TSource, TResult}"/> after a per-source OnNext has
     /// landed under <see cref="ValuesLock"/>.
     /// </summary>
     /// <returns>A ValueTask representing the asynchronous emit.</returns>

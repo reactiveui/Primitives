@@ -50,7 +50,7 @@ public static partial class SignalAsync
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     internal sealed class CompletionTaskWitness<T>(CancellationToken cancellationToken)
-        : TaskWitnessAsyncBase<T, object?>(cancellationToken)
+        : TaskResultWitnessAsyncBase<T, object?>(cancellationToken)
     {
         /// <inheritdoc/>
         protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) => default;

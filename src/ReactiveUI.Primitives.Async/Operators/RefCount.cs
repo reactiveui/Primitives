@@ -119,16 +119,16 @@ public static partial class SignalAsync
         }
 
         /// <summary>
-        /// Observer wrapper that forwards all notifications and decrements the parent's reference count on disposal,
+        /// Witness wrapper that forwards all notifications and decrements the parent's reference count on disposal,
         /// disconnecting from the source when the count reaches zero.
         /// </summary>
         /// <param name="parent">The parent ref-count observable.</param>
-        /// <param name="observer">The downstream observer to forward notifications to.</param>
+        /// <param name="observer">The downstream witness to forward notifications to.</param>
         internal sealed class RefCountWitness(RefCountSignal<T> parent, IObserverAsync<T> observer)
             : ObserverAsync<T>
         {
             /// <summary>
-            /// Forwards an element to the downstream observer.
+            /// Forwards an element to the downstream witness.
             /// </summary>
             /// <param name="value">The element to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
@@ -137,7 +137,7 @@ public static partial class SignalAsync
                 observer.OnNextAsync(value, cancellationToken);
 
             /// <summary>
-            /// Forwards a non-fatal error to the downstream observer.
+            /// Forwards a non-fatal error to the downstream witness.
             /// </summary>
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>

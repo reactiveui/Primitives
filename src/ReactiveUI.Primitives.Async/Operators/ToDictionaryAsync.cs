@@ -121,7 +121,7 @@ public static partial class SignalAsync
         @this.ToDictionaryAsync(keySelector, elementSelector, null, CancellationToken.None);
 
     /// <summary>
-    /// Observer that builds a dictionary from the elements of a sequence using key and element selectors.
+    /// Witness that builds a dictionary from the elements of a sequence using key and element selectors.
     /// </summary>
     /// <typeparam name="TSource">The type of elements in the source sequence.</typeparam>
     /// <typeparam name="TKey">The type of the dictionary keys.</typeparam>
@@ -135,7 +135,7 @@ public static partial class SignalAsync
         Func<TSource, TValue> elementSelector,
         IEqualityComparer<TKey>? comparer,
         CancellationToken cancellationToken)
-        : TaskWitnessAsyncBase<TSource, Dictionary<TKey, TValue>>(cancellationToken)
+        : TaskResultWitnessAsyncBase<TSource, Dictionary<TKey, TValue>>(cancellationToken)
         where TKey : notnull
     {
         /// <summary>

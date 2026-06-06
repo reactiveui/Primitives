@@ -258,7 +258,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeCoordinatorDisposed_ThenRelayNextAsyncReturnsDirectly()
     {
-        var observer = new DelegateAsyncWitness<int>((_, _) => default);
+        var observer = new CallbackWitnessAsync<int>((_, _) => default);
         var subscription = new SignalAsync.MergeCoordinator<int>(observer);
         await subscription.DisposeAsync();
 
@@ -272,7 +272,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeCoordinatorDisposed_ThenRelayErrorAsyncReturnsDirectly()
     {
-        var observer = new DelegateAsyncWitness<int>((_, _) => default);
+        var observer = new CallbackWitnessAsync<int>((_, _) => default);
         var subscription = new SignalAsync.MergeCoordinator<int>(observer);
         await subscription.DisposeAsync();
 
@@ -291,7 +291,7 @@ public partial class CombiningOperatorTests
         var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var items = new List<int>();
 
-        var observer = new DelegateAsyncWitness<int>(
+        var observer = new CallbackWitnessAsync<int>(
             (x, _) =>
             {
                 items.Add(x);
@@ -331,7 +331,7 @@ public partial class CombiningOperatorTests
         var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var errors = new List<Exception>();
 
-        var observer = new DelegateAsyncWitness<int>(
+        var observer = new CallbackWitnessAsync<int>(
             (_, _) => default,
             (ex, _) =>
             {
@@ -365,7 +365,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeSequenceCoordinatorDisposed_ThenOnNextReturnsDirectly()
     {
-        var observer = new DelegateAsyncWitness<int>((_, _) => default);
+        var observer = new CallbackWitnessAsync<int>((_, _) => default);
         IObservableAsync<int>[] sources = [];
         var subscription =
             new SignalAsync.MergeEnumerableSignal<int>.MergeSequenceCoordinator(observer, sources);
@@ -382,7 +382,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeSequenceCoordinatorDisposed_ThenOnErrorResumeReturnsDirectly()
     {
-        var observer = new DelegateAsyncWitness<int>((_, _) => default);
+        var observer = new CallbackWitnessAsync<int>((_, _) => default);
         IObservableAsync<int>[] sources = [];
         var subscription =
             new SignalAsync.MergeEnumerableSignal<int>.MergeSequenceCoordinator(observer, sources);

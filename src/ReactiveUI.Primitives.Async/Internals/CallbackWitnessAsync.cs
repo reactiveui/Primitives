@@ -5,13 +5,13 @@
 namespace ReactiveUI.Primitives.Async.Internals;
 
 /// <summary>
-/// An observer that delegates notification handling to user-supplied asynchronous functions.
+/// An witness that routes notifications through user-supplied asynchronous callbacks.
 /// </summary>
-/// <typeparam name="T">The type of the elements received by the observer.</typeparam>
+/// <typeparam name="T">The type of the elements received by the witness.</typeparam>
 /// <param name="onNextAsync">The asynchronous function invoked for each element.</param>
 /// <param name="onErrorResumeAsync">An optional asynchronous function invoked when a resumable error occurs.</param>
 /// <param name="onCompletedAsync">An optional asynchronous function invoked when the sequence completes.</param>
-internal sealed class DelegateAsyncWitness<T>(
+internal sealed class CallbackWitnessAsync<T>(
     Func<T, CancellationToken, ValueTask> onNextAsync,
     Func<Exception, CancellationToken, ValueTask>? onErrorResumeAsync = null,
     Func<Result, ValueTask>? onCompletedAsync = null) : ObserverAsync<T>

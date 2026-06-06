@@ -109,7 +109,7 @@ public static partial class SignalAsync
     }
 
     /// <summary>
-    /// Observer that captures the last element matching an optional predicate, or returns a default value.
+    /// Witness that captures the last element matching an optional predicate, or returns a default value.
     /// </summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="predicate">An optional predicate to filter elements.</param>
@@ -118,7 +118,7 @@ public static partial class SignalAsync
     internal sealed class LastOrDefaultTaskWitness<T>(
         Func<T, bool>? predicate,
         T? defaultValue,
-        CancellationToken cancellationToken) : TaskWitnessAsyncBase<T, T>(cancellationToken)
+        CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, T>(cancellationToken)
     {
         /// <summary>
         /// The most recently observed matching element, or the default value if no match has been found.

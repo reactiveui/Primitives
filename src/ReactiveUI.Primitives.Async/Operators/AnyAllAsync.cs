@@ -90,11 +90,11 @@ public static partial class SignalAsync
     }
 
     /// <summary>
-    /// An observer that determines whether any element in the sequence satisfies a predicate.
+    /// A witness that determines whether any element in the sequence satisfies a predicate.
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     internal sealed class AnyTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
-        : TaskWitnessAsyncBase<T, bool>(cancellationToken)
+        : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
     {
         /// <inheritdoc/>
         protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
@@ -115,11 +115,11 @@ public static partial class SignalAsync
     }
 
     /// <summary>
-    /// An observer that determines whether all elements in the sequence satisfy a predicate.
+    /// A witness that determines whether all elements in the sequence satisfy a predicate.
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     internal sealed class AllTaskWitness<T>(Func<T, bool> predicate, CancellationToken cancellationToken)
-        : TaskWitnessAsyncBase<T, bool>(cancellationToken)
+        : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
     {
         /// <summary>
         /// The predicate function used to test each element in the sequence.

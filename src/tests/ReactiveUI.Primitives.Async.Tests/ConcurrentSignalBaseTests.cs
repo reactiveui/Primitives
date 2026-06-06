@@ -101,7 +101,7 @@ public class ConcurrentSignalBaseTests
 
         var singleCaught = new ErrorCapture();
         var single = ImmutableArray.Create<IObserverAsync<int>>(
-            new DelegateAsyncWitness<int>(static (_, _) => default, MakeErrorSync(singleCaught)));
+            new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSync(singleCaught)));
         var singleError = new InvalidOperationException("single");
         await Concurrent.ForwardOnErrorResumeConcurrently(single, singleError, default);
         await Assert.That(singleCaught.Error).IsSameReferenceAs(singleError);
@@ -109,8 +109,8 @@ public class ConcurrentSignalBaseTests
         var a = new ErrorCapture();
         var b = new ErrorCapture();
         var multi = ImmutableArray.Create<IObserverAsync<int>>(
-            new DelegateAsyncWitness<int>(static (_, _) => default, MakeErrorSlow(a)),
-            new DelegateAsyncWitness<int>(static (_, _) => default, MakeErrorSync(b)));
+            new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSlow(a)),
+            new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSync(b)));
         var multiError = new InvalidOperationException("multi");
         await Concurrent.ForwardOnErrorResumeConcurrently(multi, multiError, default);
         await Assert.That(a.Error).IsSameReferenceAs(multiError);
@@ -127,15 +127,15 @@ public class ConcurrentSignalBaseTests
 
         var singleResult = new ResultCapture();
         var single = ImmutableArray.Create<IObserverAsync<int>>(
-            new DelegateAsyncWitness<int>(static (_, _) => default, null, MakeCompletedSync(singleResult)));
+            new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSync(singleResult)));
         await Concurrent.ForwardOnCompletedConcurrently(single, Result.Success);
         await Assert.That(singleResult.Result).IsEqualTo(Result.Success);
 
         var a = new ResultCapture();
         var b = new ResultCapture();
         var multi = ImmutableArray.Create<IObserverAsync<int>>(
-            new DelegateAsyncWitness<int>(static (_, _) => default, null, MakeCompletedSlow(a)),
-            new DelegateAsyncWitness<int>(static (_, _) => default, null, MakeCompletedSync(b)));
+            new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSlow(a)),
+            new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSync(b)));
         await Concurrent.ForwardOnCompletedConcurrently(multi, Result.Success);
         await Assert.That(a.Result).IsEqualTo(Result.Success);
         await Assert.That(b.Result).IsEqualTo(Result.Success);
@@ -144,7 +144,7 @@ public class ConcurrentSignalBaseTests
     /// <summary>Creates a synchronously-completing OnNext observer that captures the value.</summary>
     /// <param name="capture">The capture sink.</param>
     /// <returns>An observer whose <c>OnNextAsync</c> completes synchronously.</returns>
-    private static DelegateAsyncWitness<int> MakeSync(IntCapture capture) =>
+    private static CallbackWitnessAsync<int> MakeSync(IntCapture capture) =>
         new((x, _) =>
         {
             capture.Value = x;
@@ -154,7 +154,7 @@ public class ConcurrentSignalBaseTests
     /// <summary>Creates an OnNext observer that delays before capturing — forces the slow path.</summary>
     /// <param name="capture">The capture sink.</param>
     /// <returns>An observer whose <c>OnNextAsync</c> completes asynchronously.</returns>
-    private static DelegateAsyncWitness<int> MakeSlow(IntCapture capture) =>
+    private static CallbackWitnessAsync<int> MakeSlow(IntCapture capture) =>
         new(async (x, ct) =>
         {
             await Task.Delay(SlowPathDelayMilliseconds, ct).ConfigureAwait(false);

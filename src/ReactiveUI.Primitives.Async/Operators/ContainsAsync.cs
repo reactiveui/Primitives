@@ -75,7 +75,7 @@ public static partial class SignalAsync
         => @this.ContainsAsync(value, null, cancellationToken);
 
     /// <summary>
-    /// Observer that determines whether a sequence contains a specified value.
+    /// A witness that determines whether a sequence contains a specified value.
     /// </summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="value">The value to search for.</param>
@@ -84,7 +84,7 @@ public static partial class SignalAsync
     internal sealed class ContainsTaskWitness<T>(
         T value,
         IEqualityComparer<T> comparer,
-        CancellationToken cancellationToken) : TaskWitnessAsyncBase<T, bool>(cancellationToken)
+        CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
     {
         /// <inheritdoc/>
         protected override async ValueTask OnNextAsyncCore(T value1, CancellationToken cancellationToken)

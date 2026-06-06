@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <param name="source">The source observable whose notifications will be context-switched.</param>
 /// <param name="asyncContext">The async context to switch notifications onto.</param>
 /// <param name="forceYielding">Whether to force yielding even if already on the target context.</param>
-internal sealed class WitnessOnAsyncSignal<T>(
+internal sealed class ContextSwitchSignalAsync<T>(
     IObservableAsync<T> source,
     AsyncContext asyncContext,
     bool forceYielding) : SignalAsync<T>
@@ -21,7 +21,7 @@ internal sealed class WitnessOnAsyncSignal<T>(
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)
     {
-        var contextSwitchObserver = new ContextSwitchObserver(observer, asyncContext, forceYielding);
+        var contextSwitchObserver = new ContextSwitchWitness(observer, asyncContext, forceYielding);
         return source.SubscribeAsync(contextSwitchObserver, cancellationToken);
     }
 
@@ -31,7 +31,7 @@ internal sealed class WitnessOnAsyncSignal<T>(
     /// <param name="observer">The downstream observer to forward notifications to.</param>
     /// <param name="asyncContext">The async context to switch onto.</param>
     /// <param name="forceYielding">Whether to force yielding even if already on the target context.</param>
-    internal sealed class ContextSwitchObserver(IObserverAsync<T> observer, AsyncContext asyncContext, bool forceYielding)
+    internal sealed class ContextSwitchWitness(IObserverAsync<T> observer, AsyncContext asyncContext, bool forceYielding)
         : ObserverAsync<T>
     {
         /// <summary>Slow path: switch to the target context then forward the value.

@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>Tests for <see cref="WitnessOnAsyncSignal{T}"/> — exercises the
+/// <summary>Tests for <see cref="ContextSwitchSignalAsync{T}"/> — exercises the
 /// <c>forceYielding: true</c> slow-path branches that switch context on every
 /// <c>OnNext</c> / <c>OnErrorResume</c> / <c>OnCompleted</c> regardless of whether
 /// the call site is already on the target context.</summary>
@@ -182,7 +182,7 @@ public class ObserveOnAsyncSignalTests
     {
         var captured = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
         var downstream = new CapturingAsyncObserver<int>(captured);
-        var sut = new WitnessOnAsyncSignal<int>.ContextSwitchObserver(downstream, AsyncContext.Default, forceYielding: true);
+        var sut = new ContextSwitchSignalAsync<int>.ContextSwitchWitness(downstream, AsyncContext.Default, forceYielding: true);
 
         await sut.ForwardAfterContextSwitchAsync(Sentinel, CancellationToken.None);
 
@@ -197,7 +197,7 @@ public class ObserveOnAsyncSignalTests
     {
         var captured = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
         var downstream = new CapturingAsyncObserver<int>(captured);
-        var sut = new WitnessOnAsyncSignal<int>.ContextSwitchObserver(downstream, AsyncContext.Default, forceYielding: true);
+        var sut = new ContextSwitchSignalAsync<int>.ContextSwitchWitness(downstream, AsyncContext.Default, forceYielding: true);
         var expected = new InvalidOperationException("slow-path-error");
 
         await sut.ForwardErrorAfterContextSwitchAsync(expected, CancellationToken.None);
@@ -213,7 +213,7 @@ public class ObserveOnAsyncSignalTests
     {
         var captured = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
         var downstream = new CapturingAsyncObserver<int>(captured);
-        var sut = new WitnessOnAsyncSignal<int>.ContextSwitchObserver(downstream, AsyncContext.Default, forceYielding: true);
+        var sut = new ContextSwitchSignalAsync<int>.ContextSwitchWitness(downstream, AsyncContext.Default, forceYielding: true);
 
         await sut.ForwardCompletionAfterContextSwitchAsync(Result.Success);
 

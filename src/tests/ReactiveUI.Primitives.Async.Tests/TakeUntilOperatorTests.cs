@@ -145,7 +145,7 @@ public partial class TakeUntilOperatorTests
         await source.OnNextAsync(1, CancellationToken.None);
         await other.OnCompletedAsync(Result.Success);
 
-        // Other completed with success � according to StopSignalWitness.OnCompletedAsyncCore, success returns default (no-op)
+        // Other completed with success � according to StopSignalObserver.OnCompletedAsyncCore, success returns default (no-op)
         // Source should still be active
         await source.OnNextAsync(SecondItem, CancellationToken.None);
 

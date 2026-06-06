@@ -33,7 +33,7 @@ public static partial class SignalAsync
         Func<IObserverAsync<T>, CancellationToken, ValueTask<IAsyncDisposable>> subscribeAsync) =>
         subscribeAsync is null
             ? throw new ArgumentNullException(nameof(subscribeAsync))
-            : new DelegateSignalAsync<T>(subscribeAsync);
+            : new CallbackSignalAsync<T>(subscribeAsync);
 
     /// <summary>
     /// Creates a new observable sequence that runs the specified asynchronous job as a background task.

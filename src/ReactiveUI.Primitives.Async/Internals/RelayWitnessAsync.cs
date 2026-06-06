@@ -5,11 +5,11 @@
 namespace ReactiveUI.Primitives.Async.Internals;
 
 /// <summary>
-/// Wraps an <see cref="IObserverAsync{T}"/> to provide base observer behavior while delegating all notifications.
+/// Relays notifications from the base observer pipeline to another asynchronous observer.
 /// </summary>
-/// <typeparam name="T">The type of elements received by the observer.</typeparam>
-/// <param name="observer">The inner observer to delegate notifications to.</param>
-internal sealed class ForwardingAsyncWitness<T>(IObserverAsync<T> observer) : ObserverAsync<T>
+/// <typeparam name="T">The type of elements received by the witness.</typeparam>
+/// <param name="observer">The witness that receives the relayed notifications.</param>
+internal sealed class RelayWitnessAsync<T>(IObserverAsync<T> observer) : ObserverAsync<T>
 {
     /// <inheritdoc/>
     protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>

@@ -19,11 +19,11 @@ namespace ReactiveUI.Primitives.Async.Internals;
 /// </param>
 /// <param name="defaultValue">The value to return on empty when <paramref name="requireExactlyOne"/> is <c>false</c>.</param>
 /// <param name="cancellationToken">A cancellation token for the operation.</param>
-internal sealed class SingleElementObserver<T>(
+internal sealed class SingleElementWitness<T>(
     Func<T, bool>? predicate,
     bool requireExactlyOne,
     T? defaultValue,
-    CancellationToken cancellationToken) : TaskWitnessAsyncBase<T, T?>(cancellationToken)
+    CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, T?>(cancellationToken)
 {
     /// <summary>A value indicating whether a matching element has been found.</summary>
     private bool _hasValue;

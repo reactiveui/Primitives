@@ -67,13 +67,13 @@ public static partial class SignalAsync
         => @this.LongCountAsync(null, cancellationToken);
 
     /// <summary>
-    /// Observer that counts elements in a sequence as a 64-bit integer, optionally filtered by a predicate.
+    /// Witness that counts elements in a sequence as a 64-bit integer, optionally filtered by a predicate.
     /// </summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="predicate">An optional predicate to filter elements. If null, all elements are counted.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     internal sealed class LongCountTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
-        : TaskWitnessAsyncBase<T, long>(cancellationToken)
+        : TaskResultWitnessAsyncBase<T, long>(cancellationToken)
     {
         /// <summary>
         /// The running count of elements that satisfy the predicate.

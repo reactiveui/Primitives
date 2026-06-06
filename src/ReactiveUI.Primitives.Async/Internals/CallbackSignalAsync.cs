@@ -5,11 +5,11 @@
 namespace ReactiveUI.Primitives.Async.Internals;
 
 /// <summary>
-/// An observable that delegates subscription logic to a user-supplied asynchronous function.
+/// An observable that invokes a callback to create each subscription.
 /// </summary>
 /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
 /// <param name="subscribeAsync">The asynchronous function invoked when an observer subscribes.</param>
-internal sealed class DelegateSignalAsync<T>(
+internal sealed class CallbackSignalAsync<T>(
     Func<IObserverAsync<T>, CancellationToken, ValueTask<IAsyncDisposable>> subscribeAsync) : SignalAsync<T>
 {
     /// <inheritdoc/>

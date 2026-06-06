@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async.Tests.Internals;
 
-/// <summary>Tests for <see cref="CombineLatestIndexedObserver{TSource, TResult}"/>, the shared
+/// <summary>Tests for <see cref="CombineLatestIndexedWitness{TSource, TResult}"/>, the shared
 /// per-source observer that backs every per-arity CombineLatest subscription.</summary>
 public class CombineLatestIndexedObserverTests
 {
@@ -25,7 +25,7 @@ public class CombineLatestIndexedObserverTests
         var captured = new CaptureObserverAsync<int>();
         var parent = new TestSubscription(captured);
         int? stored = null;
-        var observer = new CombineLatestIndexedObserver<int, int>(parent, SourceBit, v => stored = v);
+        var observer = new CombineLatestIndexedWitness<int, int>(parent, SourceBit, v => stored = v);
 
         await observer.OnNextAsync(Sentinel, CancellationToken.None);
 
@@ -43,7 +43,7 @@ public class CombineLatestIndexedObserverTests
     {
         var captured = new CaptureObserverAsync<int>();
         var parent = new TestSubscription(captured);
-        var observer = new CombineLatestIndexedObserver<int, int>(parent, SourceBit, static _ => { });
+        var observer = new CombineLatestIndexedWitness<int, int>(parent, SourceBit, static _ => { });
         var expected = new InvalidOperationException("forward");
 
         await observer.OnErrorResumeAsync(expected, CancellationToken.None);
@@ -62,7 +62,7 @@ public class CombineLatestIndexedObserverTests
     {
         var captured = new CaptureObserverAsync<int>();
         var parent = new TestSubscription(captured);
-        var observer = new CombineLatestIndexedObserver<int, int>(parent, SourceBit, static _ => { });
+        var observer = new CombineLatestIndexedWitness<int, int>(parent, SourceBit, static _ => { });
 
         await observer.OnCompletedAsync(Result.Success);
 

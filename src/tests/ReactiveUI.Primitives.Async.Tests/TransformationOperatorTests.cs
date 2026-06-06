@@ -157,7 +157,7 @@ public class TransformationOperatorTests
             SignalAsync.Return(1).Scan(0, (Func<int, int, int>)null!));
 
     /// <summary>Exercises the sync-action <c>Do&lt;T&gt;(Action&lt;T&gt;, Action&lt;Exception&gt;, Action&lt;Result&gt;)</c>
-    /// overload's non-null-callback branches in <c>SyncSideEffectWitness</c>'s OnNext / OnErrorResume / OnCompleted.</summary>
+    /// overload's non-null-callback branches in <c>SyncSideEffectObserver</c>'s OnNext / OnErrorResume / OnCompleted.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDoSyncWithAllCallbacks_ThenInvokesAndForwards()

@@ -8,18 +8,18 @@ namespace ReactiveUI.Primitives.Async.Internals;
 /// Per-source <see cref="ObserverAsync{T}"/> used by every <c>CombineLatestN</c> subscription. The
 /// per-arity class previously declared N hand-rolled <c>OnNextN</c> / <c>OnCompletedN</c> method
 /// pairs whose bodies differed only in which <c>Optional&lt;TN&gt;</c> field they wrote and which
-/// completion bit they passed to the lifecycle. Pre-building N of these observers at subscription
+/// completion bit they passed to the lifecycle. Pre-building N of these witnesses at subscription
 /// time keeps the typing exact and eliminates the per-source method declarations from the per-arity
 /// files. The closure cost (one delegate per source for the value-write) is paid once at subscribe
 /// and not per emission; the actual per-emission cost is one indirect delegate invoke under the
 /// values-lock.
 /// </summary>
-/// <typeparam name="TSource">The element type of the upstream source this observer subscribes to.</typeparam>
+/// <typeparam name="TSource">The element type of the upstream source this witness subscribes to.</typeparam>
 /// <typeparam name="TResult">The downstream element type owned by the parent subscription.</typeparam>
 /// <param name="parent">The parent subscription that owns the values-lock and lifecycle.</param>
 /// <param name="sourceBit">The completion bitmask bit owned by this source (1 &lt;&lt; index).</param>
 /// <param name="recordValue">Stores the freshly-emitted value into the parent's typed <c>_valN</c> slot.</param>
-internal sealed class CombineLatestIndexedObserver<TSource, TResult>(
+internal sealed class CombineLatestIndexedWitness<TSource, TResult>(
     CombineLatestCoordinatorBase<TResult> parent,
     int sourceBit,
     Action<TSource> recordValue) : ObserverAsync<TSource>

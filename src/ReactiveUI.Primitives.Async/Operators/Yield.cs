@@ -45,7 +45,7 @@ public static partial class SignalAsync
         {
             var currentContext = AsyncContext.GetCurrent();
             return source.SubscribeAsync(
-                new WitnessOnAsyncSignal<T>.ContextSwitchObserver(observer, currentContext, true),
+                new ContextSwitchSignalAsync<T>.ContextSwitchWitness(observer, currentContext, true),
                 cancellationToken);
         }
     }

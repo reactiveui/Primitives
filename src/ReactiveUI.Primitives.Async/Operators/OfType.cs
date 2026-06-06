@@ -50,7 +50,7 @@ public static partial class SignalAsync
             IObserverAsync<TResult> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new OfTypeObserver(observer, cancellationToken);
+            var sink = new OfTypeWitness(observer, cancellationToken);
 
             if (observer is ObserverAsync<TResult> downstreamBase)
             {
@@ -62,10 +62,10 @@ public static partial class SignalAsync
             return sink;
         }
 
-        /// <summary>Per-subscription observer that forwards values matching <typeparamref name="TResult"/>.</summary>
-        /// <param name="downstream">The downstream observer.</param>
+        /// <summary>Per-subscription witness that forwards values matching <typeparamref name="TResult"/>.</summary>
+        /// <param name="downstream">The downstream witness.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class OfTypeObserver(
+        internal sealed class OfTypeWitness(
             IObserverAsync<TResult> downstream,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
         {

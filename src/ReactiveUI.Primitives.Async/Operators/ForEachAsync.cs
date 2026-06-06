@@ -95,12 +95,12 @@ public static partial class SignalAsync
     }
 
     /// <summary>
-    /// An observer that invokes an asynchronous callback for each element and signals completion via a task.
+    /// A witness that invokes an asynchronous callback for each element and signals completion via a task.
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     internal sealed class ForEachAsyncTaskWitness<T>(
         Func<T, CancellationToken, ValueTask> onNextAsync,
-        CancellationToken cancellationToken) : TaskWitnessAsyncBase<T, bool>(cancellationToken)
+        CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
     {
         /// <inheritdoc/>
         protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
@@ -116,11 +116,11 @@ public static partial class SignalAsync
     }
 
     /// <summary>
-    /// An observer that invokes a synchronous callback for each element and signals completion via a task.
+    /// A witness that invokes a synchronous callback for each element and signals completion via a task.
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     internal sealed class ForEachSyncTaskWitness<T>(Action<T> onNext, CancellationToken cancellationToken)
-        : TaskWitnessAsyncBase<T, bool>(cancellationToken)
+        : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
     {
         /// <summary>
         /// The synchronous callback invoked for each element in the sequence.

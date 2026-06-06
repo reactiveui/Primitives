@@ -317,7 +317,7 @@ public static partial class SignalAsync
         /// Creates a new inner observer for subscribing to an inner observable sequence.
         /// </summary>
         /// <returns>A new inner async observer instance.</returns>
-        protected internal virtual MergeBranchObserver CreateBranchObserver() => new(this);
+        protected internal virtual MergeBranchWitness CreateBranchObserver() => new(this);
 
         /// <summary>
         /// Completes the merged sequence, disposes all subscriptions, and optionally signals the downstream observer.
@@ -349,12 +349,12 @@ public static partial class SignalAsync
         }
 
         /// <summary>
-        /// Observer that forwards items from an inner observable to the parent merge subscription.
+        /// Witness that forwards items from an inner observable to the parent merge subscription.
         /// </summary>
-        internal class MergeBranchObserver(MergeCoordinator<T> parent) : ObserverAsync<T>
+        internal class MergeBranchWitness(MergeCoordinator<T> parent) : ObserverAsync<T>
         {
             /// <summary>
-            /// Subscribes this observer to an inner observable sequence.
+            /// Subscribes this witness to an inner observable sequence.
             /// </summary>
             /// <param name="inner">The inner observable to subscribe to.</param>
             /// <param name="cancellationToken">A token to cancel the subscription.</param>
@@ -421,7 +421,7 @@ public static partial class SignalAsync
         protected internal override async ValueTask SubscribeBranchAsync(IObservableAsync<T> inner)
         {
             await _semaphore.WaitAsync(DisposedCancellationToken).ConfigureAwait(false);
-            var innerObserver = (MergeBranchObserverWithPermit)CreateBranchObserver();
+            var innerObserver = (MergeBranchWitnessWithPermit)CreateBranchObserver();
             var subscribed = false;
             try
             {
@@ -446,23 +446,23 @@ public static partial class SignalAsync
         }
 
         /// <inheritdoc/>
-        protected internal override MergeBranchObserver CreateBranchObserver() =>
-            new MergeBranchObserverWithPermit(this);
+        protected internal override MergeBranchWitness CreateBranchObserver() =>
+            new MergeBranchWitnessWithPermit(this);
 
         /// <summary>
-        /// Inner observer that releases a semaphore slot on disposal.
+        /// Inner witness that releases a semaphore slot on disposal.
         /// </summary>
-        internal sealed class MergeBranchObserverWithPermit(BoundedMergeCoordinator<T> parent)
-            : MergeBranchObserver(parent)
+        internal sealed class MergeBranchWitnessWithPermit(BoundedMergeCoordinator<T> parent)
+            : MergeBranchWitness(parent)
         {
-            /// <summary>Tracks whether the semaphore slot has already been released for this observer.</summary>
+            /// <summary>Tracks whether the semaphore slot has already been released for this witness.</summary>
             /// <remarks>
-            /// <see cref="ObserverAsync{T}.DisposeAsync"/> can be invoked more than once for the same observer
+            /// <see cref="ObserverAsync{T}.DisposeAsync"/> can be invoked more than once for the same witness
             /// (auto-dispose after <c>OnCompletedAsync</c>, then again from <c>CompositeDisposableAsync.Remove</c>
             /// and from the parent's <c>FinishAsync</c> path). Without this guard, <see cref="SemaphoreSlim.Release()"/>
-            /// would be called multiple times per observer, exceeding <c>maxCount</c> and throwing
+            /// would be called multiple times per witness, exceeding <c>maxCount</c> and throwing
             /// <see cref="SemaphoreFullException"/> — which interrupts the parent's completion chain and leaves
-            /// downstream observers waiting forever.
+            /// downstream witnesses waiting forever.
             /// </remarks>
             private int _released;
 
@@ -569,7 +569,7 @@ public static partial class SignalAsync
                     {
                         Interlocked.Increment(ref _active);
 
-                        var innerObserver = new MergeBranchObserver(this);
+                        var innerObserver = new MergeBranchWitness(this);
                         await _innerDisposables.AddAsync(innerObserver).ConfigureAwait(false);
                         try
                         {
@@ -777,9 +777,9 @@ public static partial class SignalAsync
             }
 
             /// <summary>
-            /// Observer that forwards items from an inner source to the parent enumerable merge subscription.
+            /// Witness that forwards items from an inner source to the parent enumerable merge subscription.
             /// </summary>
-            internal sealed class MergeBranchObserver(MergeSequenceCoordinator parent) : ObserverAsync<T>
+            internal sealed class MergeBranchWitness(MergeSequenceCoordinator parent) : ObserverAsync<T>
             {
                 /// <inheritdoc/>
                 protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)

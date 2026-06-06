@@ -7,12 +7,12 @@ using System.Diagnostics;
 namespace ReactiveUI.Primitives.Async.Internals;
 
 /// <summary>
-/// Base class for observers that produce a single task-based result value when the observed sequence completes.
+/// Base class for witnesses that produce a single task-based result value when the observed sequence completes.
 /// </summary>
 /// <typeparam name="T">The type of elements received from the observable sequence.</typeparam>
-/// <typeparam name="TTaskValue">The type of the result value produced by this observer.</typeparam>
+/// <typeparam name="TTaskValue">The type of the result value produced by this witness.</typeparam>
 /// <param name="cancellationToken">A cancellation token used to cancel the waiting operation.</param>
-internal abstract class TaskWitnessAsyncBase<T, TTaskValue>(CancellationToken cancellationToken) : ObserverAsync<T>
+internal abstract class TaskResultWitnessAsyncBase<T, TTaskValue>(CancellationToken cancellationToken) : ObserverAsync<T>
 {
     /// <summary>
     /// The task completion source used to produce the observer's single result value.
@@ -36,7 +36,7 @@ internal abstract class TaskWitnessAsyncBase<T, TTaskValue>(CancellationToken ca
             await using var ct = _cancellationToken.Register(
                 static x =>
                 {
-                    var @this = (TaskWitnessAsyncBase<T, TTaskValue>)x!;
+                    var @this = (TaskResultWitnessAsyncBase<T, TTaskValue>)x!;
                     @this._tcs.TrySetException(new OperationCanceledException(@this._cancellationToken));
                 },
                 this);
@@ -44,7 +44,7 @@ internal abstract class TaskWitnessAsyncBase<T, TTaskValue>(CancellationToken ca
             using var ct = _cancellationToken.Register(
                 static x =>
                 {
-                    var @this = (TaskWitnessAsyncBase<T, TTaskValue>)x!;
+                    var @this = (TaskResultWitnessAsyncBase<T, TTaskValue>)x!;
                     @this._tcs.TrySetException(new OperationCanceledException(@this._cancellationToken));
                 },
                 this);

@@ -83,7 +83,7 @@ public static partial class SignalAsync
     /// <param name="predicate">An optional predicate to filter elements.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     internal sealed class LastTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
-        : TaskWitnessAsyncBase<T, T>(cancellationToken)
+        : TaskResultWitnessAsyncBase<T, T>(cancellationToken)
     {
         /// <summary>
         /// A value indicating whether any matching element has been observed.

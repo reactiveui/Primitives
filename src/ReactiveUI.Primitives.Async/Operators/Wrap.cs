@@ -21,5 +21,5 @@ public static partial class SignalAsync
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="observer"/> is null.</exception>
     public static IObserverAsync<T> Wrap<T>(this IObserverAsync<T> observer) => observer is null
         ? throw new ArgumentNullException(nameof(observer))
-        : new ForwardingAsyncWitness<T>(observer);
+        : new RelayWitnessAsync<T>(observer);
 }

@@ -101,7 +101,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new CatchObserver(observer, handler, onErrorResume, cancellationToken);
+            var sink = new CatchWitness(observer, handler, onErrorResume, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
             // recognises this token without allocating a per-emission linked CTS.
@@ -115,15 +115,15 @@ public static partial class SignalAsync
             return sink;
         }
 
-        /// <summary>Per-subscription observer that forwards <c>OnNext</c> verbatim, delegates error-resume to the
+        /// <summary>Per-subscription witness that forwards <c>OnNext</c> verbatim, delegates error-resume to the
         /// supplied callback (or the downstream when none was supplied), and on a failed completion subscribes the
         /// handler-produced fallback observable in place of forwarding the failure.</summary>
-        /// <param name="downstream">The downstream observer.</param>
+        /// <param name="downstream">The downstream witness.</param>
         /// <param name="handler">The fallback factory.</param>
         /// <param name="onErrorResume">Optional async error-resume callback.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain and reused for the handler
         /// subscription.</param>
-        internal sealed class CatchObserver(
+        internal sealed class CatchWitness(
             IObserverAsync<T> downstream,
             Func<Exception, IObservableAsync<T>> handler,
             Func<Exception, CancellationToken, ValueTask>? onErrorResume,

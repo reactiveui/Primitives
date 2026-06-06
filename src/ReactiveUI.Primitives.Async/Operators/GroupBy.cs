@@ -236,7 +236,7 @@ public static partial class SignalAsync
                     // that token); the downstream observer (if an ObserverAsync) observes the
                     // wrap's dispose token. Together they collapse the per-emission
                     // CancellationTokenSource.CreateLinkedTokenSource allocations to zero.
-                    var wrap = new ForwardingAsyncWitness<TValue>(observer);
+                    var wrap = new RelayWitnessAsync<TValue>(observer);
                     wrap.LinkUpstreamCancellation(parent.InternalDisposedToken);
                     if (observer is ObserverAsync<TValue> downstream)
                     {

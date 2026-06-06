@@ -24,7 +24,7 @@ public static partial class SignalAsync
     /// context.</param>
     /// <returns>An observable sequence whose observer callbacks execute on the specified context.</returns>
     public static IObservableAsync<T> WitnessOn<T>(this IObservableAsync<T> @this, AsyncContext asyncContext, bool forceYielding) =>
-        new WitnessOnAsyncSignal<T>(@this, asyncContext, forceYielding);
+        new ContextSwitchSignalAsync<T>(@this, asyncContext, forceYielding);
 
     /// <summary>
     /// Wraps the source observable so that observer callbacks are invoked on the specified async context.
@@ -47,7 +47,7 @@ public static partial class SignalAsync
     public static IObservableAsync<T> WitnessOn<T>(this IObservableAsync<T> @this, SynchronizationContext synchronizationContext, bool forceYielding)
     {
         var asyncContext = AsyncContext.From(synchronizationContext);
-        return new WitnessOnAsyncSignal<T>(@this, asyncContext, forceYielding);
+        return new ContextSwitchSignalAsync<T>(@this, asyncContext, forceYielding);
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public static partial class SignalAsync
     public static IObservableAsync<T> WitnessOn<T>(this IObservableAsync<T> @this, TaskScheduler taskScheduler, bool forceYielding)
     {
         var asyncContext = AsyncContext.From(taskScheduler);
-        return new WitnessOnAsyncSignal<T>(@this, asyncContext, forceYielding);
+        return new ContextSwitchSignalAsync<T>(@this, asyncContext, forceYielding);
     }
 
     /// <summary>
@@ -98,7 +98,7 @@ public static partial class SignalAsync
     public static IObservableAsync<T> WitnessOn<T>(this IObservableAsync<T> @this, ISequencer scheduler, bool forceYielding)
     {
         var asyncContext = AsyncContext.From(scheduler);
-        return new WitnessOnAsyncSignal<T>(@this, asyncContext, forceYielding);
+        return new ContextSwitchSignalAsync<T>(@this, asyncContext, forceYielding);
     }
 
     /// <summary>

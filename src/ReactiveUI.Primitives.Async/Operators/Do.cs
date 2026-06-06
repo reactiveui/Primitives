@@ -101,7 +101,7 @@ public static partial class SignalAsync
         }
 
         /// <summary>
-        /// An observer that invokes asynchronous side-effect callbacks before forwarding notifications.
+        /// A witness that invokes asynchronous side-effect callbacks before forwarding notifications.
         /// </summary>
         internal sealed class AsyncSideEffectWitness(
             IObserverAsync<T> observer,

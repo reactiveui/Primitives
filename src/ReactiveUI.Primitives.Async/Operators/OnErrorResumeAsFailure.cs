@@ -46,13 +46,13 @@ public static partial class SignalAsync
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken) =>
-            source.SubscribeAsync(new OnErrorResumeAsFailureObserver(observer), cancellationToken);
+            source.SubscribeAsync(new OnErrorResumeAsFailureWitness(observer), cancellationToken);
 
         /// <summary>
-        /// Observer that forwards values and completion, but converts resumable errors into failure completions.
+        /// A witness that forwards values and completion, but converts resumable errors into failure completions.
         /// </summary>
         /// <param name="observer">The downstream observer to forward notifications to.</param>
-        internal sealed class OnErrorResumeAsFailureObserver(IObserverAsync<T> observer) : ObserverAsync<T>
+        internal sealed class OnErrorResumeAsFailureWitness(IObserverAsync<T> observer) : ObserverAsync<T>
         {
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
