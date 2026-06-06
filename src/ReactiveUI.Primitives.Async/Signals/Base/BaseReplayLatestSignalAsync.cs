@@ -70,35 +70,30 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
     /// <returns>A task that represents the asynchronous notification operation.</returns>
     public async ValueTask OnNextAsync(T value, CancellationToken cancellationToken)
     {
-        var token = GetOperationCancellationToken(cancellationToken, out var linkedCts);
+        CancellationTokenSource? linkedCts;
+        var token = GetOperationCancellationToken(cancellationToken, out linkedCts);
+        using var _ = linkedCts;
 
-        try
+        ImmutableArray<IObserverAsync<T>> observers;
+        using (await _gate.EnterAsync(token).ConfigureAwait(false))
         {
-            ImmutableArray<IObserverAsync<T>> observers;
-            using (await _gate.EnterAsync(token).ConfigureAwait(false))
+            if (_result is not null)
             {
-                if (_result is not null)
-                {
-                    return;
-                }
-
-                _lastValue = new(value);
-                observers = _observers;
+                return;
             }
 
-            // Pass CancellationToken.None into the broadcast loop so downstream observers'
-            // TryEnter takes the None fast path; otherwise the Signal's own dispose token would
-            // appear foreign to each observer and force a Linked2CancellationTokenSource per
-            // emission, as discovered profiling Publish(initialValue) / ReplayLatestPublish.
-            // Signal disposal still terminates emissions because we set _result before locking
-            // and observers stop being added once the Signal has completed; in-flight
-            // forwarding does not need the dispose token threaded through.
-            await OnNextAsyncCore(observers, value, CancellationToken.None).ConfigureAwait(false);
+            _lastValue = new(value);
+            observers = _observers;
         }
-        finally
-        {
-            linkedCts?.Dispose();
-        }
+
+        // Pass CancellationToken.None into the broadcast loop so downstream observers'
+        // TryEnter takes the None fast path; otherwise the Signal's own dispose token would
+        // appear foreign to each observer and force a Linked2CancellationTokenSource per
+        // emission, as discovered profiling Publish(initialValue) / ReplayLatestPublish.
+        // Signal disposal still terminates emissions because we set _result before locking
+        // and observers stop being added once the Signal has completed; in-flight
+        // forwarding does not need the dispose token threaded through.
+        await OnNextAsyncCore(observers, value, CancellationToken.None).ConfigureAwait(false);
     }
 
     /// <summary>
