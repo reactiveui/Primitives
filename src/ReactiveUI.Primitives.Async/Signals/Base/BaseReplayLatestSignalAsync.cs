@@ -107,26 +107,20 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
     public async ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken)
     {
         var token = GetOperationCancellationToken(cancellationToken, out var linkedCts);
+        using var _ = linkedCts;
 
-        try
+        ImmutableArray<IObserverAsync<T>> observers;
+        using (await _gate.EnterAsync(token).ConfigureAwait(false))
         {
-            ImmutableArray<IObserverAsync<T>> observers;
-            using (await _gate.EnterAsync(token).ConfigureAwait(false))
+            if (_result is not null)
             {
-                if (_result is not null)
-                {
-                    return;
-                }
-
-                observers = _observers;
+                return;
             }
 
-            await OnErrorResumeAsyncCore(observers, error, token).ConfigureAwait(false);
+            observers = _observers;
         }
-        finally
-        {
-            linkedCts?.Dispose();
-        }
+
+        await OnErrorResumeAsyncCore(observers, error, token).ConfigureAwait(false);
     }
 
     /// <summary>
