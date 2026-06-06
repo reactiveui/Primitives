@@ -177,25 +177,20 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         var token = GetOperationCancellationToken(cancellationToken, out var linkedCts);
-        try
-        {
-            token.ThrowIfCancellationRequested();
+        using var _ = linkedCts;
 
-            using (await _gate.EnterAsync(token).ConfigureAwait(false))
+        token.ThrowIfCancellationRequested();
+
+        using (await _gate.EnterAsync(token).ConfigureAwait(false))
+        {
+            _observers = _observers.Add(observer);
+            if (_value.TryGetValue(out var value))
             {
-                _observers = _observers.Add(observer);
-                if (_value.TryGetValue(out var value))
-                {
-                    await observer.OnNextAsync(value, token).ConfigureAwait(false);
-                }
+                await observer.OnNextAsync(value, token).ConfigureAwait(false);
             }
+        }
 
-            return new WitnessLease(this, observer);
-        }
-        finally
-        {
-            linkedCts?.Dispose();
-        }
+        return new WitnessLease(this, observer);
     }
 
     /// <summary>
