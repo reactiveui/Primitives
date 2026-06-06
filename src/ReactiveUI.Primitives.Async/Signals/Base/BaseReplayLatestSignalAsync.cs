@@ -305,11 +305,11 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
                 _observers = _observers.Remove(observer);
             }
         }
-        catch (OperationCanceledException) when (_isDisposed)
+        catch (OperationCanceledException)
         {
             return;
         }
-        catch (ObjectDisposedException) when (_isDisposed)
+        catch (ObjectDisposedException)
         {
             return;
         }
