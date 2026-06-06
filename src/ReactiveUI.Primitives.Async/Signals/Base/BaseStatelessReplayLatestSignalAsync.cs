@@ -278,11 +278,11 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
                 }
             }
         }
-        catch (OperationCanceledException) when (_isDisposed)
+        catch (OperationCanceledException)
         {
             return;
         }
-        catch (ObjectDisposedException) when (_isDisposed)
+        catch (ObjectDisposedException)
         {
             return;
         }
