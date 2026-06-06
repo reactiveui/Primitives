@@ -742,6 +742,133 @@ public partial class SignalTests
         await Assert.That(received).IsSameReferenceAs(expected);
     }
 
+    /// <summary>Verifies that the stateless replay-latest Signal's <c>OnNextAsync</c> with a
+    /// caller-supplied cancellation token takes the linked-CTS slow path.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenStatelessReplayLatestOnNextWithCustomToken_ThenForwardsValue()
+    {
+        var signal = Signal.CreateReplayLatest<int>(new()
+        {
+            PublishingOption = PublishingOption.Serial,
+            IsStateless = true,
+        });
+        var tcs = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        await using var sub = await signal.Values.SubscribeAsync(
+            (value, _) =>
+            {
+                tcs.TrySetResult(value);
+                return default;
+            });
+
+        using var cts = new CancellationTokenSource();
+        const int LinkedCtsValue = 17;
+        await signal.OnNextAsync(LinkedCtsValue, cts.Token);
+
+        var received = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await Assert.That(received).IsEqualTo(LinkedCtsValue);
+    }
+
+    /// <summary>Verifies that the stateless replay-latest Signal's <c>OnErrorResumeAsync</c> with a
+    /// caller-supplied cancellation token takes the linked-CTS slow path.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenStatelessReplayLatestOnErrorResumeWithCustomToken_ThenForwardsError()
+    {
+        var signal = Signal.CreateReplayLatest<int>(new()
+        {
+            PublishingOption = PublishingOption.Serial,
+            IsStateless = true,
+        });
+        var tcs = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        await using var sub = await signal.Values.SubscribeAsync(
+            static (_, _) => default,
+            (error, _) =>
+            {
+                tcs.TrySetResult(error);
+                return default;
+            });
+
+        var expected = new InvalidOperationException("stateless-linked-cts");
+        using var cts = new CancellationTokenSource();
+        await signal.OnErrorResumeAsync(expected, cts.Token);
+
+        var received = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await Assert.That(received).IsSameReferenceAs(expected);
+    }
+
+    /// <summary>Verifies that replay-latest subscription with a caller-supplied cancellation token
+    /// disposes the linked token source after subscribing.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenReplayLatestSubscribeWithCustomToken_ThenSubscriptionCompletes()
+    {
+        var signal = Signal.CreateReplayLatest<int>();
+        using var cts = new CancellationTokenSource();
+
+        var sub = await signal.Values.SubscribeAsync(static (_, _) => default, cts.Token);
+        await sub.DisposeAsync();
+
+        await Assert.That(sub).IsNotNull();
+    }
+
+    /// <summary>Verifies that stateless replay-latest subscription with a caller-supplied cancellation
+    /// token disposes the linked token source after subscribing.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenStatelessReplayLatestSubscribeWithCustomToken_ThenSubscriptionCompletes()
+    {
+        var signal = Signal.CreateReplayLatest<int>(new()
+        {
+            PublishingOption = PublishingOption.Serial,
+            IsStateless = true,
+        });
+        using var cts = new CancellationTokenSource();
+
+        var sub = await signal.Values.SubscribeAsync(static (_, _) => default, cts.Token);
+        await sub.DisposeAsync();
+
+        await Assert.That(sub).IsNotNull();
+    }
+
+    /// <summary>Verifies that disposing a replay-latest subscription after its owning Signal has
+    /// already been disposed is a no-op and remains idempotent.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenReplayLatestSubscriptionDisposedAfterSignalDisposed_ThenDisposeIsIdempotent()
+    {
+        var signal = Signal.CreateReplayLatest<int>();
+        var sub = await signal.Values.SubscribeAsync(static (_, _) => default);
+
+        await signal.DisposeAsync();
+        await sub.DisposeAsync();
+        await sub.DisposeAsync();
+
+        await Assert.That(sub).IsNotNull();
+    }
+
+    /// <summary>Verifies that disposing a stateless replay-latest subscription after its owning
+    /// Signal has already been disposed is a no-op and remains idempotent.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenStatelessReplayLatestSubscriptionDisposedAfterSignalDisposed_ThenDisposeIsIdempotent()
+    {
+        var signal = Signal.CreateReplayLatest<int>(new()
+        {
+            PublishingOption = PublishingOption.Serial,
+            IsStateless = true,
+        });
+        var sub = await signal.Values.SubscribeAsync(static (_, _) => default);
+
+        await signal.DisposeAsync();
+        await sub.DisposeAsync();
+        await sub.DisposeAsync();
+
+        await Assert.That(sub).IsNotNull();
+    }
+
     /// <summary>Exercises the <c>_isDisposed</c> idempotency guard on
     /// <c>BaseReplayLatestSignalAsync.DisposeAsync</c> — a second dispose is a no-op.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>

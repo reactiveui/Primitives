@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using ReactiveUI.Primitives.Async.Internals;
 using ReactiveUI.Primitives.Concurrency;
 using PrimitiveAssert = ReactiveUI.Primitives.Tests.Assert;
 
@@ -23,15 +24,26 @@ public sealed class AsyncRenameCoverageTests
         var sequencer = new QueuedSequencer();
         var sequencerContext = AsyncContext.From(sequencer);
         var scheduler = new AsyncContext.SequencerTaskScheduler(sequencer);
+        var syncSequencer = new SynchronizationSequencer();
+        var syncSequencerContext = AsyncContext.From((ISequencer)syncSequencer);
+        var sameInSequencer = false;
         var ran = false;
 
         PrimitiveAssert.True(AsyncContext.Default.UsesDefaultSequencer);
         PrimitiveAssert.False(sequencerContext.UsesDefaultSequencer);
+        PrimitiveAssert.False(AsyncContext.From(new SynchronizationContext()).UsesDefaultSequencer);
+        PrimitiveAssert.False(AsyncContext.From(NewThreadTaskScheduler.Instance).UsesDefaultSequencer);
+        PrimitiveAssert.True(ReferenceEquals(syncSequencer, syncSequencerContext.SynchronizationContext));
+        PrimitiveAssert.False(sequencerContext.IsSameAsCurrentAsyncContext());
         PrimitiveAssert.Same(sequencer, scheduler.Sequencer);
         PrimitiveAssert.True(scheduler.GetScheduledTasksForTesting() is null);
 
         var task = Task.Factory.StartNew(
-            () => ran = true,
+            () =>
+            {
+                sameInSequencer = sequencerContext.IsSameAsCurrentAsyncContext();
+                ran = true;
+            },
             CancellationToken.None,
             TaskCreationOptions.DenyChildAttach,
             scheduler);
@@ -41,7 +53,69 @@ public sealed class AsyncRenameCoverageTests
         await task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
         PrimitiveAssert.True(ran);
+        PrimitiveAssert.True(sameInSequencer);
         PrimitiveAssert.False(scheduler.TryExecuteTaskInlineForTesting(new Task(() => { }), taskWasPreviouslyQueued: false));
+    }
+
+    /// <summary>
+    /// Verifies current-context capture and explicit awaiter scheduling branches.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task AsyncContextCurrentAndSwitcherBranchesCoverCustomSchedulersAndCancellation()
+    {
+        var previous = SynchronizationContext.Current;
+        var currentContext = new SynchronizationContext();
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(currentContext);
+
+            var captured = AsyncContext.GetCurrent();
+
+            PrimitiveAssert.True(ReferenceEquals(currentContext, captured.SynchronizationContext));
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previous);
+        }
+
+        var cancellationCallbacks = 0;
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync().ConfigureAwait(false);
+
+        var canceledAwaitable = AsyncContext.Default.SwitchContextAsync(
+            forceYielding: true,
+            cancellation.Token);
+        canceledAwaitable.OnCompleted(() => cancellationCallbacks++);
+
+        PrimitiveAssert.Equal(1, cancellationCallbacks);
+
+        var scheduled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var schedulerAwaitable = AsyncContext.From(NewThreadTaskScheduler.Instance).SwitchContextAsync(
+            forceYielding: true,
+            CancellationToken.None);
+        schedulerAwaitable.OnCompleted(scheduled.SetResult);
+
+        await scheduled.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Verifies task-signal completion failures are routed through the unhandled exception hook.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task TaskSignalSubscriptionCompleteWithFailureReportsThrownCompletion()
+    {
+        using var unhandled = new UnhandledExceptionCapture();
+        var expected = new InvalidOperationException("task-signal-completion");
+        var observer = new ThrowingCompletionObserver(expected);
+
+        await TaskSignalSubscription<int>.CompleteWithFailureAsync(
+            observer,
+            new InvalidOperationException("source")).ConfigureAwait(false);
+
+        var reported = await unhandled.WaitForAsync(expected.Message, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        PrimitiveAssert.Same(expected, reported!);
     }
 
     /// <summary>
@@ -177,6 +251,43 @@ public sealed class AsyncRenameCoverageTests
     {
         /// <inheritdoc/>
         public ValueTask DisposeAsync() => throw error;
+    }
+
+    /// <summary>
+    /// Observer that throws when completion is delivered.
+    /// </summary>
+    /// <param name="error">The exception to throw from completion.</param>
+    private sealed class ThrowingCompletionObserver(Exception error) : IObserverAsync<int>
+    {
+        /// <inheritdoc/>
+        public ValueTask DisposeAsync() => default;
+
+        /// <inheritdoc/>
+        public ValueTask OnCompletedAsync(Result result) => throw error;
+
+        /// <inheritdoc/>
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) => default;
+
+        /// <inheritdoc/>
+        public ValueTask OnNextAsync(int value, CancellationToken cancellationToken) => default;
+    }
+
+    /// <summary>
+    /// Synchronization-context-backed sequencer used to exercise <see cref="AsyncContext.From(ISequencer)"/>.
+    /// </summary>
+    private sealed class SynchronizationSequencer : SynchronizationContext, ISequencer
+    {
+        /// <inheritdoc/>
+        public DateTimeOffset Now => DateTimeOffset.UnixEpoch;
+
+        /// <inheritdoc/>
+        public long Timestamp => 0;
+
+        /// <inheritdoc/>
+        public void Schedule(IWorkItem item) => item.Execute();
+
+        /// <inheritdoc/>
+        public void Schedule(IWorkItem item, long dueTimestamp) => Schedule(item);
     }
 
     /// <summary>
