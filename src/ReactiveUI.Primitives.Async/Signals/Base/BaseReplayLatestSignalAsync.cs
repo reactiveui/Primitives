@@ -221,37 +221,31 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var token = GetOperationCancellationToken(cancellationToken, out var linkedCts);
-        try
+        using var linkedCts = GetOperationLinkedCancellationTokenSource(cancellationToken);
+        var token = GetOperationCancellationToken(cancellationToken, linkedCts);
+        token.ThrowIfCancellationRequested();
+
+        Result? result;
+        using (await _gate.EnterAsync(token).ConfigureAwait(false))
         {
-            token.ThrowIfCancellationRequested();
-
-            Result? result;
-            using (await _gate.EnterAsync(token).ConfigureAwait(false))
-            {
-                result = _result;
-                if (result is null)
-                {
-                    _observers = _observers.Add(observer);
-                    if (_lastValue.TryGetValue(out var lastValue))
-                    {
-                        await observer.OnNextAsync(lastValue, token).ConfigureAwait(false);
-                    }
-                }
-            }
-
+            result = _result;
             if (result is null)
             {
-                return new WitnessLease(this, observer);
+                _observers = _observers.Add(observer);
+                if (_lastValue.TryGetValue(out var lastValue))
+                {
+                    await observer.OnNextAsync(lastValue, token).ConfigureAwait(false);
+                }
             }
+        }
 
-            await observer.OnCompletedAsync(result.Value).ConfigureAwait(false);
-            return DisposableAsync.Empty;
-        }
-        finally
+        if (result is null)
         {
-            linkedCts?.Dispose();
+            return new WitnessLease(this, observer);
         }
+
+        await observer.OnCompletedAsync(result.Value).ConfigureAwait(false);
+        return DisposableAsync.Empty;
     }
 
     /// <summary>
