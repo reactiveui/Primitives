@@ -73,25 +73,19 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
     public async ValueTask OnNextAsync(T value, CancellationToken cancellationToken)
     {
         var token = GetOperationCancellationToken(cancellationToken, out var linkedCts);
+        using var _ = linkedCts;
 
-        try
+        ImmutableArray<IObserverAsync<T>> observers;
+        using (await _gate.EnterAsync(token).ConfigureAwait(false))
         {
-            ImmutableArray<IObserverAsync<T>> observers;
-            using (await _gate.EnterAsync(token).ConfigureAwait(false))
-            {
-                _value = new(value);
-                observers = _observers;
-            }
+            _value = new(value);
+            observers = _observers;
+        }
 
-            // Forward the caller's token (not the dispose-linked one) so downstream observers'
-            // fast-path equality check matches and they don't allocate a linked CTS per emission.
-            // The gate-protected snapshot above already isolates the broadcast from disposal.
-            await OnNextAsyncCore(observers, value, cancellationToken).ConfigureAwait(false);
-        }
-        finally
-        {
-            linkedCts?.Dispose();
-        }
+        // Forward the caller's token (not the dispose-linked one) so downstream observers'
+        // fast-path equality check matches and they don't allocate a linked CTS per emission.
+        // The gate-protected snapshot above already isolates the broadcast from disposal.
+        await OnNextAsyncCore(observers, value, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
