@@ -99,21 +99,16 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
     /// <returns>A task that represents the asynchronous error notification operation.</returns>
     public async ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken)
     {
-        var token = GetOperationCancellationToken(cancellationToken, out var linkedCts);
-        try
-        {
-            ImmutableArray<IObserverAsync<T>> observers;
-            using (await _gate.EnterAsync(token).ConfigureAwait(false))
-            {
-                observers = _observers;
-            }
+        using var linkedCts = default(CancellationTokenSource);
+        var token = GetOperationCancellationToken(cancellationToken, out linkedCts);
 
-            await OnErrorResumeAsyncCore(observers, error, token).ConfigureAwait(false);
-        }
-        finally
+        ImmutableArray<IObserverAsync<T>> observers;
+        using (await _gate.EnterAsync(token).ConfigureAwait(false))
         {
-            linkedCts?.Dispose();
+            observers = _observers;
         }
+
+        await OnErrorResumeAsyncCore(observers, error, token).ConfigureAwait(false);
     }
 
     /// <summary>
