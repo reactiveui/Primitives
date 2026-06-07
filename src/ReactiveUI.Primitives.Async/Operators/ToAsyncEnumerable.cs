@@ -62,9 +62,9 @@ public static partial class SignalAsync
         ArgumentExceptionHelper.ThrowIfNull(@this);
         ArgumentExceptionHelper.ThrowIfNull(channelFactory);
 
-        return Impl(@this, channelFactory, onErrorResume);
+        return ReadObservableValuesAsync(@this, channelFactory, onErrorResume);
 
-        static async IAsyncEnumerable<T> Impl(
+        static async IAsyncEnumerable<T> ReadObservableValuesAsync(
             IObservableAsync<T> @this,
             Func<Channel<T>> channelFactory,
             Func<Exception, CancellationToken, ValueTask>? onErrorResume,

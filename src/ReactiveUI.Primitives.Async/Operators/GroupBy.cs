@@ -102,7 +102,7 @@ public static partial class SignalAsync
         private readonly Func<TKey, ISignalAsync<TValue>> _groupSignalSelector = groupSignalSelector;
 
         /// <summary>
-        /// Subscribes the specified observer by creating a <see cref="Subscription"/> that tracks groups by key.
+        /// Subscribes the specified observer by creating a <see cref="GroupingCoordinator"/> that tracks groups by key.
         /// </summary>
         /// <param name="observer">The observer to receive grouped observable sequences.</param>
         /// <param name="cancellationToken">A token to cancel the subscription.</param>
@@ -111,7 +111,7 @@ public static partial class SignalAsync
             IObserverAsync<GroupedAsyncSignal<TKey, TValue>> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new Subscription(this, observer);
+            var subscription = new GroupingCoordinator(this, observer);
             try
             {
                 return await subscription.SubscribeSourcesAsync(cancellationToken).ConfigureAwait(false);
@@ -128,7 +128,7 @@ public static partial class SignalAsync
         /// </summary>
         /// <param name="parent">The parent GroupBy observable that provides the key selector and signal factory.</param>
         /// <param name="observer">The downstream observer to receive grouped observables.</param>
-        internal sealed class Subscription(
+        internal sealed class GroupingCoordinator(
             GroupByAsyncSignal<TKey, TValue> parent,
             IObserverAsync<GroupedAsyncSignal<TKey, TValue>> observer) : ObserverAsync<TValue>
         {
@@ -210,10 +210,10 @@ public static partial class SignalAsync
             /// <summary>
             /// Represents a single grouped async observable identified by its key.
             /// </summary>
-            /// <param name="parent">The parent subscription that manages group disposables.</param>
+            /// <param name="parent">The parent coordinator that manages group disposables.</param>
             /// <param name="key">The key that identifies this group.</param>
             /// <param name="signalValues">The observable sequence of values for this group.</param>
-            internal sealed class Signal(Subscription parent, TKey key, IObservableAsync<TValue> signalValues)
+            internal sealed class Signal(GroupingCoordinator parent, TKey key, IObservableAsync<TValue> signalValues)
                 : GroupedAsyncSignal<TKey, TValue>
             {
                 /// <summary>
@@ -236,7 +236,7 @@ public static partial class SignalAsync
                     // that token); the downstream observer (if an ObserverAsync) observes the
                     // wrap's dispose token. Together they collapse the per-emission
                     // CancellationTokenSource.CreateLinkedTokenSource allocations to zero.
-                    var wrap = new WrappedObserverAsync<TValue>(observer);
+                    var wrap = new RelayWitnessAsync<TValue>(observer);
                     wrap.LinkUpstreamCancellation(parent.InternalDisposedToken);
                     if (observer is ObserverAsync<TValue> downstream)
                     {

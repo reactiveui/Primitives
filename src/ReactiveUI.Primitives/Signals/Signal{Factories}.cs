@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.ComponentModel;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
@@ -230,6 +231,61 @@ public static partial class Signal
 
             addHandler(Handler);
             return Disposable.Create(() => removeHandler(Handler));
+        });
+    }
+
+    /// <summary>
+    /// Creates a signal from an event add/remove pair.
+    /// </summary>
+    /// <typeparam name="TEventHandler">The delegate type used by the event.</typeparam>
+    /// <typeparam name="TEventArgs">The event argument type.</typeparam>
+    /// <param name="addHandler">The action that attaches the generated event handler.</param>
+    /// <param name="removeHandler">The action that detaches the generated event handler.</param>
+    /// <returns>A signal that emits event patterns for each raised event.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="addHandler"/> or <paramref name="removeHandler"/> is <see langword="null"/>.</exception>
+    /// <exception cref="NotSupportedException"><typeparamref name="TEventHandler"/> is not a supported event delegate type.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4018:Generic methods should provide type parameters",
+        Justification = "The event argument type is part of the returned EventPattern and must be specified for non-generic event handlers.")]
+    public static IObservable<EventPattern<TEventArgs>> FromEventPattern<TEventHandler, TEventArgs>(
+        Action<TEventHandler> addHandler,
+        Action<TEventHandler> removeHandler)
+        where TEventHandler : Delegate
+        where TEventArgs : EventArgs
+    {
+        if (addHandler == null)
+        {
+            throw new ArgumentNullException(nameof(addHandler));
+        }
+
+        if (removeHandler == null)
+        {
+            throw new ArgumentNullException(nameof(removeHandler));
+        }
+
+        return Create<EventPattern<TEventArgs>>(observer =>
+        {
+            TEventHandler handler;
+            if (typeof(TEventHandler) == typeof(PropertyChangedEventHandler))
+            {
+                PropertyChangedEventHandler typed = (sender, args) =>
+                    observer.OnNext(new EventPattern<TEventArgs>(sender, (TEventArgs)(EventArgs)args));
+                handler = (TEventHandler)(object)typed;
+            }
+            else if (typeof(TEventHandler) == typeof(EventHandler<TEventArgs>))
+            {
+                EventHandler<TEventArgs> typed = (sender, args) =>
+                    observer.OnNext(new EventPattern<TEventArgs>(sender, args));
+                handler = (TEventHandler)(object)typed;
+            }
+            else
+            {
+                throw new NotSupportedException($"Event handler type '{typeof(TEventHandler)}' is not supported.");
+            }
+
+            addHandler(handler);
+            return Disposable.Create(() => removeHandler(handler));
         });
     }
 

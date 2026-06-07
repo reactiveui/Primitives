@@ -29,9 +29,9 @@ public static partial class SignalAsync
     public static async ValueTask<bool> AnyAsync<T>(this IObservableAsync<T> @this, Func<T, bool>? predicate, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var observer = new AnyAsyncObserver<T>(predicate, cancellationToken);
+        var observer = new AnyTaskWitness<T>(predicate, cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -84,42 +84,42 @@ public static partial class SignalAsync
         ArgumentExceptionHelper.ThrowIfNull(predicate);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var observer = new AllAsyncObserver<T>(predicate, cancellationToken);
+        var observer = new AllTaskWitness<T>(predicate, cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
-    /// An observer that determines whether any element in the sequence satisfies a predicate.
+    /// A witness that determines whether any element in the sequence satisfies a predicate.
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    internal sealed class AnyAsyncObserver<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
-        : TaskObserverAsyncBase<T, bool>(cancellationToken)
+    internal sealed class AnyTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
+        : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
     {
         /// <inheritdoc/>
         protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
             if (predicate is null || predicate(value))
             {
-                await TrySetCompleted(true).ConfigureAwait(false);
+                await SetResultAndDisposeAsync(true).ConfigureAwait(false);
             }
         }
 
         /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            TrySetException(error);
+            SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result) =>
-            !result.IsSuccess ? TrySetException(result.Exception) : TrySetCompleted(false);
+            !result.IsSuccess ? SetExceptionAndDisposeAsync(result.Exception) : SetResultAndDisposeAsync(false);
     }
 
     /// <summary>
-    /// An observer that determines whether all elements in the sequence satisfy a predicate.
+    /// A witness that determines whether all elements in the sequence satisfy a predicate.
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    internal sealed class AllAsyncObserver<T>(Func<T, bool> predicate, CancellationToken cancellationToken)
-        : TaskObserverAsyncBase<T, bool>(cancellationToken)
+    internal sealed class AllTaskWitness<T>(Func<T, bool> predicate, CancellationToken cancellationToken)
+        : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
     {
         /// <summary>
         /// The predicate function used to test each element in the sequence.
@@ -131,16 +131,16 @@ public static partial class SignalAsync
         {
             if (!_predicate(value))
             {
-                await TrySetCompleted(false).ConfigureAwait(false);
+                await SetResultAndDisposeAsync(false).ConfigureAwait(false);
             }
         }
 
         /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            TrySetException(error);
+            SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result) =>
-            !result.IsSuccess ? TrySetException(result.Exception) : TrySetCompleted(true);
+            !result.IsSuccess ? SetExceptionAndDisposeAsync(result.Exception) : SetResultAndDisposeAsync(true);
     }
 }

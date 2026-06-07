@@ -124,7 +124,7 @@ public static partial class SignalAsync
         }
         catch (Exception escalated)
         {
-            UnhandledExceptionHandler.OnUnhandledException(escalated);
+            UnhandledExceptionHandler.ReportUnhandledException(escalated);
         }
     }
 

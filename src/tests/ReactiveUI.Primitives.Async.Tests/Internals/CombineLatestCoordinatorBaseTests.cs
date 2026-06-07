@@ -6,9 +6,9 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async.Tests.Internals;
 
-/// <summary>Tests for <see cref="CombineLatestSubscriptionBase{TResult}"/>, the shared scaffolding
+/// <summary>Tests for <see cref="CombineLatestCoordinatorBase{TResult}"/>, the shared scaffolding
 /// derived by every <c>CombineLatestN</c> arity-specific subscription.</summary>
-public class CombineLatestSubscriptionBaseTests
+public class CombineLatestCoordinatorBaseTests
 {
     /// <summary>Verifies that the base wires its <see cref="CombineLatestLifecycle{TResult}"/> with
     /// the supplied observer and source count.</summary>
@@ -21,10 +21,10 @@ public class CombineLatestSubscriptionBaseTests
         var subscription = new TestSubscription(captured, SourceCount);
 
         await Assert.That(subscription.Lifecycle.Subscriptions).Count().IsEqualTo(SourceCount);
-        await Assert.That(subscription.Lifecycle.IsDisposed).IsFalse();
+        await Assert.That(subscription.Lifecycle.HasDisposed).IsFalse();
     }
 
-    /// <summary>Verifies that <see cref="CombineLatestSubscriptionBase{TResult}.SubscribeSourcesAsync"/>
+    /// <summary>Verifies that <see cref="CombineLatestCoordinatorBase{TResult}.SubscribeSourcesAsync"/>
     /// drives the per-arity <c>SubscribeAtAsync</c> for every source index in order.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -47,7 +47,7 @@ public class CombineLatestSubscriptionBaseTests
         await subscription.DisposeAsync();
     }
 
-    /// <summary>Verifies that <see cref="CombineLatestSubscriptionBase{TResult}.OnErrorResume"/>
+    /// <summary>Verifies that <see cref="CombineLatestCoordinatorBase{TResult}.RelaySourceErrorAsync"/>
     /// forwards the error through the lifecycle to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -57,7 +57,7 @@ public class CombineLatestSubscriptionBaseTests
         var subscription = new TestSubscription(captured, sourceCount: 1);
         var expected = new InvalidOperationException("forward");
 
-        await subscription.OnErrorResume(expected, CancellationToken.None);
+        await subscription.RelaySourceErrorAsync(expected, CancellationToken.None);
 
         await Assert.That(captured.Errors).Count().IsEqualTo(1);
         await Assert.That(captured.Errors[0]).IsEqualTo(expected);
@@ -65,7 +65,7 @@ public class CombineLatestSubscriptionBaseTests
         await subscription.DisposeAsync();
     }
 
-    /// <summary>Verifies that <see cref="CombineLatestSubscriptionBase{TResult}.DisposeAsync"/>
+    /// <summary>Verifies that <see cref="CombineLatestCoordinatorBase{TResult}.DisposeAsync"/>
     /// disposes the underlying lifecycle so subsequent disposal is idempotent.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -77,7 +77,7 @@ public class CombineLatestSubscriptionBaseTests
         await subscription.DisposeAsync();
         await subscription.DisposeAsync(); // idempotent
 
-        await Assert.That(subscription.Lifecycle.IsDisposed).IsTrue();
+        await Assert.That(subscription.Lifecycle.HasDisposed).IsTrue();
     }
 
     /// <summary>Verifies that <c>Lifecycle.LinkExternalCancellation</c> short-circuits when the
@@ -92,7 +92,7 @@ public class CombineLatestSubscriptionBaseTests
         // CancellationToken.None — can't be cancelled, helper should bail out early.
         subscription.Lifecycle.LinkExternalCancellation(CancellationToken.None);
 
-        await Assert.That(subscription.Lifecycle.IsDisposed).IsFalse();
+        await Assert.That(subscription.Lifecycle.HasDisposed).IsFalse();
         await subscription.DisposeAsync();
     }
 
@@ -132,7 +132,7 @@ public class CombineLatestSubscriptionBaseTests
         await subscription.DisposeAsync();
     }
 
-    /// <summary>Verifies that <see cref="CombineLatestSubscriptionBase{TResult}.ValuesLock"/> is
+    /// <summary>Verifies that <see cref="CombineLatestCoordinatorBase{TResult}.ValuesLock"/> is
     /// usable as a <c>lock</c> target — both the NET9 <c>Lock</c> and legacy <c>object</c> paths
     /// accept the C# 13 <c>lock</c> statement.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -153,7 +153,7 @@ public class CombineLatestSubscriptionBaseTests
     /// <param name="observer">The downstream observer.</param>
     /// <param name="sourceCount">The number of upstream sources.</param>
     private sealed class TestSubscription(IObserverAsync<int> observer, int sourceCount)
-        : CombineLatestSubscriptionBase<int>(observer, sourceCount)
+        : CombineLatestCoordinatorBase<int>(observer, sourceCount)
     {
         /// <summary>Gets the indices passed to <see cref="SubscribeAtAsync"/> in order.</summary>
         public List<int> SubscribedIndices { get; } = [];
@@ -197,7 +197,7 @@ public class CombineLatestSubscriptionBaseTests
         /// <summary>Gets the captured OnNext values in order.</summary>
         public List<T> Values { get; } = [];
 
-        /// <summary>Gets the captured OnErrorResume exceptions in order.</summary>
+        /// <summary>Gets the captured error-resume exceptions in order.</summary>
         public List<Exception> Errors { get; } = [];
 
         /// <summary>Gets the captured OnCompleted results in order.</summary>

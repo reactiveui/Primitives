@@ -32,7 +32,7 @@ public static class DisposableAsyncSlot
         var current = Volatile.Read(ref slot);
         while (true)
         {
-            if (ReferenceEquals(current, DisposedSentinel.Instance))
+            if (ReferenceEquals(current, DisposedSlotMarker.Instance))
             {
                 return value?.DisposeAsync() ?? default;
             }
@@ -64,7 +64,7 @@ public static class DisposableAsyncSlot
             return default;
         }
 
-        if (ReferenceEquals(current, DisposedSentinel.Instance))
+        if (ReferenceEquals(current, DisposedSlotMarker.Instance))
         {
             return value?.DisposeAsync() ?? default;
         }
@@ -80,8 +80,8 @@ public static class DisposableAsyncSlot
     [DebuggerStepThrough]
     public static ValueTask DisposeAsync(ref IAsyncDisposable? slot)
     {
-        var current = Interlocked.Exchange(ref slot, DisposedSentinel.Instance);
-        if (current is null || ReferenceEquals(current, DisposedSentinel.Instance))
+        var current = Interlocked.Exchange(ref slot, DisposedSlotMarker.Instance);
+        if (current is null || ReferenceEquals(current, DisposedSlotMarker.Instance))
         {
             return default;
         }
@@ -93,15 +93,15 @@ public static class DisposableAsyncSlot
     /// <param name="slot">The slot field to inspect.</param>
     /// <returns><see langword="true"/> if the slot currently holds the disposed sentinel.</returns>
     public static bool IsDisposed(IAsyncDisposable? slot) =>
-        ReferenceEquals(slot, DisposedSentinel.Instance);
+        ReferenceEquals(slot, DisposedSlotMarker.Instance);
 
     /// <summary>Shared sentinel marking a disposed slot. Distinct from the per-class sentinels in
     /// <see cref="SingleReplaceableDisposableAsync"/> and <see cref="SingleAssignmentDisposableAsync"/> so the
     /// slot helpers can be used independently of (and alongside) those wrapper classes.</summary>
-    internal sealed class DisposedSentinel : IAsyncDisposable
+    internal sealed class DisposedSlotMarker : IAsyncDisposable
     {
         /// <summary>Singleton sentinel instance.</summary>
-        public static readonly DisposedSentinel Instance = new();
+        public static readonly DisposedSlotMarker Instance = new();
 
         /// <inheritdoc/>
         ValueTask IAsyncDisposable.DisposeAsync() => default;

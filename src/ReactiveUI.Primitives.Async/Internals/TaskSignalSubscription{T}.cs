@@ -11,10 +11,10 @@ namespace ReactiveUI.Primitives.Async.Internals;
 /// <remarks>This type provides a base for implementing cancellable, asynchronously disposable
 /// subscriptions that coordinate observer notifications and resource cleanup. Disposal cancels any ongoing
 /// operations and ensures that all resources are released before completion. Derived classes should implement the
-/// core execution logic in RunCoreAsync.</remarks>
+/// core execution logic in <see cref="ExecuteAsyncCore"/>.</remarks>
 /// <typeparam name="T">The type of the elements observed by the subscription.</typeparam>
 /// <param name="observer">The observer that receives notifications for the subscription. Cannot be null.</param>
-internal abstract class CancelableTaskSubscription<T>(IObserverAsync<T> observer) : IAsyncDisposable
+internal abstract class TaskSignalSubscription<T>(IObserverAsync<T> observer) : IAsyncDisposable
 {
     /// <summary>
     /// The task completion source used to signal when the subscription's asynchronous operation has finished.
@@ -26,13 +26,13 @@ internal abstract class CancelableTaskSubscription<T>(IObserverAsync<T> observer
     /// </summary>
     private readonly CancellationTokenSource _cts = new();
 
-    /// <summary>Managed-thread ID of the thread currently inside <see cref="RunAsync"/>, or
+    /// <summary>Managed-thread ID of the thread currently inside <see cref="ExecuteAsync"/>, or
     /// <c>0</c> when no run is in flight. Replaces an <see cref="AsyncLocal{T}"/>-based
     /// reentry flag — the AsyncLocal cloned <see cref="ExecutionContext"/>
-    /// on every set, costing ~80 B per Run. Thread-ID detection is exact for the
+    /// on every set, costing ~80 B per execution. Thread-ID detection is exact for the
     /// synchronous-reentry deadlock case (Dispose called from within the same call stack
-    /// as RunAsync); asynchronous reentry after a thread hop may return from Dispose
-    /// slightly before RunAsync's finally fires, but cancellation has already been
+    /// as <see cref="ExecuteAsync"/>); asynchronous reentry after a thread hop may return from Dispose
+    /// slightly before <see cref="ExecuteAsync"/>'s finally fires, but cancellation has already been
     /// signalled so no observer notifications race the dispose.</summary>
     private int _runningThreadId;
 
@@ -46,9 +46,9 @@ internal abstract class CancelableTaskSubscription<T>(IObserverAsync<T> observer
     /// </summary>
     /// <remarks>This method initiates the asynchronous operation and does not wait for its completion. To
     /// monitor progress or handle completion, use the asynchronous counterpart directly. The
-    /// <see cref="ValueTask"/> returned by <see cref="RunAsync"/> is converted to a <see cref="Task"/>
+    /// <see cref="ValueTask"/> returned by <see cref="ExecuteAsync"/> is converted to a <see cref="Task"/>
     /// before being discarded so the fire-and-forget pattern stays compatible with CA2012.</remarks>
-    public void Run() => _ = RunAsync(_cts.Token).AsTask();
+    public void Start() => _ = ExecuteAsync(_cts.Token).AsTask();
 
     /// <summary>
     /// Asynchronously releases the resources used by the object and cancels any ongoing operations.
@@ -88,7 +88,7 @@ internal abstract class CancelableTaskSubscription<T>(IObserverAsync<T> observer
         }
         catch (Exception exception)
         {
-            UnhandledExceptionHandler.OnUnhandledException(exception);
+            UnhandledExceptionHandler.ReportUnhandledException(exception);
         }
     }
 
@@ -97,12 +97,12 @@ internal abstract class CancelableTaskSubscription<T>(IObserverAsync<T> observer
     /// </summary>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
-    internal async ValueTask RunAsync(CancellationToken cancellationToken)
+    internal async ValueTask ExecuteAsync(CancellationToken cancellationToken)
     {
         Volatile.Write(ref _runningThreadId, Environment.CurrentManagedThreadId);
         try
         {
-            await RunAsyncCore(observer, cancellationToken).ConfigureAwait(false);
+            await ExecuteAsyncCore(observer, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e)
         {
@@ -121,5 +121,5 @@ internal abstract class CancelableTaskSubscription<T>(IObserverAsync<T> observer
     /// <param name="observer">The observer that receives notifications.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
-    protected abstract ValueTask RunAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken);
+    protected abstract ValueTask ExecuteAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken);
 }

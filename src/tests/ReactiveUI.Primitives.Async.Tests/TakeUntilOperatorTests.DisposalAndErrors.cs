@@ -17,7 +17,7 @@ public partial class TakeUntilOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilPredicateDisposed_ThenSubscriptionIsDisposed()
+    public async Task WhenPredicateStopSignalDisposed_ThenSubscriptionIsDisposed()
     {
         var source = Signal.Create<int>();
         var items = new List<int>();
@@ -43,11 +43,11 @@ public partial class TakeUntilOperatorTests
 
     /// <summary>
     /// Tests TakeUntil(CancellationToken) where the token is cancelled
-    /// and the observer's OnTokenCanceled catch path is exercised.
+    /// and the observer's CompleteFromCancellation catch path is exercised.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilCancellationTokenCanceled_ThenCompletionForwarded()
+    public async Task WhenCancellationStopSignalCanceled_ThenCompletionForwarded()
     {
         using var cts = new CancellationTokenSource();
         var source = Signal.Create<int>();
@@ -159,7 +159,7 @@ public partial class TakeUntilOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilTask_ThenStopsOnTaskCompletion()
+    public async Task WhenTaskStopSignal_ThenStopsOnTaskCompletion()
     {
         var tcs = new TaskCompletionSource();
         var source = Signal.Create<int>();
@@ -197,7 +197,7 @@ public partial class TakeUntilOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilCancellationToken_ThenStopsOnCancellation()
+    public async Task WhenCancellationStopSignal_ThenStopsOnCancellation()
     {
         using var cts = new CancellationTokenSource();
         var source = Signal.Create<int>();
@@ -228,7 +228,7 @@ public partial class TakeUntilOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilPredicate_ThenStopsWhenPredicateTrue()
+    public async Task WhenPredicateStopSignal_ThenStopsWhenPredicateTrue()
     {
         var result = await SignalAsync.Range(1, 10)
             .TakeUntil(x => x > 3)
@@ -353,7 +353,7 @@ public partial class TakeUntilOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilTaskWaitAndCompleteFailsOptionFalse_ThenErrorResumeForwarded()
+    public async Task WhenTaskStopSignalAwaitStopThenCompleteFailsOptionFalse_ThenErrorResumeForwarded()
     {
         var source = Signal.Create<int>();
         var errors = new List<Exception>();
@@ -385,7 +385,7 @@ public partial class TakeUntilOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilTaskWaitAndCompleteFailsOptionTrue_ThenCompletesWithFailure()
+    public async Task WhenTaskStopSignalAwaitStopThenCompleteFailsOptionTrue_ThenCompletesWithFailure()
     {
         var source = Signal.Create<int>();
         Result? completionResult = null;
@@ -415,7 +415,7 @@ public partial class TakeUntilOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilTaskSourceEmitsErrorResume_ThenErrorIsForwarded()
+    public async Task WhenTaskStopSignalSourceEmitsErrorResume_ThenErrorIsForwarded()
     {
         var errors = new List<Exception>();
         var neverTask = new TaskCompletionSource().Task;
@@ -475,7 +475,7 @@ public partial class TakeUntilOperatorTests
 
         await source.OnNextAsync(1, CancellationToken.None);
 
-        // Dispose while WaitAndComplete is still waiting for the signal
+        // Dispose while AwaitStopThenComplete is still waiting for the signal
         await sub.DisposeAsync();
     }
 
@@ -587,7 +587,7 @@ public partial class TakeUntilOperatorTests
                 null,
                 _ => throw new InvalidOperationException("observer completion throws"));
 
-        // Fire the stop signal with success; ForwardOnCompletedAsync will throw because observer throws
+        // Fire the stop signal with success; OnCompletedAsync will throw because observer throws
         storedNotifyStop!(Result.Success);
 
         // The outer catch block should swallow the exception; no crash
@@ -604,7 +604,7 @@ public partial class TakeUntilOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilTaskForwardingThrows_ThenOuterCatchSwallows()
+    public async Task WhenTaskStopSignalForwardingThrows_ThenOuterCatchSwallows()
     {
         var tcs = new TaskCompletionSource();
         var source = Signal.Create<int>();
@@ -616,7 +616,7 @@ public partial class TakeUntilOperatorTests
                 null,
                 _ => throw new InvalidOperationException("observer completion throws"));
 
-        // Complete the task; ForwardOnCompletedAsync will throw because observer throws
+        // Complete the task; OnCompletedAsync will throw because observer throws
         tcs.SetResult();
 
         // The outer catch block should swallow the exception; no crash
@@ -629,11 +629,11 @@ public partial class TakeUntilOperatorTests
 
     /// <summary>
     /// Verifies that when TakeUntil(CancellationToken) forwards completion and the observer throws,
-    /// the outer catch block in OnTokenCanceled swallows the exception.
+    /// the outer catch block in CompleteFromCancellation swallows the exception.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilCancellationTokenForwardingThrows_ThenOuterCatchSwallows()
+    public async Task WhenCancellationStopSignalForwardingThrows_ThenOuterCatchSwallows()
     {
         using var cts = new CancellationTokenSource();
         var source = Signal.Create<int>();
@@ -645,7 +645,7 @@ public partial class TakeUntilOperatorTests
                 null,
                 _ => throw new InvalidOperationException("observer completion throws"));
 
-        // Cancel the token; OnTokenCanceled will call ForwardOnCompletedAsync which will throw
+        // Cancel the token; CompleteFromCancellation will call OnCompletedAsync which will throw
         await cts.CancelAsync();
 
         // The outer catch block should swallow the exception; no crash
@@ -658,8 +658,8 @@ public partial class TakeUntilOperatorTests
 
     /// <summary>
     /// Verifies that when TakeUntil(CompletionSignalDelegate) with SourceFailsWhenOtherFails=false
-    /// signals an error, ForwardOnErrorResumeAsync is called. If that also throws, the outer catch swallows it.
-    /// Covers the outermost catch in WaitAndComplete for CompletionSignalDelegate.
+    /// signals an error, OnErrorResumeAsync is called. If that also throws, the outer catch swallows it.
+    /// Covers the outermost catch in AwaitStopThenComplete for CompletionSignalDelegate.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -682,7 +682,7 @@ public partial class TakeUntilOperatorTests
                 (_, _) => throw new InvalidOperationException("error resume throws"),
                 _ => throw new InvalidOperationException("completion throws"));
 
-        // Signal a failure; SourceFailsWhenOtherFails=false so ForwardOnErrorResumeAsync is called, which throws
+        // Signal a failure; SourceFailsWhenOtherFails=false so OnErrorResumeAsync is called, which throws
         storedNotifyStop!(Result.Failure(new InvalidOperationException("stop error")));
 
         // The outer catch block should swallow the exception
@@ -695,12 +695,12 @@ public partial class TakeUntilOperatorTests
 
     /// <summary>
     /// Verifies that when TakeUntil(Task) with SourceFailsWhenOtherFails=false
-    /// the task faults and ForwardOnErrorResumeAsync throws, the outer catch swallows it.
-    /// Covers the outermost catch in WaitAndComplete for Task.
+    /// the task faults and OnErrorResumeAsync throws, the outer catch swallows it.
+    /// Covers the outermost catch in AwaitStopThenComplete for Task.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilTaskErrorResumeThrows_ThenOuterCatchSwallows()
+    public async Task WhenTaskStopSignalErrorResumeThrows_ThenOuterCatchSwallows()
     {
         var tcs = new TaskCompletionSource();
         var source = Signal.Create<int>();
@@ -713,7 +713,7 @@ public partial class TakeUntilOperatorTests
                 (_, _) => throw new InvalidOperationException("error resume throws"),
                 _ => throw new InvalidOperationException("completion throws"));
 
-        // Fault the task; SourceFailsWhenOtherFails=false so ForwardOnErrorResumeAsync is called, which throws
+        // Fault the task; SourceFailsWhenOtherFails=false so OnErrorResumeAsync is called, which throws
         tcs.SetException(new InvalidOperationException("task error"));
 
         // The outer catch block should swallow the exception
@@ -755,7 +755,7 @@ public partial class TakeUntilOperatorTests
     /// <summary>Tests TakeUntil with CancellationToken completes when token fires.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilCancellationToken_ThenCompletesOnCancel()
+    public async Task WhenCancellationStopSignal_ThenCompletesOnCancel()
     {
         using var cts = new CancellationTokenSource();
         var source = new DirectSource<int>();
@@ -785,7 +785,7 @@ public partial class TakeUntilOperatorTests
     /// <summary>Tests TakeUntil with Task completes when task finishes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilTaskCompletes_ThenSourceCompletes()
+    public async Task WhenTaskStopSignalCompletes_ThenSourceCompletes()
     {
         var tcs = new TaskCompletionSource();
         var source = new DirectSource<int>();

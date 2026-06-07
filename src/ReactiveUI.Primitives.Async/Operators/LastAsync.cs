@@ -39,9 +39,9 @@ public static partial class SignalAsync
     public static async ValueTask<T> LastAsync<T>(this IObservableAsync<T> @this, Func<T, bool> predicate, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var observer = new LastAsyncObserver<T>(predicate, cancellationToken);
+        var observer = new LastTaskWitness<T>(predicate, cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -71,9 +71,9 @@ public static partial class SignalAsync
     public static async ValueTask<T> LastAsync<T>(this IObservableAsync<T> @this, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var observer = new LastAsyncObserver<T>(null, cancellationToken);
+        var observer = new LastTaskWitness<T>(null, cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -82,8 +82,8 @@ public static partial class SignalAsync
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="predicate">An optional predicate to filter elements.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class LastAsyncObserver<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
-        : TaskObserverAsyncBase<T, T>(cancellationToken)
+    internal sealed class LastTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
+        : TaskResultWitnessAsyncBase<T, T>(cancellationToken)
     {
         /// <summary>
         /// A value indicating whether any matching element has been observed.
@@ -111,25 +111,25 @@ public static partial class SignalAsync
 
         /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            TrySetException(error);
+            SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result)
         {
             if (!result.IsSuccess)
             {
-                return TrySetException(result.Exception);
+                return SetExceptionAndDisposeAsync(result.Exception);
             }
 
             if (_hasValue)
             {
-                return TrySetCompleted(_last!);
+                return SetResultAndDisposeAsync(_last!);
             }
 
             var message = predicate is null
                 ? "Sequence contains no elements."
                 : "Sequence contains no matching elements.";
-            return TrySetException(new InvalidOperationException(message));
+            return SetExceptionAndDisposeAsync(new InvalidOperationException(message));
         }
     }
 }

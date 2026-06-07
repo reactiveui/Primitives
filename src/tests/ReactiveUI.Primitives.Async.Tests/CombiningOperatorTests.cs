@@ -135,7 +135,7 @@ public partial class CombiningOperatorTests
 
     /// <summary>
     /// An enumerable that throws during enumeration, used to trigger the error path
-    /// in MergeEnumerable StartAsync.
+    /// in MergeEnumerable BeginSubscribing.
     /// </summary>
     /// <typeparam name="T">The element type.</typeparam>
     private sealed class ThrowingEnumerable<T> : IEnumerable<IObservableAsync<T>>

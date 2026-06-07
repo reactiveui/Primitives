@@ -37,7 +37,7 @@ public static partial class SignalAsync
             IObserverAsync<TAccumulate> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new ScanWithInitialObserver(observer, initial, accumulator, cancellationToken);
+            var sink = new ScanWithInitialWitness(observer, initial, accumulator, cancellationToken);
 
             if (observer is ObserverAsync<TAccumulate> downstreamBase)
             {
@@ -47,7 +47,7 @@ public static partial class SignalAsync
             await observer.OnNextAsync(initial, cancellationToken).ConfigureAwait(false);
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
@@ -56,7 +56,7 @@ public static partial class SignalAsync
         /// <param name="seed">The seed accumulator value already emitted from <see cref="SubscribeAsyncCore"/>.</param>
         /// <param name="accumulator">The synchronous accumulator.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class ScanWithInitialObserver(
+        internal sealed class ScanWithInitialWitness(
             IObserverAsync<TAccumulate> downstream,
             TAccumulate seed,
             Func<TAccumulate, TSource, TAccumulate> accumulator,
@@ -100,7 +100,7 @@ public static partial class SignalAsync
             IObserverAsync<TAccumulate> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new ScanWithInitialAsyncObserver(observer, initial, accumulator, cancellationToken);
+            var sink = new ScanWithInitialAsyncWitness(observer, initial, accumulator, cancellationToken);
 
             if (observer is ObserverAsync<TAccumulate> downstreamBase)
             {
@@ -110,7 +110,7 @@ public static partial class SignalAsync
             await observer.OnNextAsync(initial, cancellationToken).ConfigureAwait(false);
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
@@ -119,7 +119,7 @@ public static partial class SignalAsync
         /// <param name="seed">The seed accumulator value already emitted from <see cref="SubscribeAsyncCore"/>.</param>
         /// <param name="accumulator">The asynchronous accumulator.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class ScanWithInitialAsyncObserver(
+        internal sealed class ScanWithInitialAsyncWitness(
             IObserverAsync<TAccumulate> downstream,
             TAccumulate seed,
             Func<TAccumulate, TSource, CancellationToken, ValueTask<TAccumulate>> accumulator,
@@ -181,7 +181,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new ThrottleDistinctObserver(observer, dueTime, timeProvider, cancellationToken);
+            var sink = new ThrottleDistinctWitness(observer, dueTime, timeProvider, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -189,16 +189,16 @@ public static partial class SignalAsync
             }
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
-        /// <summary>Per-subscription observer fusing upstream-distinct + debounce + downstream-distinct.</summary>
+        /// <summary>Per-subscription witness fusing upstream-distinct + debounce + downstream-distinct.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="dueTime">The debounce window.</param>
         /// <param name="timeProvider">The time provider used for the debounce timer.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class ThrottleDistinctObserver(
+        internal sealed class ThrottleDistinctWitness(
             IObserverAsync<T> downstream,
             TimeSpan dueTime,
             TimeProvider timeProvider,
@@ -309,7 +309,7 @@ public static partial class SignalAsync
 
             /// <summary>Waits the debounce window, then forwards the value if
             /// <see cref="TryClaimEmission"/> approves it. The single catch routes everything
-            /// through <see cref="UnhandledExceptionHandler.OnUnhandledException"/>, which
+            /// through <see cref="UnhandledExceptionHandler.ReportUnhandledException"/>, which
             /// already filters out <see cref="OperationCanceledException"/> internally —
             /// so a separate OCE-only catch would just duplicate the same silent-drop behavior.</summary>
             /// <param name="value">The candidate value.</param>
@@ -331,7 +331,7 @@ public static partial class SignalAsync
                 }
                 catch (Exception e)
                 {
-                    UnhandledExceptionHandler.OnUnhandledException(e);
+                    UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
             }
         }
@@ -354,7 +354,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new DropIfBusyObserver(observer, asyncAction, cancellationToken);
+            var sink = new DropIfBusyWitness(observer, asyncAction, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -362,15 +362,15 @@ public static partial class SignalAsync
             }
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
-        /// <summary>Per-subscription observer that drops upstream emissions while a prior action is still pending.</summary>
+        /// <summary>Per-subscription witness that drops upstream emissions while a prior action is still pending.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="asyncAction">The async side-effect invoked for accepted values.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
-        internal sealed class DropIfBusyObserver(
+        internal sealed class DropIfBusyWitness(
             IObserverAsync<T> downstream,
             Func<T, CancellationToken, ValueTask> asyncAction,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
@@ -743,7 +743,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new DebounceUntilObserver(observer, debounce, condition, timeProvider, cancellationToken);
+            var sink = new DebounceUntilWitness(observer, debounce, condition, timeProvider, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -751,7 +751,7 @@ public static partial class SignalAsync
             }
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
@@ -761,7 +761,7 @@ public static partial class SignalAsync
         /// <param name="condition">The bypass-the-delay condition.</param>
         /// <param name="timeProvider">The time provider used for the debounce timer.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class DebounceUntilObserver(
+        internal sealed class DebounceUntilWitness(
             IObserverAsync<T> downstream,
             TimeSpan debounce,
             Func<T, bool> condition,
@@ -849,7 +849,7 @@ public static partial class SignalAsync
             /// <summary>Waits the debounce window, then forwards the value if
             /// <see cref="IsCurrentEmission"/> confirms the emission was not superseded.
             /// The single catch routes everything through
-            /// <see cref="UnhandledExceptionHandler.OnUnhandledException"/>, which already
+            /// <see cref="UnhandledExceptionHandler.ReportUnhandledException"/>, which already
             /// filters out <see cref="OperationCanceledException"/> internally.</summary>
             /// <param name="value">The candidate value.</param>
             /// <param name="id">The id stamped when this delay was started.</param>
@@ -870,7 +870,7 @@ public static partial class SignalAsync
                 }
                 catch (Exception e)
                 {
-                    UnhandledExceptionHandler.OnUnhandledException(e);
+                    UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
             }
         }
@@ -892,7 +892,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new ForEachEnumerableObserver(observer, cancellationToken);
+            var sink = new ForEachEnumerableWitness(observer, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -900,14 +900,14 @@ public static partial class SignalAsync
             }
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
-        /// <summary>Per-subscription observer that flattens each upstream enumerable inline.</summary>
+        /// <summary>Per-subscription witness that flattens each upstream enumerable inline.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class ForEachEnumerableObserver(
+        internal sealed class ForEachEnumerableWitness(
             IObserverAsync<T> downstream,
             CancellationToken subscribeToken) : ObserverAsync<IEnumerable<T>>(subscribeToken)
         {

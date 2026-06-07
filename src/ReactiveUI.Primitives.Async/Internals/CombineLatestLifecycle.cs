@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives.Async.Internals;
 
 /// <summary>
 /// Shared subscription lifecycle for the arity-specific <c>CombineLatestN</c> operators (2..16) and
-/// the enumerable variant. Each per-arity <c>CombineLatestSubscription</c> composes one instance of
+/// the enumerable variant. Each per-arity <c>CombineLatestCoordinator</c> composes one instance of
 /// this class (has-a, not is-a) and forwards lifecycle / error / gating work into it, so the
 /// previously-duplicated infrastructure (gate, dispose CTS, external-link registration, observer
 /// fan-out, completion-bitmask handling) lives in one place.
@@ -15,7 +15,7 @@ namespace ReactiveUI.Primitives.Async.Internals;
 internal sealed class CombineLatestLifecycle<TResult> : IAsyncDisposable
 {
     /// <summary>Serializes downstream notifications so OnNext / OnError / OnCompleted never overlap.</summary>
-    private readonly AsyncGate _gate = new();
+    private readonly AsyncSerialGate _gate = new();
 
     /// <summary>Cancellation source for subscription disposal; cancelled exactly once.</summary>
     private readonly CancellationTokenSource _disposeCts = new();
@@ -59,7 +59,7 @@ internal sealed class CombineLatestLifecycle<TResult> : IAsyncDisposable
     public IAsyncDisposable?[] Subscriptions { get; }
 
     /// <summary>Gets a value indicating whether disposal has been signalled.</summary>
-    public bool IsDisposed => DisposalHelper.IsDisposed(_disposed);
+    public bool HasDisposed => DisposalHelper.HasDisposed(_disposed);
 
     /// <summary>
     /// Links the original subscribe-time cancellation token into this subscription's dispose chain so
@@ -92,9 +92,9 @@ internal sealed class CombineLatestLifecycle<TResult> : IAsyncDisposable
     /// <returns>A ValueTask representing the asynchronous forward.</returns>
     public async ValueTask OnErrorResumeAsync(Exception error)
     {
-        using (await _gate.LockAsync(DisposeToken).ConfigureAwait(false))
+        using (await _gate.EnterAsync(DisposeToken).ConfigureAwait(false))
         {
-            if (IsDisposed)
+            if (HasDisposed)
             {
                 return;
             }
@@ -110,9 +110,9 @@ internal sealed class CombineLatestLifecycle<TResult> : IAsyncDisposable
     /// <returns>A ValueTask representing the asynchronous emit.</returns>
     public async ValueTask EmitDownstreamAsync(TResult value)
     {
-        using (await _gate.LockAsync(DisposeToken).ConfigureAwait(false))
+        using (await _gate.EnterAsync(DisposeToken).ConfigureAwait(false))
         {
-            if (IsDisposed)
+            if (HasDisposed)
             {
                 return;
             }
@@ -133,7 +133,7 @@ internal sealed class CombineLatestLifecycle<TResult> : IAsyncDisposable
     {
         if (result.IsFailure)
         {
-            return CompleteAsync(result);
+            return FinishAsync(result);
         }
 
         int updated;
@@ -148,14 +148,14 @@ internal sealed class CombineLatestLifecycle<TResult> : IAsyncDisposable
 
     /// <summary>Disposes the lifecycle without signalling a terminal notification.</summary>
     /// <returns>A ValueTask representing the asynchronous teardown.</returns>
-    public ValueTask DisposeAsync() => CompleteAsync(null);
+    public ValueTask DisposeAsync() => FinishAsync(null);
 
     /// <summary>
     /// Completes the combined sequence and disposes every source subscription.
     /// </summary>
     /// <param name="result">The completion result, or <see langword="null"/> when disposing without signaling.</param>
     /// <returns>A ValueTask representing the asynchronous teardown.</returns>
-    public async ValueTask CompleteAsync(Result? result)
+    public async ValueTask FinishAsync(Result? result)
     {
         if (DisposalHelper.TrySetDisposed(ref _disposed))
         {

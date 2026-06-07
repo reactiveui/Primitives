@@ -284,6 +284,8 @@ public partial class InternalInfrastructureCoverageTests
         Assert.Throws<ArgumentNullException>(() => source.SkipWhile(null!));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.FlatMap<int, int>(null!, value => Signal.Emit(value)));
         Assert.Throws<ArgumentNullException>(() => source.FlatMap<int, int>(null!));
+        Assert.Throws<ArgumentNullException>(() => LinqMixins.FlatMapValues<int, int>(null!, value => [value]));
+        Assert.Throws<ArgumentNullException>(() => source.FlatMapValues<int, int>(null!));
         Assert.Throws<ArgumentNullException>(() => source.FlatMap<int, int, int>(null!, (outer, inner) => outer + inner));
         Assert.Throws<ArgumentNullException>(() => source.FlatMap<int, int, int>(value => Signal.Emit(value), null!));
         Assert.Throws<ArgumentNullException>(() => LinqMixins.Count<int>(null!));

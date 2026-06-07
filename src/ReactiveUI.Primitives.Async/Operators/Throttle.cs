@@ -155,7 +155,7 @@ public static partial class SignalAsync
                 {
                     // UnhandledExceptionHandler filters OperationCanceledException internally so
                     // a separate OCE-only catch would just duplicate the silent-drop behavior.
-                    UnhandledExceptionHandler.OnUnhandledException(e);
+                    UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
             }
 

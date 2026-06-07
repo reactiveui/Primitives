@@ -502,6 +502,40 @@ public static partial class LinqMixins
     }
 
     /// <summary>
+    /// Projects each value into an enumerable and emits every projected item.
+    /// </summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <typeparam name="TResult">The projected item type.</typeparam>
+    /// <param name="source">The source signal.</param>
+    /// <param name="selector">The projection that returns items for each source value.</param>
+    /// <returns>A signal that emits every item returned by <paramref name="selector"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+    public static IObservable<TResult> FlatMapValues<TSource, TResult>(this IObservable<TSource> source, Func<TSource, IEnumerable<TResult>> selector)
+    {
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        if (selector == null)
+        {
+            throw new ArgumentNullException(nameof(selector));
+        }
+
+        return Signal.Create<TResult>(observer =>
+            source.Subscribe(
+                value =>
+                {
+                    foreach (var item in selector(value))
+                    {
+                        observer.OnNext(item);
+                    }
+                },
+                observer.OnError,
+                observer.OnCompleted));
+    }
+
+    /// <summary>
     /// Counts the source values as an <see cref="int"/>.
     /// </summary>
     /// <typeparam name="T">The value type.</typeparam>

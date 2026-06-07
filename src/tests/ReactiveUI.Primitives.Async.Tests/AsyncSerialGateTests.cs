@@ -6,25 +6,25 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>Coverage for <see cref="AsyncGate"/> — uncontended fast path, same-thread reentry,
+/// <summary>Coverage for <see cref="AsyncSerialGate"/> — uncontended fast path, same-thread reentry,
 /// contended slow path, double-dispose idempotency.</summary>
 [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "TUnit requires instance methods")]
-public class AsyncGateTests
+public class AsyncSerialGateTests
 {
     /// <summary>Verifies that the uncontended fast path acquires the gate via pure CAS.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenUncontendedLock_ThenAcquiresAndReleases()
     {
-        using var gate = new AsyncGate();
+        using var gate = new AsyncSerialGate();
 
-        using (await gate.LockAsync())
+        using (await gate.EnterAsync())
         {
             await Assert.That(gate).IsNotNull();
         }
 
         // After release the gate must be re-acquirable.
-        using (await gate.LockAsync())
+        using (await gate.EnterAsync())
         {
             await Assert.That(gate).IsNotNull();
         }
@@ -35,17 +35,17 @@ public class AsyncGateTests
     [Test]
     public async Task WhenSameThreadReentry_ThenAllowedWithoutBlocking()
     {
-        using var gate = new AsyncGate();
+        using var gate = new AsyncSerialGate();
 
-        using (await gate.LockAsync())
-        using (await gate.LockAsync())
-        using (await gate.LockAsync())
+        using (await gate.EnterAsync())
+        using (await gate.EnterAsync())
+        using (await gate.EnterAsync())
         {
             await Assert.That(gate).IsNotNull();
         }
 
         // Gate must release cleanly after nested acquisitions.
-        using (await gate.LockAsync())
+        using (await gate.EnterAsync())
         {
             await Assert.That(gate).IsNotNull();
         }
@@ -61,21 +61,21 @@ public class AsyncGateTests
     [Test]
     public async Task WhenContendedWaiter_ThenResumesAfterRelease()
     {
-        using var gate = new AsyncGate();
-        var first = await gate.LockAsync();
+        using var gate = new AsyncSerialGate();
+        var first = await gate.EnterAsync();
 
         var secondAcquired = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         // Wait until the contender is either parked on the slow path (WaitersCount > 0) or
         // has already acquired the gate via the same-thread reentry fast path (secondAcquired
-        // set). Either outcome is a valid configuration of AsyncGate — what we care about for
+        // set). Either outcome is a valid configuration of AsyncSerialGate — what we care about for
         // this test is that the contender ultimately gets the gate after we release it; the
         // dual condition keeps the assertion stable across runners where Task.Run may reuse
         // the test thread.
         var contender = Task.Run(async () =>
         {
-            using var releaser = await gate.LockAsync().ConfigureAwait(false);
+            using var lease = await gate.EnterAsync().ConfigureAwait(false);
             secondAcquired.TrySetResult(true);
             await release.Task.ConfigureAwait(false);
         });
@@ -101,7 +101,7 @@ public class AsyncGateTests
     [Test]
     public async Task WhenDisposeCalledTwice_ThenIdempotent()
     {
-        var gate = new AsyncGate();
+        var gate = new AsyncSerialGate();
 
         gate.Dispose();
         gate.Dispose();

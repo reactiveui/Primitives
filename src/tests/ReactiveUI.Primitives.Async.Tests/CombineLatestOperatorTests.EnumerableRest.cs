@@ -191,7 +191,7 @@ public partial class CombineLatestOperatorTests
         await src1.EmitNext(1);
         await src2.EmitNext(Source1Value);
 
-        // Trigger failure on src1 → CompleteAsync → _disposed=1 → blocks on OnCompletedAsync
+        // Trigger failure on src1 → FinishAsync → _disposed=1 → blocks on OnCompletedAsync
         var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
         await completionBlocked.Task;
 

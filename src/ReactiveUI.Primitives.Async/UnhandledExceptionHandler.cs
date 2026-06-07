@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -17,7 +17,7 @@ public static class UnhandledExceptionHandler
     /// <summary>
     /// The currently registered handler action invoked when an unhandled exception occurs.
     /// </summary>
-    private static Action<Exception> _unhandledException = DefaultUnhandledExceptionHandler;
+    private static Action<Exception> _unhandledException = TraceUnhandledException;
 
     /// <summary>
     /// Gets the currently registered handler. Used for save/restore in tests.
@@ -40,7 +40,7 @@ public static class UnhandledExceptionHandler
     /// <remarks>OperationCanceledException instances are ignored and not passed to the
     /// handler.</remarks>
     /// <param name="e">The exception to be processed by the unhandled exception handler. Cannot be null.</param>
-    internal static void OnUnhandledException(Exception e)
+    internal static void ReportUnhandledException(Exception e)
     {
         if (e is OperationCanceledException)
         {
@@ -64,6 +64,6 @@ public static class UnhandledExceptionHandler
     /// an application. It writes the exception details to the standard console output for diagnostic
     /// purposes.</remarks>
     /// <param name="exception">The exception that was not handled. Cannot be null.</param>
-    internal static void DefaultUnhandledExceptionHandler(Exception exception) =>
+    internal static void TraceUnhandledException(Exception exception) =>
         System.Diagnostics.Trace.TraceError("UnhandleException: {0}", exception);
 }

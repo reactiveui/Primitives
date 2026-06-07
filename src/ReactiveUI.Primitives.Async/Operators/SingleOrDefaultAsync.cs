@@ -130,8 +130,8 @@ public static partial class SignalAsync
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var observer = new SingleElementObserver<T>(predicate, requireExactlyOne: false, defaultValue, cancellationToken);
+        var observer = new SingleElementWitness<T>(predicate, requireExactlyOne: false, defaultValue, cancellationToken);
         await using var subscription = await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 }

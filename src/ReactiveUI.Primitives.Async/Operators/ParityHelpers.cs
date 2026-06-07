@@ -207,7 +207,7 @@ public static partial class SignalAsync
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return asyncContext is null ? source : source.ObserveOn(asyncContext, forceYielding);
+            return asyncContext is null ? source : source.WitnessOn(asyncContext, forceYielding);
         }
 
         /// <summary>
@@ -227,7 +227,7 @@ public static partial class SignalAsync
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return taskScheduler is null ? source : source.ObserveOn(taskScheduler, forceYielding);
+            return taskScheduler is null ? source : source.WitnessOn(taskScheduler, forceYielding);
         }
 
         /// <summary>
@@ -250,7 +250,7 @@ public static partial class SignalAsync
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(asyncContext);
 
-            return condition ? source.ObserveOn(asyncContext, forceYielding) : source;
+            return condition ? source.WitnessOn(asyncContext, forceYielding) : source;
         }
 
         /// <summary>
@@ -273,7 +273,7 @@ public static partial class SignalAsync
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(taskScheduler);
 
-            return condition ? source.ObserveOn(taskScheduler, forceYielding) : source;
+            return condition ? source.WitnessOn(taskScheduler, forceYielding) : source;
         }
 
         /// <summary>

@@ -292,14 +292,6 @@ namespace ReactiveUI.Primitives.Async
         public static ReactiveUI.Primitives.Async.IObservableAsync<T> Never<T>() { }
         public static ReactiveUI.Primitives.Async.IObservableAsync<T> None<T>() { }
         public static ReactiveUI.Primitives.Async.IObservableAsync<bool> Not(this ReactiveUI.Primitives.Async.IObservableAsync<bool> source) { }
-        public static ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, ReactiveUI.Primitives.Async.AsyncContext asyncContext) { }
-        public static ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
-        public static ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.SynchronizationContext synchronizationContext) { }
-        public static ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.Tasks.TaskScheduler taskScheduler) { }
-        public static ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, ReactiveUI.Primitives.Async.AsyncContext asyncContext, bool forceYielding) { }
-        public static ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, bool forceYielding) { }
-        public static ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.SynchronizationContext synchronizationContext, bool forceYielding) { }
-        public static ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.Tasks.TaskScheduler taskScheduler, bool forceYielding) { }
         public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> OfType<T, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this)
             where TResult :  class { }
         public static ReactiveUI.Primitives.Async.IObservableAsync<T> OnDispose<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Action disposeAction) { }
@@ -422,6 +414,14 @@ namespace ReactiveUI.Primitives.Async
         public static ReactiveUI.Primitives.Async.IObservableAsync<T> WhereIsNotNull<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T?> source)
             where T :  class { }
         public static ReactiveUI.Primitives.Async.IObservableAsync<bool> WhereTrue(this ReactiveUI.Primitives.Async.IObservableAsync<bool> source) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, ReactiveUI.Primitives.Async.AsyncContext asyncContext) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.SynchronizationContext synchronizationContext) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.Tasks.TaskScheduler taskScheduler) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, ReactiveUI.Primitives.Async.AsyncContext asyncContext, bool forceYielding) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, bool forceYielding) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.SynchronizationContext synchronizationContext, bool forceYielding) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.Tasks.TaskScheduler taskScheduler, bool forceYielding) { }
         public static ReactiveUI.Primitives.Async.IObserverAsync<T> Wrap<T>(this ReactiveUI.Primitives.Async.IObserverAsync<T> observer) { }
         public static ReactiveUI.Primitives.Async.IObservableAsync<T> Yield<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
         [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {

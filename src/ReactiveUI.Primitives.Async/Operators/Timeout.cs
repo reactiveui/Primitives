@@ -179,7 +179,7 @@ public static partial class SignalAsync
                     // exception handler rather than tearing down the subscription. Without a timer
                     // the operator degrades to a pass-through; downstream callers continue to
                     // receive emissions without a timeout signal.
-                    UnhandledExceptionHandler.OnUnhandledException(e);
+                    UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
             }
 
@@ -279,7 +279,7 @@ public static partial class SignalAsync
                 }
                 catch (Exception e)
                 {
-                    UnhandledExceptionHandler.OnUnhandledException(e);
+                    UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
             }
 

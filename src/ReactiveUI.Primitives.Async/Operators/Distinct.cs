@@ -100,7 +100,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new DistinctObserver(observer, comparer, cancellationToken);
+            var sink = new DistinctWitness(observer, comparer, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -108,15 +108,15 @@ public static partial class SignalAsync
             }
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
-        /// <summary>Per-subscription observer that tracks seen values in a <see cref="HashSet{T}"/>.</summary>
-        /// <param name="downstream">The downstream observer.</param>
+        /// <summary>Per-subscription witness that tracks seen values in a <see cref="HashSet{T}"/>.</summary>
+        /// <param name="downstream">The downstream witness.</param>
         /// <param name="comparer">The equality comparer.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class DistinctObserver(
+        internal sealed class DistinctWitness(
             IObserverAsync<T> downstream,
             IEqualityComparer<T> comparer,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
@@ -154,7 +154,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new DistinctByObserver(observer, keySelector, comparer, cancellationToken);
+            var sink = new DistinctByWitness(observer, keySelector, comparer, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -162,16 +162,16 @@ public static partial class SignalAsync
             }
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
-        /// <summary>Per-subscription observer that tracks seen keys.</summary>
-        /// <param name="downstream">The downstream observer.</param>
+        /// <summary>Per-subscription witness that tracks seen keys.</summary>
+        /// <param name="downstream">The downstream witness.</param>
         /// <param name="keySelector">The key selector.</param>
         /// <param name="comparer">The key equality comparer.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class DistinctByObserver(
+        internal sealed class DistinctByWitness(
             IObserverAsync<T> downstream,
             Func<T, TKey> keySelector,
             IEqualityComparer<TKey> comparer,

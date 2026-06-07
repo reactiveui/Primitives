@@ -106,7 +106,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new DistinctUntilChangedObserver(observer, comparer, cancellationToken);
+            var sink = new DistinctUntilChangedWitness(observer, comparer, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -114,15 +114,15 @@ public static partial class SignalAsync
             }
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
-        /// <summary>Per-subscription observer that drops values equal to the most-recently-forwarded one.</summary>
-        /// <param name="downstream">The downstream observer.</param>
+        /// <summary>Per-subscription witness that drops values equal to the most-recently-forwarded one.</summary>
+        /// <param name="downstream">The downstream witness.</param>
         /// <param name="comparer">The equality comparer.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class DistinctUntilChangedObserver(
+        internal sealed class DistinctUntilChangedWitness(
             IObserverAsync<T> downstream,
             IEqualityComparer<T> comparer,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
@@ -175,7 +175,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new DistinctUntilChangedByObserver(observer, keySelector, comparer, cancellationToken);
+            var sink = new DistinctUntilChangedByWitness(observer, keySelector, comparer, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -183,16 +183,16 @@ public static partial class SignalAsync
             }
 
             var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.SetSourceSubscriptionAsync(subscription).ConfigureAwait(false);
+            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return sink;
         }
 
-        /// <summary>Per-subscription observer that compares extracted keys against the most-recently-forwarded one.</summary>
-        /// <param name="downstream">The downstream observer.</param>
+        /// <summary>Per-subscription witness that compares extracted keys against the most-recently-forwarded one.</summary>
+        /// <param name="downstream">The downstream witness.</param>
         /// <param name="keySelector">The key selector.</param>
         /// <param name="comparer">The key equality comparer.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class DistinctUntilChangedByObserver(
+        internal sealed class DistinctUntilChangedByWitness(
             IObserverAsync<T> downstream,
             Func<T, TKey> keySelector,
             IEqualityComparer<TKey> comparer,

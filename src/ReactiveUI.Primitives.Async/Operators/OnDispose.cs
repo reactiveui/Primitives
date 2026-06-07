@@ -61,7 +61,7 @@ public static partial class SignalAsync
         /// <inheritdoc/>
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken)
         {
-            var sink = new OnDisposeObserver<T>(observer, disposeAction);
+            var sink = new OnDisposeWitness<T>(observer, disposeAction);
             return source.SubscribeAsync(sink, cancellationToken);
         }
     }
@@ -75,16 +75,16 @@ public static partial class SignalAsync
         /// <inheritdoc/>
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken)
         {
-            var sink = new OnDisposeObserverSync<T>(observer, disposeAction);
+            var sink = new OnDisposeWitnessSync<T>(observer, disposeAction);
             return source.SubscribeAsync(sink, cancellationToken);
         }
     }
 
     /// <summary>
-    /// An observer that invokes a synchronous action when disposed.
+    /// A witness that invokes a synchronous action when disposed.
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    internal sealed class OnDisposeObserverSync<T>(IObserverAsync<T> observer, Action finallySync) : ObserverAsync<T>
+    internal sealed class OnDisposeWitnessSync<T>(IObserverAsync<T> observer, Action finallySync) : ObserverAsync<T>
     {
         /// <inheritdoc/>
         protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
@@ -113,10 +113,10 @@ public static partial class SignalAsync
     }
 
     /// <summary>
-    /// An observer that invokes an asynchronous callback when disposed.
+    /// A witness that invokes an asynchronous callback when disposed.
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    internal sealed class OnDisposeObserver<T>(IObserverAsync<T> observer, Func<ValueTask> finallyAsync) : ObserverAsync<T>
+    internal sealed class OnDisposeWitness<T>(IObserverAsync<T> observer, Func<ValueTask> finallyAsync) : ObserverAsync<T>
     {
         /// <inheritdoc/>
         protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)

@@ -140,6 +140,11 @@ public class PublicApiBehaviorTests
     private static readonly string[] ExpectedSelectMany = ["1:1", "1:11", "2:2", "2:12"];
 
     /// <summary>
+    /// Expected values projected from enumerable collections.
+    /// </summary>
+    private static readonly int[] ExpectedFlatMapValues = [1, Ten, Two, 20];
+
+    /// <summary>
     /// Expected spark kind sequence.
     /// </summary>
     private static readonly SparkKind[] ExpectedSparkKinds = [SparkKind.OnError];
@@ -321,6 +326,12 @@ public class PublicApiBehaviorTests
             .FlatMap(value => Signal.FromEnumerable([value, value + Ten]), (outer, inner) => outer + ":" + inner)
             .Subscribe(selectMany.Add);
         Assert.Equal(ExpectedSelectMany, selectMany);
+
+        var flatMapValues = new List<int>();
+        Signal.FromEnumerable([1, Two])
+            .FlatMapValues<int, int>(value => [value, value * Ten])
+            .Subscribe(flatMapValues.Add);
+        Assert.Equal(ExpectedFlatMapValues, flatMapValues);
     }
 
     /// <summary>
@@ -778,7 +789,7 @@ public class PublicApiBehaviorTests
         Assert.Throws<ArgumentNullException>(() => ((IObservable<IObservable<int>>)null!).Chain());
         Assert.Throws<ArgumentNullException>(() => Signal.Chain<int>(null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Chain(source, null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Blend<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Blend<int>((IObservable<int>[])null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Blend(source, null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Race<int>(null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Race(source, null!));
@@ -817,6 +828,8 @@ public class PublicApiBehaviorTests
         Assert.Throws<ArgumentNullException>(() => source.SkipWhile(null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).FlatMap(value => source));
         Assert.Throws<ArgumentNullException>(() => source.FlatMap<int, int>(null!));
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).FlatMapValues<int, int>(value => [value]));
+        Assert.Throws<ArgumentNullException>(() => source.FlatMapValues<int, int>(null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Count());
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).LongCount());
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Any());

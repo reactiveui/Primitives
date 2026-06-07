@@ -16,10 +16,10 @@ namespace ReactiveUI.Primitives.Async.Internals;
 /// </summary>
 /// <remarks>
 /// <para>Same-thread reentry is granted via an owner-thread-id check, with a non-shared recursion
-/// counter; nested releases just decrement it. Cross-thread reentry inside a single lock
-/// acquisition would deadlock — no in-tree caller exercises that pattern.</para>
+/// counter; nested exits just decrement it. Cross-thread reentry inside a single gate entry
+/// would deadlock — no in-tree caller exercises that pattern.</para>
 /// </remarks>
-internal sealed class AsyncGate : IDisposable
+internal sealed class AsyncSerialGate : IDisposable
 {
     /// <summary>
     /// Signal-only semaphore used to wake one waiter when the gate is released. Initial count is
@@ -35,13 +35,13 @@ internal sealed class AsyncGate : IDisposable
     private int _ownerThreadId;
 
     /// <summary>
-    /// Number of nested <see cref="LockAsync"/> calls beyond the initial acquisition. Read / written
+    /// Number of nested <see cref="EnterAsync"/> calls beyond the initial acquisition. Read / written
     /// only by the owning thread, so unguarded mutation is safe.
     /// </summary>
     private int _recursionDepth;
 
     /// <summary>
-    /// Count of awaiters parked on the slow path. Read by <see cref="Release"/> to decide whether
+    /// Count of awaiters parked on the slow path. Read by <see cref="Exit"/> to decide whether
     /// to signal the semaphore; incremented / decremented around each <see cref="SemaphoreSlim.WaitAsync(CancellationToken)"/>.
     /// </summary>
     private int _waiters;
@@ -53,16 +53,16 @@ internal sealed class AsyncGate : IDisposable
 
     /// <summary>Gets the number of awaiters currently parked on the slow path. Exposed for
     /// deterministic contention tests so they can spin-wait until a contender has entered
-    /// <see cref="WaitForReleaseAsync"/> before tripping the release.</summary>
+    /// <see cref="WaitForEntryAsync"/> before tripping the release.</summary>
     internal int WaitersCount => Volatile.Read(ref _waiters);
 
     /// <summary>
-    /// Asynchronously acquires the gate, returning a <see cref="Releaser"/> that releases it on disposal.
+    /// Asynchronously acquires the gate, returning a <see cref="Lease"/> that releases it on disposal.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A <see cref="ValueTask{Releaser}"/> that completes when the gate has been acquired.</returns>
+    /// <returns>A <see cref="ValueTask{Lease}"/> that completes when the gate has been acquired.</returns>
     [DebuggerStepThrough]
-    public ValueTask<Releaser> LockAsync(CancellationToken cancellationToken = default)
+    public ValueTask<Lease> EnterAsync(CancellationToken cancellationToken = default)
     {
         var currentThreadId = Environment.CurrentManagedThreadId;
 
@@ -70,16 +70,16 @@ internal sealed class AsyncGate : IDisposable
         if (Volatile.Read(ref _ownerThreadId) == currentThreadId)
         {
             _recursionDepth++;
-            return new(new Releaser(this));
+            return new(new Lease(this));
         }
 
         // Fast uncontended acquire: pure CAS, no semaphore touch.
         if (Interlocked.CompareExchange(ref _ownerThreadId, currentThreadId, 0) == 0)
         {
-            return new(new Releaser(this));
+            return new(new Lease(this));
         }
 
-        return WaitForReleaseAsync(cancellationToken);
+        return WaitForEntryAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -95,10 +95,10 @@ internal sealed class AsyncGate : IDisposable
     }
 
     /// <summary>
-    /// Releases the gate. Decrements the recursion depth on a nested release, or clears the owner
+    /// Exits the gate. Decrements the recursion depth on a nested exit, or clears the owner
     /// and signals one waiter (if any) on the outermost release.
     /// </summary>
-    internal void Release()
+    internal void Exit()
     {
         if (_recursionDepth > 0)
         {
@@ -107,7 +107,7 @@ internal sealed class AsyncGate : IDisposable
         }
 
         Volatile.Write(ref _ownerThreadId, 0);
-        SignalIfWaiting();
+        WakeNextWaiter();
     }
 
     /// <summary>
@@ -115,7 +115,7 @@ internal sealed class AsyncGate : IDisposable
     /// <see cref="_waiters"/> read / <see cref="SemaphoreSlim.Release()"/> race lands harmlessly in
     /// the semaphore count and is consumed by the next waiter that arrives.
     /// </summary>
-    private void SignalIfWaiting()
+    private void WakeNextWaiter()
     {
         if (Volatile.Read(ref _waiters) == 0)
         {
@@ -129,8 +129,8 @@ internal sealed class AsyncGate : IDisposable
     /// Slow path: park as a waiter and retry the acquire CAS after each semaphore signal.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token observed while waiting.</param>
-    /// <returns>A <see cref="Releaser"/> for the acquired gate.</returns>
-    private async ValueTask<Releaser> WaitForReleaseAsync(CancellationToken cancellationToken)
+    /// <returns>A <see cref="Lease"/> for the acquired gate.</returns>
+    private async ValueTask<Lease> WaitForEntryAsync(CancellationToken cancellationToken)
     {
         Interlocked.Increment(ref _waiters);
         try
@@ -154,22 +154,22 @@ internal sealed class AsyncGate : IDisposable
     }
 
     /// <summary>
-    /// Releases a previously acquired <see cref="AsyncGate"/> when disposed.
+    /// Releases a previously acquired <see cref="AsyncSerialGate"/> when disposed.
     /// </summary>
-    public readonly record struct Releaser : IDisposable
+    public readonly record struct Lease : IDisposable
     {
         /// <summary>
-        /// The parent <see cref="AsyncGate"/> whose lock is released when this releaser is disposed.
+        /// The parent <see cref="AsyncSerialGate"/> whose lock is released when this lease is disposed.
         /// </summary>
-        private readonly AsyncGate _parent;
+        private readonly AsyncSerialGate _parent;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Releaser"/> struct.
+        /// Initializes a new instance of the <see cref="Lease"/> struct.
         /// </summary>
-        /// <param name="parent">The <see cref="AsyncGate"/> that owns this releaser.</param>
-        public Releaser(AsyncGate parent) => _parent = parent;
+        /// <param name="parent">The <see cref="AsyncSerialGate"/> that owns this lease.</param>
+        public Lease(AsyncSerialGate parent) => _parent = parent;
 
         /// <inheritdoc/>
-        public void Dispose() => _parent.Release();
+        public void Dispose() => _parent.Exit();
     }
 }

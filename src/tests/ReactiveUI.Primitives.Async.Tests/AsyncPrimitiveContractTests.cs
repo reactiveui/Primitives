@@ -219,7 +219,7 @@ public sealed class AsyncPrimitiveContractTests
 
         var sequencer = new QueuedSequencer();
         var task = AsyncObs.Emit(EmittedValue)
-            .ObserveOn(sequencer, forceYielding: true)
+            .WitnessOn(sequencer, forceYielding: true)
             .ToListAsync()
             .AsTask();
 

@@ -66,14 +66,14 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var delayObserver = new DelayObserver(observer, delayInterval, timeProvider, cancellationToken);
+            var delayObserver = new DelayWitness(observer, delayInterval, timeProvider, cancellationToken);
             return source.SubscribeAsync(delayObserver, cancellationToken);
         }
 
         /// <summary>
-        /// An observer that delays each element by waiting before forwarding to the downstream observer.
+        /// A witness that delays each element by waiting before forwarding to the downstream witness.
         /// </summary>
-        internal sealed class DelayObserver(
+        internal sealed class DelayWitness(
             IObserverAsync<T> observer,
             TimeSpan delayInterval,
             TimeProvider timeProvider,

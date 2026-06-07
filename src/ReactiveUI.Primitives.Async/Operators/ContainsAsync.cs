@@ -46,9 +46,9 @@ public static partial class SignalAsync
     {
         cancellationToken.ThrowIfCancellationRequested();
         var cmp = comparer ?? EqualityComparer<T>.Default;
-        var observer = new ContainsAsyncObserver<T>(value, cmp, cancellationToken);
+        var observer = new ContainsTaskWitness<T>(value, cmp, cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -75,32 +75,32 @@ public static partial class SignalAsync
         => @this.ContainsAsync(value, null, cancellationToken);
 
     /// <summary>
-    /// Observer that determines whether a sequence contains a specified value.
+    /// A witness that determines whether a sequence contains a specified value.
     /// </summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="value">The value to search for.</param>
     /// <param name="comparer">The equality comparer to use for comparison.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class ContainsAsyncObserver<T>(
+    internal sealed class ContainsTaskWitness<T>(
         T value,
         IEqualityComparer<T> comparer,
-        CancellationToken cancellationToken) : TaskObserverAsyncBase<T, bool>(cancellationToken)
+        CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
     {
         /// <inheritdoc/>
         protected override async ValueTask OnNextAsyncCore(T value1, CancellationToken cancellationToken)
         {
             if (comparer.Equals(value, value1))
             {
-                await TrySetCompleted(true).ConfigureAwait(false);
+                await SetResultAndDisposeAsync(true).ConfigureAwait(false);
             }
         }
 
         /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
-            => TrySetException(error);
+            => SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result)
-            => result.IsSuccess ? TrySetCompleted(false) : TrySetException(result.Exception);
+            => result.IsSuccess ? SetResultAndDisposeAsync(false) : SetExceptionAndDisposeAsync(result.Exception);
     }
 }

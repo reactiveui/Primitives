@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -37,7 +37,7 @@ public class SingleReplaceableDisposableAsync : IAsyncDisposable
         var field = Volatile.Read(ref _current);
         while (true)
         {
-            if (ReferenceEquals(field, DisposedSentinel.Instance))
+            if (ReferenceEquals(field, DisposedSlotMarker.Instance))
             {
                 if (value is not null)
                 {
@@ -71,8 +71,8 @@ public class SingleReplaceableDisposableAsync : IAsyncDisposable
     /// have been released.</returns>
     public ValueTask DisposeAsync()
     {
-        var field = Interlocked.Exchange(ref _current, DisposedSentinel.Instance);
-        if (!ReferenceEquals(field, DisposedSentinel.Instance) && field is not null)
+        var field = Interlocked.Exchange(ref _current, DisposedSlotMarker.Instance);
+        if (!ReferenceEquals(field, DisposedSlotMarker.Instance) && field is not null)
         {
             // Dispose the current resource asynchronously.
             var disposeTask = field.DisposeAsync();
@@ -90,12 +90,12 @@ public class SingleReplaceableDisposableAsync : IAsyncDisposable
     /// <summary>
     /// A sentinel object used to indicate that the <see cref="SingleReplaceableDisposableAsync"/> has been disposed.
     /// </summary>
-    internal sealed class DisposedSentinel : IAsyncDisposable
+    internal sealed class DisposedSlotMarker : IAsyncDisposable
     {
         /// <summary>
-        /// Gets the singleton instance of <see cref="DisposedSentinel"/>.
+        /// Gets the singleton instance of <see cref="DisposedSlotMarker"/>.
         /// </summary>
-        public static readonly DisposedSentinel Instance = new();
+        public static readonly DisposedSlotMarker Instance = new();
 
         /// <inheritdoc/>
         public ValueTask DisposeAsync() => default;
