@@ -1,7 +1,6 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using System.Diagnostics.CodeAnalysis;
 #if WINDOWS
 using ReactiveUI.Primitives.ApiApproval;
@@ -18,10 +17,8 @@ namespace ReactiveUI.Primitives.WinUI.Tests;
 [ExcludeFromCodeCoverage]
 public class ApiApprovalTests
 {
-    /// <summary>
-    /// Generates the public API for the ReactiveUI.Primitives.WinUI assembly.
-    /// </summary>
-    /// <returns>A task to monitor the process.</returns>
+    /// <summary>Generates the public API for the ReactiveUI.Primitives.WinUI assembly.</summary>
+    /// <returns>A task representing the approval verification.</returns>
     [Test]
     public Task WinUI() =>
 #if WINDOWS

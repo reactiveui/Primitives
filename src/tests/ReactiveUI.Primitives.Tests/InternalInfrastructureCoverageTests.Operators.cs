@@ -202,7 +202,7 @@ public partial class InternalInfrastructureCoverageTests
         virtualClock.Schedule(Seven, DateTimeOffset.UnixEpoch.AddTicks(Three), (_, state) =>
         {
             scheduled.Add(state);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
         virtualClock.AdvanceTo(Three);
         Assert.Equal(ExpectedSingleSeven, scheduled);

@@ -238,7 +238,7 @@ public class Signal<T> : ISignal<T>
             observer.OnCompleted();
         }
 
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>
@@ -288,7 +288,7 @@ public class Signal<T> : ISignal<T>
             ExceptionDispatchInfo.Capture(ex).Throw();
         }
 
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>

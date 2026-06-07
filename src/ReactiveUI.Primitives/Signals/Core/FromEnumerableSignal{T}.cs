@@ -67,7 +67,7 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
             }
 
             observer.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         if (!_cancellationToken.CanBeCanceled && _values is IReadOnlyList<T> readOnlyList)
@@ -78,21 +78,21 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
             }
 
             observer.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         foreach (var value in _values)
         {
             if (_cancellationToken.IsCancellationRequested)
             {
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             observer.OnNext(value);
         }
 
         observer.OnCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>
@@ -123,14 +123,14 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
         {
             if (_cancellationToken.IsCancellationRequested)
             {
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             onNext(value);
         }
 
         onCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>
@@ -165,7 +165,7 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
     /// <returns><see langword="true"/> when the sequence was drained here.</returns>
     private bool TryDrainIndexable(Action<T> onNext, Action onCompleted, out IDisposable result)
     {
-        result = Disposable.Empty;
+        result = EmptyDisposable.Instance;
         if (_cancellationToken.CanBeCanceled)
         {
             return false;

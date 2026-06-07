@@ -3,9 +3,9 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
@@ -376,7 +376,7 @@ public partial class ReactiveExtensionsTests
         {
             observer.OnNext(1);
             observer.OnError(new InvalidOperationException());
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         using var sub = source.SubscribeAsync(
@@ -541,7 +541,7 @@ public partial class ReactiveExtensionsTests
             observer.OnNext(1);
             observer.OnNext(2);
             observer.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         using var subscription = source.SubscribeAsync(

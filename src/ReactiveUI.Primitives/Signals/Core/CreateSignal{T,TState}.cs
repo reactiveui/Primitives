@@ -57,7 +57,7 @@ internal sealed class CreateSignal<T, TState> : SignalsBase<T>
     protected override IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel)
     {
         observer = new Create(observer, cancel);
-        return _subscribe(_state, observer) ?? Disposable.Empty;
+        return _subscribe(_state, observer) ?? EmptyDisposable.Instance;
     }
 
     /// <summary>

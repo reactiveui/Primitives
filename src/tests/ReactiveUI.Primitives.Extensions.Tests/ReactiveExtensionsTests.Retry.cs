@@ -2,10 +2,10 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using ReactiveUI.Primitives.Async.Tests;
 using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
@@ -33,7 +33,7 @@ public partial class ReactiveExtensionsTests
                 observer.OnCompleted();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         var results = new List<int>();
@@ -68,7 +68,7 @@ public partial class ReactiveExtensionsTests
                 observer.OnCompleted();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         var result = source.RetryWithBackoff(
@@ -97,7 +97,7 @@ public partial class ReactiveExtensionsTests
         {
             attempts++;
             observer.OnError(new InvalidOperationException());
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         Exception? caughtException = null;
@@ -134,7 +134,7 @@ public partial class ReactiveExtensionsTests
                 observer.OnCompleted();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         var startTimestamp = TimeProvider.System.GetTimestamp();
@@ -179,7 +179,7 @@ public partial class ReactiveExtensionsTests
                 observer.OnCompleted();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         source.OnErrorRetry<int, InvalidOperationException>(
@@ -215,7 +215,7 @@ public partial class ReactiveExtensionsTests
         {
             attemptCount++;
             observer.OnError(new InvalidOperationException($"Attempt {attemptCount}"));
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         source.OnErrorRetry<int, InvalidOperationException>(
@@ -256,7 +256,7 @@ public partial class ReactiveExtensionsTests
         {
             attemptCount++;
             observer.OnError(new InvalidOperationException($"Attempt {attemptCount}"));
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         source.OnErrorRetry<int, InvalidOperationException>(
@@ -300,7 +300,7 @@ public partial class ReactiveExtensionsTests
                 observer.OnCompleted();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         var result = 0;
@@ -340,7 +340,7 @@ public partial class ReactiveExtensionsTests
                 observer.OnCompleted();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         var results = new List<int>();
@@ -375,7 +375,7 @@ public partial class ReactiveExtensionsTests
                 observer.OnCompleted();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         var result = source.OnErrorRetry<int, InvalidOperationException>(
@@ -428,7 +428,7 @@ public partial class ReactiveExtensionsTests
                 observer.OnCompleted();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         var result = source.RetryWithBackoff(
@@ -463,7 +463,7 @@ public partial class ReactiveExtensionsTests
                 observer.OnCompleted();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         var result = source.RetryWithDelay(5, attempt => TimeSpan.FromMilliseconds(1)).Wait();
@@ -492,7 +492,7 @@ public partial class ReactiveExtensionsTests
                 observer.OnCompleted();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         var result = source.RetryForeverWithDelay(TimeSpan.FromMilliseconds(1)).Wait();
@@ -521,7 +521,7 @@ public partial class ReactiveExtensionsTests
                 observer.OnCompleted();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         var result = source.RetryWithFixedDelay(5, TimeSpan.FromMilliseconds(1)).Wait();
@@ -652,7 +652,7 @@ public partial class ReactiveExtensionsTests
                 obs.OnCompleted();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         var results = new List<int>();
@@ -698,7 +698,7 @@ public partial class ReactiveExtensionsTests
                 observer.OnCompleted();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         // initialDelay=1ms, backoffFactor=100 => attempt 2 delay = 1*100^1 = 100ms, exceeds maxDelay=5ms
@@ -742,7 +742,7 @@ public partial class ReactiveExtensionsTests
                 observer.OnCompleted();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         // initialDelay=1ms, backoffFactor=1000 => computed delay = 1000ms >> maxDelay=2ms
@@ -784,7 +784,7 @@ public partial class ReactiveExtensionsTests
                 observer.OnCompleted();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         var results = new List<int>();

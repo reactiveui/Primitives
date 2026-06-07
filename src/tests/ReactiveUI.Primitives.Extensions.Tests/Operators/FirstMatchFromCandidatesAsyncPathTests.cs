@@ -4,6 +4,7 @@
 
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
@@ -346,7 +347,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
         public IDisposable Subscribe(IObserver<T> observer)
         {
             observer.OnError(error);
-            return System.Reactive.Disposables.Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
     }
 
@@ -360,7 +361,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
         public IDisposable Subscribe(IObserver<T> observer)
         {
             observer.OnCompleted();
-            return System.Reactive.Disposables.Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
     }
 }

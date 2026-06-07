@@ -5,7 +5,7 @@
 namespace ReactiveUI.Primitives.Disposables;
 
 /// <summary>
-/// A no-op <see cref="IDisposable"/> singleton used in place of <c>Disposable.Empty</c>.
+/// A no-op <see cref="IDisposable"/> singleton used in place of <c>EmptyDisposable.Instance</c>.
 /// </summary>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class EmptyDisposable : IDisposable

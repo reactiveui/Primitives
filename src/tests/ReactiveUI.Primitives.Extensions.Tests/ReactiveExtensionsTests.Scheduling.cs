@@ -7,6 +7,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Async.Tests;
 using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
@@ -254,7 +255,7 @@ public partial class ReactiveExtensionsTests
     public async Task Using_WithAction_ExecutesActionImmediately()
     {
         var executed = false;
-        using var disposable = Disposable.Create(() => { });
+        using var disposable = new ActionDisposable(() => { });
 
         disposable.Using(d => executed = true, Sequencer.Immediate).Subscribe();
 
@@ -269,7 +270,7 @@ public partial class ReactiveExtensionsTests
     public async Task Using_WithActionAndNullScheduler_ExecutesActionImmediately()
     {
         var executed = false;
-        using var disposable = Disposable.Create(() => { });
+        using var disposable = new ActionDisposable(() => { });
 
         await disposable.Using(d => executed = true, scheduler: null).ToTask();
 
@@ -283,7 +284,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Using_WithFunction_TransformsValue()
     {
-        using var disposable = Disposable.Create(() => { });
+        using var disposable = new ActionDisposable(() => { });
         var result = 0;
 
         disposable.Using(d => SampleValue42, Sequencer.Immediate).Subscribe(r => result = r);
@@ -669,7 +670,7 @@ public partial class ReactiveExtensionsTests
     public async Task WhenUsingWithActionAndNoScheduler_ThenExecutesAndDisposes()
     {
         var actionExecuted = false;
-        using var disposable = Disposable.Create(() => { });
+        using var disposable = new ActionDisposable(() => { });
 
         await disposable.Using(d => actionExecuted = true).ToTask();
 

@@ -51,7 +51,7 @@ public class FactoryStateTimerBenchmarks
             }
 
             target.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }).Subscribe(observer);
         return observer.Total;
     }
@@ -95,7 +95,7 @@ public class FactoryStateTimerBenchmarks
             }
 
             target.OnCompleted(R3.Result.Success);
-            return R3.Disposable.Empty;
+            return R3.Disposable.Create(static () => { });
         }).Subscribe(observer);
         return observer.Total;
     }

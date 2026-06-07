@@ -198,7 +198,7 @@ public static partial class Signal
                 observer.OnNext(new(sender, eventArgs));
 
             addHandler(Handler);
-            return Disposable.Create(() => removeHandler(Handler));
+            return new ActionDisposable(() => removeHandler(Handler));
         });
     }
 
@@ -230,7 +230,7 @@ public static partial class Signal
                 observer.OnNext(new(sender, eventArgs));
 
             addHandler(Handler);
-            return Disposable.Create(() => removeHandler(Handler));
+            return new ActionDisposable(() => removeHandler(Handler));
         });
     }
 
@@ -285,7 +285,7 @@ public static partial class Signal
             }
 
             addHandler(handler);
-            return Disposable.Create(() => removeHandler(handler));
+            return Scope.Create(() => removeHandler(handler));
         });
     }
 
@@ -383,7 +383,7 @@ public static partial class Signal
                 },
                 TaskScheduler.Default);
 
-            return Disposable.Create(() => Volatile.Write(ref disposed, 1));
+            return new ActionDisposable(() => Volatile.Write(ref disposed, 1));
         });
     }
 
@@ -472,7 +472,7 @@ public static partial class Signal
                         observer.OnError(error);
                     }
 
-                    return Disposable.Empty;
+                    return EmptyDisposable.Instance;
                 });
         }
 

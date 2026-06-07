@@ -296,7 +296,7 @@ public class ChooseSwitchSelectTests
         public IDisposable Subscribe(IObserver<T> observer)
         {
             _observer = observer;
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         /// <summary>Pushes a value to the retained observer.</summary>

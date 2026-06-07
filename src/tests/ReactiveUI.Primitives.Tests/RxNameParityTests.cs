@@ -740,7 +740,7 @@ public class RxNameParityTests
         public IDisposable Subscribe(IObserver<T> observer)
         {
             _observer = observer;
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         /// <summary>Pushes a value to the retained observer.</summary>
@@ -763,7 +763,7 @@ public class RxNameParityTests
         public bool IsRequiredSubscribeOnCurrentThread() => true;
 
         /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer) => Disposable.Empty;
+        public IDisposable Subscribe(IObserver<T> observer) => EmptyDisposable.Instance;
     }
 
     /// <summary>A unary parity case: a Primitives-named builder and its Rx-named twin over one source.</summary>

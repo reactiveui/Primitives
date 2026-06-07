@@ -268,7 +268,7 @@ public class StatefulSharingAndBridgeContractTests
     public async Task CommandSignalCoversSyncFaultAndDisposalBranches()
     {
         var behavior = new BehaviorSignal<int>(InitialStateValue);
-        var disposable = new MultipleDisposable(Disposable.Empty);
+        var disposable = new MultipleDisposable(EmptyDisposable.Instance);
         var fault = new InvalidOperationException("sync failed");
         var command = new CommandSignal<int>(() => throw fault);
         var results = new List<int>();
@@ -406,7 +406,7 @@ public static class BridgeSmoke
         R3.Observable<int> r3Again = PrimitivesFromR3.AsR3Observable();
         ISequencer fromSystemScheduler = scheduler.AsSequencer();
         System.Reactive.Concurrency.IScheduler systemScheduler = sequencer.AsSystemScheduler();
-        systemScheduler.Schedule(1, static (_, _) => Disposable.Empty);
+        systemScheduler.Schedule(1, static (_, _) => EmptyDisposable.Instance);
     }
 }
 """;
@@ -471,10 +471,10 @@ public static class BridgeSchedulerRuntimeSmoke
             self.Schedule(2, (_, next) =>
             {
                 calls.Add(next);
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             });
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         return calls.ToArray();

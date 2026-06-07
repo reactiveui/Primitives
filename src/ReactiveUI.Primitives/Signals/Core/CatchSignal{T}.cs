@@ -96,7 +96,7 @@ internal sealed class CatchSignal<T> : SignalsBase<T>
 
             var schedule = Sequencer.Immediate.Schedule(RecursiveRun);
 
-            return new(schedule, _subscription, Disposable.Create(() =>
+            return new(schedule, _subscription, new ActionDisposable(() =>
             {
                 lock (_gate)
                 {

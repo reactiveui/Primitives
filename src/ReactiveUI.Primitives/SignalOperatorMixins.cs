@@ -902,7 +902,7 @@ public static partial class LinqMixins
     /// <param name="observer">The downstream observer.</param>
     /// <param name="range">The source range.</param>
     /// <returns>An empty disposable.</returns>
-    private static IDisposable EmitShiftedRange<T>(IObserver<T> observer, RangeSignal range)
+    private static EmptyDisposable EmitShiftedRange<T>(IObserver<T> observer, RangeSignal range)
     {
         for (var i = 0; i < range.Count; i++)
         {
@@ -910,7 +910,7 @@ public static partial class LinqMixins
         }
 
         observer.OnCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>
@@ -921,7 +921,7 @@ public static partial class LinqMixins
     /// <param name="onCompleted">The completion callback.</param>
     /// <param name="range">The source range.</param>
     /// <returns>An empty disposable.</returns>
-    private static IDisposable EmitShiftedRange<T>(Action<T> onNext, Action onCompleted, RangeSignal range)
+    private static EmptyDisposable EmitShiftedRange<T>(Action<T> onNext, Action onCompleted, RangeSignal range)
     {
         for (var i = 0; i < range.Count; i++)
         {
@@ -929,6 +929,6 @@ public static partial class LinqMixins
         }
 
         onCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 }

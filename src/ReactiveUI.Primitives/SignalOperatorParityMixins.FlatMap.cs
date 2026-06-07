@@ -237,7 +237,7 @@ public static partial class LinqMixins
                 if (_disposed)
                 {
                     outer.Dispose();
-                    return Disposable.Empty;
+                    return EmptyDisposable.Instance;
                 }
 
                 _outer = outer;

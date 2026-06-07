@@ -236,9 +236,9 @@ public partial class InternalInfrastructureCoverageTests
         Assert.NotEqual(0, left.GetHashCode());
 
         var scheduledDisposed = false;
-        var scheduled = new ScheduledProbe(One, () => Disposable.Create(() => scheduledDisposed = true));
+        var scheduled = new ScheduledProbe(One, () => new ActionDisposable(() => scheduledDisposed = true));
         Assert.Equal(1, scheduled.CompareTo(null));
-        Assert.Equal(0, scheduled.CompareTo(new ScheduledProbe(One, () => Disposable.Empty)));
+        Assert.Equal(0, scheduled.CompareTo(new ScheduledProbe(One, () => EmptyDisposable.Instance)));
         Assert.Throws<ArgumentException>(() => scheduled.CompareTo("not-scheduled"));
         Assert.True(scheduled.Equals((object)scheduled));
         Assert.False(scheduled.Equals(new()));
@@ -250,7 +250,7 @@ public partial class InternalInfrastructureCoverageTests
         var cancelDisposed = false;
         Witness.SafeWitness<int> safe = new(
             new ThrowingObserver<int>(throwOnError: true),
-            Disposable.Create(() => cancelDisposed = true));
+            new ActionDisposable(() => cancelDisposed = true));
         Assert.Throws<InvalidOperationException>(() => safe.OnError(new InvalidOperationException("safe")));
         Assert.True(cancelDisposed);
         safe.OnError(new InvalidOperationException("ignored"));

@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- MAUI sequencer tests target the same cross-platform TFMs as the MAUI integration library
-       (net9.0;net10.0, no -windows). MauiDispatcherSequencer marshals through the IDispatcher
+  <!-- MAUI sequencer tests target runnable cross-platform TFMs only
+       (net9.0;net10.0;net11.0, no -windows and no Android app-host leg). MauiDispatcherSequencer marshals through the IDispatcher
        interface, so these tests use a fake dispatcher and run on any platform (including Linux/CI)
        without the MAUI workload, a real UI thread, or Wine. -->
   <PropertyGroup>
-    <TargetFrameworks>$(MauiTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks>$(MauiTestTargetFrameworks)</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
@@ -13,6 +13,12 @@
   <ItemGroup>
     <PackageReference Include="PublicApiGenerator" />
     <Compile Include="..\Shared\ApiApprovalExtensions.cs" Link="ApiApprovalExtensions.cs" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">
+    <PackageReference Include="Microsoft.Extensions.Configuration" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
   </ItemGroup>
 
   <ItemGroup>

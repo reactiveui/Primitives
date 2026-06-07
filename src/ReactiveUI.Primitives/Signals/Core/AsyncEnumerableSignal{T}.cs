@@ -45,7 +45,7 @@ internal sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
         IAsyncEnumerator<T>? enumerator = null;
         _ = RunAsync();
 
-        return Disposable.Create(() =>
+        return new ActionDisposable(() =>
         {
             if (Interlocked.Exchange(ref disposed, 1) != 0)
             {

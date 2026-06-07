@@ -54,7 +54,7 @@ internal sealed class UseSignal<TResource, T> : IObservable<T>
         catch (Exception error)
         {
             observer.OnError(error);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         var sink = new UseObserver(observer, resource);

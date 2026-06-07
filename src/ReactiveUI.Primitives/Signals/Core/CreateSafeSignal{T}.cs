@@ -47,7 +47,7 @@ internal sealed class CreateSafeSignal<T> : SignalsBase<T>
         }
 
         var sink = new CreateSafe(observer);
-        sink.SetCancel(_subscribe(sink) ?? Disposable.Empty);
+        sink.SetCancel(_subscribe(sink) ?? EmptyDisposable.Instance);
         return sink;
     }
 
@@ -60,7 +60,7 @@ internal sealed class CreateSafeSignal<T> : SignalsBase<T>
     protected override IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel)
     {
         var sink = new CreateSafe(observer, cancel);
-        return _subscribe(sink) ?? Disposable.Empty;
+        return _subscribe(sink) ?? EmptyDisposable.Instance;
     }
 
     /// <summary>

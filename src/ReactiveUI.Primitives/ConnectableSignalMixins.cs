@@ -230,7 +230,7 @@ public static class ConnectableSignalMixins
 
         /// <summary>
         /// Reference-counted subscription handle. A dedicated type avoids the closure that
-        /// <c>Disposable.Create</c> would allocate per subscription.
+        /// <c>Scope.Create</c> would allocate per subscription.
         /// </summary>
         private sealed class Subscription : IDisposable
         {

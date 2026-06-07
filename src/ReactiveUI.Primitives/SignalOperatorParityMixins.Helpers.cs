@@ -305,7 +305,7 @@ public static partial class LinqMixins
 
             Emit(observer);
             observer.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         /// <inheritdoc/>
@@ -318,7 +318,7 @@ public static partial class LinqMixins
 
             Emit(onNext);
             onCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         /// <summary>
@@ -405,7 +405,7 @@ public static partial class LinqMixins
 
             Emit(observer);
             observer.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         /// <inheritdoc/>
@@ -418,7 +418,7 @@ public static partial class LinqMixins
 
             Emit(onNext);
             onCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         /// <summary>
@@ -797,7 +797,7 @@ public static partial class LinqMixins
         /// Handles a sample tick.
         /// </summary>
         /// <returns>An empty disposable.</returns>
-        private IDisposable Tick()
+        private EmptyDisposable Tick()
         {
             // Hold the gate across the emission so the sample cannot interleave with a terminal.
             lock (_gate)
@@ -805,7 +805,7 @@ public static partial class LinqMixins
                 if (_done || !_hasLatest)
                 {
                     _timerActive = false;
-                    return Disposable.Empty;
+                    return EmptyDisposable.Instance;
                 }
 
                 var value = _latest!;
@@ -814,7 +814,7 @@ public static partial class LinqMixins
                 _observer.OnNext(value);
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
     }
 
@@ -1145,7 +1145,7 @@ public static partial class LinqMixins
 
             observer.OnNext(_selector(_left.Start + _left.Count - 1, _right.Start + _right.Count - 1));
             observer.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
     }
 

@@ -64,7 +64,7 @@ public class CoreRuntimeContractTests
                 value => calls.Add("N" + value),
                 ex => calls.Add("E" + ex.Message),
                 () => calls.Add("C")),
-            Disposable.Create(() => disposed++));
+            new ActionDisposable(() => disposed++));
 
         witness.OnNext(FirstValue);
         witness.OnCompleted();
@@ -81,12 +81,12 @@ public class CoreRuntimeContractTests
     /// Verifies a null disposable action uses the shared empty disposable.
     /// </summary>
     [Test]
-    public void DisposableCreateNullActionReturnsEmptyDisposable()
+    public void ActionDisposableNullActionIsDisposedAfterDispose()
     {
-        var disposable = Disposable.Create(null!);
+        var disposable = new ActionDisposable(null!);
 
         disposable.Dispose();
-        Assert.Same(Disposable.Empty, disposable);
+        Assert.True(disposable.IsDisposed);
     }
 
     /// <summary>
@@ -97,8 +97,8 @@ public class CoreRuntimeContractTests
     {
         var first = 0;
         var second = 0;
-        var firstDisposable = Disposable.Create(() => first++);
-        var secondDisposable = Disposable.Create(() => second++);
+        var firstDisposable = new ActionDisposable(() => first++);
+        var secondDisposable = new ActionDisposable(() => second++);
         var pocket = new MultipleDisposable(firstDisposable, secondDisposable);
 
         Assert.True(pocket.Remove(firstDisposable));
@@ -122,7 +122,7 @@ public class CoreRuntimeContractTests
         var slot = new SingleDisposable();
 
         slot.Dispose();
-        slot.Create(Disposable.Create(() => disposed++));
+        slot.Create(new ActionDisposable(() => disposed++));
 
         Assert.True(slot.IsDisposed);
         Assert.Equal(1, disposed);
@@ -258,7 +258,7 @@ public class CoreRuntimeContractTests
         const int State = 42;
 
         Assert.Throws<ArgumentNullException>(() =>
-            CreateScheduledItem(null!, State, (_, _) => Disposable.Empty));
+            CreateScheduledItem(null!, State, (_, _) => EmptyDisposable.Instance));
 
         Assert.Throws<ArgumentNullException>(() =>
             CreateScheduledItem(Sequencer.Immediate, State, null!));

@@ -64,7 +64,7 @@ public sealed class ImmediateSequencer : ISequencer
         }
 
         action();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>

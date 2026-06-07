@@ -44,7 +44,7 @@ public static partial class LinqMixins
             if (_count == 0)
             {
                 observer.OnCompleted();
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             var sink = new TakeObserver<T>(observer, _count);

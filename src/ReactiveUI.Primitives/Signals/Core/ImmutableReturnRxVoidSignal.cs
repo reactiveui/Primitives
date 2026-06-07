@@ -40,7 +40,7 @@ internal sealed class ImmutableReturnRxVoidSignal : IRequireCurrentThread<RxVoid
     {
         observer.OnNext(RxVoid.Default);
         observer.OnCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>
@@ -54,6 +54,6 @@ internal sealed class ImmutableReturnRxVoidSignal : IRequireCurrentThread<RxVoid
     {
         onNext(RxVoid.Default);
         onCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 }

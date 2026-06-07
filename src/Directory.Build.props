@@ -47,22 +47,23 @@
   <!-- Define Target Framework Monikers (TFMs) -->
   <PropertyGroup>
     <!-- Cross-platform TFMs that work on all platforms -->
-    <NetTargetFrameworks>net8.0;net9.0;net10.0</NetTargetFrameworks>
+    <NetTargetFrameworks>net8.0;net9.0;net10.0;net11.0</NetTargetFrameworks>
 
     <!-- .NET Framework TFMs - EnableWindowsTargeting allows cross-platform compilation -->
     <NetFrameworkTargetFrameworks>net462;net472;net48;net481</NetFrameworkTargetFrameworks>
 
-    <!-- Library projects: net8.0, net9.0, net10.0, net462, net472, net48, net481 -->
+    <!-- Library projects: net8.0-net11.0, net462, net472, net48, net481 -->
     <LibraryTargetFrameworks>$(NetTargetFrameworks);$(NetFrameworkTargetFrameworks)</LibraryTargetFrameworks>
 
     <!-- Windows UI integration projects: modern Windows TFMs plus supported .NET Framework TFMs -->
-    <WindowsNetTargetFrameworks>net8.0-windows;net9.0-windows;net10.0-windows</WindowsNetTargetFrameworks>
+    <WindowsNetTargetFrameworks>net8.0-windows;net9.0-windows;net10.0-windows;net11.0-windows</WindowsNetTargetFrameworks>
     <WindowsLibraryTargetFrameworks>$(WindowsNetTargetFrameworks);$(NetFrameworkTargetFrameworks)</WindowsLibraryTargetFrameworks>
 
     <!-- Focused platform integration projects. -->
     <BlazorTargetFrameworks>$(NetTargetFrameworks)</BlazorTargetFrameworks>
-    <MauiTargetFrameworks>net9.0;net10.0</MauiTargetFrameworks>
-    <WinUITargetFrameworks>net8.0-windows10.0.19041.0;net9.0-windows10.0.19041.0;net10.0-windows10.0.19041.0</WinUITargetFrameworks>
+    <MauiTargetFrameworks>net9.0;net10.0;net11.0;net11.0-android</MauiTargetFrameworks>
+    <MauiTestTargetFrameworks>net9.0;net10.0;net11.0</MauiTestTargetFrameworks>
+    <WinUITargetFrameworks>net8.0-windows10.0.19041.0;net9.0-windows10.0.19041.0;net10.0-windows10.0.19041.0;net11.0-windows10.0.19041.0</WinUITargetFrameworks>
 
     <!-- Test projects: net8.0, net9.0, net10.0 only -->
     <TestTargetFrameworks>$(NetTargetFrameworks)</TestTargetFrameworks>
@@ -97,6 +98,14 @@
     <IsAotCompatible>true</IsAotCompatible>
     <EnableAotAnalyzer>true</EnableAotAnalyzer>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">
+    <Features>$(Features);runtime-async=on</Features>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net11.0-android'">
+    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
   </PropertyGroup>
 
   <PropertyGroup>

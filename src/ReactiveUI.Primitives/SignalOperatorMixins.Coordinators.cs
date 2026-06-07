@@ -57,7 +57,7 @@ public static partial class LinqMixins
             }
 
             observer.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
     }
 
@@ -484,11 +484,13 @@ public static partial class LinqMixins
         {
             lock (_gate)
             {
-                if (!_done && _outerCompleted && _active == 0)
+                if (_done || !_outerCompleted || _active != 0)
                 {
-                    _done = true;
-                    _observer.OnCompleted();
+                    return;
                 }
+
+                _done = true;
+                _observer.OnCompleted();
             }
         }
     }
@@ -565,8 +567,8 @@ public static partial class LinqMixins
         /// <param name="left">The left source.</param>
         /// <param name="right">The right source.</param>
         /// <returns>The subscription cleanup.</returns>
-        internal IDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
-            MultipleDisposable.Create(
+        internal MultipleDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
+            new(
                 right.Subscribe(OnRightNext, _observer.OnError, NoOp),
                 left.Subscribe(OnLeftNext, _observer.OnError, _observer.OnCompleted));
 
@@ -805,11 +807,11 @@ public static partial class LinqMixins
         /// Emits the timeout error.
         /// </summary>
         /// <returns>An empty disposable.</returns>
-        private IDisposable EmitTimeout()
+        private EmptyDisposable EmitTimeout()
         {
             if (Interlocked.Exchange(ref _done, 1) != 0)
             {
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             try
@@ -821,7 +823,7 @@ public static partial class LinqMixins
                 Dispose();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
     }
 
@@ -1105,11 +1107,13 @@ public static partial class LinqMixins
                     _observer.OnNext(_selector(left, right));
                 }
 
-                if ((_leftCompleted && _leftQueue.Count == 0) || (_rightCompleted && _rightQueue.Count == 0))
+                if ((!_leftCompleted || _leftQueue.Count != 0) && (!_rightCompleted || _rightQueue.Count != 0))
                 {
-                    _completed = true;
-                    _observer.OnCompleted();
+                    return;
                 }
+
+                _completed = true;
+                _observer.OnCompleted();
             }
         }
     }

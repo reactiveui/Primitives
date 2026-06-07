@@ -44,7 +44,7 @@ public class ConcurencyTests
     public void TestCreate()
     {
         var scheduler = TaskPoolSequencer.Instance;
-        var disposable = scheduler.Schedule(0, (_, _) => Disposable.Empty);
+        var disposable = scheduler.Schedule(0, (_, _) => EmptyDisposable.Instance);
         Assert.NotNull(disposable);
         disposable.Dispose();
     }

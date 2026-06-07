@@ -1,0 +1,17 @@
+namespace ReactiveUI.Primitives.Concurrency
+{
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class DispatcherQueueSequencer : ReactiveUI.Primitives.Concurrency.DispatchSequencerBase
+    {
+        public DispatcherQueueSequencer(Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue) { }
+        public DispatcherQueueSequencer(Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue, Microsoft.UI.Dispatching.DispatcherQueuePriority priority) { }
+        public Microsoft.UI.Dispatching.DispatcherQueue DispatcherQueue { get; }
+        public Microsoft.UI.Dispatching.DispatcherQueuePriority Priority { get; }
+        protected override bool Post(System.Action drain) { }
+        protected override void ScheduleDelayed(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+    }
+    public static class DispatcherQueueSequencerMixins
+    {
+        public static ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencer ToSequencer(this Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue) { }
+    }
+}

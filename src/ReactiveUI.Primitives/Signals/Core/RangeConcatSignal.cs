@@ -44,7 +44,7 @@ internal sealed class RangeConcatSignal : IRequireCurrentThread<int>, IInlineSig
         }
 
         observer.OnCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <inheritdoc/>
@@ -70,6 +70,6 @@ internal sealed class RangeConcatSignal : IRequireCurrentThread<int>, IInlineSig
         }
 
         onCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 }

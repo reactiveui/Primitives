@@ -4,6 +4,7 @@
 
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
@@ -205,7 +206,7 @@ public class RunAllObservableTests
         public IDisposable Subscribe(IObserver<T> observer)
         {
             observer.OnError(error);
-            return System.Reactive.Disposables.Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
     }
 }

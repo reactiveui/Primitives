@@ -546,7 +546,7 @@ public class PublicApiBehaviorTests
         var asyncValues = new List<int>();
         var asyncErrors = new List<string>();
 
-        Signal.Use(() => Disposable.Empty, _ => (IObservable<int>)null!).Subscribe(_ => { }, ex => useErrors.Add(ex.Message));
+        Signal.Use(() => EmptyDisposable.Instance, _ => (IObservable<int>)null!).Subscribe(_ => { }, ex => useErrors.Add(ex.Message));
         Signal.Use<IDisposable, int>(() => throw new InvalidOperationException("resource"), _ => Signal.Emit(1)).Subscribe(_ => { }, ex => useErrors.Add(ex.Message));
 
         await ObserveTaskError(Task.FromCanceled<int>(new(true)), taskErrors);
@@ -628,19 +628,19 @@ public class PublicApiBehaviorTests
         var slotDisposed = 0;
         var assignmentDisposed = 0;
         var pocketDisposed = 0;
-        new Slot(Disposable.Create(() => slotDisposed++), () => slotDisposed++).Dispose();
-        new AssignmentSlot(Disposable.Create(() => assignmentDisposed++), () => assignmentDisposed++).Dispose();
-        new Pocket(Disposable.Create(() => pocketDisposed++)).Dispose();
+        new Slot(new ActionDisposable(() => slotDisposed++), () => slotDisposed++).Dispose();
+        new AssignmentSlot(new ActionDisposable(() => assignmentDisposed++), () => assignmentDisposed++).Dispose();
+        new Pocket(new ActionDisposable(() => pocketDisposed++)).Dispose();
         Assert.Equal(Two, slotDisposed);
         Assert.Equal(Two, assignmentDisposed);
         Assert.Equal(1, pocketDisposed);
 
-        var single = new SingleDisposable(Disposable.Create(() => { }), () => { });
-        Assert.Throws<InvalidOperationException>(() => single.Create(Disposable.Empty));
+        var single = new SingleDisposable(new ActionDisposable(() => { }), () => { });
+        Assert.Throws<InvalidOperationException>(() => single.Create(EmptyDisposable.Instance));
         var replaceableFirst = 0;
         var replaceableSecond = 0;
-        var replaceable = new SingleReplaceableDisposable(Disposable.Create(() => replaceableFirst++));
-        replaceable.Create(Disposable.Create(() => replaceableSecond++));
+        var replaceable = new SingleReplaceableDisposable(new ActionDisposable(() => replaceableFirst++));
+        replaceable.Create(new ActionDisposable(() => replaceableSecond++));
         replaceable.Dispose();
         Assert.Equal(1, replaceableFirst);
         Assert.Equal(1, replaceableSecond);
@@ -649,7 +649,7 @@ public class PublicApiBehaviorTests
         Assert.Throws<ArgumentNullException>(() => multiple.Remove(null));
         multiple.Dispose();
         var lateDisposed = 0;
-        multiple.Add(Disposable.Create(() => lateDisposed++));
+        multiple.Add(new ActionDisposable(() => lateDisposed++));
         Assert.Equal(1, lateDisposed);
         Assert.True(multiple.IsDisposed);
     }
@@ -859,9 +859,9 @@ public class PublicApiBehaviorTests
         Assert.Throws<ArgumentNullException>(() => Signal.FromTask((Task<int>)null!));
         Assert.Throws<ArgumentNullException>(() => Signal.FromAsyncEnumerable<int>(null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Use<IDisposable, int>(null!, resource => Signal.Emit(1)));
-        Assert.Throws<ArgumentNullException>(() => Signal.Use(() => Disposable.Empty, (Func<IDisposable, IObservable<int>>)null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Use(() => EmptyDisposable.Instance, (Func<IDisposable, IObservable<int>>)null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Use<IDisposable, int>(null!, resource => Signal.Emit(1)));
-        Assert.Throws<ArgumentNullException>(() => Signal.Use(() => Disposable.Empty, (Func<IDisposable, IObservable<int>>)null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Use(() => EmptyDisposable.Instance, (Func<IDisposable, IObservable<int>>)null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Subscribe(value => { }));
         Assert.Throws<ArgumentNullException>(() => Signal.Emit(1).Subscribe((Action<int>)null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Emit(1).Subscribe(value => { }, (Action<Exception>)null!));

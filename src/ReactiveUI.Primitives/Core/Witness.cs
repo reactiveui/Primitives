@@ -87,7 +87,7 @@ public static class Witness
     /// <param name="observer">Observer to protect.</param>
     /// <returns>A safe observer wrapper.</returns>
     public static IObserver<T> Safe<T>(IObserver<T> observer) =>
-        Safe(observer, Disposable.Empty);
+        Safe(observer, EmptyDisposable.Instance);
 
     /// <summary>
     /// Wraps a witness so it receives at most one terminal signal and no values after termination.
@@ -109,7 +109,7 @@ public static class Witness
             throw new ArgumentNullException(nameof(cancel));
         }
 
-        if (ReferenceEquals(cancel, Disposable.Empty))
+        if (ReferenceEquals(cancel, EmptyDisposable.Instance))
         {
             if (observer is DelegateWitness<T> delegateWitness)
             {

@@ -57,7 +57,7 @@ internal sealed class RangeSignal : IRequireCurrentThread<int>, IInlineSignal<in
         }
 
         observer.OnCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>
@@ -80,6 +80,6 @@ internal sealed class RangeSignal : IRequireCurrentThread<int>, IInlineSignal<in
         }
 
         onCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 }

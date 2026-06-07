@@ -810,14 +810,6 @@ namespace ReactiveUI.Primitives.Disposables
         public System.Threading.CancellationToken Token { get; }
         public void Dispose() { }
     }
-    public static class Disposable
-    {
-        public static System.IDisposable Empty { get; }
-        public static System.IDisposable Combine(params System.IDisposable[] disposables) { }
-        public static System.IDisposable Combine(System.IDisposable first, System.IDisposable second) { }
-        public static System.IDisposable Create(System.Action dispose) { }
-        public static System.IDisposable Create<TState>(TState state, System.Action<TState> dispose) { }
-    }
     [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
     public sealed class DisposableBag : ReactiveUI.Primitives.Disposables.IsDisposed, System.IDisposable
     {
@@ -876,6 +868,14 @@ namespace ReactiveUI.Primitives.Disposables
         public Pocket(params System.IDisposable[] disposables) { }
         public Pocket(System.IDisposable first, System.IDisposable second) { }
         public Pocket(System.IDisposable first, System.IDisposable second, System.IDisposable third) { }
+    }
+    public static class Scope
+    {
+        public static System.IDisposable Empty { get; }
+        public static System.IDisposable Combine(params System.IDisposable[] disposables) { }
+        public static System.IDisposable Combine(System.IDisposable first, System.IDisposable second) { }
+        public static System.IDisposable Create(System.Action dispose) { }
+        public static System.IDisposable Create<TState>(TState state, System.Action<TState> dispose) { }
     }
     [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
     public class SingleDisposable : ReactiveUI.Primitives.Disposables.IsDisposed, System.IDisposable

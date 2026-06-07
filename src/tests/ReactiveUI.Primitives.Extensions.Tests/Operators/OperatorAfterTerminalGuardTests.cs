@@ -6,6 +6,7 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
@@ -90,7 +91,7 @@ public class OperatorAfterTerminalGuardTests
         {
             subscribeCount++;
             o.OnError(new InvalidOperationException("retry-after-dispose"));
-            return System.Reactive.Disposables.Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         var sub = source.RetryForeverWithDelay(TimeSpan.FromMilliseconds(LongDelayMs))
@@ -118,7 +119,7 @@ public class OperatorAfterTerminalGuardTests
         {
             subscribeCount++;
             o.OnError(new InvalidOperationException("retry-after-dispose"));
-            return System.Reactive.Disposables.Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         var sub = source.OnErrorRetry(

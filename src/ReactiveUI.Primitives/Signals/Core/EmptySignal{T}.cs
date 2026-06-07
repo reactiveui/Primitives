@@ -38,7 +38,7 @@ internal sealed class EmptySignal<T> : SignalsBase<T>
         if (_scheduler == Sequencer.Immediate)
         {
             observer.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         return _scheduler.Schedule(observer.OnCompleted);

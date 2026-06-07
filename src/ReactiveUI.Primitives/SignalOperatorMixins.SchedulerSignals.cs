@@ -150,7 +150,7 @@ public static partial class LinqMixins
 
             var subscription = new SingleReplaceableDisposable();
             var scheduled = _scheduler.Schedule(() => subscription.Create(_source.Subscribe(observer)));
-            return MultipleDisposable.Create(scheduled, subscription);
+            return new MultipleDisposable(scheduled, subscription);
         }
     }
 

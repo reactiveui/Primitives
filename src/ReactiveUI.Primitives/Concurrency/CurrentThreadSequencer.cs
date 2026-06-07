@@ -102,7 +102,7 @@ public sealed class CurrentThreadSequencer : ISequencer
                 SetRunning(false);
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         var item = new ActionWorkItem(action);
@@ -319,7 +319,7 @@ public sealed class CurrentThreadSequencer : ISequencer
                 _item.Execute();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
     }
 }

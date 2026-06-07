@@ -196,7 +196,7 @@ public abstract class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICom
             return;
         }
 
-        var disposable = InvokeCore() ?? Disposable.Empty;
+        var disposable = InvokeCore() ?? EmptyDisposable.Instance;
         var previous = Interlocked.CompareExchange(ref _disposable, disposable, null);
         if (previous != null)
         {
@@ -223,7 +223,7 @@ public abstract class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICom
             return;
         }
 
-        Interlocked.Exchange(ref _disposable, Disposable.Empty)?.Dispose();
+        Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
     }
 
     /// <summary>

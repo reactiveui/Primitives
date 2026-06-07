@@ -185,7 +185,7 @@ public static partial class Signal
             catch (Exception ex)
             {
                 observer.OnError(ex);
-                return Disposable.Empty;
+                return Scope.Empty;
             }
 
             return source.Subscribe(observer);

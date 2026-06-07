@@ -59,7 +59,7 @@ public sealed class ConnectableSignal<T> : IObservable<T>
         lock (_gate)
         {
             // Allocate the connection only on the first connect. A dedicated disposable type
-            // avoids the closure (and extra anonymous-disposable wrapper) that Disposable.Create
+            // avoids the closure (and extra anonymous-disposable wrapper) that Scope.Create
             // would allocate.
             _connection ??= new Connection(this, _source.Subscribe(_hub));
             return _connection;

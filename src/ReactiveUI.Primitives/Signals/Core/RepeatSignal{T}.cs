@@ -58,7 +58,7 @@ internal sealed class RepeatSignal<T> : IRequireCurrentThread<T>, IInlineSignal<
         }
 
         observer.OnCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>
@@ -81,6 +81,6 @@ internal sealed class RepeatSignal<T> : IRequireCurrentThread<T>, IInlineSignal<
         }
 
         onCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 }

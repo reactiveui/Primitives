@@ -2,10 +2,10 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
@@ -476,7 +476,7 @@ public partial class ReactiveExtensionsTests
             observer.OnNext(null!);
             observer.OnNext("second");
             observer.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
         var results = new List<string>();
 
@@ -689,7 +689,7 @@ public partial class ReactiveExtensionsTests
                 observer.OnCompleted();
             }
 
-            return System.Reactive.Disposables.Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         using var sub = source.OnErrorRetry<int, InvalidOperationException>(caught.Add).Subscribe(values.Add);
@@ -711,7 +711,7 @@ public partial class ReactiveExtensionsTests
         {
             observer.OnNext(1);
             observer.OnError(failure);
-            return System.Reactive.Disposables.Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         using var sub = source.OnErrorRetry<int, NotSupportedException>(caught.Add, retryCount: 1, TimeSpan.Zero, Sequencer.Default)
@@ -745,7 +745,7 @@ public partial class ReactiveExtensionsTests
                 observer.OnCompleted();
             }
 
-            return System.Reactive.Disposables.Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         using var sub = source.RetryWithBackoff(maxRetries: 3, TimeSpan.FromMilliseconds(1))

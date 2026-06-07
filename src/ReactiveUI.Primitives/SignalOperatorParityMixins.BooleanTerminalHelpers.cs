@@ -55,7 +55,7 @@ public static partial class LinqMixins
             if (_source is RangeSignal range && typeof(T) == typeof(int))
             {
                 EmitAllRange(range, _predicate, observer);
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             var sink = new AllPredicateObserver<T>(observer, _predicate);
@@ -145,7 +145,7 @@ public static partial class LinqMixins
             if (_source is RangeSignal range && typeof(T) == typeof(int))
             {
                 EmitContainsRange(range, _value, _comparer, observer);
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             var sink = new ContainsObserver<T>(observer, _value, _comparer);

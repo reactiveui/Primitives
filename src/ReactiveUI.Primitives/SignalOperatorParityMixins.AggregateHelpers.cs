@@ -97,7 +97,7 @@ public static partial class LinqMixins
             {
                 observer.OnNext(CountDistinctRange(range, _keySelector, _comparer));
                 observer.OnCompleted();
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             var sink = new DistinctByCountObserver<T, TKey>(observer, _keySelector, _comparer);
@@ -117,7 +117,7 @@ public static partial class LinqMixins
             {
                 observer.OnNext(CountDistinctRange(range, _keySelector, _comparer));
                 observer.OnCompleted();
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             var sink = new DistinctByLongCountObserver<T, TKey>(observer, _keySelector, _comparer);
@@ -178,7 +178,7 @@ public static partial class LinqMixins
             {
                 observer.OnNext(range.Count);
                 observer.OnCompleted();
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             if (_source is ICountSource countSource)
@@ -234,7 +234,7 @@ public static partial class LinqMixins
             if (_source is RangeSignal range && typeof(T) == typeof(int))
             {
                 EmitCountRange(range, _predicate, observer);
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             var sink = new CountPredicateObserver<T>(observer, _predicate);
@@ -305,7 +305,7 @@ public static partial class LinqMixins
             {
                 observer.OnNext(range.Count);
                 observer.OnCompleted();
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             if (_source is ICountSource countSource)
@@ -361,7 +361,7 @@ public static partial class LinqMixins
             if (_source is RangeSignal range && typeof(T) == typeof(int))
             {
                 EmitLongCountRange(range, _predicate, observer);
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             var sink = new LongCountPredicateObserver<T>(observer, _predicate);
@@ -432,7 +432,7 @@ public static partial class LinqMixins
             {
                 observer.OnNext(true);
                 observer.OnCompleted();
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             var sink = new AnyObserver<T>(observer);
@@ -483,7 +483,7 @@ public static partial class LinqMixins
             if (_source is RangeSignal range && typeof(T) == typeof(int))
             {
                 EmitAnyRange(range, _predicate, observer);
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             var sink = new AnyPredicateObserver<T>(observer, _predicate);
