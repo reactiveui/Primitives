@@ -12,7 +12,7 @@
     <PackageVersion Include="stylecop.analyzers" Version="1.2.0-beta.556" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4" />
-    <PackageVersion Include="Blazor.Common.Analyzers" Version="2.0.0" />
+    <PackageVersion Include="Blazor.Common.Analyzers" Version="2.1.0" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.27.0.140913" />
   </ItemGroup>
   <!--Benchmarking and testing projects need to reference the latest versions of these packages to get the latest API additions and bug fixes, and to ensure that they are testing against the latest versions of dependencies.-->
