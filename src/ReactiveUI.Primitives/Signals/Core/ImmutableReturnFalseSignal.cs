@@ -40,7 +40,7 @@ internal sealed class ImmutableReturnFalseSignal : IRequireCurrentThread<bool>, 
     {
         observer.OnNext(false);
         observer.OnCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>
@@ -54,6 +54,6 @@ internal sealed class ImmutableReturnFalseSignal : IRequireCurrentThread<bool>, 
     {
         onNext(false);
         onCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 }

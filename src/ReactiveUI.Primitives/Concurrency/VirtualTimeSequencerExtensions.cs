@@ -72,9 +72,9 @@ public static class VirtualTimeSequencerExtensions
     /// </summary>
     /// <param name="action">Action to invoke.</param>
     /// <returns>An empty disposable.</returns>
-    private static IDisposable Invoke(Action action)
+    private static EmptyDisposable Invoke(Action action)
     {
         action();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 }

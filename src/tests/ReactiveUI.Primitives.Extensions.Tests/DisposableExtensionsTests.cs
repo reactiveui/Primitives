@@ -4,6 +4,7 @@
 
 using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
+using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
@@ -20,7 +21,7 @@ public class DisposableExtensionsTests
     public async Task GivenNull_WhenDisposeWith_ThenExceptionThrown()
     {
         // Given
-        var sut = Disposable.Create(() => { });
+        var sut = new ActionDisposable(() => { });
 
         // When
         var result = Assert.Throws<ArgumentNullException>(() => sut.DisposeWith((CompositeDisposable)null!));

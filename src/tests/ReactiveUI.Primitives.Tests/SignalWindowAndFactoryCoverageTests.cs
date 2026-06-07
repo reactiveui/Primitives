@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
@@ -174,7 +175,7 @@ public sealed class SignalWindowAndFactoryCoverageTests
 
         Assert.Equal<int>([first, second], values);
         Assert.Equal(expectedSubscriptionCount, subscriptions);
-        Assert.Equal<int>([first, second], Signal.FromEnumerable([first, second]).ToEnumerable());
+        Assert.Equal([first, second], Signal.FromEnumerable([first, second]).ToEnumerable());
 
         var factoryError = new InvalidOperationException("defer-factory");
         Exception? observedFactoryError = null;
@@ -249,7 +250,7 @@ public sealed class SignalWindowAndFactoryCoverageTests
         public IDisposable Subscribe(IObserver<T> observer)
         {
             script(observer);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
     }
 
@@ -278,11 +279,11 @@ public sealed class SignalWindowAndFactoryCoverageTests
         /// <summary>
         /// Raised by the test source.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        [SuppressMessage(
             "Roslynator",
             "RCS1159:Use EventHandler<T>",
             Justification = "This test deliberately covers the PropertyChangedEventHandler branch of the factory overload.")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        [SuppressMessage(
             "Major Code Smell",
             "S3908:Refactor this delegate to use 'System.EventHandler<TEventArgs>'.",
             Justification = "This test deliberately covers the PropertyChangedEventHandler branch of the factory overload.")]

@@ -390,11 +390,11 @@ public sealed class DeterministicEdgeCaseTests
         var multiple = new MultipleDisposable();
         for (var i = 0; i < Twenty; i++)
         {
-            multiple.Add(Disposable.Empty);
+            multiple.Add(EmptyDisposable.Instance);
         }
 
-        Assert.True(multiple.Remove(Disposable.Empty));
-        Assert.False(multiple.Remove(Disposable.Create(() => { })));
+        Assert.True(multiple.Remove(EmptyDisposable.Instance));
+        Assert.False(multiple.Remove(new ActionDisposable(() => { })));
         Assert.Throws<ArgumentNullException>(() => _ = new MultipleDisposable((IDisposable[])null!));
         Assert.Throws<ArgumentNullException>(() => multiple.Add(null!));
         multiple.Dispose();
@@ -436,12 +436,12 @@ public sealed class DeterministicEdgeCaseTests
         current.Schedule(One, TimeSpan.FromMilliseconds(1), (_, state) =>
         {
             scheduled.Add(state);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }).Dispose();
         current.Schedule(One, FixedTimestamp.AddMilliseconds(1), (_, state) =>
         {
             scheduled.Add(state + One);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }).Dispose();
         Assert.Equal(Two, scheduled.Count);
     }
@@ -590,9 +590,9 @@ public sealed class DeterministicEdgeCaseTests
                 .Subscribe(new ThrowingObserver<int>(throwOnError: true))
                 .Dispose());
 
-        var returnWitness = new ReturnSignal<int>.Return(new RecordingObserver<int>(), Disposable.Empty);
+        var returnWitness = new ReturnSignal<int>.Return(new RecordingObserver<int>(), EmptyDisposable.Instance);
         returnWitness.OnError(new InvalidOperationException("return-inner"));
-        var emptyWitness = new EmptySignal<int>.Empty(new RecordingObserver<int>(), Disposable.Empty);
+        var emptyWitness = new EmptySignal<int>.Empty(new RecordingObserver<int>(), EmptyDisposable.Instance);
         emptyWitness.OnNext(One);
         emptyWitness.OnError(new InvalidOperationException("empty-inner"));
 
@@ -1028,14 +1028,14 @@ public sealed class DeterministicEdgeCaseTests
             (_, state) =>
             {
                 helperValues.Add(state);
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             });
         helper.Invoke();
         helper.Dispose();
         helper.Invoke();
         Assert.Equal(new[] { One }, helperValues);
 
-        var unusedScheduled = new ScheduledItem<int, string>(Sequencer.Immediate, "unused", (_, _) => Disposable.Empty, One);
+        var unusedScheduled = new ScheduledItem<int, string>(Sequencer.Immediate, "unused", (_, _) => EmptyDisposable.Instance, One);
         Assert.False(new SequencerQueue<int>().Remove(unusedScheduled));
         Assert.Throws<ArgumentOutOfRangeException>(() => _ = new PriorityQueue<int>(-1));
 
@@ -1061,13 +1061,13 @@ public sealed class DeterministicEdgeCaseTests
         var absolute = ThreadPoolSequencer.Instance.Schedule(Five, FixedTimestamp, (_, state) =>
         {
             absoluteRan.TrySetResult(state);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
         Assert.Equal(Five, await absoluteRan.Task.WaitAsync(TimeSpan.FromSeconds(Five)).ConfigureAwait(false));
         absolute.Dispose();
         absolute.Dispose();
 
-        var delayedDisposed = CreateThreadPoolWorkItem(One, (_, _) => Disposable.Empty);
+        var delayedDisposed = CreateThreadPoolWorkItem(One, (_, _) => EmptyDisposable.Instance);
         delayedDisposed.Dispose();
         QueueThreadPoolWorkItem(delayedDisposed, TimeSpan.FromMilliseconds(Ten));
 
@@ -1075,7 +1075,7 @@ public sealed class DeterministicEdgeCaseTests
         var skippedItem = CreateThreadPoolWorkItem(Two, (_, _) =>
         {
             skipped = true;
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
         skippedItem.Dispose();
         InvokeThreadPoolWorkItem(skippedItem);
@@ -1086,7 +1086,7 @@ public sealed class DeterministicEdgeCaseTests
         var selfDisposing = CreateThreadPoolWorkItem(holder, (_, state) =>
         {
             ((IDisposable)state[0]!).Dispose();
-            return Disposable.Create(() => disposedReturned++);
+            return new ActionDisposable(() => disposedReturned++);
         });
         holder[0] = selfDisposing;
         InvokeThreadPoolWorkItem(selfDisposing);
@@ -1203,7 +1203,7 @@ public sealed class DeterministicEdgeCaseTests
         public IDisposable Subscribe(IObserver<T> observer)
         {
             _script(observer);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
     }
 
@@ -1226,7 +1226,7 @@ public sealed class DeterministicEdgeCaseTests
         public IDisposable Subscribe(IObserver<T> observer)
         {
             Observer = observer;
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
     }
 
@@ -1251,7 +1251,7 @@ public sealed class DeterministicEdgeCaseTests
         /// <param name="observer">The observer to subscribe.</param>
         /// <param name="cancel">The disposable used to cancel the subscription.</param>
         /// <returns>An empty disposable.</returns>
-        protected override IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) => Disposable.Empty;
+        protected override IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) => EmptyDisposable.Instance;
     }
 
     /// <summary>

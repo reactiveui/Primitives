@@ -37,7 +37,7 @@ public class SignalCreateTests
         var xs = Signal.Create<int>(o =>
         {
             o.OnNext(CreatedValue);
-            return Disposable.Create(null!);
+            return new ActionDisposable(null!);
         });
 
         var lst = new List<int>();
@@ -65,19 +65,19 @@ public class SignalCreateTests
             Signal.Create<int>(o =>
             {
                 o.OnNext(1);
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }).Subscribe(x => throw new InvalidOperationException()));
         Assert.Throws<InvalidOperationException>(() =>
             Signal.Create<int>(o =>
             {
                 o.OnError(new InvalidOperationException("source"));
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }).Subscribe(x => { }, ex => throw new InvalidOperationException()));
         Assert.Throws<InvalidOperationException>(() =>
             Signal.Create<int>(o =>
             {
                 o.OnCompleted();
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }).Subscribe(x => { }, ex => { }, () => throw new InvalidOperationException()));
     }
 

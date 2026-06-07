@@ -44,7 +44,7 @@ internal sealed class ImmediateReturnSignal<T> : IRequireCurrentThread<T>, IInli
 
         observer.OnNext(_value);
         observer.OnCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>
@@ -58,6 +58,6 @@ internal sealed class ImmediateReturnSignal<T> : IRequireCurrentThread<T>, IInli
     {
         onNext(_value);
         onCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 }

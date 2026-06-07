@@ -82,7 +82,7 @@ internal sealed class ImmutableReturnInt32Signal : IRequireCurrentThread<int>, I
     {
         observer.OnNext(_x);
         observer.OnCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>
@@ -96,6 +96,6 @@ internal sealed class ImmutableReturnInt32Signal : IRequireCurrentThread<int>, I
     {
         onNext(_x);
         onCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 }

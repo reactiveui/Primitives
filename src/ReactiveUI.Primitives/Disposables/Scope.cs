@@ -5,9 +5,9 @@
 namespace ReactiveUI.Primitives.Disposables;
 
 /// <summary>
-/// Disposable.
+/// Scope.
 /// </summary>
-public static class Disposable
+public static class Scope
 {
     /// <summary>
     /// Gets the disposable that does nothing when disposed.
@@ -40,7 +40,7 @@ public static class Disposable
     /// <param name="second">The second disposable.</param>
     /// <returns>A disposable that disposes both supplied resources.</returns>
     public static IDisposable Combine(IDisposable first, IDisposable second) =>
-        MultipleDisposable.Create(first, second);
+        new MultipleDisposable(first, second);
 
     /// <summary>
     /// Combines disposable resources into a single disposable.
@@ -48,5 +48,5 @@ public static class Disposable
     /// <param name="disposables">The disposables to combine.</param>
     /// <returns>A disposable that disposes all supplied resources.</returns>
     public static IDisposable Combine(params IDisposable[] disposables) =>
-        MultipleDisposable.Create(disposables);
+        new MultipleDisposable(disposables);
 }

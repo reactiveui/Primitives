@@ -18,7 +18,7 @@ public class DisposableTests
     public void OnlyDisposeOnce()
     {
         var disposed = 0;
-        var disposable = Disposable.Create(() => disposed++);
+        var disposable = new ActionDisposable(() => disposed++);
 
         disposable.Dispose();
 
@@ -33,9 +33,9 @@ public class DisposableTests
     /// Empties the disposable.
     /// </summary>
     [Test]
-    public void EmptyDisposable()
+    public void EmptyDisposableInstanceDoesNothing()
     {
-        var disposable = Disposable.Empty;
+        var disposable = EmptyDisposable.Instance;
         disposable.Dispose();
         disposable.Dispose();
         disposable.Dispose();
@@ -69,7 +69,7 @@ public class DisposableTests
     [Test]
     public void SingleDisposableDispose()
     {
-        var disposable = new SingleDisposable(Disposable.Empty);
+        var disposable = new SingleDisposable(EmptyDisposable.Instance);
         disposable.Dispose();
         Assert.True(disposable.IsDisposed);
     }
@@ -81,7 +81,7 @@ public class DisposableTests
     public void SingleDisposableDisposeWithAction()
     {
         var disposed = 0;
-        var disposable = new SingleDisposable(Disposable.Empty, () => disposed++);
+        var disposable = new SingleDisposable(EmptyDisposable.Instance, () => disposed++);
         disposable.Dispose();
         Assert.True(disposable.IsDisposed);
         Assert.Equal(1, disposed);
@@ -113,16 +113,16 @@ public class DisposableTests
     public void MultipleDisposableWithItemsDispose()
     {
         var disposable = new MultipleDisposable();
-        disposable.Add(Disposable.Empty);
+        disposable.Add(EmptyDisposable.Instance);
         var disposed = 0;
 
         // create a disposable that will be disposed when the MultipleDisposable is disposed
-        var singleDisposable = Disposable.Empty.DisposeWith(() => disposed++);
+        var singleDisposable = EmptyDisposable.Instance.DisposeWith(() => disposed++);
 
         // add the disposable to the MultipleDisposable
         singleDisposable?.DisposeWith(disposable);
 
-        var singleDisposable2 = Disposable.Empty.DisposeWith();
+        var singleDisposable2 = EmptyDisposable.Instance.DisposeWith();
         singleDisposable2?.DisposeWith(disposable);
 
         disposable.Dispose();

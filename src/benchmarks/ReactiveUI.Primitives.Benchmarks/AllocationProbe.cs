@@ -262,7 +262,7 @@ internal static class AllocationProbe
             }
 
             target.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }).Subscribe(observer).Dispose());
         Row("Multicast", () =>
         {

@@ -43,7 +43,7 @@ internal sealed class ImmediateThrowSignal<T> : IRequireCurrentThread<T>, IInlin
         }
 
         observer.OnError(_error);
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>
@@ -56,6 +56,6 @@ internal sealed class ImmediateThrowSignal<T> : IRequireCurrentThread<T>, IInlin
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
         onError(_error);
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 }

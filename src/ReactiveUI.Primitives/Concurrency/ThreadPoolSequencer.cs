@@ -290,7 +290,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
                 return;
             }
 
-            Interlocked.Exchange(ref _disposable, Disposable.Empty)?.Dispose();
+            Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
         }
 
         /// <inheritdoc/>
@@ -317,7 +317,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
                 return;
             }
 
-            var disposable = _action(_owner, _state) ?? Disposable.Empty;
+            var disposable = _action(_owner, _state) ?? EmptyDisposable.Instance;
             var previous = Interlocked.CompareExchange(ref _disposable, disposable, null);
             if (previous != null)
             {

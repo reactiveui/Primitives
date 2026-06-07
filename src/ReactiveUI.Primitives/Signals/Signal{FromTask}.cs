@@ -241,7 +241,7 @@ public static partial class Signal
         {
             Volatile.Write(ref completionState, TaskFaulted);
             observer.OnError(error);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         if (task.Status == TaskStatus.RanToCompletion)
@@ -252,26 +252,26 @@ public static partial class Signal
                 observer.OnNext(result);
                 Volatile.Write(ref completionState, TaskCompleted);
                 observer.OnCompleted();
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             Volatile.Write(ref completionState, TaskFaulted);
             observer.OnError(new OperationCanceledException());
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         if (task.IsCanceled || token.IsCancellationRequested)
         {
             Volatile.Write(ref completionState, TaskFaulted);
             observer.OnError(new OperationCanceledException());
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         if (task.IsFaulted)
         {
             Volatile.Write(ref completionState, TaskFaulted);
             observer.OnError(task.Exception!.InnerException ?? task.Exception);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         var cancellableTask = task.WhenCancelled(token);
@@ -284,7 +284,7 @@ public static partial class Signal
             () => Volatile.Write(ref completionState, TaskFaulted),
             token);
 
-        return Disposable.Create(() =>
+        return new ActionDisposable(() =>
         {
             if (Volatile.Read(ref completionState) == TaskCompleted)
             {
@@ -488,7 +488,7 @@ public static partial class Signal
             catch (Exception error)
             {
                 observer.OnError(error);
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             if (task.Status == TaskStatus.RanToCompletion)
@@ -498,23 +498,23 @@ public static partial class Signal
                 {
                     observer.OnNext(result);
                     observer.OnCompleted();
-                    return Disposable.Empty;
+                    return EmptyDisposable.Instance;
                 }
 
                 observer.OnError(new OperationCanceledException());
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             if (task.IsCanceled || token.IsCancellationRequested)
             {
                 observer.OnError(new OperationCanceledException());
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             if (task.IsFaulted)
             {
                 observer.OnError(task.Exception!.InnerException ?? task.Exception);
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             }
 
             var subscription = new ImmediateTaskSubscription(SourceCore);

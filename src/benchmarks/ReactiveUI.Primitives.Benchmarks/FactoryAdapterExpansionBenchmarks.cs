@@ -41,7 +41,7 @@ public class FactoryAdapterExpansionBenchmarks
         {
             target.OnNext(Value);
             target.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }).Subscribe(observer);
         return observer.Total;
     }
@@ -75,7 +75,7 @@ public class FactoryAdapterExpansionBenchmarks
         {
             target.OnNext(Value);
             target.OnCompleted(R3.Result.Success);
-            return R3.Disposable.Empty;
+            return R3.Disposable.Create(static () => { });
         }).Subscribe(observer);
         return observer.Total;
     }
@@ -92,7 +92,7 @@ public class FactoryAdapterExpansionBenchmarks
         {
             target.OnNext(Value);
             target.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }).Subscribe(observer);
         return observer.Total;
     }
@@ -216,7 +216,7 @@ public class FactoryAdapterExpansionBenchmarks
             }
 
             target.OnCompleted(R3.Result.Success);
-            return R3.Disposable.Empty;
+            return R3.Disposable.Create(static () => { });
         }).Subscribe(observer);
         return observer.Total;
     }
@@ -229,7 +229,7 @@ public class FactoryAdapterExpansionBenchmarks
     public int PrimitivesUseSubscribe()
     {
         var observer = new IntSignalObserver();
-        using var subscription = Signal.Use(static () => Disposable.Empty, static _ => Signal.Emit(Value)).Subscribe(observer);
+        using var subscription = Signal.Use(static () => EmptyDisposable.Instance, static _ => Signal.Emit(Value)).Subscribe(observer);
         return observer.Total;
     }
 
@@ -256,10 +256,10 @@ public class FactoryAdapterExpansionBenchmarks
         var observer = new IntR3Observer();
         using var subscription = R3.Observable.Create<int>(static target =>
         {
-            using var resource = R3.Disposable.Empty;
+            using var resource = R3.Disposable.Create(static () => { });
             target.OnNext(Value);
             target.OnCompleted(R3.Result.Success);
-            return R3.Disposable.Empty;
+            return R3.Disposable.Create(static () => { });
         }).Subscribe(observer);
         return observer.Total;
     }

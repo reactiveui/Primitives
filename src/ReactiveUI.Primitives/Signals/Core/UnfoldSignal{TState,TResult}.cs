@@ -72,7 +72,7 @@ internal sealed class UnfoldSignal<TState, TResult> : IRequireCurrentThread<TRes
         }
 
         observer.OnCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <inheritdoc/>
@@ -91,6 +91,6 @@ internal sealed class UnfoldSignal<TState, TResult> : IRequireCurrentThread<TRes
         }
 
         onCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 }

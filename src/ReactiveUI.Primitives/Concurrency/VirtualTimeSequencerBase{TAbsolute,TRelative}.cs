@@ -252,7 +252,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
                 workItem.Execute();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
     }
 
@@ -277,7 +277,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
                 workItem.Execute();
             }
 
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
     }
 

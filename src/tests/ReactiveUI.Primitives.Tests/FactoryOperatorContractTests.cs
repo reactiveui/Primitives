@@ -298,7 +298,7 @@ public class FactoryOperatorContractTests
             .Chain(Signal.Loop(RepeatValue, SecondValue))
             .Chain(Signal.Unfold(FirstValue, state => state <= RetrySuccessAttempt, state => state + FirstValue, state => state * ProjectionMultiplier))
             .Chain(Signal.Use(
-                () => Disposable.Create(() => disposed++),
+                () => new ActionDisposable(() => disposed++),
                 _ => Signal.FromEnumerable([ResourceFirstValue, ResourceSecondValue])))
             .Subscribe(values.Add, ex => throw ex, () => completed++);
 

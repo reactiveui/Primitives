@@ -211,14 +211,14 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
         if (error != null)
         {
             observer.OnError(error);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         observer.OnNext(value!);
         if (stopped)
         {
             observer.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         return new Subscription(this, observer);

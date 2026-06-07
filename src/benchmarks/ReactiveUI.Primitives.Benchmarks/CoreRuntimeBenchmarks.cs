@@ -33,9 +33,9 @@ public class CoreRuntimeBenchmarks
     {
         var disposed = 0;
         var pocket = new Pocket(
-            Disposable.Create(() => disposed++),
-            Disposable.Create(() => disposed++),
-            Disposable.Create(() => disposed++));
+            new ActionDisposable(() => disposed++),
+            new ActionDisposable(() => disposed++),
+            new ActionDisposable(() => disposed++));
 
         pocket.Dispose();
         return disposed;

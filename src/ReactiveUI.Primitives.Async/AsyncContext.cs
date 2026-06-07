@@ -276,7 +276,7 @@ public record AsyncContext
             scheduler.Schedule(task, (_, t) =>
             {
                 TryExecuteTask(t);
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             });
 
         /// <inheritdoc/>

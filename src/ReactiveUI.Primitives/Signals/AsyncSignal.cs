@@ -246,7 +246,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
             observer.OnCompleted();
         }
 
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>

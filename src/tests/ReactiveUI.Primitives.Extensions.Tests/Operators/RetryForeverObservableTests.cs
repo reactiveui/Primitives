@@ -4,6 +4,7 @@
 
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -43,7 +44,7 @@ public class RetryForeverObservableTests
                 observer.OnCompleted();
             }
 
-            return System.Reactive.Disposables.Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         using var sub = source.OnErrorRetry().Subscribe(values.Add, () => completed = true);
@@ -64,7 +65,7 @@ public class RetryForeverObservableTests
         {
             Interlocked.Increment(ref subscribeCount);
             captured = observer;
-            return System.Reactive.Disposables.Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         var sub = source.OnErrorRetry().Subscribe(static _ => { });

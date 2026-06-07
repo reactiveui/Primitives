@@ -71,7 +71,7 @@ internal sealed class RangeZipSignal<TResult> : IRequireCurrentThread<TResult>, 
         }
 
         observer.OnCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>
@@ -94,6 +94,6 @@ internal sealed class RangeZipSignal<TResult> : IRequireCurrentThread<TResult>, 
         }
 
         onCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 }

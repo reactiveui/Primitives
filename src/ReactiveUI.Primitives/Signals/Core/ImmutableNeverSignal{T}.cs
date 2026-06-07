@@ -31,5 +31,5 @@ internal sealed class ImmutableNeverSignal<T> : IRequireCurrentThread<T>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<T> observer) =>
-        Disposable.Empty;
+        EmptyDisposable.Instance;
 }

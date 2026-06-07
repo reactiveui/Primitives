@@ -162,11 +162,11 @@ internal static class SystemReactiveSchedulerBridge
         {
             if (item is global::ReactiveUI.Primitives.Disposables.IsDisposed { IsDisposed: true })
             {
-                return global::ReactiveUI.Primitives.Disposables.Disposable.Empty;
+                return global::ReactiveUI.Primitives.Disposables.EmptyDisposable.Instance;
             }
 
             item.Execute();
-            return global::ReactiveUI.Primitives.Disposables.Disposable.Empty;
+            return global::ReactiveUI.Primitives.Disposables.EmptyDisposable.Instance;
         }
     }
 
@@ -257,7 +257,7 @@ internal static class SystemReactiveSchedulerBridge
                 return;
             }
 
-            global::System.Threading.Interlocked.Exchange(ref _disposable, global::ReactiveUI.Primitives.Disposables.Disposable.Empty)?.Dispose();
+            global::System.Threading.Interlocked.Exchange(ref _disposable, global::ReactiveUI.Primitives.Disposables.EmptyDisposable.Instance)?.Dispose();
         }
 
         public void Execute()
@@ -267,7 +267,7 @@ internal static class SystemReactiveSchedulerBridge
                 return;
             }
 
-            var disposable = _action(_scheduler, _state) ?? global::ReactiveUI.Primitives.Disposables.Disposable.Empty;
+            var disposable = _action(_scheduler, _state) ?? global::ReactiveUI.Primitives.Disposables.EmptyDisposable.Instance;
             var previous = global::System.Threading.Interlocked.CompareExchange(ref _disposable, disposable, null);
             if (previous != null)
             {

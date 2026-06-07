@@ -437,7 +437,7 @@ public partial class InternalInfrastructureCoverageTests
         public IDisposable Subscribe(IObserver<T> observer)
         {
             _script(observer);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
     }
 
@@ -485,7 +485,7 @@ public partial class InternalInfrastructureCoverageTests
             }
 
             queue.Enqueue(scheduled);
-            return Disposable.Create(() => scheduled.IsCancelled = true);
+            return new ActionDisposable(() => scheduled.IsCancelled = true);
         }
 
         /// <summary>

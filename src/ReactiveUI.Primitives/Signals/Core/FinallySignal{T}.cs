@@ -79,7 +79,7 @@ internal sealed class FinallySignal<T> : SignalsBase<T>
                 throw;
             }
 
-            return new(subscription, Disposable.Create(() => _parent._finallyAction()));
+            return new(subscription, new ActionDisposable(() => _parent._finallyAction()));
         }
 
         /// <summary>

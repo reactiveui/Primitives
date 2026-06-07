@@ -49,7 +49,7 @@ internal sealed class ReturnSignal<T> : SignalsBase<T>
         {
             observer.OnNext(_value);
             observer.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         return _scheduler.Schedule(() =>

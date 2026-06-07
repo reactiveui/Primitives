@@ -48,7 +48,7 @@ internal sealed class ThrowSignal<T> : SignalsBase<T>
         if (_scheduler == Sequencer.Immediate)
         {
             observer.OnError(_error);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         return _scheduler.Schedule((observer, _error), static (_, state) => SignalError(state));
@@ -59,11 +59,11 @@ internal sealed class ThrowSignal<T> : SignalsBase<T>
     /// </summary>
     /// <param name="state">The observer and error state.</param>
     /// <returns>An empty disposable.</returns>
-    private static IDisposable SignalError((IObserver<T> Observer, Exception Error) state)
+    private static EmptyDisposable SignalError((IObserver<T> Observer, Exception Error) state)
     {
         state.Observer.OnError(state.Error);
         state.Observer.OnCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>

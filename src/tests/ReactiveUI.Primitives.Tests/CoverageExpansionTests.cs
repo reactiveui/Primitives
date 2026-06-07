@@ -128,7 +128,7 @@ public class CoverageExpansionTests
                 {
                     observer.OnNext(state);
                     observer.OnCompleted();
-                    return Disposable.Create(() => { });
+                    return new ActionDisposable(() => { });
                 },
                 false)
             .Subscribe(values.Add, ex => throw ex, () => completed++);
@@ -138,7 +138,7 @@ public class CoverageExpansionTests
                 (state, observer) =>
                 {
                     observer.OnNext(state);
-                    return Disposable.Create(() => disposed++);
+                    return new ActionDisposable(() => disposed++);
                 })
             .Subscribe(_ => { });
         subscription.Dispose();
@@ -269,15 +269,15 @@ public class CoverageExpansionTests
         Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.Schedule((Action<Action>)null!));
         Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).ScheduleAction(First, _ => { }));
         Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.ScheduleAction(First, (Action<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).ScheduleAction(First, _ => Disposable.Empty));
+        Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).ScheduleAction(First, _ => EmptyDisposable.Instance));
         Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.ScheduleAction(First, (Func<int, IDisposable>)null!));
         Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).ScheduleAction(First, TimeSpan.Zero, _ => { }));
         Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.ScheduleAction(First, TimeSpan.Zero, (Action<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).ScheduleAction(First, TimeSpan.Zero, _ => Disposable.Empty));
+        Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).ScheduleAction(First, TimeSpan.Zero, _ => EmptyDisposable.Instance));
         Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.ScheduleAction(First, TimeSpan.Zero, (Func<int, IDisposable>)null!));
         Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).ScheduleAction(First, AbsoluteDueTime, _ => { }));
         Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.ScheduleAction(First, AbsoluteDueTime, (Action<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).ScheduleAction(First, AbsoluteDueTime, _ => Disposable.Empty));
+        Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).ScheduleAction(First, AbsoluteDueTime, _ => EmptyDisposable.Instance));
         Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.ScheduleAction(First, AbsoluteDueTime, (Func<int, IDisposable>)null!));
 
         var values = new List<int>();
@@ -285,13 +285,13 @@ public class CoverageExpansionTests
         Sequencer.Immediate.ScheduleAction(Second, value =>
         {
             values.Add(value);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }).Dispose();
         Sequencer.Immediate.ScheduleAction(Third, TimeSpan.Zero, values.Add).Dispose();
         Sequencer.Immediate.ScheduleAction(Fourth, AbsoluteDueTime, value =>
         {
             values.Add(value);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }).Dispose();
 
         var recursiveCount = 0;

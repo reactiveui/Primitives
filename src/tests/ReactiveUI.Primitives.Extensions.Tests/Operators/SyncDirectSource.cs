@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
@@ -27,6 +28,6 @@ internal sealed class SyncDirectSource<T> : IObservable<T>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         _observer = observer;
-        return System.Reactive.Disposables.Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 }

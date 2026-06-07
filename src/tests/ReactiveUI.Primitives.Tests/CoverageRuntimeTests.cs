@@ -113,32 +113,32 @@ public class CoverageRuntimeTests
         var disposedBeforeAssign = 0;
         var lateSingle = new SingleDisposable(() => disposedBeforeAssign++);
         lateSingle.Dispose();
-        lateSingle.Create(Disposable.Create(() => disposedBeforeAssign++));
+        lateSingle.Create(new ActionDisposable(() => disposedBeforeAssign++));
         Assert.Equal(Two, disposedBeforeAssign);
         Assert.Throws<ArgumentNullException>(() => lateSingle.Create(null!));
 
         var replaced = 0;
-        var replaceable = new SingleReplaceableDisposable(Disposable.Create(() => replaced++), () => replaced++);
-        replaceable.Create(Disposable.Create(() => replaced++));
+        var replaceable = new SingleReplaceableDisposable(new ActionDisposable(() => replaced++), () => replaced++);
+        replaceable.Create(new ActionDisposable(() => replaced++));
         replaceable.Dispose();
-        replaceable.Create(Disposable.Create(() => replaced++));
+        replaceable.Create(new ActionDisposable(() => replaced++));
         Assert.Equal(Five, replaced);
         Assert.Throws<ArgumentNullException>(() => replaceable.Create(null!));
 
         var disposeFalse = 0;
-        var single = new ExposedSingleDisposable(Disposable.Create(() => disposeFalse++));
+        var single = new ExposedSingleDisposable(new ActionDisposable(() => disposeFalse++));
         single.DisposeFalse();
         single.Dispose();
         Assert.Equal(1, disposeFalse);
 
         var replaceableFalse = 0;
-        var exposedReplaceable = new ExposedSingleReplaceableDisposable(Disposable.Create(() => replaceableFalse++));
+        var exposedReplaceable = new ExposedSingleReplaceableDisposable(new ActionDisposable(() => replaceableFalse++));
         exposedReplaceable.DisposeFalse();
         exposedReplaceable.Dispose();
         Assert.Equal(1, replaceableFalse);
 
         var multipleFalse = 0;
-        var exposedMultiple = new ExposedMultipleDisposable(Disposable.Create(() => multipleFalse++));
+        var exposedMultiple = new ExposedMultipleDisposable(new ActionDisposable(() => multipleFalse++));
         exposedMultiple.DisposeFalse();
         exposedMultiple.Dispose();
         Assert.Equal(1, multipleFalse);
@@ -147,11 +147,11 @@ public class CoverageRuntimeTests
         var secondDisposed = 0;
         var thirdDisposed = 0;
         var fourthDisposed = 0;
-        var missing = Disposable.Empty;
-        var first = Disposable.Create(() => firstDisposed++);
-        var second = Disposable.Create(() => secondDisposed++);
-        var third = Disposable.Create(() => thirdDisposed++);
-        var fourth = Disposable.Create(() => fourthDisposed++);
+        var missing = EmptyDisposable.Instance;
+        var first = new ActionDisposable(() => firstDisposed++);
+        var second = new ActionDisposable(() => secondDisposed++);
+        var third = new ActionDisposable(() => thirdDisposed++);
+        var fourth = new ActionDisposable(() => fourthDisposed++);
         var group = new MultipleDisposable(first, second, third);
         group.Add(fourth);
 
@@ -168,9 +168,9 @@ public class CoverageRuntimeTests
 
         var factoryDisposed = 0;
         var factoryGroup = MultipleDisposable.Create(
-            Disposable.Create(() => factoryDisposed++),
+            new ActionDisposable(() => factoryDisposed++),
             null!,
-            Disposable.Create(() => factoryDisposed++));
+            new ActionDisposable(() => factoryDisposed++));
         factoryGroup.Dispose();
         factoryGroup.Dispose();
         Assert.Equal(Two, factoryDisposed);
@@ -178,13 +178,13 @@ public class CoverageRuntimeTests
 
         _ = new AssignmentSlot();
         _ = new AssignmentSlot(() => { });
-        _ = new AssignmentSlot(Disposable.Empty);
+        _ = new AssignmentSlot(EmptyDisposable.Instance);
         _ = new Slot();
         _ = new Slot(() => { });
-        _ = new Slot(Disposable.Empty);
+        _ = new Slot(EmptyDisposable.Instance);
         _ = new Pocket();
-        _ = new Pocket(Disposable.Empty, Disposable.Empty);
-        _ = new Pocket(Disposable.Empty, Disposable.Empty, Disposable.Empty);
+        _ = new Pocket(EmptyDisposable.Instance, EmptyDisposable.Instance);
+        _ = new Pocket(EmptyDisposable.Instance, EmptyDisposable.Instance, EmptyDisposable.Instance);
     }
 
     /// <summary>
@@ -229,7 +229,7 @@ public class CoverageRuntimeTests
                 value => events.Add("next:" + value),
                 ex => events.Add("error:" + ex.Message),
                 () => events.Add("completed")),
-            Disposable.Create(() => cancelDisposed++));
+            new ActionDisposable(() => cancelDisposed++));
         safe.OnNext(Three);
         safe.OnCompleted();
         safe.OnCompleted();
@@ -241,7 +241,7 @@ public class CoverageRuntimeTests
         var throwingCancel = 0;
         var throwing = Witness.Safe(
             Witness.Create<int>(_ => throw new InvalidOperationException("next-failed")),
-            Disposable.Create(() => throwingCancel++));
+            new ActionDisposable(() => throwingCancel++));
         Assert.Throws<InvalidOperationException>(() => throwing.OnNext(One));
         throwing.OnNext(Two);
         Assert.Equal(1, throwingCancel);
@@ -287,11 +287,11 @@ public class CoverageRuntimeTests
             (_, state) =>
             {
                 invoked.Add(state);
-                return Disposable.Create(() => disposed++);
+                return new ActionDisposable(() => disposed++);
             },
             One);
-        var second = new ScheduledItem<int, string>(Sequencer.Immediate, "second", (_, _) => Disposable.Empty, Two);
-        var equalDue = new ScheduledItem<int, string>(Sequencer.Immediate, "equal", (_, _) => Disposable.Empty, One);
+        var second = new ScheduledItem<int, string>(Sequencer.Immediate, "second", (_, _) => EmptyDisposable.Instance, Two);
+        var equalDue = new ScheduledItem<int, string>(Sequencer.Immediate, "equal", (_, _) => EmptyDisposable.Instance, One);
 
         Assert.True(first < second);
         Assert.True(first <= equalDue);
@@ -323,7 +323,7 @@ public class CoverageRuntimeTests
             (_, state) =>
             {
                 invoked.Add(state);
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             },
             Three);
         cancelled.Cancel();
@@ -400,17 +400,17 @@ public class CoverageRuntimeTests
         Sequencer.Immediate.Schedule(One, (_, state) =>
         {
             immediateValues.Add(state);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }).Dispose();
         Sequencer.Immediate.Schedule(Two, TimeSpan.FromTicks(NegativeOne), (_, state) =>
         {
             immediateValues.Add(state);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }).Dispose();
         Sequencer.Immediate.Schedule(Three, Sequencer.Immediate.Now.AddTicks(NegativeOne), (_, state) =>
         {
             immediateValues.Add(state);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }).Dispose();
         Assert.Equal(ExpectedImmediateValues, immediateValues);
 
@@ -421,7 +421,7 @@ public class CoverageRuntimeTests
         using var taskPoolSubscription = TaskPoolSequencer.Instance.Schedule(Seven, (_, _) =>
         {
             taskPoolCompletion.SetResult();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
         await WaitForAsync(taskPoolCompletion.Task);
 
@@ -429,7 +429,7 @@ public class CoverageRuntimeTests
         using var threadPoolSubscription = ThreadPoolSequencer.Instance.Schedule(Eight, TimeSpan.Zero, (_, _) =>
         {
             threadPoolCompletion.SetResult();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
         await WaitForAsync(threadPoolCompletion.Task);
 
@@ -458,14 +458,14 @@ public class CoverageRuntimeTests
         using var synchronizationSubscription = synchronizationSequencer.Schedule(One, (_, state) =>
         {
             synchronizationValues.Add(state);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
 
         var delayedSynchronizationCompletion = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var delayedSynchronizationSubscription = synchronizationSequencer.Schedule(Two, TimeSpan.Zero, (_, state) =>
         {
             delayedSynchronizationCompletion.TrySetResult(state);
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         });
         var delayedValue = await delayedSynchronizationCompletion.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
         Assert.Equal(ExpectedOneTwo, (IEnumerable<int>)[.. synchronizationValues, delayedValue]);
@@ -514,7 +514,7 @@ public class CoverageRuntimeTests
     /// Creates a scheduled item without a sequencer.
     /// </summary>
     private static void CreateScheduledItemWithoutSequencer() =>
-        _ = new ScheduledItem<int, string>(null!, "x", (_, _) => Disposable.Empty, One);
+        _ = new ScheduledItem<int, string>(null!, "x", (_, _) => EmptyDisposable.Instance, One);
 
     /// <summary>
     /// Creates a scheduled item without an action.
@@ -526,7 +526,7 @@ public class CoverageRuntimeTests
     /// Creates a scheduled item without a comparer.
     /// </summary>
     private static void CreateScheduledItemWithoutComparer() =>
-        _ = new ScheduledItem<int, string>(Sequencer.Immediate, "x", (_, _) => Disposable.Empty, One, null!);
+        _ = new ScheduledItem<int, string>(Sequencer.Immediate, "x", (_, _) => EmptyDisposable.Instance, One, null!);
 
     /// <summary>
     /// Creates a synchronization-context sequencer without a context.
@@ -608,7 +608,7 @@ public class CoverageRuntimeTests
         /// </summary>
         /// <param name="disposable">The disposable to assign.</param>
         public ExposedMultipleDisposable(IDisposable disposable)
-            : base(disposable, Disposable.Empty)
+            : base(disposable, EmptyDisposable.Instance)
         {
         }
 

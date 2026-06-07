@@ -244,7 +244,7 @@ public class BehaviorSignal<T> : ISignal<T>
             observer.OnCompleted();
         }
 
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>

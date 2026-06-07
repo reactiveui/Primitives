@@ -45,7 +45,7 @@ internal sealed class ImmutableEmptySignal<T> : IRequireCurrentThread<T>, IInlin
         }
 
         observer.OnCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>
@@ -58,6 +58,6 @@ internal sealed class ImmutableEmptySignal<T> : IRequireCurrentThread<T>, IInlin
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
         onCompleted();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 }

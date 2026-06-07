@@ -60,7 +60,7 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
     /// Tracks a subscription so it is disposed when the component is disposed.
     /// </summary>
     /// <param name="subscription">The subscription to track.</param>
-    /// <returns>The supplied subscription, or <see cref="Disposable.Empty"/> when the component has already been disposed.</returns>
+    /// <returns>The supplied subscription, or <see cref="EmptyDisposable.Instance"/> when the component has already been disposed.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="subscription"/> is <see langword="null"/>.</exception>
     protected IDisposable Track(IDisposable subscription)
     {
@@ -69,7 +69,7 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
         if (IsDisposed)
         {
             subscription.Dispose();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
 
         _subscriptions.Add(subscription);

@@ -105,7 +105,7 @@ public static partial class LinqMixins
             }
 
             observer.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
     }
 
@@ -150,7 +150,7 @@ public static partial class LinqMixins
             }
 
             observer.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
     }
 
@@ -193,7 +193,7 @@ public static partial class LinqMixins
             }
 
             observer.OnCompleted();
-            return Disposable.Empty;
+            return EmptyDisposable.Instance;
         }
     }
 }

@@ -313,7 +313,7 @@ public static partial class Sequencer
             (_, tuple) =>
             {
                 tuple.action(tuple.state);
-                return Disposable.Empty;
+                return EmptyDisposable.Instance;
             });
     }
 
@@ -506,10 +506,10 @@ public static partial class Sequencer
     /// </summary>
     /// <param name="action">Action to invoke.</param>
     /// <returns>An empty disposable.</returns>
-    private static IDisposable Invoke(Action action)
+    private static EmptyDisposable Invoke(Action action)
     {
         action();
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>
@@ -518,10 +518,10 @@ public static partial class Sequencer
     /// <typeparam name="TState">The type of the state.</typeparam>
     /// <param name="tuple">Tuple containing the state and action.</param>
     /// <returns>An empty disposable.</returns>
-    private static IDisposable Invoke<TState>((TState state, Action<TState> action) tuple)
+    private static EmptyDisposable Invoke<TState>((TState state, Action<TState> action) tuple)
     {
         tuple.action(tuple.state);
-        return Disposable.Empty;
+        return EmptyDisposable.Instance;
     }
 
     /// <summary>
@@ -648,7 +648,7 @@ public static partial class Sequencer
                 return;
             }
 
-            Interlocked.Exchange(ref _disposable, Disposable.Empty)?.Dispose();
+            Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
         }
 
         /// <inheritdoc/>
@@ -659,7 +659,7 @@ public static partial class Sequencer
                 return;
             }
 
-            var disposable = _action(_scheduler, _state) ?? Disposable.Empty;
+            var disposable = _action(_scheduler, _state) ?? EmptyDisposable.Instance;
             var previous = Interlocked.CompareExchange(ref _disposable, disposable, null);
             if (previous != null)
             {

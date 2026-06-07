@@ -810,7 +810,7 @@ namespace ReactiveUI.Primitives.Disposables
         public System.Threading.CancellationToken Token { get; }
         public void Dispose() { }
     }
-    public static class Disposable
+    public static class Scope
     {
         public static System.IDisposable Empty { get; }
         public static System.IDisposable Combine(params System.IDisposable[] disposables) { }
