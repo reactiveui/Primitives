@@ -110,8 +110,8 @@ public class DisposableAsyncSlotTests
     /// <summary>Verifies the disposed sentinel's no-op <see cref="IAsyncDisposable.DisposeAsync"/> completes silently.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenDisposedSentinelDisposed_ThenCompletesSilently() =>
-        await ((IAsyncDisposable)DisposableAsyncSlot.DisposedSentinel.Instance).DisposeAsync();
+    public async Task WhenDisposedSlotMarkerDisposed_ThenCompletesSilently() =>
+        await ((IAsyncDisposable)DisposableAsyncSlot.DisposedSlotMarker.Instance).DisposeAsync();
 
     /// <summary>Recording async disposable that counts disposals.</summary>
     private sealed class RecordingAsyncDisposable : IAsyncDisposable

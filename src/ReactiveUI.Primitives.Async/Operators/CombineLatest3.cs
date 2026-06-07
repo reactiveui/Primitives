@@ -74,7 +74,7 @@ public static partial class SignalAsync
             IObserverAsync<TResult> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new CombineLatestSubscription(observer, sources, selector);
+            var subscription = new CombineLatestCoordinator(observer, sources, selector);
             subscription.Lifecycle.LinkExternalCancellation(cancellationToken);
             return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
                 subscription,
@@ -85,10 +85,10 @@ public static partial class SignalAsync
         /// Per-arity subscription holding the typed Optional slots, the pre-built indexed
         /// observers, the SubscribeAtAsync switch, and the selector invocation. Shared scaffolding
         /// (gate, lifecycle, ValuesLock, OnErrorResume, SubscribeSourcesAsync, DisposeAsync) lives
-        /// in <see cref="CombineLatestSubscriptionBase{TResult}"/>; the per-source OnNext / OnError /
-        /// OnCompleted forwarding lives in <see cref="CombineLatestIndexedObserver{TSource, TResult}"/>.
+        /// in <see cref="CombineLatestCoordinatorBase{TResult}"/>; the per-source OnNext / OnError /
+        /// OnCompleted forwarding lives in <see cref="CombineLatestIndexedWitness{TSource, TResult}"/>.
         /// </summary>
-        internal sealed class CombineLatestSubscription : CombineLatestSubscriptionBase<TResult>
+        internal sealed class CombineLatestCoordinator : CombineLatestCoordinatorBase<TResult>
         {
             /// <summary>Bit owned by source 1 inside the lifecycle's completion bitmask.</summary>
             private const int Source1Bit = 1 << 0;
@@ -106,13 +106,13 @@ public static partial class SignalAsync
             private readonly Func<T1, T2, T3, TResult> _selector;
 
             /// <summary>Indexed observer for source 1.</summary>
-            private readonly CombineLatestIndexedObserver<T1, TResult> _obs1;
+            private readonly CombineLatestIndexedWitness<T1, TResult> _obs1;
 
             /// <summary>Indexed observer for source 2.</summary>
-            private readonly CombineLatestIndexedObserver<T2, TResult> _obs2;
+            private readonly CombineLatestIndexedWitness<T2, TResult> _obs2;
 
             /// <summary>Indexed observer for source 3.</summary>
-            private readonly CombineLatestIndexedObserver<T3, TResult> _obs3;
+            private readonly CombineLatestIndexedWitness<T3, TResult> _obs3;
 
             /// <summary>Latest value from source 1.</summary>
             private Optional<T1> _val1 = Optional<T1>.Empty;
@@ -133,12 +133,12 @@ public static partial class SignalAsync
                 T3 V3);
 
             /// <summary>
-            /// Initializes a new instance of the <see cref="CombineLatestSubscription"/> class.
+            /// Initializes a new instance of the <see cref="CombineLatestCoordinator"/> class.
             /// </summary>
             /// <param name="observer">The downstream observer.</param>
             /// <param name="sources">The bundled source observables.</param>
             /// <param name="selector">The selector that projects the latest values.</param>
-            public CombineLatestSubscription(
+            public CombineLatestCoordinator(
                 IObserverAsync<TResult> observer,
                 Sources sources,
                 Func<T1, T2, T3, TResult> selector)

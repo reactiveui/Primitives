@@ -96,14 +96,14 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var doObserver = new DoAsyncObserver(observer, onNext, onErrorResume, onCompleted);
+            var doObserver = new AsyncSideEffectWitness(observer, onNext, onErrorResume, onCompleted);
             return source.SubscribeAsync(doObserver, cancellationToken);
         }
 
         /// <summary>
-        /// An observer that invokes asynchronous side-effect callbacks before forwarding notifications.
+        /// A witness that invokes asynchronous side-effect callbacks before forwarding notifications.
         /// </summary>
-        internal sealed class DoAsyncObserver(
+        internal sealed class AsyncSideEffectWitness(
             IObserverAsync<T> observer,
             Func<T, CancellationToken, ValueTask>? onNext,
             Func<Exception, CancellationToken, ValueTask>? onErrorResume,
@@ -161,14 +161,14 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var doObserver = new DoSyncObserver(observer, onNext, onErrorResume, onCompleted);
+            var doObserver = new SyncSideEffectWitness(observer, onNext, onErrorResume, onCompleted);
             return source.SubscribeAsync(doObserver, cancellationToken);
         }
 
         /// <summary>
         /// An observer that invokes synchronous side-effect callbacks before forwarding notifications.
         /// </summary>
-        internal sealed class DoSyncObserver(
+        internal sealed class SyncSideEffectWitness(
             IObserverAsync<T> observer,
             Action<T>? onNext,
             Action<Exception>? onErrorResume,

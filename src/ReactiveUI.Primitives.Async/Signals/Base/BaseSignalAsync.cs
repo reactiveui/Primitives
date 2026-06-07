@@ -161,17 +161,7 @@ public abstract class BaseSignalAsync<T> : SignalAsync<T>, ISignalAsync<T>
             return DisposableAsync.Empty;
         }
 
-        return DisposableAsync.Create(
-            (signal: this, observer),
-            static state =>
-            {
-                lock (state.signal._gate)
-                {
-                    state.signal._observers = state.signal._observers.Remove(state.observer);
-                }
-
-                return default;
-            });
+        return new WitnessLease(this, observer);
     }
 
     /// <summary>
@@ -211,4 +201,41 @@ public abstract class BaseSignalAsync<T> : SignalAsync<T>, ISignalAsync<T>
     /// <param name="result">The result to provide to each observer upon completion.</param>
     /// <returns>A ValueTask that represents the asynchronous notification operation.</returns>
     protected abstract ValueTask OnCompletedAsyncCore(ImmutableArray<IObserverAsync<T>> observers, Result result);
+
+    /// <summary>
+    /// Removes an observer from the current subscription list.
+    /// </summary>
+    /// <param name="observer">The observer to remove.</param>
+    private void RemoveObserver(IObserverAsync<T> observer)
+    {
+        lock (_gate)
+        {
+            _observers = _observers.Remove(observer);
+        }
+    }
+
+    /// <summary>
+    /// Subscription handle that removes an witness from its owning signal when disposed.
+    /// </summary>
+    /// <param name="signal">The signal that owns the witness list.</param>
+    /// <param name="observer">The witness to remove when the lease is disposed.</param>
+    private sealed class WitnessLease(BaseSignalAsync<T> signal, IObserverAsync<T> observer) : IAsyncDisposable
+    {
+        /// <summary>
+        /// Indicates whether the lease has already removed its witness.
+        /// </summary>
+        private int _disposed;
+
+        /// <inheritdoc/>
+        public ValueTask DisposeAsync()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return default;
+            }
+
+            signal.RemoveObserver(observer);
+            return default;
+        }
+    }
 }

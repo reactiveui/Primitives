@@ -19,11 +19,11 @@ namespace ReactiveUI.Primitives.Async.Internals;
 /// </param>
 /// <param name="defaultValue">The value to return on empty when <paramref name="requireExactlyOne"/> is <c>false</c>.</param>
 /// <param name="cancellationToken">A cancellation token for the operation.</param>
-internal sealed class SingleElementObserver<T>(
+internal sealed class SingleElementWitness<T>(
     Func<T, bool>? predicate,
     bool requireExactlyOne,
     T? defaultValue,
-    CancellationToken cancellationToken) : TaskObserverAsyncBase<T, T?>(cancellationToken)
+    CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, T?>(cancellationToken)
 {
     /// <summary>A value indicating whether a matching element has been found.</summary>
     private bool _hasValue;
@@ -44,7 +44,7 @@ internal sealed class SingleElementObserver<T>(
             var message = predicate is null
                 ? "Sequence contains more than one element."
                 : "Sequence contains more than one matching element.";
-            await TrySetException(new InvalidOperationException(message)).ConfigureAwait(false);
+            await SetExceptionAndDisposeAsync(new InvalidOperationException(message)).ConfigureAwait(false);
             return;
         }
 
@@ -54,14 +54,14 @@ internal sealed class SingleElementObserver<T>(
 
     /// <inheritdoc/>
     protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-        TrySetException(error);
+        SetExceptionAndDisposeAsync(error);
 
     /// <inheritdoc/>
     protected override ValueTask OnCompletedAsyncCore(Result result)
     {
         if (!result.IsSuccess)
         {
-            return TrySetException(result.Exception);
+            return SetExceptionAndDisposeAsync(result.Exception);
         }
 
         if (!_hasValue && requireExactlyOne)
@@ -69,9 +69,9 @@ internal sealed class SingleElementObserver<T>(
             var message = predicate is null
                 ? "Sequence contains no elements."
                 : "Sequence contains no matching elements.";
-            return TrySetException(new InvalidOperationException(message));
+            return SetExceptionAndDisposeAsync(new InvalidOperationException(message));
         }
 
-        return TrySetCompleted(_value);
+        return SetResultAndDisposeAsync(_value);
     }
 }

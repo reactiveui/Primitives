@@ -91,19 +91,19 @@ public static partial class SignalAsync
                 return DisposableAsync.Empty;
             }
 
-            var subscription = new Subscription(_sources, observer, resultSelector);
+            var subscription = new EnumerableCombineLatestCoordinator(_sources, observer, resultSelector);
             return await SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
                 subscription,
                 () => subscription.SubscribeSourcesAsync(cancellationToken)).ConfigureAwait(false);
         }
 
         /// <summary>
-        /// Per-source observer that forwards to the parent subscription with its own index. Replaces the three
+        /// Per-source witness that forwards to the parent subscription with its own index. Replaces the three
         /// captured-index lambdas the previous shape allocated per source.
         /// </summary>
-        /// <param name="parent">The parent subscription.</param>
+        /// <param name="parent">The parent coordinator.</param>
         /// <param name="index">The source index.</param>
-        internal sealed class IndexedObserver(Subscription parent, int index) : IObserverAsync<TSource>
+        internal sealed class IndexedWitness(EnumerableCombineLatestCoordinator parent, int index) : IObserverAsync<TSource>
         {
             /// <inheritdoc/>
             public ValueTask OnNextAsync(TSource value, CancellationToken cancellationToken) =>
@@ -127,13 +127,13 @@ public static partial class SignalAsync
         /// <param name="sources">The source sequences.</param>
         /// <param name="observer">The observer.</param>
         /// <param name="resultSelector">The result selector.</param>
-        internal sealed class Subscription(
+        internal sealed class EnumerableCombineLatestCoordinator(
             IObservableAsync<TSource>[] sources,
             IObserverAsync<TResult> observer,
             Func<IReadOnlyList<TSource>, TResult> resultSelector) : IAsyncDisposable
         {
             /// <summary>Synchronization gate.</summary>
-            private readonly AsyncGate _gate = new();
+            private readonly AsyncSerialGate _gate = new();
 
             /// <summary>Cancellation source for disposal.</summary>
             private readonly CancellationTokenSource _disposeCts = new();
@@ -191,13 +191,13 @@ public static partial class SignalAsync
                     }
 
                     _subscriptions[index] = await _sources[index]
-                        .SubscribeAsync(new IndexedObserver(this, index), cancellationToken)
+                        .SubscribeAsync(new IndexedWitness(this, index), cancellationToken)
                         .ConfigureAwait(false);
                 }
             }
 
             /// <inheritdoc/>
-            public ValueTask DisposeAsync() => CompleteAsync(null);
+            public ValueTask DisposeAsync() => FinishAsync(null);
 
             /// <summary>
             /// Handles OnNext from a source.
@@ -208,9 +208,9 @@ public static partial class SignalAsync
             /// <returns>A value task representing the operation.</returns>
             internal async ValueTask OnNextAsync(int index, TSource indexValue, CancellationToken cancellationToken)
             {
-                using (await _gate.LockAsync(cancellationToken).ConfigureAwait(false))
+                using (await _gate.EnterAsync(cancellationToken).ConfigureAwait(false))
                 {
-                    if (DisposalHelper.IsDisposed(_disposed))
+                    if (DisposalHelper.HasDisposed(_disposed))
                     {
                         return;
                     }
@@ -242,7 +242,7 @@ public static partial class SignalAsync
                     }
                     catch (Exception ex)
                     {
-                        await CompleteAsync(Result.Failure(ex)).ConfigureAwait(false);
+                        await FinishAsync(Result.Failure(ex)).ConfigureAwait(false);
                         return;
                     }
 
@@ -258,9 +258,9 @@ public static partial class SignalAsync
             /// <returns>A value task representing the operation.</returns>
             internal async ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken)
             {
-                using (await _gate.LockAsync(cancellationToken).ConfigureAwait(false))
+                using (await _gate.EnterAsync(cancellationToken).ConfigureAwait(false))
                 {
-                    if (DisposalHelper.IsDisposed(_disposed))
+                    if (DisposalHelper.HasDisposed(_disposed))
                     {
                         return;
                     }
@@ -279,7 +279,7 @@ public static partial class SignalAsync
             {
                 if (result.IsFailure)
                 {
-                    return CompleteAsync(result);
+                    return FinishAsync(result);
                 }
 
                 bool shouldComplete;
@@ -295,17 +295,17 @@ public static partial class SignalAsync
                     shouldComplete = !_values[index].HasValue || _completedCount == _sources.Length;
                 }
 
-                return shouldComplete ? CompleteAsync(Result.Success) : default;
+                return shouldComplete ? FinishAsync(Result.Success) : default;
             }
 
             /// <summary>
             /// Completes the subscription. The gate / dispose CTS are always released in the finally
             /// block so a misbehaving downstream's OnCompletedAsync can't leak the SemaphoreSlim inside
-            /// AsyncGate or the dispose CTS's wait handles.
+            /// AsyncSerialGate or the dispose CTS's wait handles.
             /// </summary>
             /// <param name="result">The result.</param>
             /// <returns>A value task representing the operation.</returns>
-            internal async ValueTask CompleteAsync(Result? result)
+            internal async ValueTask FinishAsync(Result? result)
             {
                 if (DisposalHelper.TrySetDisposed(ref _disposed))
                 {

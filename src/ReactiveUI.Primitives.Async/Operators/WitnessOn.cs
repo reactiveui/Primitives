@@ -23,8 +23,8 @@ public static partial class SignalAsync
     /// <param name="forceYielding">When true, forces an asynchronous yield before invoking each callback, even if already on the target
     /// context.</param>
     /// <returns>An observable sequence whose observer callbacks execute on the specified context.</returns>
-    public static IObservableAsync<T> ObserveOn<T>(this IObservableAsync<T> @this, AsyncContext asyncContext, bool forceYielding) =>
-        new ObserveOnAsyncSignal<T>(@this, asyncContext, forceYielding);
+    public static IObservableAsync<T> WitnessOn<T>(this IObservableAsync<T> @this, AsyncContext asyncContext, bool forceYielding) =>
+        new ContextSwitchSignalAsync<T>(@this, asyncContext, forceYielding);
 
     /// <summary>
     /// Wraps the source observable so that observer callbacks are invoked on the specified async context.
@@ -33,8 +33,8 @@ public static partial class SignalAsync
     /// <param name="this">The source observable sequence.</param>
     /// <param name="asyncContext">The async context on which observer callbacks should be invoked.</param>
     /// <returns>An observable sequence whose observer callbacks execute on the specified context.</returns>
-    public static IObservableAsync<T> ObserveOn<T>(this IObservableAsync<T> @this, AsyncContext asyncContext) =>
-        @this.ObserveOn(asyncContext, false);
+    public static IObservableAsync<T> WitnessOn<T>(this IObservableAsync<T> @this, AsyncContext asyncContext) =>
+        @this.WitnessOn(asyncContext, false);
 
     /// <summary>
     /// Wraps the source observable so that observer callbacks are invoked on the specified synchronization context.
@@ -44,10 +44,10 @@ public static partial class SignalAsync
     /// <param name="synchronizationContext">The synchronization context on which observer callbacks should be posted.</param>
     /// <param name="forceYielding">When true, forces an asynchronous yield before invoking each callback.</param>
     /// <returns>An observable sequence whose observer callbacks execute on the specified synchronization context.</returns>
-    public static IObservableAsync<T> ObserveOn<T>(this IObservableAsync<T> @this, SynchronizationContext synchronizationContext, bool forceYielding)
+    public static IObservableAsync<T> WitnessOn<T>(this IObservableAsync<T> @this, SynchronizationContext synchronizationContext, bool forceYielding)
     {
         var asyncContext = AsyncContext.From(synchronizationContext);
-        return new ObserveOnAsyncSignal<T>(@this, asyncContext, forceYielding);
+        return new ContextSwitchSignalAsync<T>(@this, asyncContext, forceYielding);
     }
 
     /// <summary>
@@ -57,8 +57,8 @@ public static partial class SignalAsync
     /// <param name="this">The source observable sequence.</param>
     /// <param name="synchronizationContext">The synchronization context on which observer callbacks should be posted.</param>
     /// <returns>An observable sequence whose observer callbacks execute on the specified synchronization context.</returns>
-    public static IObservableAsync<T> ObserveOn<T>(this IObservableAsync<T> @this, SynchronizationContext synchronizationContext) =>
-        @this.ObserveOn(synchronizationContext, false);
+    public static IObservableAsync<T> WitnessOn<T>(this IObservableAsync<T> @this, SynchronizationContext synchronizationContext) =>
+        @this.WitnessOn(synchronizationContext, false);
 
     /// <summary>
     /// Wraps the source observable so that observer callbacks are invoked using the specified task scheduler.
@@ -68,10 +68,10 @@ public static partial class SignalAsync
     /// <param name="taskScheduler">The task scheduler on which observer callbacks should be scheduled.</param>
     /// <param name="forceYielding">When true, forces an asynchronous yield before invoking each callback.</param>
     /// <returns>An observable sequence whose observer callbacks execute on the specified task scheduler.</returns>
-    public static IObservableAsync<T> ObserveOn<T>(this IObservableAsync<T> @this, TaskScheduler taskScheduler, bool forceYielding)
+    public static IObservableAsync<T> WitnessOn<T>(this IObservableAsync<T> @this, TaskScheduler taskScheduler, bool forceYielding)
     {
         var asyncContext = AsyncContext.From(taskScheduler);
-        return new ObserveOnAsyncSignal<T>(@this, asyncContext, forceYielding);
+        return new ContextSwitchSignalAsync<T>(@this, asyncContext, forceYielding);
     }
 
     /// <summary>
@@ -81,8 +81,8 @@ public static partial class SignalAsync
     /// <param name="this">The source observable sequence.</param>
     /// <param name="taskScheduler">The task scheduler on which observer callbacks should be scheduled.</param>
     /// <returns>An observable sequence whose observer callbacks execute on the specified task scheduler.</returns>
-    public static IObservableAsync<T> ObserveOn<T>(this IObservableAsync<T> @this, TaskScheduler taskScheduler) =>
-        @this.ObserveOn(taskScheduler, false);
+    public static IObservableAsync<T> WitnessOn<T>(this IObservableAsync<T> @this, TaskScheduler taskScheduler) =>
+        @this.WitnessOn(taskScheduler, false);
 
     /// <summary>
     /// Configures the observable sequence to notify observers on the specified scheduler.
@@ -95,10 +95,10 @@ public static partial class SignalAsync
     /// <param name="scheduler">The scheduler on which to observe and deliver notifications to observers. Cannot be null.</param>
     /// <param name="forceYielding">true to force yielding to the scheduler even if already on the target context; otherwise, false.</param>
     /// <returns>An observable sequence whose notifications are delivered on the specified scheduler.</returns>
-    public static IObservableAsync<T> ObserveOn<T>(this IObservableAsync<T> @this, ISequencer scheduler, bool forceYielding)
+    public static IObservableAsync<T> WitnessOn<T>(this IObservableAsync<T> @this, ISequencer scheduler, bool forceYielding)
     {
         var asyncContext = AsyncContext.From(scheduler);
-        return new ObserveOnAsyncSignal<T>(@this, asyncContext, forceYielding);
+        return new ContextSwitchSignalAsync<T>(@this, asyncContext, forceYielding);
     }
 
     /// <summary>
@@ -108,6 +108,6 @@ public static partial class SignalAsync
     /// <param name="this">The source observable sequence.</param>
     /// <param name="scheduler">The scheduler on which to observe and deliver notifications to observers. Cannot be null.</param>
     /// <returns>An observable sequence whose notifications are delivered on the specified scheduler.</returns>
-    public static IObservableAsync<T> ObserveOn<T>(this IObservableAsync<T> @this, ISequencer scheduler) =>
-        @this.ObserveOn(scheduler, false);
+    public static IObservableAsync<T> WitnessOn<T>(this IObservableAsync<T> @this, ISequencer scheduler) =>
+        @this.WitnessOn(scheduler, false);
 }

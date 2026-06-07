@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using ReactiveUI.Primitives.Async.Disposables;
+using System.Diagnostics.CodeAnalysis;
 using ReactiveUI.Primitives.Async.Internals;
 using ReactiveUI.Primitives.Internal;
 
@@ -33,7 +33,7 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
     /// <summary>
     /// The asynchronous gate used to synchronize access to the Signal's mutable state.
     /// </summary>
-    private readonly AsyncGate _gate = new();
+    private readonly AsyncSerialGate _gate = new();
 
     /// <summary>
     /// The cancellation token source that is cancelled when this instance is disposed.
@@ -73,25 +73,11 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
     /// <returns>A task that represents the asynchronous notification operation.</returns>
     public async ValueTask OnNextAsync(T value, CancellationToken cancellationToken)
     {
-        // Fast path: when the caller passes our own dispose token (or no token at all), the
-        // per-emission linked CTS is pure waste — DisposedCancellationToken already covers
-        // disposal-driven cancellation, so reuse it directly.
-        CancellationTokenSource? linkedCts = null;
-        CancellationToken token;
-        if (cancellationToken == DisposedCancellationToken || !cancellationToken.CanBeCanceled)
-        {
-            token = DisposedCancellationToken;
-        }
-        else
-        {
-            linkedCts = CancellationTokenSource.CreateLinkedTokenSource(DisposedCancellationToken, cancellationToken);
-            token = linkedCts.Token;
-        }
-
+        var token = GetOperationCancellationToken(cancellationToken, out var linkedCts);
         try
         {
             ImmutableArray<IObserverAsync<T>> observers;
-            using (await _gate.LockAsync(token).ConfigureAwait(false))
+            using (await _gate.EnterAsync(token).ConfigureAwait(false))
             {
                 _value = new(value);
                 observers = _observers;
@@ -119,17 +105,21 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
     /// <returns>A task that represents the asynchronous error notification operation.</returns>
     public async ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken)
     {
-        using var linkedCts =
-            CancellationTokenSource.CreateLinkedTokenSource(DisposedCancellationToken, cancellationToken);
-        var token = linkedCts.Token;
-
-        ImmutableArray<IObserverAsync<T>> observers;
-        using (await _gate.LockAsync(token).ConfigureAwait(false))
+        var token = GetOperationCancellationToken(cancellationToken, out var linkedCts);
+        try
         {
-            observers = _observers;
-        }
+            ImmutableArray<IObserverAsync<T>> observers;
+            using (await _gate.EnterAsync(token).ConfigureAwait(false))
+            {
+                observers = _observers;
+            }
 
-        await OnErrorResumeAsyncCore(observers, error, token).ConfigureAwait(false);
+            await OnErrorResumeAsyncCore(observers, error, token).ConfigureAwait(false);
+        }
+        finally
+        {
+            linkedCts?.Dispose();
+        }
     }
 
     /// <summary>
@@ -142,7 +132,7 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
     public async ValueTask OnCompletedAsync(Result result)
     {
         ImmutableArray<IObserverAsync<T>> observers;
-        using (await _gate.LockAsync(DisposedCancellationToken).ConfigureAwait(false))
+        using (await _gate.EnterAsync(DisposedCancellationToken).ConfigureAwait(false))
         {
             observers = _observers;
             _observers = [];
@@ -184,38 +174,28 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)
     {
-        using var linkedCts =
-            CancellationTokenSource.CreateLinkedTokenSource(DisposedCancellationToken, cancellationToken);
-        var token = linkedCts.Token;
-
-        token.ThrowIfCancellationRequested();
-
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var disposable = DisposableAsync.Create(
-            (signal: this, observer, token),
-            static async state =>
-            {
-                using (await state.signal._gate.LockAsync(state.token).ConfigureAwait(false))
-                {
-                    state.signal._observers = state.signal._observers.Remove(state.observer);
-                    if (state.signal._observers.IsEmpty)
-                    {
-                        state.signal._value = state.signal._startValue;
-                    }
-                }
-            });
-
-        using (await _gate.LockAsync(token).ConfigureAwait(false))
+        var token = GetOperationCancellationToken(cancellationToken, out var linkedCts);
+        try
         {
-            _observers = _observers.Add(observer);
-            if (_value.TryGetValue(out var value))
-            {
-                await observer.OnNextAsync(value, token).ConfigureAwait(false);
-            }
-        }
+            token.ThrowIfCancellationRequested();
 
-        return disposable;
+            using (await _gate.EnterAsync(token).ConfigureAwait(false))
+            {
+                _observers = _observers.Add(observer);
+                if (_value.TryGetValue(out var value))
+                {
+                    await observer.OnNextAsync(value, token).ConfigureAwait(false);
+                }
+            }
+
+            return new ObserverLease(this, observer);
+        }
+        finally
+        {
+            linkedCts?.Dispose();
+        }
     }
 
     /// <summary>
@@ -258,4 +238,93 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
     /// <param name="result">The result to provide to observers upon completion. Represents the outcome of the observed sequence.</param>
     /// <returns>A ValueTask that represents the asynchronous notification operation.</returns>
     protected abstract ValueTask OnCompletedAsyncCore(ImmutableArray<IObserverAsync<T>> observers, Result result);
+
+    /// <summary>
+    /// Gets the cancellation token used for a gate-protected operation, creating a linked source only when the caller
+    /// supplied an independent cancellable token.
+    /// </summary>
+    /// <param name="cancellationToken">The caller-supplied cancellation token.</param>
+    /// <param name="linkedCts">The linked source created for the operation, or <see langword="null"/> on the fast path.</param>
+    /// <returns>The token to use while entering the gate and invoking immediate subscription callbacks.</returns>
+    private CancellationToken GetOperationCancellationToken(
+        CancellationToken cancellationToken,
+        out CancellationTokenSource? linkedCts)
+    {
+        if (cancellationToken == DisposedCancellationToken || !cancellationToken.CanBeCanceled)
+        {
+            linkedCts = null;
+            return DisposedCancellationToken;
+        }
+
+        linkedCts = CancellationTokenSource.CreateLinkedTokenSource(DisposedCancellationToken, cancellationToken);
+        return linkedCts.Token;
+    }
+
+    /// <summary>
+    /// Removes an observer and restores the initial value when the last observer leaves.
+    /// </summary>
+    /// <param name="observer">The observer to remove.</param>
+    /// <returns>A task that represents the asynchronous removal operation.</returns>
+    /// <remarks>The exception handlers are disposal-race guards and are excluded because both paths require the
+    /// signal to be disposed while this method is already waiting to enter the gate.</remarks>
+    [ExcludeFromCodeCoverage]
+    private async ValueTask RemoveObserverAndResetAsync(IObserverAsync<T> observer)
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        try
+        {
+            await RemoveObserverAndResetCoreAsync(observer).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // The signal was disposed while removal was waiting to enter the gate.
+        }
+        catch (ObjectDisposedException)
+        {
+            // The gate was disposed while removal was waiting to enter it.
+        }
+    }
+
+    /// <summary>
+    /// Removes an observer and restores the initial value when the last observer leaves.
+    /// </summary>
+    /// <param name="observer">The observer to remove.</param>
+    /// <returns>A task that represents the asynchronous removal operation.</returns>
+    private async ValueTask RemoveObserverAndResetCoreAsync(IObserverAsync<T> observer)
+    {
+        using (await _gate.EnterAsync(DisposedCancellationToken).ConfigureAwait(false))
+        {
+            _observers = _observers.Remove(observer);
+            if (_observers.IsEmpty)
+            {
+                _value = _startValue;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Subscription handle that removes an observer from a stateless replay signal when disposed.
+    /// </summary>
+    /// <param name="signal">The signal that owns the observer list.</param>
+    /// <param name="observer">The observer to remove when the lease is disposed.</param>
+    private sealed class ObserverLease(BaseStatelessReplayLatestSignalAsync<T> signal, IObserverAsync<T> observer)
+        : IAsyncDisposable
+    {
+        /// <summary>
+        /// Indicates whether the lease has already removed its observer.
+        /// </summary>
+        private int _disposed;
+
+        /// <inheritdoc/>
+        public ValueTask DisposeAsync()
+        {
+            return Interlocked.Exchange(ref _disposed, 1) != 0
+                ? default
+                : signal.RemoveObserverAndResetAsync(observer);
+        }
+    }
 }

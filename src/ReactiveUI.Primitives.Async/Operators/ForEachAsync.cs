@@ -57,9 +57,9 @@ public static partial class SignalAsync
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var observer = new ForEachObserver<T>(onNextAsync, cancellationToken);
+        var observer = new ForEachAsyncTaskWitness<T>(onNextAsync, cancellationToken);
         await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        await observer.WaitValueAsync().ConfigureAwait(false);
+        await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -89,18 +89,18 @@ public static partial class SignalAsync
         ArgumentExceptionHelper.ThrowIfNull(onNext);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var observer = new ForEachObserverSync<T>(onNext, cancellationToken);
+        var observer = new ForEachSyncTaskWitness<T>(onNext, cancellationToken);
         await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        await observer.WaitValueAsync().ConfigureAwait(false);
+        await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
-    /// An observer that invokes an asynchronous callback for each element and signals completion via a task.
+    /// A witness that invokes an asynchronous callback for each element and signals completion via a task.
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    internal sealed class ForEachObserver<T>(
+    internal sealed class ForEachAsyncTaskWitness<T>(
         Func<T, CancellationToken, ValueTask> onNextAsync,
-        CancellationToken cancellationToken) : TaskObserverAsyncBase<T, bool>(cancellationToken)
+        CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
     {
         /// <inheritdoc/>
         protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
@@ -108,19 +108,19 @@ public static partial class SignalAsync
 
         /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            TrySetException(error);
+            SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result) =>
-            result.IsSuccess ? TrySetCompleted(true) : TrySetException(result.Exception);
+            result.IsSuccess ? SetResultAndDisposeAsync(true) : SetExceptionAndDisposeAsync(result.Exception);
     }
 
     /// <summary>
-    /// An observer that invokes a synchronous callback for each element and signals completion via a task.
+    /// A witness that invokes a synchronous callback for each element and signals completion via a task.
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    internal sealed class ForEachObserverSync<T>(Action<T> onNext, CancellationToken cancellationToken)
-        : TaskObserverAsyncBase<T, bool>(cancellationToken)
+    internal sealed class ForEachSyncTaskWitness<T>(Action<T> onNext, CancellationToken cancellationToken)
+        : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
     {
         /// <summary>
         /// The synchronous callback invoked for each element in the sequence.
@@ -136,10 +136,10 @@ public static partial class SignalAsync
 
         /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            TrySetException(error);
+            SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result) =>
-            result.IsSuccess ? TrySetCompleted(true) : TrySetException(result.Exception);
+            result.IsSuccess ? SetResultAndDisposeAsync(true) : SetExceptionAndDisposeAsync(result.Exception);
     }
 }

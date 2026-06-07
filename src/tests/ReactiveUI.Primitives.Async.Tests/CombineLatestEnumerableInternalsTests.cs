@@ -19,11 +19,11 @@ public class CombineLatestEnumerableInternalsTests
     {
         var sources = new[] { SignalAsync.Return(1) };
         var downstream = new NoOpObserver();
-        var subscription = new SignalAsync.CombineLatestEnumerableSignal<int, int>.Subscription(
+        var subscription = new SignalAsync.CombineLatestEnumerableSignal<int, int>.EnumerableCombineLatestCoordinator(
             sources,
             downstream,
             static s => s[0]);
-        var indexed = new SignalAsync.CombineLatestEnumerableSignal<int, int>.IndexedObserver(subscription, 0);
+        var indexed = new SignalAsync.CombineLatestEnumerableSignal<int, int>.IndexedWitness(subscription, 0);
 
         await indexed.DisposeAsync();
 

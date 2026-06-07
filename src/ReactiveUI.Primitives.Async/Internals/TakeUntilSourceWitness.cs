@@ -12,23 +12,23 @@ namespace ReactiveUI.Primitives.Async.Internals;
 /// </summary>
 /// <typeparam name="T">The downstream element type.</typeparam>
 /// <param name="lifecycle">The shared lifecycle owning the gate and forwarding logic.</param>
-internal sealed class TakeUntilSourceObserver<T>(TakeUntilLifecycle<T> lifecycle) : ObserverAsync<T>
+internal sealed class TakeUntilSourceWitness<T>(TakeUntilLifecycle<T> lifecycle) : ObserverAsync<T>
 {
     /// <inheritdoc/>
     protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        return lifecycle.ForwardOnNextAsync(value);
+        return lifecycle.RelayNextAsync(value);
     }
 
     /// <inheritdoc/>
     protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        return lifecycle.ForwardOnErrorResumeAsync(error);
+        return lifecycle.RelayErrorAsync(error);
     }
 
     /// <inheritdoc/>
     protected override ValueTask OnCompletedAsyncCore(Result result) =>
-        lifecycle.ForwardOnCompletedAsync(result);
+        lifecycle.RelayCompletionAsync(result);
 }

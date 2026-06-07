@@ -55,9 +55,9 @@ public static partial class SignalAsync
         ArgumentExceptionHelper.ThrowIfNull(accumulator);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var observer = new AggregateAsyncObserver<T, TAcc>(seed, accumulator, cancellationToken);
+        var observer = new AggregateTaskWitness<T, TAcc>(seed, accumulator, cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -160,10 +160,10 @@ public static partial class SignalAsync
     /// <param name="seed">The initial accumulator value.</param>
     /// <param name="accumulator">The asynchronous accumulator function.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class AggregateAsyncObserver<T, TAcc>(
+    internal sealed class AggregateTaskWitness<T, TAcc>(
         TAcc seed,
         Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator,
-        CancellationToken cancellationToken) : TaskObserverAsyncBase<T, TAcc>(cancellationToken)
+        CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, TAcc>(cancellationToken)
     {
         /// <summary>
         /// The current accumulated value.
@@ -176,10 +176,10 @@ public static partial class SignalAsync
 
         /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            TrySetException(error);
+            SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result) =>
-            result.IsSuccess ? TrySetCompleted(_acc) : TrySetException(result.Exception);
+            result.IsSuccess ? SetResultAndDisposeAsync(_acc) : SetExceptionAndDisposeAsync(result.Exception);
     }
 }

@@ -26,7 +26,7 @@ internal sealed class ConcatEnumerableSignal<T>(IEnumerable<IObservableAsync<T>>
     private readonly IEnumerable<IObservableAsync<T>> _signals = signals;
 
     /// <summary>
-    /// Subscribes the specified observer by creating a <see cref="ConcatEnumerableSubscription"/> that iterates
+    /// Subscribes the specified observer by creating a <see cref="ConcatSequenceCoordinator"/> that iterates
     /// through the enumerable of observables sequentially.
     /// </summary>
     /// <param name="observer">The observer to receive elements from the concatenated sequences.</param>
@@ -36,17 +36,17 @@ internal sealed class ConcatEnumerableSignal<T>(IEnumerable<IObservableAsync<T>>
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)
     {
-        var subscription = new ConcatEnumerableSubscription(this, observer);
+        var subscription = new ConcatSequenceCoordinator(this, observer);
         return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
             subscription,
-            subscription.SubscribeNextAsync);
+            subscription.SubscribeNextSignalAsync);
     }
 
     /// <summary>
     /// Manages sequential iteration through the enumerable of observables, subscribing to each
     /// inner observable only after the previous one completes.
     /// </summary>
-    internal sealed class ConcatEnumerableSubscription : IAsyncDisposable
+    internal sealed class ConcatSequenceCoordinator : IAsyncDisposable
     {
         /// <summary>
         /// Enumerator that iterates through the collection of observable sequences to concatenate.
@@ -79,11 +79,11 @@ internal sealed class ConcatEnumerableSignal<T>(IEnumerable<IObservableAsync<T>>
         private int _disposed;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ConcatEnumerableSubscription"/> class.
+        /// Initializes a new instance of the <see cref="ConcatSequenceCoordinator"/> class.
         /// </summary>
         /// <param name="parent">The parent observable that provides the enumerable of observables.</param>
         /// <param name="observer">The downstream observer to forward elements to.</param>
-        public ConcatEnumerableSubscription(ConcatEnumerableSignal<T> parent, IObserverAsync<T> observer)
+        public ConcatSequenceCoordinator(ConcatEnumerableSignal<T> parent, IObserverAsync<T> observer)
         {
             _observer = observer;
             _enumerator = parent._signals.GetEnumerator();
@@ -95,7 +95,7 @@ internal sealed class ConcatEnumerableSignal<T>(IEnumerable<IObservableAsync<T>>
         /// or completes if no more observables are available.
         /// </summary>
         /// <returns>A task representing the asynchronous operation.</returns>
-        public async ValueTask SubscribeNextAsync()
+        public async ValueTask SubscribeNextSignalAsync()
         {
             try
             {
@@ -103,29 +103,29 @@ internal sealed class ConcatEnumerableSignal<T>(IEnumerable<IObservableAsync<T>>
                 {
                     var current = _enumerator.Current;
                     var subscription = await current.SubscribeAsync(
-                        OnInnerNextAsync,
-                        OnInnerErrorResumeAsync,
-                        result => result.IsFailure ? CompleteAsync(result) : SubscribeNextAsync(),
+                        RelayInnerValueAsync,
+                        RelayInnerErrorAsync,
+                        result => result.IsFailure ? FinishAsync(result) : SubscribeNextSignalAsync(),
                         _disposedCancellationToken).ConfigureAwait(false);
 
                     await _innerDisposable.SetDisposableAsync(subscription).ConfigureAwait(false);
                 }
                 else
                 {
-                    await CompleteAsync(Result.Success).ConfigureAwait(false);
+                    await FinishAsync(Result.Success).ConfigureAwait(false);
                 }
             }
             catch (Exception e)
             {
-                await CompleteAsync(Result.Failure(e)).ConfigureAwait(false);
+                await FinishAsync(Result.Failure(e)).ConfigureAwait(false);
             }
         }
 
         /// <inheritdoc/>
-        public ValueTask DisposeAsync() => CompleteAsync(null);
+        public ValueTask DisposeAsync() => FinishAsync(null);
 
         /// <summary>
-        /// Handles a second call to <see cref="CompleteAsync"/> when already disposed,
+        /// Handles a second call to <see cref="FinishAsync"/> when already disposed,
         /// routing any failure exception to the unhandled exception handler.
         /// </summary>
         /// <param name="result">The completion result from the second call.</param>
@@ -136,7 +136,7 @@ internal sealed class ConcatEnumerableSignal<T>(IEnumerable<IObservableAsync<T>>
                 return;
             }
 
-            UnhandledExceptionHandler.OnUnhandledException(exception);
+            UnhandledExceptionHandler.ReportUnhandledException(exception);
         }
 
         /// <summary>
@@ -145,9 +145,9 @@ internal sealed class ConcatEnumerableSignal<T>(IEnumerable<IObservableAsync<T>>
         /// <param name="exception">The error to forward.</param>
         /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        internal ValueTask OnInnerErrorResumeAsync(Exception exception, CancellationToken cancellationToken)
+        internal ValueTask RelayInnerErrorAsync(Exception exception, CancellationToken cancellationToken)
         {
-            // The inner subscription is rooted in _disposedCancellationToken (see SubscribeNextAsync),
+            // The inner subscription is rooted in _disposedCancellationToken (see SubscribeNextSignalAsync),
             // so its disposal already cascades into the inner observer's own cancellation. Forwarding
             // _disposedCancellationToken directly preserves the cancellation semantics that a linked
             // CTS would have provided, without the per-emission Linked2CancellationTokenSource alloc
@@ -160,9 +160,9 @@ internal sealed class ConcatEnumerableSignal<T>(IEnumerable<IObservableAsync<T>>
         /// Forwards an element from the current inner sequence to the downstream observer.
         /// </summary>
         /// <param name="value">The element to forward.</param>
-        /// <param name="cancellationToken">A token to cancel the operation. Ignored — see <see cref="OnInnerErrorResumeAsync"/>.</param>
+        /// <param name="cancellationToken">A token to cancel the operation. Ignored — see <see cref="RelayInnerErrorAsync"/>.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        internal ValueTask OnInnerNextAsync(T value, CancellationToken cancellationToken)
+        internal ValueTask RelayInnerValueAsync(T value, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
             return _observer.OnNextAsync(value, _disposedCancellationToken);
@@ -174,7 +174,7 @@ internal sealed class ConcatEnumerableSignal<T>(IEnumerable<IObservableAsync<T>>
         /// </summary>
         /// <param name="result">The completion result to forward, or <see langword="null"/> if disposing without signaling completion.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        internal async ValueTask CompleteAsync(Result? result)
+        internal async ValueTask FinishAsync(Result? result)
         {
             if (DisposalHelper.TrySetDisposed(ref _disposed))
             {

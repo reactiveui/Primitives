@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>Tests for <see cref="ObserveOnAsyncSignal{T}"/> — exercises the
+/// <summary>Tests for <see cref="ContextSwitchSignalAsync{T}"/> — exercises the
 /// <c>forceYielding: true</c> slow-path branches that switch context on every
 /// <c>OnNext</c> / <c>OnErrorResume</c> / <c>OnCompleted</c> regardless of whether
 /// the call site is already on the target context.</summary>
@@ -22,7 +22,7 @@ public class ObserveOnAsyncSignalTests
     public async Task WhenForceYielding_ThenValueForwarded()
     {
         var result = await SignalAsync.Return(Sentinel)
-            .ObserveOn(AsyncContext.Default, forceYielding: true)
+            .WitnessOn(AsyncContext.Default, forceYielding: true)
             .FirstAsync();
 
         await Assert.That(result).IsEqualTo(Sentinel);
@@ -40,7 +40,7 @@ public class ObserveOnAsyncSignalTests
         try
         {
             await SignalAsync.Throw<int>(expected)
-                .ObserveOn(AsyncContext.Default, forceYielding: true)
+                .WitnessOn(AsyncContext.Default, forceYielding: true)
                 .ToListAsync();
         }
         catch (InvalidOperationException ex)
@@ -58,7 +58,7 @@ public class ObserveOnAsyncSignalTests
     public async Task WhenForceYieldingSourceEmpty_ThenCompletesSuccessfully()
     {
         var result = await SignalAsync.Empty<int>()
-            .ObserveOn(AsyncContext.Default, forceYielding: true)
+            .WitnessOn(AsyncContext.Default, forceYielding: true)
             .ToListAsync();
 
         await Assert.That(result).IsEmpty();
@@ -73,7 +73,33 @@ public class ObserveOnAsyncSignalTests
         var ctx = SynchronizationContext.Current ?? new SynchronizationContext();
 
         var result = await SignalAsync.Return(Sentinel)
-            .ObserveOn(ctx, forceYielding: true)
+            .WitnessOn(ctx, forceYielding: true)
+            .FirstAsync();
+
+        await Assert.That(result).IsEqualTo(Sentinel);
+    }
+
+    /// <summary>Verifies the default <c>SynchronizationContext</c> overload forwards through the non-forced wrapper.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSyncContextDefaultOverload_ThenEmits()
+    {
+        var ctx = SynchronizationContext.Current ?? new SynchronizationContext();
+
+        var result = await SignalAsync.Return(Sentinel)
+            .WitnessOn(ctx)
+            .FirstAsync();
+
+        await Assert.That(result).IsEqualTo(Sentinel);
+    }
+
+    /// <summary>Verifies the default <see cref="TaskScheduler"/> overload forwards through the non-forced wrapper.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenTaskSchedulerDefaultOverload_ThenEmits()
+    {
+        var result = await SignalAsync.Return(Sentinel)
+            .WitnessOn(TaskScheduler.Default)
             .FirstAsync();
 
         await Assert.That(result).IsEqualTo(Sentinel);
@@ -92,7 +118,7 @@ public class ObserveOnAsyncSignalTests
         try
         {
             await SignalAsync.Throw<int>(expected)
-                .ObserveOn(customCtx, forceYielding: false)
+                .WitnessOn(customCtx, forceYielding: false)
                 .ToListAsync();
         }
         catch (InvalidOperationException ex)
@@ -112,15 +138,15 @@ public class ObserveOnAsyncSignalTests
         var customCtx = new SynchronizationContext();
 
         var result = await SignalAsync.Empty<int>()
-            .ObserveOn(customCtx, forceYielding: false)
+            .WitnessOn(customCtx, forceYielding: false)
             .ToListAsync();
 
         await Assert.That(result).IsEmpty();
     }
 
-    /// <summary>Exercises <c>ObserveOnObserver.OnErrorResumeAsyncCore</c>'s slow-path branch —
+    /// <summary>Exercises <c>ContextSwitchObserver.OnErrorResumeAsyncCore</c>'s slow-path branch —
     /// when <c>forceYielding == true</c>, the resumable-error path returns
-    /// <c>SwitchThenErrorAsync(...)</c> rather than the fast-path direct forward.</summary>
+    /// <c>ForwardErrorAfterContextSwitchAsync(...)</c> rather than the fast-path direct forward.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForceYieldingSourceEmitsResumableError_ThenSlowPathForwards()
@@ -130,7 +156,7 @@ public class ObserveOnAsyncSignalTests
         var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
-            .ObserveOn(AsyncContext.Default, forceYielding: true)
+            .WitnessOn(AsyncContext.Default, forceYielding: true)
             .SubscribeAsync(
                 static (_, _) => default,
                 (ex, _) =>
@@ -147,49 +173,49 @@ public class ObserveOnAsyncSignalTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies <c>ObserveOnObserver.SwitchThenForwardAsync</c> by calling it directly
+    /// <summary>Verifies <c>ContextSwitchObserver.ForwardAfterContextSwitchAsync</c> by calling it directly
     /// — the slow path performs the context switch and then forwards the value downstream,
     /// independent of the fast/slow choice in <c>OnNextAsyncCore</c>.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenSwitchThenForwardAsyncInvokedDirectly_ThenValueForwarded()
+    public async Task WhenForwardAfterContextSwitchAsyncInvokedDirectly_ThenValueForwarded()
     {
         var captured = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
         var downstream = new CapturingAsyncObserver<int>(captured);
-        var sut = new ObserveOnAsyncSignal<int>.ObserveOnObserver(downstream, AsyncContext.Default, forceYielding: true);
+        var sut = new ContextSwitchSignalAsync<int>.ContextSwitchWitness(downstream, AsyncContext.Default, forceYielding: true);
 
-        await sut.SwitchThenForwardAsync(Sentinel, CancellationToken.None);
+        await sut.ForwardAfterContextSwitchAsync(Sentinel, CancellationToken.None);
 
         var received = await captured.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(received).IsEqualTo(Sentinel);
     }
 
-    /// <summary>Verifies <c>ObserveOnObserver.SwitchThenErrorAsync</c> by calling it directly.</summary>
+    /// <summary>Verifies <c>ContextSwitchObserver.ForwardErrorAfterContextSwitchAsync</c> by calling it directly.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenSwitchThenErrorAsyncInvokedDirectly_ThenErrorForwarded()
+    public async Task WhenForwardErrorAfterContextSwitchAsyncInvokedDirectly_ThenErrorForwarded()
     {
         var captured = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
         var downstream = new CapturingAsyncObserver<int>(captured);
-        var sut = new ObserveOnAsyncSignal<int>.ObserveOnObserver(downstream, AsyncContext.Default, forceYielding: true);
+        var sut = new ContextSwitchSignalAsync<int>.ContextSwitchWitness(downstream, AsyncContext.Default, forceYielding: true);
         var expected = new InvalidOperationException("slow-path-error");
 
-        await sut.SwitchThenErrorAsync(expected, CancellationToken.None);
+        await sut.ForwardErrorAfterContextSwitchAsync(expected, CancellationToken.None);
 
         var received = await captured.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(received).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies <c>ObserveOnObserver.SwitchThenCompletedAsync</c> by calling it directly.</summary>
+    /// <summary>Verifies <c>ContextSwitchObserver.ForwardCompletionAfterContextSwitchAsync</c> by calling it directly.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenSwitchThenCompletedAsyncInvokedDirectly_ThenCompletionForwarded()
+    public async Task WhenForwardCompletionAfterContextSwitchAsyncInvokedDirectly_ThenCompletionForwarded()
     {
         var captured = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
         var downstream = new CapturingAsyncObserver<int>(captured);
-        var sut = new ObserveOnAsyncSignal<int>.ObserveOnObserver(downstream, AsyncContext.Default, forceYielding: true);
+        var sut = new ContextSwitchSignalAsync<int>.ContextSwitchWitness(downstream, AsyncContext.Default, forceYielding: true);
 
-        await sut.SwitchThenCompletedAsync(Result.Success);
+        await sut.ForwardCompletionAfterContextSwitchAsync(Result.Success);
 
         var result = await captured.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(result.IsSuccess).IsTrue();

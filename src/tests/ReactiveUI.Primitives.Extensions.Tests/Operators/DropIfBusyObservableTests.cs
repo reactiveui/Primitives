@@ -84,18 +84,18 @@ public class DropIfBusyObservableTests
     {
         var subject = new Subject<int>();
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var error = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
         var expected = new InvalidOperationException("handler");
-        Exception? caught = null;
 
         using var sub = subject.DropIfBusy(async _ =>
         {
             await release.Task.ConfigureAwait(false);
             throw expected;
-        }).Subscribe(static _ => { }, ex => caught = ex);
+        }).Subscribe(static _ => { }, ex => error.TrySetResult(ex));
 
         subject.OnNext(1);
         release.SetResult();
-        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
+        var caught = await error.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
         await Assert.That(caught).IsSameReferenceAs(expected);
     }

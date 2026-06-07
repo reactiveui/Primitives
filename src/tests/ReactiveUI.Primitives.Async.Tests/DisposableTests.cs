@@ -585,14 +585,14 @@ public class DisposableTests
 
     /// <summary>
     /// Verifies that the dispose sentinel DisposeAsync method returns a completed ValueTask.
-    /// Covers the DisposedSentinel.DisposeAsync path.
+    /// Covers the DisposedSlotMarker.DisposeAsync path.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleAssignmentDisposeSentinel_ThenDisposeAsyncReturnsDefault()
     {
         // Access the sentinel and verify it can be disposed
-        IAsyncDisposable sentinel = SingleAssignmentDisposableAsync.DisposedSentinel.Instance;
+        IAsyncDisposable sentinel = SingleAssignmentDisposableAsync.DisposedSlotMarker.Instance;
         await sentinel.DisposeAsync();
 
         // After dispose, getting the disposable should return the empty disposable
@@ -792,7 +792,7 @@ public class DisposableTests
         IAsyncDisposable? field = null;
         var disposable = DisposableAsync.Empty;
 
-        await SingleAssignmentDisposableAsync.SetDisposableAsync(ref field, disposable);
+        await SingleAssignmentDisposableAsync.AssignDisposableAsync(ref field, disposable);
 
         await Assert.That(field).IsNotNull();
         await Assert.That(field).IsEqualTo(disposable);
@@ -807,10 +807,10 @@ public class DisposableTests
         var first = DisposableAsync.Empty;
         var second = DisposableAsync.Create(() => default);
 
-        await SingleAssignmentDisposableAsync.SetDisposableAsync(ref field, first);
+        await SingleAssignmentDisposableAsync.AssignDisposableAsync(ref field, first);
 
         await Assert.That(async () =>
-                await SingleAssignmentDisposableAsync.SetDisposableAsync(ref field, second))
+                await SingleAssignmentDisposableAsync.AssignDisposableAsync(ref field, second))
             .ThrowsExactly<InvalidOperationException>();
     }
 
@@ -827,7 +827,7 @@ public class DisposableTests
             return default;
         });
 
-        await SingleAssignmentDisposableAsync.SetDisposableAsync(ref field, disposable);
+        await SingleAssignmentDisposableAsync.AssignDisposableAsync(ref field, disposable);
         await SingleAssignmentDisposableAsync.DisposeAsync(ref field);
 
         await Assert.That(disposed).IsTrue();
@@ -901,14 +901,14 @@ public class DisposableTests
     }
 
     /// <summary>
-    /// Verifies that the DisposedSentinel.DisposeAsync returns a completed ValueTask
+    /// Verifies that the DisposedSlotMarker.DisposeAsync returns a completed ValueTask
     /// without throwing.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenSerialDisposedSentinelDisposeAsync_ThenReturnsCompletedValueTask()
+    public async Task WhenSerialDisposedSlotMarkerDisposeAsync_ThenReturnsCompletedValueTask()
     {
-        var sentinel = SingleReplaceableDisposableAsync.DisposedSentinel.Instance;
+        var sentinel = SingleReplaceableDisposableAsync.DisposedSlotMarker.Instance;
 
         // DisposeAsync should return default (no-op)
         var task = sentinel.DisposeAsync();
@@ -928,11 +928,11 @@ public class DisposableTests
         var second = DisposableAsync.Create(() => default);
 
         // First set succeeds
-        await SingleAssignmentDisposableAsync.SetDisposableAsync(ref field, first);
+        await SingleAssignmentDisposableAsync.AssignDisposableAsync(ref field, first);
 
         // Second set with a different non-null value triggers ThrowAlreadyAssignment
         await Assert.That(async () =>
-                await SingleAssignmentDisposableAsync.SetDisposableAsync(ref field, second))
+                await SingleAssignmentDisposableAsync.AssignDisposableAsync(ref field, second))
             .ThrowsExactly<InvalidOperationException>();
     }
 

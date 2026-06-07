@@ -98,11 +98,11 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Tests that MergeSignalSourcesSignal ForwardOnNext returns early when disposed.
+    /// Tests that MergeSignalSourcesSignal OnNextAsync returns early when disposed.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMergeSignalDisposedBeforeInnerEmission_ThenForwardOnNextReturns()
+    public async Task WhenMergeSignalDisposedBeforeInnerEmission_ThenRelayNextAsyncReturns()
     {
         var source = Signal.Create<int>();
         var inner = Signal.Create<IObservableAsync<int>>();
@@ -138,11 +138,11 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that Merge ForwardOnNext returns early when disposed.
+    /// Verifies that Merge OnNextAsync returns early when disposed.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMergeDisposedDuringEmission_ThenForwardOnNextReturnsEarly()
+    public async Task WhenMergeDisposedDuringEmission_ThenRelayNextAsyncReturnsEarly()
     {
         var signal = Signal.Create<int>();
         var items = new List<int>();
@@ -171,14 +171,14 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that ForwardOnNext in MergeSubscription returns early (pre-gate check)
+    /// Verifies that OnNextAsync in MergeCoordinator returns early (pre-gate check)
     /// when the subscription has already been disposed.
     /// Uses DirectSource to retain a reference to the inner observer so that emissions
     /// can be attempted after disposal without being blocked by Signal un-subscription.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMergeSignalOfSignalsDisposed_ThenForwardOnNextReturnsPreGate()
+    public async Task WhenMergeSignalOfSignalsDisposed_ThenRelayNextAsyncReturnsPreGate()
     {
         var innerSource = new DirectSource<int>();
         var outerSource = new DirectSource<IObservableAsync<int>>();
@@ -208,7 +208,7 @@ public partial class CombiningOperatorTests
         await sub.DisposeAsync();
 
         // Emit after dispose – DirectSource still holds the inner observer reference,
-        // so this reaches ForwardOnNext which should return early at the pre-gate check.
+        // so this reaches OnNextAsync which should return early at the pre-gate check.
         try
         {
             await innerSource.EmitNext(SampleValue2, CancellationToken.None);
@@ -223,12 +223,12 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that ForwardOnErrorResume in MergeSubscription returns early
+    /// Verifies that OnErrorResumeAsync in MergeCoordinator returns early
     /// when the subscription has already been disposed.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMergeSignalOfSignalsDisposed_ThenForwardOnErrorResumeReturns()
+    public async Task WhenMergeSignalOfSignalsDisposed_ThenRelayErrorAsyncReturns()
     {
         var innerSource = new DirectSource<int>();
         var outerSource = new DirectSource<IObservableAsync<int>>();
@@ -267,14 +267,14 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that ForwardOnNext in MergeSubscription returns early at the post-gate
+    /// Verifies that OnNextAsync in MergeCoordinator returns early at the post-gate
     /// disposed check when disposal occurs while waiting for the gate.
     /// A slow observer holds the gate while a second emission waits; disposal happens
     /// before the second emission acquires the gate.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMergeSignalOfSignalsDisposedWhileGateHeld_ThenForwardOnNextReturnsPostGate()
+    public async Task WhenMergeSignalOfSignalsDisposedWhileGateHeld_ThenRelayNextAsyncReturnsPostGate()
     {
         var innerSource = new DirectSource<int>();
         var outerSource = new DirectSource<IObservableAsync<int>>();
@@ -343,12 +343,12 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that ForwardOnErrorResume in MergeSubscription returns early at the
+    /// Verifies that OnErrorResumeAsync in MergeCoordinator returns early at the
     /// post-gate disposed check when disposal occurs while waiting for the gate.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMergeSignalOfSignalsDisposedWhileGateHeld_ThenForwardOnErrorResumeReturnsPostGate()
+    public async Task WhenMergeSignalOfSignalsDisposedWhileGateHeld_ThenRelayErrorAsyncReturnsPostGate()
     {
         var innerSource = new DirectSource<int>();
         var outerSource = new DirectSource<IObservableAsync<int>>();
@@ -414,11 +414,11 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that Merge ForwardOnNext returns early at the pre-gate disposed check.
+    /// Verifies that Merge OnNextAsync returns early at the pre-gate disposed check.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMergeSignalDisposed_ThenForwardOnNextReturnsEarly()
+    public async Task WhenMergeSignalDisposed_ThenRelayNextAsyncReturnsEarly()
     {
         var outer = Signal.Create<IObservableAsync<int>>();
         var inner = new DirectSource<int>();
@@ -441,11 +441,11 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that Merge ForwardOnErrorResume returns early when disposed.
+    /// Verifies that Merge OnErrorResumeAsync returns early when disposed.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMergeSignalDisposed_ThenForwardOnErrorResumeReturnsEarly()
+    public async Task WhenMergeSignalDisposed_ThenRelayErrorAsyncReturnsEarly()
     {
         var outer = Signal.Create<IObservableAsync<int>>();
         var inner = new DirectSource<int>();
@@ -467,12 +467,12 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that Merge ForwardOnNext post-gate disposed guard returns early
+    /// Verifies that Merge OnNextAsync post-gate disposed guard returns early
     /// when disposal happens while waiting for the gate.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenMergeSignalDisposedWhileGateHeld_ThenForwardOnNextReturnsPostGate()
+    public async Task WhenMergeSignalDisposedWhileGateHeld_ThenRelayNextAsyncReturnsPostGate()
     {
         var outer = Signal.Create<IObservableAsync<int>>();
         var inner = new DirectSource<int>();
@@ -509,7 +509,7 @@ public partial class CombiningOperatorTests
 
     /// <summary>
     /// Verifies that Merge(IObservableAsync of IObservableAsync) drops values after disposal.
-    /// Covers the disposed-early-return guard in MergeSubscription.ForwardOnNext.
+    /// Covers the disposed-early-return guard in MergeCoordinator.RelayNextAsync.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -546,7 +546,7 @@ public partial class CombiningOperatorTests
 
     /// <summary>
     /// Verifies that Merge(IObservableAsync of IObservableAsync) drops error-resume after disposal.
-    /// Covers the disposed-early-return guard in MergeSubscription.ForwardOnErrorResume.
+    /// Covers the disposed-early-return guard in MergeCoordinator.RelayErrorAsync.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]

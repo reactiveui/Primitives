@@ -127,7 +127,7 @@ public static partial class SignalAsync
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            var inner = new TakeUntilTask<T>(source, task, options ?? TakeUntilOptions.Default);
+            var inner = new TaskStopSignal<T>(source, task, options ?? TakeUntilOptions.Default);
             return cancellationToken.CanBeCanceled ? inner.TakeUntil(cancellationToken) : inner;
         }
 
@@ -141,7 +141,7 @@ public static partial class SignalAsync
         /// <returns>An observable sequence that completes when the provided cancellation token is canceled or when the source
         /// sequence completes.</returns>
         public IObservableAsync<T> TakeUntil(CancellationToken cancellationToken) =>
-            new TakeUntilCancellationToken<T>(source, cancellationToken);
+            new CancellationStopSignal<T>(source, cancellationToken);
 
         /// <summary>
         /// Returns a sequence that emits elements from the source until the specified predicate returns true for an
@@ -169,7 +169,7 @@ public static partial class SignalAsync
         {
             ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-            var inner = new TakeUntilPredicate<T>(source, predicate);
+            var inner = new PredicateStopSignal<T>(source, predicate);
             return cancellationToken.CanBeCanceled ? inner.TakeUntil(cancellationToken) : inner;
         }
 
@@ -199,7 +199,7 @@ public static partial class SignalAsync
         {
             ArgumentExceptionHelper.ThrowIfNull(asyncPredicate);
 
-            var inner = new TakeUntilAsyncPredicate<T>(source, asyncPredicate);
+            var inner = new AsyncPredicateStopSignal<T>(source, asyncPredicate);
             return cancellationToken.CanBeCanceled ? inner.TakeUntil(cancellationToken) : inner;
         }
 
@@ -256,7 +256,7 @@ public static partial class SignalAsync
         {
             ArgumentExceptionHelper.ThrowIfNull(stopSignal);
 
-            var inner = new TakeUntilFromRawSignal<T>(source, stopSignal, options ?? TakeUntilOptions.Default);
+            var inner = new DelegateStopSignal<T>(source, stopSignal, options ?? TakeUntilOptions.Default);
             return cancellationToken.CanBeCanceled ? inner.TakeUntil(cancellationToken) : inner;
         }
     }
@@ -265,7 +265,7 @@ public static partial class SignalAsync
     /// Async observable that emits items from the source until the specified predicate returns true.
     /// </summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    internal sealed class TakeUntilPredicate<T>(IObservableAsync<T> source, Func<T, bool> predicate)
+    internal sealed class PredicateStopSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate)
         : SignalAsync<T>
     {
         /// <summary>The predicate that signals when to stop emitting items.</summary>
@@ -279,7 +279,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new TakeUntilPredicateSubscription(this, observer);
+            var subscription = new PredicateStopCoordinator(this, observer);
             return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
                 subscription,
                 () => subscription.SubscribeSourcesAsync(cancellationToken));
@@ -288,7 +288,7 @@ public static partial class SignalAsync
         /// <summary>
         /// Observer that forwards items from the source until the predicate returns true.
         /// </summary>
-        internal sealed class TakeUntilPredicateSubscription(TakeUntilPredicate<T> parent, IObserverAsync<T> observer)
+        internal sealed class PredicateStopCoordinator(PredicateStopSignal<T> parent, IObserverAsync<T> observer)
             : ObserverAsync<T>
         {
             /// <summary>The inner subscription handle.</summary>
@@ -337,7 +337,7 @@ public static partial class SignalAsync
     /// Async observable that emits items from the source until the specified cancellation token is canceled.
     /// </summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    internal sealed class TakeUntilCancellationToken<T>(IObservableAsync<T> source, CancellationToken cancellationToken)
+    internal sealed class CancellationStopSignal<T>(IObservableAsync<T> source, CancellationToken cancellationToken)
         : SignalAsync<T>
     {
         /// <summary>The source observable sequence.</summary>
@@ -351,7 +351,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new Subscription(this, observer);
+            var subscription = new CancellationStopCoordinator(this, observer);
             subscription.LinkExternalCancellation(cancellationToken);
             return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
                 subscription,
@@ -363,10 +363,10 @@ public static partial class SignalAsync
         /// Composes <see cref="TakeUntilLifecycle{T}"/> for the shared gate / dispose-CTS / external-
         /// link / gated-forwarding plumbing so this class only carries the operator-specific state.
         /// </summary>
-        internal sealed class Subscription : IAsyncDisposable
+        internal sealed class CancellationStopCoordinator : IAsyncDisposable
         {
             /// <summary>The parent observable that owns this subscription.</summary>
-            private readonly TakeUntilCancellationToken<T> _parent;
+            private readonly CancellationStopSignal<T> _parent;
 
             /// <summary>Shared subscription lifecycle (gate / dispose CTS / external link / forwarders).</summary>
             private readonly TakeUntilLifecycle<T> _lifecycle;
@@ -378,11 +378,11 @@ public static partial class SignalAsync
             private CancellationTokenRegistration? _tokenRegistration;
 
             /// <summary>
-            /// Initializes a new instance of the <see cref="Subscription"/> class.
+            /// Initializes a new instance of the <see cref="CancellationStopCoordinator"/> class.
             /// </summary>
             /// <param name="parent">The parent observable that owns this subscription.</param>
             /// <param name="observer">The downstream observer to forward items to.</param>
-            public Subscription(TakeUntilCancellationToken<T> parent, IObserverAsync<T> observer)
+            public CancellationStopCoordinator(CancellationStopSignal<T> parent, IObserverAsync<T> observer)
             {
                 _parent = parent;
                 _lifecycle = new(observer);
@@ -395,8 +395,8 @@ public static partial class SignalAsync
             /// <returns>A task representing the asynchronous subscribe operation.</returns>
             public async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
             {
-                _tokenRegistration = _parent._cancellationToken.Register(OnTokenCanceled);
-                _subscription = await _parent._source.SubscribeAsync(new TakeUntilSourceObserver<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
+                _tokenRegistration = _parent._cancellationToken.Register(CompleteFromCancellation);
+                _subscription = await _parent._source.SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
             }
 
             /// <summary>
@@ -430,10 +430,10 @@ public static partial class SignalAsync
             /// <summary>
             /// Callback invoked when the external cancellation token is canceled; forwards completion to the observer.
             /// </summary>
-            internal void OnTokenCanceled() => FireAndForgetHelper.Run(async () =>
+            internal void CompleteFromCancellation() => FireAndForgetHelper.Run(async () =>
             {
                 await Task.Yield();
-                await _lifecycle.ForwardOnCompletedAsync(Result.Success).ConfigureAwait(false);
+                await _lifecycle.RelayCompletionAsync(Result.Success).ConfigureAwait(false);
             });
         }
     }
@@ -442,7 +442,7 @@ public static partial class SignalAsync
     /// Async observable that emits items from the source until a raw completion signal fires.
     /// </summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    internal sealed class TakeUntilFromRawSignal<T>(
+    internal sealed class DelegateStopSignal<T>(
         IObservableAsync<T> source,
         CompletionSignalDelegate stopSignal,
         TakeUntilOptions options) : SignalAsync<T>
@@ -461,7 +461,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new Subscription(this, observer);
+            var subscription = new DelegateStopCoordinator(this, observer);
             subscription.LinkExternalCancellation(cancellationToken);
             return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
                 subscription,
@@ -471,10 +471,10 @@ public static partial class SignalAsync
         /// <summary>
         /// Manages the subscription lifetime and completes when the raw stop signal fires.
         /// </summary>
-        internal sealed class Subscription : IAsyncDisposable
+        internal sealed class DelegateStopCoordinator : IAsyncDisposable
         {
             /// <summary>The parent observable that owns this subscription.</summary>
-            private readonly TakeUntilFromRawSignal<T> _parent;
+            private readonly DelegateStopSignal<T> _parent;
 
             /// <summary>Shared subscription lifecycle (gate / dispose CTS / external link / forwarders).</summary>
             private readonly TakeUntilLifecycle<T> _lifecycle;
@@ -483,11 +483,11 @@ public static partial class SignalAsync
             private IAsyncDisposable? _subscription;
 
             /// <summary>
-            /// Initializes a new instance of the <see cref="Subscription"/> class.
+            /// Initializes a new instance of the <see cref="DelegateStopCoordinator"/> class.
             /// </summary>
             /// <param name="parent">The parent observable that owns this subscription.</param>
             /// <param name="observer">The downstream observer to forward items to.</param>
-            public Subscription(TakeUntilFromRawSignal<T> parent, IObserverAsync<T> observer)
+            public DelegateStopCoordinator(DelegateStopSignal<T> parent, IObserverAsync<T> observer)
             {
                 _parent = parent;
                 _lifecycle = new(observer);
@@ -500,8 +500,8 @@ public static partial class SignalAsync
             /// <returns>A task representing the asynchronous subscribe operation.</returns>
             public async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
             {
-                WaitAndComplete();
-                _subscription = await _parent._source.SubscribeAsync(new TakeUntilSourceObserver<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
+                AwaitStopThenComplete();
+                _subscription = await _parent._source.SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
             }
 
             /// <summary>
@@ -526,7 +526,7 @@ public static partial class SignalAsync
             /// <summary>
             /// Waits for the stop signal to fire, then forwards completion or error to the downstream observer.
             /// </summary>
-            internal void WaitAndComplete() => FireAndForgetHelper.Run(async () =>
+            internal void AwaitStopThenComplete() => FireAndForgetHelper.Run(async () =>
             {
                 var tcs = new TaskCompletionSource<object?>();
 
@@ -556,7 +556,7 @@ public static partial class SignalAsync
                         // Ignored
                     }
 
-                    await _lifecycle.ForwardOnCompletedAsync(Result.Success).ConfigureAwait(false);
+                    await _lifecycle.RelayCompletionAsync(Result.Success).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -571,11 +571,11 @@ public static partial class SignalAsync
 
                     if (_parent._options.SourceFailsWhenOtherFails)
                     {
-                        await _lifecycle.ForwardOnCompletedAsync(Result.Failure(e)).ConfigureAwait(false);
+                        await _lifecycle.RelayCompletionAsync(Result.Failure(e)).ConfigureAwait(false);
                     }
                     else
                     {
-                        await _lifecycle.ForwardOnErrorResumeAsync(e).ConfigureAwait(false);
+                        await _lifecycle.RelayErrorAsync(e).ConfigureAwait(false);
                     }
                 }
             });
@@ -586,7 +586,7 @@ public static partial class SignalAsync
     /// Async observable that emits items from the source until the specified task completes.
     /// </summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    internal sealed class TakeUntilTask<T>(IObservableAsync<T> source, Task task, TakeUntilOptions options)
+    internal sealed class TaskStopSignal<T>(IObservableAsync<T> source, Task task, TakeUntilOptions options)
         : SignalAsync<T>
     {
         /// <summary>The source observable sequence.</summary>
@@ -603,7 +603,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new Subscription(this, observer);
+            var subscription = new TaskStopCoordinator(this, observer);
             subscription.LinkExternalCancellation(cancellationToken);
             return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
                 subscription,
@@ -614,10 +614,10 @@ public static partial class SignalAsync
         /// Manages the subscription lifetime and completes when the task finishes. Composes
         /// <see cref="TakeUntilLifecycle{T}"/> for the shared plumbing.
         /// </summary>
-        internal sealed class Subscription : IAsyncDisposable
+        internal sealed class TaskStopCoordinator : IAsyncDisposable
         {
             /// <summary>The parent observable that owns this subscription.</summary>
-            private readonly TakeUntilTask<T> _parent;
+            private readonly TaskStopSignal<T> _parent;
 
             /// <summary>Shared subscription lifecycle (gate / dispose CTS / external link / forwarders).</summary>
             private readonly TakeUntilLifecycle<T> _lifecycle;
@@ -626,11 +626,11 @@ public static partial class SignalAsync
             private IAsyncDisposable? _subscription;
 
             /// <summary>
-            /// Initializes a new instance of the <see cref="Subscription"/> class.
+            /// Initializes a new instance of the <see cref="TaskStopCoordinator"/> class.
             /// </summary>
             /// <param name="parent">The parent observable that owns this subscription.</param>
             /// <param name="observer">The downstream observer to forward items to.</param>
-            public Subscription(TakeUntilTask<T> parent, IObserverAsync<T> observer)
+            public TaskStopCoordinator(TaskStopSignal<T> parent, IObserverAsync<T> observer)
             {
                 _parent = parent;
                 _lifecycle = new(observer);
@@ -644,8 +644,8 @@ public static partial class SignalAsync
             public async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
             {
                 var task = _parent._task;
-                WaitAndComplete(task);
-                _subscription = await _parent._source.SubscribeAsync(new TakeUntilSourceObserver<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
+                AwaitStopThenComplete(task);
+                _subscription = await _parent._source.SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
             }
 
             /// <summary>
@@ -671,22 +671,22 @@ public static partial class SignalAsync
             /// Waits for the task to complete, then forwards completion or error to the downstream observer.
             /// </summary>
             /// <param name="task">The task to await.</param>
-            internal void WaitAndComplete(Task task) => FireAndForgetHelper.Run(async () =>
+            internal void AwaitStopThenComplete(Task task) => FireAndForgetHelper.Run(async () =>
             {
                 try
                 {
                     await task.WaitAsync(System.Threading.Timeout.InfiniteTimeSpan, _lifecycle.DisposeToken).ConfigureAwait(false);
-                    await _lifecycle.ForwardOnCompletedAsync(Result.Success).ConfigureAwait(false);
+                    await _lifecycle.RelayCompletionAsync(Result.Success).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
                     if (_parent._options.SourceFailsWhenOtherFails)
                     {
-                        await _lifecycle.ForwardOnCompletedAsync(Result.Failure(e)).ConfigureAwait(false);
+                        await _lifecycle.RelayCompletionAsync(Result.Failure(e)).ConfigureAwait(false);
                     }
                     else
                     {
-                        await _lifecycle.ForwardOnErrorResumeAsync(e).ConfigureAwait(false);
+                        await _lifecycle.RelayErrorAsync(e).ConfigureAwait(false);
                     }
                 }
             });
@@ -717,7 +717,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new Subscription(this, observer);
+            var subscription = new AsyncStopCoordinator(this, observer);
             subscription.LinkExternalCancellation(cancellationToken);
             return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
                 subscription,
@@ -728,7 +728,7 @@ public static partial class SignalAsync
         /// Manages subscriptions to both the source and signal observables, completing when the signal
         /// fires. Composes <see cref="TakeUntilLifecycle{T}"/> for the shared plumbing.
         /// </summary>
-        internal sealed class Subscription : IAsyncDisposable
+        internal sealed class AsyncStopCoordinator : IAsyncDisposable
         {
             /// <summary>The parent observable that owns this subscription.</summary>
             private readonly TakeUntilAsyncSignal<T, TOther> _parent;
@@ -743,11 +743,11 @@ public static partial class SignalAsync
             private readonly SingleAssignmentDisposableAsync _otherDisposable = new();
 
             /// <summary>
-            /// Initializes a new instance of the <see cref="Subscription"/> class.
+            /// Initializes a new instance of the <see cref="AsyncStopCoordinator"/> class.
             /// </summary>
             /// <param name="parent">The parent observable that owns this subscription.</param>
             /// <param name="observer">The downstream observer to forward items to.</param>
-            public Subscription(TakeUntilAsyncSignal<T, TOther> parent, IObserverAsync<T> observer)
+            public AsyncStopCoordinator(TakeUntilAsyncSignal<T, TOther> parent, IObserverAsync<T> observer)
             {
                 _parent = parent;
                 _lifecycle = new(observer);
@@ -760,11 +760,11 @@ public static partial class SignalAsync
             /// <returns>This subscription as an async disposable.</returns>
             public async ValueTask<IAsyncDisposable> SubscribeSourcesAsync(CancellationToken cancellationToken)
             {
-                var otherSubscription = await _parent._other.SubscribeAsync(new OtherObserver(this), cancellationToken).ConfigureAwait(false);
+                var otherSubscription = await _parent._other.SubscribeAsync(new StopSignalWitness(this), cancellationToken).ConfigureAwait(false);
                 await _otherDisposable.SetDisposableAsync(otherSubscription).ConfigureAwait(false);
 
                 var sourceSubscription =
-                    await _parent._source.SubscribeAsync(new TakeUntilSourceObserver<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
+                    await _parent._source.SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
                 await _disposable.SetDisposableAsync(sourceSubscription).ConfigureAwait(false);
 
                 return this;
@@ -789,14 +789,14 @@ public static partial class SignalAsync
             /// <summary>
             /// Observer for the signal observable that triggers completion of the source subscription.
             /// </summary>
-            internal sealed class OtherObserver(Subscription parent) : ObserverAsync<TOther>
+            internal sealed class StopSignalWitness(AsyncStopCoordinator parent) : ObserverAsync<TOther>
             {
                 /// <inheritdoc/>
                 protected override async ValueTask OnNextAsyncCore(TOther value, CancellationToken cancellationToken)
                 {
                     _ = value;
                     _ = cancellationToken;
-                    await parent._lifecycle.ForwardOnCompletedAsync(Result.Success).ConfigureAwait(false);
+                    await parent._lifecycle.RelayCompletionAsync(Result.Success).ConfigureAwait(false);
                     await DisposeAsync().ConfigureAwait(false);
                 }
 
@@ -804,7 +804,7 @@ public static partial class SignalAsync
                 protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
                 {
                     _ = cancellationToken;
-                    return parent._lifecycle.ForwardOnErrorResumeAsync(error);
+                    return parent._lifecycle.RelayErrorAsync(error);
                 }
 
                 /// <inheritdoc/>
@@ -817,10 +817,10 @@ public static partial class SignalAsync
 
                     if (parent._parent._options.SourceFailsWhenOtherFails)
                     {
-                        return parent._lifecycle.ForwardOnCompletedAsync(result);
+                        return parent._lifecycle.RelayCompletionAsync(result);
                     }
 
-                    return parent._lifecycle.ForwardOnCompletedAsync(Result.Success);
+                    return parent._lifecycle.RelayCompletionAsync(Result.Success);
                 }
             }
         }
@@ -830,7 +830,7 @@ public static partial class SignalAsync
     /// Async observable that emits items from the source until the specified asynchronous predicate returns true.
     /// </summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    internal sealed class TakeUntilAsyncPredicate<T>(
+    internal sealed class AsyncPredicateStopSignal<T>(
         IObservableAsync<T> source,
         Func<T, CancellationToken, ValueTask<bool>> asyncPredicate) : SignalAsync<T>
     {
@@ -845,7 +845,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new TakeUntilAsyncPredicateSubscription(this, observer);
+            var subscription = new AsyncPredicateStopCoordinator(this, observer);
             return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
                 subscription,
                 () => subscription.SubscribeSourcesAsync(cancellationToken));
@@ -854,8 +854,8 @@ public static partial class SignalAsync
         /// <summary>
         /// Observer that forwards items from the source until the async predicate returns true.
         /// </summary>
-        internal sealed class TakeUntilAsyncPredicateSubscription(
-            TakeUntilAsyncPredicate<T> parent,
+        internal sealed class AsyncPredicateStopCoordinator(
+            AsyncPredicateStopSignal<T> parent,
             IObserverAsync<T> observer) : ObserverAsync<T>
         {
             /// <summary>The inner subscription handle.</summary>

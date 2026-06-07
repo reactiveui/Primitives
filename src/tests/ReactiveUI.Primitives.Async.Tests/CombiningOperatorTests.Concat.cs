@@ -234,7 +234,7 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that when the inner subscription throws during SubscribeToInnerLoop in
+    /// Verifies that when the inner subscription throws during SubscribeCurrentInnerAsync in
     /// ConcatSignalSourcesSignal, the error is propagated via completion.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -299,13 +299,13 @@ public partial class CombiningOperatorTests
                     return default;
                 });
 
-        // Complete with failure first, then dispose (which calls CompleteAsync(null))
+        // Complete with failure first, then dispose (which calls FinishAsync(null))
         await outer.OnCompletedAsync(Result.Failure(new InvalidOperationException(FirstFailMessage)));
 
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
 
-        // Now dispose – this will call CompleteAsync(null) which will hit the already-disposed path
+        // Now dispose – this will call FinishAsync(null) which will hit the already-disposed path
         await sub.DisposeAsync();
 
         await outer.DisposeAsync();
@@ -445,7 +445,7 @@ public partial class CombiningOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenConcatEnumerableSubscriptionThrows_ThenDisposesAndRethrows()
+    public async Task WhenConcatSequenceCoordinatorThrows_ThenDisposesAndRethrows()
     {
         var throwing = SignalAsync.Create<int>((_, _) =>
         {
@@ -541,12 +541,12 @@ public partial class CombiningOperatorTests
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
 
-        // Second dispose attempts CompleteAsync(null) on an already-disposed subscription
+        // Second dispose attempts FinishAsync(null) on an already-disposed subscription
         await sub.DisposeAsync();
     }
 
     /// <summary>
-    /// Verifies that ConcatEnumerableSignal handles the catch path in SubscribeNextAsync
+    /// Verifies that ConcatEnumerableSignal handles the catch path in SubscribeNextSignalAsync
     /// when the enumerator MoveNext throws.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -669,7 +669,7 @@ public partial class CombiningOperatorTests
         var error = new InvalidOperationException("late failure");
 
         // Call the extracted helper directly to test the double-dispose path
-        ConcatEnumerableSignal<int>.ConcatEnumerableSubscription.HandleAlreadyDisposed(
+        ConcatEnumerableSignal<int>.ConcatSequenceCoordinator.HandleAlreadyDisposed(
             Result.Failure(error));
 
         await Assert.That(unhandled).IsSameReferenceAs(error);
@@ -685,8 +685,8 @@ public partial class CombiningOperatorTests
         Exception? unhandled = null;
         UnhandledExceptionHandler.Register(ex => unhandled = ex);
 
-        ConcatEnumerableSignal<int>.ConcatEnumerableSubscription.HandleAlreadyDisposed(null);
-        ConcatEnumerableSignal<int>.ConcatEnumerableSubscription.HandleAlreadyDisposed(Result.Success);
+        ConcatEnumerableSignal<int>.ConcatSequenceCoordinator.HandleAlreadyDisposed(null);
+        ConcatEnumerableSignal<int>.ConcatSequenceCoordinator.HandleAlreadyDisposed(Result.Success);
 
         await Assert.That(unhandled).IsNull();
     }
@@ -722,7 +722,7 @@ public partial class CombiningOperatorTests
             () => completionResult.HasValue,
             TimeSpan.FromSeconds(5));
 
-        // Now dispose, which calls CompleteAsync(null) but TrySetDisposed returns true
+        // Now dispose, which calls FinishAsync(null) but TrySetDisposed returns true
         // (already disposed), and since result?.Exception is null for null result, no handler call.
         // We need another approach: dispose first, then force another completion with an error.
         await sub.DisposeAsync();
@@ -760,7 +760,7 @@ public partial class CombiningOperatorTests
 
         var error = new InvalidOperationException("late failure");
 
-        ConcatSignalSourcesSignal<int>.ConcatSubscription.HandleAlreadyDisposed(
+        ConcatSignalSourcesSignal<int>.ConcatCoordinator.HandleAlreadyDisposed(
             Result.Failure(error));
 
         await Assert.That(unhandled).IsSameReferenceAs(error);
@@ -777,8 +777,8 @@ public partial class CombiningOperatorTests
         Exception? unhandled = null;
         UnhandledExceptionHandler.Register(ex => unhandled = ex);
 
-        ConcatSignalSourcesSignal<int>.ConcatSubscription.HandleAlreadyDisposed(null);
-        ConcatSignalSourcesSignal<int>.ConcatSubscription.HandleAlreadyDisposed(Result.Success);
+        ConcatSignalSourcesSignal<int>.ConcatCoordinator.HandleAlreadyDisposed(null);
+        ConcatSignalSourcesSignal<int>.ConcatCoordinator.HandleAlreadyDisposed(Result.Success);
 
         await Assert.That(unhandled).IsNull();
     }
@@ -808,7 +808,7 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>
-    /// Verifies that when <c>SubscribeNextAsync</c> throws and <c>CompleteAsync</c> also throws
+    /// Verifies that when <c>SubscribeNextSignalAsync</c> throws and <c>FinishAsync</c> also throws
     /// (because the enumerator's Dispose faults), the catch block in <c>SubscribeAsyncCore</c>
     /// disposes the subscription and rethrows the exception.
     /// </summary>

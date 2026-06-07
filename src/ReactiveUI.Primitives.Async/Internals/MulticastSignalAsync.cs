@@ -26,7 +26,7 @@ internal sealed class MulticastSignalAsync<T>(IObservableAsync<T> source, ISigna
     /// <summary>
     /// The asynchronous gate used to synchronize connection and disconnection operations.
     /// </summary>
-    private readonly AsyncGate _gate = new();
+    private readonly AsyncSerialGate _gate = new();
 
     /// <summary>
     /// The current connection subscription, or <see langword="null"/> if not connected.
@@ -71,7 +71,7 @@ internal sealed class MulticastSignalAsync<T>(IObservableAsync<T> source, ISigna
 
         try
         {
-            using (await _gate.LockAsync(token).ConfigureAwait(false))
+            using (await _gate.EnterAsync(token).ConfigureAwait(false))
             {
                 if (_connection != null)
                 {
@@ -85,7 +85,7 @@ internal sealed class MulticastSignalAsync<T>(IObservableAsync<T> source, ISigna
                     token).ConfigureAwait(false)).ConfigureAwait(false);
                 return DisposableAsync.Create(async () =>
                 {
-                    using (await _gate.LockAsync(DisposedCancellationToken).ConfigureAwait(false))
+                    using (await _gate.EnterAsync(DisposedCancellationToken).ConfigureAwait(false))
                     {
                         if (connection is null)
                         {
@@ -144,7 +144,7 @@ internal sealed class MulticastSignalAsync<T>(IObservableAsync<T> source, ISigna
         // linked-CTS allocation that the downstream's TryEnter would otherwise produce. The wrap
         // itself benefits from SignalAsyncObserver forwarding CancellationToken.None to the
         // signal (the wrap's TryEnter sees None and fast-paths), so no wrap-side link is needed.
-        var wrap = new WrappedObserverAsync<T>(observer);
+        var wrap = new RelayWitnessAsync<T>(observer);
         if (observer is ObserverAsync<T> downstream)
         {
             downstream.LinkUpstreamCancellation(wrap.InternalDisposedToken);

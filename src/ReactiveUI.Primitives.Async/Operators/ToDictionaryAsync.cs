@@ -40,9 +40,9 @@ public static partial class SignalAsync
         ArgumentExceptionHelper.ThrowIfNull(keySelector);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var observer = new ToDictionaryAsyncObserver<T, TKey, T>(keySelector, x => x, comparer, cancellationToken);
+        var observer = new ToDictionaryTaskWitness<T, TKey, T>(keySelector, x => x, comparer, cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -91,13 +91,13 @@ public static partial class SignalAsync
         cancellationToken.ThrowIfCancellationRequested();
 
         var observer =
-            new ToDictionaryAsyncObserver<T, TKey, TValue>(
+            new ToDictionaryTaskWitness<T, TKey, TValue>(
                 keySelector,
                 elementSelector,
                 comparer,
                 cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -121,7 +121,7 @@ public static partial class SignalAsync
         @this.ToDictionaryAsync(keySelector, elementSelector, null, CancellationToken.None);
 
     /// <summary>
-    /// Observer that builds a dictionary from the elements of a sequence using key and element selectors.
+    /// Witness that builds a dictionary from the elements of a sequence using key and element selectors.
     /// </summary>
     /// <typeparam name="TSource">The type of elements in the source sequence.</typeparam>
     /// <typeparam name="TKey">The type of the dictionary keys.</typeparam>
@@ -130,12 +130,12 @@ public static partial class SignalAsync
     /// <param name="elementSelector">A function to extract a value from each element.</param>
     /// <param name="comparer">An optional equality comparer for keys.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class ToDictionaryAsyncObserver<TSource, TKey, TValue>(
+    internal sealed class ToDictionaryTaskWitness<TSource, TKey, TValue>(
         Func<TSource, TKey> keySelector,
         Func<TSource, TValue> elementSelector,
         IEqualityComparer<TKey>? comparer,
         CancellationToken cancellationToken)
-        : TaskObserverAsyncBase<TSource, Dictionary<TKey, TValue>>(cancellationToken)
+        : TaskResultWitnessAsyncBase<TSource, Dictionary<TKey, TValue>>(cancellationToken)
         where TKey : notnull
     {
         /// <summary>
@@ -153,10 +153,10 @@ public static partial class SignalAsync
 
         /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
-            => TrySetException(error);
+            => SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result)
-            => !result.IsSuccess ? TrySetException(result.Exception) : TrySetCompleted(_map);
+            => !result.IsSuccess ? SetExceptionAndDisposeAsync(result.Exception) : SetResultAndDisposeAsync(_map);
     }
 }

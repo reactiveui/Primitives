@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async.Tests.Internals;
 
-/// <summary>Tests for <see cref="TakeUntilSourceObserver{T}"/>, the shared async observer that
+/// <summary>Tests for <see cref="TakeUntilSourceWitness{T}"/>, the shared async observer that
 /// forwards every source notification into a <see cref="TakeUntilLifecycle{T}"/>.</summary>
 public class TakeUntilSourceObserverTests
 {
@@ -20,7 +20,7 @@ public class TakeUntilSourceObserverTests
     {
         var captured = new CaptureObserverAsync<int>();
         var lifecycle = new TakeUntilLifecycle<int>(captured);
-        var observer = new TakeUntilSourceObserver<int>(lifecycle);
+        var observer = new TakeUntilSourceWitness<int>(lifecycle);
 
         await observer.OnNextAsync(SentinelValue, CancellationToken.None);
 
@@ -36,7 +36,7 @@ public class TakeUntilSourceObserverTests
     {
         var captured = new CaptureObserverAsync<int>();
         var lifecycle = new TakeUntilLifecycle<int>(captured);
-        var observer = new TakeUntilSourceObserver<int>(lifecycle);
+        var observer = new TakeUntilSourceWitness<int>(lifecycle);
         var expected = new InvalidOperationException("forward");
 
         await observer.OnErrorResumeAsync(expected, CancellationToken.None);
@@ -54,7 +54,7 @@ public class TakeUntilSourceObserverTests
     {
         var captured = new CaptureObserverAsync<int>();
         var lifecycle = new TakeUntilLifecycle<int>(captured);
-        var observer = new TakeUntilSourceObserver<int>(lifecycle);
+        var observer = new TakeUntilSourceWitness<int>(lifecycle);
 
         await observer.OnCompletedAsync(Result.Success);
 

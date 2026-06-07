@@ -247,6 +247,7 @@ namespace ReactiveUI.Primitives
         public static System.Threading.Tasks.Task<T> FirstOrDefaultAsync<T>(this System.IObservable<T> source, T defaultValue) { }
         public static System.IObservable<TResult> FlatMap<TSource, TResult>(this System.IObservable<TSource> source, System.Func<TSource, System.IObservable<TResult>> selector) { }
         public static System.IObservable<TResult> FlatMap<TSource, TCollection, TResult>(this System.IObservable<TSource> source, System.Func<TSource, System.IObservable<TCollection>> collectionSelector, System.Func<TSource, TCollection, TResult> resultSelector) { }
+        public static System.IObservable<TResult> FlatMapValues<TSource, TResult>(this System.IObservable<TSource> source, System.Func<TSource, System.Collections.Generic.IEnumerable<TResult>> selector) { }
         public static System.IObservable<TAccumulate> Fold<TSource, TAccumulate>(this System.IObservable<TSource> source, TAccumulate seed, System.Func<TAccumulate, TSource, TAccumulate> accumulator) { }
         public static System.IObservable<TResult> ForkJoin<TLeft, TRight, TResult>(this System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
         public static System.IObservable<TResult> FuseLatest<TLeft, TRight, TResult>(this System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
@@ -1087,17 +1088,22 @@ namespace ReactiveUI.Primitives.Signals
         public static System.IObservable<long> After(System.TimeSpan dueTime, System.TimeSpan period, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
         public static System.IObservable<T> Blend<T>(params System.IObservable<T>[] sources) { }
         public static System.IObservable<T> Chain<T>(params System.IObservable<T>[] sources) { }
+        public static System.IObservable<System.Collections.Generic.IList<TSource>> Collect<TSource>(this System.IObservable<TSource> source, System.TimeSpan timeSpan) { }
+        public static System.IObservable<System.Collections.Generic.IList<TSource>> Collect<TSource>(this System.IObservable<TSource> source, System.TimeSpan timeSpan, ReactiveUI.Primitives.Concurrency.ISequencer sequencer) { }
         public static System.IObservable<T> Create<T>(System.Func<System.IObserver<T>, System.IDisposable> subscribe) { }
         public static System.IObservable<T> Create<T>(System.Func<System.IObserver<T>, System.IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread) { }
         public static System.IObservable<T> CreateSafe<T>(System.Func<System.IObserver<T>, System.IDisposable> subscribe) { }
         public static System.IObservable<T> CreateSafe<T>(System.Func<System.IObserver<T>, System.IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread) { }
         public static System.IObservable<T> CreateWithState<T, TState>(TState state, System.Func<TState, System.IObserver<T>, System.IDisposable> subscribe) { }
         public static System.IObservable<T> CreateWithState<T, TState>(TState state, System.Func<TState, System.IObserver<T>, System.IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread) { }
+        public static System.IObservable<T> Defer<T>(System.Func<System.IObservable<T>> observableFactory) { }
         public static System.IObservable<ReactiveUI.Primitives.RxVoid> Emit(ReactiveUI.Primitives.RxVoid value) { }
         public static System.IObservable<bool> Emit(bool value) { }
         public static System.IObservable<int> Emit(int value) { }
         public static System.IObservable<T> Emit<T>(T value) { }
         public static System.IObservable<T> Emit<T>(T value, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<TSource> EmitIfQuiet<TSource>(this System.IObservable<TSource> source, System.TimeSpan dueTime) { }
+        public static System.IObservable<TSource> EmitIfQuiet<TSource>(this System.IObservable<TSource> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer sequencer) { }
         public static System.IObservable<ReactiveUI.Primitives.RxVoid> EmitRxVoid() { }
         public static System.IObservable<long> Every(System.TimeSpan period) { }
         public static System.IObservable<long> Every(System.TimeSpan period, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
@@ -1115,6 +1121,9 @@ namespace ReactiveUI.Primitives.Signals
         public static System.IObservable<T> FromEnumerable<T>(System.Collections.Generic.IEnumerable<T> values, System.Threading.CancellationToken cancellationToken) { }
         public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<System.EventArgs>> FromEventPattern(System.Action<System.EventHandler> addHandler, System.Action<System.EventHandler> removeHandler) { }
         public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> FromEventPattern<TEventArgs>(System.Action<System.EventHandler<TEventArgs>> addHandler, System.Action<System.EventHandler<TEventArgs>> removeHandler)
+            where TEventArgs : System.EventArgs { }
+        public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> FromEventPattern<TEventHandler, TEventArgs>(System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler)
+            where TEventHandler : System.Delegate
             where TEventArgs : System.EventArgs { }
         public static ReactiveUI.Primitives.Signals.ITaskSignal<ReactiveUI.Primitives.RxVoid> FromTask(System.Func<System.Threading.CancellationTokenSource, System.Threading.Tasks.Task<ReactiveUI.Primitives.RxVoid>> execution) { }
         public static ReactiveUI.Primitives.Signals.ITaskSignal<ReactiveUI.Primitives.RxVoid> FromTask(System.Func<System.Threading.CancellationTokenSource, System.Threading.Tasks.Task<ReactiveUI.Primitives.RxVoid>> execution, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
@@ -1158,6 +1167,7 @@ namespace ReactiveUI.Primitives.Signals
         public static System.IObservable<T> Start<T>(System.Func<T> function) { }
         public static System.IObservable<T> Start<T>(System.Func<T> function, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
         public static System.IObservable<TResult> SyncLatest<TLeft, TRight, TResult>(System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+        public static System.Collections.Generic.IEnumerable<TSource> ToEnumerable<TSource>(this System.IObservable<TSource> source) { }
         public static System.IObservable<TResult> Unfold<TState, TResult>(TState initialState, System.Func<TState, bool> condition, System.Func<TState, TState> iterate, System.Func<TState, TResult> resultSelector) { }
         public static System.IObservable<T> Use<TResource, T>(System.Func<TResource> resourceFactory, System.Func<TResource, System.IObservable<T>> signalFactory)
             where TResource : System.IDisposable { }

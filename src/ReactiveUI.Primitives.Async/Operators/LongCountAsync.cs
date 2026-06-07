@@ -40,9 +40,9 @@ public static partial class SignalAsync
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var observer = new LongCountAsyncObserver<T>(predicate, cancellationToken);
+        var observer = new LongCountTaskWitness<T>(predicate, cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -67,13 +67,13 @@ public static partial class SignalAsync
         => @this.LongCountAsync(null, cancellationToken);
 
     /// <summary>
-    /// Observer that counts elements in a sequence as a 64-bit integer, optionally filtered by a predicate.
+    /// Witness that counts elements in a sequence as a 64-bit integer, optionally filtered by a predicate.
     /// </summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="predicate">An optional predicate to filter elements. If null, all elements are counted.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class LongCountAsyncObserver<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
-        : TaskObserverAsyncBase<T, long>(cancellationToken)
+    internal sealed class LongCountTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
+        : TaskResultWitnessAsyncBase<T, long>(cancellationToken)
     {
         /// <summary>
         /// The running count of elements that satisfy the predicate.
@@ -95,10 +95,10 @@ public static partial class SignalAsync
 
         /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            TrySetException(error);
+            SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result) =>
-            !result.IsSuccess ? TrySetException(result.Exception) : TrySetCompleted(_count);
+            !result.IsSuccess ? SetExceptionAndDisposeAsync(result.Exception) : SetResultAndDisposeAsync(_count);
     }
 }

@@ -649,13 +649,13 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(values).IsCollectionEqualTo([Two]);
     }
 
-    /// <summary>Verifies that <see cref="SignalAsync.ThrottleDistinctSignal{T}.ThrottleDistinctObserver.TryClaimEmission"/>
+    /// <summary>Verifies that <see cref="SignalAsync.ThrottleDistinctSignal{T}.ThrottleDistinctWitness.TryClaimEmission"/>
     /// returns <see langword="false"/> when the id has been superseded by a newer upstream emission.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenThrottleDistinctTryClaimEmissionSuperseded_ThenReturnsFalse()
     {
-        var observer = new SignalAsync.ThrottleDistinctSignal<int>.ThrottleDistinctObserver(
+        var observer = new SignalAsync.ThrottleDistinctSignal<int>.ThrottleDistinctWitness(
             new NoOpAsyncObserver<int>(),
             TimeSpan.FromHours(1),
             TimeProvider.System,
@@ -670,13 +670,13 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(claimed).IsFalse();
     }
 
-    /// <summary>Verifies that <see cref="SignalAsync.ThrottleDistinctSignal{T}.ThrottleDistinctObserver.TryClaimEmission"/>
+    /// <summary>Verifies that <see cref="SignalAsync.ThrottleDistinctSignal{T}.ThrottleDistinctWitness.TryClaimEmission"/>
     /// returns <see langword="false"/> when the value is a duplicate of the most-recently-emitted one.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenThrottleDistinctTryClaimEmissionDuplicate_ThenReturnsFalse()
     {
-        var observer = new SignalAsync.ThrottleDistinctSignal<int>.ThrottleDistinctObserver(
+        var observer = new SignalAsync.ThrottleDistinctSignal<int>.ThrottleDistinctWitness(
             new NoOpAsyncObserver<int>(),
             TimeSpan.FromHours(1),
             TimeProvider.System,
@@ -698,14 +698,14 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(secondClaim).IsFalse();
     }
 
-    /// <summary>Verifies that <see cref="SignalAsync.DebounceUntilSignal{T}.DebounceUntilObserver.IsCurrentEmission"/>
+    /// <summary>Verifies that <see cref="SignalAsync.DebounceUntilSignal{T}.DebounceUntilWitness.IsCurrentEmission"/>
     /// returns <see langword="true"/> for the most-recent id and <see langword="false"/> for
     /// stale ids.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDebounceUntilIsCurrentEmission_ThenMatchesIdState()
     {
-        var observer = new SignalAsync.DebounceUntilSignal<int>.DebounceUntilObserver(
+        var observer = new SignalAsync.DebounceUntilSignal<int>.DebounceUntilWitness(
             new NoOpAsyncObserver<int>(),
             TimeSpan.FromHours(1),
             static _ => false,

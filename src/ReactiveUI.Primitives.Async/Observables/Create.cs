@@ -33,7 +33,7 @@ public static partial class SignalAsync
         Func<IObserverAsync<T>, CancellationToken, ValueTask<IAsyncDisposable>> subscribeAsync) =>
         subscribeAsync is null
             ? throw new ArgumentNullException(nameof(subscribeAsync))
-            : new AnonymousSignalAsync<T>(subscribeAsync);
+            : new CallbackSignalAsync<T>(subscribeAsync);
 
     /// <summary>
     /// Creates a new observable sequence that runs the specified asynchronous job as a background task.
@@ -44,7 +44,7 @@ public static partial class SignalAsync
     /// <returns>An SignalAsync{T} that represents the observable sequence produced by the background job.</returns>
     public static IObservableAsync<T> CreateAsBackgroundJob<T>(
         Func<IObserverAsync<T>, CancellationToken, ValueTask> job) =>
-        CreateAsBackgroundJob(job, false, null);
+        CreateBackgroundJobSignal(job, false, null);
 
     /// <summary>
     /// Creates a new observable sequence that runs the specified asynchronous job as a background task.
@@ -58,7 +58,7 @@ public static partial class SignalAsync
     public static IObservableAsync<T> CreateAsBackgroundJob<T>(
         Func<IObserverAsync<T>, CancellationToken, ValueTask> job,
         bool startSynchronously) =>
-        CreateAsBackgroundJob(job, startSynchronously, null);
+        CreateBackgroundJobSignal(job, startSynchronously, null);
 
     /// <summary>
     /// Creates a new observable sequence that runs the specified asynchronous job as a background task using the
@@ -72,7 +72,7 @@ public static partial class SignalAsync
     public static IObservableAsync<T> CreateAsBackgroundJob<T>(
         Func<IObserverAsync<T>, CancellationToken, ValueTask> job,
         TaskScheduler taskScheduler) =>
-        CreateAsBackgroundJob(job, false, taskScheduler);
+        CreateBackgroundJobSignal(job, false, taskScheduler);
 
     /// <summary>
     /// Creates a new observable sequence that runs the specified asynchronous job as a background task,
@@ -83,7 +83,7 @@ public static partial class SignalAsync
     /// <param name="startSynchronously">true to start the job synchronously; otherwise, false.</param>
     /// <param name="taskScheduler">An optional task scheduler for scheduling the job, or <see langword="null"/> to use the default.</param>
     /// <returns>An observable that emits values produced by the background job.</returns>
-    private static IObservableAsync<T> CreateAsBackgroundJob<T>(
+    private static IObservableAsync<T> CreateBackgroundJobSignal<T>(
         Func<IObserverAsync<T>, CancellationToken, ValueTask> job,
         bool startSynchronously,
         TaskScheduler? taskScheduler)
@@ -92,12 +92,12 @@ public static partial class SignalAsync
 
         if (startSynchronously)
         {
-            return Create<T>((observer, _) => new(CancelableTaskSubscription.CreateAndStart(job, observer)));
+            return Create<T>((observer, _) => new(TaskSignalSubscription.StartNew(job, observer)));
         }
 
         if (taskScheduler is null)
         {
-            return Create<T>((observer, _) => new(CancelableTaskSubscription.CreateAndStart(
+            return Create<T>((observer, _) => new(TaskSignalSubscription.StartNew(
                 async (obs, token) =>
                 {
                     await Task.Yield();
@@ -106,7 +106,7 @@ public static partial class SignalAsync
                 observer)));
         }
 
-        return Create<T>((observer, _) => new(CancelableTaskSubscription.CreateAndStart(
+        return Create<T>((observer, _) => new(TaskSignalSubscription.StartNew(
             async (obs, ct) => await Task.Factory.StartNew(
                     () => job(obs, ct).AsTask(),
                     ct,

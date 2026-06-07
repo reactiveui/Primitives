@@ -27,7 +27,7 @@ public static partial class SignalAsync
 
     /// <summary>
     /// Single-value observable that captures the emitted value as a field and routes through a typed
-    /// <see cref="CancelableTaskSubscription{T}"/>. Same deferred-emit semantic as the previous
+    /// <see cref="TaskSignalSubscription{T}"/>. Same deferred-emit semantic as the previous
     /// <c>CreateAsBackgroundJob</c> path, but without the per-call <c>Func</c> closure allocation.
     /// </summary>
     /// <typeparam name="T">The element type emitted.</typeparam>
@@ -40,17 +40,17 @@ public static partial class SignalAsync
             CancellationToken cancellationToken)
         {
             var subscription = new ReturnSubscription(observer, value);
-            subscription.Run();
+            subscription.Start();
             return new(subscription);
         }
 
         /// <summary>Per-subscription task body that emits the captured value and signals completion.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="value">The captured value.</param>
-        private sealed class ReturnSubscription(IObserverAsync<T> observer, T value) : CancelableTaskSubscription<T>(observer)
+        private sealed class ReturnSubscription(IObserverAsync<T> observer, T value) : TaskSignalSubscription<T>(observer)
         {
             /// <inheritdoc/>
-            protected override async ValueTask RunAsyncCore(IObserverAsync<T> downstream, CancellationToken cancellationToken)
+            protected override async ValueTask ExecuteAsyncCore(IObserverAsync<T> downstream, CancellationToken cancellationToken)
             {
                 await downstream.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
                 await downstream.OnCompletedAsync(Result.Success).ConfigureAwait(false);

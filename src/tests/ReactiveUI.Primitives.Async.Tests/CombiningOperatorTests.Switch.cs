@@ -102,7 +102,7 @@ public partial class CombiningOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenSwitchSubscriptionThrows_ThenDisposesAndRethrows()
+    public async Task WhenSwitchCoordinatorThrows_ThenDisposesAndRethrows()
     {
         var failing = SignalAsync.Create<IObservableAsync<int>>((_, _) =>
         {

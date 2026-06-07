@@ -51,9 +51,9 @@ public static partial class SignalAsync
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var observer = new FirstOrDefaultObserver<T>(predicate, defaultValue, cancellationToken);
+        var observer = new FirstOrDefaultTaskWitness<T>(predicate, defaultValue, cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -104,38 +104,38 @@ public static partial class SignalAsync
     public static async ValueTask<T?> FirstOrDefaultAsync<T>(this IObservableAsync<T> @this, T? defaultValue, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var observer = new FirstOrDefaultObserver<T>(null, defaultValue, cancellationToken);
+        var observer = new FirstOrDefaultTaskWitness<T>(null, defaultValue, cancellationToken);
         await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.WaitValueAsync().ConfigureAwait(false);
+        return await observer.AwaitResultAsync().ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Observer that captures the first element matching an optional predicate, or returns a default value.
+    /// A witness that captures the first element matching an optional predicate, or returns a default value.
     /// </summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="predicate">An optional predicate to filter elements.</param>
     /// <param name="defaultValue">The default value to return if no element matches.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class FirstOrDefaultObserver<T>(
+    internal sealed class FirstOrDefaultTaskWitness<T>(
         Func<T, bool>? predicate,
         T? defaultValue,
-        CancellationToken cancellationToken) : TaskObserverAsyncBase<T, T>(cancellationToken)
+        CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, T>(cancellationToken)
     {
         /// <inheritdoc/>
         protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
             if (predicate is null || predicate(value))
             {
-                await TrySetCompleted(value).ConfigureAwait(false);
+                await SetResultAndDisposeAsync(value).ConfigureAwait(false);
             }
         }
 
         /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            TrySetException(error);
+            SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result) =>
-            result.IsSuccess ? TrySetCompleted(defaultValue!) : TrySetException(result.Exception);
+            result.IsSuccess ? SetResultAndDisposeAsync(defaultValue!) : SetExceptionAndDisposeAsync(result.Exception);
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -79,7 +79,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
     /// <summary>
     /// Gets a value indicating whether this observer has been disposed.
     /// </summary>
-    internal bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+    internal bool HasDisposed => Volatile.Read(ref _disposed) != 0;
 
     /// <summary>
     /// Gets the cancellation token that fires when this observer disposes. Exposed for sibling operators
@@ -142,11 +142,11 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
             return default;
         }
 
-        // OnErrorResumeAsync_Private is an async ValueTask method — any sync or async exception
+        // RouteObserverErrorAsync is an async ValueTask method — any sync or async exception
         // it raises is captured into the returned ValueTask and surfaces through the await in
         // OnErrorResumeAsyncSlow. A try/catch around the invocation expression itself would be
         // dead code in modern C# async semantics.
-        var core = OnErrorResumeAsync_Private(error, scope.Token);
+        var core = RouteObserverErrorAsync(error, scope.Token);
 
         if (core.IsCompletedSuccessfully)
         {
@@ -181,7 +181,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         }
         catch (Exception e)
         {
-            UnhandledExceptionHandler.OnUnhandledException(e);
+            UnhandledExceptionHandler.ReportUnhandledException(e);
             scope.Dispose();
             return CompleteOrChainDispose();
         }
@@ -216,8 +216,8 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
     /// </summary>
     /// <param name="value">The source subscription to track, or <see langword="null"/> to clear it.</param>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
-    internal ValueTask SetSourceSubscriptionAsync(IAsyncDisposable? value) =>
-        SingleAssignmentDisposableAsync.SetDisposableAsync(ref _sourceSubscription, value);
+    internal ValueTask AssignSourceSubscriptionAsync(IAsyncDisposable? value) =>
+        SingleAssignmentDisposableAsync.AssignDisposableAsync(ref _sourceSubscription, value);
 
     /// <summary>
     /// Internal wrapper around <see cref="LinkExternalCancellation(CancellationToken)"/> so sibling operators
@@ -257,7 +257,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
             // are legal — only cross-thread overlap fires the exception.
             if (oldCount > 0 && oldThreadId != currentThreadId)
             {
-                UnhandledExceptionHandler.OnUnhandledException(new ConcurrentObserverCallsException());
+                UnhandledExceptionHandler.ReportUnhandledException(new ConcurrentObserverCallsException());
                 scope = default;
                 return false;
             }
@@ -321,13 +321,13 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
     /// <param name="error">The exception that triggered error handling.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    internal async ValueTask OnErrorResumeAsync_Private(Exception error, CancellationToken cancellationToken)
+    internal async ValueTask RouteObserverErrorAsync(Exception error, CancellationToken cancellationToken)
     {
         try
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                UnhandledExceptionHandler.OnUnhandledException(error);
+                UnhandledExceptionHandler.ReportUnhandledException(error);
                 return;
             }
 
@@ -335,11 +335,11 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         }
         catch (OperationCanceledException)
         {
-            UnhandledExceptionHandler.OnUnhandledException(error);
+            UnhandledExceptionHandler.ReportUnhandledException(error);
         }
         catch (Exception e)
         {
-            UnhandledExceptionHandler.OnUnhandledException(e);
+            UnhandledExceptionHandler.ReportUnhandledException(e);
         }
     }
 
@@ -493,7 +493,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         }
         catch (Exception e)
         {
-            UnhandledExceptionHandler.OnUnhandledException(e);
+            UnhandledExceptionHandler.ReportUnhandledException(e);
         }
     }
 
@@ -525,7 +525,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         }
         catch (Exception e)
         {
-            await OnErrorResumeAsync_Private(e, scope.Token).ConfigureAwait(false);
+            await RouteObserverErrorAsync(e, scope.Token).ConfigureAwait(false);
         }
         finally
         {
@@ -536,7 +536,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
 
     /// <summary>
     /// Async continuation for <see cref="OnNextAsync"/> when <see cref="OnNextAsyncCore"/> threw synchronously.
-    /// Routes the error through <see cref="OnErrorResumeAsync_Private"/> off the fast path so the
+    /// Routes the error through <see cref="RouteObserverErrorAsync"/> off the fast path so the
     /// caller-visible <see cref="OnNextAsync"/> stays state-machine free in the common case.
     /// </summary>
     /// <param name="error">The exception thrown by the core.</param>
@@ -546,7 +546,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
     {
         try
         {
-            await OnErrorResumeAsync_Private(error, scope.Token).ConfigureAwait(false);
+            await RouteObserverErrorAsync(error, scope.Token).ConfigureAwait(false);
         }
         finally
         {
@@ -590,7 +590,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         }
         catch (Exception e)
         {
-            UnhandledExceptionHandler.OnUnhandledException(e);
+            UnhandledExceptionHandler.ReportUnhandledException(e);
         }
         finally
         {

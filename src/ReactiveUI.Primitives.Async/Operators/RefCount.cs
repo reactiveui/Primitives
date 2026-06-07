@@ -42,7 +42,7 @@ public static partial class SignalAsync
         /// <summary>
         /// The asynchronous gate used to serialize subscribe and dispose operations.
         /// </summary>
-        private readonly AsyncGate _gate = new();
+        private readonly AsyncSerialGate _gate = new();
 
         /// <summary>
         /// The current number of active subscribers.
@@ -100,14 +100,14 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            using (await _gate.LockAsync(cancellationToken).ConfigureAwait(false))
+            using (await _gate.EnterAsync(cancellationToken).ConfigureAwait(false))
             {
                 // incr refCount before Subscribe(completed source decrement refCxount in Subscribe)
                 ++_refCount;
                 var needConnect = _refCount == 1;
-                var coObserver = new RefCountObsever(this, observer);
+                var coObserver = new RefCountWitness(this, observer);
                 var subcription = await source.SubscribeAsync(coObserver, cancellationToken).ConfigureAwait(false);
-                if (needConnect && !coObserver.IsDisposed)
+                if (needConnect && !coObserver.HasDisposed)
                 {
                     SingleAssignmentDisposableAsync connection = new();
                     _connection = connection;
@@ -119,16 +119,16 @@ public static partial class SignalAsync
         }
 
         /// <summary>
-        /// Observer wrapper that forwards all notifications and decrements the parent's reference count on disposal,
+        /// Witness wrapper that forwards all notifications and decrements the parent's reference count on disposal,
         /// disconnecting from the source when the count reaches zero.
         /// </summary>
         /// <param name="parent">The parent ref-count observable.</param>
-        /// <param name="observer">The downstream observer to forward notifications to.</param>
-        internal sealed class RefCountObsever(RefCountSignal<T> parent, IObserverAsync<T> observer)
+        /// <param name="observer">The downstream witness to forward notifications to.</param>
+        internal sealed class RefCountWitness(RefCountSignal<T> parent, IObserverAsync<T> observer)
             : ObserverAsync<T>
         {
             /// <summary>
-            /// Forwards an element to the downstream observer.
+            /// Forwards an element to the downstream witness.
             /// </summary>
             /// <param name="value">The element to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
@@ -137,7 +137,7 @@ public static partial class SignalAsync
                 observer.OnNextAsync(value, cancellationToken);
 
             /// <summary>
-            /// Forwards a non-fatal error to the downstream observer.
+            /// Forwards a non-fatal error to the downstream witness.
             /// </summary>
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
@@ -159,7 +159,7 @@ public static partial class SignalAsync
             [DebuggerStepThrough]
             protected override async ValueTask DisposeAsyncCore()
             {
-                using (await parent._gate.LockAsync().ConfigureAwait(false))
+                using (await parent._gate.EnterAsync().ConfigureAwait(false))
                 {
                     if (--parent._refCount == 0)
                     {
