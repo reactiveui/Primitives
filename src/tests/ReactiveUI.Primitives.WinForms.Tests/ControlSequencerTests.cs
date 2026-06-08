@@ -51,19 +51,13 @@ public sealed class ControlSequencerTests
         public void Execute() => _action();
     }
 
-    /// <summary>
-    /// Hosts a Windows Forms <see cref="Control"/> with a created handle on a dedicated STA thread running a
-    /// message loop, exiting the loop and joining the thread on disposal.
-    /// </summary>
+    /// <summary>Hosts a Windows Forms <see cref="Control"/> on a dedicated STA thread running a message loop, exiting it and joining the thread on disposal.</summary>
     private sealed class ControlHarness : IDisposable
     {
         /// <summary>The thread running the Windows Forms message loop.</summary>
         private readonly Thread _thread;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ControlHarness"/> class and waits until the
-        /// control handle is created and the message loop is running.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ControlHarness"/> class and waits until the control handle and message loop are running.</summary>
         public ControlHarness()
         {
             using var ready = new ManualResetEventSlim(false);
