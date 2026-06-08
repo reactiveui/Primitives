@@ -1,0 +1,722 @@
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Async.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Tests")]
+namespace ReactiveUI.Primitives.Async
+{
+    [System.Diagnostics.DebuggerDisplay("SynchronizationContext = {SynchronizationContext}, TaskScheduler = {TaskScheduler" +
+        "}, Sequencer = {Sequencer}")]
+    public class AsyncContext : System.IEquatable<ReactiveUI.Primitives.Async.AsyncContext>
+    {
+        public ReactiveUI.Primitives.Concurrency.ISequencer? Sequencer { get; init; }
+        public System.Threading.SynchronizationContext? SynchronizationContext { get; init; }
+        public System.Threading.Tasks.TaskScheduler? TaskScheduler { get; init; }
+        public static ReactiveUI.Primitives.Async.AsyncContext Default { get; }
+        public ReactiveUI.Primitives.Async.AsyncContext.AsyncContextSwitcherAwaitable SwitchContextAsync(bool forceYielding, System.Threading.CancellationToken cancellationToken) { }
+        public static ReactiveUI.Primitives.Async.AsyncContext From(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static ReactiveUI.Primitives.Async.AsyncContext From(System.Threading.SynchronizationContext synchronizationContext) { }
+        public static ReactiveUI.Primitives.Async.AsyncContext From(System.Threading.Tasks.TaskScheduler taskScheduler) { }
+        public static ReactiveUI.Primitives.Async.AsyncContext GetCurrent() { }
+        [System.Diagnostics.DebuggerDisplay("IsCompleted = {IsCompleted}, ForceYielding = {ForceYielding}")]
+        public readonly struct AsyncContextSwitcherAwaitable : System.IEquatable<ReactiveUI.Primitives.Async.AsyncContext.AsyncContextSwitcherAwaitable>, System.Runtime.CompilerServices.INotifyCompletion
+        {
+            public AsyncContextSwitcherAwaitable(ReactiveUI.Primitives.Async.AsyncContext AsyncContext, bool ForceYielding, System.Threading.CancellationToken CancellationToken) { }
+            public ReactiveUI.Primitives.Async.AsyncContext AsyncContext { get; init; }
+            public System.Threading.CancellationToken CancellationToken { get; init; }
+            public bool ForceYielding { get; init; }
+            public bool IsCompleted { get; }
+            public ReactiveUI.Primitives.Async.AsyncContext.AsyncContextSwitcherAwaitable GetAwaiter() { }
+            public void GetResult() { }
+            public void OnCompleted(System.Action continuation) { }
+        }
+    }
+    public static class AsyncContextMixins
+    {
+        public static bool IsSameAsCurrentAsyncContext(this ReactiveUI.Primitives.Async.AsyncContext @this) { }
+    }
+    public delegate System.IAsyncDisposable CompletionSignalDelegate(System.Action<ReactiveUI.Primitives.Async.Result> notifyStop);
+    [System.Serializable]
+    public class ConcurrentObserverCallsException : System.Exception
+    {
+        public ConcurrentObserverCallsException() { }
+        public ConcurrentObserverCallsException(string message) { }
+        public ConcurrentObserverCallsException(string message, System.Exception innerException) { }
+    }
+    public abstract class ConnectableSignalAsync<T> : ReactiveUI.Primitives.Async.SignalAsync<T>
+    {
+        protected ConnectableSignalAsync() { }
+        public abstract System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ConnectAsync(System.Threading.CancellationToken cancellationToken);
+    }
+    public static class DisposableAsyncMixins
+    {
+        public static System.IAsyncDisposable ToDisposableAsync(this System.IDisposable @this) { }
+    }
+    public abstract class GroupedAsyncSignal<TKey, TValue> : ReactiveUI.Primitives.Async.SignalAsync<TValue>
+    {
+        protected GroupedAsyncSignal() { }
+        public abstract TKey Key { get; }
+    }
+    public interface IObservableAsync<T>
+    {
+        System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken);
+    }
+    public interface IObserverAsync<in T> : System.IAsyncDisposable
+    {
+        System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Async.Result result);
+        System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken);
+    }
+    public abstract class ObserverAsync<T> : ReactiveUI.Primitives.Async.IObserverAsync<T>, System.IAsyncDisposable
+    {
+        protected ObserverAsync() { }
+        protected ObserverAsync(System.Threading.CancellationToken externalLink) { }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        protected virtual System.Threading.Tasks.ValueTask DisposeAsyncCore() { }
+        protected void LinkExternalCancellation(System.Threading.CancellationToken external) { }
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Async.Result result) { }
+        protected abstract System.Threading.Tasks.ValueTask OnCompletedAsyncCore(ReactiveUI.Primitives.Async.Result result);
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        protected abstract System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken);
+        public System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
+        protected abstract System.Threading.Tasks.ValueTask OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken);
+    }
+    public static class OptionalMixins
+    {
+        public static bool TryGetValue<T>(this ReactiveUI.Primitives.Async.Optional<T> @this, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out T? value) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("HasValue = {HasValue}, Value = {_value}")]
+    public readonly struct Optional<T> : System.IEquatable<ReactiveUI.Primitives.Async.Optional<T>>
+    {
+        public Optional() { }
+        public Optional(T value) { }
+        public bool HasValue { get; }
+        public T Value { get; }
+        public static ReactiveUI.Primitives.Async.Optional<T> Empty { get; }
+    }
+    [System.Diagnostics.DebuggerDisplay("IsSuccess = {IsSuccess}, Exception = {Exception}")]
+    public readonly struct Result : System.IEquatable<ReactiveUI.Primitives.Async.Result>
+    {
+        public Result(System.Exception exception) { }
+        public System.Exception? Exception { get; }
+        [System.Diagnostics.CodeAnalysis.MemberNotNullWhen(true, "Exception")]
+        [get: System.Diagnostics.CodeAnalysis.MemberNotNullWhen(true, "Exception")]
+        public bool IsFailure { get; }
+        [System.Diagnostics.CodeAnalysis.MemberNotNullWhen(false, "Exception")]
+        [get: System.Diagnostics.CodeAnalysis.MemberNotNullWhen(false, "Exception")]
+        public bool IsSuccess { get; }
+        public static ReactiveUI.Primitives.Async.Result Success { get; }
+        public override string ToString() { }
+        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+        public void TryThrow() { }
+        public static ReactiveUI.Primitives.Async.Result Failure(System.Exception exception) { }
+    }
+    public static class SignalAsync
+    {
+        public static ReactiveUI.Primitives.Async.IObservableAsync<long> After(System.TimeSpan dueTime) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<long> After(System.TimeSpan dueTime, System.TimeSpan period) { }
+        public static System.Threading.Tasks.ValueTask<TAcc> AggregateAsync<T, TAcc>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, TAcc seed, System.Func<TAcc, T, TAcc> accumulator) { }
+        public static System.Threading.Tasks.ValueTask<TAcc> AggregateAsync<T, TAcc>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, TAcc seed, System.Func<TAcc, T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TAcc>> accumulator) { }
+        public static System.Threading.Tasks.ValueTask<TAcc> AggregateAsync<T, TAcc>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, TAcc seed, System.Func<TAcc, T, TAcc> accumulator, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<TAcc> AggregateAsync<T, TAcc>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, TAcc seed, System.Func<TAcc, T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TAcc>> accumulator, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<TResult> AggregateAsync<T, TAcc, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, TAcc seed, System.Func<TAcc, T, TAcc> accumulator, System.Func<TAcc, TResult> resultSelector) { }
+        public static System.Threading.Tasks.ValueTask<TResult> AggregateAsync<T, TAcc, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, TAcc seed, System.Func<TAcc, T, TAcc> accumulator, System.Func<TAcc, TResult> resultSelector, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<bool> AllAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate) { }
+        public static System.Threading.Tasks.ValueTask<bool> AllAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<bool> AnyAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static System.Threading.Tasks.ValueTask<bool> AnyAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<bool> AnyAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool>? predicate, System.Threading.CancellationToken cancellationToken) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> Bind<TSource, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<TSource> source, System.Func<TSource, ReactiveUI.Primitives.Async.IObservableAsync<TResult>> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Blend<T>(this ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.Async.IObservableAsync<T>> sources) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Blend<T>(params ReactiveUI.Primitives.Async.IObservableAsync<T>[] sources) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Blend<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> first, ReactiveUI.Primitives.Async.IObservableAsync<T> second) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> Cast<T, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CastTo<TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<object?> source) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Catch<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Func<System.Exception, ReactiveUI.Primitives.Async.IObservableAsync<T>> handler) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Catch<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Func<System.Exception, ReactiveUI.Primitives.Async.IObservableAsync<T>> handler, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResume) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> CatchAndIgnoreErrorResume<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Func<System.Exception, ReactiveUI.Primitives.Async.IObservableAsync<T>> handler) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Chain<T>(this ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.Async.IObservableAsync<T>> sources) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Chain<T>(params ReactiveUI.Primitives.Async.IObservableAsync<T>[] sources) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Chain<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> first, ReactiveUI.Primitives.Async.IObservableAsync<T> second) { }
+        public static System.Threading.Tasks.ValueTask<T[]> CollectArrayAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source) { }
+        public static System.Threading.Tasks.ValueTask<System.Collections.Generic.List<T>> CollectListAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<System.Collections.Generic.IReadOnlyList<T>> CombineLatest<T>(this System.Collections.Generic.IEnumerable<ReactiveUI.Primitives.Async.IObservableAsync<T>> sources) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<TSource, TResult>(this System.Collections.Generic.IEnumerable<ReactiveUI.Primitives.Async.IObservableAsync<TSource>> sources, System.Func<System.Collections.Generic.IReadOnlyList<TSource>, TResult> resultSelector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T1, T2, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T1> src1, ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, System.Func<T1, T2, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T1, T2, T3, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T1> src1, ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, System.Func<T1, T2, T3, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T1, T2, T3, T4, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T1> src1, ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, System.Func<T1, T2, T3, T4, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T1, T2, T3, T4, T5, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T1> src1, ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, System.Func<T1, T2, T3, T4, T5, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T1, T2, T3, T4, T5, T6, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T1> src1, ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, System.Func<T1, T2, T3, T4, T5, T6, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T1, T2, T3, T4, T5, T6, T7, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T1> src1, ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, System.Func<T1, T2, T3, T4, T5, T6, T7, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T1> src1, ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T1> src1, ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T1> src1, ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T1> src1, ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, ReactiveUI.Primitives.Async.IObservableAsync<T11> src11, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T1> src1, ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, ReactiveUI.Primitives.Async.IObservableAsync<T11> src11, ReactiveUI.Primitives.Async.IObservableAsync<T12> src12, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T1> src1, ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, ReactiveUI.Primitives.Async.IObservableAsync<T11> src11, ReactiveUI.Primitives.Async.IObservableAsync<T12> src12, ReactiveUI.Primitives.Async.IObservableAsync<T13> src13, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T1> src1, ReactiveUI.Primitives.Async.IObservableAsync<T2> src2, ReactiveUI.Primitives.Async.IObservableAsync<T3> src3, ReactiveUI.Primitives.Async.IObservableAsync<T4> src4, ReactiveUI.Primitives.Async.IObservableAsync<T5> src5, ReactiveUI.Primitives.Async.IObservableAsync<T6> src6, ReactiveUI.Primitives.Async.IObservableAsync<T7> src7, ReactiveUI.Primitives.Async.IObservableAsync<T8> src8, ReactiveUI.Primitives.Async.IObservableAsync<T9> src9, ReactiveUI.Primitives.Async.IObservableAsync<T10> src10, ReactiveUI.Primitives.Async.IObservableAsync<T11> src11, ReactiveUI.Primitives.Async.IObservableAsync<T12> src12, ReactiveUI.Primitives.Async.IObservableAsync<T13> src13, ReactiveUI.Primitives.Async.IObservableAsync<T14> src14, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>(
+                    this ReactiveUI.Primitives.Async.IObservableAsync<T1> src1,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T2> src2,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T3> src3,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T4> src4,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T5> src5,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T6> src6,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T7> src7,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T8> src8,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T9> src9,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T10> src10,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T11> src11,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T12> src12,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T13> src13,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T14> src14,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T15> src15,
+                    System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> CombineLatest<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>(
+                    this ReactiveUI.Primitives.Async.IObservableAsync<T1> src1,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T2> src2,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T3> src3,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T4> src4,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T5> src5,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T6> src6,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T7> src7,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T8> src8,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T9> src9,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T10> src10,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T11> src11,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T12> src12,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T13> src13,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T14> src14,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T15> src15,
+                    ReactiveUI.Primitives.Async.IObservableAsync<T16> src16,
+                    System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<bool> CombineLatestValuesAreAllFalse(this System.Collections.Generic.IEnumerable<ReactiveUI.Primitives.Async.IObservableAsync<bool>> sources) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<bool> CombineLatestValuesAreAllTrue(this System.Collections.Generic.IEnumerable<ReactiveUI.Primitives.Async.IObservableAsync<bool>> sources) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Concat<T>(this ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.Async.IObservableAsync<T>> @this) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Concat<T>(this System.Collections.Generic.IEnumerable<ReactiveUI.Primitives.Async.IObservableAsync<T>> @this) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Concat<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, ReactiveUI.Primitives.Async.IObservableAsync<T> second) { }
+        public static System.Threading.Tasks.ValueTask<bool> ContainsAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, T value) { }
+        public static System.Threading.Tasks.ValueTask<bool> ContainsAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, T value, System.Collections.Generic.IEqualityComparer<T>? comparer) { }
+        public static System.Threading.Tasks.ValueTask<bool> ContainsAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, T value, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<bool> ContainsAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, T value, System.Collections.Generic.IEqualityComparer<T>? comparer, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<int> CountAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static System.Threading.Tasks.ValueTask<int> CountAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool>? predicate) { }
+        public static System.Threading.Tasks.ValueTask<int> CountAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<int> CountAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool>? predicate, System.Threading.CancellationToken cancellationToken) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Create<T>(System.Func<ReactiveUI.Primitives.Async.IObserverAsync<T>, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<System.IAsyncDisposable>> subscribeAsync) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> CreateAsBackgroundJob<T>(System.Func<ReactiveUI.Primitives.Async.IObserverAsync<T>, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> job) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> CreateAsBackgroundJob<T>(System.Func<ReactiveUI.Primitives.Async.IObserverAsync<T>, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> job, System.Threading.Tasks.TaskScheduler taskScheduler) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> CreateAsBackgroundJob<T>(System.Func<ReactiveUI.Primitives.Async.IObserverAsync<T>, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> job, bool startSynchronously) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Defer<T>(System.Func<ReactiveUI.Primitives.Async.IObservableAsync<T>> factory) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Defer<T>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.Async.IObservableAsync<T>>> factory) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Delay<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.TimeSpan delayInterval) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Delay<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.TimeSpan delayInterval, System.TimeProvider? timeProvider) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Distinct<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Distinct<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Collections.Generic.IEqualityComparer<T> equalityComparer) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> DistinctBy<T, TKey>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, TKey> keySelector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> DistinctBy<T, TKey>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey> equalityComparer) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> DistinctUntilChanged<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> DistinctUntilChanged<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Collections.Generic.IEqualityComparer<T> equalityComparer) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> DistinctUntilChangedBy<T, TKey>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, TKey> keySelector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> DistinctUntilChangedBy<T, TKey>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey> equalityComparer) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Do<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Do<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onNext) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Do<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Action<T>? onNext, System.Action<System.Exception>? onErrorResume, System.Action<ReactiveUI.Primitives.Async.Result>? onCompleted) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Do<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onNext, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResume, System.Func<ReactiveUI.Primitives.Async.Result, System.Threading.Tasks.ValueTask>? onCompleted) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Emit<T>(T value) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid> EmitRxVoid() { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Empty<T>() { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<long> Every(System.TimeSpan period) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Expire<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.TimeSpan dueTime) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Fail<T>(System.Exception error) { }
+        public static System.Threading.Tasks.ValueTask<T> FirstAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static System.Threading.Tasks.ValueTask<T> FirstAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate) { }
+        public static System.Threading.Tasks.ValueTask<T> FirstAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<T> FirstAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<T?> FirstOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static System.Threading.Tasks.ValueTask<T?> FirstOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<T?> FirstOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, T? defaultValue) { }
+        public static System.Threading.Tasks.ValueTask<T?> FirstOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate, T? defaultValue) { }
+        public static System.Threading.Tasks.ValueTask<T?> FirstOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, T? defaultValue, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<T?> FirstOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate, T? defaultValue, System.Threading.CancellationToken cancellationToken) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> FlatMap<TSource, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<TSource> source, System.Func<TSource, ReactiveUI.Primitives.Async.IObservableAsync<TResult>> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> FlatMap<TSource, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<TSource> source, System.Func<TSource, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.Async.IObservableAsync<TResult>>> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TAccumulate> Fold<TSource, TAccumulate>(this ReactiveUI.Primitives.Async.IObservableAsync<TSource> source, TAccumulate seed, System.Func<TAccumulate, TSource, TAccumulate> accumulator) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TAccumulate> Fold<TSource, TAccumulate>(this ReactiveUI.Primitives.Async.IObservableAsync<TSource> source, TAccumulate seed, System.Func<TAccumulate, TSource, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TAccumulate>> accumulator) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> ForEach<T>(this ReactiveUI.Primitives.Async.IObservableAsync<System.Collections.Generic.IEnumerable<T>> source) { }
+        public static System.Threading.Tasks.ValueTask ForEachAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Action<T> onNext) { }
+        public static System.Threading.Tasks.ValueTask ForEachAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync) { }
+        public static System.Threading.Tasks.ValueTask ForEachAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Action<T> onNext, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask ForEachAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Threading.CancellationToken cancellationToken) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid> FromAsync(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> factory) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> FromAsync<T>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<T>> factory) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> FromAsyncEnumerable<T>(System.Collections.Generic.IAsyncEnumerable<T> values) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> FromEnumerable<T>(System.Collections.Generic.IEnumerable<T> values) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> GetMax<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, params ReactiveUI.Primitives.Async.IObservableAsync<T>[] sources)
+            where T :  struct { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> GetMin<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, params ReactiveUI.Primitives.Async.IObservableAsync<T>[] sources)
+            where T :  struct { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.Async.GroupedAsyncSignal<TKey, TValue>> GroupBy<TValue, TKey>(this ReactiveUI.Primitives.Async.IObservableAsync<TValue> source, System.Func<TValue, TKey> keySelector)
+            where TKey :  notnull { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.Async.GroupedAsyncSignal<TKey, TValue>> GroupBy<TValue, TKey>(this ReactiveUI.Primitives.Async.IObservableAsync<TValue> source, System.Func<TValue, TKey> keySelector, System.Func<TKey, ReactiveUI.Primitives.Async.Signals.ISignalAsync<TValue>> groupSignalSelector)
+            where TKey :  notnull { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<long> Interval(System.TimeSpan period) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<long> Interval(System.TimeSpan period, System.TimeProvider? timeProvider) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Keep<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Func<T, bool> predicate) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Keep<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<bool>> predicate) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> KeepNotNull<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T?> source)
+            where T :  class { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> KeepType<TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<object?> source)
+            where TResult :  class { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> KeepWith<T, TState>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, TState state, System.Func<TState, T, bool> predicate) { }
+        public static System.Threading.Tasks.ValueTask<T> LastAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static System.Threading.Tasks.ValueTask<T> LastAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate) { }
+        public static System.Threading.Tasks.ValueTask<T> LastAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<T> LastAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<T?> LastOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static System.Threading.Tasks.ValueTask<T?> LastOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<T?> LastOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, T? defaultValue) { }
+        public static System.Threading.Tasks.ValueTask<T?> LastOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate, T? defaultValue) { }
+        public static System.Threading.Tasks.ValueTask<T?> LastOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, T? defaultValue, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<T?> LastOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate, T? defaultValue, System.Threading.CancellationToken cancellationToken) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Lead<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, T value) { }
+        public static System.Threading.Tasks.ValueTask<long> LongCountAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static System.Threading.Tasks.ValueTask<long> LongCountAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool>? predicate) { }
+        public static System.Threading.Tasks.ValueTask<long> LongCountAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<long> LongCountAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool>? predicate, System.Threading.CancellationToken cancellationToken) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> Map<TSource, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<TSource> source, System.Func<TSource, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> Map<TSource, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<TSource> source, System.Func<TSource, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TResult>> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> MapWith<TSource, TState, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<TSource> source, TState state, System.Func<TState, TSource, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Merge<T>(this ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.Async.IObservableAsync<T>> @this) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Merge<T>(this System.Collections.Generic.IEnumerable<ReactiveUI.Primitives.Async.IObservableAsync<T>> @this) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Merge<T>(this ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.Async.IObservableAsync<T>> @this, int maxConcurrent) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Merge<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, ReactiveUI.Primitives.Async.IObservableAsync<T> other) { }
+        public static ReactiveUI.Primitives.Async.ConnectableSignalAsync<T> Multicast<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, ReactiveUI.Primitives.Async.Signals.ISignalAsync<T> signal) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Never<T>() { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> None<T>() { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<bool> Not(this ReactiveUI.Primitives.Async.IObservableAsync<bool> source) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> OfType<T, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this)
+            where TResult :  class { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> OnDispose<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Action disposeAction) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> OnDispose<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<System.Threading.Tasks.ValueTask> disposeAction) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> OnErrorResumeAsFailure<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> Pair<TLeft, TRight, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<TLeft> left, ReactiveUI.Primitives.Async.IObservableAsync<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> PairLatest<TLeft, TRight, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<TLeft> left, ReactiveUI.Primitives.Async.IObservableAsync<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Prepend<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Collections.Generic.IEnumerable<T> values) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Prepend<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, T value) { }
+        public static ReactiveUI.Primitives.Async.ConnectableSignalAsync<T> Publish<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source) { }
+        public static ReactiveUI.Primitives.Async.ConnectableSignalAsync<T> Publish<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, ReactiveUI.Primitives.Async.Signals.SignalCreationOptions options) { }
+        public static ReactiveUI.Primitives.Async.ConnectableSignalAsync<T> Publish<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, T initialValue) { }
+        public static ReactiveUI.Primitives.Async.ConnectableSignalAsync<T> Publish<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, T initialValue, ReactiveUI.Primitives.Async.Signals.BehaviorSignalCreationOptions options) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<long> Pulse(System.TimeSpan period) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<int> Range(int start, int count) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Reattempt<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, int retryCount) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Recover<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Func<System.Exception, ReactiveUI.Primitives.Async.IObservableAsync<T>> handler) { }
+        public static System.Threading.Tasks.ValueTask<TAccumulate> ReduceAsync<TSource, TAccumulate>(this ReactiveUI.Primitives.Async.IObservableAsync<TSource> source, TAccumulate seed, System.Func<TAccumulate, TSource, TAccumulate> accumulator) { }
+        public static ReactiveUI.Primitives.Async.SignalAsync<T> RefCount<T>(this ReactiveUI.Primitives.Async.ConnectableSignalAsync<T> source) { }
+        public static ReactiveUI.Primitives.Async.ConnectableSignalAsync<T> ReplayLatestPublish<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source) { }
+        public static ReactiveUI.Primitives.Async.ConnectableSignalAsync<T> ReplayLatestPublish<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, ReactiveUI.Primitives.Async.Signals.ReplayLatestSignalCreationOptions options) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Rescue<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Func<System.Exception, ReactiveUI.Primitives.Async.IObservableAsync<T>> handler) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Resume<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, ReactiveUI.Primitives.Async.IObservableAsync<T> fallback) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Retry<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Retry<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, int retryCount) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Return<T>(T value) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TAcc> Scan<T, TAcc>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, TAcc seed, System.Func<TAcc, T, TAcc> accumulator) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TAcc> Scan<T, TAcc>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, TAcc seed, System.Func<TAcc, T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TAcc>> accumulator) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TDest> Select<T, TDest>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, TDest> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TDest> Select<T, TDest>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TDest>> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> SelectMany<T, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, ReactiveUI.Primitives.Async.IObservableAsync<TResult>> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> SelectMany<T, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.Async.IObservableAsync<TResult>>> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> SelectMany<T, TCollection, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, ReactiveUI.Primitives.Async.IObservableAsync<TCollection>> collectionSelector, System.Func<T, TCollection, TResult> resultSelector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<int> Sequence(int start, int count) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Shift<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.TimeSpan dueTime) { }
+        public static System.Threading.Tasks.ValueTask<T> SingleAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static System.Threading.Tasks.ValueTask<T> SingleAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate) { }
+        public static System.Threading.Tasks.ValueTask<T> SingleAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<T> SingleAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<T?> SingleOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static System.Threading.Tasks.ValueTask<T?> SingleOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<T?> SingleOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, T? defaultValue) { }
+        public static System.Threading.Tasks.ValueTask<T?> SingleOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate, T? defaultValue) { }
+        public static System.Threading.Tasks.ValueTask<T?> SingleOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, T? defaultValue, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<T?> SingleOrDefaultAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate, T? defaultValue, System.Threading.CancellationToken cancellationToken) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Skip<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, int count) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> SkipWhile<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> SkipWhile<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<bool>> predicate) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> SkipWhileNull<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T?> source)
+            where T :  class { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid> Start(System.Action action) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid> Start(System.Action action, System.Threading.Tasks.TaskScheduler? taskScheduler) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> Start<TResult>(System.Func<TResult> function) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> Start<TResult>(System.Func<TResult> function, System.Threading.Tasks.TaskScheduler? taskScheduler) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> StartWith<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Collections.Generic.IEnumerable<T> values) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> StartWith<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, T value) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> StartWith<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, params T[] values) { }
+        public static ReactiveUI.Primitives.Async.ConnectableSignalAsync<T> StatelessPublish<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source) { }
+        public static ReactiveUI.Primitives.Async.ConnectableSignalAsync<T> StatelessPublish<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, T initialValue) { }
+        public static ReactiveUI.Primitives.Async.ConnectableSignalAsync<T> StatelessReplayLatestPublish<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source) { }
+        public static System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source) { }
+        public static System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Action<T> onNext) { }
+        public static System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync) { }
+        public static System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Action<T> onNext, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResumeAsync) { }
+        public static System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResumeAsync, System.Func<ReactiveUI.Primitives.Async.Result, System.Threading.Tasks.ValueTask>? onCompletedAsync) { }
+        public static System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Action<T> onNext, System.Action<System.Exception>? onErrorResume, System.Action<ReactiveUI.Primitives.Async.Result>? onCompleted, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResumeAsync, System.Func<ReactiveUI.Primitives.Async.Result, System.Threading.Tasks.ValueTask>? onCompletedAsync, System.Threading.CancellationToken cancellationToken) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Switch<T>(this ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.Async.IObservableAsync<T>> @this) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> SwitchTo<T>(this ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.Async.IObservableAsync<T>> sources) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> SyncLatest<TLeft, TRight, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<TLeft> left, ReactiveUI.Primitives.Async.IObservableAsync<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Take<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, int count) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> TakeWhile<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> TakeWhile<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<bool>> predicate) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Tap<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Action<T> onNext) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Tap<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Tap<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onNext, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResume, System.Func<ReactiveUI.Primitives.Async.Result, System.Threading.Tasks.ValueTask>? onCompleted) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Throttle<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.TimeSpan dueTime) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Throttle<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.TimeSpan dueTime, System.TimeProvider? timeProvider) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Throw<T>(System.Exception error) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Timeout<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.TimeSpan dueTime) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Timeout<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.TimeSpan dueTime, ReactiveUI.Primitives.Async.IObservableAsync<T> fallback) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Timeout<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.TimeSpan dueTime, System.TimeProvider? timeProvider) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Timeout<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.TimeSpan dueTime, ReactiveUI.Primitives.Async.IObservableAsync<T> fallback, System.TimeProvider? timeProvider) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<long> Timer(System.TimeSpan dueTime) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<long> Timer(System.TimeSpan dueTime, System.TimeProvider? timeProvider) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<long> Timer(System.TimeSpan dueTime, System.TimeSpan period) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<long> Timer(System.TimeSpan dueTime, System.TimeSpan period, System.TimeProvider? timeProvider) { }
+        public static System.Collections.Generic.IAsyncEnumerable<T> ToAsyncEnumerable<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<System.Threading.Channels.Channel<T>> channelFactory) { }
+        public static System.Collections.Generic.IAsyncEnumerable<T> ToAsyncEnumerable<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<System.Threading.Channels.Channel<T>> channelFactory, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResume) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid> ToAsyncSignal(this System.Threading.Tasks.Task @this) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> ToAsyncSignal<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> ToAsyncSignal<T>(this System.Collections.Generic.IAsyncEnumerable<T> @this) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> ToAsyncSignal<T>(this System.Collections.Generic.IEnumerable<T> @this) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> ToAsyncSignal<T>(this System.Threading.Tasks.Task<T> @this) { }
+        public static System.Threading.Tasks.ValueTask<System.Collections.Generic.Dictionary<TKey, T>> ToDictionaryAsync<T, TKey>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, TKey> keySelector)
+            where TKey :  notnull { }
+        public static System.Threading.Tasks.ValueTask<System.Collections.Generic.Dictionary<TKey, T>> ToDictionaryAsync<T, TKey>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer, System.Threading.CancellationToken cancellationToken)
+            where TKey :  notnull { }
+        public static System.Threading.Tasks.ValueTask<System.Collections.Generic.Dictionary<TKey, TValue>> ToDictionaryAsync<T, TKey, TValue>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, TKey> keySelector, System.Func<T, TValue> elementSelector)
+            where TKey :  notnull { }
+        public static System.Threading.Tasks.ValueTask<System.Collections.Generic.Dictionary<TKey, TValue>> ToDictionaryAsync<T, TKey, TValue>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, TKey> keySelector, System.Func<T, TValue> elementSelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer, System.Threading.CancellationToken cancellationToken)
+            where TKey :  notnull { }
+        public static System.Threading.Tasks.ValueTask<System.Collections.Generic.List<T>> ToListAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static System.Threading.Tasks.ValueTask<System.Collections.Generic.List<T>> ToListAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.CancellationToken cancellationToken) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Unique<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Unique<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Collections.Generic.IEqualityComparer<T> comparer) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> UniqueBy<T, TKey>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Func<T, TKey> keySelector) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> UniqueBy<T, TKey>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey> comparer) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Use<TResource, T>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TResource>> resourceFactory, System.Func<TResource, ReactiveUI.Primitives.Async.IObservableAsync<T>> signalFactory)
+            where TResource : System.IAsyncDisposable { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Using<T, TResource>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TResource>> resourceFactory, System.Func<TResource, ReactiveUI.Primitives.Async.IObservableAsync<T>> signalFactory)
+            where TResource : System.IAsyncDisposable { }
+        public static System.Threading.Tasks.ValueTask WaitCompletionAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        public static System.Threading.Tasks.ValueTask WaitCompletionAsync<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.CancellationToken cancellationToken) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Where<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, bool> predicate) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Where<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<bool>> predicate) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<bool> WhereFalse(this ReactiveUI.Primitives.Async.IObservableAsync<bool> source) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WhereIsNotNull<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T?> source)
+            where T :  class { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<bool> WhereTrue(this ReactiveUI.Primitives.Async.IObservableAsync<bool> source) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, ReactiveUI.Primitives.Async.AsyncContext asyncContext) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.SynchronizationContext synchronizationContext) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.Tasks.TaskScheduler taskScheduler) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, ReactiveUI.Primitives.Async.AsyncContext asyncContext, bool forceYielding) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, bool forceYielding) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.SynchronizationContext synchronizationContext, bool forceYielding) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> WitnessOn<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this, System.Threading.Tasks.TaskScheduler taskScheduler, bool forceYielding) { }
+        public static ReactiveUI.Primitives.Async.IObserverAsync<T> Wrap<T>(this ReactiveUI.Primitives.Async.IObserverAsync<T> observer) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<T> Yield<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> @this) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "First",
+                "Second"})]
+        public static ReactiveUI.Primitives.Async.IObservableAsync<System.ValueTuple<T1, T2>> Zip<T1, T2>(this ReactiveUI.Primitives.Async.IObservableAsync<T1> first, ReactiveUI.Primitives.Async.IObservableAsync<T2> second) { }
+        public static ReactiveUI.Primitives.Async.IObservableAsync<TResult> Zip<T1, T2, TResult>(this ReactiveUI.Primitives.Async.IObservableAsync<T1> first, ReactiveUI.Primitives.Async.IObservableAsync<T2> second, System.Func<T1, T2, TResult> resultSelector) { }
+        extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T> source)
+            where T :  notnull
+        {
+            public ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid> AsSignal() { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> CatchIgnore() { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> CatchIgnore<TException>(System.Action<TException> errorAction)
+                where TException : System.Exception { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> CatchAndReturn(T fallback) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> CatchAndReturn<TException>(System.Func<TException, T> fallbackFactory)
+                where TException : System.Exception { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> DoOnSubscribe(System.Action action) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> DoOnSubscribe(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> action) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> DropIfBusy(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> asyncAction) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> LatestOrDefault(T defaultValue) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> LogErrors(System.Action<System.Exception> logger) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> WaitUntil(System.Func<T, bool> predicate) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOnSafe(ReactiveUI.Primitives.Async.AsyncContext? asyncContext) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOnSafe(ReactiveUI.Primitives.Async.AsyncContext? asyncContext, bool forceYielding) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOnSafe(System.Threading.Tasks.TaskScheduler? taskScheduler) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOnSafe(System.Threading.Tasks.TaskScheduler? taskScheduler, bool forceYielding) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOnIf(bool condition, ReactiveUI.Primitives.Async.AsyncContext asyncContext) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOnIf(bool condition, ReactiveUI.Primitives.Async.AsyncContext asyncContext, bool forceYielding) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOnIf(bool condition, System.Threading.Tasks.TaskScheduler taskScheduler) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> ObserveOnIf(bool condition, System.Threading.Tasks.TaskScheduler taskScheduler, bool forceYielding) { }
+            [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                    "Previous",
+                    "Current"})]
+            public ReactiveUI.Primitives.Async.IObservableAsync<System.ValueTuple<T, T>> Pairwise() { }
+            [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                    "True",
+                    "False"})]
+            public System.ValueTuple<ReactiveUI.Primitives.Async.IObservableAsync<T>, ReactiveUI.Primitives.Async.IObservableAsync<T>> Partition(System.Func<T, bool> predicate) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> ReplayLastOnSubscribe(T initialValue) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> ThrottleDistinct(System.TimeSpan throttle) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> ThrottleDistinct(System.TimeSpan throttle, System.TimeProvider? timeProvider) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<TAccumulate> ScanWithInitial<TAccumulate>(TAccumulate initial, System.Func<TAccumulate, T, TAccumulate> accumulator) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<TAccumulate> ScanWithInitial<TAccumulate>(TAccumulate initial, System.Func<TAccumulate, T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TAccumulate>> accumulator) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> DebounceUntil(System.TimeSpan debounce, System.Func<T, bool> condition) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> DebounceUntil(System.TimeSpan debounce, System.Func<T, bool> condition, System.TimeProvider? timeProvider) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil<TOther>(ReactiveUI.Primitives.Async.IObservableAsync<TOther> other) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil<TOther>(ReactiveUI.Primitives.Async.IObservableAsync<TOther> other, ReactiveUI.Primitives.Async.TakeUntilOptions? options) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil<TOther>(ReactiveUI.Primitives.Async.IObservableAsync<TOther> other, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil<TOther>(ReactiveUI.Primitives.Async.IObservableAsync<TOther> other, ReactiveUI.Primitives.Async.TakeUntilOptions? options, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Threading.Tasks.Task task) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Threading.Tasks.Task task, ReactiveUI.Primitives.Async.TakeUntilOptions? options) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Threading.Tasks.Task task, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Threading.Tasks.Task task, ReactiveUI.Primitives.Async.TakeUntilOptions? options, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Func<T, bool> predicate) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Func<T, bool> predicate, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<bool>> asyncPredicate) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<bool>> asyncPredicate, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(ReactiveUI.Primitives.Async.CompletionSignalDelegate stopSignal) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(ReactiveUI.Primitives.Async.CompletionSignalDelegate stopSignal, ReactiveUI.Primitives.Async.TakeUntilOptions? options) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(ReactiveUI.Primitives.Async.CompletionSignalDelegate stopSignal, System.Threading.CancellationToken cancellationToken) { }
+            public ReactiveUI.Primitives.Async.IObservableAsync<T> TakeUntil(ReactiveUI.Primitives.Async.CompletionSignalDelegate stopSignal, ReactiveUI.Primitives.Async.TakeUntilOptions? options, System.Threading.CancellationToken cancellationToken) { }
+        }
+    }
+    public abstract class SignalAsync<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
+    {
+        protected SignalAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+        protected abstract System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken);
+    }
+    public static class SignalMixins
+    {
+        public static ReactiveUI.Primitives.Async.IObserverAsync<T> AsObserverAsync<T>(this ReactiveUI.Primitives.Async.Signals.ISignalAsync<T> signal) { }
+        public static ReactiveUI.Primitives.Async.Signals.ISignalAsync<T> MapValues<T>(this ReactiveUI.Primitives.Async.Signals.ISignalAsync<T> @this, System.Func<ReactiveUI.Primitives.Async.IObservableAsync<T>, ReactiveUI.Primitives.Async.IObservableAsync<T>> mapper) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SourceFailsWhenOtherFails = {SourceFailsWhenOtherFails}")]
+    public sealed class TakeUntilOptions : System.IEquatable<ReactiveUI.Primitives.Async.TakeUntilOptions>
+    {
+        public TakeUntilOptions() { }
+        public bool SourceFailsWhenOtherFails { get; init; }
+        public static ReactiveUI.Primitives.Async.TakeUntilOptions Default { get; }
+    }
+    public static class UnhandledExceptionHandler
+    {
+        public static void Register(System.Action<System.Exception> unhandledExceptionHandler) { }
+    }
+}
+namespace ReactiveUI.Primitives.Async.Disposables
+{
+    public static class DisposableAsync
+    {
+        public static System.IAsyncDisposable Empty { get; }
+        public static System.IAsyncDisposable Create(System.Func<System.Threading.Tasks.ValueTask> disposeAsync) { }
+        public static System.IAsyncDisposable Create<TState>(TState state, System.Func<TState, System.Threading.Tasks.ValueTask> disposeAsync) { }
+    }
+    public static class DisposableAsyncSlot
+    {
+        public static System.Threading.Tasks.ValueTask AssignAsync(ref System.IAsyncDisposable? slot, System.IAsyncDisposable? value) { }
+        public static System.Threading.Tasks.ValueTask DisposeAsync(ref System.IAsyncDisposable? slot) { }
+        public static bool IsDisposed(System.IAsyncDisposable? slot) { }
+        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+        public static System.Threading.Tasks.ValueTask SwapAsync(ref System.IAsyncDisposable? slot, System.IAsyncDisposable? value) { }
+    }
+    public sealed class MultipleDisposableAsync : System.IAsyncDisposable
+    {
+        public MultipleDisposableAsync() { }
+        public MultipleDisposableAsync(System.Collections.Generic.IEnumerable<System.IAsyncDisposable> disposables) { }
+        public MultipleDisposableAsync(params System.IAsyncDisposable[] disposables) { }
+        public MultipleDisposableAsync(int capacity) { }
+        public int Count { get; }
+        public bool IsDisposed { get; }
+        public System.Threading.Tasks.ValueTask AddAsync(System.IAsyncDisposable item) { }
+        public System.Threading.Tasks.ValueTask Clear() { }
+        public bool Contains(System.IAsyncDisposable item) { }
+        public void CopyTo(System.IAsyncDisposable[]? array, int arrayIndex) { }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Collections.Generic.IEnumerator<System.IAsyncDisposable> GetEnumerator() { }
+        public System.Threading.Tasks.ValueTask<bool> Remove(System.IAsyncDisposable item) { }
+    }
+    public sealed class SingleAssignmentDisposableAsync : System.IAsyncDisposable
+    {
+        public SingleAssignmentDisposableAsync() { }
+        public bool IsDisposed { get; }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.IAsyncDisposable? GetDisposable() { }
+        public System.Threading.Tasks.ValueTask SetDisposableAsync(System.IAsyncDisposable? value) { }
+    }
+    public class SingleReplaceableDisposableAsync : System.IAsyncDisposable
+    {
+        public SingleReplaceableDisposableAsync() { }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask SetDisposableAsync(System.IAsyncDisposable? value) { }
+    }
+}
+namespace ReactiveUI.Primitives.Async.Internals
+{
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    public static class FireAndForgetHelper
+    {
+        public static void Run(System.Func<System.Threading.Tasks.ValueTask> action) { }
+    }
+}
+namespace ReactiveUI.Primitives.Async.Signals
+{
+    public abstract class BaseReplayLatestSignalAsync<T> : ReactiveUI.Primitives.Async.SignalAsync<T>, ReactiveUI.Primitives.Async.IObservableAsync<T>, ReactiveUI.Primitives.Async.IObserverAsync<T>, ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>, System.IAsyncDisposable
+    {
+        protected BaseReplayLatestSignalAsync(ReactiveUI.Primitives.Async.Optional<T> startValue) { }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Async.Result result) { }
+        protected abstract System.Threading.Tasks.ValueTask OnCompletedAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, ReactiveUI.Primitives.Async.Result result);
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        protected abstract System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, System.Exception error, System.Threading.CancellationToken cancellationToken);
+        public System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
+        protected abstract System.Threading.Tasks.ValueTask OnNextAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, T value, System.Threading.CancellationToken cancellationToken);
+        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public abstract class BaseSignalAsync<T> : ReactiveUI.Primitives.Async.SignalAsync<T>, ReactiveUI.Primitives.Async.IObservableAsync<T>, ReactiveUI.Primitives.Async.IObserverAsync<T>, ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>, System.IAsyncDisposable
+    {
+        protected BaseSignalAsync() { }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Async.Result result) { }
+        protected abstract System.Threading.Tasks.ValueTask OnCompletedAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, ReactiveUI.Primitives.Async.Result result);
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        protected abstract System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, System.Exception error, System.Threading.CancellationToken cancellationToken);
+        public System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
+        protected abstract System.Threading.Tasks.ValueTask OnNextAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, T value, System.Threading.CancellationToken cancellationToken);
+        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public abstract class BaseStatelessReplayLatestSignalAsync<T> : ReactiveUI.Primitives.Async.SignalAsync<T>, ReactiveUI.Primitives.Async.IObservableAsync<T>, ReactiveUI.Primitives.Async.IObserverAsync<T>, ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>, System.IAsyncDisposable
+    {
+        protected BaseStatelessReplayLatestSignalAsync(ReactiveUI.Primitives.Async.Optional<T> startValue) { }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Async.Result result) { }
+        protected abstract System.Threading.Tasks.ValueTask OnCompletedAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, ReactiveUI.Primitives.Async.Result result);
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        protected abstract System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, System.Exception error, System.Threading.CancellationToken cancellationToken);
+        public System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
+        protected abstract System.Threading.Tasks.ValueTask OnNextAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, T value, System.Threading.CancellationToken cancellationToken);
+        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public abstract class BaseStatelessSignalAsync<T> : ReactiveUI.Primitives.Async.SignalAsync<T>, ReactiveUI.Primitives.Async.IObservableAsync<T>, ReactiveUI.Primitives.Async.IObserverAsync<T>, ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>, System.IAsyncDisposable
+    {
+        protected BaseStatelessSignalAsync() { }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask OnCompletedAsync(ReactiveUI.Primitives.Async.Result result) { }
+        protected abstract System.Threading.Tasks.ValueTask OnCompletedAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, ReactiveUI.Primitives.Async.Result result);
+        public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        protected abstract System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, System.Exception error, System.Threading.CancellationToken cancellationToken);
+        public System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
+        protected abstract System.Threading.Tasks.ValueTask OnNextAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, T value, System.Threading.CancellationToken cancellationToken);
+        protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
+    public sealed class BehaviorSignalCreationOptions : System.IEquatable<ReactiveUI.Primitives.Async.Signals.BehaviorSignalCreationOptions>
+    {
+        public BehaviorSignalCreationOptions() { }
+        public required bool IsStateless { get; init; }
+        public required ReactiveUI.Primitives.Async.Signals.PublishingOption PublishingOption { get; init; }
+        public static ReactiveUI.Primitives.Async.Signals.BehaviorSignalCreationOptions Default { get; }
+    }
+    public static class Concurrent
+    {
+        public static System.Threading.Tasks.ValueTask ForwardOnCompletedConcurrently<T>(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, ReactiveUI.Primitives.Async.Result result) { }
+        public static System.Threading.Tasks.ValueTask ForwardOnErrorResumeConcurrently<T>(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.ValueTask ForwardOnNextConcurrently<T>(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, T value, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class ConcurrentReplayLatestSignalAsync<T> : ReactiveUI.Primitives.Async.Signals.BaseReplayLatestSignalAsync<T>
+    {
+        public ConcurrentReplayLatestSignalAsync(ReactiveUI.Primitives.Async.Optional<T> startValue) { }
+        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, ReactiveUI.Primitives.Async.Result result) { }
+        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, T value, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class ConcurrentSignalAsync<T> : ReactiveUI.Primitives.Async.Signals.BaseSignalAsync<T>
+    {
+        public ConcurrentSignalAsync() { }
+        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, ReactiveUI.Primitives.Async.Result result) { }
+        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, T value, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class ConcurrentStatelessReplayLatestSignalAsync<T> : ReactiveUI.Primitives.Async.Signals.BaseStatelessReplayLatestSignalAsync<T>
+    {
+        public ConcurrentStatelessReplayLatestSignalAsync(ReactiveUI.Primitives.Async.Optional<T> startValue) { }
+        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, ReactiveUI.Primitives.Async.Result result) { }
+        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, T value, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class ConcurrentStatelessSignalAsync<T> : ReactiveUI.Primitives.Async.Signals.BaseStatelessSignalAsync<T>
+    {
+        public ConcurrentStatelessSignalAsync() { }
+        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, ReactiveUI.Primitives.Async.Result result) { }
+        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, T value, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public interface ISignalAsync<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>, ReactiveUI.Primitives.Async.IObserverAsync<T>, System.IAsyncDisposable
+    {
+        ReactiveUI.Primitives.Async.IObservableAsync<T> Values { get; }
+    }
+    public enum PublishingOption
+    {
+        Serial = 0,
+        Concurrent = 1,
+    }
+    [System.Diagnostics.DebuggerDisplay("PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
+    public sealed class ReplayLatestSignalCreationOptions : System.IEquatable<ReactiveUI.Primitives.Async.Signals.ReplayLatestSignalCreationOptions>
+    {
+        public ReplayLatestSignalCreationOptions() { }
+        public required bool IsStateless { get; init; }
+        public required ReactiveUI.Primitives.Async.Signals.PublishingOption PublishingOption { get; init; }
+        public static ReactiveUI.Primitives.Async.Signals.ReplayLatestSignalCreationOptions Default { get; }
+    }
+    public sealed class SerialReplayLatestSignalAsync<T> : ReactiveUI.Primitives.Async.Signals.BaseReplayLatestSignalAsync<T>
+    {
+        public SerialReplayLatestSignalAsync(ReactiveUI.Primitives.Async.Optional<T> startValue) { }
+        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, ReactiveUI.Primitives.Async.Result result) { }
+        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, T value, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class SerialSignalAsync<T> : ReactiveUI.Primitives.Async.Signals.BaseSignalAsync<T>
+    {
+        public SerialSignalAsync() { }
+        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, ReactiveUI.Primitives.Async.Result result) { }
+        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, T value, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class SerialStatelessReplayLatestSignalAsync<T> : ReactiveUI.Primitives.Async.Signals.BaseStatelessReplayLatestSignalAsync<T>
+    {
+        public SerialStatelessReplayLatestSignalAsync(ReactiveUI.Primitives.Async.Optional<T> startValue) { }
+        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, ReactiveUI.Primitives.Async.Result result) { }
+        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, T value, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class SerialStatelessSignalAsync<T> : ReactiveUI.Primitives.Async.Signals.BaseStatelessSignalAsync<T>
+    {
+        public SerialStatelessSignalAsync() { }
+        protected override System.Threading.Tasks.ValueTask OnCompletedAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, ReactiveUI.Primitives.Async.Result result) { }
+        protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, System.Exception error, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, T value, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public static class Signal
+    {
+        public static ReactiveUI.Primitives.Async.Signals.ISignalAsync<T> Create<T>() { }
+        public static ReactiveUI.Primitives.Async.Signals.ISignalAsync<T> Create<T>(ReactiveUI.Primitives.Async.Signals.SignalCreationOptions? options) { }
+        public static ReactiveUI.Primitives.Async.Signals.ISignalAsync<T> CreateBehavior<T>(T startValue) { }
+        public static ReactiveUI.Primitives.Async.Signals.ISignalAsync<T> CreateBehavior<T>(T startValue, ReactiveUI.Primitives.Async.Signals.BehaviorSignalCreationOptions? options) { }
+        public static ReactiveUI.Primitives.Async.Signals.ISignalAsync<T> CreateReplayLatest<T>() { }
+        public static ReactiveUI.Primitives.Async.Signals.ISignalAsync<T> CreateReplayLatest<T>(ReactiveUI.Primitives.Async.Signals.ReplayLatestSignalCreationOptions? options) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
+    public sealed class SignalCreationOptions : System.IEquatable<ReactiveUI.Primitives.Async.Signals.SignalCreationOptions>
+    {
+        public SignalCreationOptions() { }
+        public required bool IsStateless { get; init; }
+        public required ReactiveUI.Primitives.Async.Signals.PublishingOption PublishingOption { get; init; }
+        public static ReactiveUI.Primitives.Async.Signals.SignalCreationOptions Default { get; }
+    }
+}
