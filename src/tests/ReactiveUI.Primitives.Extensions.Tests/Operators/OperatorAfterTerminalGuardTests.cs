@@ -107,8 +107,7 @@ public class OperatorAfterTerminalGuardTests
         await Assert.That(subscribeCount).IsEqualTo(1);
     }
 
-    /// <summary>Exercises <c>RetryWithBackoff.SubscribeToSource</c>'s <c>_disposed</c> guard —
-    /// same shape as the RetryWithDelay variant.</summary>
+    /// <summary>Exercises <c>RetryWithBackoff.SubscribeToSource</c>'s <c>_disposed</c> guard — same shape as the RetryWithDelay variant.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRetryWithBackoffDisposedDuringDelay_ThenSubscribeToSourceGuardSkipsRetry()

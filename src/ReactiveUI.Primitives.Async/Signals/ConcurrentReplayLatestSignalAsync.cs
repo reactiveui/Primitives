@@ -18,9 +18,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 public sealed class ConcurrentReplayLatestSignalAsync<T>(Optional<T> startValue)
     : BaseReplayLatestSignalAsync<T>(startValue)
 {
-    /// <summary>
-    /// Asynchronously notifies all observers in the collection with the specified value.
-    /// </summary>
+    /// <summary>Asynchronously notifies all observers in the collection with the specified value.</summary>
     /// <param name="observers">The collection of observers to be notified. Cannot be null.</param>
     /// <param name="value">The value to send to each observer.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the notification operation.</param>
@@ -31,9 +29,7 @@ public sealed class ConcurrentReplayLatestSignalAsync<T>(Optional<T> startValue)
         CancellationToken cancellationToken) =>
         Concurrent.ForwardOnNextConcurrently(observers, value, cancellationToken);
 
-    /// <summary>
-    /// Asynchronously notifies all observers of an error and resumes processing, if possible.
-    /// </summary>
+    /// <summary>Asynchronously notifies all observers of an error and resumes processing, if possible.</summary>
     /// <param name="observers">The collection of observers to be notified of the error. Cannot be null.</param>
     /// <param name="error">The exception that occurred. Cannot be null.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the asynchronous operation.</param>
@@ -44,10 +40,7 @@ public sealed class ConcurrentReplayLatestSignalAsync<T>(Optional<T> startValue)
         CancellationToken cancellationToken) =>
         Concurrent.ForwardOnErrorResumeConcurrently(observers, error, cancellationToken);
 
-    /// <summary>
-    /// Notifies all observers that the asynchronous operation has completed, forwarding the specified result to each
-    /// observer.
-    /// </summary>
+    /// <summary>Notifies all observers that the asynchronous operation has completed, forwarding the specified result to each observer.</summary>
     /// <remarks>Observers are notified concurrently. The method does not guarantee the order in which
     /// observers are notified.</remarks>
     /// <param name="observers">A read-only list of observers to be notified of the completion event. Cannot be null.</param>

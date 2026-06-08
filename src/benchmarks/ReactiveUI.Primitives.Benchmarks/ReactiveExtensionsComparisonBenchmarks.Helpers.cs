@@ -14,14 +14,10 @@ using RxUnit = System.Reactive.Unit;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks the complete synchronous ReactiveUI.Primitives.Extensions public helper surface.
-/// </summary>
+/// <summary>Benchmarks the complete synchronous ReactiveUI.Primitives.Extensions public helper surface.</summary>
 public partial class ReactiveExtensionsComparisonBenchmarks
 {
-    /// <summary>
-    /// Executes the <c>ArraySource</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>ArraySource</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>ArraySource</c> result.</returns>
     private static IObservable<int> ArraySource(ExtensionsLibrary library) =>
@@ -29,9 +25,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
             ? PrimitivesExtensions.FromArray(Values)
             : PackageExtensions.FromArray(Values);
 
-    /// <summary>
-    /// Executes the <c>BoolSource</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>BoolSource</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>BoolSource</c> result.</returns>
     private static IObservable<bool> BoolSource(ExtensionsLibrary library) =>
@@ -39,9 +33,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
             ? PrimitivesExtensions.FromArray(BooleanValues)
             : PackageExtensions.FromArray(BooleanValues);
 
-    /// <summary>
-    /// Executes the <c>EnsureCompleted</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>EnsureCompleted</c> benchmark helper.</summary>
     /// <param name="task">The <c>task</c> value.</param>
     private static void EnsureCompleted(Task task)
     {
@@ -63,9 +55,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         throw new InvalidOperationException("The benchmark task should complete successfully.", task.Exception);
     }
 
-    /// <summary>
-    /// Executes the <c>EnsureCompleted</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>EnsureCompleted</c> benchmark helper.</summary>
     /// <param name="task">The <c>task</c> value.</param>
     private static void EnsureCompleted(ValueTask task)
     {
@@ -77,9 +67,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         EnsureCompleted(task.AsTask());
     }
 
-    /// <summary>
-    /// Executes the <c>GetCompletedResult</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>GetCompletedResult</c> benchmark helper.</summary>
     /// <param name="task">The <c>task</c> value.</param>
     /// <returns>The <c>GetCompletedResult</c> result.</returns>
     private static int GetCompletedResult(Task<int> task)
@@ -88,9 +76,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return Value;
     }
 
-    /// <summary>
-    /// Executes the <c>GetCompletedResult</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>GetCompletedResult</c> benchmark helper.</summary>
     /// <param name="task">The <c>task</c> value.</param>
     /// <returns>The <c>GetCompletedResult</c> result.</returns>
     private static int GetCompletedResult(ValueTask<int> task)
@@ -103,9 +89,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return Value;
     }
 
-    /// <summary>
-    /// Executes the <c>BoolSources</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>BoolSources</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <param name="value">The <c>value</c> value.</param>
     /// <returns>The <c>BoolSources</c> result.</returns>
@@ -119,9 +103,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
             : PackageObservables.Return(value);
     }
 
-    /// <summary>
-    /// Executes the <c>CompletedTasks</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>CompletedTasks</c> benchmark helper.</summary>
     /// <returns>The <c>CompletedTasks</c> result.</returns>
     private static IEnumerable<Task<int>> CompletedTasks()
     {
@@ -131,9 +113,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         }
     }
 
-    /// <summary>
-    /// Executes the <c>CreateValues</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>CreateValues</c> benchmark helper.</summary>
     /// <returns>The <c>CreateValues</c> result.</returns>
     private static int[] CreateValues()
     {
@@ -146,9 +126,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return values;
     }
 
-    /// <summary>
-    /// Executes the <c>DrainArray</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>DrainArray</c> benchmark helper.</summary>
     /// <param name="source">The <c>source</c> value.</param>
     /// <returns>The <c>DrainArray</c> result.</returns>
     private static int DrainArray(IObservable<int[]> source)
@@ -158,9 +136,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Executes the <c>DrainBool</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>DrainBool</c> benchmark helper.</summary>
     /// <param name="source">The <c>source</c> value.</param>
     /// <returns>The <c>DrainBool</c> result.</returns>
     private static int DrainBool(IObservable<bool> source)
@@ -170,9 +146,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total + observer.NextCount;
     }
 
-    /// <summary>
-    /// Executes the <c>DrainInt</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>DrainInt</c> benchmark helper.</summary>
     /// <param name="source">The <c>source</c> value.</param>
     /// <returns>The <c>DrainInt</c> result.</returns>
     private static int DrainInt(IObservable<int> source)
@@ -182,9 +156,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total + observer.NextCount;
     }
 
-    /// <summary>
-    /// Executes the <c>DrainList</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>DrainList</c> benchmark helper.</summary>
     /// <param name="source">The <c>source</c> value.</param>
     /// <returns>The <c>DrainList</c> result.</returns>
     private static int DrainList(IObservable<IList<int>> source)
@@ -194,9 +166,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Executes the <c>DrainPackageUnit</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>DrainPackageUnit</c> benchmark helper.</summary>
     /// <param name="source">The <c>source</c> value.</param>
     /// <returns>The <c>DrainPackageUnit</c> result.</returns>
     private static int DrainPackageUnit(IObservable<RxUnit> source)
@@ -206,9 +176,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Count + observer.CompletionCount;
     }
 
-    /// <summary>
-    /// Executes the <c>DrainPrimitiveUnit</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>DrainPrimitiveUnit</c> benchmark helper.</summary>
     /// <param name="source">The <c>source</c> value.</param>
     /// <returns>The <c>DrainPrimitiveUnit</c> result.</returns>
     private static int DrainPrimitiveUnit(IObservable<RxVoid> source)
@@ -218,9 +186,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Count + observer.CompletionCount;
     }
 
-    /// <summary>
-    /// Executes the <c>DrainString</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>DrainString</c> benchmark helper.</summary>
     /// <param name="source">The <c>source</c> value.</param>
     /// <returns>The <c>DrainString</c> result.</returns>
     private static int DrainString(IObservable<string?> source)
@@ -230,9 +196,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.TotalLength + observer.ItemCount;
     }
 
-    /// <summary>
-    /// Executes the <c>DrainSyncTuple</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>DrainSyncTuple</c> benchmark helper.</summary>
     /// <param name="source">The <c>source</c> value.</param>
     /// <returns>The <c>DrainSyncTuple</c> result.</returns>
     private static int DrainSyncTuple(IObservable<(int Value, IDisposable Sync)> source)
@@ -242,9 +206,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Executes the <c>Range</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>Range</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>Range</c> result.</returns>
     private static IObservable<int> Range(ExtensionsLibrary library) =>
@@ -252,9 +214,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
             ? Signal.Sequence(0, Count)
             : RxObservable.Range(0, Count);
 
-    /// <summary>
-    /// Executes the <c>ThrowInt</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>ThrowInt</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>ThrowInt</c> result.</returns>
     private static IObservable<int> ThrowInt(ExtensionsLibrary library) =>
@@ -262,15 +222,11 @@ public partial class ReactiveExtensionsComparisonBenchmarks
             ? Signal.Fail<int>(Boom)
             : RxObservable.Throw<int>(Boom);
 
-    /// <summary>
-    /// Executes the <c>ThrowPackageUnit</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>ThrowPackageUnit</c> benchmark helper.</summary>
     /// <returns>The <c>ThrowPackageUnit</c> result.</returns>
     private static IObservable<RxUnit> ThrowPackageUnit() => RxObservable.Throw<RxUnit>(Boom);
 
-    /// <summary>
-    /// Executes the <c>ThrowPrimitiveUnit</c> benchmark helper.
-    /// </summary>
+    /// <summary>Executes the <c>ThrowPrimitiveUnit</c> benchmark helper.</summary>
     /// <returns>The <c>ThrowPrimitiveUnit</c> result.</returns>
     private static IObservable<RxVoid> ThrowPrimitiveUnit() => Signal.Fail<RxVoid>(Boom);
 
@@ -281,24 +237,16 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     [GeneratedRegex("^[02468]$")]
     private static partial Regex EvenRegex();
 
-    /// <summary>
-    /// Provides a named benchmark scenario.
-    /// </summary>
+    /// <summary>Provides a named benchmark scenario.</summary>
     public sealed class ExtensionScenario
     {
-        /// <summary>
-        /// Stores the scenario name.
-        /// </summary>
+        /// <summary>Stores the scenario name.</summary>
         private readonly string _name;
 
-        /// <summary>
-        /// Stores the scenario delegate.
-        /// </summary>
+        /// <summary>Stores the scenario delegate.</summary>
         private readonly Func<int> _run;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ExtensionScenario"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ExtensionScenario"/> class.</summary>
         /// <param name="name">The scenario name.</param>
         /// <param name="run">The delegate that runs the scenario.</param>
         public ExtensionScenario(string name, Func<int> run)
@@ -307,9 +255,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
             _run = run;
         }
 
-        /// <summary>
-        /// Runs the scenario delegate.
-        /// </summary>
+        /// <summary>Runs the scenario delegate.</summary>
         /// <returns>The benchmark checksum.</returns>
         public int Run() => _run();
 
@@ -317,14 +263,10 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         public override string ToString() => _name;
     }
 
-    /// <summary>
-    /// Provides the <c>ArrayObserver</c> benchmark helper type.
-    /// </summary>
+    /// <summary>Provides the <c>ArrayObserver</c> benchmark helper type.</summary>
     private sealed class ArrayObserver : IObserver<int[]>
     {
-        /// <summary>
-        /// Gets the <c>Total</c> benchmark helper value.
-        /// </summary>
+        /// <summary>Gets the <c>Total</c> benchmark helper value.</summary>
         public int Total { get; private set; }
 
         /// <inheritdoc/>
@@ -341,14 +283,10 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         }
     }
 
-    /// <summary>
-    /// Provides the <c>DummyResource</c> benchmark helper type.
-    /// </summary>
+    /// <summary>Provides the <c>DummyResource</c> benchmark helper type.</summary>
     private sealed class DummyResource : IDisposable
     {
-        /// <summary>
-        /// Gets the <c>TouchCount</c> benchmark helper value.
-        /// </summary>
+        /// <summary>Gets the <c>TouchCount</c> benchmark helper value.</summary>
         public int TouchCount { get; private set; }
 
         /// <inheritdoc/>
@@ -356,20 +294,14 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         {
         }
 
-        /// <summary>
-        /// Executes the <c>Touch</c> benchmark helper.
-        /// </summary>
+        /// <summary>Executes the <c>Touch</c> benchmark helper.</summary>
         public void Touch() => TouchCount++;
     }
 
-    /// <summary>
-    /// Provides the <c>ListObserver</c> benchmark helper type.
-    /// </summary>
+    /// <summary>Provides the <c>ListObserver</c> benchmark helper type.</summary>
     private sealed class ListObserver : IObserver<IList<int>>
     {
-        /// <summary>
-        /// Gets the <c>Total</c> benchmark helper value.
-        /// </summary>
+        /// <summary>Gets the <c>Total</c> benchmark helper value.</summary>
         public int Total { get; private set; }
 
         /// <inheritdoc/>
@@ -386,19 +318,13 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         }
     }
 
-    /// <summary>
-    /// Provides the <c>NullableStringLengthObserver</c> benchmark helper type.
-    /// </summary>
+    /// <summary>Provides the <c>NullableStringLengthObserver</c> benchmark helper type.</summary>
     private sealed class NullableStringLengthObserver : IObserver<string?>
     {
-        /// <summary>
-        /// Gets the <c>ItemCount</c> benchmark helper value.
-        /// </summary>
+        /// <summary>Gets the <c>ItemCount</c> benchmark helper value.</summary>
         public int ItemCount { get; private set; }
 
-        /// <summary>
-        /// Gets the <c>TotalLength</c> benchmark helper value.
-        /// </summary>
+        /// <summary>Gets the <c>TotalLength</c> benchmark helper value.</summary>
         public int TotalLength { get; private set; }
 
         /// <inheritdoc/>
@@ -419,14 +345,10 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         }
     }
 
-    /// <summary>
-    /// Provides the <c>PairObserver</c> benchmark helper type.
-    /// </summary>
+    /// <summary>Provides the <c>PairObserver</c> benchmark helper type.</summary>
     private sealed class PairObserver : IObserver<(int Previous, int Current)>
     {
-        /// <summary>
-        /// Gets the <c>Total</c> benchmark helper value.
-        /// </summary>
+        /// <summary>Gets the <c>Total</c> benchmark helper value.</summary>
         public int Total { get; private set; }
 
         /// <inheritdoc/>
@@ -443,43 +365,28 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         }
     }
 
-    /// <summary>
-    /// Provides the <c>PropertySource</c> benchmark helper type.
-    /// </summary>
+    /// <summary>Provides the <c>PropertySource</c> benchmark helper type.</summary>
     private sealed class PropertySource : INotifyPropertyChanged
     {
-        /// <summary>
-        /// Stores the <c>_value</c> benchmark helper value.
-        /// </summary>
-        private int _value;
-
-        /// <summary>
-        /// Occurs when the <c>PropertyChanged</c> benchmark helper event is raised.
-        /// </summary>
+        /// <summary>Occurs when the <c>PropertyChanged</c> benchmark helper event is raised.</summary>
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        /// <summary>
-        /// Gets or sets the <c>CurrentValue</c> benchmark helper value.
-        /// </summary>
+        /// <summary>Gets or sets the <c>CurrentValue</c> benchmark helper value.</summary>
         public int CurrentValue
         {
-            get => _value;
+            get;
             set
             {
-                _value = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentValue)));
+                field = value;
+                PropertyChanged?.Invoke(this, new(nameof(CurrentValue)));
             }
         }
     }
 
-    /// <summary>
-    /// Provides the <c>R3BoolObserver</c> benchmark helper type.
-    /// </summary>
-    private sealed class R3BoolObserver : global::R3.Observer<bool>
+    /// <summary>Provides the <c>R3BoolObserver</c> benchmark helper type.</summary>
+    private sealed class R3BoolObserver : R3.Observer<bool>
     {
-        /// <summary>
-        /// Gets the <c>Total</c> benchmark helper value.
-        /// </summary>
+        /// <summary>Gets the <c>Total</c> benchmark helper value.</summary>
         public int Total { get; private set; }
 
         /// <inheritdoc/>
@@ -499,20 +406,16 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         }
 
         /// <inheritdoc/>
-        protected override void OnCompletedCore(global::R3.Result result)
+        protected override void OnCompletedCore(R3.Result result)
         {
         }
     }
 
-    /// <summary>
-    /// Provides the <c>R3CountingObserver</c> benchmark helper type.
-    /// </summary>
+    /// <summary>Provides the <c>R3CountingObserver</c> benchmark helper type.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
-    private sealed class R3CountingObserver<T> : global::R3.Observer<T>
+    private sealed class R3CountingObserver<T> : R3.Observer<T>
     {
-        /// <summary>
-        /// Gets the <c>ItemCount</c> benchmark helper value.
-        /// </summary>
+        /// <summary>Gets the <c>ItemCount</c> benchmark helper value.</summary>
         public int ItemCount { get; private set; }
 
         /// <inheritdoc/>
@@ -524,19 +427,15 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         }
 
         /// <inheritdoc/>
-        protected override void OnCompletedCore(global::R3.Result result)
+        protected override void OnCompletedCore(R3.Result result)
         {
         }
     }
 
-    /// <summary>
-    /// Provides the <c>SyncTupleObserver</c> benchmark helper type.
-    /// </summary>
+    /// <summary>Provides the <c>SyncTupleObserver</c> benchmark helper type.</summary>
     private sealed class SyncTupleObserver : IObserver<(int Value, IDisposable Sync)>
     {
-        /// <summary>
-        /// Gets the <c>Total</c> benchmark helper value.
-        /// </summary>
+        /// <summary>Gets the <c>Total</c> benchmark helper value.</summary>
         public int Total { get; private set; }
 
         /// <inheritdoc/>
@@ -557,15 +456,11 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         }
     }
 
-    /// <summary>
-    /// Provides the <c>TupleObserver</c> benchmark helper type.
-    /// </summary>
+    /// <summary>Provides the <c>TupleObserver</c> benchmark helper type.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
     private sealed class TupleObserver<T> : IObserver<(T Value, IDisposable Sync)>
     {
-        /// <summary>
-        /// Gets the <c>ItemCount</c> benchmark helper value.
-        /// </summary>
+        /// <summary>Gets the <c>ItemCount</c> benchmark helper value.</summary>
         public int ItemCount { get; private set; }
 
         /// <inheritdoc/>

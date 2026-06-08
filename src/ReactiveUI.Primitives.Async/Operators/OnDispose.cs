@@ -6,50 +6,46 @@ using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides extension methods for composing and managing asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides extension methods for composing and managing asynchronous observable sequences.</summary>
 /// <remarks>The SignalAsync class offers utility methods for working with asynchronous observables, enabling
 /// additional behaviors such as resource cleanup or side-effect handling when subscriptions are disposed. These methods
 /// are intended to simplify the creation and management of custom observable pipelines in asynchronous programming
 /// scenarios.</remarks>
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Registers a callback to be invoked asynchronously when the observable sequence is disposed.
-    /// </summary>
-    /// <remarks>Use this method to perform custom asynchronous cleanup or resource release logic when
-    /// the observable sequence is disposed. The callback is invoked when the subscription is disposed, either
-    /// explicitly or when the observer completes or errors.</remarks>
-    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
+    /// <summary>Disposal-callback operators that run an action when the observable source subscription is disposed.</summary>
     /// <param name="this">The source observable sequence.</param>
-    /// <param name="disposeAction">A function that returns a ValueTask representing the asynchronous operation to execute upon disposal of the
-    /// observable sequence. Cannot be null.</param>
-    /// <returns>An SignalAsync{T} that invokes the specified asynchronous callback when disposed.</returns>
-    public static IObservableAsync<T> OnDispose<T>(this IObservableAsync<T> @this, Func<ValueTask> disposeAction)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(@this);
-        ArgumentExceptionHelper.ThrowIfNull(disposeAction);
-
-        return new OnDisposeSignal<T>(@this, disposeAction);
-    }
-
-    /// <summary>
-    /// Registers an action to be invoked when the observable sequence is disposed.
-    /// </summary>
-    /// <remarks>Use this method to perform cleanup or resource release logic when a subscription to
-    /// the observable is disposed. The specified action is called synchronously during disposal. If multiple
-    /// actions are registered through chained calls, each will be invoked in the order registered.</remarks>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <param name="this">The source observable sequence.</param>
-    /// <param name="disposeAction">The action to execute when the subscription is disposed. Cannot be null.</param>
-    /// <returns>An observable sequence that invokes the specified action upon disposal of the subscription.</returns>
-    public static IObservableAsync<T> OnDispose<T>(this IObservableAsync<T> @this, Action disposeAction)
+    extension<T>(IObservableAsync<T> @this)
     {
-        ArgumentExceptionHelper.ThrowIfNull(@this);
-        ArgumentExceptionHelper.ThrowIfNull(disposeAction);
+        /// <summary>Registers a callback to be invoked asynchronously when the observable sequence is disposed.</summary>
+        /// <remarks>Use this method to perform custom asynchronous cleanup or resource release logic when
+        /// the observable sequence is disposed. The callback is invoked when the subscription is disposed, either
+        /// explicitly or when the observer completes or errors.</remarks>
+        /// <param name="disposeAction">A function that returns a ValueTask representing the asynchronous operation to execute upon disposal of the
+        /// observable sequence. Cannot be null.</param>
+        /// <returns>An SignalAsync{T} that invokes the specified asynchronous callback when disposed.</returns>
+        public IObservableAsync<T> OnDispose(Func<ValueTask> disposeAction)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(disposeAction);
 
-        return new OnDisposeSyncSignal<T>(@this, disposeAction);
+            return new OnDisposeSignal<T>(@this, disposeAction);
+        }
+
+        /// <summary>Registers an action to be invoked when the observable sequence is disposed.</summary>
+        /// <remarks>Use this method to perform cleanup or resource release logic when a subscription to
+        /// the observable is disposed. The specified action is called synchronously during disposal. If multiple
+        /// actions are registered through chained calls, each will be invoked in the order registered.</remarks>
+        /// <param name="disposeAction">The action to execute when the subscription is disposed. Cannot be null.</param>
+        /// <returns>An observable sequence that invokes the specified action upon disposal of the subscription.</returns>
+        public IObservableAsync<T> OnDispose(Action disposeAction)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(disposeAction);
+
+            return new OnDisposeSyncSignal<T>(@this, disposeAction);
+        }
     }
 
     /// <summary>Wraps a source observable with an async-action <c>OnDispose</c> observer without the prior <c>Create&lt;T&gt;</c> wrapper layer.</summary>
@@ -80,10 +76,10 @@ public static partial class SignalAsync
         }
     }
 
-    /// <summary>
-    /// A witness that invokes a synchronous action when disposed.
-    /// </summary>
+    /// <summary>A witness that invokes a synchronous action when disposed.</summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <param name="observer">The downstream observer to forward notifications to.</param>
+    /// <param name="finallySync">The synchronous action to invoke when disposed.</param>
     internal sealed class OnDisposeWitnessSync<T>(IObserverAsync<T> observer, Action finallySync) : ObserverAsync<T>
     {
         /// <inheritdoc/>
@@ -112,10 +108,10 @@ public static partial class SignalAsync
         }
     }
 
-    /// <summary>
-    /// A witness that invokes an asynchronous callback when disposed.
-    /// </summary>
+    /// <summary>A witness that invokes an asynchronous callback when disposed.</summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <param name="observer">The downstream observer to forward notifications to.</param>
+    /// <param name="finallyAsync">The asynchronous callback to invoke when disposed.</param>
     internal sealed class OnDisposeWitness<T>(IObserverAsync<T> observer, Func<ValueTask> finallyAsync) : ObserverAsync<T>
     {
         /// <inheritdoc/>

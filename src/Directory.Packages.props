@@ -9,13 +9,13 @@
   </ItemGroup>
   <ItemGroup>
     <PackageVersion Include="MinVer" Version="7.0.0" />
-    <PackageVersion Include="stylecop.analyzers" Version="1.2.0-beta.556" />
+    <PackageVersion Include="StyleSharp.Analyzers" Version="3.2.7" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4" />
-    <PackageVersion Include="Blazor.Common.Analyzers" Version="2.1.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.0.0-1.25277.114" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.27.0.140913" />
   </ItemGroup>
-  <!--Benchmarking and testing projects need to reference the latest versions of these packages to get the latest API additions and bug fixes, and to ensure that they are testing against the latest versions of dependencies.-->
+  <!-- Benchmarks + tests -->
   <ItemGroup>
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.6.0" />
@@ -40,10 +40,9 @@
     <PackageVersion Include="Microsoft.Maui.Core" Version="11.0.0-preview.4.26230.3" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))" />
     <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.1.3" />
   </ItemGroup>
-  <!--Net 4.x.x projects need to reference the latest versions of these packages to get the latest API additions and bug fixes.-->
+  <!-- .NET Framework legs -->
   <ItemGroup>
     <PackageVersion Include="System.ValueTuple" Version="4.6.2" />
-    <PackageVersion Include="Polyfill" Version="10.6.0" />
     <PackageVersion Include="System.Threading.Channels" Version="10.0.8" />
     <PackageVersion Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <PackageVersion Include="System.ComponentModel.Annotations" Version="5.0.0" />
@@ -51,13 +50,12 @@
     <PackageVersion Include="System.Memory" Version="4.6.3" />
     <PackageVersion Include="System.Collections.Immutable" Version="10.0.8" />
   </ItemGroup>
-  <!--Tests need to reference the latest versions of these packages to get the latest API additions and bug fixes, and to ensure that they are testing against the latest versions of dependencies.-->
+  <!-- Test infrastructure -->
   <ItemGroup>
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
     <PackageVersion Include="TUnit" Version="1.47.0" />
     <PackageVersion Include="Verify.TUnit" Version="31.18.0" />
-    <PackageVersion Include="PublicApiGenerator" Version="11.5.4" />
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.7.0" />
   </ItemGroup>
   <Import Project="$(MSBuildThisFileDirectory)/directory.packages.support.props" Condition="Exists('$(MSBuildThisFileDirectory)/directory.packages.support.props')" />

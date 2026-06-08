@@ -13,29 +13,19 @@ namespace ReactiveUI.Primitives.Disposables;
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class OnceDisposable : IsDisposed
 {
-    /// <summary>
-    /// Sentinel value indicating the object has been disposed.
-    /// </summary>
+    /// <summary>Sentinel value indicating the object has been disposed.</summary>
     private static readonly IDisposable DisposedSentinel = EmptyDisposable.Instance;
 
-    /// <summary>
-    /// The current inner disposable.
-    /// </summary>
+    /// <summary>The current inner disposable.</summary>
     private IDisposable? _current;
 
-    /// <summary>
-    /// Gets a value indicating whether a disposable has been assigned.
-    /// </summary>
+    /// <summary>Gets a value indicating whether a disposable has been assigned.</summary>
     public bool IsAssigned => Volatile.Read(ref _current) is not null;
 
-    /// <summary>
-    /// Gets a value indicating whether this instance has been disposed.
-    /// </summary>
+    /// <summary>Gets a value indicating whether this instance has been disposed.</summary>
     public bool IsDisposed => ReferenceEquals(Volatile.Read(ref _current), DisposedSentinel);
 
-    /// <summary>
-    /// Gets or sets the inner disposable. Setting more than once throws.
-    /// </summary>
+    /// <summary>Gets or sets the inner disposable. Setting more than once throws.</summary>
     public IDisposable? Disposable
     {
         get
@@ -62,9 +52,7 @@ public sealed class OnceDisposable : IsDisposed
         }
     }
 
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;

@@ -7,51 +7,35 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// AsyncSignal.
-/// </summary>
+/// <summary>AsyncSignal.</summary>
 /// <typeparam name="T">The Type.</typeparam>
 /// <seealso cref="ISignal&lt;T&gt;" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class AsyncSignal<T> : IAwaitSignal<T>
 {
-    /// <summary>
-    /// Executes the new operation.
-    /// </summary>
+    /// <summary>Executes the new operation.</summary>
     /// <returns>The result.</returns>
     private readonly Lock _observerLock = new();
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private T? _lastValue;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private bool _hasValue;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private Exception? _lastError;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private IObserver<T> _outObserver = EmptyWitness<T>.Instance;
 
-    /// <summary>
-    /// Gets a value indicating whether this instance is disposed.
-    /// </summary>
+    /// <summary>Gets a value indicating whether this instance is disposed.</summary>
     /// <value>
     ///   <c>true</c> if this instance is disposed; otherwise, <c>false</c>.
     /// </value>
     public bool IsDisposed { get; private set; }
 
-    /// <summary>
-    /// Gets the value.
-    /// </summary>
+    /// <summary>Gets the value.</summary>
     /// <value>
     /// The value.
     /// </value>
@@ -72,31 +56,23 @@ public class AsyncSignal<T> : IAwaitSignal<T>
         }
     }
 
-    /// <summary>
-    /// Gets a value indicating whether this instance has observers.
-    /// </summary>
+    /// <summary>Gets a value indicating whether this instance has observers.</summary>
     /// <value>
     ///   <c>true</c> if this instance has observers; otherwise, <c>false</c>.
     /// </value>
     public bool HasObservers => _outObserver is not EmptyWitness<T> && !IsCompleted && !IsDisposed;
 
-    /// <summary>
-    /// Gets a value indicating whether this instance is completed.
-    /// </summary>
+    /// <summary>Gets a value indicating whether this instance is completed.</summary>
     /// <value>
     ///   <c>true</c> if this instance is completed; otherwise, <c>false</c>.
     /// </value>
     public bool IsCompleted { get; private set; }
 
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>
-    /// Called when [completed].
-    /// </summary>
+    /// <summary>Called when [completed].</summary>
     public void OnCompleted()
     {
         IObserver<T> observers;
@@ -128,14 +104,12 @@ public class AsyncSignal<T> : IAwaitSignal<T>
         }
     }
 
-    /// <summary>
-    /// Specifies a callback action that will be invoked when the subject completes.
-    /// </summary>
+    /// <summary>Specifies a callback action that will be invoked when the subject completes.</summary>
     /// <param name="continuation">Callback action that will be invoked when the subject completes.</param>
     /// <exception cref="ArgumentNullException"><paramref name="continuation"/> is null.</exception>
     public void OnCompleted(Action continuation)
     {
-        if (continuation == null)
+        if (continuation is null)
         {
             throw new ArgumentNullException(nameof(continuation));
         }
@@ -143,14 +117,12 @@ public class AsyncSignal<T> : IAwaitSignal<T>
         SubscribeCompletion(continuation, true);
     }
 
-    /// <summary>
-    /// Called when [error].
-    /// </summary>
+    /// <summary>Called when [error].</summary>
     /// <param name="error">The error.</param>
     /// <exception cref="ArgumentNullException">error.</exception>
     public void OnError(Exception error)
     {
-        if (error == null)
+        if (error is null)
         {
             throw new ArgumentNullException(nameof(error));
         }
@@ -173,9 +145,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
         observers.OnError(error);
     }
 
-    /// <summary>
-    /// Called when [next].
-    /// </summary>
+    /// <summary>Called when [next].</summary>
     /// <param name="value">The value.</param>
     public void OnNext(T value)
     {
@@ -192,15 +162,13 @@ public class AsyncSignal<T> : IAwaitSignal<T>
         }
     }
 
-    /// <summary>
-    /// Subscribes the specified observer.
-    /// </summary>
+    /// <summary>Subscribes the specified observer.</summary>
     /// <param name="observer">The observer.</param>
     /// <returns>A Disposable.</returns>
     /// <exception cref="ArgumentNullException">observer.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -232,7 +200,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
             hasTerminalValue = _hasValue;
         }
 
-        if (completionError != null)
+        if (completionError is not null)
         {
             observer.OnError(completionError);
         }
@@ -249,9 +217,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>
-    /// Releases unmanaged and - optionally - managed resources.
-    /// </summary>
+    /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
     public void Dispose()
     {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
@@ -259,15 +225,11 @@ public class AsyncSignal<T> : IAwaitSignal<T>
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>
-    /// Gets an awaitable object for the current final signal.
-    /// </summary>
+    /// <summary>Gets an awaitable object for the current final signal.</summary>
     /// <returns>Object that can be awaited.</returns>
     public IAwaitSignal<T> GetAwaiter() => this;
 
-    /// <summary>
-    /// Gets the last element of the subject, potentially blocking until the subject completes successfully or exceptionally.
-    /// </summary>
+    /// <summary>Gets the last element of the subject, potentially blocking until the subject completes successfully or exceptionally.</summary>
     /// <returns>The last element of the subject. Throws an InvalidOperationException if no element was received.</returns>
     /// <exception cref="InvalidOperationException">The source sequence is empty.</exception>
     public T GetResult()
@@ -289,10 +251,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
         return _lastValue!;
     }
 
-    /// <summary>
-    /// Removes an observer previously registered via <see cref="Subscribe"/>. Called by the observer's
-    /// subscription handle when it is disposed.
-    /// </summary>
+    /// <summary>Removes an observer previously registered via <see cref="Subscribe"/>. Called by the observer's subscription handle when it is disposed.</summary>
     /// <param name="observer">The observer to remove.</param>
     internal void RemoveObserver(IObserver<T> observer)
     {
@@ -304,9 +263,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
         }
     }
 
-    /// <summary>
-    /// Releases unmanaged and - optionally - managed resources.
-    /// </summary>
+    /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
     protected virtual void Dispose(bool disposing)
     {
@@ -328,9 +285,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
         IsDisposed = true;
     }
 
-    /// <summary>
-    /// Executes the ThrowIfDisposed operation.
-    /// </summary>
+    /// <summary>Executes the ThrowIfDisposed operation.</summary>
     private void ThrowIfDisposed()
     {
         if (!IsDisposed)
@@ -341,9 +296,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
         throw new ObjectDisposedException(string.Empty);
     }
 
-    /// <summary>
-    /// Executes the SubscribeCompletion operation.
-    /// </summary>
+    /// <summary>Executes the SubscribeCompletion operation.</summary>
     /// <param name="continuation">The continuation value.</param>
     /// <param name="originalContext">The originalContext value.</param>
     private void SubscribeCompletion(Action continuation, bool originalContext) =>

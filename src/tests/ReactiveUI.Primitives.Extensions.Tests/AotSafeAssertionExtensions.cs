@@ -8,25 +8,26 @@ using TUnit.Assertions.Enums;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
-/// <summary>
-/// AOT-safe collection-equality helpers.
-/// </summary>
+/// <summary>AOT-safe collection-equality helpers.</summary>
 internal static class AotSafeAssertionExtensions
 {
-    /// <summary>
-    /// Asserts the collection is equivalent to <paramref name="expected"/>
-    /// using the element type's default <see cref="EqualityComparer{T}"/>
-    /// (order-insensitive, mirroring <c>IsEquivalentTo</c>'s default
-    /// <see cref="CollectionOrdering.Any"/>).
-    /// </summary>
+    /// <summary>Collection-equality helpers for an assertion source.</summary>
     /// <typeparam name="TCollection">The collection type being asserted.</typeparam>
     /// <typeparam name="TItem">The element type.</typeparam>
     /// <param name="source">The assertion source.</param>
-    /// <param name="expected">The expected element sequence.</param>
-    /// <returns>The chained collection-equivalency assertion.</returns>
-    public static IsEquivalentToAssertion<TCollection, TItem> IsCollectionEqualTo<TCollection, TItem>(
-        this IAssertionSource<TCollection> source,
-        IEnumerable<TItem> expected)
+    extension<TCollection, TItem>(IAssertionSource<TCollection> source)
         where TCollection : IEnumerable<TItem>
-        => source.IsEquivalentTo(expected, EqualityComparer<TItem>.Default);
+    {
+        /// <summary>
+        /// Asserts the collection is equivalent to <paramref name="expected"/>
+        /// using the element type's default <see cref="EqualityComparer{T}"/>
+        /// (order-insensitive, mirroring <c>IsEquivalentTo</c>'s default
+        /// <see cref="CollectionOrdering.Any"/>).
+        /// </summary>
+        /// <param name="expected">The expected element sequence.</param>
+        /// <returns>The chained collection-equivalency assertion.</returns>
+        public IsEquivalentToAssertion<TCollection, TItem> IsCollectionEqualTo(
+            IEnumerable<TItem> expected)
+            => source.IsEquivalentTo(expected, EqualityComparer<TItem>.Default);
+    }
 }

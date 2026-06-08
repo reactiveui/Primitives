@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <content>
-/// Using tests for combining operators.
-/// </content>
+/// <summary>Tests for the Using operator.</summary>
 public partial class CombiningOperatorTests
 {
     /// <summary>Tests Using creates resource, emits values, and disposes resource on completion.</summary>

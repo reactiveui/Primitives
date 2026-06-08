@@ -14,22 +14,16 @@ namespace ReactiveUI.Primitives.Maui.Tests;
 /// </summary>
 public sealed class MauiDispatcherSequencerTests
 {
-    /// <summary>
-    /// Expected values produced by an immediate burst, used to verify FIFO order.
-    /// </summary>
+    /// <summary>Expected values produced by an immediate burst, used to verify FIFO order.</summary>
     private static readonly int[] ExpectedBurst = [1, 2, 3];
 
-    /// <summary>
-    /// Verifies the constructor rejects a null dispatcher.
-    /// </summary>
+    /// <summary>Verifies the constructor rejects a null dispatcher.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullDispatcher() =>
         await Assert.That(() => new MauiDispatcherSequencer(null!)).Throws<ArgumentNullException>();
 
-    /// <summary>
-    /// Verifies immediate work is marshalled through <see cref="IDispatcher.Dispatch(Action)"/> and executed.
-    /// </summary>
+    /// <summary>Verifies immediate work is marshalled through <see cref="IDispatcher.Dispatch(Action)"/> and executed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ImmediateScheduleDispatchesAndExecutes()
@@ -65,9 +59,7 @@ public sealed class MauiDispatcherSequencerTests
         await Assert.That(dispatcher.LastDelay).IsGreaterThan(TimeSpan.Zero);
     }
 
-    /// <summary>
-    /// Verifies a due timestamp at or before now takes the immediate path rather than the delayed timer.
-    /// </summary>
+    /// <summary>Verifies a due timestamp at or before now takes the immediate path rather than the delayed timer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task PastDueTimestampUsesImmediatePath()
@@ -84,9 +76,7 @@ public sealed class MauiDispatcherSequencerTests
         await Assert.That(dispatcher.DispatchDelayedCount).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Verifies a burst of immediate work items all execute in FIFO order.
-    /// </summary>
+    /// <summary>Verifies a burst of immediate work items all execute in FIFO order.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ImmediateBurstExecutesInOrder()
@@ -104,19 +94,13 @@ public sealed class MauiDispatcherSequencerTests
         await Assert.That(values).IsEquivalentTo(ExpectedBurst, EqualityComparer<int>.Default);
     }
 
-    /// <summary>
-    /// Work item that invokes a delegate when executed.
-    /// </summary>
+    /// <summary>Work item that invokes a delegate when executed.</summary>
     private sealed class DelegateWorkItem : IWorkItem
     {
-        /// <summary>
-        /// The action to run on execution.
-        /// </summary>
+        /// <summary>The action to run on execution.</summary>
         private readonly Action _action;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DelegateWorkItem"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="DelegateWorkItem"/> class.</summary>
         /// <param name="action">The action to run on execution.</param>
         public DelegateWorkItem(Action action) => _action = action;
 
@@ -124,24 +108,16 @@ public sealed class MauiDispatcherSequencerTests
         public void Execute() => _action();
     }
 
-    /// <summary>
-    /// Fake MAUI dispatcher that runs marshalled work synchronously and records how it was dispatched.
-    /// </summary>
+    /// <summary>Fake MAUI dispatcher that runs marshalled work synchronously and records how it was dispatched.</summary>
     private sealed class FakeDispatcher : IDispatcher
     {
-        /// <summary>
-        /// Gets the number of times <see cref="Dispatch(Action)"/> was called.
-        /// </summary>
+        /// <summary>Gets the number of times <see cref="Dispatch(Action)"/> was called.</summary>
         public int DispatchCount { get; private set; }
 
-        /// <summary>
-        /// Gets the number of times <see cref="DispatchDelayed(TimeSpan, Action)"/> was called.
-        /// </summary>
+        /// <summary>Gets the number of times <see cref="DispatchDelayed(TimeSpan, Action)"/> was called.</summary>
         public int DispatchDelayedCount { get; private set; }
 
-        /// <summary>
-        /// Gets the delay passed to the most recent <see cref="DispatchDelayed(TimeSpan, Action)"/> call.
-        /// </summary>
+        /// <summary>Gets the delay passed to the most recent <see cref="DispatchDelayed(TimeSpan, Action)"/> call.</summary>
         public TimeSpan LastDelay { get; private set; }
 
         /// <inheritdoc/>
@@ -167,9 +143,7 @@ public sealed class MauiDispatcherSequencerTests
         /// <inheritdoc/>
         public IDispatcherTimer CreateTimer() => new FakeDispatcherTimer();
 
-        /// <summary>
-        /// Fake dispatcher timer that fires its tick immediately on start.
-        /// </summary>
+        /// <summary>Fake dispatcher timer that fires its tick immediately on start.</summary>
         private sealed class FakeDispatcherTimer : IDispatcherTimer
         {
             /// <inheritdoc/>

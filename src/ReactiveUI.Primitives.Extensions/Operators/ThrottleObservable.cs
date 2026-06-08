@@ -36,10 +36,7 @@ internal sealed class ThrottleObservable<T>(
         return new DisposableBag(subscription, sink);
     }
 
-    /// <summary>
-    /// Sink that holds the most-recent value and a scheduled emission that
-    /// fires after the configured quiescence interval.
-    /// </summary>
+    /// <summary>Sink that holds the most-recent value and a scheduled emission that fires after the configured quiescence interval.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="dueTime">The quiescence duration.</param>
     /// <param name="scheduler">The scheduler used to time emissions.</param>

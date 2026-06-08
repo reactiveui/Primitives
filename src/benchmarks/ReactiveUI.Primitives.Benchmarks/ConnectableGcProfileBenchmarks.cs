@@ -17,9 +17,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
 public class ConnectableGcProfileBenchmarks
 {
-    /// <summary>
-    /// The delegate benchmark instance that performs the measured work.
-    /// </summary>
+    /// <summary>The delegate benchmark instance that performs the measured work.</summary>
     private readonly ConnectableShareBenchmarks _b = new();
 
     /// <summary>Publish + Connect (Primitives).</summary>

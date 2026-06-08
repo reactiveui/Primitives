@@ -11,9 +11,7 @@ namespace ReactiveUI.Primitives.Extensions.Tests;
 /// <summary>Tests for ReactiveExtensionsTests.</summary>
 public partial class ReactiveExtensionsTests
 {
-    /// <summary>
-    /// Tests DebounceImmediate emits first immediately.
-    /// </summary>
+    /// <summary>Tests DebounceImmediate emits first immediately.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task DebounceImmediate_EmitsFirstImmediately()
@@ -31,9 +29,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results[0]).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Tests ThrottleFirst emits first immediately, then ignores subsequent values within the throttle window.
-    /// </summary>
+    /// <summary>Tests ThrottleFirst emits first immediately, then ignores subsequent values within the throttle window.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ThrottleFirst_EmitsFirstImmediately_IgnoresSubsequentWithinWindow()
@@ -55,9 +51,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue4]);
     }
 
-    /// <summary>
-    /// Tests DropIfBusy drops values when busy.
-    /// </summary>
+    /// <summary>Tests DropIfBusy drops values when busy.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous RxVoid test.</returns>
     [Test]
     public async Task DropIfBusy_DropsWhenBusy()
@@ -84,9 +78,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([1]);
     }
 
-    /// <summary>
-    /// Tests ThrottleDistinct throttles distinct values.
-    /// </summary>
+    /// <summary>Tests ThrottleDistinct throttles distinct values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ThrottleDistinct_ThrottlesDistinct()
@@ -107,9 +99,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue2]);
     }
 
-    /// <summary>
-    /// Tests DebounceUntil emits immediately when condition true, delays when false.
-    /// </summary>
+    /// <summary>Tests DebounceUntil emits immediately when condition true, delays when false.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task DebounceUntil_EmitsImmediatelyWhenConditionTrue_DelaysWhenFalse()
@@ -129,9 +119,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue2]);
     }
 
-    /// <summary>
-    /// Tests ThrottleOnScheduler throttles on the specified scheduler.
-    /// </summary>
+    /// <summary>Tests ThrottleOnScheduler throttles on the specified scheduler.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenThrottleOnScheduler_ThenThrottlesOnScheduler()
@@ -150,9 +138,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue2]);
     }
 
-    /// <summary>
-    /// Tests ThrottleDistinct with scheduler throttles and deduplicates.
-    /// </summary>
+    /// <summary>Tests ThrottleDistinct with scheduler throttles and deduplicates.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenThrottleDistinctWithScheduler_ThenThrottlesAndDeduplicates()
@@ -172,9 +158,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue2]);
     }
 
-    /// <summary>
-    /// Tests DebounceImmediate flushes pending value when source errors.
-    /// </summary>
+    /// <summary>Tests DebounceImmediate flushes pending value when source errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDebounceImmediateSourceErrors_ThenFlushesAndForwardsError()
@@ -198,9 +182,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests DebounceImmediate flushes pending value when source completes.
-    /// </summary>
+    /// <summary>Tests DebounceImmediate flushes pending value when source completes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDebounceImmediateSourceCompletes_ThenFlushesAndCompletes()
@@ -224,9 +206,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests DebounceUntil with scheduler delays non-matching values using the scheduler.
-    /// </summary>
+    /// <summary>Tests DebounceUntil with scheduler delays non-matching values using the scheduler.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDebounceUntilWithScheduler_ThenUsesSchedulerForDelay()
@@ -245,9 +225,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, 1]);
     }
 
-    /// <summary>
-    /// Tests ThrottleUntilTrue with predicate false path applies throttle.
-    /// </summary>
+    /// <summary>Tests ThrottleUntilTrue with predicate false path applies throttle.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenThrottleUntilTruePredicateFalse_ThenAppliesThrottle()
@@ -275,9 +253,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).Contains(1);
     }
 
-    /// <summary>
-    /// Tests ThrottleDistinct without scheduler parameter.
-    /// </summary>
+    /// <summary>Tests ThrottleDistinct without scheduler parameter.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenThrottleDistinctWithoutScheduler_ThenThrottlesAndDeduplicates()
@@ -300,9 +276,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).Contains(SampleValue2);
     }
 
-    /// <summary>
-    /// Tests DebounceUntil with scheduler delays non-matching values and passes matching immediately.
-    /// </summary>
+    /// <summary>Tests DebounceUntil with scheduler delays non-matching values and passes matching immediately.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDebounceUntilWithScheduler_ThenUsesScheduler()
@@ -322,9 +296,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).Contains(SampleValue3);
     }
 
-    /// <summary>
-    /// Tests DebounceImmediate with null scheduler uses Default scheduler.
-    /// </summary>
+    /// <summary>Tests DebounceImmediate with null scheduler uses Default scheduler.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDebounceImmediateNullScheduler_ThenUsesDefault()
@@ -347,9 +319,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).Contains(SampleValue2);
     }
 
-    /// <summary>
-    /// Tests DebounceUntil without scheduler emits immediately when condition true.
-    /// </summary>
+    /// <summary>Tests DebounceUntil without scheduler emits immediately when condition true.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDebounceUntilWithoutScheduler_ThenEmitsImmediatelyWhenConditionTrue()

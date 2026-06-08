@@ -7,14 +7,10 @@ using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// Signals.
-/// </summary>
+/// <summary>Signals.</summary>
 public static partial class Signal
 {
-    /// <summary>
-    /// Empty Signals. Returns only onError on specified scheduler.
-    /// </summary>
+    /// <summary>Empty Signals. Returns only onError on specified scheduler.</summary>
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="error">The error.</param>
     /// <param name="scheduler">The scheduler.</param>
@@ -27,9 +23,7 @@ public static partial class Signal
         ? new ImmediateThrowSignal<T>(error)
         : new ThrowSignal<T>(error, scheduler);
 
-    /// <summary>
-    /// Empty Signals. Returns only onError.
-    /// </summary>
+    /// <summary>Empty Signals. Returns only onError.</summary>
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="error">The error.</param>
     /// <returns>An Signals.</returns>
@@ -40,9 +34,7 @@ public static partial class Signal
     public static IObservable<T> Fail<T>(Exception error) =>
         new ImmediateThrowSignal<T>(error);
 
-    /// <summary>
-    /// Empty Signals. Returns only onError. witness if for Type inference.
-    /// </summary>
+    /// <summary>Empty Signals. Returns only onError. witness if for Type inference.</summary>
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="error">The error.</param>
     /// <param name="witness">The witness.</param>
@@ -50,9 +42,7 @@ public static partial class Signal
     public static IObservable<T> Fail<T>(Exception error, T witness) =>
         new ImmediateThrowSignal<T>(error);
 
-    /// <summary>
-    /// Empty Signals. Returns only onError on specified scheduler. witness if for Type inference.
-    /// </summary>
+    /// <summary>Empty Signals. Returns only onError on specified scheduler. witness if for Type inference.</summary>
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="error">The error.</param>
     /// <param name="scheduler">The scheduler.</param>

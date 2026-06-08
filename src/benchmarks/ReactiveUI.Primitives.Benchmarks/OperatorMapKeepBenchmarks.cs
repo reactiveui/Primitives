@@ -9,35 +9,23 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Operator benchmarks for mapping, filtering, and aggregate predicates.
-/// </summary>
+/// <summary>Operator benchmarks for mapping, filtering, and aggregate predicates.</summary>
 [MemoryDiagnoser]
 public class OperatorMapKeepBenchmarks
 {
-    /// <summary>
-    /// The starting value of each benchmarked sequence.
-    /// </summary>
+    /// <summary>The starting value of each benchmarked sequence.</summary>
     private const int StartValue = 0;
 
-    /// <summary>
-    /// The number of values produced by each benchmarked sequence.
-    /// </summary>
+    /// <summary>The number of values produced by each benchmarked sequence.</summary>
     private const int RangeCount = 32;
 
-    /// <summary>
-    /// The divisor used by the key-selector benchmarks.
-    /// </summary>
+    /// <summary>The divisor used by the key-selector benchmarks.</summary>
     private const int KeyDivisor = 2;
 
-    /// <summary>
-    /// The value matched by the any-predicate benchmarks.
-    /// </summary>
+    /// <summary>The value matched by the any-predicate benchmarks.</summary>
     private const int MatchValue = 31;
 
-    /// <summary>
-    /// Baseline map/where chain using primitives.
-    /// </summary>
+    /// <summary>Baseline map/where chain using primitives.</summary>
     /// <returns>The aggregate total.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesRangeMapKeep()
@@ -50,9 +38,7 @@ public class OperatorMapKeepBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Map/where chain using System.Reactive.
-    /// </summary>
+    /// <summary>Map/where chain using System.Reactive.</summary>
     /// <returns>The aggregate total.</returns>
     [Benchmark]
     public int SystemReactiveRangeSelectWhere()
@@ -65,9 +51,7 @@ public class OperatorMapKeepBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Map/where chain using R3.
-    /// </summary>
+    /// <summary>Map/where chain using R3.</summary>
     /// <returns>The aggregate total.</returns>
     [Benchmark]
     public int R3RangeSelectWhere()
@@ -82,9 +66,7 @@ public class OperatorMapKeepBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Baseline aggregate/count with predicate sequence.
-    /// </summary>
+    /// <summary>Baseline aggregate/count with predicate sequence.</summary>
     /// <returns>Negated count if predicate matched; otherwise positive count.</returns>
     [Benchmark]
     public int PrimitivesAggregateAnyCount()
@@ -101,9 +83,7 @@ public class OperatorMapKeepBenchmarks
         return any.Value ? count.Total : -count.Total;
     }
 
-    /// <summary>
-    /// Aggregate/count with predicate sequence using System.Reactive.
-    /// </summary>
+    /// <summary>Aggregate/count with predicate sequence using System.Reactive.</summary>
     /// <returns>Negated count if predicate matched; otherwise positive count.</returns>
     [Benchmark]
     public int SystemReactiveAggregateAnyCount()
@@ -120,9 +100,7 @@ public class OperatorMapKeepBenchmarks
         return any.Value ? count.Total : -count.Total;
     }
 
-    /// <summary>
-    /// Aggregate/count with predicate sequence using R3.
-    /// </summary>
+    /// <summary>Aggregate/count with predicate sequence using R3.</summary>
     /// <returns>Negated count if predicate matched; otherwise positive count.</returns>
     [Benchmark]
     public async Task<int> R3AggregateAnyCount()

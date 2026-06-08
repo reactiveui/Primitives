@@ -35,7 +35,7 @@ internal sealed class EverySignal : IRequireCurrentThread<long>
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<long> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }

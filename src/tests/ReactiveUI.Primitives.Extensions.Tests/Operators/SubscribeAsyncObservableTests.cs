@@ -107,8 +107,7 @@ public class SubscribeAsyncObservableTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies that completion arriving while a handler is in flight defers
-    /// completion until the handler finishes.</summary>
+    /// <summary>Verifies that completion arriving while a handler is in flight defers completion until the handler finishes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscribeAsyncCompletesWhileProcessing_ThenDeferredCompletion()

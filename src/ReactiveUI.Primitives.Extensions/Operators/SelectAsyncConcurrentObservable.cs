@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Projects each element to an asynchronous operation with limited concurrency.
-/// </summary>
+/// <summary>Projects each element to an asynchronous operation with limited concurrency.</summary>
 /// <typeparam name="TSource">The type of elements in the source sequence.</typeparam>
 /// <typeparam name="TResult">The type of the result of the asynchronous operation.</typeparam>
 /// <param name="source">The source observable.</param>
@@ -32,9 +30,7 @@ internal sealed class SelectAsyncConcurrentObservable<TSource, TResult>(
         return new DisposableBag(sub, sink);
     }
 
-    /// <summary>
-    /// Sink that manages concurrent async projection.
-    /// </summary>
+    /// <summary>Sink that manages concurrent async projection.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="selector">The async selector.</param>
     /// <param name="maxConcurrency">The maximum concurrency.</param>

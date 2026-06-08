@@ -33,9 +33,7 @@ internal sealed class ScheduledSourceObservable<T> : IObservable<T>
     /// <summary>The bundled scheduling configuration shared across every subscription.</summary>
     private readonly ScheduleConfig<T> _config;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ScheduledSourceObservable{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ScheduledSourceObservable{T}"/> class.</summary>
     /// <param name="source">The upstream observable.</param>
     /// <param name="config">Bundled scheduling configuration (scheduler, optional delay, optional transform/action).</param>
     public ScheduledSourceObservable(IObservable<T> source, ScheduleConfig<T> config)
@@ -72,10 +70,7 @@ internal sealed class ScheduledSourceObservable<T> : IObservable<T>
         Func<T, T>? Transform,
         Action<T>? Action)
     {
-        /// <summary>
-        /// Applies the optional side-effect and transform, then emits the value
-        /// to the captured observer.
-        /// </summary>
+        /// <summary>Applies the optional side-effect and transform, then emits the value to the captured observer.</summary>
         public void Emit()
         {
             try
@@ -91,11 +86,9 @@ internal sealed class ScheduledSourceObservable<T> : IObservable<T>
         }
     }
 
-    /// <summary>
-    /// Per-value sink that captures the configured scheduling parameters once
-    /// and schedules each <see cref="OnNext"/> through the configured
-    /// <see cref="ISequencer"/>.
-    /// </summary>
+    /// <summary>Per-value sink that schedules each <see cref="OnNext"/> through the configured sequencer.</summary>
+    /// <param name="downstream">The downstream observer.</param>
+    /// <param name="config">The captured scheduling configuration.</param>
     private sealed class ScheduledSourceObserver(IObserver<T> downstream, ScheduleConfig<T> config) : IObserver<T>
     {
         /// <inheritdoc/>

@@ -18,29 +18,19 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class OperatorStatefulFilterBenchmarks
 {
-    /// <summary>
-    /// The starting value of each benchmarked sequence.
-    /// </summary>
+    /// <summary>The starting value of each benchmarked sequence.</summary>
     private const int StartValue = 0;
 
-    /// <summary>
-    /// The number of values produced by each benchmarked sequence.
-    /// </summary>
+    /// <summary>The number of values produced by each benchmarked sequence.</summary>
     private const int RangeCount = 32;
 
-    /// <summary>
-    /// The number of leading values skipped or compared by the benchmarks.
-    /// </summary>
+    /// <summary>The number of leading values skipped or compared by the benchmarks.</summary>
     private const int SkipCount = 8;
 
-    /// <summary>
-    /// The exclusive upper bound used by the take/skip-while benchmarks.
-    /// </summary>
+    /// <summary>The exclusive upper bound used by the take/skip-while benchmarks.</summary>
     private const int TakeWhileLimit = 24;
 
-    /// <summary>
-    /// The divisor used by the key-selector benchmarks.
-    /// </summary>
+    /// <summary>The divisor used by the key-selector benchmarks.</summary>
     private const int KeyDivisor = 2;
 
     /// <summary>Primitives Skip.</summary>

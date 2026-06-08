@@ -20,15 +20,10 @@ namespace ReactiveUI.Primitives.Async;
 /// begins only after the previous completes.</param>
 internal sealed class ConcatEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> signals) : SignalAsync<T>
 {
-    /// <summary>
-    /// The enumerable collection of signal sequences to concatenate.
-    /// </summary>
+    /// <summary>The enumerable collection of signal sequences to concatenate.</summary>
     private readonly IEnumerable<IObservableAsync<T>> _signals = signals;
 
-    /// <summary>
-    /// Subscribes the specified observer by creating a <see cref="ConcatSequenceCoordinator"/> that iterates
-    /// through the enumerable of observables sequentially.
-    /// </summary>
+    /// <summary>Subscribes the specified observer by creating a <see cref="ConcatSequenceCoordinator"/> that iterates through the enumerable of observables sequentially.</summary>
     /// <param name="observer">The observer to receive elements from the concatenated sequences.</param>
     /// <param name="cancellationToken">A token to cancel the subscription.</param>
     /// <returns>An async disposable that tears down the subscription when disposed.</returns>
@@ -48,39 +43,25 @@ internal sealed class ConcatEnumerableSignal<T>(IEnumerable<IObservableAsync<T>>
     /// </summary>
     internal sealed class ConcatSequenceCoordinator : IAsyncDisposable
     {
-        /// <summary>
-        /// Enumerator that iterates through the collection of observable sequences to concatenate.
-        /// </summary>
+        /// <summary>Enumerator that iterates through the collection of observable sequences to concatenate.</summary>
         private readonly IEnumerator<IObservableAsync<T>> _enumerator;
 
-        /// <summary>
-        /// Serial disposable that holds the currently active inner subscription, disposing the previous one when replaced.
-        /// </summary>
+        /// <summary>Serial disposable that holds the currently active inner subscription, disposing the previous one when replaced.</summary>
         private readonly SingleReplaceableDisposableAsync _innerDisposable = new();
 
-        /// <summary>
-        /// Cancellation token source used to signal disposal of the subscription.
-        /// </summary>
+        /// <summary>Cancellation token source used to signal disposal of the subscription.</summary>
         private readonly CancellationTokenSource _cts = new();
 
-        /// <summary>
-        /// Cached cancellation token from the dispose cancellation token source.
-        /// </summary>
+        /// <summary>Cached cancellation token from the dispose cancellation token source.</summary>
         private readonly CancellationToken _disposedCancellationToken;
 
-        /// <summary>
-        /// The downstream observer to forward elements to.
-        /// </summary>
+        /// <summary>The downstream observer to forward elements to.</summary>
         private readonly IObserverAsync<T> _observer;
 
-        /// <summary>
-        /// Flag indicating whether this subscription has been disposed (1 = disposed, 0 = active).
-        /// </summary>
+        /// <summary>Flag indicating whether this subscription has been disposed (1 = disposed, 0 = active).</summary>
         private int _disposed;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ConcatSequenceCoordinator"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ConcatSequenceCoordinator"/> class.</summary>
         /// <param name="parent">The parent observable that provides the enumerable of observables.</param>
         /// <param name="observer">The downstream observer to forward elements to.</param>
         public ConcatSequenceCoordinator(ConcatEnumerableSignal<T> parent, IObserverAsync<T> observer)
@@ -90,10 +71,7 @@ internal sealed class ConcatEnumerableSignal<T>(IEnumerable<IObservableAsync<T>>
             _disposedCancellationToken = _cts.Token;
         }
 
-        /// <summary>
-        /// Advances to and subscribes to the next observable in the enumerable,
-        /// or completes if no more observables are available.
-        /// </summary>
+        /// <summary>Advances to and subscribes to the next observable in the enumerable, or completes if no more observables are available.</summary>
         /// <returns>A task representing the asynchronous operation.</returns>
         public async ValueTask SubscribeNextSignalAsync()
         {
@@ -124,10 +102,7 @@ internal sealed class ConcatEnumerableSignal<T>(IEnumerable<IObservableAsync<T>>
         /// <inheritdoc/>
         public ValueTask DisposeAsync() => FinishAsync(null);
 
-        /// <summary>
-        /// Handles a second call to <see cref="FinishAsync"/> when already disposed,
-        /// routing any failure exception to the unhandled exception handler.
-        /// </summary>
+        /// <summary>Handles a second call to <see cref="FinishAsync"/> when already disposed, routing any failure exception to the unhandled exception handler.</summary>
         /// <param name="result">The completion result from the second call.</param>
         internal static void HandleAlreadyDisposed(Result? result)
         {
@@ -139,9 +114,7 @@ internal sealed class ConcatEnumerableSignal<T>(IEnumerable<IObservableAsync<T>>
             UnhandledExceptionHandler.ReportUnhandledException(exception);
         }
 
-        /// <summary>
-        /// Forwards a non-fatal error from the current inner sequence to the downstream observer.
-        /// </summary>
+        /// <summary>Forwards a non-fatal error from the current inner sequence to the downstream observer.</summary>
         /// <param name="exception">The error to forward.</param>
         /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
@@ -156,9 +129,7 @@ internal sealed class ConcatEnumerableSignal<T>(IEnumerable<IObservableAsync<T>>
             return _observer.OnErrorResumeAsync(exception, _disposedCancellationToken);
         }
 
-        /// <summary>
-        /// Forwards an element from the current inner sequence to the downstream observer.
-        /// </summary>
+        /// <summary>Forwards an element from the current inner sequence to the downstream observer.</summary>
         /// <param name="value">The element to forward.</param>
         /// <param name="cancellationToken">A token to cancel the operation. Ignored — see <see cref="RelayInnerErrorAsync"/>.</param>
         /// <returns>A task representing the asynchronous operation.</returns>

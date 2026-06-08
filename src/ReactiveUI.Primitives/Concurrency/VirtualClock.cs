@@ -4,32 +4,24 @@
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// Deterministic virtual scheduler backed by <see cref="DateTimeOffset"/> and <see cref="TimeSpan"/>.
-/// </summary>
+/// <summary>Deterministic virtual scheduler backed by <see cref="DateTimeOffset"/> and <see cref="TimeSpan"/>.</summary>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class VirtualClock : VirtualTimeSequencer<DateTimeOffset, TimeSpan>
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="VirtualClock"/> class at the default clock value.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="VirtualClock"/> class at the default clock value.</summary>
     public VirtualClock()
         : this(default)
     {
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="VirtualClock"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="VirtualClock"/> class.</summary>
     /// <param name="initialClock">Initial virtual time.</param>
     public VirtualClock(DateTimeOffset initialClock)
         : base(initialClock, Comparer<DateTimeOffset>.Default)
     {
     }
 
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 

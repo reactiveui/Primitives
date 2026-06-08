@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace ReactiveUI.Primitives.R3Bridge.Generator;
 
-    /// <summary>Emits opt-in R3-shaped bridge extensions when R3 symbols are visible to the consumer compilation.</summary>
+/// <summary>Emits opt-in R3-shaped bridge extensions when R3 symbols are visible to the consumer compilation.</summary>
 [Generator(LanguageNames.CSharp)]
 public sealed class R3BridgeGenerator : IIncrementalGenerator
 {

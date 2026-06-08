@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Sink that drops leading values while the predicate holds, then mirrors the source.
-/// </summary>
+/// <summary>Sink that drops leading values while the predicate holds, then mirrors the source.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 public sealed class SkipWhileObserver<T> : SingleSourceObserver<T>
 {
@@ -19,9 +17,7 @@ public sealed class SkipWhileObserver<T> : SingleSourceObserver<T>
     /// <summary>A value indicating whether the skipping phase is still active.</summary>
     private bool _skipping = true;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SkipWhileObserver{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="SkipWhileObserver{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="predicate">The predicate that determines whether to keep skipping values.</param>
     public SkipWhileObserver(IObserver<T> observer, Func<T, bool> predicate)

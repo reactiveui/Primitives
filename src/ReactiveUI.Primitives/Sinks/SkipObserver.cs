@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Sink that drops the first <c>count</c> values, then forwards the rest.
-/// </summary>
+/// <summary>Sink that drops the first <c>count</c> values, then forwards the rest.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 public sealed class SkipObserver<T> : SingleSourceObserver<T>
 {
@@ -16,9 +14,7 @@ public sealed class SkipObserver<T> : SingleSourceObserver<T>
     /// <summary>The remaining number of values to drop.</summary>
     private int _remaining;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SkipObserver{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="SkipObserver{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="count">The number of leading values to drop.</param>
     public SkipObserver(IObserver<T> observer, int count)

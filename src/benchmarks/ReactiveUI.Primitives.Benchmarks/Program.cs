@@ -8,59 +8,37 @@ using BenchmarkDotNet.Running;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Entry point for benchmark execution and smoke-test mode.
-/// </summary>
+/// <summary>Entry point for benchmark execution and smoke-test mode.</summary>
 internal static class Program
 {
-    /// <summary>
-    /// The expected Primitives value for the documented SwitchRanges scheduling difference.
-    /// </summary>
+    /// <summary>The expected Primitives value for the documented SwitchRanges scheduling difference.</summary>
     private const int SwitchRangesPrimitivesValue = 1856;
 
-    /// <summary>
-    /// The expected System.Reactive value for the documented SwitchRanges scheduling difference.
-    /// </summary>
+    /// <summary>The expected System.Reactive value for the documented SwitchRanges scheduling difference.</summary>
     private const int SwitchRangesSystemReactiveValue = 1721;
 
-    /// <summary>
-    /// The expected R3 value for the documented SwitchRanges scheduling difference.
-    /// </summary>
+    /// <summary>The expected R3 value for the documented SwitchRanges scheduling difference.</summary>
     private const int SwitchRangesR3Value = 1856;
 
-    /// <summary>
-    /// The expected Primitives and R3 value for the documented CombineLatest/WithLatest differences.
-    /// </summary>
+    /// <summary>The expected Primitives and R3 value for the documented CombineLatest/WithLatest differences.</summary>
     private const int CombineWithLatestPrimitivesValue = 536;
 
-    /// <summary>
-    /// The expected System.Reactive value for the documented CombineLatestRanges difference.
-    /// </summary>
+    /// <summary>The expected System.Reactive value for the documented CombineLatestRanges difference.</summary>
     private const int CombineLatestSystemReactiveValue = 806;
 
-    /// <summary>
-    /// The expected System.Reactive value for the documented WithLatestRanges difference.
-    /// </summary>
+    /// <summary>The expected System.Reactive value for the documented WithLatestRanges difference.</summary>
     private const int WithLatestSystemReactiveValue = 416;
 
-    /// <summary>
-    /// The benchmark method-name prefix identifying the Primitives library row.
-    /// </summary>
+    /// <summary>The benchmark method-name prefix identifying the Primitives library row.</summary>
     private const string PrimitivesPrefix = "Primitives";
 
-    /// <summary>
-    /// The benchmark method-name prefix identifying the System.Reactive library row.
-    /// </summary>
+    /// <summary>The benchmark method-name prefix identifying the System.Reactive library row.</summary>
     private const string SystemReactivePrefix = "SystemReactive";
 
-    /// <summary>
-    /// The benchmark method-name prefix identifying the R3 library row.
-    /// </summary>
+    /// <summary>The benchmark method-name prefix identifying the R3 library row.</summary>
     private const string R3Prefix = "R3";
 
-    /// <summary>
-    /// Maps comparator benchmark method suffixes onto the matching Primitives smoke scenario.
-    /// </summary>
+    /// <summary>Maps comparator benchmark method suffixes onto the matching Primitives smoke scenario.</summary>
     private static readonly Dictionary<string, string> SmokeScenarioAliases =
         new(StringComparer.Ordinal)
         {
@@ -74,9 +52,7 @@ internal static class Program
             ["CompositeDispose"] = "PocketDispose",
         };
 
-    /// <summary>
-    /// Executes benchmarks, or runs a deterministic smoke check with <c>--smoke</c>.
-    /// </summary>
+    /// <summary>Executes benchmarks, or runs a deterministic smoke check with <c>--smoke</c>.</summary>
     /// <param name="args">BenchmarkDotNet command-line arguments.</param>
     /// <returns>A task that completes when execution is finished.</returns>
     public static async Task Main(string[] args)
@@ -115,9 +91,7 @@ internal static class Program
         BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
     }
 
-    /// <summary>
-    /// Runs the extension comparison scenarios once to validate benchmark delegates.
-    /// </summary>
+    /// <summary>Runs the extension comparison scenarios once to validate benchmark delegates.</summary>
     private static void RunExtensionComparisonSmoke()
     {
         var benchmarks = new ReactiveExtensionsComparisonBenchmarks();
@@ -128,9 +102,7 @@ internal static class Program
         Console.WriteLine("Extensions scenario smoke validation passed.");
     }
 
-    /// <summary>
-    /// Runs a named extension scenario set.
-    /// </summary>
+    /// <summary>Runs a named extension scenario set.</summary>
     /// <param name="name">The scenario set name.</param>
     /// <param name="scenarios">The scenarios to run.</param>
     private static void RunExtensionScenarioSet(
@@ -144,9 +116,7 @@ internal static class Program
         }
     }
 
-    /// <summary>
-    /// Runs the deterministic smoke benchmark scenarios and writes their results to the console.
-    /// </summary>
+    /// <summary>Runs the deterministic smoke benchmark scenarios and writes their results to the console.</summary>
     /// <returns>A task that completes when all smoke benchmarks have run.</returns>
     private static async Task RunSmokeBenchmarksAsync()
     {
@@ -244,9 +214,7 @@ internal static class Program
         RunCoreRuntimeSmokeBenchmarks();
     }
 
-    /// <summary>
-    /// Runs the expansion-coverage smoke benchmark scenarios and writes their results to the console.
-    /// </summary>
+    /// <summary>Runs the expansion-coverage smoke benchmark scenarios and writes their results to the console.</summary>
     /// <returns>A task that completes when all expansion smoke benchmarks have run.</returns>
     private static async Task RunExpansionSmokeBenchmarksAsync()
     {
@@ -258,9 +226,7 @@ internal static class Program
         await RunStateTaskCommandSmokeAsync();
     }
 
-    /// <summary>
-    /// Runs the factory-adapter expansion smoke benchmarks and writes their results to the console.
-    /// </summary>
+    /// <summary>Runs the factory-adapter expansion smoke benchmarks and writes their results to the console.</summary>
     /// <returns>A task that completes when the factory-adapter smoke benchmarks have run.</returns>
     private static async Task RunFactoryAdapterExpansionSmokeAsync()
     {
@@ -292,9 +258,7 @@ internal static class Program
         Console.WriteLine($"R3NeverSubscribeDispose={factoryAdapters.R3NeverSubscribeDispose()}");
     }
 
-    /// <summary>
-    /// Runs the time and scheduler operator smoke benchmarks and writes their results to the console.
-    /// </summary>
+    /// <summary>Runs the time and scheduler operator smoke benchmarks and writes their results to the console.</summary>
     private static void RunTimeSchedulerSmoke()
     {
         var timeSchedulers = new OperatorTimeSchedulerBenchmarks();
@@ -324,9 +288,7 @@ internal static class Program
         Console.WriteLine($"R3ObserveOnImmediate={timeSchedulers.R3ObserveOnImmediate()}");
     }
 
-    /// <summary>
-    /// Runs the higher-order operator smoke benchmarks and writes their results to the console.
-    /// </summary>
+    /// <summary>Runs the higher-order operator smoke benchmarks and writes their results to the console.</summary>
     private static void RunHigherOrderSmoke()
     {
         var higherOrder = new OperatorHigherOrderBenchmarks();
@@ -353,9 +315,7 @@ internal static class Program
         Console.WriteLine($"R3ForkJoinRanges={higherOrder.R3ForkJoinRanges()}");
     }
 
-    /// <summary>
-    /// Runs the terminal-collection smoke benchmarks and writes their results to the console.
-    /// </summary>
+    /// <summary>Runs the terminal-collection smoke benchmarks and writes their results to the console.</summary>
     /// <returns>A task that completes when the terminal-collection smoke benchmarks have run.</returns>
     private static async Task RunTerminalCollectionSmokeAsync()
     {
@@ -402,9 +362,7 @@ internal static class Program
         Console.WriteLine($"SystemReactiveCollectArray={terminalCollections.SystemReactiveCollectArray()}");
     }
 
-    /// <summary>
-    /// Runs the connectable/share smoke benchmarks and writes their results to the console.
-    /// </summary>
+    /// <summary>Runs the connectable/share smoke benchmarks and writes their results to the console.</summary>
     private static void RunConnectableShareSmoke()
     {
         var connectableShare = new ConnectableShareBenchmarks();
@@ -423,9 +381,7 @@ internal static class Program
         Console.WriteLine($"SystemReactiveAutoConnectSubscribe={connectableShare.SystemReactiveAutoConnectSubscribe()}");
     }
 
-    /// <summary>
-    /// Runs the state, task, and command smoke benchmarks and writes their results to the console.
-    /// </summary>
+    /// <summary>Runs the state, task, and command smoke benchmarks and writes their results to the console.</summary>
     /// <returns>A task that completes when the state/task/command smoke benchmarks have run.</returns>
     private static async Task RunStateTaskCommandSmokeAsync()
     {
@@ -449,9 +405,7 @@ internal static class Program
         Console.WriteLine($"R3CommandResultSubscribe={stateTaskCommand.R3CommandResultSubscribe()}");
     }
 
-    /// <summary>
-    /// Runs the core-runtime smoke benchmark scenarios and writes their results to the console.
-    /// </summary>
+    /// <summary>Runs the core-runtime smoke benchmark scenarios and writes their results to the console.</summary>
     private static void RunCoreRuntimeSmokeBenchmarks()
     {
         var coreRuntime = new CoreRuntimeBenchmarks();
@@ -470,9 +424,7 @@ internal static class Program
         Console.WriteLine($"R3CompletedSpark={coreRuntime.R3CompletedSpark()}");
     }
 
-    /// <summary>
-    /// Validates the captured smoke output for parity across the participating libraries.
-    /// </summary>
+    /// <summary>Validates the captured smoke output for parity across the participating libraries.</summary>
     /// <param name="output">The captured smoke benchmark console output.</param>
     private static void ValidateSmokeOutput(string output)
     {
@@ -517,9 +469,7 @@ internal static class Program
         Console.WriteLine($"Smoke parity validation passed for {groupCount} benchmark groups.");
     }
 
-    /// <summary>
-    /// Validates a group of consecutive smoke rows for one scenario, one row per participating library.
-    /// </summary>
+    /// <summary>Validates a group of consecutive smoke rows for one scenario, one row per participating library.</summary>
     /// <param name="firstRowNumber">The one-based row number of the first row in the group.</param>
     /// <param name="rows">The library result rows for the scenario, in emission order.</param>
     /// <returns>A failure description, or <see langword="null"/> when the group is valid.</returns>
@@ -552,9 +502,7 @@ internal static class Program
             : ValidateSmokeParity(primitivesName, primitivesValue, rows);
     }
 
-    /// <summary>
-    /// Determines whether the name carries a recognized library prefix.
-    /// </summary>
+    /// <summary>Determines whether the name carries a recognized library prefix.</summary>
     /// <param name="name">The benchmark result name.</param>
     /// <returns><see langword="true"/> when the name has a known library prefix.</returns>
     private static bool HasKnownLibraryPrefix(string name) =>
@@ -562,9 +510,7 @@ internal static class Program
         name.StartsWith(SystemReactivePrefix, StringComparison.Ordinal) ||
         name.StartsWith(R3Prefix, StringComparison.Ordinal);
 
-    /// <summary>
-    /// Validates that every library row in the group matches the Primitives value.
-    /// </summary>
+    /// <summary>Validates that every library row in the group matches the Primitives value.</summary>
     /// <param name="primitivesName">The Primitives result name.</param>
     /// <param name="primitivesValue">The Primitives result value.</param>
     /// <param name="rows">The library result rows for the scenario.</param>
@@ -588,9 +534,7 @@ internal static class Program
         return null;
     }
 
-    /// <summary>
-    /// Normalizes a benchmark result name to its underlying smoke scenario name.
-    /// </summary>
+    /// <summary>Normalizes a benchmark result name to its underlying smoke scenario name.</summary>
     /// <param name="name">The benchmark result name including its library prefix.</param>
     /// <returns>The normalized smoke scenario name.</returns>
     private static string NormalizeSmokeScenarioName(string name)
@@ -612,9 +556,7 @@ internal static class Program
         return SmokeScenarioAliases.TryGetValue(scenario, out var normalized) ? normalized : scenario;
     }
 
-    /// <summary>
-    /// Determines whether the named scenario has a documented, expected parity difference.
-    /// </summary>
+    /// <summary>Determines whether the named scenario has a documented, expected parity difference.</summary>
     /// <param name="primitivesName">The Primitives result name.</param>
     /// <returns><see langword="true"/> when the scenario is a documented difference; otherwise, <see langword="false"/>.</returns>
     private static bool IsDocumentedSmokeDifference(string primitivesName) =>
@@ -622,9 +564,7 @@ internal static class Program
             "PrimitivesCombineLatestRanges" or
             "PrimitivesWithLatestRanges";
 
-    /// <summary>
-    /// Splits the scenario rows into the Primitives name and the per-library values.
-    /// </summary>
+    /// <summary>Splits the scenario rows into the Primitives name and the per-library values.</summary>
     /// <param name="rows">The library result rows for the scenario.</param>
     /// <returns>The Primitives name and the Primitives, System.Reactive, and R3 values.</returns>
     private static (string? PrimitivesName, int PrimitivesValue, int SystemReactiveValue, int R3Value) SplitLibraryValues(
@@ -655,9 +595,7 @@ internal static class Program
         return (primitivesName, primitivesValue, systemReactiveValue, r3Value);
     }
 
-    /// <summary>
-    /// Validates a scenario with a documented, expected parity difference against its known values.
-    /// </summary>
+    /// <summary>Validates a scenario with a documented, expected parity difference against its known values.</summary>
     /// <param name="rows">The library result rows for the scenario.</param>
     /// <returns>A failure description, or <see langword="null"/> when the values match the documented difference.</returns>
     private static string? ValidateDocumentedSmokeDifference(List<(string Name, int Value)> rows)
@@ -686,9 +624,7 @@ internal static class Program
               $"but got Primitives={primitivesValue}, System.Reactive={systemReactiveValue}, R3={r3Value}.";
     }
 
-    /// <summary>
-    /// Parses a single <c>key=value</c> smoke output row into its name and integer value.
-    /// </summary>
+    /// <summary>Parses a single <c>key=value</c> smoke output row into its name and integer value.</summary>
     /// <param name="line">The smoke output row to parse.</param>
     /// <returns>A tuple containing the result name and its integer value.</returns>
     private static (string Name, int Value) ParseSmokeResult(string line)
@@ -703,21 +639,15 @@ internal static class Program
         return (line[..separator], value);
     }
 
-    /// <summary>
-    /// A <see cref="TextWriter"/> that mirrors every write to a primary and a secondary writer.
-    /// </summary>
+    /// <summary>A <see cref="TextWriter"/> that mirrors every write to a primary and a secondary writer.</summary>
     /// <param name="primary">The primary writer to forward writes to.</param>
     /// <param name="secondary">The secondary writer to forward writes to.</param>
     private sealed class SmokeTeeTextWriter(TextWriter primary, TextWriter secondary) : TextWriter
     {
-        /// <summary>
-        /// Gets the character encoding of the primary writer.
-        /// </summary>
+        /// <summary>Gets the character encoding of the primary writer.</summary>
         public override Encoding Encoding => primary.Encoding;
 
-        /// <summary>
-        /// Writes a character to both the primary and secondary writers.
-        /// </summary>
+        /// <summary>Writes a character to both the primary and secondary writers.</summary>
         /// <param name="value">The character to write.</param>
         public override void Write(char value)
         {
@@ -725,9 +655,7 @@ internal static class Program
             secondary.Write(value);
         }
 
-        /// <summary>
-        /// Writes a string to both the primary and secondary writers.
-        /// </summary>
+        /// <summary>Writes a string to both the primary and secondary writers.</summary>
         /// <param name="value">The string to write.</param>
         public override void Write(string? value)
         {
@@ -735,9 +663,7 @@ internal static class Program
             secondary.Write(value);
         }
 
-        /// <summary>
-        /// Writes a string followed by a line terminator to both the primary and secondary writers.
-        /// </summary>
+        /// <summary>Writes a string followed by a line terminator to both the primary and secondary writers.</summary>
         /// <param name="value">The string to write.</param>
         public override void WriteLine(string? value)
         {

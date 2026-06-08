@@ -8,9 +8,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Retries the source observable sequence upon error, with a delay selected by a function.
-/// </summary>
+/// <summary>Retries the source observable sequence upon error, with a delay selected by a function.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="retryCount">The maximum number of retries.</param>
@@ -32,9 +30,7 @@ internal sealed class RetryWithDelayObservable<T>(
         return sink;
     }
 
-    /// <summary>
-    /// Sink that manages retries with a custom delay selector.
-    /// </summary>
+    /// <summary>Sink that manages retries with a custom delay selector.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="source">The source observable.</param>
     /// <param name="maxRetries">The maximum number of retries.</param>

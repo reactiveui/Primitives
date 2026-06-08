@@ -10,9 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Tests;
 /// <summary>Tests for ReactiveExtensionsTests.</summary>
 public partial class ReactiveExtensionsTests
 {
-    /// <summary>
-    /// Tests BufferUntil with character delimiters.
-    /// </summary>
+    /// <summary>Tests BufferUntil with character delimiters.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task BufferUntil_WithStartAndEndChars_BuffersCorrectly()
@@ -63,9 +61,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>
-    /// Tests BufferUntil emits remaining buffered content when the source completes before the end delimiter.
-    /// </summary>
+    /// <summary>Tests BufferUntil emits remaining buffered content when the source completes before the end delimiter.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task BufferUntil_WhenSourceCompletesWithPartialBuffer_EmitsRemainingContent()
@@ -89,9 +85,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests Conflate with minimum update period.
-    /// </summary>
+    /// <summary>Tests Conflate with minimum update period.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Conflate_WithMinimumPeriod_DelaysUpdates()
@@ -113,9 +107,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests Conflate completes after a pending delayed update has been emitted.
-    /// </summary>
+    /// <summary>Tests Conflate completes after a pending delayed update has been emitted.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Conflate_WithPendingDelayedUpdate_CompletesAfterFlush()
@@ -142,9 +134,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests BufferUntilIdle buffers values until idle period.
-    /// </summary>
+    /// <summary>Tests BufferUntilIdle buffers values until idle period.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task BufferUntilIdle_BuffersUntilIdle()
@@ -166,9 +156,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results[0]).IsCollectionEqualTo([1, SampleValue2, SampleValue3]);
     }
 
-    /// <summary>
-    /// Tests BufferUntilIdle with scheduler forwards source error after flushing buffered items.
-    /// </summary>
+    /// <summary>Tests BufferUntilIdle with scheduler forwards source error after flushing buffered items.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenBufferUntilIdleWithSchedulerSourceErrors_ThenFlushesAndForwardsError()
@@ -193,9 +181,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests BufferUntilIdle with scheduler flushes buffered items on source completion.
-    /// </summary>
+    /// <summary>Tests BufferUntilIdle with scheduler flushes buffered items on source completion.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenBufferUntilIdleWithSchedulerSourceCompletes_ThenFlushesAndCompletes()
@@ -220,9 +206,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests BufferUntilIdle without scheduler uses the Publish+Buffer+Throttle path.
-    /// </summary>
+    /// <summary>Tests BufferUntilIdle without scheduler uses the Publish+Buffer+Throttle path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenBufferUntilIdleCalledWithoutScheduler_ThenBuffersUntilIdle()
@@ -241,9 +225,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
     }
 
-    /// <summary>
-    /// Tests BufferUntilInactive buffers items and flushes after inactivity period.
-    /// </summary>
+    /// <summary>Tests BufferUntilInactive buffers items and flushes after inactivity period.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenBufferUntilInactive_ThenBuffersAndFlushesOnInactivity()
@@ -265,9 +247,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results[0]).IsCollectionEqualTo([1, SampleValue2, SampleValue3]);
     }
 
-    /// <summary>
-    /// Tests BufferUntilInactive flushes remaining items on error.
-    /// </summary>
+    /// <summary>Tests BufferUntilInactive flushes remaining items on error.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenBufferUntilInactiveSourceErrors_ThenFlushesAndForwardsError()
@@ -292,9 +272,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests BufferUntilInactive flushes remaining items on completion.
-    /// </summary>
+    /// <summary>Tests BufferUntilInactive flushes remaining items on completion.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenBufferUntilInactiveSourceCompletes_ThenFlushesAndCompletes()
@@ -319,9 +297,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests Conflate non-throttled path emits immediately when update period has passed.
-    /// </summary>
+    /// <summary>Tests Conflate non-throttled path emits immediately when update period has passed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenConflateNonThrottledPath_ThenEmitsImmediately()

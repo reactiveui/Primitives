@@ -6,8 +6,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Covers the secondary-dispose-failure swallow branch and the
-/// scheduler-error-forwarding path of <c>UsingActionObservable&lt;T&gt;</c>.</summary>
+/// <summary>Covers the secondary-dispose-failure swallow branch and the scheduler-error-forwarding path of <c>UsingActionObservable&lt;T&gt;</c>.</summary>
 public partial class UsingActionObservableTests
 {
     /// <summary>Verifies that when the action throws AND the resource also throws on dispose,

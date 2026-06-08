@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Executes an action at subscription time.
-/// </summary>
+/// <summary>Executes an action at subscription time.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="action">The action to execute when subscribed.</param>

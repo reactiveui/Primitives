@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Sink that suppresses adjacent values whose projected key matches the previous one.
-/// </summary>
+/// <summary>Sink that suppresses adjacent values whose projected key matches the previous one.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <typeparam name="TKey">The key type.</typeparam>
 public sealed class UniqueByObserver<T, TKey> : SingleSourceObserver<T>
@@ -26,9 +24,7 @@ public sealed class UniqueByObserver<T, TKey> : SingleSourceObserver<T>
     /// <summary>The most recently observed key.</summary>
     private TKey? _last;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="UniqueByObserver{T, TKey}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="UniqueByObserver{T, TKey}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="keySelector">The key projection.</param>
     /// <param name="comparer">The comparer used to compare adjacent keys.</param>

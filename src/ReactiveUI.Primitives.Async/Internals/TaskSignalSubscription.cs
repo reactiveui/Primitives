@@ -4,14 +4,10 @@
 
 namespace ReactiveUI.Primitives.Async.Internals;
 
-/// <summary>
-/// Provides factory methods for creating and starting cancelable task-based subscriptions.
-/// </summary>
+/// <summary>Provides factory methods for creating and starting cancelable task-based subscriptions.</summary>
 internal static class TaskSignalSubscription
 {
-    /// <summary>
-    /// Creates and immediately starts a new cancelable task subscription.
-    /// </summary>
+    /// <summary>Creates and immediately starts a new cancelable task subscription.</summary>
     /// <typeparam name="T">The type of the elements observed by the subscription.</typeparam>
     /// <param name="executeAsyncCore">The asynchronous function that defines the subscription logic.</param>
     /// <param name="observer">The observer that receives notifications.</param>
@@ -25,9 +21,7 @@ internal static class TaskSignalSubscription
         return ret;
     }
 
-    /// <summary>
-    /// A cancelable task subscription that delegates its core logic to a user-supplied function.
-    /// </summary>
+    /// <summary>A cancelable task subscription that delegates its core logic to a user-supplied function.</summary>
     /// <typeparam name="T">The type of the elements observed by the subscription.</typeparam>
     /// <param name="executeAsyncCore">The asynchronous function that defines the subscription logic.</param>
     /// <param name="observer">The observer that receives notifications.</param>

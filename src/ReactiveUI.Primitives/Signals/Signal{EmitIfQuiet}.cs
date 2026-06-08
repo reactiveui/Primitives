@@ -7,62 +7,12 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// Create Signals functionality.
-/// </summary>
+/// <summary>Create Signals functionality.</summary>
 public static partial class Signal
 {
-    /// <summary>
-    /// Emits only the latest value after a quiet period using the default sequencer.
-    /// </summary>
+    /// <summary>Coordinates throttled emission for a single subscription.</summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
-    /// <param name="source">The source signal.</param>
-    /// <param name="dueTime">The quiet period before the latest value is emitted.</param>
-    /// <returns>A throttled signal.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
-    public static IObservable<TSource> EmitIfQuiet<TSource>(
-        this IObservable<TSource> source,
-        TimeSpan dueTime) =>
-        source.EmitIfQuiet(dueTime, Sequencer.Default);
-
-    /// <summary>
-    /// Emits only the latest value after a quiet period.
-    /// </summary>
-    /// <typeparam name="TSource">The source value type.</typeparam>
-    /// <param name="source">The source signal.</param>
-    /// <param name="dueTime">The quiet period before the latest value is emitted.</param>
-    /// <param name="sequencer">The sequencer used to schedule delayed emissions.</param>
-    /// <returns>A throttled signal.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
-    public static IObservable<TSource> EmitIfQuiet<TSource>(
-        this IObservable<TSource> source,
-        TimeSpan dueTime,
-        ISequencer sequencer)
-    {
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
-
-        if (sequencer == null)
-        {
-            throw new ArgumentNullException(nameof(sequencer));
-        }
-
-        if (dueTime <= TimeSpan.Zero)
-        {
-            return source;
-        }
-
-        return Create<TSource>(observer =>
-            new EmitIfQuietCoordinator<TSource>(observer, dueTime, sequencer).Subscribe(source));
-    }
-
-    /// <summary>
-    /// Coordinates throttled emission for a single subscription.
-    /// </summary>
-    /// <typeparam name="TSource">The source value type.</typeparam>
-    private sealed class EmitIfQuietCoordinator<TSource> : IDisposable
+    internal sealed class EmitIfQuietCoordinator<TSource> : IDisposable
     {
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<TSource> _observer;
@@ -91,9 +41,7 @@ public static partial class Signal
         /// <summary>Whether the source has terminated.</summary>
         private bool _stopped;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="EmitIfQuietCoordinator{TSource}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="EmitIfQuietCoordinator{TSource}"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="dueTime">The quiet period before emitting the latest value.</param>
         /// <param name="sequencer">The sequencer used to schedule delayed emissions.</param>
@@ -107,9 +55,7 @@ public static partial class Signal
         /// <inheritdoc/>
         public void Dispose() => _disposables.Dispose();
 
-        /// <summary>
-        /// Subscribes to the source and returns the coordinator as the subscription.
-        /// </summary>
+        /// <summary>Subscribes to the source and returns the coordinator as the subscription.</summary>
         /// <param name="source">The source signal.</param>
         /// <returns>The subscription that tears down source and scheduled throttle work.</returns>
         internal EmitIfQuietCoordinator<TSource> Subscribe(IObservable<TSource> source)

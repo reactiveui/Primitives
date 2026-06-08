@@ -6,16 +6,12 @@ using System.Windows.Threading;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// WPF dispatcher sequencer that coalesces scheduled work onto a dispatcher drain.
-/// </summary>
+/// <summary>WPF dispatcher sequencer that coalesces scheduled work onto a dispatcher drain.</summary>
 /// <seealso cref="DispatchSequencerBase" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class DispatcherSequencer : DispatchSequencerBase
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DispatcherSequencer"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="DispatcherSequencer"/> class.</summary>
     /// <param name="dispatcher">The dispatcher.</param>
     /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is <see langword="null"/>.</exception>
     public DispatcherSequencer(Dispatcher dispatcher)
@@ -23,9 +19,7 @@ public class DispatcherSequencer : DispatchSequencerBase
     {
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DispatcherSequencer"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="DispatcherSequencer"/> class.</summary>
     /// <param name="dispatcher">The dispatcher.</param>
     /// <param name="priority">Dispatcher priority used for posted drains.</param>
     /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is <see langword="null"/>.</exception>
@@ -35,19 +29,13 @@ public class DispatcherSequencer : DispatchSequencerBase
         Priority = priority;
     }
 
-    /// <summary>
-    /// Gets the dispatcher.
-    /// </summary>
+    /// <summary>Gets the dispatcher.</summary>
     public Dispatcher Dispatcher { get; }
 
-    /// <summary>
-    /// Gets the dispatcher priority used for posted drains.
-    /// </summary>
+    /// <summary>Gets the dispatcher priority used for posted drains.</summary>
     public DispatcherPriority Priority { get; }
 
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 

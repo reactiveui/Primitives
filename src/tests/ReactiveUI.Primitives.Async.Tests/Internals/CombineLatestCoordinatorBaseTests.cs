@@ -6,12 +6,10 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async.Tests.Internals;
 
-/// <summary>Tests for <see cref="CombineLatestCoordinatorBase{TResult}"/>, the shared scaffolding
-/// derived by every <c>CombineLatestN</c> arity-specific subscription.</summary>
+/// <summary>Tests for <see cref="CombineLatestCoordinatorBase{TResult}"/>, the shared scaffolding derived by every <c>CombineLatestN</c> arity-specific subscription.</summary>
 public class CombineLatestCoordinatorBaseTests
 {
-    /// <summary>Verifies that the base wires its <see cref="CombineLatestLifecycle{TResult}"/> with
-    /// the supplied observer and source count.</summary>
+    /// <summary>Verifies that the base wires its <see cref="CombineLatestLifecycle{TResult}"/> with the supplied observer and source count.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenConstructed_ThenLifecycleSlotsSized()
@@ -24,8 +22,7 @@ public class CombineLatestCoordinatorBaseTests
         await Assert.That(subscription.Lifecycle.HasDisposed).IsFalse();
     }
 
-    /// <summary>Verifies that <see cref="CombineLatestCoordinatorBase{TResult}.SubscribeSourcesAsync"/>
-    /// drives the per-arity <c>SubscribeAtAsync</c> for every source index in order.</summary>
+    /// <summary>Verifies that <see cref="CombineLatestCoordinatorBase{TResult}.SubscribeSourcesAsync"/> drives the per-arity <c>SubscribeAtAsync</c> for every source index in order.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscribeSourcesAsync_ThenSubscribeAtCalledForEveryIndex()
@@ -47,8 +44,7 @@ public class CombineLatestCoordinatorBaseTests
         await subscription.DisposeAsync();
     }
 
-    /// <summary>Verifies that <see cref="CombineLatestCoordinatorBase{TResult}.RelaySourceErrorAsync"/>
-    /// forwards the error through the lifecycle to the downstream observer.</summary>
+    /// <summary>Verifies that <see cref="CombineLatestCoordinatorBase{TResult}.RelaySourceErrorAsync"/> forwards the error through the lifecycle to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnErrorResume_ThenForwardsViaLifecycle()
@@ -65,8 +61,7 @@ public class CombineLatestCoordinatorBaseTests
         await subscription.DisposeAsync();
     }
 
-    /// <summary>Verifies that <see cref="CombineLatestCoordinatorBase{TResult}.DisposeAsync"/>
-    /// disposes the underlying lifecycle so subsequent disposal is idempotent.</summary>
+    /// <summary>Verifies that <see cref="CombineLatestCoordinatorBase{TResult}.DisposeAsync"/> disposes the underlying lifecycle so subsequent disposal is idempotent.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDisposeAsync_ThenLifecycleDisposed()
@@ -132,9 +127,7 @@ public class CombineLatestCoordinatorBaseTests
         await subscription.DisposeAsync();
     }
 
-    /// <summary>Verifies that <see cref="CombineLatestCoordinatorBase{TResult}.ValuesLock"/> is
-    /// usable as a <c>lock</c> target — both the NET9 <c>Lock</c> and legacy <c>object</c> paths
-    /// accept the C# 13 <c>lock</c> statement.</summary>
+    /// <summary>Verifies <see cref="CombineLatestCoordinatorBase{TResult}.ValuesLock"/> is usable as a <c>lock</c> target on both paths.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLockOnValuesLock_ThenNoThrow()

@@ -4,10 +4,7 @@
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
-/// <summary>
-/// Configures assembly-wide TUnit defaults via a <see cref="TestDiscovery"/> hook so they
-/// are in place before any test executes.
-/// </summary>
+/// <summary>Configures assembly-wide TUnit defaults via a <see cref="TestDiscovery"/> hook so they are in place before any test executes.</summary>
 internal static class GlobalTestSetup
 {
     /// <summary>The worker-thread floor for the test process; see <see cref="ConfigureDefaults"/>.</summary>
@@ -31,7 +28,7 @@ internal static class GlobalTestSetup
     /// </para>
     /// </summary>
     /// <param name="context">The TUnit test-discovery context exposing programmatic settings.</param>
-    [Before(HookType.TestDiscovery)]
+    [Before(TestDiscovery)]
     public static void ConfigureDefaults(BeforeTestDiscoveryContext context)
     {
         context.Settings.Timeouts.DefaultTestTimeout = TimeSpan.FromSeconds(60);

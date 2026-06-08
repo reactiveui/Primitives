@@ -7,27 +7,19 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Represents the ImmutableNeverSignal class.
-/// </summary>
+/// <summary>Represents the ImmutableNeverSignal class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
 internal sealed class ImmutableNeverSignal<T> : IRequireCurrentThread<T>
 {
-    /// <summary>
-    /// Executes the new operation.
-    /// </summary>
+    /// <summary>Executes the new operation.</summary>
     /// <returns>The result.</returns>
     internal static readonly ImmutableNeverSignal<T> Instance = new();
 
-    /// <summary>
-    /// Executes the IsRequiredSubscribeOnCurrentThread operation.
-    /// </summary>
+    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>
-    /// Executes the Subscribe operation.
-    /// </summary>
+    /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<T> observer) =>

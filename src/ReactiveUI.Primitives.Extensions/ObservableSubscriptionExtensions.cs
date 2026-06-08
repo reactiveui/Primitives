@@ -18,191 +18,138 @@ public static class ObservableSubscriptionExtensions
     /// <summary>The default timeout used by the <c>WaitFor*</c> helpers when no override is supplied.</summary>
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
 
-    /// <summary>
-    /// Subscribes to <paramref name="source"/> and returns the last value emitted during
-    /// the synchronous <see cref="IObservable{T}.Subscribe(IObserver{T})"/> call.
-    /// </summary>
-    /// <typeparam name="T">The element type of <paramref name="source"/>.</typeparam>
+    /// <summary>Blocking subscribe and wait operators for an observable source sequence.</summary>
+    /// <typeparam name="T">The element type of the source.</typeparam>
     /// <param name="source">The observable to subscribe to.</param>
-    /// <returns>The last emitted value, or <see langword="default"/> if no value was emitted.</returns>
-    public static T? SubscribeGetValue<T>(this IObservable<T> source)
+    extension<T>(IObservable<T> source)
     {
-        ArgumentExceptionHelper.ThrowIfNull(source);
+        /// <summary>Subscribes to the source and returns the last value emitted during the synchronous <see cref="IObservable{T}.Subscribe(IObserver{T})"/> call.</summary>
+        /// <returns>The last emitted value, or <see langword="default"/> if no value was emitted.</returns>
+        public T? SubscribeGetValue()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-        var sink = new ValueCaptureObserver<T>();
-        using var subscription = source.Subscribe(sink);
-        return sink.Value;
+            var sink = new ValueCaptureObserver<T>();
+            using var subscription = source.Subscribe(sink);
+            return sink.Value;
+        }
+
+        /// <summary>Subscribes to the source and returns any error emitted during the synchronous <see cref="IObservable{T}.Subscribe(IObserver{T})"/> call.</summary>
+        /// <returns>The captured error, or <see langword="null"/> if none.</returns>
+        public Exception? SubscribeGetError()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            var sink = new ErrorCaptureObserver<T>();
+            using var subscription = source.Subscribe(sink);
+            return sink.Error;
+        }
+
+        /// <summary>Blocks until the source emits a value, errors, or completes (default 30s timeout).</summary>
+        /// <returns>The last value emitted before terminal, or <see langword="default"/> if the sequence completed empty.</returns>
+        /// <exception cref="TimeoutException">The sequence did not terminate in time.</exception>
+        public T? WaitForValue() =>
+            WaitForValueCore(source, null, DefaultTimeout);
+
+        /// <summary>Blocks until the source emits a value, errors, or completes, honoring an explicit <paramref name="timeout"/>.</summary>
+        /// <param name="timeout">The wait timeout.</param>
+        /// <returns>The last value emitted before terminal, or <see langword="default"/> if the sequence completed empty.</returns>
+        /// <exception cref="TimeoutException">The sequence did not terminate within <paramref name="timeout"/>.</exception>
+        public T? WaitForValue(TimeSpan timeout) =>
+            WaitForValueCore(source, null, timeout);
+
+        /// <summary>Blocks until the source emits a value, errors, or completes, routing the subscribe call through <paramref name="scheduler"/> (default 30s timeout).</summary>
+        /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
+        /// <returns>The last value emitted before terminal, or <see langword="default"/> if the sequence completed empty.</returns>
+        /// <exception cref="TimeoutException">The sequence did not terminate in time.</exception>
+        public T? WaitForValue(ISequencer scheduler) =>
+            WaitForValueCore(source, scheduler, DefaultTimeout);
+
+        /// <summary>Blocks until the source emits a value, errors, or completes, routing the subscribe call through <paramref name="scheduler"/> with an explicit <paramref name="timeout"/>.</summary>
+        /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
+        /// <param name="timeout">The wait timeout.</param>
+        /// <returns>The last value emitted before terminal, or <see langword="default"/> if the sequence completed empty.</returns>
+        /// <exception cref="TimeoutException">The sequence did not terminate within <paramref name="timeout"/>.</exception>
+        public T? WaitForValue(ISequencer scheduler, TimeSpan timeout) =>
+            WaitForValueCore(source, scheduler, timeout);
+
+        /// <summary>Blocks until the source terminates; returns any captured error (does NOT rethrow). Default 30s timeout.</summary>
+        /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
+        public Exception? WaitForError() =>
+            WaitForErrorCore(source, null, DefaultTimeout);
+
+        /// <summary>Blocks until the source terminates with an explicit <paramref name="timeout"/>; returns any captured error (does NOT rethrow).</summary>
+        /// <param name="timeout">The wait timeout.</param>
+        /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
+        public Exception? WaitForError(TimeSpan timeout) =>
+            WaitForErrorCore(source, null, timeout);
+
+        /// <summary>Blocks until the source terminates, routing the subscribe call through <paramref name="scheduler"/>; returns any captured error (does NOT rethrow).</summary>
+        /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
+        /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
+        public Exception? WaitForError(ISequencer scheduler) =>
+            WaitForErrorCore(source, scheduler, DefaultTimeout);
+
+        /// <summary>
+        /// Blocks until the source terminates, routing the subscribe call
+        /// through <paramref name="scheduler"/> with an explicit <paramref name="timeout"/>;
+        /// returns any captured error (does NOT rethrow).
+        /// </summary>
+        /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
+        /// <param name="timeout">The wait timeout.</param>
+        /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
+        public Exception? WaitForError(ISequencer scheduler, TimeSpan timeout) =>
+            WaitForErrorCore(source, scheduler, timeout);
     }
 
-    /// <summary>
-    /// Subscribes to a <see cref="RxVoid"/>-producing observable, discarding the value.
-    /// Safe only when the sequence terminates synchronously.
-    /// </summary>
+    /// <summary>Blocking subscribe and wait operators for a <see cref="RxVoid"/>-producing source.</summary>
     /// <param name="source">The observable to subscribe to.</param>
-    public static void SubscribeAndComplete(this IObservable<RxVoid> source)
+    extension(IObservable<RxVoid> source)
     {
-        ArgumentExceptionHelper.ThrowIfNull(source);
+        /// <summary>Subscribes to a <see cref="RxVoid"/>-producing observable, discarding the value. Safe only when the sequence terminates synchronously.</summary>
+        public void SubscribeAndComplete()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-        using var subscription = source.Subscribe(NoopObserver<RxVoid>.Instance);
+            using var subscription = source.Subscribe(NoopObserver<RxVoid>.Instance);
+        }
+
+        /// <summary>Subscribes to the source and returns any error emitted during the synchronous <see cref="IObservable{T}.Subscribe(IObserver{T})"/> call.</summary>
+        /// <returns>The captured error, or <see langword="null"/> if none.</returns>
+        public Exception? SubscribeGetError()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            var sink = new ErrorCaptureObserver<RxVoid>();
+            using var subscription = source.Subscribe(sink);
+            return sink.Error;
+        }
+
+        /// <summary>Blocks until the <see cref="RxVoid"/>-producing source completes (default 30s timeout); rethrows any captured error.</summary>
+        public void WaitForCompletion() =>
+            WaitForCompletionCore(source, null, DefaultTimeout);
+
+        /// <summary>Blocks until the <see cref="RxVoid"/>-producing source completes, honoring an explicit <paramref name="timeout"/>; rethrows any captured error.</summary>
+        /// <param name="timeout">The wait timeout.</param>
+        public void WaitForCompletion(TimeSpan timeout) =>
+            WaitForCompletionCore(source, null, timeout);
+
+        /// <summary>Blocks until the <see cref="RxVoid"/>-producing source completes, routing the subscribe call through <paramref name="scheduler"/>; rethrows any captured error.</summary>
+        /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
+        public void WaitForCompletion(ISequencer scheduler) =>
+            WaitForCompletionCore(source, scheduler, DefaultTimeout);
+
+        /// <summary>
+        /// Blocks until the <see cref="RxVoid"/>-producing source completes, routing the subscribe call
+        /// through <paramref name="scheduler"/> with an explicit <paramref name="timeout"/>; rethrows any captured error.
+        /// </summary>
+        /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
+        /// <param name="timeout">The wait timeout.</param>
+        public void WaitForCompletion(ISequencer scheduler, TimeSpan timeout) =>
+            WaitForCompletionCore(source, scheduler, timeout);
     }
 
-    /// <summary>
-    /// Subscribes to <paramref name="source"/> and returns any error emitted during the
-    /// synchronous <see cref="IObservable{T}.Subscribe(IObserver{T})"/> call.
-    /// </summary>
-    /// <param name="source">The observable to subscribe to.</param>
-    /// <returns>The captured error, or <see langword="null"/> if none.</returns>
-    public static Exception? SubscribeGetError(this IObservable<RxVoid> source) =>
-        SubscribeGetError<RxVoid>(source);
-
-    /// <summary>
-    /// Subscribes to <paramref name="source"/> and returns any error emitted during the
-    /// synchronous <see cref="IObservable{T}.Subscribe(IObserver{T})"/> call.
-    /// </summary>
-    /// <typeparam name="T">The element type of <paramref name="source"/>.</typeparam>
-    /// <param name="source">The observable to subscribe to.</param>
-    /// <returns>The captured error, or <see langword="null"/> if none.</returns>
-    public static Exception? SubscribeGetError<T>(this IObservable<T> source)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(source);
-
-        var sink = new ErrorCaptureObserver<T>();
-        using var subscription = source.Subscribe(sink);
-        return sink.Error;
-    }
-
-    /// <summary>
-    /// Blocks until <paramref name="source"/> emits a value, errors, or completes
-    /// (default 30s timeout).
-    /// </summary>
-    /// <typeparam name="T">The element type.</typeparam>
-    /// <param name="source">The observable to subscribe to.</param>
-    /// <returns>The last value emitted before terminal, or <see langword="default"/> if the sequence completed empty.</returns>
-    /// <exception cref="TimeoutException">The sequence did not terminate in time.</exception>
-    public static T? WaitForValue<T>(this IObservable<T> source) =>
-        WaitForValueCore(source, null, DefaultTimeout);
-
-    /// <summary>
-    /// Blocks until <paramref name="source"/> emits a value, errors, or completes,
-    /// honoring an explicit <paramref name="timeout"/>.
-    /// </summary>
-    /// <typeparam name="T">The element type.</typeparam>
-    /// <param name="source">The observable to subscribe to.</param>
-    /// <param name="timeout">The wait timeout.</param>
-    /// <returns>The last value emitted before terminal, or <see langword="default"/> if the sequence completed empty.</returns>
-    /// <exception cref="TimeoutException">The sequence did not terminate within <paramref name="timeout"/>.</exception>
-    public static T? WaitForValue<T>(this IObservable<T> source, TimeSpan timeout) =>
-        WaitForValueCore(source, null, timeout);
-
-    /// <summary>
-    /// Blocks until <paramref name="source"/> emits a value, errors, or completes,
-    /// routing the subscribe call through <paramref name="scheduler"/> (default 30s timeout).
-    /// </summary>
-    /// <typeparam name="T">The element type.</typeparam>
-    /// <param name="source">The observable to subscribe to.</param>
-    /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
-    /// <returns>The last value emitted before terminal, or <see langword="default"/> if the sequence completed empty.</returns>
-    /// <exception cref="TimeoutException">The sequence did not terminate in time.</exception>
-    public static T? WaitForValue<T>(this IObservable<T> source, ISequencer scheduler) =>
-        WaitForValueCore(source, scheduler, DefaultTimeout);
-
-    /// <summary>
-    /// Blocks until <paramref name="source"/> emits a value, errors, or completes,
-    /// routing the subscribe call through <paramref name="scheduler"/> with an explicit
-    /// <paramref name="timeout"/>.
-    /// </summary>
-    /// <typeparam name="T">The element type.</typeparam>
-    /// <param name="source">The observable to subscribe to.</param>
-    /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
-    /// <param name="timeout">The wait timeout.</param>
-    /// <returns>The last value emitted before terminal, or <see langword="default"/> if the sequence completed empty.</returns>
-    /// <exception cref="TimeoutException">The sequence did not terminate within <paramref name="timeout"/>.</exception>
-    public static T? WaitForValue<T>(this IObservable<T> source, ISequencer scheduler, TimeSpan timeout) =>
-        WaitForValueCore(source, scheduler, timeout);
-
-    /// <summary>
-    /// Blocks until a <see cref="RxVoid"/>-producing <paramref name="source"/> completes
-    /// (default 30s timeout); rethrows any captured error.
-    /// </summary>
-    /// <param name="source">The observable to subscribe to.</param>
-    public static void WaitForCompletion(this IObservable<RxVoid> source) =>
-        WaitForCompletionCore(source, null, DefaultTimeout);
-
-    /// <summary>
-    /// Blocks until a <see cref="RxVoid"/>-producing <paramref name="source"/> completes,
-    /// honoring an explicit <paramref name="timeout"/>; rethrows any captured error.
-    /// </summary>
-    /// <param name="source">The observable to subscribe to.</param>
-    /// <param name="timeout">The wait timeout.</param>
-    public static void WaitForCompletion(this IObservable<RxVoid> source, TimeSpan timeout) =>
-        WaitForCompletionCore(source, null, timeout);
-
-    /// <summary>
-    /// Blocks until a <see cref="RxVoid"/>-producing <paramref name="source"/> completes,
-    /// routing the subscribe call through <paramref name="scheduler"/>; rethrows any captured error.
-    /// </summary>
-    /// <param name="source">The observable to subscribe to.</param>
-    /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
-    public static void WaitForCompletion(this IObservable<RxVoid> source, ISequencer scheduler) =>
-        WaitForCompletionCore(source, scheduler, DefaultTimeout);
-
-    /// <summary>
-    /// Blocks until a <see cref="RxVoid"/>-producing <paramref name="source"/> completes,
-    /// routing the subscribe call through <paramref name="scheduler"/> with an explicit
-    /// <paramref name="timeout"/>; rethrows any captured error.
-    /// </summary>
-    /// <param name="source">The observable to subscribe to.</param>
-    /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
-    /// <param name="timeout">The wait timeout.</param>
-    public static void WaitForCompletion(this IObservable<RxVoid> source, ISequencer scheduler, TimeSpan timeout) =>
-        WaitForCompletionCore(source, scheduler, timeout);
-
-    /// <summary>
-    /// Blocks until <paramref name="source"/> terminates; returns any captured error
-    /// (does NOT rethrow). Default 30s timeout.
-    /// </summary>
-    /// <typeparam name="T">The element type.</typeparam>
-    /// <param name="source">The observable to subscribe to.</param>
-    /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
-    public static Exception? WaitForError<T>(this IObservable<T> source) =>
-        WaitForErrorCore(source, null, DefaultTimeout);
-
-    /// <summary>
-    /// Blocks until <paramref name="source"/> terminates with an explicit <paramref name="timeout"/>;
-    /// returns any captured error (does NOT rethrow).
-    /// </summary>
-    /// <typeparam name="T">The element type.</typeparam>
-    /// <param name="source">The observable to subscribe to.</param>
-    /// <param name="timeout">The wait timeout.</param>
-    /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
-    public static Exception? WaitForError<T>(this IObservable<T> source, TimeSpan timeout) =>
-        WaitForErrorCore(source, null, timeout);
-
-    /// <summary>
-    /// Blocks until <paramref name="source"/> terminates, routing the subscribe call
-    /// through <paramref name="scheduler"/>; returns any captured error (does NOT rethrow).
-    /// </summary>
-    /// <typeparam name="T">The element type.</typeparam>
-    /// <param name="source">The observable to subscribe to.</param>
-    /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
-    /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
-    public static Exception? WaitForError<T>(this IObservable<T> source, ISequencer scheduler) =>
-        WaitForErrorCore(source, scheduler, DefaultTimeout);
-
-    /// <summary>
-    /// Blocks until <paramref name="source"/> terminates, routing the subscribe call
-    /// through <paramref name="scheduler"/> with an explicit <paramref name="timeout"/>;
-    /// returns any captured error (does NOT rethrow).
-    /// </summary>
-    /// <typeparam name="T">The element type.</typeparam>
-    /// <param name="source">The observable to subscribe to.</param>
-    /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
-    /// <param name="timeout">The wait timeout.</param>
-    /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
-    public static Exception? WaitForError<T>(this IObservable<T> source, ISequencer scheduler, TimeSpan timeout) =>
-        WaitForErrorCore(source, scheduler, timeout);
-
-    /// <summary>Shared implementation of <see cref="WaitForValue{T}(IObservable{T})"/> and its overloads.</summary>
+    /// <summary>Shared implementation of the <c>WaitForValue</c> operators.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="scheduler">Optional scheduler for the subscribe call.</param>
@@ -225,7 +172,7 @@ public static class ObservableSubscriptionExtensions
         return sink.Result;
     }
 
-    /// <summary>Shared implementation of <see cref="WaitForCompletion(IObservable{RxVoid})"/> and its overloads.</summary>
+    /// <summary>Shared implementation of the <c>WaitForCompletion</c> operators.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="scheduler">Optional scheduler for the subscribe call.</param>
     /// <param name="timeout">The wait timeout.</param>
@@ -251,7 +198,7 @@ public static class ObservableSubscriptionExtensions
         throw sink.Error;
     }
 
-    /// <summary>Shared implementation of <see cref="WaitForError{T}(IObservable{T})"/> and its overloads.</summary>
+    /// <summary>Shared implementation of the <c>WaitForError</c> operators.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="scheduler">Optional scheduler for the subscribe call.</param>
@@ -300,10 +247,7 @@ public static class ObservableSubscriptionExtensions
         return new DisposableBag(scheduled, swap);
     }
 
-    /// <summary>
-    /// No-op observer used by <see cref="SubscribeAndComplete"/> to absorb signals
-    /// without allocating a delegate trio.
-    /// </summary>
+    /// <summary>No-op observer used by <see cref="SubscribeAndComplete"/> to absorb signals without allocating a delegate trio.</summary>
     /// <typeparam name="T">The element type of the source.</typeparam>
     private sealed class NoopObserver<T> : IObserver<T>
     {
@@ -396,10 +340,7 @@ public static class ObservableSubscriptionExtensions
         public void OnCompleted() => done.Set();
     }
 
-    /// <summary>
-    /// Observer used by the completion / error <c>WaitFor</c> paths: captures any
-    /// terminal error and signals the gate on terminal.
-    /// </summary>
+    /// <summary>Observer used by the completion / error <c>WaitFor</c> paths: captures any terminal error and signals the gate on terminal.</summary>
     /// <typeparam name="T">The element type of the source.</typeparam>
     /// <param name="done">The gate signalled on terminal.</param>
     private sealed class BlockingTerminalObserver<T>(ManualResetEventSlim done) : IObserver<T>

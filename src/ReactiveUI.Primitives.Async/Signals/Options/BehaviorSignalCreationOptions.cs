@@ -4,29 +4,22 @@
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
-/// <summary>
-/// Represents configuration options for creating a behavior Signal, including publishing behavior and statefulness.
-/// </summary>
+/// <summary>Represents configuration options for creating a behavior Signal, including publishing behavior and statefulness.</summary>
 [System.Diagnostics.DebuggerDisplay("PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
 public sealed record BehaviorSignalCreationOptions
 {
-    /// <summary>
-    /// Gets the publishing option to use when processing the item.
-    /// </summary>
-    public required PublishingOption PublishingOption { get; init; }
-
-    /// <summary>
-    /// Gets a value indicating whether the object is stateless.
-    /// </summary>
-    public required bool IsStateless { get; init; }
-
-    /// <summary>
-    /// Gets the default configuration options for creating a new BehaviorSignal instance.
-    /// </summary>
+    /// <summary>Gets the default configuration options for creating a new BehaviorSignal instance.</summary>
     /// <remarks>Use this property to obtain a standard set of options when creating a BehaviorSignal, unless
     /// custom behavior is required.</remarks>
     public static BehaviorSignalCreationOptions Default { get; } = new()
     {
-        PublishingOption = PublishingOption.Serial, IsStateless = false
+        PublishingOption = PublishingOption.Serial,
+        IsStateless = false
     };
+
+    /// <summary>Gets the publishing option to use when processing the item.</summary>
+    public required PublishingOption PublishingOption { get; init; }
+
+    /// <summary>Gets a value indicating whether the object is stateless.</summary>
+    public required bool IsStateless { get; init; }
 }

@@ -8,38 +8,28 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Represents the SignalsBase class.
-/// </summary>
+/// <summary>Represents the SignalsBase class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
 internal abstract class SignalsBase<T> : IRequireCurrentThread<T>
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SignalsBase{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="SignalsBase{T}"/> class.</summary>
     /// <param name="isRequiredSubscribeOnCurrentThread">The isRequiredSubscribeOnCurrentThread value.</param>
     private protected SignalsBase(bool isRequiredSubscribeOnCurrentThread) =>
         IsCurrentThreadSubscriptionRequired = isRequiredSubscribeOnCurrentThread;
 
-    /// <summary>
-    /// Gets a value indicating whether subscription must be dispatched through the current-thread sequencer.
-    /// </summary>
+    /// <summary>Gets a value indicating whether subscription must be dispatched through the current-thread sequencer.</summary>
     public bool IsCurrentThreadSubscriptionRequired { get; }
 
-    /// <summary>
-    /// Executes the IsRequiredSubscribeOnCurrentThread operation.
-    /// </summary>
+    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() => IsCurrentThreadSubscriptionRequired;
 
-    /// <summary>
-    /// Executes the Subscribe operation.
-    /// </summary>
+    /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
     public virtual IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -58,9 +48,7 @@ internal abstract class SignalsBase<T> : IRequireCurrentThread<T>
         return subscription;
     }
 
-    /// <summary>
-    /// Executes the SubscribeCore operation.
-    /// </summary>
+    /// <summary>Executes the SubscribeCore operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <param name="cancel">The cancel value.</param>
     /// <returns>The result.</returns>

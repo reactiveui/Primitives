@@ -34,8 +34,7 @@ public partial class PartitionObservableTests
         await Assert.That(c).IsCollectionEqualTo([Two, Four]);
     }
 
-    /// <summary>Verifies that disposing the middle of three same-side observers
-    /// exercises the <c>existing.Length &gt; 2</c> shrink branch.</summary>
+    /// <summary>Verifies that disposing the middle of three same-side observers exercises the <c>existing.Length &gt; 2</c> shrink branch.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMiddleOfThreeDisposed_ThenOthersStillReceive()
@@ -59,8 +58,7 @@ public partial class PartitionObservableTests
         await Assert.That(c).IsCollectionEqualTo([Two, Four]);
     }
 
-    /// <summary>Verifies that double-dispose of a partition subscription is a no-op
-    /// (idempotent Subscription.Dispose).</summary>
+    /// <summary>Verifies that double-dispose of a partition subscription is a no-op (idempotent Subscription.Dispose).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscriptionDisposedTwice_ThenIdempotent()

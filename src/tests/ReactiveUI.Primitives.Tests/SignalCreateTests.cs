@@ -7,19 +7,13 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// SignalsCreateTests.
-/// </summary>
+/// <summary>SignalsCreateTests.</summary>
 public class SignalCreateTests
 {
-    /// <summary>
-    /// Value emitted by create-signal tests.
-    /// </summary>
+    /// <summary>Value emitted by create-signal tests.</summary>
     private const int CreatedValue = 42;
 
-    /// <summary>
-    /// Creates the argument checking.
-    /// </summary>
+    /// <summary>Creates the argument checking.</summary>
     [Test]
     public void Create_ArgumentChecking()
     {
@@ -28,9 +22,7 @@ public class SignalCreateTests
         Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(null!).Subscribe(null!));
     }
 
-    /// <summary>
-    /// Creates the null coalescing action.
-    /// </summary>
+    /// <summary>Creates the null coalescing action.</summary>
     [Test]
     public void Create_NullCoalescingAction()
     {
@@ -47,17 +39,13 @@ public class SignalCreateTests
         Assert.True(lst.SequenceEqual([CreatedValue]));
     }
 
-    /// <summary>
-    /// Creates the exception.
-    /// </summary>
+    /// <summary>Creates the exception.</summary>
     [Test]
     public void Create_Exception() =>
         Assert.Throws<InvalidOperationException>(() =>
                Signal.Create(new Func<IObserver<int>, IDisposable>(_ => throw new InvalidOperationException())).Subscribe());
 
-    /// <summary>
-    /// Creates the observer throws.
-    /// </summary>
+    /// <summary>Creates the observer throws.</summary>
     [Test]
     public void Create_ObserverThrows()
     {
@@ -81,9 +69,7 @@ public class SignalCreateTests
             }).Subscribe(x => { }, ex => { }, () => throw new InvalidOperationException()));
     }
 
-    /// <summary>
-    /// Creates the with disposable argument checking.
-    /// </summary>
+    /// <summary>Creates the with disposable argument checking.</summary>
     [Test]
     public void CreateWithDisposable_ArgumentChecking()
     {
@@ -96,9 +82,7 @@ public class SignalCreateTests
         }).Subscribe(null!));
     }
 
-    /// <summary>
-    /// Creates the with disposable null coalescing action.
-    /// </summary>
+    /// <summary>Creates the with disposable null coalescing action.</summary>
     [Test]
     public void CreateWithDisposable_NullCoalescingAction()
     {
@@ -115,9 +99,7 @@ public class SignalCreateTests
         Assert.True(lst.SequenceEqual([CreatedValue]));
     }
 
-    /// <summary>
-    /// Creates the with disposable exception.
-    /// </summary>
+    /// <summary>Creates the with disposable exception.</summary>
     [Test]
     public void CreateWithDisposable_Exception() =>
         Assert.Throws<InvalidOperationException>(() =>

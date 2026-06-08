@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <content>
-/// Concat tests for combining operators.
-/// </content>
+/// <summary>Tests for the Concat operator.</summary>
 public partial class CombiningOperatorTests
 {
     /// <summary>Tests Concat two sequences emits in order.</summary>
@@ -50,9 +48,7 @@ public partial class CombiningOperatorTests
         await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
     }
 
-    /// <summary>
-    /// Verifies that concat of an observable-of-observables where the outer source errors propagates the failure.
-    /// </summary>
+    /// <summary>Verifies that concat of an observable-of-observables where the outer source errors propagates the failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenConcatObservableOfObservablesOuterErrors_ThenFailurePropagates()
@@ -79,9 +75,7 @@ public partial class CombiningOperatorTests
         await outer.DisposeAsync();
     }
 
-    /// <summary>
-    /// Verifies that concat of an observable-of-observables where an inner source errors propagates the failure.
-    /// </summary>
+    /// <summary>Verifies that concat of an observable-of-observables where an inner source errors propagates the failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenConcatObservableOfObservablesInnerErrors_ThenFailurePropagates()
@@ -148,9 +142,7 @@ public partial class CombiningOperatorTests
         await outer.DisposeAsync();
     }
 
-    /// <summary>
-    /// Verifies that concat of an enumerable where one source errors propagates the failure.
-    /// </summary>
+    /// <summary>Verifies that concat of an enumerable where one source errors propagates the failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenConcatEnumerableOneSourceErrors_ThenFailurePropagates()
@@ -183,9 +175,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).Contains(1);
     }
 
-    /// <summary>
-    /// Verifies that disposing a concat enumerable subscription multiple times is idempotent and does not throw.
-    /// </summary>
+    /// <summary>Verifies that disposing a concat enumerable subscription multiple times is idempotent and does not throw.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenConcatEnumerableDoubleDisposal_ThenIdempotent()
@@ -476,10 +466,7 @@ public partial class CombiningOperatorTests
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that ConcatEnumerableSignal forwards error-resume events from inner sources
-    /// to the downstream observer.
-    /// </summary>
+    /// <summary>Verifies that ConcatEnumerableSignal forwards error-resume events from inner sources to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenConcatEnumerableInnerErrorResume_ThenForwardedToObserver()
@@ -675,9 +662,7 @@ public partial class CombiningOperatorTests
         await Assert.That(unhandled).IsSameReferenceAs(error);
     }
 
-    /// <summary>
-    /// Tests that HandleAlreadyDisposed with null or success result does not invoke unhandled handler.
-    /// </summary>
+    /// <summary>Tests that HandleAlreadyDisposed with null or success result does not invoke unhandled handler.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenConcatEnumerableDoubleDisposeWithoutFailure_ThenNoUnhandledException()

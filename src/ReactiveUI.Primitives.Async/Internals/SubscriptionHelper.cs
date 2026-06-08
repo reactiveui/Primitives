@@ -10,11 +10,7 @@ namespace ReactiveUI.Primitives.Async.Internals;
 /// </summary>
 internal static class SubscriptionHelper
 {
-    /// <summary>
-    /// Executes <paramref name="subscribeAsync"/> and returns <paramref name="subscription"/>.
-    /// If <paramref name="subscribeAsync"/> throws, <paramref name="subscription"/> is disposed
-    /// before the exception propagates.
-    /// </summary>
+    /// <summary>Executes <paramref name="subscribeAsync"/> and returns <paramref name="subscription"/>.</summary>
     /// <param name="subscription">The subscription to manage.</param>
     /// <param name="subscribeAsync">The async action that wires up the subscription.</param>
     /// <returns>The subscription if successful.</returns>

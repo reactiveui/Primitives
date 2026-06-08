@@ -6,21 +6,15 @@ using Microsoft.UI.Dispatching;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// WinUI dispatcher queue sequencer that coalesces scheduled work through a <see cref="DispatcherQueue"/>.
-/// </summary>
+/// <summary>WinUI dispatcher queue sequencer that coalesces scheduled work through a <see cref="DispatcherQueue"/>.</summary>
 /// <seealso cref="DispatchSequencerBase" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class DispatcherQueueSequencer : DispatchSequencerBase
 {
-    /// <summary>
-    /// Cached dispatcher queue handler used for the base drain.
-    /// </summary>
+    /// <summary>Cached dispatcher queue handler used for the base drain.</summary>
     private DispatcherQueueHandler? _handler;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DispatcherQueueSequencer"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="DispatcherQueueSequencer"/> class.</summary>
     /// <param name="dispatcherQueue">The dispatcher queue used to marshal work to the UI thread.</param>
     /// <exception cref="ArgumentNullException"><paramref name="dispatcherQueue"/> is <see langword="null"/>.</exception>
     public DispatcherQueueSequencer(DispatcherQueue dispatcherQueue)
@@ -28,9 +22,7 @@ public sealed class DispatcherQueueSequencer : DispatchSequencerBase
     {
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DispatcherQueueSequencer"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="DispatcherQueueSequencer"/> class.</summary>
     /// <param name="dispatcherQueue">The dispatcher queue used to marshal work to the UI thread.</param>
     /// <param name="priority">Dispatcher queue priority used for posted drains.</param>
     /// <exception cref="ArgumentNullException"><paramref name="dispatcherQueue"/> is <see langword="null"/>.</exception>
@@ -40,19 +32,13 @@ public sealed class DispatcherQueueSequencer : DispatchSequencerBase
         Priority = priority;
     }
 
-    /// <summary>
-    /// Gets the dispatcher queue used to marshal work to the UI thread.
-    /// </summary>
+    /// <summary>Gets the dispatcher queue used to marshal work to the UI thread.</summary>
     public DispatcherQueue DispatcherQueue { get; }
 
-    /// <summary>
-    /// Gets the dispatcher queue priority used for posted drains.
-    /// </summary>
+    /// <summary>Gets the dispatcher queue priority used for posted drains.</summary>
     public DispatcherQueuePriority Priority { get; }
 
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 

@@ -6,17 +6,13 @@ using System.Globalization;
 
 namespace ReactiveUI.Primitives.Core;
 
-/// <summary>
-/// Represents a value captured at a scheduler timestamp.
-/// </summary>
+/// <summary>Represents a value captured at a scheduler timestamp.</summary>
 /// <typeparam name="T">The captured value type.</typeparam>
 [Serializable]
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public readonly struct Moment<T> : IEquatable<Moment<T>>
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Moment{T}"/> struct.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="Moment{T}"/> struct.</summary>
     /// <param name="value">The captured value.</param>
     /// <param name="timestamp">The scheduler timestamp.</param>
     public Moment(T value, DateTimeOffset timestamp)
@@ -25,33 +21,23 @@ public readonly struct Moment<T> : IEquatable<Moment<T>>
         Timestamp = timestamp;
     }
 
-    /// <summary>
-    /// Gets the captured value.
-    /// </summary>
+    /// <summary>Gets the captured value.</summary>
     public T Value { get; }
 
-    /// <summary>
-    /// Gets the scheduler timestamp.
-    /// </summary>
+    /// <summary>Gets the scheduler timestamp.</summary>
     public DateTimeOffset Timestamp { get; }
 
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>
-    /// Compares two timestamped values for equality.
-    /// </summary>
+    /// <summary>Compares two timestamped values for equality.</summary>
     /// <param name="first">First value.</param>
     /// <param name="second">Second value.</param>
     /// <returns><c>true</c> when both values and timestamps are equal.</returns>
     public static bool operator ==(Moment<T> first, Moment<T> second) => first.Equals(second);
 
-    /// <summary>
-    /// Compares two timestamped values for inequality.
-    /// </summary>
+    /// <summary>Compares two timestamped values for inequality.</summary>
     /// <param name="first">First value.</param>
     /// <param name="second">Second value.</param>
     /// <returns><c>true</c> when either value or timestamp differs.</returns>

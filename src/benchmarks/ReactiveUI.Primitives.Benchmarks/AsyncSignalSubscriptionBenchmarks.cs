@@ -8,25 +8,17 @@ using PrimitivesAsyncSignalFactory = ReactiveUI.Primitives.Async.Signals.Signal;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks subscription churn for asynchronous signal implementations.
-/// </summary>
+/// <summary>Benchmarks subscription churn for asynchronous signal implementations.</summary>
 [MemoryDiagnoser]
 public class AsyncSignalSubscriptionBenchmarks
 {
-    /// <summary>
-    /// The number of observers subscribed and disposed by each benchmark operation.
-    /// </summary>
+    /// <summary>The number of observers subscribed and disposed by each benchmark operation.</summary>
     private const int SubscriberCount = 8;
 
-    /// <summary>
-    /// The value replayed to each late subscriber.
-    /// </summary>
+    /// <summary>The value replayed to each late subscriber.</summary>
     private const int ReplayValue = 42;
 
-    /// <summary>
-    /// Subscribes and disposes multiple observers against an async replay-latest signal.
-    /// </summary>
+    /// <summary>Subscribes and disposes multiple observers against an async replay-latest signal.</summary>
     /// <returns>The total value observed during subscription replay.</returns>
     [Benchmark]
     public async Task<int> PrimitivesReplayLatestSubscribeDisposeAsync()
@@ -55,9 +47,7 @@ public class AsyncSignalSubscriptionBenchmarks
         }
     }
 
-    /// <summary>
-    /// Sums the totals recorded by the async observers.
-    /// </summary>
+    /// <summary>Sums the totals recorded by the async observers.</summary>
     /// <param name="observers">The observers to sum.</param>
     /// <returns>The combined observed total.</returns>
     private static int Sum(CountingObserver[] observers)
@@ -71,9 +61,7 @@ public class AsyncSignalSubscriptionBenchmarks
         return total;
     }
 
-    /// <summary>
-    /// Disposes every non-null async subscription in order.
-    /// </summary>
+    /// <summary>Disposes every non-null async subscription in order.</summary>
     /// <param name="subscriptions">The subscriptions to dispose.</param>
     /// <returns>A task that represents the asynchronous dispose operation.</returns>
     private static async ValueTask DisposeAllAsync(IAsyncDisposable[] subscriptions)
@@ -87,14 +75,10 @@ public class AsyncSignalSubscriptionBenchmarks
         }
     }
 
-    /// <summary>
-    /// Observer that accumulates replayed async signal values.
-    /// </summary>
+    /// <summary>Observer that accumulates replayed async signal values.</summary>
     private sealed class CountingObserver : Async.ObserverAsync<int>
     {
-        /// <summary>
-        /// Gets the accumulated value total.
-        /// </summary>
+        /// <summary>Gets the accumulated value total.</summary>
         public int Total { get; private set; }
 
         /// <inheritdoc/>

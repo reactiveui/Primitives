@@ -12,51 +12,52 @@ namespace ReactiveUI.Primitives.Async;
 /// Provides the arity-6 (<c>six</c>-source) <c>CombineLatest</c> extension method
 /// and its supporting internal observable + subscription types.
 /// </summary>
-[SuppressMessage(
-    "Major Code Smell",
-    "S107:Methods should not have too many parameters",
-    Justification = "Has more than 7 parameters - just expected for arity-N CombineLatest operator surface.")]
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Combines the latest values from six asynchronous observable sources into a single
-    /// sequence, projecting them through <paramref name="selector"/> whenever any source emits.
-    /// </summary>
-    /// <remarks>
-    /// The returned sequence does not produce a value until every source has emitted at least
-    /// once. After that, each new value from any source produces a fresh projection using the
-    /// most recent value from each. Completion / failure of any source propagates downstream.
-    /// </remarks>
-    /// <typeparam name="T1">The element type of source 1.</typeparam>
-    /// <typeparam name="T2">The element type of source 2.</typeparam>
-    /// <typeparam name="T3">The element type of source 3.</typeparam>
-    /// <typeparam name="T4">The element type of source 4.</typeparam>
-    /// <typeparam name="T5">The element type of source 5.</typeparam>
-    /// <typeparam name="T6">The element type of source 6.</typeparam>
-    /// <typeparam name="TResult">The projected element type.</typeparam>
+    /// <summary>Combines the latest values from multiple asynchronous observable sources.</summary>
     /// <param name="src1">Source observable 1 whose latest value is combined.</param>
-    /// <param name="src2">Source observable 2 whose latest value is combined.</param>
-    /// <param name="src3">Source observable 3 whose latest value is combined.</param>
-    /// <param name="src4">Source observable 4 whose latest value is combined.</param>
-    /// <param name="src5">Source observable 5 whose latest value is combined.</param>
-    /// <param name="src6">Source observable 6 whose latest value is combined.</param>
-    /// <param name="selector">Projects the latest value of every source into a result.</param>
-    /// <returns>An observable sequence of projected results.</returns>
-    public static IObservableAsync<TResult> CombineLatest<T1, T2, T3, T4, T5, T6, TResult>(
-        this IObservableAsync<T1> src1,
-        IObservableAsync<T2> src2,
-        IObservableAsync<T3> src3,
-        IObservableAsync<T4> src4,
-        IObservableAsync<T5> src5,
-        IObservableAsync<T6> src6,
-        Func<T1, T2, T3, T4, T5, T6, TResult> selector) =>
-        new CombineLatest6SignalAsync<T1, T2, T3, T4, T5, T6, TResult>(
-            new(src1, src2, src3, src4, src5, src6),
-            selector);
+    /// <typeparam name="T1">The element type of source 1.</typeparam>
+    extension<T1>(IObservableAsync<T1> src1)
+    {
+        /// <summary>
+        /// Combines the latest values from six asynchronous observable sources into a single
+        /// sequence, projecting them through <paramref name="selector"/> whenever any source emits.
+        /// </summary>
+        /// <remarks>
+        /// The returned sequence does not produce a value until every source has emitted at least
+        /// once. After that, each new value from any source produces a fresh projection using the
+        /// most recent value from each. Completion / failure of any source propagates downstream.
+        /// </remarks>
+        /// <typeparam name="T2">The element type of source 2.</typeparam>
+        /// <typeparam name="T3">The element type of source 3.</typeparam>
+        /// <typeparam name="T4">The element type of source 4.</typeparam>
+        /// <typeparam name="T5">The element type of source 5.</typeparam>
+        /// <typeparam name="T6">The element type of source 6.</typeparam>
+        /// <typeparam name="TResult">The projected element type.</typeparam>
+        /// <param name="src2">Source observable 2 whose latest value is combined.</param>
+        /// <param name="src3">Source observable 3 whose latest value is combined.</param>
+        /// <param name="src4">Source observable 4 whose latest value is combined.</param>
+        /// <param name="src5">Source observable 5 whose latest value is combined.</param>
+        /// <param name="src6">Source observable 6 whose latest value is combined.</param>
+        /// <param name="selector">Projects the latest value of every source into a result.</param>
+        /// <returns>An observable sequence of projected results.</returns>
+        [SuppressMessage(
+            "Major Code Smell",
+            "S107:Methods should not have too many parameters",
+            Justification = "Has more than 7 parameters - just expected for arity-N CombineLatest operator surface.")]
+        public IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, T6, TResult>(
+            IObservableAsync<T2> src2,
+            IObservableAsync<T3> src3,
+            IObservableAsync<T4> src4,
+            IObservableAsync<T5> src5,
+            IObservableAsync<T6> src6,
+            Func<T1, T2, T3, T4, T5, T6, TResult> selector) =>
+            new CombineLatest6SignalAsync<T1, T2, T3, T4, T5, T6, TResult>(
+                new(src1, src2, src3, src4, src5, src6),
+                selector);
+    }
 
-    /// <summary>
-    /// Async observable that combines the latest values from six source sequences using a selector.
-    /// </summary>
+    /// <summary>Async observable that combines the latest values from six source sequences using a selector.</summary>
     /// <typeparam name="T1">Element type of source 1.</typeparam>
     /// <typeparam name="T2">Element type of source 2.</typeparam>
     /// <typeparam name="T3">Element type of source 3.</typeparam>
@@ -64,10 +65,24 @@ public static partial class SignalAsync
     /// <typeparam name="T5">Element type of source 5.</typeparam>
     /// <typeparam name="T6">Element type of source 6.</typeparam>
     /// <typeparam name="TResult">The projected element type.</typeparam>
+    /// <param name="sources">The bundled source observables.</param>
+    /// <param name="selector">The selector that projects the latest values.</param>
     internal sealed class CombineLatest6SignalAsync<T1, T2, T3, T4, T5, T6, TResult>(
         CombineLatest6SignalAsync<T1, T2, T3, T4, T5, T6, TResult>.Sources sources,
         Func<T1, T2, T3, T4, T5, T6, TResult> selector) : SignalAsync<TResult>
     {
+        /// <inheritdoc/>
+        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+            IObserverAsync<TResult> observer,
+            CancellationToken cancellationToken)
+        {
+            var subscription = new CombineLatestCoordinator(observer, sources, selector);
+            subscription.Lifecycle.LinkExternalCancellation(cancellationToken);
+            return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
+                subscription,
+                () => subscription.SubscribeSourcesAsync(cancellationToken));
+        }
+
         /// <summary>
         /// Bundles the six source observables so the subscription constructor stays at three
         /// parameters (observer, sources, selector) regardless of arity. Sonar S107 caps method /
@@ -86,18 +101,6 @@ public static partial class SignalAsync
             IObservableAsync<T4> Src4,
             IObservableAsync<T5> Src5,
             IObservableAsync<T6> Src6);
-
-        /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
-            IObserverAsync<TResult> observer,
-            CancellationToken cancellationToken)
-        {
-            var subscription = new CombineLatestCoordinator(observer, sources, selector);
-            subscription.Lifecycle.LinkExternalCancellation(cancellationToken);
-            return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
-                subscription,
-                () => subscription.SubscribeSourcesAsync(cancellationToken));
-        }
 
         /// <summary>
         /// Per-arity subscription holding the typed Optional slots, the pre-built indexed
@@ -168,24 +171,7 @@ public static partial class SignalAsync
             /// <summary>Latest value from source 6.</summary>
             private Optional<T6> _val6 = Optional<T6>.Empty;
 
-            /// <summary>Latest-value snapshot taken when every source has produced at least one value.</summary>
-            /// <param name="V1">Latest value from source 1.</param>
-            /// <param name="V2">Latest value from source 2.</param>
-            /// <param name="V3">Latest value from source 3.</param>
-            /// <param name="V4">Latest value from source 4.</param>
-            /// <param name="V5">Latest value from source 5.</param>
-            /// <param name="V6">Latest value from source 6.</param>
-            internal readonly record struct Values(
-                T1 V1,
-                T2 V2,
-                T3 V3,
-                T4 V4,
-                T5 V5,
-                T6 V6);
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="CombineLatestCoordinator"/> class.
-            /// </summary>
+            /// <summary>Initializes a new instance of the <see cref="CombineLatestCoordinator"/> class.</summary>
             /// <param name="observer">The downstream observer.</param>
             /// <param name="sources">The bundled source observables.</param>
             /// <param name="selector">The selector that projects the latest values.</param>
@@ -258,6 +244,21 @@ public static partial class SignalAsync
                 values = default;
                 return false;
             }
+
+            /// <summary>Latest-value snapshot taken when every source has produced at least one value.</summary>
+            /// <param name="V1">Latest value from source 1.</param>
+            /// <param name="V2">Latest value from source 2.</param>
+            /// <param name="V3">Latest value from source 3.</param>
+            /// <param name="V4">Latest value from source 4.</param>
+            /// <param name="V5">Latest value from source 5.</param>
+            /// <param name="V6">Latest value from source 6.</param>
+            internal readonly record struct Values(
+                T1 V1,
+                T2 V2,
+                T3 V3,
+                T4 V4,
+                T5 V5,
+                T6 V6);
         }
     }
 }

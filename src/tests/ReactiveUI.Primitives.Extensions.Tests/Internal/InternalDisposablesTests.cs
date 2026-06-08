@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
 
-/// <summary>Tests for the internal disposable holders
-/// (<see cref="SwapDisposable"/>, <see cref="MutableDisposable"/>, <see cref="OnceDisposable"/>)
-/// that back the sync-side sinks.</summary>
+/// <summary>Tests for the internal disposable holders (<see cref="SwapDisposable"/>, <see cref="MutableDisposable"/>, <see cref="OnceDisposable"/>) that back the sync-side sinks.</summary>
 public class InternalDisposablesTests
 {
     /// <summary>Verifies that assigning a new inner disposes the previous one.</summary>

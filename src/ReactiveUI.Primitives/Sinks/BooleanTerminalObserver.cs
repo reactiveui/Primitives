@@ -4,31 +4,21 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Base observer for boolean terminal operators that emit a single result or error.
-/// </summary>
+/// <summary>Base observer for boolean terminal operators that emit a single result or error.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 public abstract class BooleanTerminalObserver<T> : SingleSourceObserver<T>
 {
-    /// <summary>
-    /// The downstream observer.
-    /// </summary>
+    /// <summary>The downstream observer.</summary>
     private readonly IObserver<bool> _observer;
 
-    /// <summary>
-    /// A value indicating whether the observer has terminated.
-    /// </summary>
+    /// <summary>A value indicating whether the observer has terminated.</summary>
     private bool _done;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="BooleanTerminalObserver{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="BooleanTerminalObserver{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     protected BooleanTerminalObserver(IObserver<bool> observer) => _observer = observer;
 
-    /// <summary>
-    /// Gets a value indicating whether the observer has terminated.
-    /// </summary>
+    /// <summary>Gets a value indicating whether the observer has terminated.</summary>
     protected bool IsDone => _done;
 
     /// <inheritdoc/>
@@ -50,9 +40,7 @@ public abstract class BooleanTerminalObserver<T> : SingleSourceObserver<T>
         }
     }
 
-    /// <summary>
-    /// Emits the terminal boolean value and completes the observer.
-    /// </summary>
+    /// <summary>Emits the terminal boolean value and completes the observer.</summary>
     /// <param name="value">The terminal result.</param>
     protected void EmitCompleted(bool value)
     {

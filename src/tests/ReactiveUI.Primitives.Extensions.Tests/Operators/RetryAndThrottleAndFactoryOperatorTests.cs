@@ -245,8 +245,7 @@ public class RetryAndThrottleAndFactoryOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies that <c>ThrottleDistinct</c> (sync overload, no scheduler) emits distinct
-    /// values respecting the throttle window.</summary>
+    /// <summary>Verifies that <c>ThrottleDistinct</c> (sync overload, no scheduler) emits distinct values respecting the throttle window.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenThrottleDistinctSyncDefaultScheduler_ThenForwardsSourceError()
@@ -313,8 +312,7 @@ public class RetryAndThrottleAndFactoryOperatorTests
         await Assert.That(followUp).IsEqualTo(RxVoid.Default);
     }
 
-    /// <summary>An <see cref="IEnumerable{T}"/> whose <c>MoveNext</c> throws when enumerated,
-    /// used to drive the error path of <c>FromArray</c>.</summary>
+    /// <summary>An <see cref="IEnumerable{T}"/> whose <c>MoveNext</c> throws when enumerated, used to drive the error path of <c>FromArray</c>.</summary>
     /// <param name="error">The exception thrown when enumeration begins.</param>
     /// <returns>An enumerable that throws.</returns>
     private static IEnumerable<int> BadEnumerable(Exception error)

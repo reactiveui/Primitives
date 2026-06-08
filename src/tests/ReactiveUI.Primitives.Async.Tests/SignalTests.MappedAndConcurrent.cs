@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Mapped Signal, mixins, concurrent multi-observer, and edge-case tests for <see cref="SignalTests"/>.
-/// </summary>
+/// <summary>Mapped Signal, mixins, concurrent multi-observer, and edge-case tests for <see cref="SignalTests"/>.</summary>
 public partial class SignalTests
 {
     /// <summary>Tests MapValues transforms observable.</summary>
@@ -165,7 +163,8 @@ public partial class SignalTests
     {
         var options = new SignalCreationOptions
         {
-            PublishingOption = PublishingOption.Concurrent, IsStateless = false
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = false
         };
         var signal = Signal.Create<int>(options);
         var errorTcs = new TaskCompletionSource<Exception>();
@@ -569,7 +568,8 @@ public partial class SignalTests
     {
         var signal = Signal.Create<int>(new()
         {
-            PublishingOption = PublishingOption.Concurrent, IsStateless = false
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = false
         });
         var items1 = new List<int>();
         var items2 = new List<int>();
@@ -613,7 +613,8 @@ public partial class SignalTests
     {
         var signal = Signal.Create<int>(new()
         {
-            PublishingOption = PublishingOption.Concurrent, IsStateless = false
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = false
         });
         var errors1 = new List<Exception>();
         var errors2 = new List<Exception>();
@@ -656,7 +657,8 @@ public partial class SignalTests
     {
         var signal = Signal.Create<int>(new()
         {
-            PublishingOption = PublishingOption.Concurrent, IsStateless = false
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = false
         });
         var completed1 = new TaskCompletionSource();
         var completed2 = new TaskCompletionSource();

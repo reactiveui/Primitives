@@ -9,30 +9,20 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks for pairwise zip composition.
-/// </summary>
+/// <summary>Benchmarks for pairwise zip composition.</summary>
 [MemoryDiagnoser]
 public class OperatorZipBenchmarks
 {
-    /// <summary>
-    /// The starting value of the left-hand sequence.
-    /// </summary>
+    /// <summary>The starting value of the left-hand sequence.</summary>
     private const int LeftStart = 1;
 
-    /// <summary>
-    /// The starting value of the right-hand sequence.
-    /// </summary>
+    /// <summary>The starting value of the right-hand sequence.</summary>
     private const int RightStart = 10;
 
-    /// <summary>
-    /// The number of values produced by each zipped sequence.
-    /// </summary>
+    /// <summary>The number of values produced by each zipped sequence.</summary>
     private const int Count = 16;
 
-    /// <summary>
-    /// Baseline zip using ReactiveUI.Primitives.
-    /// </summary>
+    /// <summary>Baseline zip using ReactiveUI.Primitives.</summary>
     /// <returns>The sum of zipped values.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesZip()
@@ -46,9 +36,7 @@ public class OperatorZipBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Zip using System.Reactive.
-    /// </summary>
+    /// <summary>Zip using System.Reactive.</summary>
     /// <returns>The sum of zipped values.</returns>
     [Benchmark]
     public int SystemReactiveZip()
@@ -59,9 +47,7 @@ public class OperatorZipBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Zip using R3.
-    /// </summary>
+    /// <summary>Zip using R3.</summary>
     /// <returns>The sum of zipped values.</returns>
     [Benchmark]
     public int R3Zip()

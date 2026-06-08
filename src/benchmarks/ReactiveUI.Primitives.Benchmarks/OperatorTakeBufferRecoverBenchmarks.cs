@@ -17,29 +17,19 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class OperatorTakeBufferRecoverBenchmarks
 {
-    /// <summary>
-    /// The number of values produced by each benchmarked sequence.
-    /// </summary>
+    /// <summary>The number of values produced by each benchmarked sequence.</summary>
     private const int Count = 16;
 
-    /// <summary>
-    /// The number of leading values taken by the prefix-truncation benchmarks.
-    /// </summary>
+    /// <summary>The number of leading values taken by the prefix-truncation benchmarks.</summary>
     private const int TakeCount = 8;
 
-    /// <summary>
-    /// The number of values per batch used by the buffering benchmarks.
-    /// </summary>
+    /// <summary>The number of values per batch used by the buffering benchmarks.</summary>
     private const int BufferSize = 4;
 
-    /// <summary>
-    /// The error used to trigger the error-handling benchmarks.
-    /// </summary>
+    /// <summary>The error used to trigger the error-handling benchmarks.</summary>
     private static readonly InvalidOperationException Boom = new("boom");
 
-    /// <summary>
-    /// Benchmarks taking a prefix of a range.
-    /// </summary>
+    /// <summary>Benchmarks taking a prefix of a range.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesTakeRange()
@@ -49,9 +39,7 @@ public class OperatorTakeBufferRecoverBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks taking a prefix of a range using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks taking a prefix of a range using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveTakeRange()
@@ -61,9 +49,7 @@ public class OperatorTakeBufferRecoverBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks taking a prefix of a range using R3.
-    /// </summary>
+    /// <summary>Benchmarks taking a prefix of a range using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3TakeRange()
@@ -73,9 +59,7 @@ public class OperatorTakeBufferRecoverBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks batching a range into fixed-size lists.
-    /// </summary>
+    /// <summary>Benchmarks batching a range into fixed-size lists.</summary>
     /// <returns>The number of batches observed.</returns>
     [Benchmark]
     public int PrimitivesBufferRange()
@@ -85,9 +69,7 @@ public class OperatorTakeBufferRecoverBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks batching a range into fixed-size lists using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks batching a range into fixed-size lists using System.Reactive.</summary>
     /// <returns>The number of batches observed.</returns>
     [Benchmark]
     public int SystemReactiveBufferRange()
@@ -97,9 +79,7 @@ public class OperatorTakeBufferRecoverBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks batching a range into fixed-size arrays using R3.
-    /// </summary>
+    /// <summary>Benchmarks batching a range into fixed-size arrays using R3.</summary>
     /// <returns>The number of batches observed.</returns>
     [Benchmark]
     public int R3BufferRange()
@@ -109,9 +89,7 @@ public class OperatorTakeBufferRecoverBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks recovering from an error with a handler-selected fallback sequence.
-    /// </summary>
+    /// <summary>Benchmarks recovering from an error with a handler-selected fallback sequence.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesRecover()
@@ -123,9 +101,7 @@ public class OperatorTakeBufferRecoverBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks recovering from an error with a handler-selected fallback sequence using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks recovering from an error with a handler-selected fallback sequence using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveRecover()
@@ -137,9 +113,7 @@ public class OperatorTakeBufferRecoverBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks recovering from an error with a handler-selected fallback sequence using R3.
-    /// </summary>
+    /// <summary>Benchmarks recovering from an error with a handler-selected fallback sequence using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3Recover()
@@ -151,9 +125,7 @@ public class OperatorTakeBufferRecoverBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks resuming with a fallback sequence on error.
-    /// </summary>
+    /// <summary>Benchmarks resuming with a fallback sequence on error.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesResume()
@@ -165,9 +137,7 @@ public class OperatorTakeBufferRecoverBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks resuming with a fallback sequence on error using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks resuming with a fallback sequence on error using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveResume()

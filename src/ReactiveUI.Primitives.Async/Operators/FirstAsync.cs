@@ -6,77 +6,63 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides extension methods for working with asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
 /// <remarks>The methods in this class enable querying and manipulation of asynchronous observables, such as
 /// retrieving the first element that matches a specified condition. These extensions are designed to be used with types
 /// that implement asynchronous observable patterns.</remarks>
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Asynchronously returns the first element in the sequence that satisfies the specified predicate.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <summary>First-element operators for an observable source sequence.</summary>
     /// <param name="this">The source observable sequence.</param>
-    /// <param name="predicate">A function to test each element for a condition. The method returns the first element for which this
-    /// predicate returns <see langword="true"/>.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the first element that matches
-    /// the predicate.</returns>
-    public static ValueTask<T> FirstAsync<T>(this IObservableAsync<T> @this, Func<T, bool> predicate)
-        => @this.FirstAsync(predicate, CancellationToken.None);
-
-    /// <summary>
-    /// Asynchronously returns the first element in the sequence that satisfies the specified predicate.
-    /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    /// <param name="this">The source observable sequence.</param>
-    /// <param name="predicate">A function to test each element for a condition. The method returns the first element for which this
-    /// predicate returns <see langword="true"/>.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the first element that matches
-    /// the predicate.</returns>
-    public static async ValueTask<T> FirstAsync<T>(this IObservableAsync<T> @this, Func<T, bool> predicate, CancellationToken cancellationToken)
+    extension<T>(IObservableAsync<T> @this)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        var observer = new FirstTaskWitness<T>(predicate, cancellationToken);
-        await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.AwaitResultAsync().ConfigureAwait(false);
+        /// <summary>Asynchronously returns the first element in the sequence that satisfies the specified predicate.</summary>
+        /// <param name="predicate">A function to test each element for a condition. The method returns the first element for which this
+        /// predicate returns <see langword="true"/>.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the first element that matches
+        /// the predicate.</returns>
+        public ValueTask<T> FirstAsync(Func<T, bool> predicate)
+            => @this.FirstAsync(predicate, CancellationToken.None);
+
+        /// <summary>Asynchronously returns the first element in the sequence that satisfies the specified predicate.</summary>
+        /// <param name="predicate">A function to test each element for a condition. The method returns the first element for which this
+        /// predicate returns <see langword="true"/>.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the first element that matches
+        /// the predicate.</returns>
+        public async ValueTask<T> FirstAsync(Func<T, bool> predicate, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var observer = new FirstTaskWitness<T>(predicate, cancellationToken);
+            await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+            return await observer.AwaitResultAsync().ConfigureAwait(false);
+        }
+
+        /// <summary>Asynchronously returns the first element of the sequence.</summary>
+        /// <remarks>If the sequence is empty, the behavior depends on the implementation and may result
+        /// in an exception being thrown.</remarks>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the first element of the
+        /// sequence.</returns>
+        public ValueTask<T> FirstAsync()
+            => @this.FirstAsync(CancellationToken.None);
+
+        /// <summary>Asynchronously returns the first element of the sequence.</summary>
+        /// <remarks>If the sequence is empty, the behavior depends on the implementation and may result
+        /// in an exception being thrown.</remarks>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the first element of the
+        /// sequence.</returns>
+        public async ValueTask<T> FirstAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var observer = new FirstTaskWitness<T>(null, cancellationToken);
+            await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+            return await observer.AwaitResultAsync().ConfigureAwait(false);
+        }
     }
 
-    /// <summary>
-    /// Asynchronously returns the first element of the sequence.
-    /// </summary>
-    /// <remarks>If the sequence is empty, the behavior depends on the implementation and may result
-    /// in an exception being thrown.</remarks>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    /// <param name="this">The source observable sequence.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the first element of the
-    /// sequence.</returns>
-    public static ValueTask<T> FirstAsync<T>(this IObservableAsync<T> @this)
-        => @this.FirstAsync(CancellationToken.None);
-
-    /// <summary>
-    /// Asynchronously returns the first element of the sequence.
-    /// </summary>
-    /// <remarks>If the sequence is empty, the behavior depends on the implementation and may result
-    /// in an exception being thrown.</remarks>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    /// <param name="this">The source observable sequence.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the first element of the
-    /// sequence.</returns>
-    public static async ValueTask<T> FirstAsync<T>(this IObservableAsync<T> @this, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        var observer = new FirstTaskWitness<T>(null, cancellationToken);
-        await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.AwaitResultAsync().ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// A witness that captures the first element matching an optional predicate.
-    /// </summary>
+    /// <summary>A witness that captures the first element matching an optional predicate.</summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="predicate">An optional predicate to filter elements.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>

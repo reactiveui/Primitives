@@ -12,54 +12,69 @@ namespace ReactiveUI.Primitives.Async;
 /// Provides the arity-4 (<c>four</c>-source) <c>CombineLatest</c> extension method
 /// and its supporting internal observable + subscription types.
 /// </summary>
-[SuppressMessage(
-    "Major Code Smell",
-    "S107:Methods should not have too many parameters",
-    Justification = "Has more than 7 parameters - just expected for arity-N CombineLatest operator surface.")]
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Combines the latest values from four asynchronous observable sources into a single
-    /// sequence, projecting them through <paramref name="selector"/> whenever any source emits.
-    /// </summary>
-    /// <remarks>
-    /// The returned sequence does not produce a value until every source has emitted at least
-    /// once. After that, each new value from any source produces a fresh projection using the
-    /// most recent value from each. Completion / failure of any source propagates downstream.
-    /// </remarks>
-    /// <typeparam name="T1">The element type of source 1.</typeparam>
-    /// <typeparam name="T2">The element type of source 2.</typeparam>
-    /// <typeparam name="T3">The element type of source 3.</typeparam>
-    /// <typeparam name="T4">The element type of source 4.</typeparam>
-    /// <typeparam name="TResult">The projected element type.</typeparam>
+    /// <summary>Combines the latest values from multiple asynchronous observable sources.</summary>
     /// <param name="src1">Source observable 1 whose latest value is combined.</param>
-    /// <param name="src2">Source observable 2 whose latest value is combined.</param>
-    /// <param name="src3">Source observable 3 whose latest value is combined.</param>
-    /// <param name="src4">Source observable 4 whose latest value is combined.</param>
-    /// <param name="selector">Projects the latest value of every source into a result.</param>
-    /// <returns>An observable sequence of projected results.</returns>
-    public static IObservableAsync<TResult> CombineLatest<T1, T2, T3, T4, TResult>(
-        this IObservableAsync<T1> src1,
-        IObservableAsync<T2> src2,
-        IObservableAsync<T3> src3,
-        IObservableAsync<T4> src4,
-        Func<T1, T2, T3, T4, TResult> selector) =>
-        new CombineLatest4SignalAsync<T1, T2, T3, T4, TResult>(
-            new(src1, src2, src3, src4),
-            selector);
+    /// <typeparam name="T1">The element type of source 1.</typeparam>
+    extension<T1>(IObservableAsync<T1> src1)
+    {
+        /// <summary>
+        /// Combines the latest values from four asynchronous observable sources into a single
+        /// sequence, projecting them through <paramref name="selector"/> whenever any source emits.
+        /// </summary>
+        /// <remarks>
+        /// The returned sequence does not produce a value until every source has emitted at least
+        /// once. After that, each new value from any source produces a fresh projection using the
+        /// most recent value from each. Completion / failure of any source propagates downstream.
+        /// </remarks>
+        /// <typeparam name="T2">The element type of source 2.</typeparam>
+        /// <typeparam name="T3">The element type of source 3.</typeparam>
+        /// <typeparam name="T4">The element type of source 4.</typeparam>
+        /// <typeparam name="TResult">The projected element type.</typeparam>
+        /// <param name="src2">Source observable 2 whose latest value is combined.</param>
+        /// <param name="src3">Source observable 3 whose latest value is combined.</param>
+        /// <param name="src4">Source observable 4 whose latest value is combined.</param>
+        /// <param name="selector">Projects the latest value of every source into a result.</param>
+        /// <returns>An observable sequence of projected results.</returns>
+        [SuppressMessage(
+            "Major Code Smell",
+            "S107:Methods should not have too many parameters",
+            Justification = "Has more than 7 parameters - just expected for arity-N CombineLatest operator surface.")]
+        public IObservableAsync<TResult> CombineLatest<T2, T3, T4, TResult>(
+            IObservableAsync<T2> src2,
+            IObservableAsync<T3> src3,
+            IObservableAsync<T4> src4,
+            Func<T1, T2, T3, T4, TResult> selector) =>
+            new CombineLatest4SignalAsync<T1, T2, T3, T4, TResult>(
+                new(src1, src2, src3, src4),
+                selector);
+    }
 
-    /// <summary>
-    /// Async observable that combines the latest values from four source sequences using a selector.
-    /// </summary>
+    /// <summary>Async observable that combines the latest values from four source sequences using a selector.</summary>
     /// <typeparam name="T1">Element type of source 1.</typeparam>
     /// <typeparam name="T2">Element type of source 2.</typeparam>
     /// <typeparam name="T3">Element type of source 3.</typeparam>
     /// <typeparam name="T4">Element type of source 4.</typeparam>
     /// <typeparam name="TResult">The projected element type.</typeparam>
+    /// <param name="sources">The bundled source observables.</param>
+    /// <param name="selector">The selector that projects the latest values.</param>
     internal sealed class CombineLatest4SignalAsync<T1, T2, T3, T4, TResult>(
         CombineLatest4SignalAsync<T1, T2, T3, T4, TResult>.Sources sources,
         Func<T1, T2, T3, T4, TResult> selector) : SignalAsync<TResult>
     {
+        /// <inheritdoc/>
+        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+            IObserverAsync<TResult> observer,
+            CancellationToken cancellationToken)
+        {
+            var subscription = new CombineLatestCoordinator(observer, sources, selector);
+            subscription.Lifecycle.LinkExternalCancellation(cancellationToken);
+            return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
+                subscription,
+                () => subscription.SubscribeSourcesAsync(cancellationToken));
+        }
+
         /// <summary>
         /// Bundles the four source observables so the subscription constructor stays at three
         /// parameters (observer, sources, selector) regardless of arity. Sonar S107 caps method /
@@ -74,18 +89,6 @@ public static partial class SignalAsync
             IObservableAsync<T2> Src2,
             IObservableAsync<T3> Src3,
             IObservableAsync<T4> Src4);
-
-        /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
-            IObserverAsync<TResult> observer,
-            CancellationToken cancellationToken)
-        {
-            var subscription = new CombineLatestCoordinator(observer, sources, selector);
-            subscription.Lifecycle.LinkExternalCancellation(cancellationToken);
-            return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
-                subscription,
-                () => subscription.SubscribeSourcesAsync(cancellationToken));
-        }
 
         /// <summary>
         /// Per-arity subscription holding the typed Optional slots, the pre-built indexed
@@ -138,20 +141,7 @@ public static partial class SignalAsync
             /// <summary>Latest value from source 4.</summary>
             private Optional<T4> _val4 = Optional<T4>.Empty;
 
-            /// <summary>Latest-value snapshot taken when every source has produced at least one value.</summary>
-            /// <param name="V1">Latest value from source 1.</param>
-            /// <param name="V2">Latest value from source 2.</param>
-            /// <param name="V3">Latest value from source 3.</param>
-            /// <param name="V4">Latest value from source 4.</param>
-            internal readonly record struct Values(
-                T1 V1,
-                T2 V2,
-                T3 V3,
-                T4 V4);
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="CombineLatestCoordinator"/> class.
-            /// </summary>
+            /// <summary>Initializes a new instance of the <see cref="CombineLatestCoordinator"/> class.</summary>
             /// <param name="observer">The downstream observer.</param>
             /// <param name="sources">The bundled source observables.</param>
             /// <param name="selector">The selector that projects the latest values.</param>
@@ -218,6 +208,17 @@ public static partial class SignalAsync
                 values = default;
                 return false;
             }
+
+            /// <summary>Latest-value snapshot taken when every source has produced at least one value.</summary>
+            /// <param name="V1">Latest value from source 1.</param>
+            /// <param name="V2">Latest value from source 2.</param>
+            /// <param name="V3">Latest value from source 3.</param>
+            /// <param name="V4">Latest value from source 4.</param>
+            internal readonly record struct Values(
+                T1 V1,
+                T2 V2,
+                T3 V3,
+                T4 V4);
         }
     }
 }

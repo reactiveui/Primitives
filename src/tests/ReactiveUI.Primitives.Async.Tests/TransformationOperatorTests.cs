@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Tests for transformation operators: Select, SelectMany, Scan, Do, Cast, OfType.
-/// </summary>
+/// <summary>Tests for transformation operators: Select, SelectMany, Scan, Do, Cast, OfType.</summary>
 public class TransformationOperatorTests
 {
     /// <summary>Number of inputs fed into the async-accumulator <c>Scan</c> sync-result test.</summary>
@@ -506,10 +504,7 @@ public class TransformationOperatorTests
         await Assert.That(downstreamErrors).Count().IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Verifies that async Do with an onCompleted callback invokes the callback
-    /// when the source sequence completes.
-    /// </summary>
+    /// <summary>Verifies that async Do with an onCompleted callback invokes the callback when the source sequence completes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDoAsyncWithOnCompleted_ThenInvokesCallback()
@@ -598,10 +593,7 @@ public class TransformationOperatorTests
         await Assert.That(downstreamErrors).Count().IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Verifies that ObserveOn with an IScheduler creates the correct async context
-    /// and emits values through the pipeline.
-    /// </summary>
+    /// <summary>Verifies that ObserveOn with an IScheduler creates the correct async context and emits values through the pipeline.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnIScheduler_ThenEmitsValues()
@@ -739,17 +731,13 @@ public class TransformationOperatorTests
         await Assert.That(exception!.Message).IsEqualTo("onCompleted blew up");
     }
 
-    /// <summary>
-    /// Verifies that Yield with a null source throws <see cref="ArgumentNullException"/>.
-    /// </summary>
+    /// <summary>Verifies that Yield with a null source throws <see cref="ArgumentNullException"/>.</summary>
     [Test]
     public void WhenYieldNullSource_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(() =>
-            SignalAsync.Yield<int>(null!));
+            SignalAsyncExtensions.Yield<int>(null!));
 
-    /// <summary>
-    /// Verifies that Yield forwards all elements from the source sequence.
-    /// </summary>
+    /// <summary>Verifies that Yield forwards all elements from the source sequence.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenYield_ThenForwardsAllElements()
@@ -766,9 +754,7 @@ public class TransformationOperatorTests
         await Assert.That(result).IsCollectionEqualTo([1, Expected2, Expected3, Expected4, Expected5]);
     }
 
-    /// <summary>
-    /// Verifies that Yield forwards completion from the source sequence.
-    /// </summary>
+    /// <summary>Verifies that Yield forwards completion from the source sequence.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenYield_ThenForwardsCompletion()
@@ -796,9 +782,7 @@ public class TransformationOperatorTests
         await Assert.That(capturedResult!.Value.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that Yield forwards errors from the source sequence.
-    /// </summary>
+    /// <summary>Verifies that Yield forwards errors from the source sequence.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenYieldSourceErrors_ThenForwardsError()
@@ -833,22 +817,16 @@ public class TransformationOperatorTests
         await Assert.That(capturedResult!.Value.IsSuccess).IsFalse();
     }
 
-    /// <summary>
-    /// Verifies that the three-argument GroupBy overload throws <see cref="ArgumentNullException"/>
-    /// when the source parameter is null.
-    /// </summary>
+    /// <summary>Verifies that the three-argument GroupBy overload throws <see cref="ArgumentNullException"/> when the source parameter is null.</summary>
     [Test]
     public void WhenGroupByWithSignalSelectorNullSource_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(() =>
-            SignalAsync.GroupBy<int, int>(
+            SignalAsyncExtensions.GroupBy<int, int>(
                 null!,
                 static x => x,
                 static _ => Signal.Create<int>()));
 
-    /// <summary>
-    /// Verifies that the three-argument GroupBy overload throws <see cref="ArgumentNullException"/>
-    /// when the keySelector parameter is null.
-    /// </summary>
+    /// <summary>Verifies that the three-argument GroupBy overload throws <see cref="ArgumentNullException"/> when the keySelector parameter is null.</summary>
     [Test]
     public void WhenGroupByWithSignalSelectorNullKeySelector_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(() =>
@@ -911,10 +889,7 @@ public class TransformationOperatorTests
         await Assert.That(groups[0]).IsCollectionEqualTo([EvenFirst, EvenSecond, EvenThird]);
     }
 
-    /// <summary>
-    /// Verifies that GroupBy forwards resumable errors from the source through to the downstream observer
-    /// via <see cref="IObserverAsync{T}.OnErrorResumeAsync"/>.
-    /// </summary>
+    /// <summary>Verifies that GroupBy forwards resumable errors from the source through to the downstream observer via <see cref="IObserverAsync{T}.OnErrorResumeAsync"/>.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenGroupBySourceEmitsResumableError_ThenForwardsErrorDownstream()
@@ -1077,8 +1052,7 @@ public class TransformationOperatorTests
         await Assert.That(result).IsCollectionEqualTo([1, ThirdRunningTotal, SixthRunningTotal]);
     }
 
-    /// <summary>Verifies that the sync-accumulator <c>Scan</c> overload forwards a non-terminal
-    /// upstream error downstream.</summary>
+    /// <summary>Verifies that the sync-accumulator <c>Scan</c> overload forwards a non-terminal upstream error downstream.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScanSyncSourceErrorResume_ThenForwarded()
@@ -1105,8 +1079,7 @@ public class TransformationOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies that the async-accumulator <c>Scan</c> overload forwards a non-terminal
-    /// upstream error downstream.</summary>
+    /// <summary>Verifies that the async-accumulator <c>Scan</c> overload forwards a non-terminal upstream error downstream.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScanAsyncSourceErrorResume_ThenForwarded()

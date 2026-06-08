@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Sink that forwards values while the predicate holds, then completes and unsubscribes.
-/// </summary>
+/// <summary>Sink that forwards values while the predicate holds, then completes and unsubscribes.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 public sealed class TakeWhileObserver<T> : SingleSourceObserver<T>
 {
@@ -19,9 +17,7 @@ public sealed class TakeWhileObserver<T> : SingleSourceObserver<T>
     /// <summary>A value indicating whether completion has been emitted.</summary>
     private bool _completed;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TakeWhileObserver{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="TakeWhileObserver{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="predicate">The predicate that determines whether to keep taking values.</param>
     public TakeWhileObserver(IObserver<T> observer, Func<T, bool> predicate)
@@ -77,9 +73,7 @@ public sealed class TakeWhileObserver<T> : SingleSourceObserver<T>
     /// <inheritdoc/>
     public override void OnCompleted() => Complete();
 
-    /// <summary>
-    /// Completes the downstream observer once and releases the upstream subscription.
-    /// </summary>
+    /// <summary>Completes the downstream observer once and releases the upstream subscription.</summary>
     private void Complete()
     {
         if (_completed)

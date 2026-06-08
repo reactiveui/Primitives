@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Emits (previous, current) pairs from a sequence.
-/// </summary>
+/// <summary>Emits (previous, current) pairs from a sequence.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 internal sealed class PairwiseObservable<T>(IObservable<T> source) : IObservable<(T Previous, T Current)>
@@ -22,25 +20,17 @@ internal sealed class PairwiseObservable<T>(IObservable<T> source) : IObservable
         return source.Subscribe(new PairwiseObserver(observer));
     }
 
-    /// <summary>
-    /// The observer for the pairwise operator.
-    /// </summary>
+    /// <summary>The observer for the pairwise operator.</summary>
     /// <param name="downstream">The downstream observer.</param>
     private sealed class PairwiseObserver(IObserver<(T Previous, T Current)> downstream) : IObserver<T>
     {
-        /// <summary>
-        /// The gate for state access.
-        /// </summary>
+        /// <summary>The gate for state access.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// The previous value.
-        /// </summary>
+        /// <summary>The previous value.</summary>
         private T? _previous;
 
-        /// <summary>
-        /// A value indicating whether there is a previous value.
-        /// </summary>
+        /// <summary>A value indicating whether there is a previous value.</summary>
         private bool _hasPrevious;
 
         /// <inheritdoc/>

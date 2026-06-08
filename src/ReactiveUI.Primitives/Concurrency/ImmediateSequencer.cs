@@ -6,49 +6,33 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// ImmediateSequencer.
-/// </summary>
+/// <summary>ImmediateSequencer.</summary>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class ImmediateSequencer : ISequencer
 {
-    /// <summary>
-    /// Singleton holder for the immediate sequencer.
-    /// </summary>
+    /// <summary>Singleton holder for the immediate sequencer.</summary>
     private static readonly Lazy<ImmediateSequencer> StaticInstance = new(static () => new());
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ImmediateSequencer"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ImmediateSequencer"/> class.</summary>
     private ImmediateSequencer()
     {
     }
 
-    /// <summary>
-    /// Gets the singleton instance of the immediate scheduler.
-    /// </summary>
+    /// <summary>Gets the singleton instance of the immediate scheduler.</summary>
     public static ImmediateSequencer Instance => StaticInstance.Value;
 
-    /// <summary>
-    /// Gets the scheduler's notion of current time.
-    /// </summary>
+    /// <summary>Gets the scheduler's notion of current time.</summary>
     public DateTimeOffset Now => Sequencer.Now;
 
-    /// <summary>
-    /// Gets the scheduler's monotonic timestamp.
-    /// </summary>
+    /// <summary>Gets the scheduler's monotonic timestamp.</summary>
     public long Timestamp => Sequencer.Timestamp;
 
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>
-    /// Schedules an action to run immediately.
-    /// </summary>
+    /// <summary>Schedules an action to run immediately.</summary>
     /// <param name="action">Action to execute.</param>
     /// <returns>An empty disposable because the action has already run.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
@@ -58,7 +42,7 @@ public sealed class ImmediateSequencer : ISequencer
         Justification = "Must remain an instance method so overload resolution selects it over the allocating ISequencer.Schedule(Action) extension, giving an allocation-free immediate path.")]
     public IDisposable Schedule(Action action)
     {
-        if (action == null)
+        if (action is null)
         {
             throw new ArgumentNullException(nameof(action));
         }
@@ -67,9 +51,7 @@ public sealed class ImmediateSequencer : ISequencer
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>
-    /// Schedules the specified work item.
-    /// </summary>
+    /// <summary>Schedules the specified work item.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item)
@@ -87,9 +69,7 @@ public sealed class ImmediateSequencer : ISequencer
         item.Execute();
     }
 
-    /// <summary>
-    /// Schedules the specified work item.
-    /// </summary>
+    /// <summary>Schedules the specified work item.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
     /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>

@@ -7,86 +7,58 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Represents the CatchSignal class.
-/// </summary>
+/// <summary>Represents the CatchSignal class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
 internal sealed class CatchSignal<T> : SignalsBase<T>
 {
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly IEnumerable<IObservable<T>> _sources;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CatchSignal{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="CatchSignal{T}"/> class.</summary>
     /// <param name="sources">The sources value.</param>
     public CatchSignal(IEnumerable<IObservable<T>> sources)
         : base(true) => _sources = sources;
 
-    /// <summary>
-    /// Executes the SubscribeCore operation.
-    /// </summary>
+    /// <summary>Executes the SubscribeCore operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <param name="cancel">The cancel value.</param>
     /// <returns>The result.</returns>
     protected override IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
         new Catch(this, observer, cancel).Run();
 
-    /// <summary>
-    /// Represents the Catch class.
-    /// </summary>
+    /// <summary>Represents the Catch class.</summary>
     private sealed class Catch : WitnessBase<T, T>
     {
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
+        /// <summary>Stores state for the signal implementation.</summary>
         private readonly CatchSignal<T> _parent;
 
-        /// <summary>
-        /// Executes the new operation.
-        /// </summary>
+        /// <summary>Executes the new operation.</summary>
         /// <returns>The result.</returns>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
+        /// <summary>Stores state for the signal implementation.</summary>
         private bool _isDisposed;
 
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
+        /// <summary>Stores state for the signal implementation.</summary>
         private IEnumerator<IObservable<T>>? _e;
 
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
+        /// <summary>Stores state for the signal implementation.</summary>
         private SingleReplaceableDisposable? _subscription;
 
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
+        /// <summary>Stores state for the signal implementation.</summary>
         private Exception? _lastException;
 
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
+        /// <summary>Stores state for the signal implementation.</summary>
         private Action? _nextSelf;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Catch"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="Catch"/> class.</summary>
         /// <param name="parent">The parent value.</param>
         /// <param name="observer">The observer value.</param>
         /// <param name="cancel">The cancel value.</param>
         public Catch(CatchSignal<T> parent, IObserver<T> observer, IDisposable cancel)
             : base(observer, cancel) => _parent = parent;
 
-        /// <summary>
-        /// Executes the Run operation.
-        /// </summary>
+        /// <summary>Executes the Run operation.</summary>
         /// <returns>The result.</returns>
         public MultipleDisposable Run()
         {
@@ -107,15 +79,11 @@ internal sealed class CatchSignal<T> : SignalsBase<T>
             }));
         }
 
-        /// <summary>
-        /// Executes the OnNext operation.
-        /// </summary>
+        /// <summary>Executes the OnNext operation.</summary>
         /// <param name="value">The value.</param>
         public override void OnNext(T value) => Observer.OnNext(value);
 
-        /// <summary>
-        /// Executes the OnError operation.
-        /// </summary>
+        /// <summary>Executes the OnError operation.</summary>
         /// <param name="error">The error value.</param>
         public override void OnError(Exception error)
         {
@@ -123,9 +91,7 @@ internal sealed class CatchSignal<T> : SignalsBase<T>
             _nextSelf!();
         }
 
-        /// <summary>
-        /// Executes the OnCompleted operation.
-        /// </summary>
+        /// <summary>Executes the OnCompleted operation.</summary>
         public override void OnCompleted()
         {
             try
@@ -138,9 +104,7 @@ internal sealed class CatchSignal<T> : SignalsBase<T>
             }
         }
 
-        /// <summary>
-        /// Executes the Dispose operation.
-        /// </summary>
+        /// <summary>Executes the Dispose operation.</summary>
         /// <param name="disposing">The disposing value.</param>
         protected override void Dispose(bool disposing)
         {
@@ -155,9 +119,7 @@ internal sealed class CatchSignal<T> : SignalsBase<T>
             base.Dispose(disposing);
         }
 
-        /// <summary>
-        /// Executes the RecursiveRun operation.
-        /// </summary>
+        /// <summary>Executes the RecursiveRun operation.</summary>
         /// <param name="self">The self value.</param>
         private void RecursiveRun(Action self)
         {
@@ -191,7 +153,7 @@ internal sealed class CatchSignal<T> : SignalsBase<T>
                     _e?.Dispose();
                 }
 
-                if (ex != null)
+                if (ex is not null)
                 {
                     try
                     {
@@ -207,7 +169,7 @@ internal sealed class CatchSignal<T> : SignalsBase<T>
 
                 if (!hasNext)
                 {
-                    if (_lastException != null)
+                    if (_lastException is not null)
                     {
                         try
                         {

@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides factory methods for creating and composing asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides factory methods for creating and composing asynchronous observable sequences.</summary>
 /// <remarks>The SignalAsync class contains static methods for working with asynchronous observables, enabling
 /// resource management and composition patterns similar to those found in reactive programming. All members are
 /// thread-safe and intended for use in asynchronous and reactive scenarios.</remarks>

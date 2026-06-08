@@ -11,144 +11,88 @@ using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies factory and operator contract behavior for the primitives surface.
-/// </summary>
+/// <summary>Verifies factory and operator contract behavior for the primitives surface.</summary>
 public class FactoryOperatorContractTests
 {
-    /// <summary>
-    /// The first integer used by parity sequences.
-    /// </summary>
+    /// <summary>The first integer used by parity sequences.</summary>
     private const int FirstValue = 1;
 
-    /// <summary>
-    /// The second integer used by parity sequences.
-    /// </summary>
+    /// <summary>The second integer used by parity sequences.</summary>
     private const int SecondValue = 2;
 
-    /// <summary>
-    /// The third integer used by parity sequences.
-    /// </summary>
+    /// <summary>The third integer used by parity sequences.</summary>
     private const int RetrySuccessAttempt = 3;
 
-    /// <summary>
-    /// The fourth integer used by parity sequences.
-    /// </summary>
+    /// <summary>The fourth integer used by parity sequences.</summary>
     private const int FourthValue = 4;
 
-    /// <summary>
-    /// A representative even value used by predicate tests.
-    /// </summary>
+    /// <summary>A representative even value used by predicate tests.</summary>
     private const int SixthValue = 6;
 
-    /// <summary>
-    /// A resource-scoped sequence value.
-    /// </summary>
+    /// <summary>A resource-scoped sequence value.</summary>
     private const int ResourceFirstValue = 7;
 
-    /// <summary>
-    /// A resource-scoped sequence value.
-    /// </summary>
+    /// <summary>A resource-scoped sequence value.</summary>
     private const int ResourceSecondValue = 8;
 
-    /// <summary>
-    /// The repeated value used by finite factory tests.
-    /// </summary>
+    /// <summary>The repeated value used by finite factory tests.</summary>
     private const int RepeatValue = 9;
 
-    /// <summary>
-    /// The multiplier used by unfold and projection tests.
-    /// </summary>
+    /// <summary>The multiplier used by unfold and projection tests.</summary>
     private const int ProjectionMultiplier = 10;
 
-    /// <summary>
-    /// The first projected value after applying the projection multiplier.
-    /// </summary>
+    /// <summary>The first projected value after applying the projection multiplier.</summary>
     private const int ProjectedFirstValue = 10;
 
-    /// <summary>
-    /// The second projected value after applying the projection multiplier.
-    /// </summary>
+    /// <summary>The second projected value after applying the projection multiplier.</summary>
     private const int ProjectedSecondValue = 11;
 
-    /// <summary>
-    /// The third projected value after applying the projection multiplier.
-    /// </summary>
+    /// <summary>The third projected value after applying the projection multiplier.</summary>
     private const int ProjectedThirdValue = 20;
 
-    /// <summary>
-    /// The fourth projected value after applying the projection multiplier.
-    /// </summary>
+    /// <summary>The fourth projected value after applying the projection multiplier.</summary>
     private const int ProjectedFourthValue = 21;
 
-    /// <summary>
-    /// A peer value used to verify distinct-by bucketing.
-    /// </summary>
+    /// <summary>A peer value used to verify distinct-by bucketing.</summary>
     private const int ProjectedSecondBucketPeerValue = 12;
 
-    /// <summary>
-    /// The zip result expected from the first pair.
-    /// </summary>
+    /// <summary>The zip result expected from the first pair.</summary>
     private const int FirstZipResult = 11;
 
-    /// <summary>
-    /// The zip or fork-join result expected from the second pair.
-    /// </summary>
+    /// <summary>The zip or fork-join result expected from the second pair.</summary>
     private const int SecondZipResult = 22;
 
-    /// <summary>
-    /// The second result expected from the shorter range zip test.
-    /// </summary>
+    /// <summary>The second result expected from the shorter range zip test.</summary>
     private const int RangeZipShorterSecondResult = 13;
 
-    /// <summary>
-    /// The third unfolded value.
-    /// </summary>
+    /// <summary>The third unfolded value.</summary>
     private const int ThirdUnfoldedValue = 30;
 
-    /// <summary>
-    /// The terminal value used by default and recovery tests.
-    /// </summary>
+    /// <summary>The terminal value used by default and recovery tests.</summary>
     private const int RetryResult = 42;
 
-    /// <summary>
-    /// Delay used by the async enumerable cancellation test.
-    /// </summary>
+    /// <summary>Delay used by the async enumerable cancellation test.</summary>
     private const int AsyncEnumeratorDelayMilliseconds = 5000;
 
-    /// <summary>
-    /// Settle delay used by the async enumerable cancellation test.
-    /// </summary>
+    /// <summary>Settle delay used by the async enumerable cancellation test.</summary>
     private const int AsyncEnumeratorSettleMilliseconds = 50;
 
-    /// <summary>
-    /// Virtual clock due time for one-shot timers.
-    /// </summary>
+    /// <summary>Virtual clock due time for one-shot timers.</summary>
     private const int AfterTicks = 5;
 
-    /// <summary>
-    /// Virtual clock period for recurring timers.
-    /// </summary>
+    /// <summary>Virtual clock period for recurring timers.</summary>
     private const int EveryTicks = 3;
 
-    /// <summary>
-    /// Virtual clock advance used before a boundary tick.
-    /// </summary>
+    /// <summary>Virtual clock advance used before a boundary tick.</summary>
     private const int InitialAdvanceTicks = 4;
 
-    /// <summary>
-    /// Virtual clock advance used after disposing recurring work.
-    /// </summary>
+    /// <summary>Virtual clock advance used after disposing recurring work.</summary>
     private const int FinalAdvanceTicks = 10;
 
-    /// <summary>
-    /// Index of the third interval captured in the interval test.
-    /// </summary>
+    /// <summary>Index of the third interval captured in the interval test.</summary>
     private const int ThirdIntervalIndex = 2;
 
-    /// <summary>
-    /// Expected values for finite factory composition.
-    /// </summary>
+    /// <summary>Expected values for finite factory composition.</summary>
     private static readonly int[] FiniteFactoryExpected =
     [
         SecondValue,
@@ -163,74 +107,46 @@ public class FactoryOperatorContractTests
         ResourceSecondValue,
     ];
 
-    /// <summary>
-    /// Expected values from the unary materialization test.
-    /// </summary>
+    /// <summary>Expected values from the unary materialization test.</summary>
     private static readonly int[] UnaryExpected = [FourthValue, ProjectedFirstValue, 18];
 
-    /// <summary>
-    /// Expected source values from a four-item sequence.
-    /// </summary>
+    /// <summary>Expected source values from a four-item sequence.</summary>
     private static readonly int[] FourItemExpected = [FirstValue, SecondValue, RetrySuccessAttempt, FourthValue];
 
-    /// <summary>
-    /// Expected selected values after source disposal.
-    /// </summary>
+    /// <summary>Expected selected values after source disposal.</summary>
     private static readonly int[] SelectedAfterDisposeExpected = [SecondValue, RetrySuccessAttempt];
 
-    /// <summary>
-    /// Expected values from a single-filter pass.
-    /// </summary>
+    /// <summary>Expected values from a single-filter pass.</summary>
     private static readonly int[] SingleSecondValueExpected = [SecondValue];
 
-    /// <summary>
-    /// Expected values from the zip test.
-    /// </summary>
+    /// <summary>Expected values from the zip test.</summary>
     private static readonly int[] ZippedExpected = [FirstZipResult, SecondZipResult];
 
-    /// <summary>
-    /// Expected values from the shorter range zip test.
-    /// </summary>
+    /// <summary>Expected values from the shorter range zip test.</summary>
     private static readonly int[] RangeZipShorterExpected = [FirstZipResult, RangeZipShorterSecondResult];
 
-    /// <summary>
-    /// Expected values from combine-latest style operators.
-    /// </summary>
+    /// <summary>Expected values from combine-latest style operators.</summary>
     private static readonly string[] LatestExpected = ["2a", "2b"];
 
-    /// <summary>
-    /// Expected values from virtual recurring timers.
-    /// </summary>
+    /// <summary>Expected values from virtual recurring timers.</summary>
     private static readonly long[] EveryExpected = [0L, 1L, 2L];
 
-    /// <summary>
-    /// Expected values from lead, append, and prepend.
-    /// </summary>
+    /// <summary>Expected values from lead, append, and prepend.</summary>
     private static readonly int[] LeadAppendExpected = [0, FirstValue, SecondValue, RetrySuccessAttempt, FourthValue];
 
-    /// <summary>
-    /// Expected values from the System.Reactive named alias migration test.
-    /// </summary>
+    /// <summary>Expected values from the System.Reactive named alias migration test.</summary>
     private static readonly int[] SystemReactiveNamedAliasExpected = [0, FirstValue, SecondValue, RetrySuccessAttempt];
 
-    /// <summary>
-    /// Expected values after distinct-by bucketing.
-    /// </summary>
+    /// <summary>Expected values after distinct-by bucketing.</summary>
     private static readonly int[] DistinctByExpected = [ProjectedSecondValue, ProjectedFourthValue];
 
-    /// <summary>
-    /// Expected values from a take-while sequence.
-    /// </summary>
+    /// <summary>Expected values from a take-while sequence.</summary>
     private static readonly int[] TakeWhileExpected = [FirstValue, SecondValue];
 
-    /// <summary>
-    /// Expected values from a skip-while sequence.
-    /// </summary>
+    /// <summary>Expected values from a skip-while sequence.</summary>
     private static readonly int[] SkipWhileExpected = [RetrySuccessAttempt, FirstValue];
 
-    /// <summary>
-    /// Expected values from bind selection.
-    /// </summary>
+    /// <summary>Expected values from bind selection.</summary>
     private static readonly int[] SelectedProjectionExpected =
     [
         ProjectedFirstValue,
@@ -239,54 +155,34 @@ public class FactoryOperatorContractTests
         ProjectedFourthValue,
     ];
 
-    /// <summary>
-    /// Expected true result for boolean terminal operators.
-    /// </summary>
+    /// <summary>Expected true result for boolean terminal operators.</summary>
     private static readonly bool[] TrueExpected = [true];
 
-    /// <summary>
-    /// Expected one-shot timer result before repeated timer advancement.
-    /// </summary>
+    /// <summary>Expected one-shot timer result before repeated timer advancement.</summary>
     private static readonly long[] OneShotTimerExpected = [0L];
 
-    /// <summary>
-    /// Expected retry recovery value.
-    /// </summary>
+    /// <summary>Expected retry recovery value.</summary>
     private static readonly int[] RetryResultExpected = [RetryResult];
 
-    /// <summary>
-    /// Expected async enumerable value before disposal.
-    /// </summary>
+    /// <summary>Expected async enumerable value before disposal.</summary>
     private static readonly int[] AsyncEnumerableBeforeDisposeExpected = [FirstValue];
 
-    /// <summary>
-    /// Expected observed value after virtual clock processing.
-    /// </summary>
+    /// <summary>Expected observed value after virtual clock processing.</summary>
     private static readonly int[] ObservedResourceExpected = [ResourceFirstValue];
 
-    /// <summary>
-    /// Expected throttle output after the quiet period.
-    /// </summary>
+    /// <summary>Expected throttle output after the quiet period.</summary>
     private static readonly int[] ThrottleExpected = [RetrySuccessAttempt];
 
-    /// <summary>
-    /// Expected sample output over the virtual clock ticks.
-    /// </summary>
+    /// <summary>Expected sample output over the virtual clock ticks.</summary>
     private static readonly int[] SampleExpected = [SecondValue, RetrySuccessAttempt];
 
-    /// <summary>
-    /// Expected fork-join output.
-    /// </summary>
+    /// <summary>Expected fork-join output.</summary>
     private static readonly int[] ForkJoinExpected = [SecondZipResult];
 
-    /// <summary>
-    /// Expected collected task output.
-    /// </summary>
+    /// <summary>Expected collected task output.</summary>
     private static readonly int[] CollectedExpected = [FirstValue, SecondValue, RetrySuccessAttempt];
 
-    /// <summary>
-    /// Verifies finite factory composition and resource disposal.
-    /// </summary>
+    /// <summary>Verifies finite factory composition and resource disposal.</summary>
     [Test]
     public void FactoriesEmitExpectedFiniteSequencesAndDisposeResources()
     {
@@ -307,9 +203,7 @@ public class FactoryOperatorContractTests
         Assert.Equal(1, disposed);
     }
 
-    /// <summary>
-    /// Verifies unary transformation, filtering, aggregation, and materialization operators.
-    /// </summary>
+    /// <summary>Verifies unary transformation, filtering, aggregation, and materialization operators.</summary>
     [Test]
     public void UnaryOperatorsTransformFilterAggregateAndMaterialize()
     {
@@ -332,14 +226,13 @@ public class FactoryOperatorContractTests
         Signal.FromEnumerable(FourItemExpected).Reduce(0, (sum, value) => sum + value).Subscribe(terminal.Add);
 
         Assert.Equal(UnaryExpected, values);
-        Assert.Equal(new[] { ProjectedFirstValue }, terminal);
+        int[] expectedTerminal = [ProjectedFirstValue];
+        Assert.Equal(expectedTerminal, terminal);
         Assert.Equal(RetrySuccessAttempt, taps);
         Assert.Equal(SparkKind.OnCompleted, sparks[^1].Kind);
     }
 
-    /// <summary>
-    /// Verifies cold map and keep operators detach from their source when disposed.
-    /// </summary>
+    /// <summary>Verifies cold map and keep operators detach from their source when disposed.</summary>
     [Test]
     public void MapAndKeepStayColdUntilSubscribedAndDetachOnDispose()
     {
@@ -367,9 +260,7 @@ public class FactoryOperatorContractTests
         Assert.Equal(SingleSecondValueExpected, filteredValues);
     }
 
-    /// <summary>
-    /// Verifies merge, concat, zip, and combine-latest ordering semantics.
-    /// </summary>
+    /// <summary>Verifies merge, concat, zip, and combine-latest ordering semantics.</summary>
     [Test]
     public void CombiningOperatorsPreserveCoreOrderingSemantics()
     {
@@ -413,14 +304,15 @@ public class FactoryOperatorContractTests
         Assert.Equal(FourItemExpected, rangeMerged);
         Assert.Equal(TakeWhileExpected, rangeRace);
         Assert.Equal(TakeWhileExpected, rangeAmb);
-        Assert.Equal(new[] { ProjectedSecondBucketPeerValue, RangeZipShorterSecondResult }, rangeLatest);
-        Assert.Equal(new[] { ProjectedSecondBucketPeerValue, RangeZipShorterSecondResult }, rangeWithLatest);
-        Assert.Equal(new[] { RangeZipShorterSecondResult }, rangeForkJoin);
+        int[] expectedRangeLatest = [ProjectedSecondBucketPeerValue, RangeZipShorterSecondResult];
+        Assert.Equal(expectedRangeLatest, rangeLatest);
+        int[] expectedRangeWithLatest = [ProjectedSecondBucketPeerValue, RangeZipShorterSecondResult];
+        Assert.Equal(expectedRangeWithLatest, rangeWithLatest);
+        int[] expectedRangeForkJoin = [RangeZipShorterSecondResult];
+        Assert.Equal(expectedRangeForkJoin, rangeForkJoin);
     }
 
-    /// <summary>
-    /// Verifies the range-specialized zip path preserves shorter-source completion semantics.
-    /// </summary>
+    /// <summary>Verifies the range-specialized zip path preserves shorter-source completion semantics.</summary>
     [Test]
     public void RangeZipCompletesAtShorterRange()
     {
@@ -434,9 +326,7 @@ public class FactoryOperatorContractTests
         Assert.Equal(1, completed);
     }
 
-    /// <summary>
-    /// Verifies retry resubscribes until a deferred source succeeds.
-    /// </summary>
+    /// <summary>Verifies retry resubscribes until a deferred source succeeds.</summary>
     [Test]
     public void RetryResubscribesUntilSuccess()
     {
@@ -457,9 +347,7 @@ public class FactoryOperatorContractTests
         Assert.Equal(RetryResultExpected, values);
     }
 
-    /// <summary>
-    /// Verifies async enumerable subscriptions cancel and dispose the enumerator.
-    /// </summary>
+    /// <summary>Verifies async enumerable subscriptions cancel and dispose the enumerator.</summary>
     /// <returns>A task that completes when the asynchronous assertions have run.</returns>
     [Test]
     public async Task AsyncEnumerableFactoryCancelsEnumeratorOnDispose()
@@ -490,9 +378,7 @@ public class FactoryOperatorContractTests
         Assert.True(disposed);
     }
 
-    /// <summary>
-    /// Verifies completed async enumerable subscriptions can be disposed without racing a disposed token source.
-    /// </summary>
+    /// <summary>Verifies completed async enumerable subscriptions can be disposed without racing a disposed token source.</summary>
     /// <returns>A task that completes when asynchronous assertions have run.</returns>
     [Test]
     public async Task AsyncEnumerableFactoryCanDisposeAfterCompletion()
@@ -509,9 +395,7 @@ public class FactoryOperatorContractTests
         Assert.Equal(TakeWhileExpected, (IEnumerable<int>)values);
     }
 
-    /// <summary>
-    /// Verifies timer factories use an injected virtual sequencer.
-    /// </summary>
+    /// <summary>Verifies timer factories use an injected virtual sequencer.</summary>
     [Test]
     public void TimeFactoriesUseInjectedScheduler()
     {
@@ -538,9 +422,7 @@ public class FactoryOperatorContractTests
         Assert.Equal(EveryExpected, every);
     }
 
-    /// <summary>
-    /// Verifies additional factory and unary operator parity helpers.
-    /// </summary>
+    /// <summary>Verifies additional factory and unary operator parity helpers.</summary>
     [Test]
     public void AdditionalFactoriesAndUnaryOperatorsCoverCommonParitySurface()
     {
@@ -549,9 +431,7 @@ public class FactoryOperatorContractTests
         VerifySelectionAndProjectionOperators();
     }
 
-    /// <summary>
-    /// Verifies System.Reactive-style aliases intended to ease migration.
-    /// </summary>
+    /// <summary>Verifies System.Reactive-style aliases intended to ease migration.</summary>
     /// <returns>A task that completes when the asynchronous assertions have run.</returns>
     [Test]
     public async Task SystemReactiveNamedAliasesCoverMigrationConvenienceSurface()
@@ -588,9 +468,7 @@ public class FactoryOperatorContractTests
         await VerifyTaskAliasOperators();
     }
 
-    /// <summary>
-    /// Verifies boundary and latest-value operators with virtual time.
-    /// </summary>
+    /// <summary>Verifies boundary and latest-value operators with virtual time.</summary>
     [Test]
     public void BoundaryAndLatestOperatorsUseVirtualTimeAndCompletionSemantics()
     {
@@ -627,9 +505,7 @@ public class FactoryOperatorContractTests
         Assert.Equal(ForkJoinExpected, forkJoined);
     }
 
-    /// <summary>
-    /// Verifies terminal task operators complete with their expected values.
-    /// </summary>
+    /// <summary>Verifies terminal task operators complete with their expected values.</summary>
     /// <returns>A task that completes when the asynchronous assertions have run.</returns>
     [Test]
     public async Task TerminalTaskOperatorsCompleteWithExpectedSemantics()
@@ -655,9 +531,7 @@ public class FactoryOperatorContractTests
         Assert.True(any);
     }
 
-    /// <summary>
-    /// Verifies factory guards, async aliases, and cancellation-aware enumerable conversion.
-    /// </summary>
+    /// <summary>Verifies factory guards, async aliases, and cancellation-aware enumerable conversion.</summary>
     /// <returns>A task that completes when asynchronous assertions finish.</returns>
     [Test]
     public async Task FactoryAliasesAndGuardsCoverParityBranches()
@@ -709,7 +583,8 @@ public class FactoryOperatorContractTests
 
         Assert.Equal(RetryResult, fromAsync);
         Assert.Equal(RetrySuccessAttempt, fromAsyncWithToken);
-        Assert.Equal(new[] { FirstValue, SecondValue, FirstValue, SecondValue }, values);
+        int[] expectedValues = [FirstValue, SecondValue, FirstValue, SecondValue];
+        Assert.Equal(expectedValues, values);
         Assert.Equal(SecondValue, completed);
         Assert.Equal(1, errors.Count);
         Assert.Equal(1, eventValues.Count);
@@ -717,9 +592,7 @@ public class FactoryOperatorContractTests
         Assert.Same(EventArgs.Empty, eventValues[0].EventArgs);
     }
 
-    /// <summary>
-    /// Verifies sequence boundary operators.
-    /// </summary>
+    /// <summary>Verifies sequence boundary operators.</summary>
     private static void VerifySequenceBoundaryOperators()
     {
         var leadAppend = new List<int>();
@@ -746,9 +619,7 @@ public class FactoryOperatorContractTests
         Assert.Equal(RetryResultExpected, defaulted);
     }
 
-    /// <summary>
-    /// Verifies boolean terminal operators.
-    /// </summary>
+    /// <summary>Verifies boolean terminal operators.</summary>
     private static void VerifyBooleanTerminalOperators()
     {
         var count = new List<int>();
@@ -763,16 +634,15 @@ public class FactoryOperatorContractTests
         Signal.FromEnumerable([SecondValue, FourthValue, SixthValue]).Contains(FourthValue).Subscribe(contains.Add);
         Signal.None<int>().IsEmpty().Subscribe(isEmpty.Add);
 
-        Assert.Equal(new[] { RetrySuccessAttempt }, count);
+        int[] expectedCount = [RetrySuccessAttempt];
+        Assert.Equal(expectedCount, count);
         Assert.Equal(TrueExpected, any);
         Assert.Equal(TrueExpected, all);
         Assert.Equal(TrueExpected, contains);
         Assert.Equal(TrueExpected, isEmpty);
     }
 
-    /// <summary>
-    /// Verifies selection and projection operators.
-    /// </summary>
+    /// <summary>Verifies selection and projection operators.</summary>
     private static void VerifySelectionAndProjectionOperators()
     {
         var selected = new List<int>();
@@ -782,9 +652,7 @@ public class FactoryOperatorContractTests
         Assert.Equal(SelectedProjectionExpected, selected);
     }
 
-    /// <summary>
-    /// Verifies task-based alias operators.
-    /// </summary>
+    /// <summary>Verifies task-based alias operators.</summary>
     /// <returns>A task that completes when assertions have run.</returns>
     [SuppressMessage("Major Code Smell", "S6966:Awaitable method should be used", Justification = "Synchronous ToArray/ToList operators are deliberately covered alongside async variants.")]
     private static async Task VerifyTaskAliasOperators()
@@ -813,36 +681,24 @@ public class FactoryOperatorContractTests
         Assert.Equal(ProjectedSecondValue, started);
     }
 
-    /// <summary>
-    /// Test event source.
-    /// </summary>
+    /// <summary>Test event source.</summary>
     private sealed class EventSource
     {
-        /// <summary>
-        /// Raised when <see cref="Raise"/> is called.
-        /// </summary>
+        /// <summary>Raised when <see cref="Raise"/> is called.</summary>
         public event EventHandler? Raised;
 
-        /// <summary>
-        /// Raises the event.
-        /// </summary>
+        /// <summary>Raises the event.</summary>
         public void Raise() => Raised?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>
-    /// Records observer values and terminal signals.
-    /// </summary>
+    /// <summary>Records observer values and terminal signals.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
     private sealed class RecordingObserver<T> : IObserver<T>
     {
-        /// <summary>
-        /// Gets observed values.
-        /// </summary>
+        /// <summary>Gets observed values.</summary>
         public List<T> Values { get; } = [];
 
-        /// <summary>
-        /// Gets completion count.
-        /// </summary>
+        /// <summary>Gets completion count.</summary>
         public int Completed { get; private set; }
 
         /// <inheritdoc/>

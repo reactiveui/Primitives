@@ -2,60 +2,52 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
 using ReactiveUI.Primitives.Concurrency;
-using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Covers recently added signal windowing and factory behavior that is reported by CI coverage gates.
-/// </summary>
+/// <summary>Covers recently added signal windowing and factory behavior that is reported by CI coverage gates.</summary>
 public sealed class SignalWindowAndFactoryCoverageTests
 {
-    /// <summary>
-    /// Verifies <see cref="Signal.Collect{TSource}(IObservable{TSource}, TimeSpan)"/> immediate, scheduled,
-    /// terminal, and error paths.
-    /// </summary>
+    /// <summary>Verifies the Collect method covers immediate, scheduled, terminal, and error paths.</summary>
     [Test]
     public void CollectCoversImmediateScheduledCompletionErrorAndDisposePaths()
     {
-        const int first = 1;
-        const int second = 2;
-        const int third = 3;
-        const int expectedBatchCount = 2;
+        const int First = 1;
+        const int Second = 2;
+        const int Third = 3;
+        const int ExpectedBatchCount = 2;
         var immediateBatches = new List<int[]>();
 
-        Signal.FromEnumerable([first, second])
+        Signal.FromEnumerable([First, Second])
             .Collect(TimeSpan.Zero)
             .Subscribe(batch => immediateBatches.Add([.. batch]));
 
-        Assert.Equal(expectedBatchCount, immediateBatches.Count);
-        Assert.Equal<int>([first], immediateBatches[0]);
-        Assert.Equal<int>([second], immediateBatches[1]);
+        Assert.Equal(ExpectedBatchCount, immediateBatches.Count);
+        Assert.Equal<int>([First], immediateBatches[0]);
+        Assert.Equal<int>([Second], immediateBatches[1]);
 
         var clock = new TestClock();
         var source = new Signal<int>();
         var scheduledBatches = new List<int[]>();
         var completed = 0;
         var subscription = source
-            .Collect(TimeSpan.FromTicks(second), clock)
+            .Collect(TimeSpan.FromTicks(Second), clock)
             .Subscribe(batch => scheduledBatches.Add([.. batch]), ex => throw ex, () => completed++);
 
-        source.OnNext(first);
-        source.OnNext(second);
-        clock.AdvanceBy(TimeSpan.FromTicks(second));
-        source.OnNext(third);
+        source.OnNext(First);
+        source.OnNext(Second);
+        clock.AdvanceBy(TimeSpan.FromTicks(Second));
+        source.OnNext(Third);
         source.OnCompleted();
-        clock.AdvanceBy(TimeSpan.FromTicks(second));
+        clock.AdvanceBy(TimeSpan.FromTicks(Second));
         subscription.Dispose();
 
-        Assert.Equal(expectedBatchCount, scheduledBatches.Count);
-        Assert.Equal<int>([first, second], scheduledBatches[0]);
-        Assert.Equal<int>([third], scheduledBatches[1]);
+        Assert.Equal(ExpectedBatchCount, scheduledBatches.Count);
+        Assert.Equal<int>([First, Second], scheduledBatches[0]);
+        Assert.Equal<int>([Third], scheduledBatches[1]);
         Assert.Equal(1, completed);
 
         var errorClock = new TestClock();
@@ -63,66 +55,63 @@ public sealed class SignalWindowAndFactoryCoverageTests
         var expected = new InvalidOperationException("collect");
         Exception? observed = null;
 
-        errorSource.Collect(TimeSpan.FromTicks(first), errorClock)
+        errorSource.Collect(TimeSpan.FromTicks(First), errorClock)
             .Subscribe(_ => { }, ex => observed = ex);
-        errorSource.OnNext(first);
+        errorSource.OnNext(First);
         errorSource.OnError(expected);
-        errorClock.AdvanceBy(TimeSpan.FromTicks(first));
+        errorClock.AdvanceBy(TimeSpan.FromTicks(First));
 
         Assert.Same(expected, observed!);
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Collect(TimeSpan.FromTicks(first)));
-        Assert.Throws<ArgumentNullException>(() => Signal.Emit(first).Collect(TimeSpan.FromTicks(first), null!));
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Collect(TimeSpan.FromTicks(First)));
+        Assert.Throws<ArgumentNullException>(() => Signal.Emit(First).Collect(TimeSpan.FromTicks(First), null!));
 
         var stoppedGuardCompleted = 0;
         new ScriptedObservable<int>(observer =>
         {
             observer.OnCompleted();
-            observer.OnNext(first);
-        }).Collect(TimeSpan.FromTicks(first), new TestClock())
+            observer.OnNext(First);
+        }).Collect(TimeSpan.FromTicks(First), new TestClock())
             .Subscribe(_ => { }, ex => throw ex, () => stoppedGuardCompleted++);
         Assert.Equal(1, stoppedGuardCompleted);
     }
 
-    /// <summary>
-    /// Verifies <see cref="Signal.EmitIfQuiet{TSource}(IObservable{TSource}, TimeSpan)"/> immediate, scheduled,
-    /// completion, stale emission, and error paths.
-    /// </summary>
+    /// <summary>Verifies the EmitIfQuiet method covers immediate, scheduled, completion, stale emission, and error paths.</summary>
     [Test]
     public void EmitIfQuietCoversImmediateScheduledCompletionStaleAndErrorPaths()
     {
-        const int first = 1;
-        const int second = 2;
-        const int third = 3;
+        const int First = 1;
+        const int Second = 2;
+        const int Third = 3;
         var immediateValues = new List<int>();
 
-        Signal.FromEnumerable([first, second])
+        Signal.FromEnumerable([First, Second])
             .EmitIfQuiet(TimeSpan.Zero)
             .Subscribe(immediateValues.Add);
 
-        Assert.Equal<int>([first, second], immediateValues);
+        Assert.Equal<int>([First, Second], immediateValues);
 
         var clock = new TestClock();
         var source = new Signal<int>();
         var delayedValues = new List<int>();
         var completed = 0;
 
-        source.EmitIfQuiet(TimeSpan.FromTicks(third), clock)
+        source.EmitIfQuiet(TimeSpan.FromTicks(Third), clock)
             .Subscribe(delayedValues.Add, ex => throw ex, () => completed++);
-        source.OnNext(first);
-        clock.AdvanceBy(TimeSpan.FromTicks(second));
-        source.OnNext(second);
-        clock.AdvanceBy(TimeSpan.FromTicks(first));
-        clock.AdvanceBy(TimeSpan.FromTicks(second));
-        source.OnNext(third);
+        source.OnNext(First);
+        clock.AdvanceBy(TimeSpan.FromTicks(Second));
+        source.OnNext(Second);
+        clock.AdvanceBy(TimeSpan.FromTicks(First));
+        clock.AdvanceBy(TimeSpan.FromTicks(Second));
+        source.OnNext(Third);
         source.OnCompleted();
-        clock.AdvanceBy(TimeSpan.FromTicks(third));
+        clock.AdvanceBy(TimeSpan.FromTicks(Third));
 
-        Assert.Equal<int>([second, third], delayedValues);
+        Assert.Equal<int>([Second, Third], delayedValues);
         Assert.Equal(1, completed);
 
         var emptyCompletion = 0;
         var emptySource = new Signal<int>();
-        emptySource.EmitIfQuiet(TimeSpan.FromTicks(first), new TestClock())
+        emptySource.EmitIfQuiet(TimeSpan.FromTicks(First), new TestClock())
             .Subscribe(_ => { }, ex => throw ex, () => emptyCompletion++);
         emptySource.OnCompleted();
         Assert.Equal(1, emptyCompletion);
@@ -132,50 +121,48 @@ public sealed class SignalWindowAndFactoryCoverageTests
         var expected = new InvalidOperationException("quiet");
         Exception? observed = null;
 
-        errorSource.EmitIfQuiet(TimeSpan.FromTicks(first), errorClock)
+        errorSource.EmitIfQuiet(TimeSpan.FromTicks(First), errorClock)
             .Subscribe(_ => { }, ex => observed = ex);
-        errorSource.OnNext(first);
+        errorSource.OnNext(First);
         errorSource.OnError(expected);
-        errorClock.AdvanceBy(TimeSpan.FromTicks(first));
+        errorClock.AdvanceBy(TimeSpan.FromTicks(First));
 
         Assert.Same(expected, observed!);
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).EmitIfQuiet(TimeSpan.FromTicks(first)));
-        Assert.Throws<ArgumentNullException>(() => Signal.Emit(first).EmitIfQuiet(TimeSpan.FromTicks(first), null!));
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).EmitIfQuiet(TimeSpan.FromTicks(First)));
+        Assert.Throws<ArgumentNullException>(() => Signal.Emit(First).EmitIfQuiet(TimeSpan.FromTicks(First), null!));
 
         var stoppedGuardCompleted = 0;
         new ScriptedObservable<int>(observer =>
         {
             observer.OnCompleted();
-            observer.OnNext(first);
-        }).EmitIfQuiet(TimeSpan.FromTicks(first), new TestClock())
+            observer.OnNext(First);
+        }).EmitIfQuiet(TimeSpan.FromTicks(First), new TestClock())
             .Subscribe(_ => { }, ex => throw ex, () => stoppedGuardCompleted++);
         Assert.Equal(1, stoppedGuardCompleted);
     }
 
-    /// <summary>
-    /// Verifies deferred sources and blocking enumeration surface success, factory failure, and source failure paths.
-    /// </summary>
+    /// <summary>Verifies deferred sources and blocking enumeration surface success, factory failure, and source failure paths.</summary>
     [Test]
     public void DeferAndToEnumerableCoverSuccessAndErrorPaths()
     {
-        const int first = 1;
-        const int second = 2;
-        const int expectedSubscriptionCount = 2;
+        const int First = 1;
+        const int Second = 2;
+        const int ExpectedSubscriptionCount = 2;
         var subscriptions = 0;
         var values = new List<int>();
 
         var deferred = Signal.Defer(() =>
         {
             subscriptions++;
-            return Signal.FromEnumerable([first, second]);
+            return Signal.FromEnumerable([First, Second]);
         });
 
         deferred.Subscribe(values.Add);
         deferred.Subscribe(_ => { });
 
-        Assert.Equal<int>([first, second], values);
-        Assert.Equal(expectedSubscriptionCount, subscriptions);
-        Assert.Equal([first, second], Signal.FromEnumerable([first, second]).ToEnumerable());
+        Assert.Equal<int>([First, Second], values);
+        Assert.Equal(ExpectedSubscriptionCount, subscriptions);
+        Assert.Equal([First, Second], Signal.FromEnumerable([First, Second]).ToEnumerable());
 
         var factoryError = new InvalidOperationException("defer-factory");
         Exception? observedFactoryError = null;
@@ -187,13 +174,11 @@ public sealed class SignalWindowAndFactoryCoverageTests
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).ToEnumerable());
     }
 
-    /// <summary>
-    /// Verifies generic event factory overloads for supported and unsupported handler shapes.
-    /// </summary>
+    /// <summary>Verifies generic event factory overloads for supported and unsupported handler shapes.</summary>
     [Test]
     public void GenericFromEventPatternCoversPropertyChangedGenericAndUnsupportedHandlers()
     {
-        const int eventValue = 7;
+        const int EventValue = 7;
         var source = new GenericEventSource();
         var values = new List<int>();
         var genericSubscription = Signal
@@ -202,11 +187,11 @@ public sealed class SignalWindowAndFactoryCoverageTests
                 handler => source.Changed -= handler)
             .Subscribe(pattern => values.Add(pattern.EventArgs.Value));
 
-        source.Raise(eventValue);
+        source.Raise(EventValue);
         genericSubscription.Dispose();
-        source.Raise(eventValue + 1);
+        source.Raise(EventValue + 1);
 
-        Assert.Equal<int>([eventValue], values);
+        Assert.Equal<int>([EventValue], values);
 
         var propertySource = new PropertyChangedEventSource();
         var propertyNames = new List<string?>();
@@ -227,21 +212,15 @@ public sealed class SignalWindowAndFactoryCoverageTests
             Signal.FromEventPattern<Action, EventArgs>(_ => { }, _ => { }).Subscribe(_ => { }));
     }
 
-    /// <summary>
-    /// Event arguments carrying a deterministic integer value.
-    /// </summary>
+    /// <summary>Event arguments carrying a deterministic integer value.</summary>
     /// <param name="value">The value supplied by the event.</param>
     private sealed class TestEventArgs(int value) : EventArgs
     {
-        /// <summary>
-        /// Gets the event value.
-        /// </summary>
+        /// <summary>Gets the event value.</summary>
         public int Value { get; } = value;
     }
 
-    /// <summary>
-    /// Observable that runs a supplied subscription script synchronously.
-    /// </summary>
+    /// <summary>Observable that runs a supplied subscription script synchronously.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="script">The script invoked with the observer.</param>
     private sealed class ScriptedObservable<T>(Action<IObserver<T>> script) : IObservable<T>
@@ -254,31 +233,21 @@ public sealed class SignalWindowAndFactoryCoverageTests
         }
     }
 
-    /// <summary>
-    /// Source used to exercise generic <see cref="EventHandler{TEventArgs}"/> event conversion.
-    /// </summary>
+    /// <summary>Source used to exercise generic <see cref="EventHandler{TEventArgs}"/> event conversion.</summary>
     private sealed class GenericEventSource
     {
-        /// <summary>
-        /// Raised by the test source.
-        /// </summary>
+        /// <summary>Raised by the test source.</summary>
         public event EventHandler<TestEventArgs>? Changed;
 
-        /// <summary>
-        /// Raises <see cref="Changed"/> with the supplied value.
-        /// </summary>
+        /// <summary>Raises <see cref="Changed"/> with the supplied value.</summary>
         /// <param name="value">The value supplied to the event arguments.</param>
         public void Raise(int value) => Changed?.Invoke(this, new TestEventArgs(value));
     }
 
-    /// <summary>
-    /// Source used to exercise <see cref="PropertyChangedEventHandler"/> event conversion.
-    /// </summary>
+    /// <summary>Source used to exercise <see cref="PropertyChangedEventHandler"/> event conversion.</summary>
     private sealed class PropertyChangedEventSource
     {
-        /// <summary>
-        /// Raised by the test source.
-        /// </summary>
+        /// <summary>Raised by the test source.</summary>
         [SuppressMessage(
             "Roslynator",
             "RCS1159:Use EventHandler<T>",
@@ -289,14 +258,10 @@ public sealed class SignalWindowAndFactoryCoverageTests
             Justification = "This test deliberately covers the PropertyChangedEventHandler branch of the factory overload.")]
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        /// <summary>
-        /// Gets a placeholder property name used by the event test.
-        /// </summary>
-        public static int Value => default;
+        /// <summary>Gets a placeholder property name used by the event test.</summary>
+        public static int Value => 0;
 
-        /// <summary>
-        /// Raises <see cref="PropertyChanged"/> with the supplied property name.
-        /// </summary>
+        /// <summary>Raises <see cref="PropertyChanged"/> with the supplied property name.</summary>
         /// <param name="propertyName">The property name supplied to the event arguments.</param>
         public void Raise(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }

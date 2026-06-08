@@ -11,20 +11,14 @@ namespace ReactiveUI.Primitives.Async;
 /// <remarks>Timer is useful for triggering one-shot deferred actions in observable pipelines.</remarks>
 public static partial class SignalAsync
 {
-    /// <summary>
-    /// Creates an observable sequence that produces a single value (0) after the specified delay,
-    /// then completes.
-    /// </summary>
+    /// <summary>Creates an observable sequence that produces a single value (0) after the specified delay, then completes.</summary>
     /// <param name="dueTime">The time span after which to produce the value. Must be non-negative.</param>
     /// <returns>An observable sequence that produces a single value after the specified delay and then completes.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
     public static IObservableAsync<long> Timer(TimeSpan dueTime)
         => Timer(dueTime, (TimeProvider?)null);
 
-    /// <summary>
-    /// Creates an observable sequence that produces a single value (0) after the specified delay,
-    /// then completes.
-    /// </summary>
+    /// <summary>Creates an observable sequence that produces a single value (0) after the specified delay, then completes.</summary>
     /// <param name="dueTime">The time span after which to produce the value. Must be non-negative.</param>
     /// <param name="timeProvider">An optional time provider for controlling timing. If null, <see cref="TimeProvider.System"/>
     /// is used.</param>
@@ -46,7 +40,7 @@ public static partial class SignalAsync
         return CreateAsBackgroundJob<long>(
             async (observer, cancellationToken) =>
             {
-                await DelayAsync(dueTime, tp, cancellationToken).ConfigureAwait(false);
+                await SignalAsyncExtensions.DelayAsync(dueTime, tp, cancellationToken).ConfigureAwait(false);
                 await observer.OnNextAsync(0L, cancellationToken).ConfigureAwait(false);
                 await observer.OnCompletedAsync(Result.Success).ConfigureAwait(false);
             },
@@ -100,13 +94,13 @@ public static partial class SignalAsync
         return CreateAsBackgroundJob<long>(
             async (observer, cancellationToken) =>
             {
-                await DelayAsync(dueTime, tp, cancellationToken).ConfigureAwait(false);
+                await SignalAsyncExtensions.DelayAsync(dueTime, tp, cancellationToken).ConfigureAwait(false);
 
                 long tick = 0;
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     await observer.OnNextAsync(tick++, cancellationToken).ConfigureAwait(false);
-                    await DelayAsync(period, tp, cancellationToken).ConfigureAwait(false);
+                    await SignalAsyncExtensions.DelayAsync(period, tp, cancellationToken).ConfigureAwait(false);
                 }
             },
             true);

@@ -18,104 +18,64 @@ namespace ReactiveUI.Primitives.Benchmarks;
 /// </summary>
 internal static class AllocationProbe
 {
-    /// <summary>
-    /// Shared single-character payload reused by reference/type-coercion probes.
-    /// </summary>
+    /// <summary>Shared single-character payload reused by reference/type-coercion probes.</summary>
     private const string ProbeShared = "x";
 
-    /// <summary>
-    /// Number of warm-up iterations executed before measurement begins.
-    /// </summary>
+    /// <summary>Number of warm-up iterations executed before measurement begins.</summary>
     private const int Warmup = 50;
 
-    /// <summary>
-    /// Number of measured iterations used to compute the per-op allocation average.
-    /// </summary>
+    /// <summary>Number of measured iterations used to compute the per-op allocation average.</summary>
     private const int Iterations = 1000;
 
-    /// <summary>
-    /// Element count emitted by the standard probe sequences.
-    /// </summary>
+    /// <summary>Element count emitted by the standard probe sequences.</summary>
     private const int Count = 32;
 
-    /// <summary>
-    /// Number of concurrent subscriptions exercised by the fan-out churn probe.
-    /// </summary>
+    /// <summary>Number of concurrent subscriptions exercised by the fan-out churn probe.</summary>
     private const int FanOut = 64;
 
-    /// <summary>
-    /// Single sample value emitted by the <c>Return</c> probe.
-    /// </summary>
+    /// <summary>Single sample value emitted by the <c>Return</c> probe.</summary>
     private const int ReturnValue = 7;
 
-    /// <summary>
-    /// Element count to skip / take / buffer in the windowing probes.
-    /// </summary>
+    /// <summary>Element count to skip / take / buffer in the windowing probes.</summary>
     private const int Window = 8;
 
-    /// <summary>
-    /// Divisor used by the <c>UniqueBy</c> key selector.
-    /// </summary>
+    /// <summary>Divisor used by the <c>UniqueBy</c> key selector.</summary>
     private const int KeyDivisor = 2;
 
-    /// <summary>
-    /// Inner sequence length used by the <c>FlatMap</c> probe.
-    /// </summary>
+    /// <summary>Inner sequence length used by the <c>FlatMap</c> probe.</summary>
     private const int InnerCount = 2;
 
-    /// <summary>
-    /// Retry count used by the <c>Reattempt</c> probe.
-    /// </summary>
+    /// <summary>Retry count used by the <c>Reattempt</c> probe.</summary>
     private const int RetryCount = 2;
 
-    /// <summary>
-    /// Source length used by the <c>FlatMap</c> probe.
-    /// </summary>
+    /// <summary>Source length used by the <c>FlatMap</c> probe.</summary>
     private const int FlatMapSourceCount = 8;
 
-    /// <summary>
-    /// Exclusive upper bound used by the <c>TakeWhile</c> probe predicate.
-    /// </summary>
+    /// <summary>Exclusive upper bound used by the <c>TakeWhile</c> probe predicate.</summary>
     private const int TakeWhileBound = 24;
 
-    /// <summary>
-    /// Start value used by the secondary (right-hand) probe sequences.
-    /// </summary>
+    /// <summary>Start value used by the secondary (right-hand) probe sequences.</summary>
     private const int RightStart = 10;
 
-    /// <summary>
-    /// Per-element multiplier used by the <c>FlatMap</c> inner factory.
-    /// </summary>
+    /// <summary>Per-element multiplier used by the <c>FlatMap</c> inner factory.</summary>
     private const int FlatMapMultiplier = 10;
 
-    /// <summary>
-    /// Factor used by the <c>MapWith</c> probe.
-    /// </summary>
+    /// <summary>Factor used by the <c>MapWith</c> probe.</summary>
     private const int MapWithFactor = 3;
 
-    /// <summary>
-    /// History buffer capacity used by the <c>ReplaySignal</c> probe.
-    /// </summary>
+    /// <summary>History buffer capacity used by the <c>ReplaySignal</c> probe.</summary>
     private const int HistoryCapacity = 16;
 
-    /// <summary>
-    /// Width, in characters, of the console separator rule.
-    /// </summary>
+    /// <summary>Width, in characters, of the console separator rule.</summary>
     private const int SeparatorWidth = 56;
 
-    /// <summary>
-    /// Left-padding width applied to the operator name column.
-    /// </summary>
+    /// <summary>Left-padding width applied to the operator name column.</summary>
     private const int NameColumnWidth = -34;
 
-    /// <summary>
-    /// Right-padding width applied to the bytes-per-op column.
-    /// </summary>
+    /// <summary>Right-padding width applied to the bytes-per-op column.</summary>
     private const int ValueColumnWidth = 6;
 
-    /// <summary>
-    /// Runs the probe and prints a per-operator allocation table.
-    /// </summary>
+    /// <summary>Runs the probe and prints a per-operator allocation table.</summary>
     public static void Run()
     {
         // Shared, reused observer: allocated once here, never inside a measured op, so its bytes
@@ -160,9 +120,7 @@ internal static class AllocationProbe
         ProbeChurn(observer, handles);
     }
 
-    /// <summary>
-    /// Probes factory and source allocation.
-    /// </summary>
+    /// <summary>Probes factory and source allocation.</summary>
     /// <param name="observer">The reused observer.</param>
     private static void ProbeFactories(IntSignalObserver observer)
     {
@@ -171,9 +129,7 @@ internal static class AllocationProbe
         Row("Empty", () => Signal.None<int>().Subscribe(observer).Dispose());
     }
 
-    /// <summary>
-    /// Probes stateful single-source operator allocation.
-    /// </summary>
+    /// <summary>Probes stateful single-source operator allocation.</summary>
     /// <param name="observer">The reused observer.</param>
     private static void ProbeStatefulOperators(IntSignalObserver observer)
     {
@@ -187,9 +143,7 @@ internal static class AllocationProbe
         Row("SkipWhile", () => Signal.Sequence(0, Count).SkipWhile(static x => x < Window).Subscribe(observer).Dispose());
     }
 
-    /// <summary>
-    /// Probes projection and combination operator allocation.
-    /// </summary>
+    /// <summary>Probes projection and combination operator allocation.</summary>
     /// <param name="observer">The reused observer.</param>
     private static void ProbeProjection(IntSignalObserver observer)
     {
@@ -203,9 +157,7 @@ internal static class AllocationProbe
         Row("FlatMap", () => Signal.Sequence(1, FlatMapSourceCount).FlatMap(static x => Signal.Sequence(x * FlatMapMultiplier, InnerCount)).Subscribe(observer).Dispose());
     }
 
-    /// <summary>
-    /// Probes pass-through and terminal operator allocation.
-    /// </summary>
+    /// <summary>Probes pass-through and terminal operator allocation.</summary>
     /// <param name="observer">The reused integer observer.</param>
     /// <param name="sparkObserver">The reused spark observer.</param>
     /// <param name="intervalObserver">The reused time-interval observer.</param>
@@ -229,9 +181,7 @@ internal static class AllocationProbe
         Row("CollectArray (range)", () => Signal.Sequence(0, Count).CollectArray().Subscribe(arrayObserver).Dispose());
     }
 
-    /// <summary>
-    /// Probes coverage-gap operator and factory allocation.
-    /// </summary>
+    /// <summary>Probes coverage-gap operator and factory allocation.</summary>
     /// <param name="observer">The reused integer observer.</param>
     /// <param name="listObserver">The reused list observer.</param>
     /// <param name="stringObserver">The reused string observer.</param>
@@ -272,9 +222,7 @@ internal static class AllocationProbe
         });
     }
 
-    /// <summary>
-    /// Probes subject construction, subscription, and single-emit allocation.
-    /// </summary>
+    /// <summary>Probes subject construction, subscription, and single-emit allocation.</summary>
     /// <param name="observer">The reused observer.</param>
     private static void ProbeSubjects(IntSignalObserver observer)
     {
@@ -283,9 +231,7 @@ internal static class AllocationProbe
         Row("ReplaySignal", () => EmitOnce(new HistorySignal<int>(HistoryCapacity), observer));
     }
 
-    /// <summary>
-    /// Probes connectable operator allocation.
-    /// </summary>
+    /// <summary>Probes connectable operator allocation.</summary>
     /// <param name="observer">The reused observer.</param>
     private static void ProbeConnectable(IntSignalObserver observer)
     {
@@ -300,9 +246,7 @@ internal static class AllocationProbe
         Row("AutoConnect", () => Signal.Sequence(1, Count).ShareLive().AutoConnect().Subscribe(observer).Dispose());
     }
 
-    /// <summary>
-    /// Probes subscribe/dispose churn allocation.
-    /// </summary>
+    /// <summary>Probes subscribe/dispose churn allocation.</summary>
     /// <param name="observer">The reused observer.</param>
     /// <param name="handles">The reused subscription-handle buffer.</param>
     private static void ProbeChurn(IntSignalObserver observer, IDisposable[] handles) =>
@@ -320,9 +264,7 @@ internal static class AllocationProbe
             }
         });
 
-    /// <summary>
-    /// Subscribes, emits a single value, then tears the subscription and subject down.
-    /// </summary>
+    /// <summary>Subscribes, emits a single value, then tears the subscription and subject down.</summary>
     /// <param name="subject">The signal under test.</param>
     /// <param name="observer">The reused observer to subscribe.</param>
     private static void EmitOnce(ISignal<int> subject, IObserver<int> observer)
@@ -333,9 +275,7 @@ internal static class AllocationProbe
         subject.Dispose();
     }
 
-    /// <summary>
-    /// Prints a blank line and a section heading.
-    /// </summary>
+    /// <summary>Prints a blank line and a section heading.</summary>
     /// <param name="name">The section heading to print.</param>
     private static void Section(string name)
     {
@@ -343,9 +283,7 @@ internal static class AllocationProbe
         Console.WriteLine(name);
     }
 
-    /// <summary>
-    /// Warms up, measures, and prints the per-operation allocation for a single probe row.
-    /// </summary>
+    /// <summary>Warms up, measures, and prints the per-operation allocation for a single probe row.</summary>
     /// <param name="name">The operator label to print.</param>
     /// <param name="op">The operation to measure.</param>
     private static void Row(string name, Action op)
@@ -366,6 +304,6 @@ internal static class AllocationProbe
         }
 
         var perOp = (GC.GetAllocatedBytesForCurrentThread() - before) / Iterations;
-        Console.WriteLine($"  {name,NameColumnWidth} {perOp,ValueColumnWidth} B");
+        Console.WriteLine($"  {name, NameColumnWidth} {perOp, ValueColumnWidth} B");
     }
 }

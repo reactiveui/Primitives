@@ -6,75 +6,59 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides extension methods for performing asynchronous operations on observable sequences.
-/// </summary>
+/// <summary>Provides extension methods for performing asynchronous operations on observable sequences.</summary>
 /// <remarks>The SignalAsync class contains static methods that extend the functionality of asynchronous
 /// observable sequences, enabling operations such as counting elements that satisfy a specified condition. These
 /// methods are designed to work with types that implement asynchronous observation patterns.</remarks>
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Asynchronously counts the number of elements that satisfy a specified condition.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
+    /// <summary>Asynchronous element-counting operators for an observable source sequence.</summary>
     /// <param name="this">The source observable sequence.</param>
-    /// <param name="predicate">A function to test each element for a condition. If null, all elements are counted.</param>
-    /// <returns>A task that represents the asynchronous count operation. The task result contains the number of elements
-    /// that match the predicate.</returns>
-    public static ValueTask<int> CountAsync<T>(this IObservableAsync<T> @this, Func<T, bool>? predicate)
-        => @this.CountAsync(predicate, CancellationToken.None);
-
-    /// <summary>
-    /// Asynchronously counts the number of elements that satisfy a specified condition.
-    /// </summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <param name="this">The source observable sequence.</param>
-    /// <param name="predicate">A function to test each element for a condition. If null, all elements are counted.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-    /// <returns>A task that represents the asynchronous count operation. The task result contains the number of elements
-    /// that match the predicate.</returns>
-    public static async ValueTask<int> CountAsync<T>(this IObservableAsync<T> @this, Func<T, bool>? predicate, CancellationToken cancellationToken)
+    extension<T>(IObservableAsync<T> @this)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        var observer = new CountTaskWitness<T>(predicate, cancellationToken);
-        await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.AwaitResultAsync().ConfigureAwait(false);
+        /// <summary>Asynchronously counts the number of elements that satisfy a specified condition.</summary>
+        /// <param name="predicate">A function to test each element for a condition. If null, all elements are counted.</param>
+        /// <returns>A task that represents the asynchronous count operation. The task result contains the number of elements
+        /// that match the predicate.</returns>
+        public ValueTask<int> CountAsync(Func<T, bool>? predicate)
+            => @this.CountAsync(predicate, CancellationToken.None);
+
+        /// <summary>Asynchronously counts the number of elements that satisfy a specified condition.</summary>
+        /// <param name="predicate">A function to test each element for a condition. If null, all elements are counted.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+        /// <returns>A task that represents the asynchronous count operation. The task result contains the number of elements
+        /// that match the predicate.</returns>
+        public async ValueTask<int> CountAsync(Func<T, bool>? predicate, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var observer = new CountTaskWitness<T>(predicate, cancellationToken);
+            await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+            return await observer.AwaitResultAsync().ConfigureAwait(false);
+        }
+
+        /// <summary>Asynchronously returns the total number of elements in the data source.</summary>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the number of elements in the
+        /// data source.</returns>
+        public ValueTask<int> CountAsync()
+            => @this.CountAsync(null, CancellationToken.None);
+
+        /// <summary>Asynchronously returns the total number of elements in the data source.</summary>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous count operation.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the number of elements in the
+        /// data source.</returns>
+        public ValueTask<int> CountAsync(CancellationToken cancellationToken)
+            => @this.CountAsync(null, cancellationToken);
     }
 
-    /// <summary>
-    /// Asynchronously returns the total number of elements in the data source.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <param name="this">The source observable sequence.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the number of elements in the
-    /// data source.</returns>
-    public static ValueTask<int> CountAsync<T>(this IObservableAsync<T> @this)
-        => @this.CountAsync(null, CancellationToken.None);
-
-    /// <summary>
-    /// Asynchronously returns the total number of elements in the data source.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <param name="this">The source observable sequence.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous count operation.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the number of elements in the
-    /// data source.</returns>
-    public static ValueTask<int> CountAsync<T>(this IObservableAsync<T> @this, CancellationToken cancellationToken)
-        => @this.CountAsync(null, cancellationToken);
-
-    /// <summary>
-    /// A witness that counts elements in a sequence, optionally filtered by a predicate.
-    /// </summary>
+    /// <summary>A witness that counts elements in a sequence, optionally filtered by a predicate.</summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="predicate">An optional predicate to filter elements. If null, all elements are counted.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     internal sealed class CountTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
         : TaskResultWitnessAsyncBase<T, int>(cancellationToken)
     {
-        /// <summary>
-        /// The running count of elements that satisfy the predicate.
-        /// </summary>
+        /// <summary>The running count of elements that satisfy the predicate.</summary>
         private int _count;
 
         /// <inheritdoc/>

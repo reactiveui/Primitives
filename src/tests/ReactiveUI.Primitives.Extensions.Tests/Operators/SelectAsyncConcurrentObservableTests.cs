@@ -64,8 +64,7 @@ public class SelectAsyncConcurrentObservableTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies that disposing the subscription mid-flight suppresses
-    /// further emissions and completion.</summary>
+    /// <summary>Verifies that disposing the subscription mid-flight suppresses further emissions and completion.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectAsyncConcurrentDisposedMidFlight_ThenSuppressesEmissionAndCompletion()
@@ -96,8 +95,7 @@ public class SelectAsyncConcurrentObservableTests
         await Assert.That(completed).IsFalse();
     }
 
-    /// <summary>Verifies that completion arriving while selectors are still in flight
-    /// is forwarded after all selectors finish.</summary>
+    /// <summary>Verifies that completion arriving while selectors are still in flight is forwarded after all selectors finish.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectAsyncConcurrentCompletesWithInFlight_ThenDeferredCompletion()

@@ -4,31 +4,23 @@
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// IAwaitSignal.
-/// </summary>
+/// <summary>IAwaitSignal.</summary>
 /// <typeparam name="T">The Type of Signal.</typeparam>
 /// <seealso cref="ISignal&lt;T&gt;" />
 /// <seealso cref="System.Runtime.CompilerServices.INotifyCompletion" />
 public interface IAwaitSignal<T> : ISignal<T>, System.Runtime.CompilerServices.INotifyCompletion
 {
-    /// <summary>
-    /// Gets a value indicating whether this instance is completed.
-    /// </summary>
+    /// <summary>Gets a value indicating whether this instance is completed.</summary>
     /// <value>
     ///   <c>true</c> if this instance is completed; otherwise, <c>false</c>.
     /// </value>
     bool IsCompleted { get; }
 
-    /// <summary>
-    /// Gets the awaiter.
-    /// </summary>
+    /// <summary>Gets the awaiter.</summary>
     /// <returns>An IAwaitSignal.</returns>
     IAwaitSignal<T> GetAwaiter();
 
-    /// <summary>
-    /// Gets the result.
-    /// </summary>
+    /// <summary>Gets the result.</summary>
     /// <returns>A value of T.</returns>
     T GetResult();
 }

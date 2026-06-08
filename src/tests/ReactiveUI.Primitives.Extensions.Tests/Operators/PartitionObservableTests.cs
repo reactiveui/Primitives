@@ -104,8 +104,7 @@ public partial class PartitionObservableTests
         await Assert.That(oddCompleted).IsTrue();
     }
 
-    /// <summary>Verifies that disposing one side stops it from receiving further emissions
-    /// while the other side keeps receiving.</summary>
+    /// <summary>Verifies that disposing one side stops it from receiving further emissions while the other side keeps receiving.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPartitionOneSideDisposed_ThenOnlyOtherSideReceives()
@@ -127,8 +126,7 @@ public partial class PartitionObservableTests
         await Assert.That(oddResults).IsCollectionEqualTo([Three]);
     }
 
-    /// <summary>Verifies that the partition can be resubscribed after all sides drop —
-    /// the source subscription is re-established.</summary>
+    /// <summary>Verifies that the partition can be resubscribed after all sides drop — the source subscription is re-established.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPartitionResubscribedAfterAllSidesDropped_ThenSourceRebound()
@@ -173,8 +171,7 @@ public partial class PartitionObservableTests
         await Assert.That(lastResults).IsCollectionEqualTo([One, Three]);
     }
 
-    /// <summary>Verifies that disposing a subscription whose parent sink has already been torn
-    /// down (last subscriber path) is a no-op.</summary>
+    /// <summary>Verifies that disposing a subscription whose parent sink has already been torn down (last subscriber path) is a no-op.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscriptionDisposedAfterParentSinkTornDown_ThenNoOp()

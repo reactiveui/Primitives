@@ -8,35 +8,23 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks for factory-style signal constructors.
-/// </summary>
+/// <summary>Benchmarks for factory-style signal constructors.</summary>
 [MemoryDiagnoser]
 public class FactorySignalBenchmarks
 {
-    /// <summary>
-    /// The first value produced by the range benchmarks.
-    /// </summary>
+    /// <summary>The first value produced by the range benchmarks.</summary>
     private const int RangeStart = 4;
 
-    /// <summary>
-    /// The number of values produced by the range benchmarks.
-    /// </summary>
+    /// <summary>The number of values produced by the range benchmarks.</summary>
     private const int RangeCount = 32;
 
-    /// <summary>
-    /// The number of values produced by the repeat benchmarks.
-    /// </summary>
+    /// <summary>The number of values produced by the repeat benchmarks.</summary>
     private const int RepeatCount = 32;
 
-    /// <summary>
-    /// The value repeated by the repeat benchmarks.
-    /// </summary>
+    /// <summary>The value repeated by the repeat benchmarks.</summary>
     private const int ThrowValue = 42;
 
-    /// <summary>
-    /// Baseline benchmark for empty completion with the primitives implementation.
-    /// </summary>
+    /// <summary>Baseline benchmark for empty completion with the primitives implementation.</summary>
     /// <returns>The number of completion notifications observed.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesEmptySubscribe()
@@ -46,9 +34,7 @@ public class FactorySignalBenchmarks
         return observer.CompletionCount;
     }
 
-    /// <summary>
-    /// Benchmarks System.Reactive empty completion path.
-    /// </summary>
+    /// <summary>Benchmarks System.Reactive empty completion path.</summary>
     /// <returns>The number of completion notifications observed.</returns>
     [Benchmark]
     public int SystemReactiveEmptySubscribe()
@@ -58,9 +44,7 @@ public class FactorySignalBenchmarks
         return observer.CompletionCount;
     }
 
-    /// <summary>
-    /// Benchmarks R3 empty completion path.
-    /// </summary>
+    /// <summary>Benchmarks R3 empty completion path.</summary>
     /// <returns>The number of completion notifications observed.</returns>
     [Benchmark]
     public int R3EmptySubscribe()
@@ -70,9 +54,7 @@ public class FactorySignalBenchmarks
         return observer.CompletionCount;
     }
 
-    /// <summary>
-    /// Benchmarks range generation and subscription.
-    /// </summary>
+    /// <summary>Benchmarks range generation and subscription.</summary>
     /// <returns>The sum of the received integer range.</returns>
     [Benchmark]
     public int PrimitivesRangeSubscribe()
@@ -82,9 +64,7 @@ public class FactorySignalBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks range generation and subscription using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks range generation and subscription using System.Reactive.</summary>
     /// <returns>The sum of the received integer range.</returns>
     [Benchmark]
     public int SystemReactiveRangeSubscribe()
@@ -94,9 +74,7 @@ public class FactorySignalBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks range generation and subscription using R3.
-    /// </summary>
+    /// <summary>Benchmarks range generation and subscription using R3.</summary>
     /// <returns>The sum of the received integer range.</returns>
     [Benchmark]
     public int R3RangeSubscribe()
@@ -106,9 +84,7 @@ public class FactorySignalBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks fixed repeat sequence generation.
-    /// </summary>
+    /// <summary>Benchmarks fixed repeat sequence generation.</summary>
     /// <returns>The sum of the received repeated values.</returns>
     [Benchmark]
     public int PrimitivesRepeatSubscribe()
@@ -118,9 +94,7 @@ public class FactorySignalBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks fixed repeat sequence generation in System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks fixed repeat sequence generation in System.Reactive.</summary>
     /// <returns>The sum of the received repeated values.</returns>
     [Benchmark]
     public int SystemReactiveRepeatSubscribe()
@@ -130,9 +104,7 @@ public class FactorySignalBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks fixed repeat sequence generation in R3.
-    /// </summary>
+    /// <summary>Benchmarks fixed repeat sequence generation in R3.</summary>
     /// <returns>The sum of the received repeated values.</returns>
     [Benchmark]
     public int R3RepeatSubscribe()
@@ -142,9 +114,7 @@ public class FactorySignalBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks terminal error completion for primitives.
-    /// </summary>
+    /// <summary>Benchmarks terminal error completion for primitives.</summary>
     /// <returns>The number of errors observed.</returns>
     [Benchmark]
     public int PrimitivesThrowSubscribe()
@@ -154,9 +124,7 @@ public class FactorySignalBenchmarks
         return observer.ErrorCount;
     }
 
-    /// <summary>
-    /// Benchmarks terminal error completion for System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks terminal error completion for System.Reactive.</summary>
     /// <returns>The number of errors observed.</returns>
     [Benchmark]
     public int SystemReactiveThrowSubscribe()
@@ -166,9 +134,7 @@ public class FactorySignalBenchmarks
         return observer.ErrorCount;
     }
 
-    /// <summary>
-    /// Benchmarks terminal error completion for R3.
-    /// </summary>
+    /// <summary>Benchmarks terminal error completion for R3.</summary>
     /// <returns>The number of errors observed.</returns>
     [Benchmark]
     public int R3ThrowSubscribe()

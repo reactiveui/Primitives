@@ -9,56 +9,38 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Blazor.Components;
 
-/// <summary>
-/// Base component that tracks reactive subscriptions and refreshes through Blazor's renderer dispatcher.
-/// </summary>
+/// <summary>Base component that tracks reactive subscriptions and refreshes through Blazor's renderer dispatcher.</summary>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public abstract class ReactiveComponentBase : ComponentBase, IDisposable
 {
-    /// <summary>
-    /// Tracks subscriptions owned by the component.
-    /// </summary>
+    /// <summary>Tracks subscriptions owned by the component.</summary>
     private readonly MultipleDisposable _subscriptions = new();
 
-    /// <summary>
-    /// Value indicating whether the component has been disposed.
-    /// </summary>
+    /// <summary>Value indicating whether the component has been disposed.</summary>
     private bool _disposed;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ReactiveComponentBase"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ReactiveComponentBase"/> class.</summary>
     protected ReactiveComponentBase() =>
         RendererSequencer = new BlazorRendererSequencer(InvokeAsync);
 
-    /// <summary>
-    /// Gets a value indicating whether the component has been disposed.
-    /// </summary>
+    /// <summary>Gets a value indicating whether the component has been disposed.</summary>
     protected bool IsDisposed => _disposed;
 
-    /// <summary>
-    /// Gets a sequencer that schedules work through the Blazor renderer dispatcher.
-    /// </summary>
+    /// <summary>Gets a sequencer that schedules work through the Blazor renderer dispatcher.</summary>
     protected ISequencer RendererSequencer { get; }
 
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => $"IsDisposed = {IsDisposed}";
 
-    /// <summary>
-    /// Disposes the component and all tracked subscriptions.
-    /// </summary>
+    /// <summary>Disposes the component and all tracked subscriptions.</summary>
     public void Dispose()
     {
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>
-    /// Tracks a subscription so it is disposed when the component is disposed.
-    /// </summary>
+    /// <summary>Tracks a subscription so it is disposed when the component is disposed.</summary>
     /// <param name="subscription">The subscription to track.</param>
     /// <returns>The supplied subscription, or <see cref="EmptyDisposable.Instance"/> when the component has already been disposed.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="subscription"/> is <see langword="null"/>.</exception>
@@ -76,9 +58,7 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
         return subscription;
     }
 
-    /// <summary>
-    /// Subscribes to a source and refreshes the component after each value.
-    /// </summary>
+    /// <summary>Subscribes to a source and refreshes the component after each value.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onNext">Action invoked for each value on the Blazor renderer dispatcher.</param>
@@ -87,9 +67,7 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
     protected IDisposable Observe<T>(IObservable<T> source, Action<T> onNext) =>
         Observe(source, onNext, null, null);
 
-    /// <summary>
-    /// Subscribes to a source and refreshes the component after each observed signal.
-    /// </summary>
+    /// <summary>Subscribes to a source and refreshes the component after each observed signal.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onNext">Action invoked for each value on the Blazor renderer dispatcher.</param>
@@ -104,9 +82,7 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
         Action? onCompleted) =>
         Observe(source, onNext, onError, onCompleted, true);
 
-    /// <summary>
-    /// Subscribes to a source and refreshes the component after each observed signal.
-    /// </summary>
+    /// <summary>Subscribes to a source and refreshes the component after each observed signal.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onNext">Action invoked for each value on the Blazor renderer dispatcher.</param>
@@ -122,12 +98,12 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
         Action? onCompleted,
         bool refreshAfterCallbacks)
     {
-        if (source == null)
+        if (source is null)
         {
             throw new ArgumentNullException(nameof(source));
         }
 
-        if (onNext == null)
+        if (onNext is null)
         {
             throw new ArgumentNullException(nameof(onNext));
         }
@@ -140,7 +116,7 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
             }),
             error => _ = InvokeAsync(() =>
             {
-                if (onError == null)
+                if (onError is null)
                 {
                     OnObservedError(error);
                 }
@@ -158,20 +134,16 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
             })));
     }
 
-    /// <summary>
-    /// Invalidates the component through Blazor's renderer dispatcher.
-    /// </summary>
+    /// <summary>Invalidates the component through Blazor's renderer dispatcher.</summary>
     /// <returns>A task that completes when the renderer has accepted the invalidation callback.</returns>
     protected Task InvalidateAsync() => InvokeAsync(StateHasChanged);
 
-    /// <summary>
-    /// Handles an unhandled subscription error.
-    /// </summary>
+    /// <summary>Handles an unhandled subscription error.</summary>
     /// <param name="error">The observed error.</param>
     /// <exception cref="InvalidOperationException">Always thrown to surface the subscription error.</exception>
     protected virtual void OnObservedError(Exception error)
     {
-        if (error == null)
+        if (error is null)
         {
             throw new ArgumentNullException(nameof(error));
         }
@@ -179,9 +151,7 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
         throw new InvalidOperationException("The reactive subscription failed.", error);
     }
 
-    /// <summary>
-    /// Releases resources used by the component.
-    /// </summary>
+    /// <summary>Releases resources used by the component.</summary>
     /// <param name="disposing"><see langword="true"/> when managed resources should be released.</param>
     protected virtual void Dispose(bool disposing)
     {
@@ -194,9 +164,7 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
         _subscriptions.Dispose();
     }
 
-    /// <summary>
-    /// Refreshes the component when requested and when it is still active.
-    /// </summary>
+    /// <summary>Refreshes the component when requested and when it is still active.</summary>
     /// <param name="shouldRefresh">A value indicating whether refresh is requested.</param>
     private void Refresh(bool shouldRefresh)
     {

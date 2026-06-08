@@ -14,8 +14,7 @@ public partial class UsingActionObservableTests
     /// <summary>Synthetic error message attached to action failures.</summary>
     private const string ActionFailedMessage = "action failed";
 
-    /// <summary>Verifies that <c>Using</c> with a null action still emits, completes,
-    /// and disposes the resource.</summary>
+    /// <summary>Verifies that <c>Using</c> with a null action still emits, completes, and disposes the resource.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenUsingNullAction_ThenEmitsUnitCompletesAndDisposes()
@@ -32,8 +31,7 @@ public partial class UsingActionObservableTests
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>Verifies that <c>Using</c> invokes the action against the resource
-    /// and disposes after completion.</summary>
+    /// <summary>Verifies that <c>Using</c> invokes the action against the resource and disposes after completion.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenUsingActionInvoked_ThenActionRunsThenResourceDisposed()

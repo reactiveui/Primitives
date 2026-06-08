@@ -27,6 +27,8 @@ internal sealed class RetryForeverObservable<T>(IObservable<T> source) : IObserv
     }
 
     /// <summary>Sink that re-subscribes the source on every error.</summary>
+    /// <param name="source">The source to re-subscribe on error.</param>
+    /// <param name="downstream">The downstream observer.</param>
     private sealed class RetrySink(IObservable<T> source, IObserver<T> downstream) : IObserver<T>, IDisposable
     {
         /// <summary>Holds the current inner subscription; swapped on each resubscribe.</summary>

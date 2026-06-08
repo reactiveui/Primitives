@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <content>
-/// Merge tests for combining operators.
-/// </content>
+/// <summary>Tests for the Merge operator.</summary>
 public partial class CombiningOperatorTests
 {
     /// <summary>Tests Merge two sequences emits from both.</summary>
@@ -116,9 +114,7 @@ public partial class CombiningOperatorTests
         await outer.DisposeAsync();
     }
 
-    /// <summary>
-    /// Verifies that merge with max concurrency propagates an error when the inner subscription itself throws.
-    /// </summary>
+    /// <summary>Verifies that merge with max concurrency propagates an error when the inner subscription itself throws.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeWithMaxConcurrencySubscriptionThrows_ThenErrorPropagates()
@@ -158,9 +154,7 @@ public partial class CombiningOperatorTests
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that merging an enumerable of observables where one inner source errors propagates the failure.
-    /// </summary>
+    /// <summary>Verifies that merging an enumerable of observables where one inner source errors propagates the failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeEnumerableOneInnerErrors_ThenFailurePropagates()
@@ -192,9 +186,7 @@ public partial class CombiningOperatorTests
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that merge enumerable forwards error-resume events from inner sources to the downstream observer.
-    /// </summary>
+    /// <summary>Verifies that merge enumerable forwards error-resume events from inner sources to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeEnumerableInnerErrorResume_ThenForwardedToObserver()
@@ -228,9 +220,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).Contains(1);
     }
 
-    /// <summary>
-    /// Verifies that merge of observable-of-observables forwards error-resume events from inner sources.
-    /// </summary>
+    /// <summary>Verifies that merge of observable-of-observables forwards error-resume events from inner sources.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeObservableOfObservablesInnerErrorResume_ThenForwarded()
@@ -497,9 +487,7 @@ public partial class CombiningOperatorTests
         await innerSignal.DisposeAsync();
     }
 
-    /// <summary>
-    /// Tests that MergeEnumerableSignal SubscribeAsyncCore catch block disposes and rethrows.
-    /// </summary>
+    /// <summary>Tests that MergeEnumerableSignal SubscribeAsyncCore catch block disposes and rethrows.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeEnumerableBeginSubscribingThrows_ThenCatchBlockHandled()
@@ -537,9 +525,7 @@ public partial class CombiningOperatorTests
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Tests that MergeEnumerable cancellation during inner subscription is handled.
-    /// </summary>
+    /// <summary>Tests that MergeEnumerable cancellation during inner subscription is handled.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeEnumerableCanceledDuringSubscription_ThenHandledGracefully()
@@ -644,9 +630,7 @@ public partial class CombiningOperatorTests
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that MergeEnumerable forwards errors from a source that throws during subscribe.
-    /// </summary>
+    /// <summary>Verifies that MergeEnumerable forwards errors from a source that throws during subscribe.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeEnumerableSourceThrowsDuringSubscribe_ThenCompletesWithFailure()
@@ -923,7 +907,7 @@ public partial class CombiningOperatorTests
         await Assert.That(sub).IsNotNull();
     }
 
-    /// <summary>Verifies the <see cref="SignalAsync.MergeCoordinator{T}.RelayNextIfActiveAsync"/>
+    /// <summary>Verifies the <see cref="SignalAsyncExtensions.MergeCoordinator{T}.RelayNextIfActiveAsync"/>
     /// inside-gate after-dispose guard by subscribing, disposing the subscription, then calling
     /// the locked-helper directly — exercising the defensive branch that is otherwise only
     /// reachable through a real concurrency race between dispose and gate acquisition.</summary>
@@ -933,7 +917,7 @@ public partial class CombiningOperatorTests
     {
         var captured = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
         var downstream = new CapturingObserver<int>(onNext: captured);
-        var subscription = new SignalAsync.MergeCoordinator<int>(downstream);
+        var subscription = new SignalAsyncExtensions.MergeCoordinator<int>(downstream);
 
         await subscription.DisposeAsync();
         await subscription.RelayNextIfActiveAsync(1);
@@ -941,15 +925,14 @@ public partial class CombiningOperatorTests
         await Assert.That(captured.Task.IsCompleted).IsFalse();
     }
 
-    /// <summary>Verifies the <see cref="SignalAsync.MergeCoordinator{T}.RelayErrorIfActiveAsync"/>
-    /// inside-gate after-dispose guard.</summary>
+    /// <summary>Verifies the <see cref="SignalAsyncExtensions.MergeCoordinator{T}.RelayErrorIfActiveAsync"/> inside-gate after-dispose guard.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeRelayErrorIfActiveAsyncAfterDispose_ThenDropped()
     {
         var captured = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
         var downstream = new CapturingObserver<int>(onError: captured);
-        var subscription = new SignalAsync.MergeCoordinator<int>(downstream);
+        var subscription = new SignalAsyncExtensions.MergeCoordinator<int>(downstream);
 
         await subscription.DisposeAsync();
         await subscription.RelayErrorIfActiveAsync(new InvalidOperationException("late"));
@@ -957,9 +940,7 @@ public partial class CombiningOperatorTests
         await Assert.That(captured.Task.IsCompleted).IsFalse();
     }
 
-    /// <summary>Verifies the
-    /// <see cref="SignalAsync.MergeEnumerableSignal{T}.MergeSequenceCoordinator.RelayNextIfActiveAsync"/>
-    /// inside-gate after-dispose guard on the enumerable-Merge subscription class.</summary>
+    /// <summary>Verifies the enumerable-Merge <c>RelayNextIfActiveAsync</c> inside-gate after-dispose guard.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeEnumerableOnNextAsyncLockedAfterDispose_ThenDropped()
@@ -971,7 +952,7 @@ public partial class CombiningOperatorTests
         // and call the Locked helper directly to verify the inside-gate guard.
         IObservableAsync<int>[] sources = [SignalAsync.Never<int>()];
         var sub = await sources.Merge().SubscribeAsync(downstream, CancellationToken.None);
-        var enumerableSub = (SignalAsync.MergeEnumerableSignal<int>.MergeSequenceCoordinator)sub;
+        var enumerableSub = (SignalAsyncExtensions.MergeEnumerableSignal<int>.MergeSequenceCoordinator)sub;
 
         await enumerableSub.DisposeAsync();
         await enumerableSub.RelayNextIfActiveAsync(1);
@@ -979,8 +960,7 @@ public partial class CombiningOperatorTests
         await Assert.That(captured.Task.IsCompleted).IsFalse();
     }
 
-    /// <summary>Verifies the enumerable-Merge subscription's after-dispose
-    /// <c>RelayErrorIfActiveAsync</c> guard.</summary>
+    /// <summary>Verifies the enumerable-Merge subscription's after-dispose <c>RelayErrorIfActiveAsync</c> guard.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeEnumerableOnErrorResumeAsyncLockedAfterDispose_ThenDropped()
@@ -989,7 +969,7 @@ public partial class CombiningOperatorTests
         var downstream = new CapturingObserver<int>(onError: captured);
         IObservableAsync<int>[] sources = [SignalAsync.Never<int>()];
         var sub = await sources.Merge().SubscribeAsync(downstream, CancellationToken.None);
-        var enumerableSub = (SignalAsync.MergeEnumerableSignal<int>.MergeSequenceCoordinator)sub;
+        var enumerableSub = (SignalAsyncExtensions.MergeEnumerableSignal<int>.MergeSequenceCoordinator)sub;
 
         await enumerableSub.DisposeAsync();
         await enumerableSub.RelayErrorIfActiveAsync(new InvalidOperationException("late"));

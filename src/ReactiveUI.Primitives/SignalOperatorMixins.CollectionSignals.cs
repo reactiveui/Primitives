@@ -7,12 +7,12 @@ using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives;
 
-/// <content>
+/// <summary>
 /// Dedicated signals/sinks for the terminal collection operators (CollectList, CollectArray) and
 /// their eager range-backed fast paths, replacing the per-subscription
 /// <c>Signal.CreateSafe(observer =&gt; ...)</c> closures with parameter-holding signals.
-/// </content>
-public static partial class LinqMixins
+/// </summary>
+public static partial class LinqExtensions
 {
     /// <summary>Dedicated signal for <c>CollectList</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
@@ -28,7 +28,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<IList<T>> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -53,7 +53,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T[]> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -78,7 +78,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<IList<T>> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -123,7 +123,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T[]> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -181,7 +181,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }

@@ -34,10 +34,7 @@ internal sealed class WaitUntilObservable<T>(
         return subscription;
     }
 
-    /// <summary>
-    /// Forwarding observer that filters by <paramref name="predicate"/> and completes
-    /// after the first match, disposing the upstream subscription handle.
-    /// </summary>
+    /// <summary>Forwarding observer that filters by <paramref name="predicate"/> and completes after the first match, disposing the upstream subscription handle.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="predicate">The match predicate.</param>
     /// <param name="subscription">The handle controlling the upstream subscription.</param>

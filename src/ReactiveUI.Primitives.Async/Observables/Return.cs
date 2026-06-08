@@ -6,17 +6,13 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides factory methods for creating asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides factory methods for creating asynchronous observable sequences.</summary>
 /// <remarks>The SignalAsync class contains static methods for constructing and manipulating asynchronous
 /// observables. Use these methods to create observables that emit values asynchronously, supporting scenarios such as
 /// background processing or integration with asynchronous workflows.</remarks>
 public static partial class SignalAsync
 {
-    /// <summary>
-    /// Creates an observable sequence that emits a single value and then completes.
-    /// </summary>
+    /// <summary>Creates an observable sequence that emits a single value and then completes.</summary>
     /// <remarks>The returned observable sequence emits the value asynchronously and completes immediately
     /// after. Subscribe returns before the value is observed — emit + complete are scheduled onto the
     /// threadpool, preserving the deferred semantic the surrounding pipeline expects.</remarks>

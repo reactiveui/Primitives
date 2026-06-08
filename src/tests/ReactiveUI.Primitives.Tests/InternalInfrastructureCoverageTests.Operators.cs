@@ -9,14 +9,10 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests for internal infrastructure coverage.
-/// </summary>
+/// <summary>Tests for internal infrastructure coverage.</summary>
 public partial class InternalInfrastructureCoverageTests
 {
-    /// <summary>
-    /// Covers parity operator overloads, aliases, and argument guards that are not hit by scenario tests.
-    /// </summary>
+    /// <summary>Covers parity operator overloads, aliases, and argument guards that are not hit by scenario tests.</summary>
     [Test]
     public void ParityOperatorAliasesAndGuardsCoverRemainingBranches()
     {
@@ -79,9 +75,7 @@ public partial class InternalInfrastructureCoverageTests
         AssertParityOperatorArgumentGuards(source);
     }
 
-    /// <summary>
-    /// Covers operator Subscribe(null) and current-thread propagation for internal optimized signal classes.
-    /// </summary>
+    /// <summary>Covers operator Subscribe(null) and current-thread propagation for internal optimized signal classes.</summary>
     [Test]
     public void InternalOptimizedOperatorSignalsValidateObserversAndThreadRequirements()
     {
@@ -135,9 +129,7 @@ public partial class InternalInfrastructureCoverageTests
         }
     }
 
-    /// <summary>
-    /// Covers remaining public alias, immutable-return, and virtual-time edge branches.
-    /// </summary>
+    /// <summary>Covers remaining public alias, immutable-return, and virtual-time edge branches.</summary>
     [Test]
     public void AliasRangeImmutableAndVirtualTimeBranchesCoverRemainingEdges()
     {
@@ -248,9 +240,7 @@ public partial class InternalInfrastructureCoverageTests
         Assert.Equal(1, delegateErrors);
     }
 
-    /// <summary>
-    /// Covers optimized aggregate helper paths with custom comparers, selector exceptions, and range-backed count aliases.
-    /// </summary>
+    /// <summary>Covers optimized aggregate helper paths with custom comparers, selector exceptions, and range-backed count aliases.</summary>
     [Test]
     public void AggregateOptimizedSignalsCoverComparerAndExceptionPaths()
     {
@@ -289,9 +279,7 @@ public partial class InternalInfrastructureCoverageTests
         Assert.Equal(ExpectedTrueValues, containsRange.Values);
     }
 
-    /// <summary>
-    /// Covers coordinator paths where later sources complete or error after another source has won or supplied both values.
-    /// </summary>
+    /// <summary>Covers coordinator paths where later sources complete or error after another source has won or supplied both values.</summary>
     [Test]
     public void HigherOrderCoordinatorRaceCombineSwitchPathsCoverLateBranches()
     {

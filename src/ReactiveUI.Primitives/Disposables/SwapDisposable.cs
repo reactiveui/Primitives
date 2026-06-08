@@ -19,9 +19,7 @@ public sealed class SwapDisposable : IsDisposed
     /// <summary>Indicates whether the object has been disposed (0 = open, 1 = disposed).</summary>
     private int _disposed;
 
-    /// <summary>
-    /// Gets a value indicating whether this instance has been disposed.
-    /// </summary>
+    /// <summary>Gets a value indicating whether this instance has been disposed.</summary>
     public bool IsDisposed => Volatile.Read(ref _disposed) == DisposableSlotHelper.DisposedSentinel;
 
     /// <summary>Gets or sets the current inner disposable. Setting disposes the previous value.</summary>
@@ -31,9 +29,7 @@ public sealed class SwapDisposable : IsDisposed
         set => DisposableSlotHelper.SwapAndDisposePrevious(ref _current, ref _disposed, value);
     }
 
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;

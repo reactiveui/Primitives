@@ -26,8 +26,7 @@ internal sealed class CombineLatestLifecycle<TResult> : IAsyncDisposable
     /// <summary>The downstream observer that receives the projected results.</summary>
     private readonly IObserverAsync<TResult> _observer;
 
-    /// <summary>Bitmask value with every source-completion bit set; the sequence completes when
-    /// <see cref="_doneFlags"/> equals this value.</summary>
+    /// <summary>Bitmask value with every source-completion bit set; the sequence completes when <see cref="_doneFlags"/> equals this value.</summary>
     private readonly int _allDoneMask;
 
     /// <summary>Bitmask of completed sources. Bit N is set when source N completes (no failure).</summary>
@@ -39,9 +38,7 @@ internal sealed class CombineLatestLifecycle<TResult> : IAsyncDisposable
     /// <summary>Registration that propagates the original subscribe-time cancellation into <see cref="_disposeCts"/>.</summary>
     private CancellationTokenRegistration _externalLinkRegistration;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CombineLatestLifecycle{TResult}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="CombineLatestLifecycle{TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="sourceCount">The number of upstream sources (e.g. 2 for arity-2).</param>
     public CombineLatestLifecycle(IObserverAsync<TResult> observer, int sourceCount)
@@ -85,9 +82,7 @@ internal sealed class CombineLatestLifecycle<TResult> : IAsyncDisposable
             _disposeCts);
     }
 
-    /// <summary>
-    /// Forwards an upstream error to the downstream observer under the gate, respecting disposal.
-    /// </summary>
+    /// <summary>Forwards an upstream error to the downstream observer under the gate, respecting disposal.</summary>
     /// <param name="error">The error to forward.</param>
     /// <returns>A ValueTask representing the asynchronous forward.</returns>
     public async ValueTask OnErrorResumeAsync(Exception error)
@@ -103,9 +98,7 @@ internal sealed class CombineLatestLifecycle<TResult> : IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Emits a projected value to the downstream observer under the gate, respecting disposal.
-    /// </summary>
+    /// <summary>Emits a projected value to the downstream observer under the gate, respecting disposal.</summary>
     /// <param name="value">The projected value.</param>
     /// <returns>A ValueTask representing the asynchronous emit.</returns>
     public async ValueTask EmitDownstreamAsync(TResult value)
@@ -150,9 +143,7 @@ internal sealed class CombineLatestLifecycle<TResult> : IAsyncDisposable
     /// <returns>A ValueTask representing the asynchronous teardown.</returns>
     public ValueTask DisposeAsync() => FinishAsync(null);
 
-    /// <summary>
-    /// Completes the combined sequence and disposes every source subscription.
-    /// </summary>
+    /// <summary>Completes the combined sequence and disposes every source subscription.</summary>
     /// <param name="result">The completion result, or <see langword="null"/> when disposing without signaling.</param>
     /// <returns>A ValueTask representing the asynchronous teardown.</returns>
     public async ValueTask FinishAsync(Result? result)

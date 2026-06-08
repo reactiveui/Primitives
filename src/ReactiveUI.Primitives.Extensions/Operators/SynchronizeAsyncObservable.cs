@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Wraps elements in a synchronization context that waits for a disposal signal before proceeding to the next element.
-/// </summary>
+/// <summary>Wraps elements in a synchronization context that waits for a disposal signal before proceeding to the next element.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 internal sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObservable<(T Value, IDisposable Sync)>
@@ -25,9 +23,7 @@ internal sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IOb
         return new DisposableBag(sub, sink);
     }
 
-    /// <summary>
-    /// The sink for the <see cref="SynchronizeAsyncObservable{T}"/>.
-    /// </summary>
+    /// <summary>The sink for the <see cref="SynchronizeAsyncObservable{T}"/>.</summary>
     /// <param name="downstream">The downstream observer.</param>
     private sealed class SynchronizeAsyncSink(IObserver<(T Value, IDisposable Sync)> downstream)
         : IObserver<T>, IDisposable

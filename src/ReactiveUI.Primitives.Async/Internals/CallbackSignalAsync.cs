@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Internals;
 
-/// <summary>
-/// An observable that invokes a callback to create each subscription.
-/// </summary>
+/// <summary>An observable that invokes a callback to create each subscription.</summary>
 /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
 /// <param name="subscribeAsync">The asynchronous function invoked when an observer subscribes.</param>
 internal sealed class CallbackSignalAsync<T>(

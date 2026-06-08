@@ -4,25 +4,17 @@
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Observer used by Signal and System.Reactive benchmark cases that only need an item count.
-/// </summary>
+/// <summary>Observer used by Signal and System.Reactive benchmark cases that only need an item count.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
 internal sealed class CountingSignalObserver<T> : IObserver<T>
 {
-    /// <summary>
-    /// Gets the number of onNext calls.
-    /// </summary>
+    /// <summary>Gets the number of onNext calls.</summary>
     public int Count { get; private set; }
 
-    /// <summary>
-    /// Gets the number of terminal completions observed.
-    /// </summary>
+    /// <summary>Gets the number of terminal completions observed.</summary>
     public int CompletionCount { get; private set; }
 
-    /// <summary>
-    /// Gets the number of errors observed.
-    /// </summary>
+    /// <summary>Gets the number of errors observed.</summary>
     public int ErrorCount { get; private set; }
 
     /// <inheritdoc/>

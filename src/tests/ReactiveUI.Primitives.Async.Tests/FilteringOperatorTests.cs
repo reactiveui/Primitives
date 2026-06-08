@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Tests for filtering operators: Where, Take, Skip, TakeWhile, SkipWhile, Distinct, DistinctUntilChanged.
-/// </summary>
+/// <summary>Tests for filtering operators: Where, Take, Skip, TakeWhile, SkipWhile, Distinct, DistinctUntilChanged.</summary>
 public class FilteringOperatorTests
 {
     /// <summary>Second element (2).</summary>
@@ -356,8 +354,7 @@ public class FilteringOperatorTests
         await Assert.That(result).IsCollectionEqualTo(["aa", "ba"]);
     }
 
-    /// <summary>Verifies that sync-predicate <c>SkipWhile</c> forwards a non-terminal upstream error
-    /// through its <c>OnErrorResume</c> path.</summary>
+    /// <summary>Verifies that sync-predicate <c>SkipWhile</c> forwards a non-terminal upstream error through its <c>OnErrorResume</c> path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSkipWhileSyncSourceErrorResume_ThenForwarded()
@@ -384,8 +381,7 @@ public class FilteringOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies that sync-predicate <c>TakeWhile</c> forwards a non-terminal upstream error
-    /// through its <c>OnErrorResume</c> path.</summary>
+    /// <summary>Verifies that sync-predicate <c>TakeWhile</c> forwards a non-terminal upstream error through its <c>OnErrorResume</c> path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeWhileSyncSourceErrorResume_ThenForwarded()

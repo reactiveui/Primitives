@@ -6,18 +6,14 @@ using System.Collections.Immutable;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
-/// <summary>
-/// Provides an asynchronous Signal that forwards notifications to observers concurrently.
-/// </summary>
+/// <summary>Provides an asynchronous Signal that forwards notifications to observers concurrently.</summary>
 /// <remarks>Observers are notified in parallel for each event. This class is suitable for scenarios where high
 /// throughput and concurrent notification of multiple observers are required. Thread safety is ensured for observer
 /// notification operations. Cancellation tokens can be used to cancel ongoing notification tasks.</remarks>
 /// <typeparam name="T">The type of value observed and forwarded to observers.</typeparam>
 public sealed class ConcurrentSignalAsync<T> : BaseSignalAsync<T>
 {
-    /// <summary>
-    /// Forwards the specified value to all observers asynchronously.
-    /// </summary>
+    /// <summary>Forwards the specified value to all observers asynchronously.</summary>
     /// <remarks>Observers are notified concurrently. If cancellation is requested, the operation may
     /// terminate before all observers are notified.</remarks>
     /// <param name="observers">A read-only list of observers that will receive the value. Cannot be null.</param>
@@ -30,9 +26,7 @@ public sealed class ConcurrentSignalAsync<T> : BaseSignalAsync<T>
         CancellationToken cancellationToken) =>
         Concurrent.ForwardOnNextConcurrently(observers, value, cancellationToken);
 
-    /// <summary>
-    /// Handles an error by resuming asynchronous observation for each observer in the collection.
-    /// </summary>
+    /// <summary>Handles an error by resuming asynchronous observation for each observer in the collection.</summary>
     /// <remarks>This method processes all observers concurrently. If the operation is canceled via the
     /// provided cancellation token, the task will complete in a canceled state.</remarks>
     /// <param name="observers">A read-only list of observers to which the error handling and resumption logic will be applied.</param>
@@ -46,9 +40,7 @@ public sealed class ConcurrentSignalAsync<T> : BaseSignalAsync<T>
         CancellationToken cancellationToken) =>
         Concurrent.ForwardOnErrorResumeConcurrently(observers, error, cancellationToken);
 
-    /// <summary>
-    /// Notifies all observers of the completion event asynchronously.
-    /// </summary>
+    /// <summary>Notifies all observers of the completion event asynchronously.</summary>
     /// <remarks>Observers are notified concurrently. If any observer throws an exception during notification,
     /// the exception may be aggregated and surfaced to the caller.</remarks>
     /// <param name="observers">A read-only list of observers to be notified of the completion event.</param>

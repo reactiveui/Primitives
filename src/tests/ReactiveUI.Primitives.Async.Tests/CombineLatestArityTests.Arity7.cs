@@ -10,9 +10,7 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests for CombineLatestArityTests.</summary>
 public partial class CombineLatestArityTests
 {
-    /// <summary>
-    /// Verifies that CombineLatest7 disposes on subscription failure (catch block).
-    /// </summary>
+    /// <summary>Verifies that CombineLatest7 disposes on subscription failure (catch block).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest7SubscriptionThrows_ThenDisposesAndRethrows()
@@ -37,9 +35,7 @@ public partial class CombineLatestArityTests
                 .SubscribeAsync((_, _) => default, null));
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest7 OnNextCombined guard returns when disposed.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest7 OnNextCombined guard returns when disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest7DisposedBeforeCombine_ThenOnNextCombinedIsGuarded()
@@ -84,9 +80,7 @@ public partial class CombineLatestArityTests
         await Assert.That(results).Count().IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest7 OnErrorResume guard returns when disposed.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest7 OnErrorResume guard returns when disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest7DisposedBeforeError_ThenOnErrorResumeIsGuarded()
@@ -123,9 +117,7 @@ public partial class CombineLatestArityTests
         await Assert.That(receivedError).IsNull();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest7 OnNext for the last source returns early when not all sources have values.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest7 OnNext for the last source returns early when not all sources have values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest7LastSourceEmitsFirst_ThenNoEmission()
@@ -168,9 +160,7 @@ public partial class CombineLatestArityTests
         await s7.OnCompletedAsync(Result.Success);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest7 OnNext for middle sources returns early when not all sources have values.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest7 OnNext for middle sources returns early when not all sources have values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest7MiddleSourcesEmitFirst_ThenNoEmission()
@@ -217,9 +207,7 @@ public partial class CombineLatestArityTests
         await s7.OnCompletedAsync(Result.Success);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest7 OnNext_1 calls OnNextCombined when source 1 re-emits after all values are present.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest7 OnNext_1 calls OnNextCombined when source 1 re-emits after all values are present.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest7Source1ReEmits_ThenOnNextCombinedViaOnNext1()
@@ -272,9 +260,7 @@ public partial class CombineLatestArityTests
         await s7.OnCompletedAsync(Result.Success);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest7 OnNext_2 calls OnNextCombined when source 2 re-emits after all values are present.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest7 OnNext_2 calls OnNextCombined when source 2 re-emits after all values are present.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest7Source2ReEmits_ThenOnNextCombinedViaOnNext2()
@@ -327,9 +313,7 @@ public partial class CombineLatestArityTests
         await s7.OnCompletedAsync(Result.Success);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest7 OnNext_3 calls OnNextCombined when source 3 re-emits after all values are present.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest7 OnNext_3 calls OnNextCombined when source 3 re-emits after all values are present.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest7Source3ReEmits_ThenOnNextCombinedViaOnNext3()
@@ -382,9 +366,7 @@ public partial class CombineLatestArityTests
         await s7.OnCompletedAsync(Result.Success);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest7 OnNext_4 calls OnNextCombined when source 4 re-emits after all values are present.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest7 OnNext_4 calls OnNextCombined when source 4 re-emits after all values are present.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest7Source4ReEmits_ThenOnNextCombinedViaOnNext4()
@@ -437,9 +419,7 @@ public partial class CombineLatestArityTests
         await s7.OnCompletedAsync(Result.Success);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest7 OnNext_5 calls OnNextCombined when source 5 re-emits after all values are present.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest7 OnNext_5 calls OnNextCombined when source 5 re-emits after all values are present.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest7Source5ReEmits_ThenOnNextCombinedViaOnNext5()
@@ -492,9 +472,7 @@ public partial class CombineLatestArityTests
         await s7.OnCompletedAsync(Result.Success);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest7 OnNext_6 calls OnNextCombined when source 6 re-emits after all values are present.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest7 OnNext_6 calls OnNextCombined when source 6 re-emits after all values are present.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest7Source6ReEmits_ThenOnNextCombinedViaOnNext6()

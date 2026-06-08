@@ -7,9 +7,7 @@ namespace ReactiveUI.Primitives.Extensions.Tests;
 /// <summary>Tests for ReactiveExtensionsTests.</summary>
 public partial class ReactiveExtensionsTests
 {
-    /// <summary>
-    /// Tests SelectAsync with CancellationToken projects values asynchronously.
-    /// </summary>
+    /// <summary>Tests SelectAsync with CancellationToken projects values asynchronously.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectAsyncWithCancellationToken_ThenProjectsValues()
@@ -28,9 +26,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6]);
     }
 
-    /// <summary>
-    /// Tests SelectAsync simple overload projects values asynchronously.
-    /// </summary>
+    /// <summary>Tests SelectAsync simple overload projects values asynchronously.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectAsyncSimple_ThenProjectsValues()
@@ -49,9 +45,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6]);
     }
 
-    /// <summary>
-    /// Tests SelectAsyncSequential processes tasks in order.
-    /// </summary>
+    /// <summary>Tests SelectAsyncSequential processes tasks in order.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectAsyncSequential_ThenProcessesInOrder()
@@ -70,9 +64,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6]);
     }
 
-    /// <summary>
-    /// Tests SelectLatestAsync emits only the latest async result.
-    /// </summary>
+    /// <summary>Tests SelectLatestAsync emits only the latest async result.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectLatestAsync_ThenEmitsLatestResult()
@@ -96,9 +88,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsNotEmpty();
     }
 
-    /// <summary>
-    /// Tests SelectAsyncConcurrent processes tasks concurrently up to max concurrency.
-    /// </summary>
+    /// <summary>Tests SelectAsyncConcurrent processes tasks concurrently up to max concurrency.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectAsyncConcurrent_ThenProcessesConcurrently()

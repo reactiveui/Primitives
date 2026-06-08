@@ -17,8 +17,7 @@ public class ThrottleObservableTests
     /// <summary>Tick window for the throttle itself.</summary>
     private const int ThrottleTicks = 10;
 
-    /// <summary>Verifies that an <c>OnNext</c> arriving after the source has already
-    /// completed is silently dropped by the throttle sink.</summary>
+    /// <summary>Verifies that an <c>OnNext</c> arriving after the source has already completed is silently dropped by the throttle sink.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnNextAfterCompleted_ThenDropped()
@@ -40,8 +39,7 @@ public class ThrottleObservableTests
         await Assert.That(values).IsEmpty();
     }
 
-    /// <summary>Verifies that an <c>OnError</c> arriving after the source has already
-    /// completed is silently dropped.</summary>
+    /// <summary>Verifies that an <c>OnError</c> arriving after the source has already completed is silently dropped.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnErrorAfterCompleted_ThenDropped()
@@ -61,8 +59,7 @@ public class ThrottleObservableTests
         await Assert.That(caught).IsNull();
     }
 
-    /// <summary>Verifies that an <c>OnCompleted</c> arriving after a prior <c>OnError</c>
-    /// is silently dropped.</summary>
+    /// <summary>Verifies that an <c>OnCompleted</c> arriving after a prior <c>OnError</c> is silently dropped.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnCompletedAfterError_ThenDropped()

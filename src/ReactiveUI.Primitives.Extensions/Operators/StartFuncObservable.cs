@@ -40,11 +40,7 @@ internal sealed class StartFuncObservable<TResult>(
         });
     }
 
-    /// <summary>
-    /// Runs <paramref name="function"/> and signals <paramref name="observer"/>
-    /// with the result followed by completion. Exceptions thrown by the function
-    /// are forwarded to <see cref="IObserver{T}.OnError"/>.
-    /// </summary>
+    /// <summary>Runs the function, then signals the observer with the result and completion.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="function">The function to invoke.</param>
     private static void Run(IObserver<TResult> observer, Func<TResult> function)

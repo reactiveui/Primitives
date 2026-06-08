@@ -4,27 +4,19 @@
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Represents the DeferSignal class.
-/// </summary>
+/// <summary>Represents the DeferSignal class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
 internal sealed class DeferSignal<T> : SignalsBase<T>
 {
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly Func<IObservable<T>> _observableFactory;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DeferSignal{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="DeferSignal{T}"/> class.</summary>
     /// <param name="observableFactory">The observableFactory value.</param>
     public DeferSignal(Func<IObservable<T>> observableFactory)
         : base(false) => _observableFactory = observableFactory;
 
-    /// <summary>
-    /// Executes the SubscribeCore operation.
-    /// </summary>
+    /// <summary>Executes the SubscribeCore operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <param name="cancel">The cancel value.</param>
     /// <returns>The result.</returns>
@@ -45,14 +37,10 @@ internal sealed class DeferSignal<T> : SignalsBase<T>
         return source.Subscribe(observer);
     }
 
-    /// <summary>
-    /// Represents the Defer class.
-    /// </summary>
+    /// <summary>Represents the Defer class.</summary>
     private sealed class Defer : WitnessBase<T, T>
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Defer"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="Defer"/> class.</summary>
         /// <param name="observer">The observer value.</param>
         /// <param name="cancel">The cancel value.</param>
         public Defer(IObserver<T> observer, IDisposable cancel)
@@ -60,9 +48,7 @@ internal sealed class DeferSignal<T> : SignalsBase<T>
         {
         }
 
-        /// <summary>
-        /// Executes the OnNext operation.
-        /// </summary>
+        /// <summary>Executes the OnNext operation.</summary>
         /// <param name="value">The value.</param>
         public override void OnNext(T value)
         {
@@ -77,9 +63,7 @@ internal sealed class DeferSignal<T> : SignalsBase<T>
             }
         }
 
-        /// <summary>
-        /// Executes the OnError operation.
-        /// </summary>
+        /// <summary>Executes the OnError operation.</summary>
         /// <param name="error">The error value.</param>
         public override void OnError(Exception error)
         {
@@ -93,9 +77,7 @@ internal sealed class DeferSignal<T> : SignalsBase<T>
             }
         }
 
-        /// <summary>
-        /// Executes the OnCompleted operation.
-        /// </summary>
+        /// <summary>Executes the OnCompleted operation.</summary>
         public override void OnCompleted()
         {
             try

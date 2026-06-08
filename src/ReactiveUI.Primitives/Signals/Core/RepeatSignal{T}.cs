@@ -7,25 +7,17 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Represents the RepeatSignal class.
-/// </summary>
+/// <summary>Represents the RepeatSignal class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
 internal sealed class RepeatSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
 {
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly T _value;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly int _count;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="RepeatSignal{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="RepeatSignal{T}"/> class.</summary>
     /// <param name="value">The value.</param>
     /// <param name="count">The count value.</param>
     public RepeatSignal(T value, int count)
@@ -34,20 +26,16 @@ internal sealed class RepeatSignal<T> : IRequireCurrentThread<T>, IInlineSignal<
         _count = count;
     }
 
-    /// <summary>
-    /// Executes the IsRequiredSubscribeOnCurrentThread operation.
-    /// </summary>
+    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>
-    /// Executes the Subscribe operation.
-    /// </summary>
+    /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -61,16 +49,14 @@ internal sealed class RepeatSignal<T> : IRequireCurrentThread<T>, IInlineSignal<
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>
-    /// Executes the Subscribe operation.
-    /// </summary>
+    /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="onNext">The onNext value.</param>
     /// <param name="onError">The onError value.</param>
     /// <param name="onCompleted">The onCompleted value.</param>
     /// <returns>The result.</returns>
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
-        if (onNext == null)
+        if (onNext is null)
         {
             throw new ArgumentNullException(nameof(onNext));
         }

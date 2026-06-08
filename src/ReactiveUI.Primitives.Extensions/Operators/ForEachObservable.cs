@@ -31,11 +31,7 @@ internal sealed class ForEachObservable<T>(
         return observed.Subscribe(new ForEachObserver(observer));
     }
 
-    /// <summary>
-    /// Forwarding observer that fans each batch element out to the downstream
-    /// via <see cref="ObserverExtensions.FastForEach{T}(IObserver{T}, IEnumerable{T})"/>
-    /// and passes terminal signals through.
-    /// </summary>
+    /// <summary>Forwarding observer that fans each batch element out to the downstream.</summary>
     /// <param name="downstream">The downstream observer.</param>
     private sealed class ForEachObserver(IObserver<T> downstream) : IObserver<IEnumerable<T>>
     {

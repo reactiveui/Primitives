@@ -8,10 +8,7 @@ using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Represents an asynchronous observer that processes notifications of type <typeparamref name="T"/> using asynchronous
-/// methods.
-/// </summary>
+/// <summary>Represents an asynchronous observer that processes notifications of type <typeparamref name="T"/> using asynchronous methods.</summary>
 /// <remarks>Implement this abstract class to handle asynchronous event streams or push-based data sources, where
 /// notifications may arrive concurrently or in rapid succession. The observer provides asynchronous methods for
 /// handling new data, errors, and completion signals, and supports proper resource cleanup via asynchronous disposal.
@@ -37,20 +34,13 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
     /// Replaces a monitor gate + two separate <c>int</c> fields, saving ~24 B per observer.</summary>
     private long _callState;
 
-    /// <summary>
-    /// Completion source that is set when all in-flight calls finish after disposal has been requested.
-    /// </summary>
+    /// <summary>Completion source that is set when all in-flight calls finish after disposal has been requested.</summary>
     private TaskCompletionSource<object?>? _allCallsCompletedTcs;
 
-    /// <summary>
-    /// The disposable representing the upstream source subscription, disposed when this observer is disposed.
-    /// </summary>
+    /// <summary>The disposable representing the upstream source subscription, disposed when this observer is disposed.</summary>
     private IAsyncDisposable? _sourceSubscription;
 
-    /// <summary>
-    /// Registration created by <see cref="LinkExternalCancellation(CancellationToken)"/> so the link can be
-    /// released when the observer disposes.
-    /// </summary>
+    /// <summary>Registration created by <see cref="LinkExternalCancellation(CancellationToken)"/> so the link can be released when the observer disposes.</summary>
     private CancellationTokenRegistration _externalLinkRegistration;
 
     /// <summary>
@@ -61,9 +51,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
     /// </summary>
     private CancellationToken _externalLinkedToken;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverAsync{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ObserverAsync{T}"/> class.</summary>
     protected ObserverAsync()
     {
     }
@@ -76,9 +64,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
     /// <param name="externalLink">The external token whose cancellation should trigger this observer's disposal.</param>
     protected ObserverAsync(CancellationToken externalLink) => LinkExternalCancellation(externalLink);
 
-    /// <summary>
-    /// Gets a value indicating whether this observer has been disposed.
-    /// </summary>
+    /// <summary>Gets a value indicating whether this observer has been disposed.</summary>
     internal bool HasDisposed => Volatile.Read(ref _disposed) != 0;
 
     /// <summary>
@@ -90,9 +76,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
     /// </summary>
     internal CancellationToken InternalDisposedToken => GetOrCreateDisposeCts().Token;
 
-    /// <summary>
-    /// Asynchronously processes the next value in the sequence.
-    /// </summary>
+    /// <summary>Asynchronously processes the next value in the sequence.</summary>
     /// <param name="value">The value to be processed.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
@@ -129,9 +113,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         return OnNextAsyncSlow(core, scope);
     }
 
-    /// <summary>
-    /// Handles an error by attempting to resume processing asynchronously.
-    /// </summary>
+    /// <summary>Handles an error by attempting to resume processing asynchronously.</summary>
     /// <param name="error">The exception that triggered the error handling logic. Cannot be null.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
     /// <returns>A task that represents the asynchronous error handling operation.</returns>
@@ -195,9 +177,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         return OnCompletedAsyncSlow(core, scope);
     }
 
-    /// <summary>
-    /// Asynchronously releases the resources used by the object.
-    /// </summary>
+    /// <summary>Asynchronously releases the resources used by the object.</summary>
     /// <remarks>Call this method to clean up resources when the object is no longer needed. This method is
     /// safe to call multiple times; subsequent calls after disposal will have no effect. Any unhandled exceptions that
     /// occur during disposal are captured and reported but do not prevent the completion of the dispose
@@ -211,9 +191,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>
-    /// Sets the source subscription disposable for this observer.
-    /// </summary>
+    /// <summary>Sets the source subscription disposable for this observer.</summary>
     /// <param name="value">The source subscription to track, or <see langword="null"/> to clear it.</param>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
     internal ValueTask AssignSourceSubscriptionAsync(IAsyncDisposable? value) =>
@@ -230,9 +208,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
     internal void LinkUpstreamCancellation(CancellationToken upstream) =>
         LinkExternalCancellation(upstream);
 
-    /// <summary>
-    /// Attempts to enter a notification call, checking for disposal, cancellation, and concurrent access.
-    /// </summary>
+    /// <summary>Attempts to enter a notification call, checking for disposal, cancellation, and concurrent access.</summary>
     /// <param name="cancellationToken">The caller-supplied cancellation token.</param>
     /// <param name="scope">When successful, a <see cref="LinkedTokenScope"/> providing the effective cancellation token.</param>
     /// <returns><see langword="true"/> if the call was entered successfully; otherwise, <see langword="false"/>.</returns>
@@ -275,9 +251,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         }
     }
 
-    /// <summary>
-    /// Exits a notification call, decrementing counters and signalling completion if disposal is pending.
-    /// </summary>
+    /// <summary>Exits a notification call, decrementing counters and signalling completion if disposal is pending.</summary>
     /// <returns><see langword="true"/> if the caller should proceed with disposal; <see langword="false"/> if
     /// disposal was already signalled to a waiting <see cref="DisposeAsync"/> call.</returns>
     [DebuggerStepThrough]
@@ -314,10 +288,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         }
     }
 
-    /// <summary>
-    /// Internal error-resume handler that delegates to <see cref="OnErrorResumeAsyncCore"/> and routes
-    /// unhandled or cancelled errors to the <see cref="UnhandledExceptionHandler"/>.
-    /// </summary>
+    /// <summary>Internal error-resume handler that delegates to <see cref="OnErrorResumeAsyncCore"/> and routes unhandled or cancelled errors to the <see cref="UnhandledExceptionHandler"/>.</summary>
     /// <param name="error">The exception that triggered error handling.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -343,9 +314,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         }
     }
 
-    /// <summary>
-    /// Performs asynchronous completion logic when the operation has finished processing the specified result.
-    /// </summary>
+    /// <summary>Performs asynchronous completion logic when the operation has finished processing the specified result.</summary>
     /// <param name="result">The result of the operation to be processed during completion.</param>
     /// <returns>A ValueTask that represents the asynchronous completion operation.</returns>
     protected abstract ValueTask OnCompletedAsyncCore(Result result);
@@ -396,9 +365,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         _externalLinkedToken = external;
     }
 
-    /// <summary>
-    /// Performs application-defined tasks associated with asynchronously releasing unmanaged resources.
-    /// </summary>
+    /// <summary>Performs application-defined tasks associated with asynchronously releasing unmanaged resources.</summary>
     /// <remarks>Override this method to provide custom asynchronous resource cleanup logic in a derived
     /// class. This method is called by DisposeAsync to perform the actual resource release.</remarks>
     /// <returns>A task that represents the asynchronous dispose operation.</returns>
@@ -447,9 +414,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         await CompleteDisposeAfterCancelAsync(allOnSomethingCallsCompleted).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Handles an error by providing an asynchronous mechanism to resume execution after an exception occurs.
-    /// </summary>
+    /// <summary>Handles an error by providing an asynchronous mechanism to resume execution after an exception occurs.</summary>
     /// <remarks>Override this method to implement custom error recovery or resumption logic in derived
     /// classes. The method is called when an error occurs and allows the operation to continue or perform cleanup
     /// asynchronously.</remarks>
@@ -458,9 +423,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
     /// <returns>A ValueTask that represents the asynchronous operation of resuming execution after the error.</returns>
     protected abstract ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Processes the next value in the asynchronous sequence.
-    /// </summary>
+    /// <summary>Processes the next value in the asynchronous sequence.</summary>
     /// <param name="value">The value to be processed.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
     /// <returns>A ValueTask that represents the asynchronous operation.</returns>
@@ -506,10 +469,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
     private ValueTask CompleteOrChainDispose() =>
         ExitOnSomethingCall() ? DisposeAsync() : default;
 
-    /// <summary>
-    /// Async continuation for <see cref="OnNextAsync"/> when <see cref="OnNextAsyncCore"/> returned an
-    /// incomplete <see cref="ValueTask"/>. Owns the <paramref name="scope"/> and exit bookkeeping.
-    /// </summary>
+    /// <summary>Async continuation for <see cref="OnNextAsync"/> when the core <see cref="ValueTask"/> is incomplete.</summary>
     /// <param name="core">The pending core <see cref="ValueTask"/>.</param>
     /// <param name="scope">The linked-token scope to release on completion.</param>
     /// <returns>A <see cref="ValueTask"/> that completes once the core completes and bookkeeping has run.</returns>
@@ -555,10 +515,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         }
     }
 
-    /// <summary>
-    /// Async continuation for <see cref="OnErrorResumeAsync"/> when the core returned an incomplete
-    /// <see cref="ValueTask"/>.
-    /// </summary>
+    /// <summary>Async continuation for <see cref="OnErrorResumeAsync"/> when the core returned an incomplete <see cref="ValueTask"/>.</summary>
     /// <param name="core">The pending core <see cref="ValueTask"/>.</param>
     /// <param name="scope">The linked-token scope to release on completion.</param>
     /// <returns>A <see cref="ValueTask"/> that completes once the core completes and bookkeeping has run.</returns>
@@ -575,10 +532,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         }
     }
 
-    /// <summary>
-    /// Async continuation for <see cref="OnCompletedAsync"/> when the core returned an incomplete
-    /// <see cref="ValueTask"/>. Calls <see cref="DisposeAsync"/> after completion if bookkeeping requires it.
-    /// </summary>
+    /// <summary>Async continuation for <see cref="OnCompletedAsync"/> when the core <see cref="ValueTask"/> is incomplete.</summary>
     /// <param name="core">The pending core <see cref="ValueTask"/>.</param>
     /// <param name="scope">The linked-token scope to release on completion.</param>
     /// <returns>A <see cref="ValueTask"/> that completes once the core, bookkeeping, and any required dispose have run.</returns>

@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// An observable that switches the notification context of a source observable to a specified async context.
-/// </summary>
+/// <summary>An observable that switches the notification context of a source observable to a specified async context.</summary>
 /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
 /// <param name="source">The source observable whose notifications will be context-switched.</param>
 /// <param name="asyncContext">The async context to switch notifications onto.</param>
@@ -25,9 +23,7 @@ internal sealed class ContextSwitchSignalAsync<T>(
         return source.SubscribeAsync(contextSwitchObserver, cancellationToken);
     }
 
-    /// <summary>
-    /// An observer that switches each notification onto the specified async context before forwarding.
-    /// </summary>
+    /// <summary>An observer that switches each notification onto the specified async context before forwarding.</summary>
     /// <param name="observer">The downstream observer to forward notifications to.</param>
     /// <param name="asyncContext">The async context to switch onto.</param>
     /// <param name="forceYielding">Whether to force yielding even if already on the target context.</param>
@@ -46,8 +42,7 @@ internal sealed class ContextSwitchSignalAsync<T>(
             await observer.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
         }
 
-        /// <summary>Slow path: switch to the target context then forward the error.
-        /// Exposed as <see langword="internal"/> for direct unit testing.</summary>
+        /// <summary>Slow path: switch to the target context then forward the error. Exposed as <see langword="internal"/> for direct unit testing.</summary>
         /// <param name="error">The error to forward.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A task that completes after the context switch and downstream forward.</returns>
@@ -57,8 +52,7 @@ internal sealed class ContextSwitchSignalAsync<T>(
             await observer.OnErrorResumeAsync(error, cancellationToken).ConfigureAwait(false);
         }
 
-        /// <summary>Slow path: switch to the target context then forward completion.
-        /// Exposed as <see langword="internal"/> for direct unit testing.</summary>
+        /// <summary>Slow path: switch to the target context then forward completion. Exposed as <see langword="internal"/> for direct unit testing.</summary>
         /// <param name="result">The completion result.</param>
         /// <returns>A task that completes after the context switch and downstream forward.</returns>
         internal async ValueTask ForwardCompletionAfterContextSwitchAsync(Result result)

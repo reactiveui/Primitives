@@ -4,21 +4,15 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Shared delegate handlers for three-argument callbacks.
-/// </summary>
+/// <summary>Shared delegate handlers for three-argument callbacks.</summary>
 /// <typeparam name="T1">The first value type.</typeparam>
 /// <typeparam name="T2">The second value type.</typeparam>
 /// <typeparam name="T3">The third value type.</typeparam>
 internal static class Handle<T1, T2, T3>
 {
-    /// <summary>
-    /// Callback that ignores all values.
-    /// </summary>
+    /// <summary>Callback that ignores all values.</summary>
     public static readonly Action<T1, T2, T3> Ignore = (_, _, _) => { };
 
-    /// <summary>
-    /// Error callback that throws the supplied exception.
-    /// </summary>
+    /// <summary>Error callback that throws the supplied exception.</summary>
     public static readonly Action<Exception, T1, T2, T3> Throw = (ex, _, _, _) => ex.Throw();
 }

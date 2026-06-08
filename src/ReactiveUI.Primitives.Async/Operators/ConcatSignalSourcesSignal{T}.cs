@@ -16,10 +16,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <param name="source">The outer observable sequence that emits inner observable sequences to concatenate.</param>
 internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableAsync<T>> source) : SignalAsync<T>
 {
-    /// <summary>
-    /// Subscribes the specified observer by creating a <see cref="ConcatCoordinator"/> that manages
-    /// sequential subscription to inner observables.
-    /// </summary>
+    /// <summary>Subscribes the specified observer by creating a <see cref="ConcatCoordinator"/> that manages sequential subscription to inner observables.</summary>
     /// <param name="observer">The observer to receive elements from the concatenated sequences.</param>
     /// <param name="cancellationToken">A token to cancel the subscription.</param>
     /// <returns>An async disposable that tears down the subscription when disposed.</returns>
@@ -39,54 +36,34 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
     /// </summary>
     internal sealed class ConcatCoordinator : IAsyncDisposable
     {
-        /// <summary>
-        /// Concurrent queue that buffers inner observables waiting to be subscribed to.
-        /// </summary>
+        /// <summary>Concurrent queue that buffers inner observables waiting to be subscribed to.</summary>
         private readonly ConcurrentQueue<IObservableAsync<T>> _buffer = new();
 
-        /// <summary>
-        /// Cancellation token source used to signal disposal of the subscription.
-        /// </summary>
+        /// <summary>Cancellation token source used to signal disposal of the subscription.</summary>
         private readonly CancellationTokenSource _disposeCts = new();
 
-        /// <summary>
-        /// Cached cancellation token from the dispose cancellation token source.
-        /// </summary>
+        /// <summary>Cached cancellation token from the dispose cancellation token source.</summary>
         private readonly CancellationToken _disposedCancellationToken;
 
-        /// <summary>
-        /// Disposable that holds the single outer subscription.
-        /// </summary>
+        /// <summary>Disposable that holds the single outer subscription.</summary>
         private readonly SingleAssignmentDisposableAsync _outerDisposable = new();
 
-        /// <summary>
-        /// Serial disposable that holds the currently active inner subscription, disposing the previous one when replaced.
-        /// </summary>
+        /// <summary>Serial disposable that holds the currently active inner subscription, disposing the previous one when replaced.</summary>
         private readonly SingleReplaceableDisposableAsync _innerSubscription = new();
 
-        /// <summary>
-        /// The downstream observer to forward elements to.
-        /// </summary>
+        /// <summary>The downstream observer to forward elements to.</summary>
         private readonly IObserverAsync<T> _observer;
 
-        /// <summary>
-        /// Async gate that serializes observer callbacks to ensure thread-safe emission.
-        /// </summary>
+        /// <summary>Async gate that serializes observer callbacks to ensure thread-safe emission.</summary>
         private readonly AsyncSerialGate _observerOnSomethingGate = new();
 
-        /// <summary>
-        /// Indicates whether the outer observable sequence has completed.
-        /// </summary>
+        /// <summary>Indicates whether the outer observable sequence has completed.</summary>
         private bool _outerCompleted;
 
-        /// <summary>
-        /// Flag indicating whether this subscription has been disposed (1 = disposed, 0 = active).
-        /// </summary>
+        /// <summary>Flag indicating whether this subscription has been disposed (1 = disposed, 0 = active).</summary>
         private int _disposed;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ConcatCoordinator"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ConcatCoordinator"/> class.</summary>
         /// <param name="observer">The downstream observer to forward elements to.</param>
         public ConcatCoordinator(IObserverAsync<T> observer)
         {
@@ -94,9 +71,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
             _disposedCancellationToken = _disposeCts.Token;
         }
 
-        /// <summary>
-        /// Subscribes to the outer observable sequence.
-        /// </summary>
+        /// <summary>Subscribes to the outer observable sequence.</summary>
         /// <param name="source">The outer observable that emits inner observable sequences.</param>
         /// <param name="subscriptionToken">A token to cancel the subscription.</param>
         /// <returns>A task representing the asynchronous subscribe operation.</returns>
@@ -190,10 +165,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
         /// <inheritdoc/>
         public ValueTask DisposeAsync() => FinishAsync(null);
 
-        /// <summary>
-        /// Handles a second call to <see cref="FinishAsync"/> when already disposed,
-        /// routing any failure exception to the unhandled exception handler.
-        /// </summary>
+        /// <summary>Handles a second call to <see cref="FinishAsync"/> when already disposed, routing any failure exception to the unhandled exception handler.</summary>
         /// <param name="result">The completion result from the second call.</param>
         internal static void HandleAlreadyDisposed(Result? result)
         {
@@ -205,9 +177,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
             UnhandledExceptionHandler.ReportUnhandledException(exception);
         }
 
-        /// <summary>
-        /// Subscribes to the specified inner observable, setting it as the current active inner subscription.
-        /// </summary>
+        /// <summary>Subscribes to the specified inner observable, setting it as the current active inner subscription.</summary>
         /// <param name="currentInner">The inner observable to subscribe to.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         internal async ValueTask SubscribeCurrentInnerAsync(IObservableAsync<T> currentInner)
@@ -250,24 +220,18 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
             _observerOnSomethingGate.Dispose();
         }
 
-        /// <summary>
-        /// A witness for the outer observable sequence that delegates to the parent <see cref="ConcatCoordinator"/>.
-        /// </summary>
+        /// <summary>A witness for the outer observable sequence that delegates to the parent <see cref="ConcatCoordinator"/>.</summary>
         /// <param name="subscription">The parent concat subscription.</param>
         internal sealed class ConcatOuterWitness(ConcatCoordinator subscription) : ObserverAsync<IObservableAsync<T>>
         {
-            /// <summary>
-            /// Forwards a new inner observable to the parent subscription for buffering and sequential subscription.
-            /// </summary>
+            /// <summary>Forwards a new inner observable to the parent subscription for buffering and sequential subscription.</summary>
             /// <param name="value">The new inner observable.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override ValueTask OnNextAsyncCore(IObservableAsync<T> value, CancellationToken cancellationToken)
                 => subscription.AcceptOuterValueAsync(value);
 
-            /// <summary>
-            /// Forwards a non-fatal error from the outer sequence to the downstream observer.
-            /// </summary>
+            /// <summary>Forwards a non-fatal error from the outer sequence to the downstream observer.</summary>
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
@@ -287,24 +251,18 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
                 }
             }
 
-            /// <summary>
-            /// Handles the outer sequence completing.
-            /// </summary>
+            /// <summary>Handles the outer sequence completing.</summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override ValueTask OnCompletedAsyncCore(Result result)
                 => subscription.AcceptOuterCompletionAsync(result);
         }
 
-        /// <summary>
-        /// A witness for the currently active inner observable sequence that delegates to the parent <see cref="ConcatCoordinator"/>.
-        /// </summary>
+        /// <summary>A witness for the currently active inner observable sequence that delegates to the parent <see cref="ConcatCoordinator"/>.</summary>
         /// <param name="subscription">The parent concat subscription.</param>
         internal sealed class ConcatInnerWitness(ConcatCoordinator subscription) : ObserverAsync<T>
         {
-            /// <summary>
-            /// Forwards an element from the inner sequence to the downstream observer.
-            /// </summary>
+            /// <summary>Forwards an element from the inner sequence to the downstream observer.</summary>
             /// <param name="value">The element to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
@@ -318,9 +276,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
                 }
             }
 
-            /// <summary>
-            /// Forwards a non-fatal error from the inner sequence to the downstream observer.
-            /// </summary>
+            /// <summary>Forwards a non-fatal error from the inner sequence to the downstream observer.</summary>
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
@@ -336,9 +292,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
                 }
             }
 
-            /// <summary>
-            /// Handles the inner sequence completing, triggering subscription to the next buffered sequence.
-            /// </summary>
+            /// <summary>Handles the inner sequence completing, triggering subscription to the next buffered sequence.</summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override ValueTask OnCompletedAsyncCore(Result result)

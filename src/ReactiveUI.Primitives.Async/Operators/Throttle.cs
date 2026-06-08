@@ -6,59 +6,57 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides Throttle (debounce) extension methods for asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides Throttle (debounce) extension methods for asynchronous observable sequences.</summary>
 /// <remarks>Throttle ignores elements from the source sequence that are followed by another element
 /// within a specified time span. Only values that are not followed by another value within the due time
 /// are forwarded to observers. This is commonly used to suppress rapid bursts of events such as keystrokes
 /// or mouse movements.</remarks>
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Ignores elements from the source sequence that are followed by another element within
-    /// the specified time span. Only the last element in each burst is forwarded.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
+    /// <summary>Throttle (debounce) operators for an observable source sequence.</summary>
     /// <param name="this">The source observable sequence.</param>
-    /// <param name="dueTime">The time span that must elapse after the last element before it is forwarded.
-    /// Must be non-negative.</param>
-    /// <returns>An observable sequence containing only those elements that are not followed by another
-    /// element within the specified due time.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
-    public static IObservableAsync<T> Throttle<T>(this IObservableAsync<T> @this, TimeSpan dueTime)
-        => @this.Throttle(dueTime, (TimeProvider?)null);
-
-    /// <summary>
-    /// Ignores elements from the source sequence that are followed by another element within
-    /// the specified time span. Only the last element in each burst is forwarded.
-    /// </summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <param name="this">The source observable sequence.</param>
-    /// <param name="dueTime">The time span that must elapse after the last element before it is forwarded.
-    /// Must be non-negative.</param>
-    /// <param name="timeProvider">An optional time provider for controlling timing. If null, <see cref="TimeProvider.System"/>
-    /// is used.</param>
-    /// <returns>An observable sequence containing only those elements that are not followed by another
-    /// element within the specified due time.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
-    public static IObservableAsync<T> Throttle<T>(this IObservableAsync<T> @this, TimeSpan dueTime, TimeProvider? timeProvider)
+    extension<T>(IObservableAsync<T> @this)
     {
-#if NET8_0_OR_GREATER
-        ArgumentOutOfRangeException.ThrowIfLessThan(dueTime, TimeSpan.Zero);
-#else
-        if (dueTime < TimeSpan.Zero)
+        /// <summary>
+        /// Ignores elements from the source sequence that are followed by another element within
+        /// the specified time span. Only the last element in each burst is forwarded.
+        /// </summary>
+        /// <param name="dueTime">The time span that must elapse after the last element before it is forwarded.
+        /// Must be non-negative.</param>
+        /// <returns>An observable sequence containing only those elements that are not followed by another
+        /// element within the specified due time.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
+        public IObservableAsync<T> Throttle(TimeSpan dueTime)
+            => @this.Throttle(dueTime, (TimeProvider?)null);
+
+        /// <summary>
+        /// Ignores elements from the source sequence that are followed by another element within
+        /// the specified time span. Only the last element in each burst is forwarded.
+        /// </summary>
+        /// <param name="dueTime">The time span that must elapse after the last element before it is forwarded.
+        /// Must be non-negative.</param>
+        /// <param name="timeProvider">An optional time provider for controlling timing. If null, <see cref="TimeProvider.System"/>
+        /// is used.</param>
+        /// <returns>An observable sequence containing only those elements that are not followed by another
+        /// element within the specified due time.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
+        public IObservableAsync<T> Throttle(TimeSpan dueTime, TimeProvider? timeProvider)
         {
-            throw new ArgumentOutOfRangeException(nameof(dueTime));
-        }
+#if NET8_0_OR_GREATER
+            ArgumentOutOfRangeException.ThrowIfLessThan(dueTime, TimeSpan.Zero);
+#else
+            if (dueTime < TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(dueTime));
+            }
 #endif
 
-        return new ThrottleSignal<T>(@this, dueTime, timeProvider ?? TimeProvider.System);
+            return new ThrottleSignal<T>(@this, dueTime, timeProvider ?? TimeProvider.System);
+        }
     }
 
-    /// <summary>
-    /// Asynchronously delays for the specified duration using the provided time provider.
-    /// </summary>
+    /// <summary>Asynchronously delays for the specified duration using the provided time provider.</summary>
     /// <param name="delay">The duration to delay.</param>
     /// <param name="timeProvider">The time provider to use for the delay.</param>
     /// <param name="cancellationToken">A token to cancel the delay.</param>
@@ -94,9 +92,7 @@ public static partial class SignalAsync
     internal sealed class ThrottleSignal<T>(IObservableAsync<T> source, TimeSpan dueTime, TimeProvider timeProvider)
         : SignalAsync<T>
     {
-        /// <summary>
-        /// Subscribes the specified observer with throttle behavior applied.
-        /// </summary>
+        /// <summary>Subscribes the specified observer with throttle behavior applied.</summary>
         /// <param name="observer">The observer to receive throttled elements.</param>
         /// <param name="cancellationToken">A token to cancel the subscription.</param>
         /// <returns>An async disposable that tears down the subscription when disposed.</returns>
@@ -118,19 +114,13 @@ public static partial class SignalAsync
         internal sealed class ThrottleObserver(IObserverAsync<T> observer, TimeSpan dueTime, TimeProvider timeProvider)
             : ObserverAsync<T>
         {
-            /// <summary>
-            /// The synchronization gate protecting shared throttle state.
-            /// </summary>
+            /// <summary>The synchronization gate protecting shared throttle state.</summary>
             private readonly Lock _gate = new();
 
-            /// <summary>
-            /// A monotonically increasing identifier used to detect whether a newer element has superseded the current timer.
-            /// </summary>
+            /// <summary>A monotonically increasing identifier used to detect whether a newer element has superseded the current timer.</summary>
             private long _id;
 
-            /// <summary>
-            /// Waits for the debounce delay and then forwards the value if it has not been superseded.
-            /// </summary>
+            /// <summary>Waits for the debounce delay and then forwards the value if it has not been superseded.</summary>
             /// <param name="value">The value to forward after the delay.</param>
             /// <param name="id">The identifier of this timer; if superseded by a newer id, the value is discarded.</param>
             /// <param name="cancellationToken">A token to cancel the delay.</param>
@@ -182,9 +172,7 @@ public static partial class SignalAsync
                 return default;
             }
 
-            /// <summary>
-            /// Marks any in-flight delay as superseded and forwards the error to the downstream observer.
-            /// </summary>
+            /// <summary>Marks any in-flight delay as superseded and forwards the error to the downstream observer.</summary>
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
@@ -198,9 +186,7 @@ public static partial class SignalAsync
                 return observer.OnErrorResumeAsync(error, cancellationToken);
             }
 
-            /// <summary>
-            /// Marks any in-flight delay as superseded and forwards completion to the downstream observer.
-            /// </summary>
+            /// <summary>Marks any in-flight delay as superseded and forwards completion to the downstream observer.</summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override ValueTask OnCompletedAsyncCore(Result result)

@@ -6,51 +6,43 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides extension methods for working with asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
 /// <remarks>The SignalAsync class contains static methods that extend the functionality of asynchronous
 /// observables, enabling operations such as materializing the sequence into a list asynchronously. These methods are
 /// intended to simplify common tasks when consuming asynchronous observable streams.</remarks>
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Asynchronously collects all elements from the source sequence into a list.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <summary>Asynchronous list-materialization operators for an observable source sequence.</summary>
     /// <param name="this">The source observable sequence.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains a list of all elements in the
-    /// source sequence, in the order they were received.</returns>
-    public static ValueTask<List<T>> ToListAsync<T>(this IObservableAsync<T> @this)
-        => @this.ToListAsync(CancellationToken.None);
-
-    /// <summary>
-    /// Asynchronously collects all elements from the source sequence into a list.
-    /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    /// <param name="this">The source observable sequence.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains a list of all elements in the
-    /// source sequence, in the order they were received.</returns>
-    public static async ValueTask<List<T>> ToListAsync<T>(this IObservableAsync<T> @this, CancellationToken cancellationToken)
+    extension<T>(IObservableAsync<T> @this)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        var observer = new ToListTaskWitness<T>(cancellationToken);
-        await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.AwaitResultAsync().ConfigureAwait(false);
+        /// <summary>Asynchronously collects all elements from the source sequence into a list.</summary>
+        /// <returns>A task that represents the asynchronous operation. The task result contains a list of all elements in the
+        /// source sequence, in the order they were received.</returns>
+        public ValueTask<List<T>> ToListAsync()
+            => @this.ToListAsync(CancellationToken.None);
+
+        /// <summary>Asynchronously collects all elements from the source sequence into a list.</summary>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains a list of all elements in the
+        /// source sequence, in the order they were received.</returns>
+        public async ValueTask<List<T>> ToListAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var observer = new ToListTaskWitness<T>(cancellationToken);
+            await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+            return await observer.AwaitResultAsync().ConfigureAwait(false);
+        }
     }
 
-    /// <summary>
-    /// Witness that collects all elements from a sequence into a list.
-    /// </summary>
+    /// <summary>Witness that collects all elements from a sequence into a list.</summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     internal sealed class ToListTaskWitness<T>(CancellationToken cancellationToken)
         : TaskResultWitnessAsyncBase<T, List<T>>(cancellationToken)
     {
-        /// <summary>
-        /// The list that accumulates all elements received from the source sequence.
-        /// </summary>
+        /// <summary>The list that accumulates all elements received from the source sequence.</summary>
         private readonly List<T> _items = [];
 
         /// <inheritdoc/>

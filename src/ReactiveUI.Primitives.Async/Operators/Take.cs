@@ -7,48 +7,44 @@ using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides extension methods for working with asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
 /// <remarks>The SignalAsync class contains static extension methods that enable advanced operations on
 /// asynchronous observables, such as filtering, transformation, and sequence control. These methods are intended to be
 /// used with the SignalAsync{T} type to facilitate reactive programming patterns in asynchronous
 /// scenarios.</remarks>
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Returns a new observable sequence that emits only the first specified number of elements from the source
-    /// sequence.
-    /// </summary>
-    /// <remarks>If the source sequence contains fewer elements than <paramref name="count"/>, all
-    /// available elements are emitted and the sequence completes. This method does not modify the source sequence;
-    /// it returns a new sequence with the specified behavior.</remarks>
-    /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
+    /// <summary>Element-limiting operators for an observable source sequence.</summary>
     /// <param name="this">The source observable sequence.</param>
-    /// <param name="count">The maximum number of elements to emit from the source sequence. Must be greater than or equal to zero.</param>
-    /// <returns>An observable sequence that contains at most the first <paramref name="count"/> elements from the source
-    /// sequence. If <paramref name="count"/> is zero, the resulting sequence completes immediately without emitting
-    /// any elements.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="count"/> is less than zero.</exception>
-    public static IObservableAsync<T> Take<T>(this IObservableAsync<T> @this, int count)
+    /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
+    extension<T>(IObservableAsync<T> @this)
     {
-        ArgumentExceptionHelper.ThrowIfNull(@this);
-#if NET8_0_OR_GREATER
-        ArgumentOutOfRangeException.ThrowIfNegative(count);
-#else
-        if (count < 0)
+        /// <summary>Returns a new observable sequence that emits only the first specified number of elements from the source sequence.</summary>
+        /// <remarks>If the source sequence contains fewer elements than <paramref name="count"/>, all
+        /// available elements are emitted and the sequence completes. This method does not modify the source sequence;
+        /// it returns a new sequence with the specified behavior.</remarks>
+        /// <param name="count">The maximum number of elements to emit from the source sequence. Must be greater than or equal to zero.</param>
+        /// <returns>An observable sequence that contains at most the first <paramref name="count"/> elements from the source
+        /// sequence. If <paramref name="count"/> is zero, the resulting sequence completes immediately without emitting
+        /// any elements.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="count"/> is less than zero.</exception>
+        public IObservableAsync<T> Take(int count)
         {
-            throw new ArgumentOutOfRangeException(nameof(count));
-        }
+            ArgumentExceptionHelper.ThrowIfNull(@this);
+#if NET8_0_OR_GREATER
+            ArgumentOutOfRangeException.ThrowIfNegative(count);
+#else
+            if (count < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count));
+            }
 #endif
 
-        return count == 0 ? new TakeZeroSignal<T>() : new TakeSignal<T>(@this, count);
+            return count == 0 ? new TakeZeroSignal<T>() : new TakeSignal<T>(@this, count);
+        }
     }
 
-    /// <summary>
-    /// <c>Take(0)</c> short-circuit: synthesizes an immediate-completion observable without ever
-    /// subscribing to the upstream.
-    /// </summary>
+    /// <summary><c>Take(0)</c> short-circuit: synthesizes an immediate-completion observable without ever subscribing to the upstream.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     internal sealed class TakeZeroSignal<T> : SignalAsync<T>
     {
@@ -62,10 +58,7 @@ public static partial class SignalAsync
         }
     }
 
-    /// <summary>
-    /// Single-observer-layer <c>Take(count)</c>. Forwards values until the budget is exhausted, then
-    /// signals completion downstream.
-    /// </summary>
+    /// <summary>Single-observer-layer <c>Take(count)</c>. Forwards values until the budget is exhausted, then signals completion downstream.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="count">The maximum number of values to forward (must be &gt; 0; the zero case uses <see cref="TakeZeroSignal{T}"/>).</param>

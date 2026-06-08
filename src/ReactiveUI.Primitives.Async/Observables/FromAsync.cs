@@ -7,19 +7,14 @@ using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides factory methods for creating asynchronous observables from asynchronous operations.
-/// </summary>
+/// <summary>Provides factory methods for creating asynchronous observables from asynchronous operations.</summary>
 /// <remarks>The methods in this class allow integration of asynchronous tasks or functions into the observable
 /// pattern, enabling consumers to subscribe to results produced by asynchronous operations. All created observables
 /// execute the provided asynchronous factory as a background job and emit the result to subscribers upon
 /// completion.</remarks>
 public static partial class SignalAsync
 {
-    /// <summary>
-    /// Creates an asynchronous observable sequence that emits a single value produced by the specified factory
-    /// function.
-    /// </summary>
+    /// <summary>Creates an asynchronous observable sequence that emits a single value produced by the specified factory function.</summary>
     /// <remarks>The observable sequence will emit the value produced by the factory and then signal
     /// completion. The factory function is invoked when the sequence is subscribed to, and supports cancellation via
     /// the provided <see cref="CancellationToken"/>.</remarks>

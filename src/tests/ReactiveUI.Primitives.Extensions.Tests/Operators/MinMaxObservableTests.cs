@@ -126,8 +126,7 @@ public class MinMaxObservableTests
         await Assert.That(results).IsCollectionEqualTo([HighValue, MidValue, LowValue]);
     }
 
-    /// <summary>Verifies that <see cref="MinMaxObservable{T}"/>
-    /// with an empty source list completes immediately without emitting.</summary>
+    /// <summary>Verifies that <see cref="MinMaxObservable{T}"/> with an empty source list completes immediately without emitting.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMinMaxObservableNoSources_ThenCompletesImmediately()
@@ -142,8 +141,7 @@ public class MinMaxObservableTests
         await Assert.That(completed).IsTrue();
     }
 
-    /// <summary>Verifies that <see cref="MinMaxObservable{T}"/>
-    /// throws when subscribed with a null observer.</summary>
+    /// <summary>Verifies that <see cref="MinMaxObservable{T}"/> throws when subscribed with a null observer.</summary>
     [Test]
     public void WhenMinMaxObservableNullObserver_ThenSubscribeThrows()
     {
@@ -152,8 +150,7 @@ public class MinMaxObservableTests
         Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
     }
 
-    /// <summary>Verifies that when every source completes, the combined sequence completes via
-    /// the per-source <c>OnCompleted</c> path.</summary>
+    /// <summary>Verifies that when every source completes, the combined sequence completes via the per-source <c>OnCompleted</c> path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAllSourcesComplete_ThenForwardsCompletion()

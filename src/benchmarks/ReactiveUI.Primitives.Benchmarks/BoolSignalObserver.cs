@@ -4,34 +4,22 @@
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Boolean observer used by Signal and System.Reactive benchmark cases.
-/// </summary>
+/// <summary>Boolean observer used by Signal and System.Reactive benchmark cases.</summary>
 internal sealed class BoolSignalObserver : IObserver<bool>
 {
-    /// <summary>
-    /// Gets the total of true values observed.
-    /// </summary>
+    /// <summary>Gets the total of true values observed.</summary>
     public int Total { get; private set; }
 
-    /// <summary>
-    /// Gets the number of onNext calls.
-    /// </summary>
+    /// <summary>Gets the number of onNext calls.</summary>
     public int NextCount { get; private set; }
 
-    /// <summary>
-    /// Gets a value indicating whether the last observed value was true.
-    /// </summary>
+    /// <summary>Gets a value indicating whether the last observed value was true.</summary>
     public bool LastValue { get; private set; }
 
-    /// <summary>
-    /// Gets the number of terminal completions observed.
-    /// </summary>
+    /// <summary>Gets the number of terminal completions observed.</summary>
     public int CompletionCount { get; private set; }
 
-    /// <summary>
-    /// Gets the number of errors observed.
-    /// </summary>
+    /// <summary>Gets the number of errors observed.</summary>
     public int ErrorCount { get; private set; }
 
     /// <inheritdoc/>

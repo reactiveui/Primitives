@@ -6,8 +6,7 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async.Tests.Internals;
 
-/// <summary>Tests for <see cref="TakeUntilSourceWitness{T}"/>, the shared async observer that
-/// forwards every source notification into a <see cref="TakeUntilLifecycle{T}"/>.</summary>
+/// <summary>Tests for <see cref="TakeUntilSourceWitness{T}"/>, the shared async observer that forwards every source notification into a <see cref="TakeUntilLifecycle{T}"/>.</summary>
 public class TakeUntilSourceObserverTests
 {
     /// <summary>Sentinel value used by the value-forward test.</summary>

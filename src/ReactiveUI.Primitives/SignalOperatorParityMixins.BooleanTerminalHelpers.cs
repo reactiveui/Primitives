@@ -8,30 +8,20 @@ using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Private helper types for boolean terminal parity operators.
-/// </summary>
-public static partial class LinqMixins
+/// <summary>Private helper types for boolean terminal parity operators.</summary>
+public static partial class LinqExtensions
 {
-    /// <summary>
-    /// Predicate all operator implemented without delegate observer wrappers.
-    /// </summary>
+    /// <summary>Predicate all operator implemented without delegate observer wrappers.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class AllPredicateSignal<T> : IRequireCurrentThread<bool>
     {
-        /// <summary>
-        /// The source observable.
-        /// </summary>
+        /// <summary>The source observable.</summary>
         private readonly IObservable<T> _source;
 
-        /// <summary>
-        /// The predicate.
-        /// </summary>
+        /// <summary>The predicate.</summary>
         private readonly Func<T, bool> _predicate;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AllPredicateSignal{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="AllPredicateSignal{T}"/> class.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="predicate">The predicate.</param>
         internal AllPredicateSignal(IObservable<T> source, Func<T, bool> predicate)
@@ -47,7 +37,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<bool> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -63,9 +53,7 @@ public static partial class LinqMixins
             return sink;
         }
 
-        /// <summary>
-        /// Evaluates a predicate directly over a range source and emits the all result.
-        /// </summary>
+        /// <summary>Evaluates a predicate directly over a range source and emits the all result.</summary>
         /// <param name="range">The range source.</param>
         /// <param name="predicate">The predicate.</param>
         /// <param name="observer">The downstream observer.</param>
@@ -96,30 +84,20 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Contains operator implemented without composing Any and comparer closures.
-    /// </summary>
+    /// <summary>Contains operator implemented without composing Any and comparer closures.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class ContainsSignal<T> : IRequireCurrentThread<bool>
     {
-        /// <summary>
-        /// The source observable.
-        /// </summary>
+        /// <summary>The source observable.</summary>
         private readonly IObservable<T> _source;
 
-        /// <summary>
-        /// The value to locate.
-        /// </summary>
+        /// <summary>The value to locate.</summary>
         private readonly T _value;
 
-        /// <summary>
-        /// The comparer used for equality checks.
-        /// </summary>
+        /// <summary>The comparer used for equality checks.</summary>
         private readonly IEqualityComparer<T> _comparer;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ContainsSignal{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ContainsSignal{T}"/> class.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="value">The value to locate.</param>
         /// <param name="comparer">The comparer used for equality checks.</param>
@@ -137,7 +115,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<bool> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -153,9 +131,7 @@ public static partial class LinqMixins
             return sink;
         }
 
-        /// <summary>
-        /// Evaluates contains directly over a range source and emits the result.
-        /// </summary>
+        /// <summary>Evaluates contains directly over a range source and emits the result.</summary>
         /// <param name="range">The range source.</param>
         /// <param name="value">The value to locate.</param>
         /// <param name="comparer">The comparer used for equality checks.</param>

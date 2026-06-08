@@ -20,8 +20,7 @@ public class SelectAsyncSequentialObservableTests
     /// <summary>Settle delay in milliseconds used to let an awaited continuation attempt delivery.</summary>
     private const int SettleDelayMilliseconds = 50;
 
-    /// <summary>Verifies that <c>SelectAsyncSequential</c> forwards selector exceptions
-    /// and stops draining the queue afterwards.</summary>
+    /// <summary>Verifies that <c>SelectAsyncSequential</c> forwards selector exceptions and stops draining the queue afterwards.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectAsyncSequentialSelectorThrows_ThenForwardsErrorAndStops()
@@ -62,8 +61,7 @@ public class SelectAsyncSequentialObservableTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies that disposing the subscription mid-flight suppresses
-    /// further emissions and completion.</summary>
+    /// <summary>Verifies that disposing the subscription mid-flight suppresses further emissions and completion.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectAsyncSequentialDisposedMidFlight_ThenSuppressesEmissionAndCompletion()
@@ -91,8 +89,7 @@ public class SelectAsyncSequentialObservableTests
         await Assert.That(completed).IsFalse();
     }
 
-    /// <summary>Verifies that completion arriving while a selector is in flight
-    /// is forwarded after the in-flight selector finishes.</summary>
+    /// <summary>Verifies that completion arriving while a selector is in flight is forwarded after the in-flight selector finishes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectAsyncSequentialCompletesWhileProcessing_ThenDeferredCompletion()

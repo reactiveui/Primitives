@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <content>
-/// MergeSignalDisposal tests for combining operators.
-/// </content>
+/// <summary>Tests for signal-Merge disposal behavior.</summary>
 public partial class CombiningOperatorTests
 {
     /// <summary>
@@ -56,10 +54,7 @@ public partial class CombiningOperatorTests
         await outer.DisposeAsync();
     }
 
-    /// <summary>
-    /// Verifies that the error-resume forwarding path in Merge is silently skipped
-    /// after the subscription has been disposed.
-    /// </summary>
+    /// <summary>Verifies that the error-resume forwarding path in Merge is silently skipped after the subscription has been disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeSignalDisposedDuringErrorResume_ThenForwardingSilentlyReturns()
@@ -97,9 +92,7 @@ public partial class CombiningOperatorTests
         await outer.DisposeAsync();
     }
 
-    /// <summary>
-    /// Tests that MergeSignalSourcesSignal OnNextAsync returns early when disposed.
-    /// </summary>
+    /// <summary>Tests that MergeSignalSourcesSignal OnNextAsync returns early when disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeSignalDisposedBeforeInnerEmission_ThenRelayNextAsyncReturns()
@@ -137,9 +130,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).DoesNotContain(Sentinel42);
     }
 
-    /// <summary>
-    /// Verifies that Merge OnNextAsync returns early when disposed.
-    /// </summary>
+    /// <summary>Verifies that Merge OnNextAsync returns early when disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeDisposedDuringEmission_ThenRelayNextAsyncReturnsEarly()
@@ -222,10 +213,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).DoesNotContain(SampleValue2);
     }
 
-    /// <summary>
-    /// Verifies that OnErrorResumeAsync in MergeCoordinator returns early
-    /// when the subscription has already been disposed.
-    /// </summary>
+    /// <summary>Verifies that OnErrorResumeAsync in MergeCoordinator returns early when the subscription has already been disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeSignalOfSignalsDisposed_ThenRelayErrorAsyncReturns()
@@ -326,7 +314,6 @@ public partial class CombiningOperatorTests
         });
 
         // Give the second emission time to start waiting for the gate
-
         // Dispose while the second emission is waiting for the gate
         var disposeTask = sub.DisposeAsync();
 
@@ -398,7 +385,6 @@ public partial class CombiningOperatorTests
         });
 
         // Give the error emission time to start waiting for the gate
-
         // Dispose while the error emission is waiting for the gate
         var disposeTask = sub.DisposeAsync();
 
@@ -413,9 +399,7 @@ public partial class CombiningOperatorTests
         await Assert.That(errors).IsEmpty();
     }
 
-    /// <summary>
-    /// Verifies that Merge OnNextAsync returns early at the pre-gate disposed check.
-    /// </summary>
+    /// <summary>Verifies that Merge OnNextAsync returns early at the pre-gate disposed check.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeSignalDisposed_ThenRelayNextAsyncReturnsEarly()
@@ -440,9 +424,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).Count().IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Verifies that Merge OnErrorResumeAsync returns early when disposed.
-    /// </summary>
+    /// <summary>Verifies that Merge OnErrorResumeAsync returns early when disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeSignalDisposed_ThenRelayErrorAsyncReturnsEarly()

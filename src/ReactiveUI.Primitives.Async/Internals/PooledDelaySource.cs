@@ -157,10 +157,7 @@ internal sealed class PooledDelaySource : IValueTaskSource
         _core.SetResult(true);
     }
 
-    /// <summary>
-    /// Callback invoked when the caller's cancellation token transitions to cancelled. Same
-    /// race-only loser branch as <see cref="OnTimerFired"/>.
-    /// </summary>
+    /// <summary>Callback invoked when the caller's cancellation token transitions to cancelled. Same race-only loser branch as <see cref="OnTimerFired"/>.</summary>
     /// <param name="cancellationToken">The cancellation token that fired.</param>
     [ExcludeFromCodeCoverage]
     private void OnCancelled(CancellationToken cancellationToken)

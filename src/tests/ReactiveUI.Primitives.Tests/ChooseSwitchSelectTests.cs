@@ -7,10 +7,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests for the fused <see cref="LinqMixins.Choose{TIn, TOut}"/> and
-/// <see cref="LinqMixins.SwitchSelect{TSource, TResult}"/> projection operators.
-/// </summary>
+/// <summary>Tests for the fused <see cref="LinqExtensions.Choose{TIn, TOut}"/> and <see cref="LinqExtensions.SwitchSelect{TSource, TResult}"/> projection operators.</summary>
 public class ChooseSwitchSelectTests
 {
     /// <summary>The value ten.</summary>
@@ -91,10 +88,10 @@ public class ChooseSwitchSelectTests
         outer.SwitchSelect(key => key == KeyA ? inner1 : inner2)
             .Subscribe(values.Add);
 
-        outer.OnNext(null);    // skipped (null)
-        outer.OnNext(KeyA);    // subscribe inner1
-        inner1.OnNext(Ten);    // forwarded
-        outer.OnNext(KeyB);    // switch to inner2; inner1 superseded
+        outer.OnNext(null); // skipped (null)
+        outer.OnNext(KeyA); // subscribe inner1
+        inner1.OnNext(Ten); // forwarded
+        outer.OnNext(KeyB); // switch to inner2; inner1 superseded
         inner1.OnNext(Eleven); // stale -> ignored
         inner2.OnNext(Twenty); // forwarded
 
@@ -112,7 +109,7 @@ public class ChooseSwitchSelectTests
         outer.SwitchSelect(_ => inner)
             .Subscribe(_ => { }, ex => throw ex, () => completed++);
 
-        outer.OnNext(KeyA);  // active inner
+        outer.OnNext(KeyA); // active inner
         outer.OnCompleted(); // outer done, inner still active -> not complete
         Assert.Equal(0, completed);
         inner.OnCompleted(); // now complete
@@ -189,7 +186,7 @@ public class ChooseSwitchSelectTests
         inner.OnNext(Ten);
         subscription.Dispose();
         inner.OnNext(Eleven); // disposed -> ignored
-        outer.OnNext(KeyB);   // disposed -> ignored
+        outer.OnNext(KeyB); // disposed -> ignored
 
         Assert.Equal(_tenOnly, values);
     }

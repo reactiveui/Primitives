@@ -8,9 +8,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Retries the source observable sequence upon error, with optional delay, retry count, and backoff.
-/// </summary>
+/// <summary>Retries the source observable sequence upon error, with optional delay, retry count, and backoff.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="policy">The retry / backoff configuration.</param>
@@ -30,9 +28,7 @@ internal sealed class RetryWithBackoffObservable<T>(
         return sink;
     }
 
-    /// <summary>
-    /// Sink that manages retries with exponential backoff.
-    /// </summary>
+    /// <summary>Sink that manages retries with exponential backoff.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="source">The source observable.</param>
     /// <param name="policy">The retry / backoff configuration.</param>

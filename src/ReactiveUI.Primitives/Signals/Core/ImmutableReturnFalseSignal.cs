@@ -7,33 +7,23 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Represents the ImmutableReturnFalseSignal class.
-/// </summary>
+/// <summary>Represents the ImmutableReturnFalseSignal class.</summary>
 internal sealed class ImmutableReturnFalseSignal : IRequireCurrentThread<bool>, IInlineSignal<bool>
 {
-    /// <summary>
-    /// Executes the new operation.
-    /// </summary>
+    /// <summary>Executes the new operation.</summary>
     /// <returns>The result.</returns>
     internal static readonly ImmutableReturnFalseSignal Instance = new();
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ImmutableReturnFalseSignal"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ImmutableReturnFalseSignal"/> class.</summary>
     private ImmutableReturnFalseSignal()
     {
     }
 
-    /// <summary>
-    /// Executes the IsRequiredSubscribeOnCurrentThread operation.
-    /// </summary>
+    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>
-    /// Executes the Subscribe operation.
-    /// </summary>
+    /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<bool> observer)
@@ -43,9 +33,7 @@ internal sealed class ImmutableReturnFalseSignal : IRequireCurrentThread<bool>, 
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>
-    /// Executes the Subscribe operation.
-    /// </summary>
+    /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="onNext">The onNext value.</param>
     /// <param name="onError">The onError value.</param>
     /// <param name="onCompleted">The onCompleted value.</param>

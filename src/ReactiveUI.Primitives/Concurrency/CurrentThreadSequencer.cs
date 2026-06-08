@@ -8,78 +8,54 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// CurrentThreadSequencer.
-/// </summary>
+/// <summary>CurrentThreadSequencer.</summary>
 /// <seealso cref="ISequencer" />
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class CurrentThreadSequencer : ISequencer
 {
-    /// <summary>
-    /// Initial capacity for a freshly created thread-local work queue.
-    /// </summary>
+    /// <summary>Initial capacity for a freshly created thread-local work queue.</summary>
     private const int InitialQueueCapacity = 4;
 
-    /// <summary>
-    /// Singleton holder for the current-thread sequencer.
-    /// </summary>
+    /// <summary>Singleton holder for the current-thread sequencer.</summary>
     private static readonly Lazy<CurrentThreadSequencer> StaticInstance = new(() => new());
 
-    /// <summary>
-    /// Tracks whether the current thread is running scheduled work.
-    /// </summary>
+    /// <summary>Tracks whether the current thread is running scheduled work.</summary>
     [ThreadStatic]
     private static bool _running;
 
-    /// <summary>
-    /// Holds recursive work queued for the current thread.
-    /// </summary>
+    /// <summary>Holds recursive work queued for the current thread.</summary>
     [ThreadStatic]
     private static SequencerQueue<long>? _threadLocalQueue;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CurrentThreadSequencer"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="CurrentThreadSequencer"/> class.</summary>
     private CurrentThreadSequencer()
     {
     }
 
-    /// <summary>
-    /// Gets the singleton instance of the current thread scheduler.
-    /// </summary>
+    /// <summary>Gets the singleton instance of the current thread scheduler.</summary>
     public static CurrentThreadSequencer Instance => StaticInstance.Value;
 
-    /// <summary>
-    /// Gets a value indicating whether gets a value that indicates whether the caller must call a Schedule method.
-    /// </summary>
+    /// <summary>Gets a value indicating whether gets a value that indicates whether the caller must call a Schedule method.</summary>
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     public static bool IsScheduleRequired => !_running;
 
-    /// <summary>
-    /// Gets the scheduler's notion of current time.
-    /// </summary>
+    /// <summary>Gets the scheduler's notion of current time.</summary>
     public DateTimeOffset Now => Sequencer.Now;
 
-    /// <summary>
-    /// Gets the scheduler's monotonic timestamp.
-    /// </summary>
+    /// <summary>Gets the scheduler's monotonic timestamp.</summary>
     public long Timestamp => Sequencer.Timestamp;
 
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>
-    /// Schedules an action to be executed on the current-thread trampoline.
-    /// </summary>
+    /// <summary>Schedules an action to be executed on the current-thread trampoline.</summary>
     /// <param name="action">Action to execute.</param>
     /// <returns>The disposable object used to cancel queued work, or an empty disposable when the action has already run.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
     public IDisposable Schedule(Action action)
     {
-        if (action == null)
+        if (action is null)
         {
             throw new ArgumentNullException(nameof(action));
         }
@@ -91,7 +67,7 @@ public sealed class CurrentThreadSequencer : ISequencer
             {
                 action();
                 var queue = GetQueue();
-                if (queue != null)
+                if (queue is not null)
                 {
                     Trampoline.Run(queue);
                 }
@@ -110,14 +86,12 @@ public sealed class CurrentThreadSequencer : ISequencer
         return item;
     }
 
-    /// <summary>
-    /// Schedules a work item to be executed.
-    /// </summary>
+    /// <summary>Schedules a work item to be executed.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item)
     {
-        if (item == null)
+        if (item is null)
         {
             throw new ArgumentNullException(nameof(item));
         }
@@ -125,15 +99,13 @@ public sealed class CurrentThreadSequencer : ISequencer
         Schedule(item, Timestamp);
     }
 
-    /// <summary>
-    /// Schedules a work item to be executed at the specified monotonic timestamp.
-    /// </summary>
+    /// <summary>Schedules a work item to be executed at the specified monotonic timestamp.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
     /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item, long dueTimestamp)
     {
-        if (item == null)
+        if (item is null)
         {
             throw new ArgumentNullException(nameof(item));
         }
@@ -170,7 +142,7 @@ public sealed class CurrentThreadSequencer : ISequencer
             queue = GetQueue();
 
             // yes, run those in the queue as well
-            if (queue != null)
+            if (queue is not null)
             {
                 try
                 {
@@ -193,7 +165,7 @@ public sealed class CurrentThreadSequencer : ISequencer
         queue = GetQueue();
 
         // if there is a task running or there is a queue
-        if (queue == null)
+        if (queue is null)
         {
             queue = new(InitialQueueCapacity);
             SetQueue(queue);
@@ -204,32 +176,22 @@ public sealed class CurrentThreadSequencer : ISequencer
         queue.Enqueue(si);
     }
 
-    /// <summary>
-    /// Gets the queued recursive work for the current thread.
-    /// </summary>
+    /// <summary>Gets the queued recursive work for the current thread.</summary>
     /// <returns>The current thread queue, if one exists.</returns>
     private static SequencerQueue<long>? GetQueue() => _threadLocalQueue;
 
-    /// <summary>
-    /// Sets the queued recursive work for the current thread.
-    /// </summary>
+    /// <summary>Sets the queued recursive work for the current thread.</summary>
     /// <param name="newQueue">The queue to assign.</param>
     private static void SetQueue(SequencerQueue<long>? newQueue) => _threadLocalQueue = newQueue;
 
-    /// <summary>
-    /// Sets the current-thread running marker.
-    /// </summary>
+    /// <summary>Sets the current-thread running marker.</summary>
     /// <param name="running">Value indicating whether work is running.</param>
     private static void SetRunning(bool running) => _running = running;
 
-    /// <summary>
-    /// Runs queued current-thread work.
-    /// </summary>
+    /// <summary>Runs queued current-thread work.</summary>
     private static class Trampoline
     {
-        /// <summary>
-        /// Runs all work currently in the queue.
-        /// </summary>
+        /// <summary>Runs all work currently in the queue.</summary>
         /// <param name="queue">Queue to drain.</param>
         public static void Run(SequencerQueue<long> queue)
         {
@@ -253,24 +215,16 @@ public sealed class CurrentThreadSequencer : ISequencer
         }
     }
 
-    /// <summary>
-    /// Cancellable action work item.
-    /// </summary>
+    /// <summary>Cancellable action work item.</summary>
     private sealed class ActionWorkItem : IWorkItem, IsDisposed
     {
-        /// <summary>
-        /// Action to execute.
-        /// </summary>
+        /// <summary>Action to execute.</summary>
         private readonly Action _action;
 
-        /// <summary>
-        /// Tracks cancellation.
-        /// </summary>
+        /// <summary>Tracks cancellation.</summary>
         private int _isDisposed;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ActionWorkItem"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ActionWorkItem"/> class.</summary>
         /// <param name="action">Action to execute.</param>
         public ActionWorkItem(Action action) => _action = action;
 
@@ -292,19 +246,13 @@ public sealed class CurrentThreadSequencer : ISequencer
         }
     }
 
-    /// <summary>
-    /// Current-thread queued work item.
-    /// </summary>
+    /// <summary>Current-thread queued work item.</summary>
     private sealed class CurrentThreadScheduledItem : ScheduledItem<long>
     {
-        /// <summary>
-        /// Scheduled work item.
-        /// </summary>
+        /// <summary>Scheduled work item.</summary>
         private readonly IWorkItem _item;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CurrentThreadScheduledItem"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="CurrentThreadScheduledItem"/> class.</summary>
         /// <param name="item">Scheduled work item.</param>
         /// <param name="dueTimestamp">Absolute monotonic due timestamp.</param>
         public CurrentThreadScheduledItem(IWorkItem item, long dueTimestamp)

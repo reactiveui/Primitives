@@ -6,10 +6,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests for the fused <see cref="LinqMixins.BlendUnique{T}(System.IObservable{T}[])"/> operator
-/// (merge + distinct-until-changed in a single sink).
-/// </summary>
+/// <summary>Tests for the fused <see cref="LinqExtensions.BlendUnique{T}(System.IObservable{T}[])"/> operator (merge + distinct-until-changed in a single sink).</summary>
 public class BlendUniqueTests
 {
     /// <summary>The value one.</summary>
@@ -53,7 +50,7 @@ public class BlendUniqueTests
         var completed = 0;
 
         // source0 emits 1,1,2 (-> 1,2) then source1 emits 2,3,3 (2 == last, dropped -> 3).
-        LinqMixins.BlendUnique(
+        LinqExtensions.BlendUnique(
                 Signal.FromEnumerable(_firstDuplicatedThenSecond),
                 Signal.FromEnumerable(_secondThenThirdDuplicated))
             .Subscribe(values.Add, ex => throw ex, () => completed++);
@@ -69,7 +66,7 @@ public class BlendUniqueTests
         var values = new List<int>();
         var completed = 0;
 
-        LinqMixins.BlendUnique<int>()
+        LinqExtensions.BlendUnique<int>()
             .Subscribe(values.Add, ex => throw ex, () => completed++);
 
         Assert.Equal(0, values.Count);
@@ -83,7 +80,7 @@ public class BlendUniqueTests
         var values = new List<string>();
 
         // Case-insensitive: "a","A" collapse; "B" forwarded.
-        LinqMixins.BlendUnique(
+        LinqExtensions.BlendUnique(
                 [Signal.FromEnumerable(_caseVariants)],
                 StringComparer.OrdinalIgnoreCase)
             .Subscribe(values.Add);
@@ -98,7 +95,7 @@ public class BlendUniqueTests
         var values = new List<int>();
         Exception? error = null;
 
-        LinqMixins.BlendUnique(
+        LinqExtensions.BlendUnique(
                 Signal.FromEnumerable(_single),
                 Signal.Fail<int>(new InvalidOperationException("boom")))
             .Subscribe(values.Add, ex => error = ex, () => { });
@@ -115,7 +112,7 @@ public class BlendUniqueTests
         var source = new Signal<int>();
         var values = new List<int>();
 
-        var subscription = LinqMixins.BlendUnique(source).Subscribe(values.Add);
+        var subscription = LinqExtensions.BlendUnique(source).Subscribe(values.Add);
         source.OnNext(One);
         subscription.Dispose();
         source.OnNext(Two); // no longer subscribed -> ignored
@@ -134,14 +131,14 @@ public class BlendUniqueTests
         Exception? error = null;
         var completed = 0;
 
-        LinqMixins.BlendUnique(first, second, third)
+        LinqExtensions.BlendUnique(first, second, third)
             .Subscribe(values.Add, ex => error = ex, () => completed++);
 
-        first.OnNext(One);                                        // forwarded
-        second.OnError(new InvalidOperationException("boom"));    // terminal
-        first.OnNext(Two);                                        // value suppressed (done)
-        first.OnCompleted();                                      // completion suppressed (done)
-        third.OnError(new InvalidOperationException("again"));    // error suppressed (done)
+        first.OnNext(One); // forwarded
+        second.OnError(new InvalidOperationException("boom")); // terminal
+        first.OnNext(Two); // value suppressed (done)
+        first.OnCompleted(); // completion suppressed (done)
+        third.OnError(new InvalidOperationException("again")); // error suppressed (done)
 
         Assert.Equal(_single, values);
         Assert.NotNull(error);
@@ -152,8 +149,8 @@ public class BlendUniqueTests
     [Test]
     public void NullArgumentsThrow()
     {
-        Assert.Throws<ArgumentNullException>(() => LinqMixins.BlendUnique<int>(null!, comparer: null));
-        Assert.Throws<ArgumentNullException>(() => LinqMixins.BlendUnique(Signal.FromEnumerable(_single), null!));
-        Assert.Throws<ArgumentNullException>(() => LinqMixins.BlendUnique(Signal.FromEnumerable(_single)).Subscribe(null!));
+        Assert.Throws<ArgumentNullException>(() => LinqExtensions.BlendUnique<int>(null!, comparer: null));
+        Assert.Throws<ArgumentNullException>(() => LinqExtensions.BlendUnique(Signal.FromEnumerable(_single), null!));
+        Assert.Throws<ArgumentNullException>(() => LinqExtensions.BlendUnique(Signal.FromEnumerable(_single)).Subscribe(null!));
     }
 }

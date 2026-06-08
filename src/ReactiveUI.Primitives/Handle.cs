@@ -6,24 +6,16 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Shared delegate handlers.
-/// </summary>
+/// <summary>Shared delegate handlers.</summary>
 internal static class Handle
 {
-    /// <summary>
-    /// Action that does nothing.
-    /// </summary>
+    /// <summary>Action that does nothing.</summary>
     public static readonly Action Nop = () => { };
 
-    /// <summary>
-    /// Error handler that throws the supplied exception.
-    /// </summary>
+    /// <summary>Error handler that throws the supplied exception.</summary>
     public static readonly Action<Exception> Throw = ex => ex.Throw();
 
-    /// <summary>
-    /// Converts an error into an empty observable sequence.
-    /// </summary>
+    /// <summary>Converts an error into an empty observable sequence.</summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <param name="ex">Ignored exception.</param>
     /// <returns>An empty sequence.</returns>

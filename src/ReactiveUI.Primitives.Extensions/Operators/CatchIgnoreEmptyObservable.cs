@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Forwards source values; on any source error, swallows it and completes silently.
-/// </summary>
+/// <summary>Forwards source values; on any source error, swallows it and completes silently.</summary>
 /// <typeparam name="T">Element type.</typeparam>
 /// <param name="source">Upstream source.</param>
 internal sealed class CatchIgnoreEmptyObservable<T>(IObservable<T> source) : IObservable<T>
@@ -21,11 +19,7 @@ internal sealed class CatchIgnoreEmptyObservable<T>(IObservable<T> source) : IOb
         return source.Subscribe(new CatchIgnoreEmptyObserver(observer));
     }
 
-    /// <summary>
-    /// Forwarding observer that passes <see cref="OnNext"/> / <see cref="OnCompleted"/>
-    /// through and replaces <see cref="OnError"/> with terminal
-    /// <see cref="IObserver{T}.OnCompleted"/>.
-    /// </summary>
+    /// <summary>Forwarding observer that swaps <see cref="OnError"/> for terminal completion.</summary>
     /// <param name="downstream">The downstream observer.</param>
     private sealed class CatchIgnoreEmptyObserver(IObserver<T> downstream) : IObserver<T>
     {

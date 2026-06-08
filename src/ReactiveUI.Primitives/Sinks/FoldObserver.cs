@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Sink that emits a running accumulation for every source value.
-/// </summary>
+/// <summary>Sink that emits a running accumulation for every source value.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TAccumulate">The accumulated value type.</typeparam>
 public sealed class FoldObserver<TSource, TAccumulate> : SingleSourceObserver<TSource>
@@ -20,9 +18,7 @@ public sealed class FoldObserver<TSource, TAccumulate> : SingleSourceObserver<TS
     /// <summary>The current accumulated value.</summary>
     private TAccumulate _current;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="FoldObserver{TSource, TAccumulate}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="FoldObserver{TSource, TAccumulate}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="seed">The initial accumulated value.</param>
     /// <param name="accumulator">The accumulator function.</param>

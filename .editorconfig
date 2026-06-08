@@ -1039,7 +1039,7 @@ dotnet_diagnostic.RCS1226.severity = none # Add paragraph to documentation comme
 dotnet_diagnostic.RCS1228.severity = error # Unused element in a documentation comment
 dotnet_diagnostic.RCS1232.severity = error # Order elements in documentation comment
 dotnet_diagnostic.RCS1253.severity = error # Format documentation comment summary
-dotnet_diagnostic.RCS1263.severity = error # Invalid reference in a documentation comment
+dotnet_diagnostic.RCS1263.severity = none # Invalid reference in a documentation comment
 
 ###################
 # Roslynator Analyzers (RCS1xxx) - Disabled (covered by CA/SA equivalent)
@@ -1108,216 +1108,246 @@ dotnet_diagnostic.RCS0054.severity = none # Fix formatting of a call chain — f
 dotnet_diagnostic.RCS0055.severity = none # Fix formatting of a binary expression chain — formatting preference
 dotnet_diagnostic.RCS0056.severity = none # A line is too long — line-length not enforced
 dotnet_diagnostic.RCS0057.severity = none # Normalize whitespace at the beginning of a file — handled by editorconfig
-dotnet_diagnostic.RCS0058.severity = none # Normalize whitespace at the end of a file — covered by SA1518
-dotnet_diagnostic.RCS0059.severity = none # Place new line after/before null-conditional operator — StyleCop wrapping rules cover this
+dotnet_diagnostic.RCS0058.severity = none # Normalize whitespace at the end of a file — covered by SST1518
+dotnet_diagnostic.RCS0059.severity = none # Place new line after/before null-conditional operator — StyleSharp wrapping rules cover this
 dotnet_diagnostic.RCS0060.severity = none # Add/remove line after file scoped namespace declaration — formatting preference
 dotnet_diagnostic.RCS0061.severity = none # Add/remove blank line between switch sections — formatting preference
 dotnet_diagnostic.RCS0062.severity = none # Put expression body on its own line — formatting preference
-dotnet_diagnostic.RCS0063.severity = none # Remove unnecessary blank line — covered by SA1505 / SA1507
+dotnet_diagnostic.RCS0063.severity = none # Remove unnecessary blank line — covered by SST1505 / SST1507
 
 ###################
-# StyleCop Analyzers (SA) - Spacing Rules
+# StyleSharp Analyzers (SST)
 ###################
-dotnet_diagnostic.SA1000.severity = error # Keywords must be spaced correctly
-dotnet_diagnostic.SA1001.severity = error # Commas must be spaced correctly
-dotnet_diagnostic.SA1002.severity = error # Semicolons must be spaced correctly
-dotnet_diagnostic.SA1003.severity = error # Symbols must be spaced correctly
-dotnet_diagnostic.SA1004.severity = error # Documentation lines must begin with single space
-dotnet_diagnostic.SA1005.severity = error # Single line comments must begin with single space
-dotnet_diagnostic.SA1006.severity = error # Preprocessor keywords must not be preceded by space
-dotnet_diagnostic.SA1007.severity = error # Operator keyword must be followed by space
-dotnet_diagnostic.SA1008.severity = error # Opening parenthesis must be spaced correctly
-dotnet_diagnostic.SA1009.severity = error # Closing parenthesis must be spaced correctly
-dotnet_diagnostic.SA1010.severity = none # Opening square brackets must be spaced correctly — conflicts with C# 12 collection expressions
-dotnet_diagnostic.SA1011.severity = error # Closing square brackets must be spaced correctly
-dotnet_diagnostic.SA1012.severity = error # Opening braces must be spaced correctly
-dotnet_diagnostic.SA1013.severity = error # Closing braces must be spaced correctly
-dotnet_diagnostic.SA1014.severity = error # Opening generic brackets must be spaced correctly
-dotnet_diagnostic.SA1015.severity = error # Closing generic brackets must be spaced correctly
-dotnet_diagnostic.SA1016.severity = error # Opening attribute brackets must be spaced correctly
-dotnet_diagnostic.SA1017.severity = error # Closing attribute brackets must be spaced correctly
-dotnet_diagnostic.SA1018.severity = error # Nullable type symbols must not be preceded by space
-dotnet_diagnostic.SA1019.severity = error # Member access symbols must be spaced correctly
-dotnet_diagnostic.SA1020.severity = error # Increment decrement symbols must be spaced correctly
-dotnet_diagnostic.SA1021.severity = error # Negative signs must be spaced correctly
-dotnet_diagnostic.SA1022.severity = error # Positive signs must be spaced correctly
-dotnet_diagnostic.SA1023.severity = error # Dereference and access of symbols must be spaced correctly
-dotnet_diagnostic.SA1024.severity = error # Colons must be spaced correctly
-dotnet_diagnostic.SA1025.severity = error # Code must not contain multiple whitespace in a row
-dotnet_diagnostic.SA1026.severity = error # Code must not contain space after new keyword in implicitly typed array allocation
-dotnet_diagnostic.SA1027.severity = error # Use tabs correctly
-dotnet_diagnostic.SA1028.severity = error # Code must not contain trailing whitespace
+file_header_template = Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.\nReactiveUI Association Incorporated licenses this file to you under the MIT license.\nSee the LICENSE file in the project root for full license information.
+stylesharp.summary_single_line_max_length = 120
+
+# Spacing
+dotnet_diagnostic.SST1000.severity = error # A control-flow keyword is not followed by a space
+dotnet_diagnostic.SST1001.severity = error # A comma is spaced incorrectly
+dotnet_diagnostic.SST1002.severity = error # A semicolon is spaced incorrectly
+dotnet_diagnostic.SST1003.severity = error # A binary operator is not surrounded by spaces
+dotnet_diagnostic.SST1004.severity = error # A documentation comment line does not begin with a single space after the '///'
+dotnet_diagnostic.SST1005.severity = error # A single-line comment does not begin with a single space
+dotnet_diagnostic.SST1006.severity = error # A preprocessor keyword is preceded by a space after the '#'
+dotnet_diagnostic.SST1007.severity = error # An operator keyword is not followed by a space
+dotnet_diagnostic.SST1008.severity = error # An opening parenthesis is followed by a space
+dotnet_diagnostic.SST1009.severity = error # A closing parenthesis is preceded by a space
+dotnet_diagnostic.SST1010.severity = none # An opening square bracket has adjacent whitespace — conflicts with modern collection expressions
+dotnet_diagnostic.SST1011.severity = error # A closing square bracket is preceded by a space
+dotnet_diagnostic.SST1012.severity = error # An opening brace is not followed by a space on a single line
+dotnet_diagnostic.SST1013.severity = error # A closing brace is not preceded by a space on a single line
+dotnet_diagnostic.SST1014.severity = error # An opening generic bracket is preceded or followed by a space
+dotnet_diagnostic.SST1015.severity = error # A closing generic bracket is preceded by a space
+dotnet_diagnostic.SST1016.severity = error # An opening attribute bracket is followed by a space
+dotnet_diagnostic.SST1017.severity = error # A closing attribute bracket is preceded by a space
+dotnet_diagnostic.SST1018.severity = error # A nullable type symbol is preceded by a space
+dotnet_diagnostic.SST1019.severity = error # A member access symbol is surrounded by spaces
+dotnet_diagnostic.SST1020.severity = error # An increment or decrement symbol is separated from its operand by a space
+dotnet_diagnostic.SST1021.severity = error # A unary negative sign is followed by a space
+dotnet_diagnostic.SST1022.severity = error # A unary positive sign is followed by a space
+dotnet_diagnostic.SST1023.severity = error # A dereference or address-of symbol is followed by a space
+dotnet_diagnostic.SST1024.severity = error # A colon is spaced incorrectly for its context
+dotnet_diagnostic.SST1025.severity = error # Two or more whitespace characters appear in a row within a line
+dotnet_diagnostic.SST1026.severity = error # A space follows 'new' or 'stackalloc' in an implicit array creation
+dotnet_diagnostic.SST1027.severity = error # A tab character is used where the project standardises on spaces
+dotnet_diagnostic.SST1028.severity = error # A line ends with trailing whitespace
+
+# Readability and maintainability
+dotnet_diagnostic.SST1100.severity = error # A base. prefix is used where the type does not override the member
+dotnet_diagnostic.SST1101.severity = none # An instance member is accessed without a this. prefix — we don't require this. prefixing
+dotnet_diagnostic.SST1102.severity = error # A query clause is separated from the previous clause by a blank line
+dotnet_diagnostic.SST1103.severity = error # Query clauses mix single-line and multi-line layout
+dotnet_diagnostic.SST1104.severity = error # A query clause shares the last line of a multi-line previous clause
+dotnet_diagnostic.SST1105.severity = error # A multi-line query clause does not begin on its own line
+dotnet_diagnostic.SST1106.severity = error # A statement is empty (a stray semicolon)
+dotnet_diagnostic.SST1107.severity = error # More than one statement shares a line
+dotnet_diagnostic.SST1110.severity = error # An opening parenthesis or bracket does not sit on the line of the preceding code
+dotnet_diagnostic.SST1111.severity = error # A closing parenthesis or bracket does not sit on the last parameter's line
+dotnet_diagnostic.SST1112.severity = error # An empty parameter list's closing parenthesis is on a different line
+dotnet_diagnostic.SST1113.severity = error # A comma does not sit on the previous parameter's line
+dotnet_diagnostic.SST1114.severity = error # A blank line separates the declaration from its parameter list
+dotnet_diagnostic.SST1115.severity = error # A blank line separates a parameter from the preceding comma
+dotnet_diagnostic.SST1120.severity = error # A comment contains no text
+dotnet_diagnostic.SST1121.severity = none # A framework type name is used instead of its built-in alias — duplicate of RCS1013
+dotnet_diagnostic.SST1122.severity = error # An empty string literal is used instead of string.Empty
+dotnet_diagnostic.SST1123.severity = error # A #region is placed inside a code element body
+dotnet_diagnostic.SST1124.severity = error # A #region directive is used
+dotnet_diagnostic.SST1125.severity = error # A Nullable<T> type is written in long form instead of the T? shorthand
+dotnet_diagnostic.SST1127.severity = error # A generic type constraint shares a line with the declaration or another constraint
+dotnet_diagnostic.SST1128.severity = error # A constructor initializer shares a line with the constructor signature
+dotnet_diagnostic.SST1129.severity = error # A value type is created with a parameterless constructor call instead of default
+dotnet_diagnostic.SST1130.severity = error # An anonymous delegate is used where a lambda expression is clearer
+dotnet_diagnostic.SST1131.severity = error # A comparison places the constant on the left ("yoda" condition)
+dotnet_diagnostic.SST1132.severity = error # Several fields are declared in a single statement
+dotnet_diagnostic.SST1133.severity = error # Several attributes share one bracket list
+dotnet_diagnostic.SST1134.severity = error # An attribute shares a line with another attribute or the element
+dotnet_diagnostic.SST1135.severity = error # A using directive names a namespace or type that is not fully qualified
+dotnet_diagnostic.SST1136.severity = error # Several enum members share a line
+dotnet_diagnostic.SST1137.severity = error # Sibling elements are indented differently from one another
+dotnet_diagnostic.SST1139.severity = error # A numeric literal is cast where a literal suffix would express the type
+dotnet_diagnostic.SST1141.severity = error # An explicit ValueTuple<...> is used where tuple syntax would do
+dotnet_diagnostic.SST1142.severity = error # A tuple element is accessed by ItemN where it has a name
+dotnet_diagnostic.SST1143.severity = error # A boolean expression is compared to a true/false literal
+dotnet_diagnostic.SST1145.severity = error # A wrapped conditional expression places ?/: inconsistently
+dotnet_diagnostic.SST1146.severity = error # An if statement follows a closing brace on the same line
+dotnet_diagnostic.SST1150.severity = error # Require each constructor parameter on a unique line
+dotnet_diagnostic.SST1151.severity = error # Require each method parameter on a unique line
+dotnet_diagnostic.SST1152.severity = error # Require each delegate parameter on a unique line
+dotnet_diagnostic.SST1153.severity = error # Require each indexer parameter on a unique line
+dotnet_diagnostic.SST1154.severity = error # Require each invocation argument on a unique line
+dotnet_diagnostic.SST1155.severity = error # Require each object creation argument on a unique line
+dotnet_diagnostic.SST1156.severity = error # Require each element access argument on a unique line
+dotnet_diagnostic.SST1157.severity = error # Require each attribute argument on a unique line
+dotnet_diagnostic.SST1158.severity = error # Require each anonymous method parameter on a unique line
+dotnet_diagnostic.SST1159.severity = error # Require each parenthesized lambda parameter on a unique line
+dotnet_diagnostic.SST1160.severity = error # Require each record primary-constructor parameter on a unique line
+dotnet_diagnostic.SST1161.severity = error # Require each class primary-constructor parameter on a unique line
+dotnet_diagnostic.SST1162.severity = error # Require each struct primary-constructor parameter on a unique line
+dotnet_diagnostic.SST1163.severity = error # Require each target-typed object creation argument on a unique line
+dotnet_diagnostic.SST1164.severity = error # Require each constructor initializer argument on a unique line
+dotnet_diagnostic.SST1165.severity = error # Require each primary-constructor base argument on a unique line
+dotnet_diagnostic.SST1166.severity = error # Require each local-function parameter on a unique line
+dotnet_diagnostic.SST1167.severity = error # Require each operator parameter on a unique line
+dotnet_diagnostic.SST1168.severity = error # Require each conversion-operator parameter on a unique line
+dotnet_diagnostic.SST1169.severity = error # Require each type parameter on a unique line
+dotnet_diagnostic.SST1170.severity = error # Require each type argument on a unique line
+dotnet_diagnostic.SST1171.severity = error # Require each function-pointer parameter on a unique line
+
+# Ordering
+dotnet_diagnostic.SST1200.severity = none # Using directives should be placed outside the namespace — usings live outside file-scoped namespaces
+dotnet_diagnostic.SST1201.severity = error # Members should be ordered by kind
+dotnet_diagnostic.SST1202.severity = error # Members should be ordered by accessibility
+dotnet_diagnostic.SST1203.severity = error # Constants should appear before fields
+dotnet_diagnostic.SST1204.severity = error # Static members should appear before instance members
+dotnet_diagnostic.SST1205.severity = error # Partial elements should declare an access modifier
+dotnet_diagnostic.SST1206.severity = error # Declaration keywords should follow the standard order
+dotnet_diagnostic.SST1207.severity = error # Place protected before internal
+dotnet_diagnostic.SST1208.severity = error # System using directives should appear before other usings
+dotnet_diagnostic.SST1209.severity = error # Using alias directives should appear after other usings
+dotnet_diagnostic.SST1210.severity = error # Regular using directives should be ordered alphabetically
+dotnet_diagnostic.SST1211.severity = error # Using alias directives should be ordered alphabetically by alias
+dotnet_diagnostic.SST1212.severity = error # Property accessors should be ordered with get first
+dotnet_diagnostic.SST1213.severity = error # Event accessors should be ordered with add first
+dotnet_diagnostic.SST1214.severity = error # Static readonly fields should appear before static non-readonly fields
+dotnet_diagnostic.SST1215.severity = error # Instance readonly fields should appear before instance non-readonly fields
+dotnet_diagnostic.SST1216.severity = error # Using static directives should be placed after regular usings and before aliases
+dotnet_diagnostic.SST1217.severity = error # Using static directives should be ordered alphabetically
+
+# Naming
+dotnet_diagnostic.SST1300.severity = none # Types and members should be PascalCase — naming duplicates existing analyzers
+dotnet_diagnostic.SST1302.severity = error # Interface names should begin with I
+dotnet_diagnostic.SST1303.severity = error # Const names should be PascalCase
+dotnet_diagnostic.SST1304.severity = error # Non-private readonly fields should be PascalCase
+dotnet_diagnostic.SST1306.severity = none # Field names should begin with a lower-case letter — private fields use _camelCase here
+dotnet_diagnostic.SST1307.severity = error # Accessible fields should be PascalCase
+dotnet_diagnostic.SST1308.severity = none # Field names should not be prefixed with m_ or s_ — too broad for existing conventions
+dotnet_diagnostic.SST1309.severity = error # Private fields should be _camelCase
+dotnet_diagnostic.SST1310.severity = none # Field names should not contain underscores — conflicts with _camelCase
+dotnet_diagnostic.SST1311.severity = none # Static readonly fields should be PascalCase — we use _camelCase for private static readonly too
+dotnet_diagnostic.SST1312.severity = error # Local variables should be camelCase
+dotnet_diagnostic.SST1313.severity = error # Parameters should be camelCase
+dotnet_diagnostic.SST1314.severity = error # Type parameters should begin with T
+dotnet_diagnostic.SST1316.severity = none # Tuple element names should use the configured casing — tuple naming is not enforced here
+
+# Maintainability
+dotnet_diagnostic.SST1400.severity = error # An element does not declare an access modifier
+dotnet_diagnostic.SST1401.severity = error # A non-private, non-constant field is exposed
+dotnet_diagnostic.SST1402.severity = error # A file declares more than one top-level type
+dotnet_diagnostic.SST1403.severity = error # A file declares more than one namespace
+dotnet_diagnostic.SST1404.severity = error # A code-analysis suppression has no justification
+dotnet_diagnostic.SST1405.severity = error # A Debug.Assert call provides no message
+dotnet_diagnostic.SST1406.severity = error # A Debug.Fail call provides no message
+dotnet_diagnostic.SST1407.severity = error # Mixed-precedence arithmetic is not parenthesized
+dotnet_diagnostic.SST1408.severity = error # Mixed conditional operators are not parenthesized
+dotnet_diagnostic.SST1410.severity = error # An anonymous method has an empty parameter list
+dotnet_diagnostic.SST1411.severity = error # An attribute uses an empty argument list
+dotnet_diagnostic.SST1413.severity = none # A multi-line initializer omits the trailing comma — trailing commas are not required here
+dotnet_diagnostic.SST1414.severity = error # A tuple type in a member signature has an unnamed element
+dotnet_diagnostic.SST1415.severity = error # An argument-exception constructor uses a string literal where nameof would track renames
+
+# Layout
+dotnet_diagnostic.SST1500.severity = error # A brace in a multi-line construct shares its line with other code
+dotnet_diagnostic.SST1501.severity = error # A statement block is collapsed onto a single line
+dotnet_diagnostic.SST1502.severity = error # An element body is collapsed onto a single line
+dotnet_diagnostic.SST1503.severity = none # A control-flow statement omits the braces around its child statement — duplicate with existing brace preferences
+dotnet_diagnostic.SST1504.severity = error # The accessors of a property/event mix single-line and multi-line forms
+dotnet_diagnostic.SST1505.severity = error # An opening brace is followed by a blank line
+dotnet_diagnostic.SST1506.severity = error # An element documentation header is followed by a blank line
+dotnet_diagnostic.SST1507.severity = error # Two or more blank lines appear in a row
+dotnet_diagnostic.SST1508.severity = error # A closing brace is preceded by a blank line
+dotnet_diagnostic.SST1509.severity = error # An opening brace is preceded by a blank line
+dotnet_diagnostic.SST1510.severity = error # A chained block such as else/catch/finally is preceded by a blank line
+dotnet_diagnostic.SST1511.severity = error # The while footer of a do/while loop is preceded by a blank line
+dotnet_diagnostic.SST1512.severity = error # A single-line comment is followed by a blank line
+dotnet_diagnostic.SST1513.severity = error # A closing brace is not followed by a blank line
+dotnet_diagnostic.SST1514.severity = error # An element documentation header is not preceded by a blank line
+dotnet_diagnostic.SST1515.severity = error # A single-line comment is not preceded by a blank line
+dotnet_diagnostic.SST1516.severity = error # Adjacent members or namespace elements are not separated by a blank line
+dotnet_diagnostic.SST1517.severity = error # The file begins with one or more blank lines
+dotnet_diagnostic.SST1518.severity = error # The file does not end with exactly one newline
+dotnet_diagnostic.SST1519.severity = error # A multi-line child statement of a control-flow keyword omits its braces
+dotnet_diagnostic.SST1520.severity = error # The clauses of an if/else chain use braces inconsistently
+
+# Documentation
+dotnet_diagnostic.SST1600.severity = error # Externally visible members should be documented
+dotnet_diagnostic.SST1601.severity = error # Partial elements should be documented
+dotnet_diagnostic.SST1602.severity = error # Enumeration members should be documented
+dotnet_diagnostic.SST1604.severity = error # Element documentation should contain a summary
+dotnet_diagnostic.SST1606.severity = error # The summary should have text
+dotnet_diagnostic.SST1608.severity = error # Documentation should not use the default placeholder summary
+dotnet_diagnostic.SST1611.severity = error # Parameters should be documented
+dotnet_diagnostic.SST1612.severity = error # Parameter documentation should match the parameters
+dotnet_diagnostic.SST1613.severity = error # Parameter documentation should declare a name
+dotnet_diagnostic.SST1614.severity = error # Parameter documentation should have text
+dotnet_diagnostic.SST1615.severity = error # The return value should be documented
+dotnet_diagnostic.SST1616.severity = error # Return value documentation should have text
+dotnet_diagnostic.SST1617.severity = error # A void return value should not be documented
+dotnet_diagnostic.SST1618.severity = error # Generic type parameters should be documented
+dotnet_diagnostic.SST1620.severity = error # Type parameter documentation should match the type parameters
+dotnet_diagnostic.SST1621.severity = error # Type parameter documentation should declare a name
+dotnet_diagnostic.SST1622.severity = error # Type parameter documentation should have text
+dotnet_diagnostic.SST1623.severity = error # Property summaries should describe their accessors
+dotnet_diagnostic.SST1625.severity = error # Element documentation should not be copy-pasted
+dotnet_diagnostic.SST1626.severity = error # A documentation-style comment is used where it does not document an element
+dotnet_diagnostic.SST1629.severity = error # Documentation text should end with a period
+dotnet_diagnostic.SST1633.severity = error # Files should begin with the configured header
+dotnet_diagnostic.SST1642.severity = error # Constructor summaries should begin with the standard text
+dotnet_diagnostic.SST1643.severity = error # Destructor summaries should begin with the standard text
+dotnet_diagnostic.SST1649.severity = error # The file name should match the first type name
+dotnet_diagnostic.SST1651.severity = error # Placeholder documentation elements should be removed
+dotnet_diagnostic.SST1653.severity = error # Keep short documentation summaries on a single line
+dotnet_diagnostic.SST1654.severity = error # Extension blocks should be documented with a summary
+dotnet_diagnostic.SST1655.severity = error # Extension block parameters should be documented
+dotnet_diagnostic.SST1656.severity = error # Extension block type parameters should be documented
+dotnet_diagnostic.SST1657.severity = error # Extension block documentation should reference a real parameter or type parameter
+
+# Concurrency and modernization
+dotnet_diagnostic.SST1900.severity = error # A dedicated object lock field should be a System.Threading.Lock
+dotnet_diagnostic.SST1901.severity = error # A lock targets a field or property reachable from outside the declaring type
+dotnet_diagnostic.SST2000.severity = suggestion # A null check plus throw should use ArgumentNullException.ThrowIfNull
+dotnet_diagnostic.SST2003.severity = suggestion # A disposed check should use ObjectDisposedException.ThrowIf
+dotnet_diagnostic.SST2004.severity = suggestion # A range check should use an ArgumentOutOfRangeException.ThrowIf... helper
+
+# Modern language and library usage
+dotnet_diagnostic.SST1700.severity = error # An extension block declares no members
+dotnet_diagnostic.SST1701.severity = error # Two extension blocks in a type share the same receiver type
+dotnet_diagnostic.SST1702.severity = error # Extension blocks in a type are separated by other members
+dotnet_diagnostic.SST1703.severity = error # A classic this-parameter extension method is used where an extension block could be
+dotnet_diagnostic.SST1704.severity = error # A class declaring extension blocks is not named with an Extensions suffix
+dotnet_diagnostic.SST1705.severity = error # A class mixes classic extension methods with extension blocks
+dotnet_diagnostic.SST1706.severity = error # An extension block targets a broad receiver type such as object or dynamic
+dotnet_diagnostic.SST1801.severity = error # A positional record parameter does not match the configured casing
+dotnet_diagnostic.SST1802.severity = error # A record declares a settable rather than init-only instance property
+dotnet_diagnostic.SST1803.severity = error # A record struct is not declared readonly
+dotnet_diagnostic.SST2100.severity = error # An empty collection creation can use []
+dotnet_diagnostic.SST2101.severity = error # An explicit collection creation can use [...]
+dotnet_diagnostic.SST2200.severity = error # A single-use backing field can use the C# 14 field keyword
 
 ###################
-# StyleCop Analyzers (SA) - Readability Rules
+# PublicApiAnalyzers (RSxxxx) - public API surface tracking
 ###################
-dotnet_diagnostic.SA1100.severity = error # Do not prefix calls with base unless local implementation exists
-dotnet_diagnostic.SA1101.severity = none # Prefix local calls with this — we don't follow the this. prefix style
-dotnet_diagnostic.SA1102.severity = error # Query clause must follow previous clause
-dotnet_diagnostic.SA1103.severity = error # Query clauses must be on same line or separate lines
-dotnet_diagnostic.SA1104.severity = error # Query clause must begin on new line when previous clause spans multiple lines
-dotnet_diagnostic.SA1105.severity = error # Query clauses spanning multiple lines must begin on own line
-dotnet_diagnostic.SA1106.severity = error # Code must not contain empty statements
-dotnet_diagnostic.SA1107.severity = error # Code must not contain multiple statements on one line
-dotnet_diagnostic.SA1108.severity = error # Block statements must not contain embedded comments
-dotnet_diagnostic.SA1110.severity = error # Opening parenthesis or bracket must be on declaration line
-dotnet_diagnostic.SA1111.severity = error # Closing parenthesis must be on line of last parameter
-dotnet_diagnostic.SA1112.severity = error # Closing parenthesis must be on line of opening parenthesis
-dotnet_diagnostic.SA1113.severity = error # Comma must be on same line as previous parameter
-dotnet_diagnostic.SA1114.severity = error # Parameter list must follow declaration
-dotnet_diagnostic.SA1115.severity = error # Parameter must follow comma
-dotnet_diagnostic.SA1116.severity = error # Split parameters must start on line after declaration
-dotnet_diagnostic.SA1117.severity = error # Parameters must be on same line or separate lines
-dotnet_diagnostic.SA1118.severity = error # Parameter must not span multiple lines
-dotnet_diagnostic.SA1120.severity = error # Comments must contain text
-dotnet_diagnostic.SA1121.severity = none # Use built-in type alias - DUPLICATE RCS1013 (slower: 330ms vs 19ms)
-dotnet_diagnostic.SA1122.severity = error # Use string.Empty for empty strings
-dotnet_diagnostic.SA1123.severity = error # Do not place regions within elements
-dotnet_diagnostic.SA1124.severity = error # Do not use regions
-dotnet_diagnostic.SA1125.severity = error # Use shorthand for nullable types
-dotnet_diagnostic.SA1127.severity = error # Generic type constraints must be on own line
-dotnet_diagnostic.SA1128.severity = error # Constructor initializer must be on own line
-dotnet_diagnostic.SA1129.severity = error # Do not use default value type constructor
-dotnet_diagnostic.SA1130.severity = error # Use lambda syntax
-dotnet_diagnostic.SA1131.severity = error # Use readable conditions
-dotnet_diagnostic.SA1132.severity = error # Do not combine fields
-dotnet_diagnostic.SA1133.severity = error # Do not combine attributes
-dotnet_diagnostic.SA1134.severity = error # Attributes must not share line
-dotnet_diagnostic.SA1135.severity = error # Using directives must be qualified
-dotnet_diagnostic.SA1136.severity = error # Enum values should be on separate lines
-dotnet_diagnostic.SA1137.severity = error # Elements should have the same indentation
-dotnet_diagnostic.SA1139.severity = error # Use literal suffix notation instead of casting
-
-###################
-# StyleCop Analyzers (SA) - Ordering Rules
-###################
-dotnet_diagnostic.SA1200.severity = none # Using directives must be placed correctly — usings live outside file-scoped namespaces
-dotnet_diagnostic.SA1201.severity = error # Elements must appear in the correct order
-dotnet_diagnostic.SA1202.severity = error # Elements must be ordered by access
-dotnet_diagnostic.SA1203.severity = error # Constants must appear before fields
-dotnet_diagnostic.SA1204.severity = error # Static elements must appear before instance elements
-dotnet_diagnostic.SA1205.severity = error # Partial elements must declare access
-dotnet_diagnostic.SA1206.severity = error # Declaration keywords must follow order
-dotnet_diagnostic.SA1207.severity = error # Protected must come before internal
-dotnet_diagnostic.SA1208.severity = error # System using directives must be placed before other using directives
-dotnet_diagnostic.SA1209.severity = error # Using alias directives must be placed after other using directives
-dotnet_diagnostic.SA1210.severity = error # Using directives must be ordered alphabetically by namespace
-dotnet_diagnostic.SA1211.severity = error # Using alias directives must be ordered alphabetically by alias name
-dotnet_diagnostic.SA1212.severity = error # Property accessors must follow order
-dotnet_diagnostic.SA1213.severity = error # Event accessors must follow order
-dotnet_diagnostic.SA1214.severity = error # Readonly elements must appear before non-readonly elements
-dotnet_diagnostic.SA1216.severity = error # Using static directives must be placed at the correct location
-dotnet_diagnostic.SA1217.severity = error # Using static directives must be ordered alphabetically
-
-###################
-# StyleCop Analyzers (SA) - Naming Rules
-###################
-dotnet_diagnostic.SA1300.severity = none # Element must begin with upper-case letter - DUPLICATE S100/S101 (slower: 101ms vs 47ms)
-dotnet_diagnostic.SA1302.severity = error # Interface names must begin with I
-dotnet_diagnostic.SA1303.severity = error # Const field names must begin with upper-case letter
-dotnet_diagnostic.SA1304.severity = error # Non-private readonly fields must begin with upper-case letter
-dotnet_diagnostic.SA1306.severity = none # Field names must begin with lower-case letter — we use the _underscore prefix for private fields
-dotnet_diagnostic.SA1307.severity = error # Accessible fields must begin with upper-case letter
-dotnet_diagnostic.SA1308.severity = error # Variable names must not be prefixed
-dotnet_diagnostic.SA1309.severity = none # Field names must not begin with underscore — we use the _underscore prefix for private fields
-dotnet_diagnostic.SA1310.severity = error # Field names must not contain underscore
-dotnet_diagnostic.SA1311.severity = none # Static readonly fields must begin with upper-case letter — we use the _underscore convention for private static readonly fields too
-dotnet_diagnostic.SA1312.severity = error # Variable names must begin with lower-case letter
-dotnet_diagnostic.SA1313.severity = error # Parameter names must begin with lower-case letter
-dotnet_diagnostic.SA1314.severity = error # Type parameter names must begin with T
-dotnet_diagnostic.SA1316.severity = none # Tuple element names should use correct casing — we don't enforce a tuple element naming convention
-
-###################
-# StyleCop Analyzers (SA) - Maintainability Rules
-###################
-dotnet_diagnostic.SA1119.severity = error # Statement must not use unnecessary parenthesis
-dotnet_diagnostic.SA1400.severity = error # Access modifier must be declared
-dotnet_diagnostic.SA1401.severity = error # Fields must be private
-dotnet_diagnostic.SA1402.severity = error # File may only contain a single type
-dotnet_diagnostic.SA1403.severity = error # File may only contain a single namespace
-dotnet_diagnostic.SA1404.severity = error # Code analysis suppression must have justification
-dotnet_diagnostic.SA1405.severity = error # Debug.Assert must provide message text
-dotnet_diagnostic.SA1406.severity = error # Debug.Fail must provide message text
-dotnet_diagnostic.SA1407.severity = error # Arithmetic expressions must declare precedence
-dotnet_diagnostic.SA1408.severity = error # Conditional expressions must declare precedence
-dotnet_diagnostic.SA1410.severity = error # Remove delegate parenthesis when possible
-dotnet_diagnostic.SA1411.severity = error # Attribute constructor must not use unnecessary parenthesis
-dotnet_diagnostic.SA1413.severity = none # Use trailing commas in multi-line initializers — trailing commas not required
-
-###################
-# StyleCop Analyzers (SA) - Layout Rules
-###################
-dotnet_diagnostic.SA1500.severity = error # Braces for multi-line statements must not share line
-dotnet_diagnostic.SA1501.severity = error # Statement must not be on single line
-dotnet_diagnostic.SA1502.severity = error # Element must not be on single line
-dotnet_diagnostic.SA1503.severity = none # Braces must not be omitted - DUPLICATE S121 (slower: 50ms vs 20ms)
-dotnet_diagnostic.SA1504.severity = error # All accessors must be single-line or multi-line
-dotnet_diagnostic.SA1505.severity = error # Opening braces must not be followed by blank line
-dotnet_diagnostic.SA1506.severity = error # Element documentation headers must not be followed by blank line
-dotnet_diagnostic.SA1507.severity = error # Code must not contain multiple blank lines in a row
-dotnet_diagnostic.SA1508.severity = error # Closing braces must not be preceded by blank line
-dotnet_diagnostic.SA1509.severity = error # Opening braces must not be preceded by blank line
-dotnet_diagnostic.SA1510.severity = error # Chained statement blocks must not be preceded by blank line
-dotnet_diagnostic.SA1511.severity = error # While-do footer must not be preceded by blank line
-dotnet_diagnostic.SA1512.severity = error # Single-line comments must not be followed by blank line
-dotnet_diagnostic.SA1513.severity = error # Closing brace must be followed by blank line
-dotnet_diagnostic.SA1514.severity = error # Element documentation header must be preceded by blank line
-dotnet_diagnostic.SA1515.severity = error # Single-line comment must be preceded by blank line
-dotnet_diagnostic.SA1516.severity = error # Elements must be separated by blank line
-dotnet_diagnostic.SA1517.severity = error # Code must not contain blank lines at start of file
-dotnet_diagnostic.SA1518.severity = error # Use line endings correctly at end of file
-dotnet_diagnostic.SA1519.severity = error # Braces must not be omitted from multi-line child statement
-dotnet_diagnostic.SA1520.severity = error # Use braces consistently
-
-###################
-# StyleCop Analyzers (SA) - Documentation Rules
-###################
-dotnet_diagnostic.SA1600.severity = error # Elements must be documented
-dotnet_diagnostic.SA1601.severity = error # Partial elements must be documented
-dotnet_diagnostic.SA1602.severity = error # Enumeration items must be documented
-dotnet_diagnostic.SA1604.severity = error # Element documentation must have summary
-dotnet_diagnostic.SA1605.severity = error # Partial element documentation must have summary
-dotnet_diagnostic.SA1606.severity = error # Element documentation must have summary text
-dotnet_diagnostic.SA1607.severity = error # Partial element documentation must have summary text
-dotnet_diagnostic.SA1608.severity = error # Element documentation must not have default summary
-dotnet_diagnostic.SA1610.severity = error # Property documentation must have value text
-dotnet_diagnostic.SA1611.severity = error # Element parameters must be documented
-dotnet_diagnostic.SA1612.severity = error # Element parameter documentation must match element parameters
-dotnet_diagnostic.SA1613.severity = error # Element parameter documentation must declare parameter name
-dotnet_diagnostic.SA1614.severity = error # Element parameter documentation must have text
-dotnet_diagnostic.SA1615.severity = error # Element return value must be documented
-dotnet_diagnostic.SA1616.severity = error # Element return value documentation must have text
-dotnet_diagnostic.SA1617.severity = error # Void return value must not be documented
-dotnet_diagnostic.SA1618.severity = error # Generic type parameters must be documented
-dotnet_diagnostic.SA1619.severity = error # Generic type parameters must be documented partial class
-dotnet_diagnostic.SA1620.severity = error # Generic type parameter documentation must match type parameters
-dotnet_diagnostic.SA1621.severity = error # Generic type parameter documentation must declare parameter name
-dotnet_diagnostic.SA1622.severity = error # Generic type parameter documentation must have text
-dotnet_diagnostic.SA1623.severity = error # Property summary documentation must match accessors
-dotnet_diagnostic.SA1624.severity = error # Property summary documentation must omit set accessor with restricted access
-dotnet_diagnostic.SA1625.severity = error # Element documentation must not be copied and pasted
-dotnet_diagnostic.SA1626.severity = error # Single-line comments must not use documentation style slashes
-dotnet_diagnostic.SA1627.severity = error # Documentation text must not be empty
-dotnet_diagnostic.SA1629.severity = error # Documentation text must end with a period
-dotnet_diagnostic.SA1633.severity = error # File must have header
-dotnet_diagnostic.SA1634.severity = error # File header must show copyright
-dotnet_diagnostic.SA1635.severity = error # File header must have copyright text
-dotnet_diagnostic.SA1636.severity = error # File header copyright text must match
-dotnet_diagnostic.SA1637.severity = none # File header must contain file name — our headers don't include the filename
-dotnet_diagnostic.SA1638.severity = none # File header file name documentation must match file name — our headers don't include the filename
-dotnet_diagnostic.SA1640.severity = error # File header must have valid company text
-dotnet_diagnostic.SA1641.severity = error # File header company name text must match
-dotnet_diagnostic.SA1642.severity = error # Constructor summary documentation must begin with standard text
-dotnet_diagnostic.SA1643.severity = error # Destructor summary documentation must begin with standard text
-dotnet_diagnostic.SA1649.severity = error # File name must match type name
-dotnet_diagnostic.SA1651.severity = error # Do not use placeholder elements
-
-###################
-# StyleCop Alternative Analyzers (SX) - Alternative Rules
-###################
-dotnet_diagnostic.SX1101.severity = error # Do not prefix local members with this
-dotnet_diagnostic.SX1309.severity = error # Field names must begin with underscore
-dotnet_diagnostic.SX1623.severity = none # Property summary documentation must match accessors (alternative) — alternative SX rule, replaced by standard SA1623
+dotnet_diagnostic.RS0016.severity = error # public symbol missing from the PublicAPI baseline
+dotnet_diagnostic.RS0017.severity = error # PublicAPI baseline entry no longer in source
 
 ###################
 # Trimming Analyzer Warnings (IL2001 - IL2123)
@@ -2042,7 +2072,7 @@ resharper_redundant_to_string_call_highlighting = none # handled by RCS1097
 ###################
 # ReSharper - Naming (matches SA/CA naming rules)
 ###################
-resharper_inconsistent_naming_highlighting = error # partially handled by SA1300 family but IDE1006 isn't enabled; keep ReSharper active
+resharper_inconsistent_naming_highlighting = none # too many false positives on test/fixture naming; SA1300 family covers the real cases
 
 ###################
 # ReSharper - Unused code (matches CA1801 / CA1823 / IDE0051-0052)

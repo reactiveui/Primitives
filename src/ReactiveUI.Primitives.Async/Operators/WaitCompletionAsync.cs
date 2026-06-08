@@ -7,46 +7,39 @@ using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides extension methods for working with asynchronous observable sequences.
-/// </summary>
-public static partial class SignalAsync
+/// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Asynchronously waits for the observable sequence to complete without retrieving any values.
-    /// </summary>
-    /// <remarks>This method subscribes to the observable sequence and completes when the sequence signals
-    /// completion or when the operation is canceled. Any values produced by the sequence are ignored.</remarks>
-    /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
+    /// <summary>Asynchronous completion-await operators for an observable source sequence.</summary>
     /// <param name="this">The observable sequence to wait for completion.</param>
-    /// <returns>A ValueTask that represents the asynchronous wait operation.</returns>
-    public static ValueTask WaitCompletionAsync<T>(this IObservableAsync<T> @this) =>
-        @this.WaitCompletionAsync(CancellationToken.None);
-
-    /// <summary>
-    /// Asynchronously waits for the observable sequence to complete without retrieving any values.
-    /// </summary>
-    /// <remarks>This method subscribes to the observable sequence and completes when the sequence signals
-    /// completion or when the operation is canceled. Any values produced by the sequence are ignored.</remarks>
     /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
-    /// <param name="this">The observable sequence to wait for completion.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the wait operation.</param>
-    /// <returns>A ValueTask that represents the asynchronous wait operation.</returns>
-    public static async ValueTask WaitCompletionAsync<T>(
-        this IObservableAsync<T> @this,
-        CancellationToken cancellationToken)
+    extension<T>(IObservableAsync<T> @this)
     {
-        ArgumentExceptionHelper.ThrowIfNull(@this);
-        cancellationToken.ThrowIfCancellationRequested();
+        /// <summary>Asynchronously waits for the observable sequence to complete without retrieving any values.</summary>
+        /// <remarks>This method subscribes to the observable sequence and completes when the sequence signals
+        /// completion or when the operation is canceled. Any values produced by the sequence are ignored.</remarks>
+        /// <returns>A ValueTask that represents the asynchronous wait operation.</returns>
+        public ValueTask WaitCompletionAsync() =>
+            @this.WaitCompletionAsync(CancellationToken.None);
 
-        var observer = new CompletionTaskWitness<T>(cancellationToken);
-        await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        await observer.AwaitResultAsync().ConfigureAwait(false);
+        /// <summary>Asynchronously waits for the observable sequence to complete without retrieving any values.</summary>
+        /// <remarks>This method subscribes to the observable sequence and completes when the sequence signals
+        /// completion or when the operation is canceled. Any values produced by the sequence are ignored.</remarks>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the wait operation.</param>
+        /// <returns>A ValueTask that represents the asynchronous wait operation.</returns>
+        public async ValueTask WaitCompletionAsync(
+            CancellationToken cancellationToken)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(@this);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var observer = new CompletionTaskWitness<T>(cancellationToken);
+            await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+            await observer.AwaitResultAsync().ConfigureAwait(false);
+        }
     }
 
-    /// <summary>
-    /// Observer that waits for a sequence to complete, ignoring all emitted values.
-    /// </summary>
+    /// <summary>Observer that waits for a sequence to complete, ignoring all emitted values.</summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     internal sealed class CompletionTaskWitness<T>(CancellationToken cancellationToken)

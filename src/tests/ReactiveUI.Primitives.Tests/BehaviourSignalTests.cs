@@ -6,48 +6,32 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// BehaviourSignalTests.
-/// </summary>
+/// <summary>BehaviourSignalTests.</summary>
 public class BehaviourSignalTests
 {
-    /// <summary>
-    /// Initial value used by behavior signal value tests.
-    /// </summary>
+    /// <summary>Initial value used by behavior signal value tests.</summary>
     private const int InitialValue = 42;
 
-    /// <summary>
-    /// First updated value used by behavior signal value tests.
-    /// </summary>
+    /// <summary>First updated value used by behavior signal value tests.</summary>
     private const int FirstUpdatedValue = 43;
 
-    /// <summary>
-    /// Second updated value used by behavior signal value tests.
-    /// </summary>
+    /// <summary>Second updated value used by behavior signal value tests.</summary>
     private const int SecondUpdatedValue = 44;
 
-    /// <summary>
-    /// Value that should be ignored after completion.
-    /// </summary>
+    /// <summary>Value that should be ignored after completion.</summary>
     private const int IgnoredAfterCompletionValue = 1234;
 
-    /// <summary>
-    /// Subscribes the argument checking.
-    /// </summary>
+    /// <summary>Subscribes the argument checking.</summary>
     [Test]
     public void Subscribe_ArgumentChecking() =>
         Assert.Throws<ArgumentNullException>(() => new BehaviorSignal<int>(1).Subscribe(null!));
 
-    /// <summary>
-    /// Called when [error argument checking].
-    /// </summary>
+    /// <summary>Called when [error argument checking].</summary>
     [Test]
     public void OnError_ArgumentChecking() =>
         Assert.Throws<ArgumentNullException>(() => new BehaviorSignal<int>(1).OnError(null!));
 
-    /// <summary>
-    /// Determines whether this instance has observers.
-    /// </summary>
+    /// <summary>Determines whether this instance has observers.</summary>
     [Test]
     public void HasObservers()
     {
@@ -73,9 +57,7 @@ public class BehaviourSignalTests
         Assert.False(s.HasObservers);
     }
 
-    /// <summary>
-    /// Determines whether [has observers dispose1].
-    /// </summary>
+    /// <summary>Determines whether [has observers dispose1].</summary>
     [Test]
     public void HasObservers_Dispose1()
     {
@@ -96,9 +78,7 @@ public class BehaviourSignalTests
         Assert.True(s.IsDisposed);
     }
 
-    /// <summary>
-    /// Determines whether [has observers dispose2].
-    /// </summary>
+    /// <summary>Determines whether [has observers dispose2].</summary>
     [Test]
     public void HasObservers_Dispose2()
     {
@@ -119,9 +99,7 @@ public class BehaviourSignalTests
         Assert.True(s.IsDisposed);
     }
 
-    /// <summary>
-    /// Determines whether [has observers dispose3].
-    /// </summary>
+    /// <summary>Determines whether [has observers dispose3].</summary>
     [Test]
     public void HasObservers_Dispose3()
     {
@@ -134,9 +112,7 @@ public class BehaviourSignalTests
         Assert.True(s.IsDisposed);
     }
 
-    /// <summary>
-    /// Determines whether [has observers on completed].
-    /// </summary>
+    /// <summary>Determines whether [has observers on completed].</summary>
     [Test]
     public void HasObservers_OnCompleted()
     {
@@ -153,9 +129,7 @@ public class BehaviourSignalTests
         Assert.False(s.HasObservers);
     }
 
-    /// <summary>
-    /// Determines whether [has observers on error].
-    /// </summary>
+    /// <summary>Determines whether [has observers on error].</summary>
     [Test]
     public void HasObservers_OnError()
     {
@@ -172,9 +146,7 @@ public class BehaviourSignalTests
         Assert.False(s.HasObservers);
     }
 
-    /// <summary>
-    /// Values the initial.
-    /// </summary>
+    /// <summary>Values the initial.</summary>
     [Test]
     public void Value_Initial()
     {
@@ -185,9 +157,7 @@ public class BehaviourSignalTests
         Assert.Equal(InitialValue, x);
     }
 
-    /// <summary>
-    /// Values the first.
-    /// </summary>
+    /// <summary>Values the first.</summary>
     [Test]
     public void Value_First()
     {
@@ -204,9 +174,7 @@ public class BehaviourSignalTests
         Assert.Equal(FirstUpdatedValue, x);
     }
 
-    /// <summary>
-    /// Values the second.
-    /// </summary>
+    /// <summary>Values the second.</summary>
     [Test]
     public void Value_Second()
     {
@@ -229,9 +197,7 @@ public class BehaviourSignalTests
         Assert.Equal(SecondUpdatedValue, x);
     }
 
-    /// <summary>
-    /// Values the frozen after on completed.
-    /// </summary>
+    /// <summary>Values the frozen after on completed.</summary>
     [Test]
     public void Value_FrozenAfterOnCompleted()
     {
@@ -266,9 +232,7 @@ public class BehaviourSignalTests
         Assert.Equal(SecondUpdatedValue, x);
     }
 
-    /// <summary>
-    /// Values the throws after on error.
-    /// </summary>
+    /// <summary>Values the throws after on error.</summary>
     [Test]
     public void Value_ThrowsAfterOnError()
     {
@@ -282,9 +246,7 @@ public class BehaviourSignalTests
         Assert.Throws<InvalidOperationException>(() => s.TryGetValue(out _));
     }
 
-    /// <summary>
-    /// Values the throws on dispose.
-    /// </summary>
+    /// <summary>Values the throws on dispose.</summary>
     [Test]
     public void Value_ThrowsOnDispose()
     {

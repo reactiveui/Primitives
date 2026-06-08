@@ -9,20 +9,14 @@ using RxReplaySubject = System.Reactive.Subjects.ReplaySubject<int>;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks history/snapshot behavior for bounded replay buffers.
-/// </summary>
+/// <summary>Benchmarks history/snapshot behavior for bounded replay buffers.</summary>
 [MemoryDiagnoser]
 public class ReplaySignalBenchmarks
 {
-    /// <summary>
-    /// The bounded replay buffer size and the number of values populated into each subject.
-    /// </summary>
+    /// <summary>The bounded replay buffer size and the number of values populated into each subject.</summary>
     private const int BufferSize = 16;
 
-    /// <summary>
-    /// Baseline bounded replay subscription benchmark for primitives.
-    /// </summary>
+    /// <summary>Baseline bounded replay subscription benchmark for primitives.</summary>
     /// <returns>The sum replayed to a late subscriber.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesHistorySubscribe()
@@ -34,9 +28,7 @@ public class ReplaySignalBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Bounded replay subscription benchmark for System.Reactive.
-    /// </summary>
+    /// <summary>Bounded replay subscription benchmark for System.Reactive.</summary>
     /// <returns>The sum replayed to a late subscriber.</returns>
     [Benchmark]
     public int SystemReactiveReplaySubscribe()
@@ -48,9 +40,7 @@ public class ReplaySignalBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Bounded replay subscription benchmark for R3.
-    /// </summary>
+    /// <summary>Bounded replay subscription benchmark for R3.</summary>
     /// <returns>The sum replayed to a late subscriber.</returns>
     [Benchmark]
     public int R3ReplaySubscribe()
@@ -62,9 +52,7 @@ public class ReplaySignalBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Populates the bounded primitives history signal with the buffered values.
-    /// </summary>
+    /// <summary>Populates the bounded primitives history signal with the buffered values.</summary>
     /// <param name="subject">The history signal to populate.</param>
     private static void PopulateHistorySignal(HistorySignal<int> subject)
     {
@@ -74,9 +62,7 @@ public class ReplaySignalBenchmarks
         }
     }
 
-    /// <summary>
-    /// Populates the System.Reactive replay subject with the buffered values.
-    /// </summary>
+    /// <summary>Populates the System.Reactive replay subject with the buffered values.</summary>
     /// <param name="subject">The replay subject to populate.</param>
     private static void PopulateReplaySubject(RxReplaySubject subject)
     {
@@ -86,9 +72,7 @@ public class ReplaySignalBenchmarks
         }
     }
 
-    /// <summary>
-    /// Populates the R3 replay subject with the buffered values.
-    /// </summary>
+    /// <summary>Populates the R3 replay subject with the buffered values.</summary>
     /// <param name="subject">The replay subject to populate.</param>
     private static void PopulateReplaySubject(R3ReplaySubject subject)
     {

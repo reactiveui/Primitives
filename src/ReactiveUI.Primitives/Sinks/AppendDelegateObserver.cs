@@ -4,35 +4,23 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Delegate-backed observer for fused prepend/append inline subscriptions.
-/// </summary>
+/// <summary>Delegate-backed observer for fused prepend/append inline subscriptions.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 public sealed class AppendDelegateObserver<T> : SingleSourceObserver<T>
 {
-    /// <summary>
-    /// The next callback.
-    /// </summary>
+    /// <summary>The next callback.</summary>
     private readonly Action<T> _onNext;
 
-    /// <summary>
-    /// The error callback.
-    /// </summary>
+    /// <summary>The error callback.</summary>
     private readonly Action<Exception> _onError;
 
-    /// <summary>
-    /// The completion callback.
-    /// </summary>
+    /// <summary>The completion callback.</summary>
     private readonly Action _onCompleted;
 
-    /// <summary>
-    /// The appended value.
-    /// </summary>
+    /// <summary>The appended value.</summary>
     private readonly T _value;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AppendDelegateObserver{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="AppendDelegateObserver{T}"/> class.</summary>
     /// <param name="onNext">The next callback.</param>
     /// <param name="onError">The error callback.</param>
     /// <param name="onCompleted">The completion callback.</param>

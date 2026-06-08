@@ -21,50 +21,35 @@ namespace ReactiveUI.Primitives.Async;
 [System.Diagnostics.DebuggerDisplay("SynchronizationContext = {SynchronizationContext}, TaskScheduler = {TaskScheduler}, Sequencer = {Sequencer}")]
 public record AsyncContext
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AsyncContext"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="AsyncContext"/> class.</summary>
     private AsyncContext()
     {
     }
 
-    /// <summary>
-    /// Gets the default instance of the AsyncContext class.
-    /// </summary>
+    /// <summary>Gets the default instance of the AsyncContext class.</summary>
     /// <remarks>Use this property to access a shared, default AsyncContext instance when a custom context is
     /// not required.</remarks>
     public static AsyncContext Default { get; } = new();
 
-    /// <summary>
-    /// Gets the synchronization context to use for marshaling callbacks and continuations.
-    /// </summary>
+    /// <summary>Gets the synchronization context to use for marshaling callbacks and continuations.</summary>
     /// <remarks>If this property is set, callbacks and continuations will be posted to the specified
     /// synchronization context. If null, the default context is used, which may result in execution on a thread pool
     /// thread. This property is typically used to ensure that asynchronous operations resume on a specific thread or
     /// context, such as a UI thread.</remarks>
     public SynchronizationContext? SynchronizationContext { get; init; }
 
-    /// <summary>
-    /// Gets the task scheduler to use for scheduling tasks, or null to use the default scheduler.
-    /// </summary>
+    /// <summary>Gets the task scheduler to use for scheduling tasks, or null to use the default scheduler.</summary>
     public TaskScheduler? TaskScheduler { get; init; }
 
-    /// <summary>
-    /// Gets the sequencer used to schedule continuations, or <see langword="null"/> when another context shape is used.
-    /// </summary>
+    /// <summary>Gets the sequencer used to schedule continuations, or <see langword="null"/> when another context shape is used.</summary>
     public ISequencer? Sequencer { get; init; }
 
-    /// <summary>
-    /// Gets a value indicating whether the current context uses the default task scheduler and no synchronization
-    /// context.
-    /// </summary>
+    /// <summary>Gets a value indicating whether the current context uses the default task scheduler and no synchronization context.</summary>
     internal bool UsesDefaultSequencer => SynchronizationContext is null &&
                                       Sequencer is null &&
                                       (TaskScheduler is null || TaskScheduler == TaskScheduler.Default);
 
-    /// <summary>
-    /// Creates a new AsyncContext that uses the specified SynchronizationContext for asynchronous operations.
-    /// </summary>
+    /// <summary>Creates a new AsyncContext that uses the specified SynchronizationContext for asynchronous operations.</summary>
     /// <remarks>The returned AsyncContext will have its TaskScheduler property set to null. Use this method
     /// when you want to control asynchronous execution using a specific SynchronizationContext, such as for UI thread
     /// synchronization.</remarks>
@@ -78,9 +63,7 @@ public record AsyncContext
         return new() { SynchronizationContext = synchronizationContext, TaskScheduler = null, Sequencer = null };
     }
 
-    /// <summary>
-    /// Creates a new AsyncContext that uses the specified TaskScheduler for task execution.
-    /// </summary>
+    /// <summary>Creates a new AsyncContext that uses the specified TaskScheduler for task execution.</summary>
     /// <param name="taskScheduler">The TaskScheduler to associate with the new AsyncContext. Cannot be null.</param>
     /// <returns>An AsyncContext instance configured to use the specified TaskScheduler. The SynchronizationContext property of
     /// the returned instance is set to null.</returns>
@@ -92,9 +75,7 @@ public record AsyncContext
         return new() { SynchronizationContext = null, TaskScheduler = taskScheduler, Sequencer = null };
     }
 
-    /// <summary>
-    /// Creates a new AsyncContext using the specified sequencer for continuation scheduling.
-    /// </summary>
+    /// <summary>Creates a new AsyncContext using the specified sequencer for continuation scheduling.</summary>
     /// <remarks>If the provided sequencer directly implements <see cref="SynchronizationContext"/>, that instance is used
     /// directly. Otherwise, continuations are scheduled as direct <see cref="IWorkItem"/> instances on the sequencer.</remarks>
     /// <param name="scheduler">The sequencer to use for configuring the AsyncContext.</param>
@@ -107,16 +88,14 @@ public record AsyncContext
         return scheduler is SynchronizationContext sc
             ? From(sc)
             : new()
-                {
-                    SynchronizationContext = null,
-                    TaskScheduler = null,
-                    Sequencer = scheduler
-                };
+            {
+                SynchronizationContext = null,
+                TaskScheduler = null,
+                Sequencer = scheduler
+            };
     }
 
-    /// <summary>
-    /// Gets the current asynchronous context associated with the calling thread.
-    /// </summary>
+    /// <summary>Gets the current asynchronous context associated with the calling thread.</summary>
     /// <remarks>Use this method to capture the context for scheduling asynchronous operations that should
     /// continue on the same logical thread or synchronization context. This is commonly used to ensure code executes on
     /// the appropriate context, such as a UI thread in desktop applications.</remarks>
@@ -129,9 +108,7 @@ public record AsyncContext
         return currentSc is not null ? From(currentSc) : From(TaskScheduler.Current);
     }
 
-    /// <summary>
-    /// Creates an awaitable that switches execution to the associated asynchronous context.
-    /// </summary>
+    /// <summary>Creates an awaitable that switches execution to the associated asynchronous context.</summary>
     /// <param name="forceYielding">true to always yield execution to the context, even if already in the correct context; otherwise, false to avoid
     /// yielding if already in the context.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the context switch operation.</param>
@@ -158,15 +135,10 @@ public record AsyncContext
         bool ForceYielding,
         CancellationToken CancellationToken) : INotifyCompletion
     {
-        /// <summary>
-        /// Gets a value indicating whether the asynchronous operation has completed in the current context.
-        /// </summary>
+        /// <summary>Gets a value indicating whether the asynchronous operation has completed in the current context.</summary>
         public bool IsCompleted => !ForceYielding && AsyncContext.IsSameAsCurrentAsyncContext();
 
-        /// <summary>
-        /// Checks whether the associated cancellation token has had cancellation requested and throws an exception if
-        /// so.
-        /// </summary>
+        /// <summary>Checks whether the associated cancellation token has had cancellation requested and throws an exception if so.</summary>
         /// <remarks>This method is typically used to observe cancellation requests and respond by
         /// throwing an OperationCanceledException if cancellation has been signaled. If cancellation has not been
         /// requested, the method returns normally.</remarks>
@@ -179,9 +151,7 @@ public record AsyncContext
         /// <returns>An awaiter that can be used to await this instance and perform an asynchronous context switch.</returns>
         public AsyncContextSwitcherAwaitable GetAwaiter() => this;
 
-        /// <summary>
-        /// Schedules the specified continuation action to be invoked when the operation has completed.
-        /// </summary>
+        /// <summary>Schedules the specified continuation action to be invoked when the operation has completed.</summary>
         /// <remarks>If a synchronization context is available, the continuation is posted to it;
         /// otherwise, the continuation is scheduled on the associated task scheduler or the default task scheduler. If
         /// the operation has already been canceled, the continuation is invoked immediately on the current
@@ -227,9 +197,7 @@ public record AsyncContext
             }
         }
 
-        /// <summary>
-        /// Work item used to schedule context-switch continuations directly on an <see cref="ISequencer"/>.
-        /// </summary>
+        /// <summary>Work item used to schedule context-switch continuations directly on an <see cref="ISequencer"/>.</summary>
         /// <param name="continuation">The continuation to invoke.</param>
         private sealed class ContinuationWorkItem(Action continuation) : IWorkItem
         {
@@ -238,9 +206,7 @@ public record AsyncContext
         }
     }
 
-    /// <summary>
-    /// Provides a custom TaskScheduler that schedules tasks using the specified IScheduler.
-    /// </summary>
+    /// <summary>Provides a custom TaskScheduler that schedules tasks using the specified IScheduler.</summary>
     /// <remarks>This TaskScheduler enables integration of Task-based asynchronous code with reactive or
     /// custom scheduling strategies by delegating task execution to the provided ISequencer. Tasks scheduled through
     /// this TaskScheduler will be executed according to the policies of the specified ISequencer. This class is
@@ -252,9 +218,7 @@ public record AsyncContext
         Justification = "Kept as an internal adapter for generator and test smoke scenarios that need TaskScheduler-shaped sequencer execution.")]
     internal sealed class SequencerTaskScheduler(ISequencer scheduler) : TaskScheduler
     {
-        /// <summary>
-        /// Gets the sequencer used by this task-scheduler adapter.
-        /// </summary>
+        /// <summary>Gets the sequencer used by this task-scheduler adapter.</summary>
         internal ISequencer Sequencer => scheduler;
 
         /// <summary>Internal accessor for the protected <see cref="GetScheduledTasks"/> override; used only by the test assembly.</summary>

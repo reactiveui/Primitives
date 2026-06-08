@@ -7,34 +7,22 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests for the shared UI dispatch sequencer base.
-/// </summary>
+/// <summary>Tests for the shared UI dispatch sequencer base.</summary>
 public sealed class DispatchSequencerBaseTests
 {
-    /// <summary>
-    /// Expected post count after reentrant scheduling.
-    /// </summary>
+    /// <summary>Expected post count after reentrant scheduling.</summary>
     private const int ExpectedReentrantPostCount = 2;
 
-    /// <summary>
-    /// Stateful schedule test value.
-    /// </summary>
+    /// <summary>Stateful schedule test value.</summary>
     private const int StatefulScheduleValue = 7;
 
-    /// <summary>
-    /// Expected burst values.
-    /// </summary>
+    /// <summary>Expected burst values.</summary>
     private static readonly int[] ExpectedBurstValues = [1, 2, 3];
 
-    /// <summary>
-    /// Expected reentrant values.
-    /// </summary>
+    /// <summary>Expected reentrant values.</summary>
     private static readonly int[] ExpectedReentrantValues = [1, 2];
 
-    /// <summary>
-    /// Verifies a burst posts one dispatcher drain and preserves FIFO order.
-    /// </summary>
+    /// <summary>Verifies a burst posts one dispatcher drain and preserves FIFO order.</summary>
     [Test]
     public void DispatchSequencerBaseCoalescesBurstIntoOneDrain()
     {
@@ -52,9 +40,7 @@ public sealed class DispatchSequencerBaseTests
         Assert.Equal(1, sequencer.PostCount);
     }
 
-    /// <summary>
-    /// Verifies cancelled queued work is skipped when the drain runs.
-    /// </summary>
+    /// <summary>Verifies cancelled queued work is skipped when the drain runs.</summary>
     [Test]
     public void DispatchSequencerBaseSkipsCancelledQueuedWork()
     {
@@ -69,9 +55,7 @@ public sealed class DispatchSequencerBaseTests
         Assert.Equal(0, values.Count);
     }
 
-    /// <summary>
-    /// Verifies work scheduled from inside a drain runs in the next drain.
-    /// </summary>
+    /// <summary>Verifies work scheduled from inside a drain runs in the next drain.</summary>
     [Test]
     public void DispatchSequencerBaseDefersReentrantWorkToNextDrain()
     {
@@ -89,9 +73,7 @@ public sealed class DispatchSequencerBaseTests
         Assert.Equal(ExpectedReentrantValues.AsEnumerable(), values);
     }
 
-    /// <summary>
-    /// Verifies stateful schedule overloads pass state without requiring a captured closure.
-    /// </summary>
+    /// <summary>Verifies stateful schedule overloads pass state without requiring a captured closure.</summary>
     [Test]
     public void StatefulScheduleOverloadPassesState()
     {
@@ -102,24 +84,16 @@ public sealed class DispatchSequencerBaseTests
         Assert.Equal(StatefulScheduleValue, values[0]);
     }
 
-    /// <summary>
-    /// Test dispatch sequencer that records posted drains.
-    /// </summary>
+    /// <summary>Test dispatch sequencer that records posted drains.</summary>
     private sealed class TestDispatchSequencer : DispatchSequencerBase
     {
-        /// <summary>
-        /// Posted drains.
-        /// </summary>
+        /// <summary>Posted drains.</summary>
         private readonly Queue<Action> _drains = new();
 
-        /// <summary>
-        /// Gets the number of posted drains.
-        /// </summary>
+        /// <summary>Gets the number of posted drains.</summary>
         public int PostCount { get; private set; }
 
-        /// <summary>
-        /// Runs the next posted drain.
-        /// </summary>
+        /// <summary>Runs the next posted drain.</summary>
         public void RunNextDrain() => _drains.Dequeue()();
 
         /// <inheritdoc/>
@@ -131,24 +105,16 @@ public sealed class DispatchSequencerBaseTests
         }
     }
 
-    /// <summary>
-    /// Work item that records one value.
-    /// </summary>
+    /// <summary>Work item that records one value.</summary>
     private sealed class RecordingWorkItem : IWorkItem, IsDisposed
     {
-        /// <summary>
-        /// Recorded values.
-        /// </summary>
+        /// <summary>Recorded values.</summary>
         private readonly List<int> _values;
 
-        /// <summary>
-        /// Value to record.
-        /// </summary>
+        /// <summary>Value to record.</summary>
         private readonly int _value;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RecordingWorkItem"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="RecordingWorkItem"/> class.</summary>
         /// <param name="values">Recorded values.</param>
         /// <param name="value">Value to record.</param>
         public RecordingWorkItem(List<int> values, int value)
@@ -167,24 +133,16 @@ public sealed class DispatchSequencerBaseTests
         public void Execute() => _values.Add(_value);
     }
 
-    /// <summary>
-    /// Work item that schedules more work from inside a drain.
-    /// </summary>
+    /// <summary>Work item that schedules more work from inside a drain.</summary>
     private sealed class ReentrantWorkItem : IWorkItem
     {
-        /// <summary>
-        /// Sequencer under test.
-        /// </summary>
+        /// <summary>Sequencer under test.</summary>
         private readonly ISequencer _sequencer;
 
-        /// <summary>
-        /// Recorded values.
-        /// </summary>
+        /// <summary>Recorded values.</summary>
         private readonly List<int> _values;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ReentrantWorkItem"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ReentrantWorkItem"/> class.</summary>
         /// <param name="sequencer">Sequencer under test.</param>
         /// <param name="values">Recorded values.</param>
         public ReentrantWorkItem(ISequencer sequencer, List<int> values)

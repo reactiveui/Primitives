@@ -10,66 +10,76 @@ namespace ReactiveUI.Primitives;
 /// Fused projection operators: <c>Choose</c> (filter + map in one sink) and <c>SwitchSelect</c>
 /// (filter-null + map-to-inner + switch-to-latest in one sink).
 /// </summary>
-public static partial class LinqMixins
+public static partial class LinqExtensions
 {
-    /// <summary>
-    /// Maps each source value to a <c>(HasValue, Value)</c> pair and forwards only the values whose
-    /// <c>HasValue</c> is <see langword="true"/> — a single fused sink in place of <c>Where(...).Select(...)</c>.
-    /// Unlike a <c>TOut?</c>-returning projection, the explicit flag lets a non-nullable value type be skipped.
-    /// </summary>
-    /// <typeparam name="TIn">The source element type.</typeparam>
-    /// <typeparam name="TOut">The forwarded element type.</typeparam>
+    /// <summary>Fused projection operators for an observable source sequence.</summary>
     /// <param name="source">The source observable.</param>
-    /// <param name="chooser">Maps a source value to <c>(HasValue, Value)</c>; the value is skipped when <c>HasValue</c> is <see langword="false"/>.</param>
-    /// <returns>An observable of the chosen values.</returns>
-    public static IObservable<TOut> Choose<TIn, TOut>(this IObservable<TIn> source, Func<TIn, (bool HasValue, TOut Value)> chooser)
+    /// <typeparam name="TIn">The source element type.</typeparam>
+    extension<TIn>(IObservable<TIn> source)
     {
-        if (source == null)
+        /// <summary>
+        /// Maps each source value to a <c>(HasValue, Value)</c> pair and forwards only the values whose
+        /// <c>HasValue</c> is <see langword="true"/> — a single fused sink in place of <c>Where(...).Select(...)</c>.
+        /// Unlike a <c>TOut?</c>-returning projection, the explicit flag lets a non-nullable value type be skipped.
+        /// </summary>
+        /// <typeparam name="TOut">The forwarded element type.</typeparam>
+        /// <param name="chooser">Maps a source value to <c>(HasValue, Value)</c>; the value is skipped when <c>HasValue</c> is <see langword="false"/>.</param>
+        /// <returns>An observable of the chosen values.</returns>
+        public IObservable<TOut> Choose<TOut>(Func<TIn, (bool HasValue, TOut Value)> chooser)
         {
-            throw new ArgumentNullException(nameof(source));
-        }
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
 
-        if (chooser == null)
-        {
-            throw new ArgumentNullException(nameof(chooser));
-        }
+            if (chooser is null)
+            {
+                throw new ArgumentNullException(nameof(chooser));
+            }
 
-        return new ChooseSignal<TIn, TOut>(source, chooser);
+            return new ChooseSignal<TIn, TOut>(source, chooser);
+        }
     }
 
-    /// <summary>
-    /// Filters out null source values, projects each remaining value to an inner observable, and mirrors only the
-    /// latest inner observable — a single fused sink in place of <c>WhereNotNull().Select(selector).Switch()</c>.
-    /// </summary>
-    /// <typeparam name="TSource">The (nullable) source element type.</typeparam>
-    /// <typeparam name="TResult">The element type of the projected inner observables.</typeparam>
+    /// <summary>Fused projection operators for an observable source sequence of nullable values.</summary>
     /// <param name="source">The source observable.</param>
-    /// <param name="selector">Projects each non-null source value to an inner observable.</param>
-    /// <returns>An observable that mirrors the latest projected inner observable.</returns>
-    public static IObservable<TResult> SwitchSelect<TSource, TResult>(this IObservable<TSource?> source, Func<TSource, IObservable<TResult>> selector)
+    /// <typeparam name="TSource">The (nullable) source element type.</typeparam>
+    extension<TSource>(IObservable<TSource?> source)
     {
-        if (source == null)
+        /// <summary>
+        /// Filters out null source values, projects each remaining value to an inner observable, and mirrors only the
+        /// latest inner observable — a single fused sink in place of <c>WhereNotNull().Select(selector).Switch()</c>.
+        /// </summary>
+        /// <typeparam name="TResult">The element type of the projected inner observables.</typeparam>
+        /// <param name="selector">Projects each non-null source value to an inner observable.</param>
+        /// <returns>An observable that mirrors the latest projected inner observable.</returns>
+        public IObservable<TResult> SwitchSelect<TResult>(Func<TSource, IObservable<TResult>> selector)
         {
-            throw new ArgumentNullException(nameof(source));
-        }
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
 
-        if (selector == null)
-        {
-            throw new ArgumentNullException(nameof(selector));
-        }
+            if (selector is null)
+            {
+                throw new ArgumentNullException(nameof(selector));
+            }
 
-        return new SwitchSelectSignal<TSource, TResult>(source, selector);
+            return new SwitchSelectSignal<TSource, TResult>(source, selector);
+        }
     }
 
     /// <summary>A fused filter + map observable.</summary>
     /// <typeparam name="TIn">The source element type.</typeparam>
     /// <typeparam name="TOut">The forwarded element type.</typeparam>
+    /// <param name="source">The source observable whose values are filtered and mapped.</param>
+    /// <param name="chooser">Maps a source value to <c>(HasValue, Value)</c>; the value is skipped when <c>HasValue</c> is <see langword="false"/>.</param>
     private sealed class ChooseSignal<TIn, TOut>(IObservable<TIn> source, Func<TIn, (bool HasValue, TOut Value)> chooser) : IObservable<TOut>
     {
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TOut> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -78,6 +88,8 @@ public static partial class LinqMixins
         }
 
         /// <summary>Applies the chooser to each value and forwards only the chosen ones.</summary>
+        /// <param name="downstream">The downstream observer that receives the chosen values.</param>
+        /// <param name="chooser">Maps a source value to <c>(HasValue, Value)</c>; the value is skipped when <c>HasValue</c> is <see langword="false"/>.</param>
         private sealed class Sink(IObserver<TOut> downstream, Func<TIn, (bool HasValue, TOut Value)> chooser) : IObserver<TIn>
         {
             /// <inheritdoc/>
@@ -113,12 +125,14 @@ public static partial class LinqMixins
     /// <summary>A fused filter-null + map-to-inner + switch-to-latest observable.</summary>
     /// <typeparam name="TSource">The (nullable) source element type.</typeparam>
     /// <typeparam name="TResult">The element type of the projected inner observables.</typeparam>
+    /// <param name="source">The source observable whose non-null values are projected to inner observables.</param>
+    /// <param name="selector">Projects each non-null source value to an inner observable.</param>
     private sealed class SwitchSelectSignal<TSource, TResult>(IObservable<TSource?> source, Func<TSource, IObservable<TResult>> selector) : IObservable<TResult>
     {
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -129,6 +143,8 @@ public static partial class LinqMixins
         }
 
         /// <summary>Subscribes to the source, switching the active inner subscription on each non-null value.</summary>
+        /// <param name="selector">Projects each non-null source value to an inner observable.</param>
+        /// <param name="downstream">The downstream observer that receives values from the latest inner observable.</param>
         private sealed class Sink(Func<TSource, IObservable<TResult>> selector, IObserver<TResult> downstream)
             : IObserver<TSource?>, IDisposable
         {

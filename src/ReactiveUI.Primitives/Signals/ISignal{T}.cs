@@ -4,8 +4,6 @@
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// ISubject.
-/// </summary>
+/// <summary>ISubject.</summary>
 /// <typeparam name="T">The Type.</typeparam>
 public interface ISignal<T> : ISignal<T, T>;

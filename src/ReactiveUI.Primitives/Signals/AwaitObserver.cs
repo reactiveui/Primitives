@@ -4,25 +4,17 @@
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// Represents the AwaitObserver class.
-/// </summary>
+/// <summary>Represents the AwaitObserver class.</summary>
 /// <typeparam name="T">The Type.</typeparam>
 public sealed class AwaitObserver<T> : IObserver<T>
 {
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly SynchronizationContext? _context;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly Action _callback;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AwaitObserver{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="AwaitObserver{T}"/> class.</summary>
     /// <param name="callback">The callback value.</param>
     /// <param name="originalContext">The originalContext value.</param>
     public AwaitObserver(Action callback, bool originalContext)
@@ -35,31 +27,23 @@ public sealed class AwaitObserver<T> : IObserver<T>
         _callback = callback;
     }
 
-    /// <summary>
-    /// Executes the OnCompleted operation.
-    /// </summary>
+    /// <summary>Executes the OnCompleted operation.</summary>
     public void OnCompleted() => InvokeOnOriginalContext();
 
-    /// <summary>
-    /// Executes the OnError operation.
-    /// </summary>
+    /// <summary>Executes the OnError operation.</summary>
     /// <param name="error">The error value.</param>
     public void OnError(Exception error) => InvokeOnOriginalContext();
 
-    /// <summary>
-    /// Executes the OnNext operation.
-    /// </summary>
+    /// <summary>Executes the OnNext operation.</summary>
     /// <param name="value">The value.</param>
     public void OnNext(T value)
     {
     }
 
-    /// <summary>
-    /// Executes the InvokeOnOriginalContext operation.
-    /// </summary>
+    /// <summary>Executes the InvokeOnOriginalContext operation.</summary>
     private void InvokeOnOriginalContext()
     {
-        if (_context != null)
+        if (_context is not null)
         {
             _context.Post(c => ((Action)c!)(), _callback);
         }

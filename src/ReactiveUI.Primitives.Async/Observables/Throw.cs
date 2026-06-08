@@ -9,17 +9,13 @@ using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides factory methods for creating asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides factory methods for creating asynchronous observable sequences.</summary>
 /// <remarks>The SignalAsync class offers static methods to construct and manipulate asynchronous observables.
 /// Use these methods to create sequences that emit values, errors, or completion notifications in an asynchronous
 /// manner.</remarks>
 public static partial class SignalAsync
 {
-    /// <summary>
-    /// Creates an observable sequence that terminates immediately with the specified exception.
-    /// </summary>
+    /// <summary>Creates an observable sequence that terminates immediately with the specified exception.</summary>
     /// <remarks>Use this method to create an observable sequence that fails immediately, which can be useful
     /// for testing error handling or representing error conditions in reactive workflows.</remarks>
     /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
@@ -37,9 +33,7 @@ public static partial class SignalAsync
         return new ThrowSignalAsync<T>(error);
     }
 
-    /// <summary>
-    /// Represents an asynchronous observable sequence that immediately terminates with the specified exception.
-    /// </summary>
+    /// <summary>Represents an asynchronous observable sequence that immediately terminates with the specified exception.</summary>
     /// <remarks>Use this type to create an observable sequence that fails immediately upon subscription,
     /// propagating the provided exception to subscribers. This can be useful for representing error conditions in
     /// asynchronous observable scenarios.</remarks>

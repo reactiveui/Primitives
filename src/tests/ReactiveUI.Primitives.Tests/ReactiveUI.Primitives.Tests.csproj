@@ -16,11 +16,9 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
     <PackageReference Include="System.Reactive" />
     <PackageReference Include="Microsoft.Reactive.Testing" />
-    <PackageReference Include="PublicApiGenerator" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Shared\ApiApprovalExtensions.cs" Link="ApiApprovalExtensions.cs" />
     <Compile Include="..\Shared\AsyncTestHelpers.cs" Link="AsyncTestHelpers.cs" />
   </ItemGroup>
 

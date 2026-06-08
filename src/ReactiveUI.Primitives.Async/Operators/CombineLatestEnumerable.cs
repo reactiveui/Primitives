@@ -9,57 +9,54 @@ using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides CombineLatest overloads for enumerable collections of asynchronous observable sequences.
-/// </summary>
-public static partial class SignalAsync
+/// <summary>Provides CombineLatest overloads for enumerable collections of asynchronous observable sequences.</summary>
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Combines the latest value from each asynchronous observable sequence in the supplied collection.
-    /// </summary>
-    /// <remarks>
-    /// <para>For perf reasons each emitted <see cref="IReadOnlyList{T}"/> is a reference to a single shared buffer
-    /// owned by the subscription, not a fresh allocation. Downstream observers MUST consume the snapshot synchronously
-    /// inside their <c>OnNextAsync</c> handler; retaining a reference past the handler will surface the next
-    /// emission's values instead, because the buffer is overwritten under the operator's gate before each emit.
-    /// If you need a stable copy, project to one via <see cref="CombineLatest{TSource,TResult}"/> or
-    /// <c>.Select(static s =&gt; s.ToArray())</c>.</para>
-    /// </remarks>
-    /// <typeparam name="T">The element type produced by the source sequences.</typeparam>
+    /// <summary>CombineLatest operators for an enumerable collection of observable source sequences.</summary>
     /// <param name="sources">The source sequences to combine.</param>
-    /// <returns>An observable sequence that emits a snapshot of the latest values whenever any source produces a new value,
-    /// after all sources have produced at least one value.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="sources"/> is <see langword="null"/>.</exception>
-    public static IObservableAsync<IReadOnlyList<T>> CombineLatest<T>(this IEnumerable<IObservableAsync<T>> sources)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(sources);
-
-        // Delegate to the projecting variant with an identity selector so a single subscription
-        // implementation backs both shapes. The static lambda avoids capturing and matches the
-        // perf-critical zero-alloc rule for selectors that don't reference enclosing state.
-        return new CombineLatestEnumerableSignal<T, IReadOnlyList<T>>(sources, static s => s);
-    }
-
-    /// <summary>
-    /// Combines the latest value from each asynchronous observable sequence in the supplied collection and projects the
-    /// resulting snapshot into a result value.
-    /// </summary>
     /// <typeparam name="TSource">The element type produced by the source sequences.</typeparam>
-    /// <typeparam name="TResult">The projected result type.</typeparam>
-    /// <param name="sources">The source sequences to combine.</param>
-    /// <param name="resultSelector">A selector that projects the current snapshot of latest values into a result value.</param>
-    /// <returns>An observable sequence that emits projected results whenever any source produces a new value, after all
-    /// sources have produced at least one value.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="sources"/> or <paramref name="resultSelector"/>
-    /// is <see langword="null"/>.</exception>
-    public static IObservableAsync<TResult> CombineLatest<TSource, TResult>(
-        this IEnumerable<IObservableAsync<TSource>> sources,
-        Func<IReadOnlyList<TSource>, TResult> resultSelector)
+    extension<TSource>(IEnumerable<IObservableAsync<TSource>> sources)
     {
-        ArgumentExceptionHelper.ThrowIfNull(sources);
-        ArgumentExceptionHelper.ThrowIfNull(resultSelector);
+        /// <summary>Combines the latest value from each asynchronous observable sequence in the supplied collection.</summary>
+        /// <remarks>
+        /// <para>For perf reasons each emitted <see cref="IReadOnlyList{T}"/> is a reference to a single shared buffer
+        /// owned by the subscription, not a fresh allocation. Downstream observers MUST consume the snapshot synchronously
+        /// inside their <c>OnNextAsync</c> handler; retaining a reference past the handler will surface the next
+        /// emission's values instead, because the buffer is overwritten under the operator's gate before each emit.
+        /// If you need a stable copy, project to one via the projecting <c>CombineLatest</c> overload or
+        /// <c>.Select(static s =&gt; s.ToArray())</c>.</para>
+        /// </remarks>
+        /// <returns>An observable sequence that emits a snapshot of the latest values whenever any source produces a new value,
+        /// after all sources have produced at least one value.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="sources"/> is <see langword="null"/>.</exception>
+        public IObservableAsync<IReadOnlyList<TSource>> CombineLatest()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(sources);
 
-        return new CombineLatestEnumerableSignal<TSource, TResult>(sources, resultSelector);
+            // Delegate to the projecting variant with an identity selector so a single subscription
+            // implementation backs both shapes. The static lambda avoids capturing and matches the
+            // perf-critical zero-alloc rule for selectors that don't reference enclosing state.
+            return new CombineLatestEnumerableSignal<TSource, IReadOnlyList<TSource>>(sources, static s => s);
+        }
+
+        /// <summary>
+        /// Combines the latest value from each asynchronous observable sequence in the supplied collection and projects the
+        /// resulting snapshot into a result value.
+        /// </summary>
+        /// <typeparam name="TResult">The projected result type.</typeparam>
+        /// <param name="resultSelector">A selector that projects the current snapshot of latest values into a result value.</param>
+        /// <returns>An observable sequence that emits projected results whenever any source produces a new value, after all
+        /// sources have produced at least one value.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="sources"/> or <paramref name="resultSelector"/>
+        /// is <see langword="null"/>.</exception>
+        public IObservableAsync<TResult> CombineLatest<TResult>(
+            Func<IReadOnlyList<TSource>, TResult> resultSelector)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(sources);
+            ArgumentExceptionHelper.ThrowIfNull(resultSelector);
+
+            return new CombineLatestEnumerableSignal<TSource, TResult>(sources, resultSelector);
+        }
     }
 
     /// <summary>
@@ -78,7 +75,7 @@ public static partial class SignalAsync
     {
         /// <summary>The source sequences.</summary>
         private readonly IObservableAsync<TSource>[] _sources =
-            sources as IObservableAsync<TSource>[] ?? [.. ArgumentExceptionHelper.Check(sources)];
+            (sources as IObservableAsync<TSource>[]) ?? [.. ArgumentExceptionHelper.Check(sources)];
 
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -121,9 +118,7 @@ public static partial class SignalAsync
             public ValueTask DisposeAsync() => default;
         }
 
-        /// <summary>
-        /// Manages subscriptions to all source sequences and coordinates emission of projected snapshots.
-        /// </summary>
+        /// <summary>Manages subscriptions to all source sequences and coordinates emission of projected snapshots.</summary>
         /// <param name="sources">The source sequences.</param>
         /// <param name="observer">The observer.</param>
         /// <param name="resultSelector">The result selector.</param>
@@ -176,9 +171,7 @@ public static partial class SignalAsync
             /// <summary>Number of sources that have produced a value.</summary>
             private int _hasValueCount;
 
-            /// <summary>
-            /// Subscribes to all source sequences.
-            /// </summary>
+            /// <summary>Subscribes to all source sequences.</summary>
             /// <param name="cancellationToken">The cancellation token.</param>
             /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
             public async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
@@ -199,9 +192,7 @@ public static partial class SignalAsync
             /// <inheritdoc/>
             public ValueTask DisposeAsync() => FinishAsync(null);
 
-            /// <summary>
-            /// Handles OnNext from a source.
-            /// </summary>
+            /// <summary>Handles OnNext from a source.</summary>
             /// <param name="index">The source index.</param>
             /// <param name="indexValue">The value.</param>
             /// <param name="cancellationToken">The cancellation token.</param>
@@ -250,9 +241,7 @@ public static partial class SignalAsync
                 }
             }
 
-            /// <summary>
-            /// Handles OnErrorResume from a source.
-            /// </summary>
+            /// <summary>Handles OnErrorResume from a source.</summary>
             /// <param name="error">The error.</param>
             /// <param name="cancellationToken">The cancellation token.</param>
             /// <returns>A value task representing the operation.</returns>
@@ -269,9 +258,7 @@ public static partial class SignalAsync
                 }
             }
 
-            /// <summary>
-            /// Handles OnCompleted from a source.
-            /// </summary>
+            /// <summary>Handles OnCompleted from a source.</summary>
             /// <param name="index">The source index.</param>
             /// <param name="result">The result.</param>
             /// <returns>A value task representing the operation.</returns>

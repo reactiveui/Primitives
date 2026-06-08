@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Fast path for the common two-source min/max case.
-/// </summary>
+/// <summary>Fast path for the common two-source min/max case.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="left">The first source.</param>
 /// <param name="right">The second source.</param>

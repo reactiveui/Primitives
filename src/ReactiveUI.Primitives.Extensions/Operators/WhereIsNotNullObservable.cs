@@ -24,10 +24,7 @@ internal sealed class WhereIsNotNullObservable<T>(IObservable<T> source) : IObse
         return source.Subscribe(new WhereIsNotNullObserver(observer));
     }
 
-    /// <summary>
-    /// Forwarding observer that suppresses null <see cref="OnNext"/> values and
-    /// passes <see cref="OnError"/> and <see cref="OnCompleted"/> through unchanged.
-    /// </summary>
+    /// <summary>Forwarding observer that suppresses null <see cref="OnNext"/> values and passes <see cref="OnError"/> and <see cref="OnCompleted"/> through unchanged.</summary>
     /// <param name="downstream">The downstream observer.</param>
     private sealed class WhereIsNotNullObserver(IObserver<T> downstream) : IObserver<T>
     {

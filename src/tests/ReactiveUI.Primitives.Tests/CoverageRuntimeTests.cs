@@ -9,104 +9,64 @@ using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Covers runtime support types that are internal implementation details but must remain visible to coverage.
-/// </summary>
+/// <summary>Covers runtime support types that are internal implementation details but must remain visible to coverage.</summary>
 public class CoverageRuntimeTests
 {
-    /// <summary>
-    /// A reusable value for one.
-    /// </summary>
+    /// <summary>A reusable value for one.</summary>
     private const int One = 1;
 
-    /// <summary>
-    /// A reusable value for two.
-    /// </summary>
+    /// <summary>A reusable value for two.</summary>
     private const int Two = 2;
 
-    /// <summary>
-    /// A reusable value for three.
-    /// </summary>
+    /// <summary>A reusable value for three.</summary>
     private const int Three = 3;
 
-    /// <summary>
-    /// A reusable value for four.
-    /// </summary>
+    /// <summary>A reusable value for four.</summary>
     private const int Four = 4;
 
-    /// <summary>
-    /// A reusable value for five.
-    /// </summary>
+    /// <summary>A reusable value for five.</summary>
     private const int Five = 5;
 
-    /// <summary>
-    /// A reusable value for six.
-    /// </summary>
+    /// <summary>A reusable value for six.</summary>
     private const int Six = 6;
 
-    /// <summary>
-    /// A reusable value for seven.
-    /// </summary>
+    /// <summary>A reusable value for seven.</summary>
     private const int Seven = 7;
 
-    /// <summary>
-    /// A reusable value for eight.
-    /// </summary>
+    /// <summary>A reusable value for eight.</summary>
     private const int Eight = 8;
 
-    /// <summary>
-    /// A reusable negative value.
-    /// </summary>
+    /// <summary>A reusable negative value.</summary>
     private const int NegativeOne = -1;
 
-    /// <summary>
-    /// Timeout used when waiting for background scheduled work.
-    /// </summary>
+    /// <summary>Timeout used when waiting for background scheduled work.</summary>
     private const int TimeoutSeconds = 2;
 
-    /// <summary>
-    /// Expected two-only value sequence.
-    /// </summary>
+    /// <summary>Expected two-only value sequence.</summary>
     private static readonly int[] ExpectedTwoOnly = [Two];
 
-    /// <summary>
-    /// Expected one-two value sequence.
-    /// </summary>
+    /// <summary>Expected one-two value sequence.</summary>
     private static readonly int[] ExpectedOneTwo = [One, Two];
 
-    /// <summary>
-    /// Expected three-four value sequence.
-    /// </summary>
+    /// <summary>Expected three-four value sequence.</summary>
     private static readonly int[] ExpectedThreeFour = [Three, Four];
 
-    /// <summary>
-    /// Expected five-six value sequence.
-    /// </summary>
+    /// <summary>Expected five-six value sequence.</summary>
     private static readonly int[] ExpectedFiveSix = [Five, Six];
 
-    /// <summary>
-    /// Expected immediate sequencer value sequence.
-    /// </summary>
+    /// <summary>Expected immediate sequencer value sequence.</summary>
     private static readonly int[] ExpectedImmediateValues = [One, Two, Three];
 
-    /// <summary>
-    /// Expected handled error sequence.
-    /// </summary>
+    /// <summary>Expected handled error sequence.</summary>
     private static readonly string[] ExpectedHandledErrors = ["handled"];
 
-    /// <summary>
-    /// Expected safe witness event sequence.
-    /// </summary>
+    /// <summary>Expected safe witness event sequence.</summary>
     private static readonly string[] ExpectedSafeEvents = ["next:3", "completed"];
 
-    /// <summary>
-    /// Expected repeated scheduled item invocation sequence.
-    /// </summary>
+    /// <summary>Expected repeated scheduled item invocation sequence.</summary>
     private static readonly string[] ExpectedRepeatedScheduledItemInvocations = ["first", "first"];
 
-    /// <summary>
-    /// Covers disposable slot constructor, disposal, removal, and disposed-assignment branches.
-    /// </summary>
+    /// <summary>Covers disposable slot constructor, disposal, removal, and disposed-assignment branches.</summary>
     [Test]
     public void DisposableSlotsCoverAssignmentReplacementAndRemovalBranches()
     {
@@ -187,9 +147,7 @@ public class CoverageRuntimeTests
         _ = new Pocket(EmptyDisposable.Instance, EmptyDisposable.Instance, EmptyDisposable.Instance);
     }
 
-    /// <summary>
-    /// Covers internal witness implementations and safe observer terminal behavior.
-    /// </summary>
+    /// <summary>Covers internal witness implementations and safe observer terminal behavior.</summary>
     [Test]
     public void WitnessesCoverDisposedThrowEmptyAndSafeBranches()
     {
@@ -248,9 +206,7 @@ public class CoverageRuntimeTests
         Assert.Throws<ArgumentNullException>(() => safe.OnError(null!));
     }
 
-    /// <summary>
-    /// Covers priority queues, sequencer queues, and scheduled item comparison and disposal paths.
-    /// </summary>
+    /// <summary>Covers priority queues, sequencer queues, and scheduled item comparison and disposal paths.</summary>
     [Test]
     public void QueuesAndScheduledItemsCoverOrderingComparisonAndDisposalBranches()
     {
@@ -339,9 +295,7 @@ public class CoverageRuntimeTests
         Assert.Equal(DateTimeOffset.UnixEpoch, initialClock.Now);
     }
 
-    /// <summary>
-    /// Covers enumerable signal fast paths for arrays, read-only lists, iterators, and delegate subscriptions.
-    /// </summary>
+    /// <summary>Covers enumerable signal fast paths for arrays, read-only lists, iterators, and delegate subscriptions.</summary>
     [Test]
     public void FromEnumerableSignalCoversAllSynchronousFastPaths()
     {
@@ -380,9 +334,7 @@ public class CoverageRuntimeTests
         Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe(_ => { }, ex => { }, null!));
     }
 
-    /// <summary>
-    /// Covers immediate and background sequencer argument validation and execution paths.
-    /// </summary>
+    /// <summary>Covers immediate and background sequencer argument validation and execution paths.</summary>
     /// <returns>A task representing the asynchronous test operation.</returns>
     [Test]
     public async Task SequencersCoverValidationAndExecutionBranches()
@@ -471,9 +423,7 @@ public class CoverageRuntimeTests
         Assert.Equal(ExpectedOneTwo, (IEnumerable<int>)[.. synchronizationValues, delayedValue]);
     }
 
-    /// <summary>
-    /// Covers virtual-time extension validation and action scheduling.
-    /// </summary>
+    /// <summary>Covers virtual-time extension validation and action scheduling.</summary>
     [Test]
     public void VirtualTimeSequencerExtensionsValidateAndRunActions()
     {
@@ -495,9 +445,7 @@ public class CoverageRuntimeTests
         Assert.Equal(Three, invoked);
     }
 
-    /// <summary>
-    /// Creates an iterator-backed enumerable for the non-indexable enumerable path.
-    /// </summary>
+    /// <summary>Creates an iterator-backed enumerable for the non-indexable enumerable path.</summary>
     /// <returns>The yielded values.</returns>
     private static IEnumerable<int> YieldValues()
     {
@@ -505,45 +453,31 @@ public class CoverageRuntimeTests
         yield return Six;
     }
 
-    /// <summary>
-    /// Creates an invalid sequencer queue.
-    /// </summary>
+    /// <summary>Creates an invalid sequencer queue.</summary>
     private static void CreateInvalidSequencerQueue() => _ = new SequencerQueue<int>(NegativeOne);
 
-    /// <summary>
-    /// Creates a scheduled item without a sequencer.
-    /// </summary>
+    /// <summary>Creates a scheduled item without a sequencer.</summary>
     private static void CreateScheduledItemWithoutSequencer() =>
         _ = new ScheduledItem<int, string>(null!, "x", (_, _) => EmptyDisposable.Instance, One);
 
-    /// <summary>
-    /// Creates a scheduled item without an action.
-    /// </summary>
+    /// <summary>Creates a scheduled item without an action.</summary>
     private static void CreateScheduledItemWithoutAction() =>
         _ = new ScheduledItem<int, string>(Sequencer.Immediate, "x", null!, One);
 
-    /// <summary>
-    /// Creates a scheduled item without a comparer.
-    /// </summary>
+    /// <summary>Creates a scheduled item without a comparer.</summary>
     private static void CreateScheduledItemWithoutComparer() =>
         _ = new ScheduledItem<int, string>(Sequencer.Immediate, "x", (_, _) => EmptyDisposable.Instance, One, null!);
 
-    /// <summary>
-    /// Creates a synchronization-context sequencer without a context.
-    /// </summary>
+    /// <summary>Creates a synchronization-context sequencer without a context.</summary>
     private static void CreateSynchronizationContextSequencerWithoutContext() =>
         _ = new SynchronizationContextSequencer(null!);
 
-    /// <summary>
-    /// Compares a scheduled item through the non-generic comparable interface.
-    /// </summary>
+    /// <summary>Compares a scheduled item through the non-generic comparable interface.</summary>
     /// <param name="item">The scheduled item.</param>
     private static void CompareScheduledItemWithInvalidObject(ScheduledItem<int, string> item) =>
         item.CompareTo("bad");
 
-    /// <summary>
-    /// Waits for a task with a bounded timeout.
-    /// </summary>
+    /// <summary>Waits for a task with a bounded timeout.</summary>
     /// <param name="task">The task to wait for.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task WaitForAsync(Task task)
@@ -558,94 +492,66 @@ public class CoverageRuntimeTests
         await task.ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Exposes the protected dispose path for coverage.
-    /// </summary>
+    /// <summary>Exposes the protected dispose path for coverage.</summary>
     private sealed class ExposedSingleDisposable : SingleDisposable
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ExposedSingleDisposable"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ExposedSingleDisposable"/> class.</summary>
         /// <param name="disposable">The disposable to assign.</param>
         public ExposedSingleDisposable(IDisposable disposable)
             : base(disposable)
         {
         }
 
-        /// <summary>
-        /// Invokes the protected dispose path with <see langword="false"/>.
-        /// </summary>
+        /// <summary>Invokes the protected dispose path with <see langword="false"/>.</summary>
         public void DisposeFalse() => Dispose(false);
     }
 
-    /// <summary>
-    /// Exposes the protected dispose path for coverage.
-    /// </summary>
+    /// <summary>Exposes the protected dispose path for coverage.</summary>
     private sealed class ExposedSingleReplaceableDisposable : SingleReplaceableDisposable
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ExposedSingleReplaceableDisposable"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ExposedSingleReplaceableDisposable"/> class.</summary>
         /// <param name="disposable">The disposable to assign.</param>
         public ExposedSingleReplaceableDisposable(IDisposable disposable)
             : base(disposable)
         {
         }
 
-        /// <summary>
-        /// Invokes the protected dispose path with <see langword="false"/>.
-        /// </summary>
+        /// <summary>Invokes the protected dispose path with <see langword="false"/>.</summary>
         public void DisposeFalse() => Dispose(false);
     }
 
-    /// <summary>
-    /// Exposes the protected dispose path for coverage.
-    /// </summary>
+    /// <summary>Exposes the protected dispose path for coverage.</summary>
     private sealed class ExposedMultipleDisposable : MultipleDisposable
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ExposedMultipleDisposable"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ExposedMultipleDisposable"/> class.</summary>
         /// <param name="disposable">The disposable to assign.</param>
         public ExposedMultipleDisposable(IDisposable disposable)
             : base(disposable, EmptyDisposable.Instance)
         {
         }
 
-        /// <summary>
-        /// Invokes the protected dispose path with <see langword="false"/>.
-        /// </summary>
+        /// <summary>Invokes the protected dispose path with <see langword="false"/>.</summary>
         public void DisposeFalse() => Dispose(false);
     }
 
-    /// <summary>
-    /// Synchronization context that runs posted work immediately.
-    /// </summary>
+    /// <summary>Synchronization context that runs posted work immediately.</summary>
     private sealed class ImmediateSynchronizationContext : SynchronizationContext
     {
         /// <inheritdoc/>
         public override void Post(SendOrPostCallback d, object? state) => d(state);
     }
 
-    /// <summary>
-    /// Records observer values and terminal signals.
-    /// </summary>
+    /// <summary>Records observer values and terminal signals.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
     private sealed class RecordingObserver<T> : IObserver<T>
     {
-        /// <summary>
-        /// Gets observed values.
-        /// </summary>
+        /// <summary>Gets observed values.</summary>
         public List<T> Values { get; } = [];
 
-        /// <summary>
-        /// Gets the completion count.
-        /// </summary>
+        /// <summary>Gets the completion count.</summary>
         public int Completed { get; private set; }
 
-        /// <summary>
-        /// Gets the observed errors.
-        /// </summary>
+        /// <summary>Gets the observed errors.</summary>
         public List<Exception> Errors { get; } = [];
 
         /// <inheritdoc/>

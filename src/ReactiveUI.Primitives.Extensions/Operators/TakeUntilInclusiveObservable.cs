@@ -27,9 +27,7 @@ internal sealed class TakeUntilInclusiveObservable<T>(
         return source.Subscribe(new TakeUntilInclusiveObserver(observer, predicate));
     }
 
-    /// <summary>
-    /// The observer for the <see cref="TakeUntilInclusiveObservable{T}"/>.
-    /// </summary>
+    /// <summary>The observer for the <see cref="TakeUntilInclusiveObservable{T}"/>.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="predicate">The predicate to determine when to stop taking elements.</param>
     private sealed class TakeUntilInclusiveObserver(

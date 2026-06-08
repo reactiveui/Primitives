@@ -9,8 +9,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
 
-/// <summary>Tests for <see cref="FirstAsTaskHelper"/> covering the error and empty-completion
-/// paths that <c>ToHotTask</c> does not otherwise exercise.</summary>
+/// <summary>Tests for <see cref="FirstAsTaskHelper"/> covering the error and empty-completion paths that <c>ToHotTask</c> does not otherwise exercise.</summary>
 public class FirstAsTaskHelperTests
 {
     /// <summary>Value used by the latch-on-first-emission test.</summary>

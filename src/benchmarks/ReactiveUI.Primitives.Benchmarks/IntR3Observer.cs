@@ -6,39 +6,25 @@ using R3;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Observer used by R3 benchmark cases.
-/// </summary>
+/// <summary>Observer used by R3 benchmark cases.</summary>
 internal sealed class IntR3Observer : Observer<int>
 {
-    /// <summary>
-    /// Gets the total of received values.
-    /// </summary>
+    /// <summary>Gets the total of received values.</summary>
     public int Total { get; private set; }
 
-    /// <summary>
-    /// Gets the number of onNext calls.
-    /// </summary>
+    /// <summary>Gets the number of onNext calls.</summary>
     public int NextCount { get; private set; }
 
-    /// <summary>
-    /// Gets the last value observed.
-    /// </summary>
+    /// <summary>Gets the last value observed.</summary>
     public int LastValue { get; private set; }
 
-    /// <summary>
-    /// Gets the number of terminal completions observed.
-    /// </summary>
+    /// <summary>Gets the number of terminal completions observed.</summary>
     public int CompletionCount { get; private set; }
 
-    /// <summary>
-    /// Gets the number of errors observed.
-    /// </summary>
+    /// <summary>Gets the number of errors observed.</summary>
     public int ErrorCount { get; private set; }
 
-    /// <summary>
-    /// Called for each emitted value.
-    /// </summary>
+    /// <summary>Called for each emitted value.</summary>
     /// <param name="value">The emitted value.</param>
     protected override void OnNextCore(int value)
     {
@@ -47,15 +33,11 @@ internal sealed class IntR3Observer : Observer<int>
         LastValue = value;
     }
 
-    /// <summary>
-    /// Called when an error is observed.
-    /// </summary>
+    /// <summary>Called when an error is observed.</summary>
     /// <param name="error">The observed exception.</param>
     protected override void OnErrorResumeCore(Exception error) => ErrorCount++;
 
-    /// <summary>
-    /// Called when sequence completed.
-    /// </summary>
+    /// <summary>Called when sequence completed.</summary>
     /// <param name="result">The completion result.</param>
     protected override void OnCompletedCore(Result result)
     {

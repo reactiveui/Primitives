@@ -16,20 +16,13 @@ namespace ReactiveUI.Primitives.Async.Disposables;
 /// disposal; external synchronization is required if used from multiple threads.</remarks>
 public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
 {
-    /// <summary>
-    /// The currently assigned disposable resource, or the disposed sentinel if already disposed.
-    /// </summary>
+    /// <summary>The currently assigned disposable resource, or the disposed sentinel if already disposed.</summary>
     private IAsyncDisposable? _current;
 
-    /// <summary>
-    /// Gets a value indicating whether the object has been disposed.
-    /// </summary>
+    /// <summary>Gets a value indicating whether the object has been disposed.</summary>
     public bool IsDisposed => ReferenceEquals(Volatile.Read(ref _current), DisposedSlotMarker.Instance);
 
-    /// <summary>
-    /// Gets the current asynchronous disposable resource, or an empty disposable if the resource has already been
-    /// disposed.
-    /// </summary>
+    /// <summary>Gets the current asynchronous disposable resource, or an empty disposable if the resource has already been disposed.</summary>
     /// <returns>An <see cref="IAsyncDisposable"/> representing the current resource, or <see cref="DisposableAsync.Empty"/> if
     /// the resource has been disposed. Returns <see langword="null"/> if no resource is set.</returns>
     public IAsyncDisposable? GetDisposable()
@@ -43,24 +36,17 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
         return field;
     }
 
-    /// <summary>
-    /// Asynchronously sets the current disposable resource to the specified value, replacing any previously set
-    /// resource.
-    /// </summary>
+    /// <summary>Asynchronously sets the current disposable resource to the specified value, replacing any previously set resource.</summary>
     /// <param name="value">The new <see cref="IAsyncDisposable"/> instance to set as the current resource, or <see langword="null"/> to
     /// clear the current resource.</param>
     /// <returns>A <see cref="ValueTask"/> that represents the asynchronous operation.</returns>
     public ValueTask SetDisposableAsync(IAsyncDisposable? value) => AssignDisposableAsync(ref _current, value);
 
-    /// <summary>
-    /// Asynchronously releases the unmanaged resources used by the object.
-    /// </summary>
+    /// <summary>Asynchronously releases the unmanaged resources used by the object.</summary>
     /// <returns>A ValueTask that represents the asynchronous dispose operation.</returns>
     public ValueTask DisposeAsync() => DisposeAsync(ref _current);
 
-    /// <summary>
-    /// Atomically assigns an asynchronous disposable object to the specified field if it has not already been set.
-    /// </summary>
+    /// <summary>Atomically assigns an asynchronous disposable object to the specified field if it has not already been set.</summary>
     /// <remarks>If the field has already been assigned or disposed, the method either throws an exception or
     /// disposes the provided value, as appropriate. This method is intended for use in thread-safe scenarios where a
     /// disposable resource should only be set once.</remarks>
@@ -72,7 +58,7 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
     internal static ValueTask AssignDisposableAsync(ref IAsyncDisposable? field, IAsyncDisposable? value)
     {
         var current = Interlocked.CompareExchange(ref field, value, null);
-        if (current == null)
+        if (current is null)
         {
             // ok to set.
             return default;
@@ -91,9 +77,7 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
         throw CreateAlreadyAssignedException();
     }
 
-    /// <summary>
-    /// Asynchronously disposes the object referenced by the specified field, if it has not already been disposed.
-    /// </summary>
+    /// <summary>Asynchronously disposes the object referenced by the specified field, if it has not already been disposed.</summary>
     /// <remarks>This method is intended for use in thread-safe disposal patterns to ensure that the
     /// referenced object is disposed only once. After calling this method, the field will reference a sentinel value
     /// indicating it has been disposed.</remarks>
@@ -113,21 +97,15 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
         return current.DisposeAsync();
     }
 
-    /// <summary>
-    /// Creates an exception indicating that the disposable has already been assigned.
-    /// </summary>
+    /// <summary>Creates an exception indicating that the disposable has already been assigned.</summary>
     /// <returns>An <see cref="InvalidOperationException"/> with the already-assigned message.</returns>
     internal static InvalidOperationException CreateAlreadyAssignedException() =>
         new("Disposable is already assigned.");
 
-    /// <summary>
-    /// A sentinel object used to indicate that the <see cref="SingleAssignmentDisposableAsync"/> has been disposed.
-    /// </summary>
+    /// <summary>A sentinel object used to indicate that the <see cref="SingleAssignmentDisposableAsync"/> has been disposed.</summary>
     internal sealed class DisposedSlotMarker : IAsyncDisposable
     {
-        /// <summary>
-        /// Gets the singleton instance of <see cref="DisposedSlotMarker"/>.
-        /// </summary>
+        /// <summary>Gets the singleton instance of <see cref="DisposedSlotMarker"/>.</summary>
         public static readonly DisposedSlotMarker Instance = new();
 
         /// <inheritdoc/>

@@ -46,9 +46,7 @@ internal sealed class AsyncSerialGate : IDisposable
     /// </summary>
     private int _waiters;
 
-    /// <summary>
-    /// Indicates whether this instance has been disposed.
-    /// </summary>
+    /// <summary>Indicates whether this instance has been disposed.</summary>
     private bool _disposedValue;
 
     /// <summary>Gets the number of awaiters currently parked on the slow path. Exposed for
@@ -56,9 +54,7 @@ internal sealed class AsyncSerialGate : IDisposable
     /// <see cref="WaitForEntryAsync"/> before tripping the release.</summary>
     internal int WaitersCount => Volatile.Read(ref _waiters);
 
-    /// <summary>
-    /// Asynchronously acquires the gate, returning a <see cref="Lease"/> that releases it on disposal.
-    /// </summary>
+    /// <summary>Asynchronously acquires the gate, returning a <see cref="Lease"/> that releases it on disposal.</summary>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A <see cref="ValueTask{Lease}"/> that completes when the gate has been acquired.</returns>
     [DebuggerStepThrough]
@@ -125,9 +121,7 @@ internal sealed class AsyncSerialGate : IDisposable
         _semaphore.Release();
     }
 
-    /// <summary>
-    /// Slow path: park as a waiter and retry the acquire CAS after each semaphore signal.
-    /// </summary>
+    /// <summary>Slow path: park as a waiter and retry the acquire CAS after each semaphore signal.</summary>
     /// <param name="cancellationToken">Cancellation token observed while waiting.</param>
     /// <returns>A <see cref="Lease"/> for the acquired gate.</returns>
     private async ValueTask<Lease> WaitForEntryAsync(CancellationToken cancellationToken)
@@ -153,19 +147,13 @@ internal sealed class AsyncSerialGate : IDisposable
         }
     }
 
-    /// <summary>
-    /// Releases a previously acquired <see cref="AsyncSerialGate"/> when disposed.
-    /// </summary>
+    /// <summary>Releases a previously acquired <see cref="AsyncSerialGate"/> when disposed.</summary>
     public readonly record struct Lease : IDisposable
     {
-        /// <summary>
-        /// The parent <see cref="AsyncSerialGate"/> whose lock is released when this lease is disposed.
-        /// </summary>
+        /// <summary>The parent <see cref="AsyncSerialGate"/> whose lock is released when this lease is disposed.</summary>
         private readonly AsyncSerialGate _parent;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Lease"/> struct.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="Lease"/> struct.</summary>
         /// <param name="parent">The <see cref="AsyncSerialGate"/> that owns this lease.</param>
         public Lease(AsyncSerialGate parent) => _parent = parent;
 

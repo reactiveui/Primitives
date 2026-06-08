@@ -8,9 +8,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Conflates an observable stream by delaying updates that occur within a minimum period.
-/// </summary>
+/// <summary>Conflates an observable stream by delaying updates that occur within a minimum period.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="minimumUpdatePeriod">The minimum period between emissions.</param>
@@ -50,7 +48,10 @@ internal sealed class ConflateObservable<T>(
         /// <summary>The scheduler to run the conflation on.</summary>
         private readonly ISequencer _scheduler;
 
-        /// <summary>Shared queue / gate / scheduled-drain machinery.</summary>
+        /// <summary>The gate protecting the queue, throttle window, and downstream notification.</summary>
+        private readonly Lock _gate = new();
+
+        /// <summary>Shared queue / scheduled-drain machinery.</summary>
         private readonly ScheduledDrainState<T> _state;
 
         /// <summary>The disposable tracking a scheduled deferred emission.</summary>
@@ -72,7 +73,7 @@ internal sealed class ConflateObservable<T>(
             _downstream = downstream;
             _minimumUpdatePeriod = minimumUpdatePeriod;
             _scheduler = scheduler;
-            _state = new ScheduledDrainState<T>(scheduler, this);
+            _state = new ScheduledDrainState<T>(scheduler, this, _gate);
         }
 
         /// <summary>Records the upstream subscription so <see cref="Dispose"/> can tear it down.</summary>
@@ -92,7 +93,7 @@ internal sealed class ConflateObservable<T>(
         public void Dispose()
         {
             IDisposable? subscription;
-            lock (_state.Gate)
+            lock (_gate)
             {
                 if (_state.Done)
                 {
@@ -114,24 +115,24 @@ internal sealed class ConflateObservable<T>(
                 switch (notification.Kind)
                 {
                     case DrainNotificationKind.Next:
-                    {
-                        ProcessNext(notification.Value);
-                        break;
-                    }
+                        {
+                            ProcessNext(notification.Value);
+                            break;
+                        }
 
                     case DrainNotificationKind.Error:
-                    {
-                        ForwardError(notification.Error!);
-                        return;
-                    }
+                        {
+                            ForwardError(notification.Error!);
+                            return;
+                        }
 
                     default:
-                    {
-                        // DrainNotificationKind has only three values; the discard arm absorbs
-                        // Completed so the compiler sees an exhaustive switch.
-                        ForwardCompleted();
-                        return;
-                    }
+                        {
+                            // DrainNotificationKind has only three values; the discard arm absorbs
+                            // Completed so the compiler sees an exhaustive switch.
+                            ForwardCompleted();
+                            return;
+                        }
                 }
             }
         }
@@ -147,7 +148,7 @@ internal sealed class ConflateObservable<T>(
             var currentUpdateTime = _scheduler.Now;
             bool scheduleRequired;
 
-            lock (_state.Gate)
+            lock (_gate)
             {
                 if (_state.Done)
                 {
@@ -155,7 +156,7 @@ internal sealed class ConflateObservable<T>(
                 }
 
                 scheduleRequired = currentUpdateTime - _lastUpdateTime < _minimumUpdatePeriod;
-                if (scheduleRequired && _updateScheduled.Disposable != null)
+                if (scheduleRequired && _updateScheduled.Disposable is not null)
                 {
                     _updateScheduled.Disposable.Dispose();
                     _updateScheduled.Disposable = null;
@@ -172,8 +173,7 @@ internal sealed class ConflateObservable<T>(
             }
         }
 
-        /// <summary>Schedules a deferred emission of <paramref name="value"/> at the end of the throttle window,
-        /// forwarding a pending completion once it lands.</summary>
+        /// <summary>Schedules a deferred emission of <paramref name="value"/> at the end of the throttle window, forwarding a pending completion once it lands.</summary>
         /// <param name="value">The value to emit when the window elapses.</param>
         private void ScheduleDeferredEmission(T value) =>
             _updateScheduled.Disposable = _scheduler.Schedule(
@@ -191,7 +191,7 @@ internal sealed class ConflateObservable<T>(
         {
             _downstream.OnNext(value);
 
-            lock (_state.Gate)
+            lock (_gate)
             {
                 _lastUpdateTime = _scheduler.Now;
                 _updateScheduled.Disposable = null;
@@ -208,7 +208,7 @@ internal sealed class ConflateObservable<T>(
         private void EmitInline(T value)
         {
             _downstream.OnNext(value);
-            lock (_state.Gate)
+            lock (_gate)
             {
                 _lastUpdateTime = _scheduler.Now;
             }
@@ -221,7 +221,7 @@ internal sealed class ConflateObservable<T>(
         [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         private void ForwardError(Exception error)
         {
-            lock (_state.Gate)
+            lock (_gate)
             {
                 if (_state.Done)
                 {
@@ -241,14 +241,14 @@ internal sealed class ConflateObservable<T>(
         [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         private void ForwardCompleted()
         {
-            lock (_state.Gate)
+            lock (_gate)
             {
                 if (_state.Done)
                 {
                     return;
                 }
 
-                if (_updateScheduled.Disposable != null)
+                if (_updateScheduled.Disposable is not null)
                 {
                     _completionRequested = true;
                     return;

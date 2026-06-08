@@ -13,31 +13,24 @@ namespace ReactiveUI.Primitives.Extensions;
 /// <typeparam name="T">The type of the update value.</typeparam>
 public readonly record struct Stale<T> : IStale<T>
 {
-    /// <summary>The update value, or <see langword="default"/> when the instance is a stale signal.</summary>
-    private readonly T? _update;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Stale{T}"/> struct representing a stale signal.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="Stale{T}"/> struct representing a stale signal.</summary>
     public Stale()
     {
         IsStale = true;
-        _update = default;
+        Update = default;
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Stale{T}"/> struct representing a value update.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="Stale{T}"/> struct representing a value update.</summary>
     /// <param name="update">The update value.</param>
     public Stale(T? update)
     {
         IsStale = false;
-        _update = update;
+        Update = update;
     }
 
     /// <inheritdoc/>
     public bool IsStale { get; }
 
     /// <inheritdoc/>
-    public T? Update => IsStale ? throw new InvalidOperationException("Stale instance has no update.") : _update;
+    public T? Update => IsStale ? throw new InvalidOperationException("Stale instance has no update.") : field;
 }

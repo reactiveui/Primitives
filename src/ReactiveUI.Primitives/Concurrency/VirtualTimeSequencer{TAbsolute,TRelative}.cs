@@ -4,23 +4,17 @@
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// Base class for virtual time schedulers using a priority queue for scheduled items.
-/// </summary>
+/// <summary>Base class for virtual time schedulers using a priority queue for scheduled items.</summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 /// <typeparam name="TRelative">Relative time representation type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSequencerBase<TAbsolute, TRelative>
     where TAbsolute : IComparable<TAbsolute>
 {
-    /// <summary>
-    /// Queue of scheduled virtual-time work.
-    /// </summary>
+    /// <summary>Queue of scheduled virtual-time work.</summary>
     private readonly SequencerQueue<TAbsolute> _queue = new();
 
-    /// <summary>
-    /// Synchronization gate guarding the scheduled-work queue.
-    /// </summary>
+    /// <summary>Synchronization gate guarding the scheduled-work queue.</summary>
     private readonly Lock _gate = new();
 
     /// <summary>
@@ -31,10 +25,7 @@ public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSe
     {
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="VirtualTimeSequencer{TAbsolute, TRelative}"/> class.
-    /// Creates a new virtual time scheduler.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="VirtualTimeSequencer{TAbsolute, TRelative}"/> class. Creates a new virtual time scheduler.</summary>
     /// <param name="initialClock">Initial value for the clock.</param>
     /// <param name="comparer">Comparer to determine causality of events based on absolute time.</param>
     /// <exception cref="ArgumentNullException"><paramref name="comparer"/> is <c>null</c>.</exception>
@@ -43,15 +34,11 @@ public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSe
     {
     }
 
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>
-    /// Schedules an action to be executed at dueTime.
-    /// </summary>
+    /// <summary>Schedules an action to be executed at dueTime.</summary>
     /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
     /// <param name="state">State passed to the action to be executed.</param>
     /// <param name="dueTime">Absolute time at which to execute the action.</param>
@@ -63,7 +50,7 @@ public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSe
     /// <exception cref="ArgumentNullException"><paramref name="action" /> is <c>null</c>.</exception>
     public override IDisposable ScheduleAbsolute<TState>(TState state, TAbsolute dueTime, Func<ISequencer, TState, IDisposable> action)
     {
-        if (action == null)
+        if (action is null)
         {
             throw new ArgumentNullException(nameof(action));
         }
@@ -78,9 +65,7 @@ public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSe
         return si;
     }
 
-    /// <summary>
-    /// Gets the next scheduled item to be executed.
-    /// </summary>
+    /// <summary>Gets the next scheduled item to be executed.</summary>
     /// <returns>The next scheduled item.</returns>
     protected override IScheduledItem<TAbsolute>? GetNext()
     {
@@ -103,9 +88,7 @@ public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSe
         return null;
     }
 
-    /// <summary>
-    /// Removes an invoked scheduled item from the queue.
-    /// </summary>
+    /// <summary>Removes an invoked scheduled item from the queue.</summary>
     /// <param name="scheduledItem">The item to remove.</param>
     private void Remove(ScheduledItem<TAbsolute> scheduledItem)
     {
@@ -115,30 +98,20 @@ public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSe
         }
     }
 
-    /// <summary>
-    /// Virtual-time scheduled item that removes itself without a per-schedule wrapper closure.
-    /// </summary>
+    /// <summary>Virtual-time scheduled item that removes itself without a per-schedule wrapper closure.</summary>
     /// <typeparam name="TState">The scheduled state type.</typeparam>
     private sealed class VirtualScheduledItem<TState> : ScheduledItem<TAbsolute>
     {
-        /// <summary>
-        /// The scheduler that owns the item.
-        /// </summary>
+        /// <summary>The scheduler that owns the item.</summary>
         private readonly VirtualTimeSequencer<TAbsolute, TRelative> _owner;
 
-        /// <summary>
-        /// The scheduled state.
-        /// </summary>
+        /// <summary>The scheduled state.</summary>
         private readonly TState _state;
 
-        /// <summary>
-        /// The scheduled action.
-        /// </summary>
+        /// <summary>The scheduled action.</summary>
         private readonly Func<ISequencer, TState, IDisposable> _action;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="VirtualScheduledItem{TState}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="VirtualScheduledItem{TState}"/> class.</summary>
         /// <param name="owner">The scheduler that owns the item.</param>
         /// <param name="state">The scheduled state.</param>
         /// <param name="action">The scheduled action.</param>

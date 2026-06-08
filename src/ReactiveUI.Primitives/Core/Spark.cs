@@ -4,14 +4,10 @@
 
 namespace ReactiveUI.Primitives.Core;
 
-/// <summary>
-/// Provides a set of static methods for constructing spark.
-/// </summary>
+/// <summary>Provides a set of static methods for constructing spark.</summary>
 public static class Spark
 {
-    /// <summary>
-    /// Creates an object that represents an OnNext spark to an observer.
-    /// </summary>
+    /// <summary>Creates an object that represents an OnNext spark to an observer.</summary>
     /// <typeparam name="T">
     /// The type of the elements received by the observer.
     /// Upon dematerialization of the spark into an observable sequence, this type is used as the element type for the sequence.
@@ -20,9 +16,7 @@ public static class Spark
     /// <returns>The OnNext spark containing the value.</returns>
     public static Spark<T> CreateOnNext<T>(T value) => Spark<T>.OnNext(value);
 
-    /// <summary>
-    /// Creates an object that represents an OnError spark to an observer.
-    /// </summary>
+    /// <summary>Creates an object that represents an OnError spark to an observer.</summary>
     /// <typeparam name="T">
     /// The type of the elements received by the observer.
     /// Upon dematerialization of the spark into an observable sequence, this type is used as the element type for the sequence.
@@ -36,7 +30,7 @@ public static class Spark
         Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static Spark<T> CreateOnError<T>(Exception error)
     {
-        if (error == null)
+        if (error is null)
         {
             throw new ArgumentNullException(nameof(error));
         }
@@ -44,9 +38,7 @@ public static class Spark
         return Spark<T>.OnError(error);
     }
 
-    /// <summary>
-    /// Creates an object that represents an OnCompleted spark to an observer.
-    /// </summary>
+    /// <summary>Creates an object that represents an OnCompleted spark to an observer.</summary>
     /// <typeparam name="T">
     /// The type of the elements received by the observer.
     /// Upon dematerialization of the spark into an observable sequence, this type is used as the element type for the sequence.

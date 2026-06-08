@@ -7,32 +7,22 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Represents a finite signal backed by an enumerable sequence.
-/// </summary>
+/// <summary>Represents a finite signal backed by an enumerable sequence.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
 {
-    /// <summary>
-    /// Stores the source values.
-    /// </summary>
+    /// <summary>Stores the source values.</summary>
     private readonly IEnumerable<T> _values;
 
-    /// <summary>
-    /// Cancels synchronous enumeration when requested.
-    /// </summary>
+    /// <summary>Cancels synchronous enumeration when requested.</summary>
     private readonly CancellationToken _cancellationToken;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="FromEnumerableSignal{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="FromEnumerableSignal{T}"/> class.</summary>
     /// <param name="values">The source values.</param>
     public FromEnumerableSignal(IEnumerable<T> values) =>
         _values = values;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="FromEnumerableSignal{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="FromEnumerableSignal{T}"/> class.</summary>
     /// <param name="values">The source values.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     public FromEnumerableSignal(IEnumerable<T> values, CancellationToken cancellationToken)
@@ -41,20 +31,16 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
         _cancellationToken = cancellationToken;
     }
 
-    /// <summary>
-    /// Executes the IsRequiredSubscribeOnCurrentThread operation.
-    /// </summary>
+    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns><see langword="false"/>.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>
-    /// Executes the Subscribe operation.
-    /// </summary>
+    /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The subscription.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -95,21 +81,19 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>
-    /// Executes the Subscribe operation.
-    /// </summary>
+    /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="onNext">The onNext value.</param>
     /// <param name="onError">The onError value.</param>
     /// <param name="onCompleted">The onCompleted value.</param>
     /// <returns>The subscription.</returns>
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
-        if (onNext == null)
+        if (onNext is null)
         {
             throw new ArgumentNullException(nameof(onNext));
         }
 
-        if (onCompleted == null)
+        if (onCompleted is null)
         {
             throw new ArgumentNullException(nameof(onCompleted));
         }
@@ -133,9 +117,7 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>
-    /// Attempts to expose the backing sequence when it is already indexable and cannot be cancelled.
-    /// </summary>
+    /// <summary>Attempts to expose the backing sequence when it is already indexable and cannot be cancelled.</summary>
     /// <param name="values">The indexable values.</param>
     /// <returns><see langword="true"/> when values can be read without enumeration allocations.</returns>
     internal bool TryGetReadOnlyValues(out IReadOnlyList<T> values)
@@ -156,9 +138,7 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
         return false;
     }
 
-    /// <summary>
-    /// Drains an indexable, non-cancellable backing sequence without enumerator allocation.
-    /// </summary>
+    /// <summary>Drains an indexable, non-cancellable backing sequence without enumerator allocation.</summary>
     /// <param name="onNext">The value callback.</param>
     /// <param name="onCompleted">The completion callback.</param>
     /// <param name="result">The empty subscription when drained.</param>

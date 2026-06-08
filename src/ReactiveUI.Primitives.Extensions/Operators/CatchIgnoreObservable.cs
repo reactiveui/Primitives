@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Operator that catches exceptions of a specific type and completes.
-/// </summary>
+/// <summary>Operator that catches exceptions of a specific type and completes.</summary>
 /// <typeparam name="TSource">The type of the elements in the source sequence.</typeparam>
 /// <typeparam name="TException">The type of the exception to catch.</typeparam>
 /// <param name="source">The source observable sequence.</param>
@@ -18,14 +16,10 @@ internal sealed class CatchIgnoreObservable<TSource, TException>(
     Action<TException> errorAction) : IObservable<TSource>
     where TException : Exception
 {
-    /// <summary>
-    /// The source observable.
-    /// </summary>
+    /// <summary>The source observable.</summary>
     private readonly IObservable<TSource> _source = InvalidOperationExceptionHelper.Check(source);
 
-    /// <summary>
-    /// The action to invoke when an exception occurs.
-    /// </summary>
+    /// <summary>The action to invoke when an exception occurs.</summary>
     private readonly Action<TException> _errorAction = InvalidOperationExceptionHelper.Check(errorAction);
 
     /// <inheritdoc/>
@@ -35,9 +29,7 @@ internal sealed class CatchIgnoreObservable<TSource, TException>(
         return _source.Subscribe(new CatchIgnoreObserver(observer, _errorAction));
     }
 
-    /// <summary>
-    /// Observer that catches specific exceptions.
-    /// </summary>
+    /// <summary>Observer that catches specific exceptions.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="errorAction">The error action.</param>
     private sealed class CatchIgnoreObserver(

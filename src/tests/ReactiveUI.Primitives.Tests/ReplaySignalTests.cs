@@ -7,29 +7,19 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// ReplaySignalTests.
-/// </summary>
+/// <summary>ReplaySignalTests.</summary>
 public class ReplaySignalTests
 {
-    /// <summary>
-    /// Value emitted while checking observer state.
-    /// </summary>
+    /// <summary>Value emitted while checking observer state.</summary>
     private const int ReplayValue = 42;
 
-    /// <summary>
-    /// Buffer size of two used across replay signal tests.
-    /// </summary>
+    /// <summary>Buffer size of two used across replay signal tests.</summary>
     private const int Two = 2;
 
-    /// <summary>
-    /// Buffer size of three used across replay signal tests.
-    /// </summary>
+    /// <summary>Buffer size of three used across replay signal tests.</summary>
     private const int Three = 3;
 
-    /// <summary>
-    /// Constructors the argument checking.
-    /// </summary>
+    /// <summary>Constructors the argument checking.</summary>
     [Test]
     public void Constructor_ArgumentChecking()
     {
@@ -66,9 +56,7 @@ public class ReplaySignalTests
         CreateAndDispose(() => new HistorySignal<int>(0, TimeSpan.Zero, EmptySequencer.Instance));
     }
 
-    /// <summary>
-    /// Determines whether this instance has observers.
-    /// </summary>
+    /// <summary>Determines whether this instance has observers.</summary>
     [Test]
     public void HasObservers()
     {
@@ -78,9 +66,7 @@ public class ReplaySignalTests
         HasObserversImpl(new(TimeSpan.FromSeconds(1)));
     }
 
-    /// <summary>
-    /// Determines whether [has observers dispose1].
-    /// </summary>
+    /// <summary>Determines whether [has observers dispose1].</summary>
     [Test]
     public void HasObservers_Dispose1()
     {
@@ -90,9 +76,7 @@ public class ReplaySignalTests
         HasObservers_Dispose1Impl(new(TimeSpan.FromSeconds(1)));
     }
 
-    /// <summary>
-    /// Determines whether [has observers dispose2].
-    /// </summary>
+    /// <summary>Determines whether [has observers dispose2].</summary>
     [Test]
     public void HasObservers_Dispose2()
     {
@@ -102,9 +86,7 @@ public class ReplaySignalTests
         HasObservers_Dispose2Impl(new(TimeSpan.FromSeconds(1)));
     }
 
-    /// <summary>
-    /// Determines whether [has observers dispose3].
-    /// </summary>
+    /// <summary>Determines whether [has observers dispose3].</summary>
     [Test]
     public void HasObservers_Dispose3()
     {
@@ -114,9 +96,7 @@ public class ReplaySignalTests
         HasObservers_Dispose3Impl(new(TimeSpan.FromSeconds(1)));
     }
 
-    /// <summary>
-    /// Determines whether [has observers on completed].
-    /// </summary>
+    /// <summary>Determines whether [has observers on completed].</summary>
     [Test]
     public void HasObservers_OnCompleted()
     {
@@ -126,9 +106,7 @@ public class ReplaySignalTests
         HasObservers_OnCompletedImpl(new(TimeSpan.FromSeconds(1)));
     }
 
-    /// <summary>
-    /// Determines whether [has observers on error].
-    /// </summary>
+    /// <summary>Determines whether [has observers on error].</summary>
     [Test]
     public void HasObservers_OnError()
     {
@@ -138,9 +116,7 @@ public class ReplaySignalTests
         HasObservers_OnErrorImpl(new(TimeSpan.FromSeconds(1)));
     }
 
-    /// <summary>
-    /// Called when [error argument checking].
-    /// </summary>
+    /// <summary>Called when [error argument checking].</summary>
     [Test]
     public void OnError_ArgumentChecking()
     {
@@ -150,9 +126,7 @@ public class ReplaySignalTests
         Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(EmptySequencer.Instance).OnError(null!));
     }
 
-    /// <summary>
-    /// Subscribes the argument checking.
-    /// </summary>
+    /// <summary>Subscribes the argument checking.</summary>
     [Test]
     public void Subscribe_ArgumentChecking()
     {
@@ -162,18 +136,14 @@ public class ReplaySignalTests
         Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(EmptySequencer.Instance).Subscribe(null!));
     }
 
-    /// <summary>
-    /// Creates a replay signal and disposes it immediately.
-    /// </summary>
+    /// <summary>Creates a replay signal and disposes it immediately.</summary>
     /// <param name="factory">Factory used to create the signal.</param>
     private static void CreateAndDispose(Func<ReplaySignal<int>> factory)
     {
         using var signal = factory();
     }
 
-    /// <summary>
-    /// Verifies observer state when the source is disposed before subscription disposal.
-    /// </summary>
+    /// <summary>Verifies observer state when the source is disposed before subscription disposal.</summary>
     /// <param name="s">Signal to test.</param>
     private static void HasObservers_Dispose1Impl(ReplaySignal<int> s)
     {
@@ -193,9 +163,7 @@ public class ReplaySignalTests
         Assert.True(s.IsDisposed);
     }
 
-    /// <summary>
-    /// Verifies observer state when the subscription is disposed before the source.
-    /// </summary>
+    /// <summary>Verifies observer state when the subscription is disposed before the source.</summary>
     /// <param name="s">Signal to test.</param>
     private static void HasObservers_Dispose2Impl(ReplaySignal<int> s)
     {
@@ -215,9 +183,7 @@ public class ReplaySignalTests
         Assert.True(s.IsDisposed);
     }
 
-    /// <summary>
-    /// Verifies observer state when the source is disposed without subscribers.
-    /// </summary>
+    /// <summary>Verifies observer state when the source is disposed without subscribers.</summary>
     /// <param name="s">Signal to test.</param>
     private static void HasObservers_Dispose3Impl(ReplaySignal<int> s)
     {
@@ -229,9 +195,7 @@ public class ReplaySignalTests
         Assert.True(s.IsDisposed);
     }
 
-    /// <summary>
-    /// Verifies observer state after completion.
-    /// </summary>
+    /// <summary>Verifies observer state after completion.</summary>
     /// <param name="s">Signal to test.</param>
     private static void HasObservers_OnCompletedImpl(ReplaySignal<int> s)
     {
@@ -247,9 +211,7 @@ public class ReplaySignalTests
         Assert.False(s.HasObservers);
     }
 
-    /// <summary>
-    /// Verifies observer state after error.
-    /// </summary>
+    /// <summary>Verifies observer state after error.</summary>
     /// <param name="s">Signal to test.</param>
     private static void HasObservers_OnErrorImpl(ReplaySignal<int> s)
     {
@@ -265,9 +227,7 @@ public class ReplaySignalTests
         Assert.False(s.HasObservers);
     }
 
-    /// <summary>
-    /// Verifies observer state as subscriptions are added and removed.
-    /// </summary>
+    /// <summary>Verifies observer state as subscriptions are added and removed.</summary>
     /// <param name="s">Signal to test.</param>
     private static void HasObserversImpl(ReplaySignal<int> s)
     {

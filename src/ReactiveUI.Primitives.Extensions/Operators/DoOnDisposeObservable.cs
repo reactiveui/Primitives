@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Executes an action when the subscription is disposed.
-/// </summary>
+/// <summary>Executes an action when the subscription is disposed.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="disposeAction">The action to execute when the subscription is disposed.</param>

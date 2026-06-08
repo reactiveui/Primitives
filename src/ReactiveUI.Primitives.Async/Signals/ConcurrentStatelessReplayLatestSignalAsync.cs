@@ -20,9 +20,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 public sealed class ConcurrentStatelessReplayLatestSignalAsync<T>(Optional<T> startValue)
     : BaseStatelessReplayLatestSignalAsync<T>(startValue)
 {
-    /// <summary>
-    /// Asynchronously notifies all observers in the collection with the specified value.
-    /// </summary>
+    /// <summary>Asynchronously notifies all observers in the collection with the specified value.</summary>
     /// <remarks>Notifications are forwarded to all observers concurrently. If the operation is canceled, not
     /// all observers may receive the notification.</remarks>
     /// <param name="observers">A read-only list of observers to be notified. Cannot be null.</param>
@@ -35,9 +33,7 @@ public sealed class ConcurrentStatelessReplayLatestSignalAsync<T>(Optional<T> st
         CancellationToken cancellationToken) =>
         Concurrent.ForwardOnNextConcurrently(observers, value, cancellationToken);
 
-    /// <summary>
-    /// Asynchronously notifies all observers of an error and resumes processing, if possible.
-    /// </summary>
+    /// <summary>Asynchronously notifies all observers of an error and resumes processing, if possible.</summary>
     /// <param name="observers">A read-only list of observers to be notified of the error.</param>
     /// <param name="error">The exception that occurred and is to be forwarded to the observers. Cannot be null.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>

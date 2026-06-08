@@ -23,8 +23,8 @@ internal static class InvalidOperationExceptionHelper
     /// caller member, e.g. <c>"'source' was not supplied to 'Subscribe'."</c>.
     /// </summary>
     /// <param name="argument">The reference type field to validate as non-null.</param>
-    /// <param name="memberName">Captured automatically via <see cref="CallerArgumentExpressionAttribute"/>.</param>
-    /// <param name="operation">Captured automatically via <see cref="CallerMemberNameAttribute"/>.</param>
+    /// <param name="memberName">The validated member's name, captured from the <paramref name="argument"/> expression via <see cref="CallerArgumentExpressionAttribute"/>.</param>
+    /// <param name="operation">The void-throwing caller's name, captured via <see cref="CallerMemberNameAttribute"/>.</param>
     public static void ThrowIfNull(
         [NotNull] object? argument,
         [CallerArgumentExpression(nameof(argument))]
@@ -46,8 +46,8 @@ internal static class InvalidOperationExceptionHelper
     /// </summary>
     /// <typeparam name="T">The type of the argument.</typeparam>
     /// <param name="argument">The argument to validate.</param>
-    /// <param name="memberName">Captured automatically via <see cref="CallerArgumentExpressionAttribute"/>.</param>
-    /// <param name="operation">Captured automatically via <see cref="CallerMemberNameAttribute"/>.</param>
+    /// <param name="memberName">The validated reference-type argument's name, captured from the <paramref name="argument"/> expression via <see cref="CallerArgumentExpressionAttribute"/>.</param>
+    /// <param name="operation">The reference-type-checking caller's name, captured via <see cref="CallerMemberNameAttribute"/>.</param>
     /// <returns>The non-null argument.</returns>
     public static T Check<T>(
         [NotNull] T? argument,
@@ -70,8 +70,8 @@ internal static class InvalidOperationExceptionHelper
     /// Designed for use in primary constructor initializers.
     /// </summary>
     /// <param name="argument">The argument to validate.</param>
-    /// <param name="memberName">Captured automatically via <see cref="CallerArgumentExpressionAttribute"/>.</param>
-    /// <param name="operation">Captured automatically via <see cref="CallerMemberNameAttribute"/>.</param>
+    /// <param name="memberName">The validated string argument's name, captured from the <paramref name="argument"/> expression via <see cref="CallerArgumentExpressionAttribute"/>.</param>
+    /// <param name="operation">The string-checking caller's name, captured via <see cref="CallerMemberNameAttribute"/>.</param>
     /// <returns>The non-null, non-empty argument.</returns>
     public static string Check(
         [NotNull] string? argument,

@@ -6,14 +6,10 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <content>
-/// GroupBy tests for combining operators.
-/// </content>
+/// <summary>Tests for the GroupBy operator.</summary>
 public partial class CombiningOperatorTests
 {
-    /// <summary>
-    /// Tests that GroupBy SubscribeAsyncCore catch block disposes and rethrows when source throws.
-    /// </summary>
+    /// <summary>Tests that GroupBy SubscribeAsyncCore catch block disposes and rethrows when source throws.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenGroupBySourceThrowsDuringSubscription_ThenDisposesAndRethrows()
@@ -25,9 +21,7 @@ public partial class CombiningOperatorTests
             await failing.GroupBy(x => x % SampleValue2).ToListAsync());
     }
 
-    /// <summary>
-    /// Tests that GroupBy group observable subscriptions are tracked by the parent disposable.
-    /// </summary>
+    /// <summary>Tests that GroupBy group observable subscriptions are tracked by the parent disposable.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenGroupByGroupObservableSubscribed_ThenSubscriptionIsTracked()

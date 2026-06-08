@@ -62,10 +62,9 @@ public partial class TerminalOperatorTests
     /// <summary>Tests Wrap with a null observer throws ArgumentNullException.</summary>
     [Test]
     public void WhenWrapWithNullObserver_ThenThrowsArgumentNullException() =>
-        Assert.Throws<ArgumentNullException>(() => SignalAsync.Wrap<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => SignalAsyncExtensions.Wrap<int>(null!));
 
-    /// <summary>Verifies the async-callback <c>ForEachAsync</c> overload throws when the
-    /// callback delegate is null.</summary>
+    /// <summary>Verifies the async-callback <c>ForEachAsync</c> overload throws when the callback delegate is null.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForEachAsyncCallbackNull_ThenThrowsArgumentNullException() =>

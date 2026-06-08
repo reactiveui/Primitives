@@ -9,9 +9,7 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests for CombineLatestOperatorTests.</summary>
 public partial class CombineLatestOperatorTests
 {
-    /// <summary>
-    /// Verifies that CombineLatest with 2 sources propagates failure when source 1 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 2 sources propagates failure when source 1 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest2Sources_Source1Errors_ThenFailurePropagates()
@@ -36,9 +34,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 2 sources propagates failure when source 2 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 2 sources propagates failure when source 2 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest2Sources_Source2Errors_ThenFailurePropagates()
@@ -63,9 +59,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 2 sources completes when source 1 is the last to complete.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 2 sources completes when source 1 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest2Sources_Source1CompletesLast_ThenCombinedCompletes()
@@ -93,9 +87,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 2 sources completes when source 2 is the last to complete.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 2 sources completes when source 2 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest2Sources_Source2CompletesLast_ThenCombinedCompletes()
@@ -123,9 +115,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 2 sources handles disposal during active emission gracefully.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 2 sources handles disposal during active emission gracefully.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest2Sources_DisposedDuringEmission_ThenNoError()
@@ -155,9 +145,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 2 sources ignores error resume after disposal.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 2 sources ignores error resume after disposal.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest2Sources_ErrorResumeAfterDisposal_ThenIgnored()
@@ -178,9 +166,7 @@ public partial class CombineLatestOperatorTests
         await s2.OnErrorResumeAsync(new InvalidOperationException(), CancellationToken.None);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 3 sources propagates failure when source 1 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 3 sources propagates failure when source 1 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest3Sources_Source1Errors_ThenFailurePropagates()
@@ -206,9 +192,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 3 sources propagates failure when source 2 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 3 sources propagates failure when source 2 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest3Sources_Source2Errors_ThenFailurePropagates()
@@ -234,9 +218,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 3 sources propagates failure when source 3 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 3 sources propagates failure when source 3 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest3Sources_Source3Errors_ThenFailurePropagates()
@@ -262,9 +244,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 3 sources completes when source 1 is the last to complete.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 3 sources completes when source 1 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest3Sources_Source1CompletesLast_ThenCombinedCompletes()
@@ -295,9 +275,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 3 sources completes when source 2 is the last to complete.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 3 sources completes when source 2 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest3Sources_Source2CompletesLast_ThenCombinedCompletes()
@@ -328,9 +306,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 3 sources completes when source 3 is the last to complete.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 3 sources completes when source 3 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest3Sources_Source3CompletesLast_ThenCombinedCompletes()
@@ -361,9 +337,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 3 sources handles disposal during active emission gracefully.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 3 sources handles disposal during active emission gracefully.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest3Sources_DisposedDuringEmission_ThenNoError()
@@ -396,9 +370,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 3 sources ignores error resume after disposal.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 3 sources ignores error resume after disposal.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest3Sources_ErrorResumeAfterDisposal_ThenIgnored()

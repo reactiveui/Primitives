@@ -7,14 +7,10 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests for internal infrastructure coverage.
-/// </summary>
+/// <summary>Tests for internal infrastructure coverage.</summary>
 public partial class InternalInfrastructureCoverageTests
 {
-    /// <summary>
-    /// Covers Signal and AsyncSignal subscriber churn, late subscriptions, disposal, and terminal no-op branches.
-    /// </summary>
+    /// <summary>Covers Signal and AsyncSignal subscriber churn, late subscriptions, disposal, and terminal no-op branches.</summary>
     [Test]
     public void SubjectsCoverMultipleSubscriberChurnLateTerminalsAndDisposalBranches()
     {
@@ -141,9 +137,7 @@ public partial class InternalInfrastructureCoverageTests
         Assert.True(bufferError);
     }
 
-    /// <summary>
-    /// Covers observer exception paths and typed catch/finally branches with deterministic synchronous sources.
-    /// </summary>
+    /// <summary>Covers observer exception paths and typed catch/finally branches with deterministic synchronous sources.</summary>
     [Test]
     public void ObserverExceptionCatchFinallyAndTerminalPredicateBranchesCoverRemainders()
     {
@@ -182,9 +176,7 @@ public partial class InternalInfrastructureCoverageTests
         Assert.Equal(1, finallyCalls);
     }
 
-    /// <summary>
-    /// Covers terminal observers that must ignore protocol violations after their first terminal signal.
-    /// </summary>
+    /// <summary>Covers terminal observers that must ignore protocol violations after their first terminal signal.</summary>
     [Test]
     public void TerminalObserversIgnoreLateSignalsAndForwardPredicateFailures()
     {

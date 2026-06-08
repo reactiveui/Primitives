@@ -10,9 +10,7 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests for CombineLatestArityTests.</summary>
 public partial class CombineLatestArityTests
 {
-    /// <summary>
-    /// Verifies that CombineLatest8 disposes on subscription failure (catch block).
-    /// </summary>
+    /// <summary>Verifies that CombineLatest8 disposes on subscription failure (catch block).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
@@ -40,9 +38,7 @@ public partial class CombineLatestArityTests
                 .SubscribeAsync((_, _) => default, null));
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest8 OnNextCombined guard returns when disposed.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest8 OnNextCombined guard returns when disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
@@ -91,9 +87,7 @@ public partial class CombineLatestArityTests
         await Assert.That(results).Count().IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest8 OnErrorResume guard returns when disposed.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest8 OnErrorResume guard returns when disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
@@ -133,9 +127,7 @@ public partial class CombineLatestArityTests
         await Assert.That(receivedError).IsNull();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest8 OnNext for the last source returns early when not all sources have values.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest8 OnNext for the last source returns early when not all sources have values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
@@ -182,9 +174,7 @@ public partial class CombineLatestArityTests
         await s8.OnCompletedAsync(Result.Success);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest8 OnNext for middle sources returns early when not all sources have values.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest8 OnNext for middle sources returns early when not all sources have values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
@@ -236,9 +226,7 @@ public partial class CombineLatestArityTests
         await s8.OnCompletedAsync(Result.Success);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest8 OnNext_1 calls OnNextCombined when source 1 re-emits after all values are present.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest8 OnNext_1 calls OnNextCombined when source 1 re-emits after all values are present.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
@@ -296,9 +284,7 @@ public partial class CombineLatestArityTests
         await s8.OnCompletedAsync(Result.Success);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest8 OnNext_2 calls OnNextCombined when source 2 re-emits after all values are present.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest8 OnNext_2 calls OnNextCombined when source 2 re-emits after all values are present.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
@@ -356,9 +342,7 @@ public partial class CombineLatestArityTests
         await s8.OnCompletedAsync(Result.Success);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest8 OnNext_3 calls OnNextCombined when source 3 re-emits after all values are present.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest8 OnNext_3 calls OnNextCombined when source 3 re-emits after all values are present.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
@@ -416,9 +400,7 @@ public partial class CombineLatestArityTests
         await s8.OnCompletedAsync(Result.Success);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest8 OnNext_4 calls OnNextCombined when source 4 re-emits after all values are present.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest8 OnNext_4 calls OnNextCombined when source 4 re-emits after all values are present.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
@@ -476,9 +458,7 @@ public partial class CombineLatestArityTests
         await s8.OnCompletedAsync(Result.Success);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest8 OnNext_5 calls OnNextCombined when source 5 re-emits after all values are present.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest8 OnNext_5 calls OnNextCombined when source 5 re-emits after all values are present.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
@@ -536,9 +516,7 @@ public partial class CombineLatestArityTests
         await s8.OnCompletedAsync(Result.Success);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest8 OnNext_6 calls OnNextCombined when source 6 re-emits after all values are present.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest8 OnNext_6 calls OnNextCombined when source 6 re-emits after all values are present.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
@@ -596,9 +574,7 @@ public partial class CombineLatestArityTests
         await s8.OnCompletedAsync(Result.Success);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest8 OnNext_7 calls OnNextCombined when source 7 re-emits after all values are present.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest8 OnNext_7 calls OnNextCombined when source 7 re-emits after all values are present.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]

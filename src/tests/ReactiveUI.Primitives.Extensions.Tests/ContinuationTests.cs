@@ -14,8 +14,7 @@ public class ContinuationTests
     /// <summary>Guard timeout to keep barrier rendezvous from hanging the test run.</summary>
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
 
-    /// <summary>Verifies <see cref="Continuation.LockValueTask{T}"/> pushes the item downstream, locks,
-    /// and completes once the phase is signalled by an unlock.</summary>
+    /// <summary>Verifies <see cref="Continuation.LockValueTask{T}"/> pushes the item downstream, locks, and completes once the phase is signalled by an unlock.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLockValueTaskNotLocked_ThenEmitsAndCompletesOnUnlock()
@@ -35,8 +34,7 @@ public class ContinuationTests
         await Assert.That(continuation.CompletedPhases).IsGreaterThanOrEqualTo(1);
     }
 
-    /// <summary>Verifies a second <see cref="Continuation.LockValueTask{T}"/> while already locked returns a
-    /// completed default value task and does not push the item downstream.</summary>
+    /// <summary>Verifies a second <see cref="Continuation.LockValueTask{T}"/> while already locked returns a completed default value task and does not push the item downstream.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLockValueTaskAlreadyLocked_ThenReturnsDefaultAndDropsItem()
@@ -77,8 +75,7 @@ public class ContinuationTests
         await Assert.That(values.Count).IsEqualTo(1);
     }
 
-    /// <summary>Verifies a second <see cref="Continuation.Lock{T}"/> while already locked returns a completed
-    /// task and drops the item.</summary>
+    /// <summary>Verifies a second <see cref="Continuation.Lock{T}"/> while already locked returns a completed task and drops the item.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLockAlreadyLocked_ThenReturnsCompletedAndDropsItem()

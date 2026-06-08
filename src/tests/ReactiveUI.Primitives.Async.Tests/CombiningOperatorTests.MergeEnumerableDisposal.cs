@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <content>
-/// MergeEnumerableDisposal tests for combining operators.
-/// </content>
+/// <summary>Tests for enumerable-Merge disposal behavior.</summary>
 public partial class CombiningOperatorTests
 {
     /// <summary>
@@ -85,9 +83,7 @@ public partial class CombiningOperatorTests
         await innerSignal.DisposeAsync();
     }
 
-    /// <summary>
-    /// Verifies that MergeEnumerable OnNextAsync returns early when disposed.
-    /// </summary>
+    /// <summary>Verifies that MergeEnumerable OnNextAsync returns early when disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeEnumerableDisposedDuringEmission_ThenOnNextReturnsEarly()
@@ -119,9 +115,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).DoesNotContain(SampleValue2);
     }
 
-    /// <summary>
-    /// Verifies that MergeEnumerable OnErrorResumeAsync returns early when disposed.
-    /// </summary>
+    /// <summary>Verifies that MergeEnumerable OnErrorResumeAsync returns early when disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeEnumerableDisposed_ThenOnErrorResumeReturnsEarly()
@@ -150,9 +144,7 @@ public partial class CombiningOperatorTests
         await Assert.That(errors).IsEmpty();
     }
 
-    /// <summary>
-    /// Verifies that MergeEnumerable FinishAsync handles second error after disposal.
-    /// </summary>
+    /// <summary>Verifies that MergeEnumerable FinishAsync handles second error after disposal.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeEnumerableCompletedTwiceWithError_ThenSecondErrorGoesToUnhandled()
@@ -507,9 +499,7 @@ public partial class CombiningOperatorTests
         await Assert.That(unhandled).IsNotNull();
     }
 
-    /// <summary>
-    /// Verifies MergeEnumerable OnNextAsync post-gate disposed guard.
-    /// </summary>
+    /// <summary>Verifies MergeEnumerable OnNextAsync post-gate disposed guard.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeEnumerableDisposed_ThenOnNextReturnsEarly()
@@ -545,7 +535,7 @@ public partial class CombiningOperatorTests
         Exception? unhandled = null;
         UnhandledExceptionHandler.Register(ex => unhandled = ex);
 
-        SignalAsync.MergeEnumerableSignal<int>.MergeSequenceCoordinator.RoutePostDisposalException(
+        SignalAsyncExtensions.MergeEnumerableSignal<int>.MergeSequenceCoordinator.RoutePostDisposalException(
             Result.Failure(new InvalidOperationException("post-dispose error")));
 
         await Assert.That(unhandled).IsNotNull();
@@ -622,9 +612,7 @@ public partial class CombiningOperatorTests
         await Assert.That(errors).Count().IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Verifies MergeEnumerable OnNextAsync post-gate disposed guard using blocking-OnCompletedAsync.
-    /// </summary>
+    /// <summary>Verifies MergeEnumerable OnNextAsync post-gate disposed guard using blocking-OnCompletedAsync.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeEnumerableDisposedWhileGateHeld_ThenOnNextPostGateReturns()
@@ -663,9 +651,7 @@ public partial class CombiningOperatorTests
         await failTask;
     }
 
-    /// <summary>
-    /// Verifies MergeEnumerable OnErrorResumeAsync post-gate disposed guard using blocking-OnCompletedAsync.
-    /// </summary>
+    /// <summary>Verifies MergeEnumerable OnErrorResumeAsync post-gate disposed guard using blocking-OnCompletedAsync.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeEnumerableDisposedWhileGateHeld_ThenOnErrorResumePostGateReturns()

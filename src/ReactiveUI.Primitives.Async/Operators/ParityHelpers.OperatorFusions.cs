@@ -7,15 +7,12 @@ using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Fused operator observables backing the parity-helper extension methods in
-/// <see cref="SignalAsync"/>.
-/// </summary>
+/// <summary>Fused operator observables backing the parity-helper extension methods in <see cref="SignalAsyncExtensions"/>.</summary>
 [SuppressMessage(
     "Major Code Smell",
     "S3604:Member initializer values should not be redundant",
     Justification = "Primary-constructor parameters are captured into observer state.")]
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
     /// <summary>
     /// Fuses <c>Return(initial).Concat(source.Scan(initial, accumulator))</c> into a single layer.
@@ -82,9 +79,7 @@ public static partial class SignalAsync
         }
     }
 
-    /// <summary>
-    /// Async-accumulator variant of <see cref="ScanWithInitialSignal{TSource, TAccumulate}"/>.
-    /// </summary>
+    /// <summary>Async-accumulator variant of <see cref="ScanWithInitialSignal{TSource, TAccumulate}"/>.</summary>
     /// <typeparam name="TSource">The upstream element type.</typeparam>
     /// <typeparam name="TAccumulate">The accumulator type.</typeparam>
     /// <param name="source">The upstream observable.</param>
@@ -466,25 +461,14 @@ public static partial class SignalAsync
     /// <typeparam name="T">The element type partitioned across the two branches.</typeparam>
     internal sealed class PartitionCoordinator<T>
     {
+        /// <summary>Synchronization gate protecting branch slots and the source-subscription lifecycle.</summary>
+        private readonly Lock _gate = new();
+
         /// <summary>The upstream observable shared across both branches.</summary>
         private readonly IObservableAsync<T> _source;
 
         /// <summary>The partition predicate, evaluated exactly once per upstream emission.</summary>
         private readonly Func<T, bool> _predicate;
-
-        /// <summary>Initializes a new instance of the <see cref="PartitionCoordinator{T}"/> class.</summary>
-        /// <param name="source">The upstream observable.</param>
-        /// <param name="predicate">The partition predicate.</param>
-        public PartitionCoordinator(IObservableAsync<T> source, Func<T, bool> predicate)
-        {
-            _source = source;
-            _predicate = predicate;
-            TrueBranch = new PartitionBranchSignal(isTrueBranch: true) { Coordinator = this };
-            FalseBranch = new PartitionBranchSignal(isTrueBranch: false) { Coordinator = this };
-        }
-
-        /// <summary>Synchronization gate protecting branch slots and the source-subscription lifecycle.</summary>
-        private readonly Lock _gate = new();
 
         /// <summary>The active observer for the truthy branch, or <see langword="null"/> when nobody is subscribed.</summary>
         private IObserverAsync<T>? _trueObserver;
@@ -497,6 +481,17 @@ public static partial class SignalAsync
 
         /// <summary>Cached terminal result so a late-arriving branch can be notified immediately.</summary>
         private Result? _terminalResult;
+
+        /// <summary>Initializes a new instance of the <see cref="PartitionCoordinator{T}"/> class.</summary>
+        /// <param name="source">The upstream observable.</param>
+        /// <param name="predicate">The partition predicate.</param>
+        public PartitionCoordinator(IObservableAsync<T> source, Func<T, bool> predicate)
+        {
+            _source = source;
+            _predicate = predicate;
+            TrueBranch = new PartitionBranchSignal(isTrueBranch: true) { Coordinator = this };
+            FalseBranch = new PartitionBranchSignal(isTrueBranch: false) { Coordinator = this };
+        }
 
         /// <summary>Gets the truthy-side observable; values for which the predicate returns <see langword="true"/>.</summary>
         public IObservableAsync<T> TrueBranch { get; }
@@ -690,6 +685,9 @@ public static partial class SignalAsync
         /// <param name="isTrueBranch"><see langword="true"/> for the truthy branch.</param>
         internal sealed class PartitionBranchSignal(bool isTrueBranch) : SignalAsync<T>
         {
+            /// <summary>Gets or sets the back-pointer to the owning coordinator.</summary>
+            internal PartitionCoordinator<T> Coordinator { get; set; } = null!;
+
             /// <inheritdoc/>
             protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
                 IObserverAsync<T> observer,
@@ -699,9 +697,6 @@ public static partial class SignalAsync
                 // coordinator field is filled in below.
                 return Coordinator.SubscribeBranchAsync(isTrueBranch, observer, cancellationToken);
             }
-
-            /// <summary>Gets or sets the back-pointer to the owning coordinator.</summary>
-            internal PartitionCoordinator<T> Coordinator { get; set; } = null!;
         }
 
         /// <summary>Branch subscription handle returned to the subscriber.</summary>

@@ -19,14 +19,10 @@ namespace ReactiveUI.Primitives.Core;
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
 public readonly struct Spark<T> : IEquatable<Spark<T>>
 {
-    /// <summary>
-    /// The carried exception for an OnError spark; otherwise <see langword="null"/>.
-    /// </summary>
+    /// <summary>The carried exception for an OnError spark; otherwise <see langword="null"/>.</summary>
     private readonly Exception? _exception;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Spark{T}"/> struct.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="Spark{T}"/> struct.</summary>
     /// <param name="kind">The kind of spark.</param>
     /// <param name="value">The carried value, when the kind is OnNext.</param>
     /// <param name="exception">The carried exception, when the kind is OnError.</param>
@@ -44,30 +40,20 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
     /// </summary>
     public T Value { get; }
 
-    /// <summary>
-    /// Gets a value indicating whether the spark carries a value.
-    /// </summary>
+    /// <summary>Gets a value indicating whether the spark carries a value.</summary>
     public bool HasValue => Kind == SparkKind.OnNext;
 
-    /// <summary>
-    /// Gets the exception of an OnError spark or returns null.
-    /// </summary>
+    /// <summary>Gets the exception of an OnError spark or returns null.</summary>
     public Exception Exception => _exception!;
 
-    /// <summary>
-    /// Gets the kind of Spark that is represented.
-    /// </summary>
+    /// <summary>Gets the kind of Spark that is represented.</summary>
     public SparkKind Kind { get; }
 
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>
-    /// Determines whether the two specified Spark&lt;T&gt; objects have a different observer message payload.
-    /// </summary>
+    /// <summary>Determines whether the two specified Spark&lt;T&gt; objects have a different observer message payload.</summary>
     /// <param name="left">The first Spark&lt;T&gt; to compare.</param>
     /// <param name="right">The second Spark&lt;T&gt; to compare.</param>
     /// <returns>
@@ -76,9 +62,7 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
     /// </returns>
     public static bool operator !=(Spark<T> left, Spark<T> right) => !left.Equals(right);
 
-    /// <summary>
-    /// Determines whether the two specified Spark&lt;T&gt; objects have the same observer message payload.
-    /// </summary>
+    /// <summary>Determines whether the two specified Spark&lt;T&gt; objects have the same observer message payload.</summary>
     /// <param name="left">The first Spark&lt;T&gt; to compare.</param>
     /// <param name="right">The second Spark&lt;T&gt; to compare.</param>
     /// <returns>
@@ -87,9 +71,7 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
     /// </returns>
     public static bool operator ==(Spark<T> left, Spark<T> right) => left.Equals(right);
 
-    /// <summary>
-    /// Determines whether the current Spark&lt;T&gt; object has the same observer message payload as a specified Spark&lt;T&gt; value.
-    /// </summary>
+    /// <summary>Determines whether the current Spark&lt;T&gt; object has the same observer message payload as a specified Spark&lt;T&gt; value.</summary>
     /// <param name="other">An object to compare to the current Spark&lt;T&gt; object.</param>
     /// <returns>true if both Spark&lt;T&gt; objects have the same observer message payload; otherwise, false.</returns>
     /// <remarks>
@@ -111,16 +93,12 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
         };
     }
 
-    /// <summary>
-    /// Determines whether the specified System.Object is equal to the current Spark&lt;T&gt;.
-    /// </summary>
+    /// <summary>Determines whether the specified System.Object is equal to the current Spark&lt;T&gt;.</summary>
     /// <param name="obj">The System.Object to compare with the current Spark&lt;T&gt;.</param>
     /// <returns>true if the specified System.Object is equal to the current Spark&lt;T&gt;; otherwise, false.</returns>
     public override bool Equals(object? obj) => obj is Spark<T> other && Equals(other);
 
-    /// <summary>
-    /// Returns the hash code for this spark.
-    /// </summary>
+    /// <summary>Returns the hash code for this spark.</summary>
     /// <returns>A hash code for this spark.</returns>
     public override int GetHashCode() => Kind switch
     {
@@ -129,9 +107,7 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
         _ => typeof(T).GetHashCode() ^ 8510,
     };
 
-    /// <summary>
-    /// Returns a string representation of this spark.
-    /// </summary>
+    /// <summary>Returns a string representation of this spark.</summary>
     /// <returns>A string representation of this spark.</returns>
     public override string ToString() => Kind switch
     {
@@ -140,13 +116,11 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
         _ => "OnCompleted()",
     };
 
-    /// <summary>
-    /// Invokes the observer's method corresponding to the Spark.
-    /// </summary>
+    /// <summary>Invokes the observer's method corresponding to the Spark.</summary>
     /// <param name="observer">Observer to invoke the Spark on.</param>
     public void Accept(IObserver<T> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -165,15 +139,13 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
         }
     }
 
-    /// <summary>
-    /// Invokes the observer's method corresponding to the Spark and returns the produced result.
-    /// </summary>
+    /// <summary>Invokes the observer's method corresponding to the Spark and returns the produced result.</summary>
     /// <typeparam name="TResult">The type of the result returned from the observer's Spark handlers.</typeparam>
     /// <param name="observer">Observer to invoke the Spark on.</param>
     /// <returns>Result produced by the observation.</returns>
     public TResult Accept<TResult>(IObserver<T, TResult> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -186,25 +158,23 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
         };
     }
 
-    /// <summary>
-    /// Invokes the delegate corresponding to the Spark.
-    /// </summary>
+    /// <summary>Invokes the delegate corresponding to the Spark.</summary>
     /// <param name="onNext">Delegate to invoke for an OnNext Spark.</param>
     /// <param name="onError">Delegate to invoke for an OnError Spark.</param>
     /// <param name="onCompleted">Delegate to invoke for an OnCompleted Spark.</param>
     public void Accept(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
-        if (onNext == null)
+        if (onNext is null)
         {
             throw new ArgumentNullException(nameof(onNext));
         }
 
-        if (onError == null)
+        if (onError is null)
         {
             throw new ArgumentNullException(nameof(onError));
         }
 
-        if (onCompleted == null)
+        if (onCompleted is null)
         {
             throw new ArgumentNullException(nameof(onCompleted));
         }
@@ -223,9 +193,7 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
         }
     }
 
-    /// <summary>
-    /// Invokes the delegate corresponding to the Spark and returns the produced result.
-    /// </summary>
+    /// <summary>Invokes the delegate corresponding to the Spark and returns the produced result.</summary>
     /// <typeparam name="TResult">The type of the result returned from the Spark handler delegates.</typeparam>
     /// <param name="onNext">Delegate to invoke for an OnNext Spark.</param>
     /// <param name="onError">Delegate to invoke for an OnError Spark.</param>
@@ -233,17 +201,17 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
     /// <returns>Result produced by the observation.</returns>
     public TResult Accept<TResult>(Func<T, TResult> onNext, Func<Exception, TResult> onError, Func<TResult> onCompleted)
     {
-        if (onNext == null)
+        if (onNext is null)
         {
             throw new ArgumentNullException(nameof(onNext));
         }
 
-        if (onError == null)
+        if (onError is null)
         {
             throw new ArgumentNullException(nameof(onError));
         }
 
-        if (onCompleted == null)
+        if (onCompleted is null)
         {
             throw new ArgumentNullException(nameof(onCompleted));
         }
@@ -256,20 +224,16 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
         };
     }
 
-    /// <summary>
-    /// Returns an observable sequence with a single Spark, using the immediate scheduler.
-    /// </summary>
+    /// <summary>Returns an observable sequence with a single Spark, using the immediate scheduler.</summary>
     /// <returns>The observable sequence that surfaces the behavior of the Spark upon subscription.</returns>
     public IObservable<T> ToObservable() => ToObservable(Sequencer.Immediate);
 
-    /// <summary>
-    /// Returns an observable sequence with a single Spark.
-    /// </summary>
+    /// <summary>Returns an observable sequence with a single Spark.</summary>
     /// <param name="scheduler">Sequencer to send out the Spark calls on.</param>
     /// <returns>The observable sequence that surfaces the behavior of the Spark upon subscription.</returns>
     public IObservable<T> ToObservable(ISequencer scheduler)
     {
-        if (scheduler == null)
+        if (scheduler is null)
         {
             throw new ArgumentNullException(nameof(scheduler));
         }
@@ -287,23 +251,17 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
         }));
     }
 
-    /// <summary>
-    /// Creates an OnNext spark carrying the supplied value.
-    /// </summary>
+    /// <summary>Creates an OnNext spark carrying the supplied value.</summary>
     /// <param name="value">The value carried by the spark.</param>
     /// <returns>The OnNext spark.</returns>
     internal static Spark<T> OnNext(T value) => new(SparkKind.OnNext, value, null);
 
-    /// <summary>
-    /// Creates an OnError spark carrying the supplied exception.
-    /// </summary>
+    /// <summary>Creates an OnError spark carrying the supplied exception.</summary>
     /// <param name="exception">The exception carried by the spark.</param>
     /// <returns>The OnError spark.</returns>
     internal static Spark<T> OnError(Exception exception) => new(SparkKind.OnError, default!, exception);
 
-    /// <summary>
-    /// Creates an OnCompleted spark.
-    /// </summary>
+    /// <summary>Creates an OnCompleted spark.</summary>
     /// <returns>The OnCompleted spark.</returns>
     internal static Spark<T> OnCompleted() => new(SparkKind.OnCompleted, default!, null);
 }

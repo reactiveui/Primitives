@@ -8,9 +8,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Conditionally switches between two schedulers based on a reactive condition.
-/// </summary>
+/// <summary>Conditionally switches between two schedulers based on a reactive condition.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="condition">The reactive condition observable.</param>
@@ -22,24 +20,16 @@ internal sealed class ObserveOnIfObservable<T>(
     ISequencer trueScheduler,
     ISequencer falseScheduler) : IObservable<T>
 {
-    /// <summary>
-    /// The source observable.
-    /// </summary>
+    /// <summary>The source observable.</summary>
     private readonly IObservable<T> _source = InvalidOperationExceptionHelper.Check(source);
 
-    /// <summary>
-    /// The reactive condition observable.
-    /// </summary>
+    /// <summary>The reactive condition observable.</summary>
     private readonly IObservable<bool> _condition = InvalidOperationExceptionHelper.Check(condition);
 
-    /// <summary>
-    /// The scheduler to use when condition is true.
-    /// </summary>
+    /// <summary>The scheduler to use when condition is true.</summary>
     private readonly ISequencer _trueScheduler = InvalidOperationExceptionHelper.Check(trueScheduler);
 
-    /// <summary>
-    /// The scheduler to use when condition is false.
-    /// </summary>
+    /// <summary>The scheduler to use when condition is false.</summary>
     private readonly ISequencer _falseScheduler = InvalidOperationExceptionHelper.Check(falseScheduler);
 
     /// <inheritdoc/>
@@ -53,9 +43,7 @@ internal sealed class ObserveOnIfObservable<T>(
         return new DisposableBag(sourceSub, conditionSub, sink);
     }
 
-    /// <summary>
-    /// Sinks the source observable and conditionally observes on different schedulers.
-    /// </summary>
+    /// <summary>Sinks the source observable and conditionally observes on different schedulers.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="trueScheduler">The scheduler to use when condition is true.</param>
     /// <param name="falseScheduler">The scheduler to use when condition is false.</param>
@@ -64,49 +52,31 @@ internal sealed class ObserveOnIfObservable<T>(
         ISequencer trueScheduler,
         ISequencer falseScheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>
-        /// The gate for synchronization.
-        /// </summary>
+        /// <summary>The gate for synchronization.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// The downstream observer.
-        /// </summary>
+        /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _downstream = InvalidOperationExceptionHelper.Check(downstream);
 
-        /// <summary>
-        /// The scheduler to use when condition is true.
-        /// </summary>
+        /// <summary>The scheduler to use when condition is true.</summary>
         private readonly ISequencer _trueScheduler = InvalidOperationExceptionHelper.Check(trueScheduler);
 
-        /// <summary>
-        /// The scheduler to use when condition is false.
-        /// </summary>
+        /// <summary>The scheduler to use when condition is false.</summary>
         private readonly ISequencer _falseScheduler = InvalidOperationExceptionHelper.Check(falseScheduler);
 
-        /// <summary>
-        /// The current scheduler.
-        /// </summary>
+        /// <summary>The current scheduler.</summary>
         private ISequencer _currentScheduler = falseScheduler;
 
-        /// <summary>
-        /// The last condition value.
-        /// </summary>
+        /// <summary>The last condition value.</summary>
         private bool _lastCondition;
 
-        /// <summary>
-        /// Whether the condition has been received.
-        /// </summary>
+        /// <summary>Whether the condition has been received.</summary>
         private bool _hasCondition;
 
-        /// <summary>
-        /// Whether the sequence is done.
-        /// </summary>
+        /// <summary>Whether the sequence is done.</summary>
         private bool _done;
 
-        /// <summary>
-        /// Gets the condition observer.
-        /// </summary>
+        /// <summary>Gets the condition observer.</summary>
         public IObserver<bool> ConditionObserver => new ConditionObserverImpl(this);
 
         /// <inheritdoc/>
@@ -199,9 +169,7 @@ internal sealed class ObserveOnIfObservable<T>(
             _downstream.OnNext(value);
         }
 
-        /// <summary>
-        /// Observer for condition updates.
-        /// </summary>
+        /// <summary>Observer for condition updates.</summary>
         /// <param name="sink">The owning sink.</param>
         private sealed class ConditionObserverImpl(ObserveOnIfSink sink) : IObserver<bool>
         {

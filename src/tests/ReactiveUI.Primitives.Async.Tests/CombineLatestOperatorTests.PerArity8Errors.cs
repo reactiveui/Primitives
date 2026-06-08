@@ -9,9 +9,7 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests for CombineLatestOperatorTests.</summary>
 public partial class CombineLatestOperatorTests
 {
-    /// <summary>
-    /// Verifies that CombineLatest with 8 sources propagates failure when source 1 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 8 sources propagates failure when source 1 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107", Justification = "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
@@ -50,9 +48,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 8 sources propagates failure when source 2 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 8 sources propagates failure when source 2 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107", Justification = "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
@@ -91,9 +87,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 8 sources propagates failure when source 3 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 8 sources propagates failure when source 3 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107", Justification = "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
@@ -132,9 +126,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 8 sources propagates failure when source 4 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 8 sources propagates failure when source 4 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107", Justification = "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
@@ -173,9 +165,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 8 sources propagates failure when source 5 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 8 sources propagates failure when source 5 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107", Justification = "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
@@ -214,9 +204,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 8 sources propagates failure when source 6 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 8 sources propagates failure when source 6 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107", Justification = "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
@@ -255,9 +243,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 8 sources propagates failure when source 7 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 8 sources propagates failure when source 7 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107", Justification = "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
@@ -296,9 +282,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 8 sources propagates failure when source 8 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 8 sources propagates failure when source 8 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107", Justification = "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]

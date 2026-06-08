@@ -6,48 +6,48 @@ using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides SkipWhile extension methods for asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides SkipWhile extension methods for asynchronous observable sequences.</summary>
 /// <remarks>SkipWhile bypasses elements in the source sequence as long as a predicate is satisfied,
 /// then emits all remaining elements.</remarks>
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Bypasses elements in the observable sequence as long as the specified asynchronous condition is true,
-    /// then emits all remaining elements.
-    /// </summary>
-    /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
+    /// <summary>SkipWhile operators for an observable source sequence.</summary>
     /// <param name="this">The source observable sequence.</param>
-    /// <param name="predicate">An asynchronous function to test each element for a condition. Receives the element
-    /// and a cancellation token.</param>
-    /// <returns>An observable sequence that skips elements while the predicate returns true and emits
-    /// all subsequent elements.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="predicate"/> is null.</exception>
-    public static IObservableAsync<T> SkipWhile<T>(this IObservableAsync<T> @this, Func<T, CancellationToken, ValueTask<bool>> predicate)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(@this);
-        ArgumentExceptionHelper.ThrowIfNull(predicate);
-
-        return new SkipWhileAsyncSignal<T>(@this, predicate);
-    }
-
-    /// <summary>
-    /// Bypasses elements in the observable sequence as long as the specified condition is true,
-    /// then emits all remaining elements.
-    /// </summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    /// <param name="this">The source observable sequence.</param>
-    /// <param name="predicate">A function to test each element for a condition.</param>
-    /// <returns>An observable sequence that skips elements while the predicate returns true and emits
-    /// all subsequent elements.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="predicate"/> is null.</exception>
-    public static IObservableAsync<T> SkipWhile<T>(this IObservableAsync<T> @this, Func<T, bool> predicate)
+    extension<T>(IObservableAsync<T> @this)
     {
-        ArgumentExceptionHelper.ThrowIfNull(@this);
-        ArgumentExceptionHelper.ThrowIfNull(predicate);
+        /// <summary>
+        /// Bypasses elements in the observable sequence as long as the specified asynchronous condition is true,
+        /// then emits all remaining elements.
+        /// </summary>
+        /// <param name="predicate">An asynchronous function to test each element for a condition. Receives the element
+        /// and a cancellation token.</param>
+        /// <returns>An observable sequence that skips elements while the predicate returns true and emits
+        /// all subsequent elements.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="predicate"/> is null.</exception>
+        public IObservableAsync<T> SkipWhile(Func<T, CancellationToken, ValueTask<bool>> predicate)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-        return new SkipWhileSyncSignal<T>(@this, predicate);
+            return new SkipWhileAsyncSignal<T>(@this, predicate);
+        }
+
+        /// <summary>
+        /// Bypasses elements in the observable sequence as long as the specified condition is true,
+        /// then emits all remaining elements.
+        /// </summary>
+        /// <param name="predicate">A function to test each element for a condition.</param>
+        /// <returns>An observable sequence that skips elements while the predicate returns true and emits
+        /// all subsequent elements.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="predicate"/> is null.</exception>
+        public IObservableAsync<T> SkipWhile(Func<T, bool> predicate)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(predicate);
+
+            return new SkipWhileSyncSignal<T>(@this, predicate);
+        }
     }
 
     /// <summary>

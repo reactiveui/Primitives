@@ -7,25 +7,17 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Represents the ThrowSignal class.
-/// </summary>
+/// <summary>Represents the ThrowSignal class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
 internal sealed class ThrowSignal<T> : SignalsBase<T>
 {
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly Exception _error;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly ISequencer _scheduler;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ThrowSignal{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ThrowSignal{T}"/> class.</summary>
     /// <param name="error">The error value.</param>
     /// <param name="scheduler">The scheduler value.</param>
     public ThrowSignal(Exception error, ISequencer scheduler)
@@ -35,9 +27,7 @@ internal sealed class ThrowSignal<T> : SignalsBase<T>
         _scheduler = scheduler;
     }
 
-    /// <summary>
-    /// Executes the SubscribeCore operation.
-    /// </summary>
+    /// <summary>Executes the SubscribeCore operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <param name="cancel">The cancel value.</param>
     /// <returns>The result.</returns>
@@ -54,9 +44,7 @@ internal sealed class ThrowSignal<T> : SignalsBase<T>
         return _scheduler.Schedule((observer, _error), static (_, state) => SignalError(state));
     }
 
-    /// <summary>
-    /// Emits the scheduled error notification.
-    /// </summary>
+    /// <summary>Emits the scheduled error notification.</summary>
     /// <param name="state">The observer and error state.</param>
     /// <returns>An empty disposable.</returns>
     private static EmptyDisposable SignalError((IObserver<T> Observer, Exception Error) state)
@@ -66,14 +54,10 @@ internal sealed class ThrowSignal<T> : SignalsBase<T>
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>
-    /// Represents the Throw class.
-    /// </summary>
+    /// <summary>Represents the Throw class.</summary>
     private sealed class Throw : WitnessBase<T, T>
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Throw"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="Throw"/> class.</summary>
         /// <param name="observer">The observer value.</param>
         /// <param name="cancel">The cancel value.</param>
         public Throw(IObserver<T> observer, IDisposable cancel)
@@ -81,9 +65,7 @@ internal sealed class ThrowSignal<T> : SignalsBase<T>
         {
         }
 
-        /// <summary>
-        /// Executes the OnNext operation.
-        /// </summary>
+        /// <summary>Executes the OnNext operation.</summary>
         /// <param name="value">The value.</param>
         public override void OnNext(T value)
         {
@@ -98,9 +80,7 @@ internal sealed class ThrowSignal<T> : SignalsBase<T>
             }
         }
 
-        /// <summary>
-        /// Executes the OnError operation.
-        /// </summary>
+        /// <summary>Executes the OnError operation.</summary>
         /// <param name="error">The error value.</param>
         public override void OnError(Exception error)
         {
@@ -114,9 +94,7 @@ internal sealed class ThrowSignal<T> : SignalsBase<T>
             }
         }
 
-        /// <summary>
-        /// Executes the OnCompleted operation.
-        /// </summary>
+        /// <summary>Executes the OnCompleted operation.</summary>
         public override void OnCompleted()
         {
             try

@@ -9,9 +9,7 @@ using AsyncObs = ReactiveUI.Primitives.Async.SignalAsync;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Contract tests for async primitive aliases and async runtime integration points.
-/// </summary>
+/// <summary>Contract tests for async primitive aliases and async runtime integration points.</summary>
 public sealed class AsyncPrimitiveContractTests
 {
     /// <summary>A reused value of two for projections and counts.</summary>
@@ -62,9 +60,7 @@ public sealed class AsyncPrimitiveContractTests
     /// <summary>Expected single-element sequence containing three.</summary>
     private static readonly int[] ThreeOnly = [3];
 
-    /// <summary>
-    /// Verifies async primitive factory aliases emit the same values as their observable async counterparts.
-    /// </summary>
+    /// <summary>Verifies async primitive factory aliases emit the same values as their observable async counterparts.</summary>
     /// <returns>A task to monitor completion.</returns>
     [Test]
     public async Task PrimitivesFactoryAliasesMatchObservableAsyncSemantics()
@@ -78,9 +74,12 @@ public sealed class AsyncPrimitiveContractTests
         var none = await AsyncObs.None<int>().ToListAsync();
         var enumerable = await OneTwoThree.ToAsyncSignal().ToListAsync();
 
+        // Typed local forces the IEnumerable<T> sequence overload, not the scalar overload.
+        int[] empty = [];
+
         Assert.Equal(ThreeFourFive, sequence);
         Assert.Equal(NineOnly, emitted);
-        Assert.Equal(Array.Empty<int>(), none);
+        Assert.Equal(empty, none);
         Assert.Equal(OneTwoThree, enumerable);
 
         var error = new InvalidOperationException("failure");
@@ -97,9 +96,7 @@ public sealed class AsyncPrimitiveContractTests
         Assert.Same(error, observed!);
     }
 
-    /// <summary>
-    /// Verifies async primitive transformation aliases compose using the core naming surface.
-    /// </summary>
+    /// <summary>Verifies async primitive transformation aliases compose using the core naming surface.</summary>
     /// <returns>A task to monitor completion.</returns>
     [Test]
     public async Task PrimitivesTransformationAliasesComposeLikeCoreNaming()
@@ -127,9 +124,7 @@ public sealed class AsyncPrimitiveContractTests
         Assert.Equal(OneThree, typed);
     }
 
-    /// <summary>
-    /// Verifies async primitive combination aliases forward to the expected async operators.
-    /// </summary>
+    /// <summary>Verifies async primitive combination aliases forward to the expected async operators.</summary>
     /// <returns>A task to monitor completion.</returns>
     [Test]
     public async Task PrimitivesCombinationAliasesForwardToAsyncOperators()
@@ -156,9 +151,7 @@ public sealed class AsyncPrimitiveContractTests
         Assert.Contains(BlendRight, blended);
     }
 
-    /// <summary>
-    /// Verifies async primitive error handling and terminal aliases match expected behavior.
-    /// </summary>
+    /// <summary>Verifies async primitive error handling and terminal aliases match expected behavior.</summary>
     /// <returns>A task to monitor completion.</returns>
     [Test]
     public async Task PrimitivesErrorAndTerminalAliasesMatchExpectedBehavior()
@@ -189,9 +182,7 @@ public sealed class AsyncPrimitiveContractTests
         Assert.Equal((IEnumerable<int>)OneTwoThree, collected);
     }
 
-    /// <summary>
-    /// Verifies <c>Use</c> disposes its async resource after completion.
-    /// </summary>
+    /// <summary>Verifies <c>Use</c> disposes its async resource after completion.</summary>
     /// <returns>A task to monitor completion.</returns>
     [Test]
     public async Task UseDisposesAsyncResourceAfterCompletion()
@@ -208,9 +199,7 @@ public sealed class AsyncPrimitiveContractTests
         Assert.True(disposed);
     }
 
-    /// <summary>
-    /// Verifies <c>ObserveOn</c> schedules direct work through the supplied sequencer.
-    /// </summary>
+    /// <summary>Verifies <c>ObserveOn</c> schedules direct work through the supplied sequencer.</summary>
     /// <returns>A task to monitor completion.</returns>
     [Test]
     public async Task ObserveOnSequencerSchedulesDirectWorkItems()
@@ -229,9 +218,7 @@ public sealed class AsyncPrimitiveContractTests
         Assert.True(sequencer.ScheduleCount > 0);
     }
 
-    /// <summary>
-    /// Verifies shift and expire aliases use the time-based async operators.
-    /// </summary>
+    /// <summary>Verifies shift and expire aliases use the time-based async operators.</summary>
     /// <returns>A task to monitor completion.</returns>
     [Test]
     public async Task ShiftAndExpireAliasesUseTimeBasedOperators()
@@ -255,9 +242,7 @@ public sealed class AsyncPrimitiveContractTests
         Assert.NotNull(timeout);
     }
 
-    /// <summary>
-    /// Drains queued sequencer work until the supplied task completes.
-    /// </summary>
+    /// <summary>Drains queued sequencer work until the supplied task completes.</summary>
     /// <typeparam name="T">The task result type.</typeparam>
     /// <param name="task">The task to observe for completion.</param>
     /// <param name="sequencer">The queued sequencer to drain.</param>
@@ -282,9 +267,7 @@ public sealed class AsyncPrimitiveContractTests
         return await task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds)).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Test sequencer that queues scheduled work until drained explicitly.
-    /// </summary>
+    /// <summary>Test sequencer that queues scheduled work until drained explicitly.</summary>
     private sealed class QueuedSequencer : ISequencer
     {
         /// <summary>A fixed deterministic clock value for the test sequencer.</summary>
@@ -299,9 +282,7 @@ public sealed class AsyncPrimitiveContractTests
         /// <inheritdoc/>
         public long Timestamp => FixedNow.Ticks;
 
-        /// <summary>
-        /// Gets the number of scheduled work items.
-        /// </summary>
+        /// <summary>Gets the number of scheduled work items.</summary>
         public int ScheduleCount { get; private set; }
 
         /// <inheritdoc/>
@@ -314,9 +295,7 @@ public sealed class AsyncPrimitiveContractTests
         /// <inheritdoc/>
         public void Schedule(IWorkItem item, long dueTimestamp) => Schedule(item);
 
-        /// <summary>
-        /// Executes all queued work items.
-        /// </summary>
+        /// <summary>Executes all queued work items.</summary>
         public void DrainAll()
         {
             while (_items.TryDequeue(out var item))
@@ -326,9 +305,7 @@ public sealed class AsyncPrimitiveContractTests
         }
     }
 
-    /// <summary>
-    /// Async disposable test resource that invokes a callback when disposed.
-    /// </summary>
+    /// <summary>Async disposable test resource that invokes a callback when disposed.</summary>
     /// <param name="onDispose">The callback invoked during disposal.</param>
     private sealed class TestAsyncResource(Action onDispose) : IAsyncDisposable
     {

@@ -4,20 +4,14 @@
 
 namespace ReactiveUI.Primitives.Core;
 
-/// <summary>
-/// Copy-on-write observer broadcaster optimized for zero-allocation single-subscriber delivery.
-/// </summary>
+/// <summary>Copy-on-write observer broadcaster optimized for zero-allocation single-subscriber delivery.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 internal struct Broadcaster<T> : IEquatable<Broadcaster<T>>
 {
-    /// <summary>
-    /// Stores either a single observer, an observer array, or <see langword="null"/>.
-    /// </summary>
+    /// <summary>Stores either a single observer, an observer array, or <see langword="null"/>.</summary>
     private object? _observers;
 
-    /// <summary>
-    /// Gets a value indicating whether at least one observer is registered.
-    /// </summary>
+    /// <summary>Gets a value indicating whether at least one observer is registered.</summary>
     public bool HasObservers => Volatile.Read(ref _observers) is not null;
 
     /// <summary>
@@ -42,7 +36,7 @@ internal struct Broadcaster<T> : IEquatable<Broadcaster<T>>
             {
                 next = new[] { single, observer };
             }
-            else if (Interlocked.CompareExchange(ref _observers, observer, null) == null)
+            else if (Interlocked.CompareExchange(ref _observers, observer, null) is null)
             {
                 return;
             }
@@ -58,14 +52,10 @@ internal struct Broadcaster<T> : IEquatable<Broadcaster<T>>
         }
     }
 
-    /// <summary>
-    /// Removes all observers from the broadcaster.
-    /// </summary>
+    /// <summary>Removes all observers from the broadcaster.</summary>
     public void Clear() => Volatile.Write(ref _observers, null);
 
-    /// <summary>
-    /// Removes an observer from the broadcaster using a lock-free compare-and-swap.
-    /// </summary>
+    /// <summary>Removes an observer from the broadcaster using a lock-free compare-and-swap.</summary>
     /// <param name="observer">Observer to remove.</param>
     public void Remove(IObserver<T> observer)
     {
@@ -84,9 +74,7 @@ internal struct Broadcaster<T> : IEquatable<Broadcaster<T>>
         }
     }
 
-    /// <summary>
-    /// Broadcasts a value to the current observers.
-    /// </summary>
+    /// <summary>Broadcasts a value to the current observers.</summary>
     /// <param name="value">Value to broadcast.</param>
     public void Next(T value)
     {
@@ -108,9 +96,7 @@ internal struct Broadcaster<T> : IEquatable<Broadcaster<T>>
         }
     }
 
-    /// <summary>
-    /// Broadcasts an error to the current observers.
-    /// </summary>
+    /// <summary>Broadcasts an error to the current observers.</summary>
     /// <param name="exception">Error to broadcast.</param>
     public void Error(Exception exception)
     {
@@ -132,9 +118,7 @@ internal struct Broadcaster<T> : IEquatable<Broadcaster<T>>
         }
     }
 
-    /// <summary>
-    /// Broadcasts completion to the current observers.
-    /// </summary>
+    /// <summary>Broadcasts completion to the current observers.</summary>
     public void Completed()
     {
         var snapshot = Volatile.Read(ref _observers);
@@ -167,9 +151,7 @@ internal struct Broadcaster<T> : IEquatable<Broadcaster<T>>
     public override readonly int GetHashCode() =>
         _observers is null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_observers);
 
-    /// <summary>
-    /// Computes the observer-set value that results from removing an observer.
-    /// </summary>
+    /// <summary>Computes the observer-set value that results from removing an observer.</summary>
     /// <param name="current">The current observer-set snapshot.</param>
     /// <param name="observer">The observer to remove.</param>
     /// <param name="next">The replacement observer-set value when the observer is present.</param>

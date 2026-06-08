@@ -6,8 +6,7 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async.Tests.Internals;
 
-/// <summary>Tests for <see cref="CombineLatestIndexedWitness{TSource, TResult}"/>, the shared
-/// per-source observer that backs every per-arity CombineLatest subscription.</summary>
+/// <summary>Tests for <see cref="CombineLatestIndexedWitness{TSource, TResult}"/>, the shared per-source observer that backs every per-arity CombineLatest subscription.</summary>
 public class CombineLatestIndexedObserverTests
 {
     /// <summary>The bitmask bit used by this test's single virtual source.</summary>
@@ -35,8 +34,7 @@ public class CombineLatestIndexedObserverTests
         await parent.DisposeAsync();
     }
 
-    /// <summary>Verifies that OnErrorResumeAsync forwards the error through the parent's lifecycle
-    /// to the downstream observer.</summary>
+    /// <summary>Verifies that OnErrorResumeAsync forwards the error through the parent's lifecycle to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnErrorResumeAsync_ThenLifecycleForwardsError()

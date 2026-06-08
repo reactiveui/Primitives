@@ -1,0 +1,8 @@
+#nullable enable
+ReactiveUI.Primitives.Concurrency.MauiDispatcherSequencer
+ReactiveUI.Primitives.Concurrency.MauiDispatcherSequencer.Dispatcher.get -> Microsoft.Maui.Dispatching.IDispatcher!
+ReactiveUI.Primitives.Concurrency.MauiDispatcherSequencerExtensions
+ReactiveUI.Primitives.Concurrency.MauiDispatcherSequencerExtensions.extension(Microsoft.Maui.Dispatching.IDispatcher!)
+ReactiveUI.Primitives.Concurrency.MauiDispatcherSequencerExtensions.extension(Microsoft.Maui.Dispatching.IDispatcher!).ToSequencer() -> ReactiveUI.Primitives.Concurrency.MauiDispatcherSequencer!
+ReactiveUI.Primitives.Concurrency.MauiDispatcherSequencer.MauiDispatcherSequencer(Microsoft.Maui.Dispatching.IDispatcher! dispatcher) -> void
+static ReactiveUI.Primitives.Concurrency.MauiDispatcherSequencerExtensions.ToSequencer(this Microsoft.Maui.Dispatching.IDispatcher! dispatcher) -> ReactiveUI.Primitives.Concurrency.MauiDispatcherSequencer!

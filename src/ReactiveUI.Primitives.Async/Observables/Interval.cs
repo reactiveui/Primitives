@@ -4,18 +4,14 @@
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides factory methods for creating asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides factory methods for creating asynchronous observable sequences.</summary>
 /// <remarks>The SignalAsync class offers static methods to construct observables that emit values
 /// asynchronously. These methods are useful for scenarios where data needs to be produced or streamed over time, such
 /// as timers or event-driven sequences. All members of this class are thread-safe and can be used from multiple threads
 /// concurrently.</remarks>
 public static partial class SignalAsync
 {
-    /// <summary>
-    /// Creates an asynchronous observable sequence that emits a long integer value at each specified time interval.
-    /// </summary>
+    /// <summary>Creates an asynchronous observable sequence that emits a long integer value at each specified time interval.</summary>
     /// <remarks>The sequence continues emitting values until the observer unsubscribes or the cancellation
     /// token is triggered. This method is useful for generating periodic events or timers in asynchronous
     /// workflows.</remarks>
@@ -25,9 +21,7 @@ public static partial class SignalAsync
     public static IObservableAsync<long> Interval(TimeSpan period) =>
         Interval(period, (TimeProvider?)null);
 
-    /// <summary>
-    /// Creates an asynchronous observable sequence that emits a long integer value at each specified time interval.
-    /// </summary>
+    /// <summary>Creates an asynchronous observable sequence that emits a long integer value at each specified time interval.</summary>
     /// <remarks>The sequence continues emitting values until the observer unsubscribes or the cancellation
     /// token is triggered. This method is useful for generating periodic events or timers in asynchronous
     /// workflows.</remarks>

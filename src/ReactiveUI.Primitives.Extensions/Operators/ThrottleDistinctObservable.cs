@@ -8,9 +8,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Throttles a sequence and ensures only distinct values are emitted.
-/// </summary>
+/// <summary>Throttles a sequence and ensures only distinct values are emitted.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="throttle">The throttle duration.</param>
@@ -47,7 +45,10 @@ internal sealed class ThrottleDistinctObservable<T>(
         TimeSpan throttle,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>Shared gate / timer / done-flag plumbing.</summary>
+        /// <summary>The gate protecting state transitions and downstream notification.</summary>
+        private readonly Lock _gate = new();
+
+        /// <summary>Shared timer / done-flag plumbing.</summary>
         private readonly TimerSinkState<T> _state = new(downstream);
 
         /// <summary>The last emitted value.</summary>
@@ -65,7 +66,7 @@ internal sealed class ThrottleDistinctObservable<T>(
         /// <inheritdoc/>
         public void OnNext(T value)
         {
-            lock (_state.Gate)
+            lock (_gate)
             {
                 if (_state.Done)
                 {
@@ -86,13 +87,31 @@ internal sealed class ThrottleDistinctObservable<T>(
         }
 
         /// <inheritdoc/>
-        public void OnError(Exception error) => _state.HandleError(error);
+        public void OnError(Exception error)
+        {
+            lock (_gate)
+            {
+                _state.HandleErrorLocked(error);
+            }
+        }
 
         /// <inheritdoc/>
-        public void OnCompleted() => _state.HandleCompleted();
+        public void OnCompleted()
+        {
+            lock (_gate)
+            {
+                _state.HandleCompletedLocked();
+            }
+        }
 
         /// <inheritdoc/>
-        public void Dispose() => _state.HandleDispose();
+        public void Dispose()
+        {
+            lock (_gate)
+            {
+                _state.HandleDisposeLocked();
+            }
+        }
 
         /// <summary>Emits the last received value if it differs from the last emitted value.
         /// Marked <c>[ExcludeFromCodeCoverage]</c> because the in-lock
@@ -103,7 +122,7 @@ internal sealed class ThrottleDistinctObservable<T>(
         private void Emit()
         {
             T? toEmit;
-            lock (_state.Gate)
+            lock (_gate)
             {
                 if (_state.Done || !_hasLastReceived)
                 {

@@ -6,8 +6,7 @@ using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>Tests for the zero-allocation <see cref="DisposableAsyncSlot"/> swap / single-assignment /
-/// dispose helpers that operate against a caller-owned <see cref="IAsyncDisposable"/> field.</summary>
+/// <summary>Tests for the <see cref="DisposableAsyncSlot"/> swap, single-assignment, and dispose helpers.</summary>
 public class DisposableAsyncSlotTests
 {
     /// <summary>Verifies a swap stores the new value and asynchronously disposes the previous occupant.</summary>

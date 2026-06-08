@@ -6,38 +6,26 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests asynchronous signal behavior.
-/// </summary>
+/// <summary>Tests asynchronous signal behavior.</summary>
 public class AsyncSignalTests
 {
-    /// <summary>
-    /// Defines the integer value observed by asynchronous tests.
-    /// </summary>
+    /// <summary>Defines the integer value observed by asynchronous tests.</summary>
     private const int ExpectedValue = 42;
 
-    /// <summary>
-    /// Defines the maximum time to wait for cross-thread test work.
-    /// </summary>
+    /// <summary>Defines the maximum time to wait for cross-thread test work.</summary>
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
 
-    /// <summary>
-    /// Subscribes the argument checking.
-    /// </summary>
+    /// <summary>Subscribes the argument checking.</summary>
     [Test]
     public void Subscribe_ArgumentChecking() =>
         Assert.Throws<ArgumentNullException>(() => new AsyncSignal<int>().Subscribe(null!));
 
-    /// <summary>
-    /// Called when [error argument checking].
-    /// </summary>
+    /// <summary>Called when [error argument checking].</summary>
     [Test]
     public void OnError_ArgumentChecking() =>
         Assert.Throws<ArgumentNullException>(() => new AsyncSignal<int>().OnError(null!));
 
-    /// <summary>
-    /// Awaits the blocking.
-    /// </summary>
+    /// <summary>Awaits the blocking.</summary>
     [Test]
     public void Await_Blocking()
     {
@@ -47,9 +35,7 @@ public class AsyncSignalTests
         Assert.True(s.IsCompleted);
     }
 
-    /// <summary>
-    /// Awaits the throw.
-    /// </summary>
+    /// <summary>Awaits the throw.</summary>
     [Test]
     public void Await_Throw()
     {
@@ -59,9 +45,7 @@ public class AsyncSignalTests
         Assert.True(s.IsCompleted);
     }
 
-    /// <summary>
-    /// Gets the result empty.
-    /// </summary>
+    /// <summary>Gets the result empty.</summary>
     [Test]
     public void GetResult_Empty()
     {
@@ -70,9 +54,7 @@ public class AsyncSignalTests
         Assert.Throws<InvalidOperationException>(() => s.GetResult());
     }
 
-    /// <summary>
-    /// Gets the result blocking.
-    /// </summary>
+    /// <summary>Gets the result blocking.</summary>
     [Test]
     public void GetResult_Blocking()
     {
@@ -82,9 +64,7 @@ public class AsyncSignalTests
         Assert.True(s.IsCompleted);
     }
 
-    /// <summary>
-    /// Gets the result blocking throw.
-    /// </summary>
+    /// <summary>Gets the result blocking throw.</summary>
     [Test]
     public void GetResult_Blocking_Throw()
     {
@@ -94,9 +74,7 @@ public class AsyncSignalTests
         Assert.True(s.IsCompleted);
     }
 
-    /// <summary>
-    /// Gets the result context.
-    /// </summary>
+    /// <summary>Gets the result context.</summary>
     [Test]
     public void GetResult_Context()
     {
@@ -128,9 +106,7 @@ public class AsyncSignalTests
         Assert.True(ctx.Ran);
     }
 
-    /// <summary>
-    /// Determines whether this instance has observers.
-    /// </summary>
+    /// <summary>Determines whether this instance has observers.</summary>
     [Test]
     public void HasObservers()
     {
@@ -156,9 +132,7 @@ public class AsyncSignalTests
         Assert.False(s.HasObservers);
     }
 
-    /// <summary>
-    /// Determines whether [has observers dispose1].
-    /// </summary>
+    /// <summary>Determines whether [has observers dispose1].</summary>
     [Test]
     public void HasObservers_Dispose1()
     {
@@ -179,9 +153,7 @@ public class AsyncSignalTests
         Assert.True(s.IsDisposed);
     }
 
-    /// <summary>
-    /// Determines whether [has observers dispose2].
-    /// </summary>
+    /// <summary>Determines whether [has observers dispose2].</summary>
     [Test]
     public void HasObservers_Dispose2()
     {
@@ -202,9 +174,7 @@ public class AsyncSignalTests
         Assert.True(s.IsDisposed);
     }
 
-    /// <summary>
-    /// Determines whether [has observers dispose3].
-    /// </summary>
+    /// <summary>Determines whether [has observers dispose3].</summary>
     [Test]
     public void HasObservers_Dispose3()
     {
@@ -217,9 +187,7 @@ public class AsyncSignalTests
         Assert.True(s.IsDisposed);
     }
 
-    /// <summary>
-    /// Determines whether [has observers on completed].
-    /// </summary>
+    /// <summary>Determines whether [has observers on completed].</summary>
     [Test]
     public void HasObservers_OnCompleted()
     {
@@ -238,9 +206,7 @@ public class AsyncSignalTests
         d.Dispose();
     }
 
-    /// <summary>
-    /// Determines whether [has observers on error].
-    /// </summary>
+    /// <summary>Determines whether [has observers on error].</summary>
     [Test]
     public void HasObservers_OnError()
     {
@@ -259,9 +225,7 @@ public class AsyncSignalTests
         d.Dispose();
     }
 
-    /// <summary>
-    /// Gets the result blocking implementation.
-    /// </summary>
+    /// <summary>Gets the result blocking implementation.</summary>
     /// <param name="s">The s.</param>
     private static void GetResult_BlockingImpl(IAwaitSignal<int> s)
     {
@@ -300,9 +264,7 @@ public class AsyncSignalTests
         Assert.True(s.IsCompleted);
     }
 
-    /// <summary>
-    /// Gets the result blocking throw implementation.
-    /// </summary>
+    /// <summary>Gets the result blocking throw implementation.</summary>
     /// <param name="s">The s.</param>
     private static void GetResult_Blocking_ThrowImpl(IAwaitSignal<int> s)
     {
@@ -351,14 +313,10 @@ public class AsyncSignalTests
         Assert.True(s.IsCompleted);
     }
 
-    /// <summary>
-    /// Captures whether a continuation was posted through the synchronization context.
-    /// </summary>
+    /// <summary>Captures whether a continuation was posted through the synchronization context.</summary>
     private sealed class MyContext : SynchronizationContext
     {
-        /// <summary>
-        /// Gets a value indicating whether a continuation was posted.
-        /// </summary>
+        /// <summary>Gets a value indicating whether a continuation was posted.</summary>
         public bool Ran { get; private set; }
 
         /// <inheritdoc/>

@@ -7,24 +7,16 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// Signals.
-/// </summary>
+/// <summary>Signals.</summary>
 public static partial class Signal
 {
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private const int TaskCompleted = 1;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private const int TaskFaulted = 2;
 
-    /// <summary>
-    /// Handles Asnyc Tasks with cancellation.
-    /// </summary>
+    /// <summary>Handles Asnyc Tasks with cancellation.</summary>
     /// <param name="execution">The function to execute.</param>
     /// <returns>
     /// An ITaskSignal of T.
@@ -32,9 +24,7 @@ public static partial class Signal
     public static ITaskSignal<RxVoid> FromTask(Func<CancellationTokenSource, Task<RxVoid>> execution) =>
         FromTask(execution, null, null);
 
-    /// <summary>
-    /// Handles Asnyc Tasks with cancellation.
-    /// </summary>
+    /// <summary>Handles Asnyc Tasks with cancellation.</summary>
     /// <param name="execution">The function to execute.</param>
     /// <param name="scheduler">The scheduler.</param>
     /// <returns>
@@ -43,9 +33,7 @@ public static partial class Signal
     public static ITaskSignal<RxVoid> FromTask(Func<CancellationTokenSource, Task<RxVoid>> execution, ISequencer? scheduler) =>
         FromTask(execution, scheduler, null);
 
-    /// <summary>
-    /// Handles Asnyc Tasks with cancellation.
-    /// </summary>
+    /// <summary>Handles Asnyc Tasks with cancellation.</summary>
     /// <param name="execution">The function to execute.</param>
     /// <param name="scheduler">The scheduler.</param>
     /// <param name="cancellationTokenSource">The cancellation token source.</param>
@@ -58,9 +46,7 @@ public static partial class Signal
         CancellationTokenSource? cancellationTokenSource) =>
         CreateTaskSignal(execution, static _ => true, scheduler, cancellationTokenSource);
 
-    /// <summary>
-    /// Froms the asynchronous.
-    /// </summary>
+    /// <summary>Froms the asynchronous.</summary>
     /// <typeparam name="TResult">The type of the return value.</typeparam>
     /// <param name="actionAsync">The action asynchronous.</param>
     /// <returns>
@@ -69,9 +55,7 @@ public static partial class Signal
     public static ITaskSignal<TResult> FromTask<TResult>(Func<CancellationTokenSource, Task<TResult>> actionAsync) =>
         FromTask(actionAsync, null, null);
 
-    /// <summary>
-    /// Froms the asynchronous.
-    /// </summary>
+    /// <summary>Froms the asynchronous.</summary>
     /// <typeparam name="TResult">The type of the return value.</typeparam>
     /// <param name="actionAsync">The action asynchronous.</param>
     /// <param name="scheduler">The scheduler.</param>
@@ -81,9 +65,7 @@ public static partial class Signal
     public static ITaskSignal<TResult> FromTask<TResult>(Func<CancellationTokenSource, Task<TResult>> actionAsync, ISequencer? scheduler) =>
         FromTask(actionAsync, scheduler, null);
 
-    /// <summary>
-    /// Froms the asynchronous.
-    /// </summary>
+    /// <summary>Froms the asynchronous.</summary>
     /// <typeparam name="TResult">The type of the return value.</typeparam>
     /// <param name="actionAsync">The action asynchronous.</param>
     /// <param name="scheduler">The scheduler.</param>
@@ -97,100 +79,7 @@ public static partial class Signal
         CancellationTokenSource? cancellationTokenSource) =>
         CreateTaskSignal(actionAsync, static _ => true, scheduler, cancellationTokenSource);
 
-    /// <summary>
-    /// Handles the cancellation.
-    /// </summary>
-    /// <param name="asyncTask">The asynchronous task.</param>
-    /// <returns>A Task.</returns>
-    public static Task HandleCancellation(this Task asyncTask) => HandleCancellation(asyncTask, null);
-
-    /// <summary>
-    /// Handles the cancellation.
-    /// </summary>
-    /// <param name="asyncTask">The asynchronous task.</param>
-    /// <param name="action">The action.</param>
-    /// <returns>A Task.</returns>
-    public static async Task HandleCancellation(this Task asyncTask, Action? action)
-    {
-        try
-        {
-            await asyncTask.ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            action?.Invoke();
-        }
-    }
-
-    /// <summary>
-    /// Handles the cancellation.
-    /// </summary>
-    /// <typeparam name="TResult">The type of the result.</typeparam>
-    /// <param name="asyncTask">The asynchronous task.</param>
-    /// <returns>A Task of TResult.</returns>
-    public static Task<TResult?> HandleCancellation<TResult>(this Task<TResult> asyncTask) => HandleCancellation(asyncTask, null);
-
-    /// <summary>
-    /// Handles the cancellation.
-    /// </summary>
-    /// <typeparam name="TResult">The type of the result.</typeparam>
-    /// <param name="asyncTask">The asynchronous task.</param>
-    /// <param name="action">The action.</param>
-    /// <returns>A Task of TResult.</returns>
-    public static async Task<TResult?> HandleCancellation<TResult>(this Task<TResult> asyncTask, Action? action)
-    {
-        try
-        {
-            return await asyncTask.ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            action?.Invoke();
-        }
-
-        return default;
-    }
-
-    /// <summary>
-    /// Handles the cancellation.
-    /// </summary>
-    /// <typeparam name="TResult">The type.</typeparam>
-    /// <param name="asyncTask">The asynchronous task.</param>
-    /// <param name="token">The token.</param>
-    /// <returns>
-    /// A Task.
-    /// </returns>
-    public static Task<TResult?> HandleCancellation<TResult>(this IObservable<TResult> asyncTask, CancellationToken token) =>
-        HandleCancellation(asyncTask, null, token);
-
-    /// <summary>
-    /// Handles the cancellation.
-    /// </summary>
-    /// <typeparam name="TResult">The type.</typeparam>
-    /// <param name="asyncTask">The asynchronous task.</param>
-    /// <param name="action">The action.</param>
-    /// <param name="token">The token.</param>
-    /// <returns>
-    /// A Task.
-    /// </returns>
-    public static async Task<TResult?> HandleCancellation<TResult>(this IObservable<TResult> asyncTask, Action? action, CancellationToken token)
-    {
-        try
-        {
-            token.ThrowIfCancellationRequested();
-            return await Task.Run(async () => await asyncTask, token).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            action?.Invoke();
-        }
-
-        return default;
-    }
-
-    /// <summary>
-    /// Executes the CreateTaskSignal operation.
-    /// </summary>
+    /// <summary>Executes the CreateTaskSignal operation.</summary>
     /// <typeparam name="TResult">The TResult type.</typeparam>
     /// <param name="execution">The execution value.</param>
     /// <param name="shouldEmit">The shouldEmit value.</param>
@@ -209,9 +98,7 @@ public static partial class Signal
                 scheduler,
                 cancellationTokenSource);
 
-    /// <summary>
-    /// Executes the SubscribeTask operation.
-    /// </summary>
+    /// <summary>Executes the SubscribeTask operation.</summary>
     /// <typeparam name="TResult">The TResult type.</typeparam>
     /// <param name="signal">The signal value.</param>
     /// <param name="execution">The execution value.</param>
@@ -295,9 +182,7 @@ public static partial class Signal
         });
     }
 
-    /// <summary>
-    /// Executes the ObserveTask operation.
-    /// </summary>
+    /// <summary>Executes the ObserveTask operation.</summary>
     /// <typeparam name="TResult">The TResult type.</typeparam>
     /// <param name="cancellableTask">The cancellableTask value.</param>
     /// <param name="shouldEmit">The shouldEmit value.</param>
@@ -335,9 +220,7 @@ public static partial class Signal
         }
     }
 
-    /// <summary>
-    /// Executes the Cancel operation.
-    /// </summary>
+    /// <summary>Executes the Cancel operation.</summary>
     /// <param name="source">The source value.</param>
     private static void Cancel(CancellationTokenSource source)
     {
@@ -351,75 +234,20 @@ public static partial class Signal
         }
     }
 
-    /// <summary>
-    /// Executes the WhenCancelled operation.
-    /// </summary>
-    /// <typeparam name="TResult">The TResult type.</typeparam>
-    /// <param name="asyncTask">The asyncTask value.</param>
-    /// <param name="cancellationToken">The cancellationToken value.</param>
-    /// <returns>The result.</returns>
-    private static async Task<(TResult Value, bool IsCanceled)> WhenCancelled<TResult>(this Task<TResult> asyncTask, CancellationToken cancellationToken)
-    {
-        var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var registration = cancellationToken.Register(
-            static state => ((TaskCompletionSource<TResult>)state!).TrySetCanceled(),
-            tcs,
-            useSynchronizationContext: false);
-        var cancellationTask = tcs.Task;
-
-        try
-        {
-            // Create a task that completes when either the async operation completes,
-            // or cancellation is requested.
-            var readyTask = await Task.WhenAny(asyncTask, cancellationTask).ConfigureAwait(false);
-
-            // In case of cancellation, register a continuation to observe any unhandled
-            // exceptions from the asynchronous operation once it completes.
-            if (readyTask == cancellationTask)
-            {
-                _ = asyncTask.ContinueWith(
-                    static task => _ = task.Exception,
-                    CancellationToken.None,
-                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                    TaskScheduler.Default);
-            }
-
-            return (await readyTask.ConfigureAwait(false), tcs.Task.IsCanceled || readyTask.IsCanceled);
-        }
-        finally
-        {
-#if NET8_0_OR_GREATER
-            await registration.DisposeAsync().ConfigureAwait(false);
-#else
-            registration.Dispose();
-#endif
-        }
-    }
-
-    /// <summary>
-    /// Immediate task signal that subscribes directly instead of building a nested observable pipeline.
-    /// </summary>
+    /// <summary>Immediate task signal that subscribes directly instead of building a nested observable pipeline.</summary>
     /// <typeparam name="TResult">The result type.</typeparam>
     private sealed class ImmediateTaskSignal<TResult> : ITaskSignal<TResult>
     {
-        /// <summary>
-        /// Executes the task.
-        /// </summary>
+        /// <summary>Executes the task.</summary>
         private readonly Func<CancellationTokenSource, Task<TResult>> _execution;
 
-        /// <summary>
-        /// Filters successful task results.
-        /// </summary>
+        /// <summary>Filters successful task results.</summary>
         private readonly Func<TResult, bool> _shouldEmit;
 
-        /// <summary>
-        /// Non-zero after disposal.
-        /// </summary>
+        /// <summary>Non-zero after disposal.</summary>
         private int _disposed;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ImmediateTaskSignal{TResult}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ImmediateTaskSignal{TResult}"/> class.</summary>
         /// <param name="execution">Task factory.</param>
         /// <param name="shouldEmit">Result filter.</param>
         /// <param name="cancellationTokenSource">Optional cancellation source.</param>
@@ -445,15 +273,13 @@ public static partial class Signal
         /// <inheritdoc/>
         public bool IsDisposed => Volatile.Read(ref _disposed) != 0;
 
-        /// <summary>
-        /// Gets the owned cancellation source.
-        /// </summary>
+        /// <summary>Gets the owned cancellation source.</summary>
         private CancellationTokenSource SourceCore { get; }
 
         /// <inheritdoc/>
         public void GetOperationCanceled(IObserver<Exception> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -471,7 +297,7 @@ public static partial class Signal
             Justification = "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -541,9 +367,7 @@ public static partial class Signal
             SourceCore.Dispose();
         }
 
-        /// <summary>
-        /// Throws when disposed.
-        /// </summary>
+        /// <summary>Throws when disposed.</summary>
         private void ThrowIfDisposed()
         {
             if (!IsDisposed)
@@ -554,45 +378,29 @@ public static partial class Signal
             throw new ObjectDisposedException(nameof(ImmediateTaskSignal<TResult>));
         }
 
-        /// <summary>
-        /// Subscription for pending immediate tasks.
-        /// </summary>
+        /// <summary>Subscription for pending immediate tasks.</summary>
         private sealed class ImmediateTaskSubscription : IDisposable
         {
-            /// <summary>
-            /// Completed state marker.
-            /// </summary>
+            /// <summary>Completed state marker.</summary>
             private const int Completed = 1;
 
-            /// <summary>
-            /// Faulted state marker.
-            /// </summary>
+            /// <summary>Faulted state marker.</summary>
             private const int Faulted = 2;
 
-            /// <summary>
-            /// Cancellation source to cancel while pending.
-            /// </summary>
+            /// <summary>Cancellation source to cancel while pending.</summary>
             private readonly CancellationTokenSource _source;
 
-            /// <summary>
-            /// Completion state.
-            /// </summary>
+            /// <summary>Completion state.</summary>
             private int _state;
 
-            /// <summary>
-            /// Initializes a new instance of the <see cref="ImmediateTaskSubscription"/> class.
-            /// </summary>
+            /// <summary>Initializes a new instance of the <see cref="ImmediateTaskSubscription"/> class.</summary>
             /// <param name="source">Cancellation source.</param>
             public ImmediateTaskSubscription(CancellationTokenSource source) => _source = source;
 
-            /// <summary>
-            /// Marks the task completed.
-            /// </summary>
+            /// <summary>Marks the task completed.</summary>
             public void MarkCompleted() => Volatile.Write(ref _state, Completed);
 
-            /// <summary>
-            /// Marks the task faulted.
-            /// </summary>
+            /// <summary>Marks the task faulted.</summary>
             public void MarkFaulted() => Volatile.Write(ref _state, Faulted);
 
             /// <inheritdoc/>

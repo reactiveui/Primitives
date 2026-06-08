@@ -139,6 +139,7 @@ public class ObserveOnObservableTests
     /// <summary>Observable that synchronously errors during <c>Subscribe</c> and exposes the subscription
     /// handle it returned so tests can assert it was disposed.</summary>
     /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="error">The exception to emit synchronously.</param>
     private sealed class SyncErroringObservable<T>(Exception error) : IObservable<T>
     {
         /// <summary>Gets the subscription handle returned from the most recent subscribe.</summary>

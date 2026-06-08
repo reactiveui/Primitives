@@ -24,9 +24,7 @@ internal sealed class MapWithSignal<TSource, TState, TResult> : IRequireCurrentT
     /// <summary>The transform applied to each source value and the state.</summary>
     private readonly Func<TState, TSource, TResult> _selector;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MapWithSignal{TSource, TState, TResult}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="MapWithSignal{TSource, TState, TResult}"/> class.</summary>
     /// <param name="source">The source sequence.</param>
     /// <param name="state">The state passed to the selector.</param>
     /// <param name="selector">The transform applied to each source value and the state.</param>
@@ -37,21 +35,17 @@ internal sealed class MapWithSignal<TSource, TState, TResult> : IRequireCurrentT
         _selector = selector;
     }
 
-    /// <summary>
-    /// Determines whether the sink must subscribe on the current thread.
-    /// </summary>
+    /// <summary>Determines whether the sink must subscribe on the current thread.</summary>
     /// <returns><see langword="true"/> when the source requires current-thread subscription.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() =>
         _source is IRequireCurrentThread<TSource> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread();
 
-    /// <summary>
-    /// Subscribes the observer to the projected sequence.
-    /// </summary>
+    /// <summary>Subscribes the observer to the projected sequence.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <returns>The subscription handle.</returns>
     public IDisposable Subscribe(IObserver<TResult> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -74,9 +68,7 @@ internal sealed class MapWithSignal<TSource, TState, TResult> : IRequireCurrentT
         /// <summary>Whether a terminal notification has been forwarded.</summary>
         private bool _stopped;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MapWithObserver"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="MapWithObserver"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="state">The state passed to the selector.</param>
         /// <param name="selector">The transform applied to each source value and the state.</param>

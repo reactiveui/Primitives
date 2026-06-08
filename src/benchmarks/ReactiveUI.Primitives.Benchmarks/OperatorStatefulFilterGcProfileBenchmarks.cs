@@ -18,24 +18,16 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
 public class OperatorStatefulFilterGcProfileBenchmarks
 {
-    /// <summary>
-    /// The starting value of each benchmarked sequence.
-    /// </summary>
+    /// <summary>The starting value of each benchmarked sequence.</summary>
     private const int StartValue = 0;
 
-    /// <summary>
-    /// The number of values produced by each benchmarked sequence.
-    /// </summary>
+    /// <summary>The number of values produced by each benchmarked sequence.</summary>
     private const int RangeCount = 1024;
 
-    /// <summary>
-    /// The number of leading values skipped or compared by the benchmarks.
-    /// </summary>
+    /// <summary>The number of leading values skipped or compared by the benchmarks.</summary>
     private const int SkipCount = 8;
 
-    /// <summary>
-    /// The divisor used by the key-selector benchmarks.
-    /// </summary>
+    /// <summary>The divisor used by the key-selector benchmarks.</summary>
     private const int KeyDivisor = 2;
 
     /// <summary>Subscribe-and-drain through Skip.</summary>

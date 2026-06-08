@@ -18,8 +18,7 @@ public class ObserverArrayHelpersTests
     /// <summary>Expected length of the array after removing one observer from three.</summary>
     private const int RemainingLengthAfterRemoveFromThree = 2;
 
-    /// <summary>Verifies <see cref="ObserverArrayHelpers.Broadcast{T}"/> short-circuits when
-    /// the observer array is empty.</summary>
+    /// <summary>Verifies <see cref="ObserverArrayHelpers.Broadcast{T}"/> short-circuits when the observer array is empty.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenBroadcastEmpty_ThenNoOp()
@@ -31,8 +30,7 @@ public class ObserverArrayHelpersTests
         await Assert.That(observers).IsEmpty();
     }
 
-    /// <summary>Verifies <see cref="ObserverArrayHelpers.Broadcast{T}"/> fans the value out to
-    /// every observer in order.</summary>
+    /// <summary>Verifies <see cref="ObserverArrayHelpers.Broadcast{T}"/> fans the value out to every observer in order.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenBroadcastMultiple_ThenEveryObserverReceivesValue()
@@ -49,8 +47,7 @@ public class ObserverArrayHelpersTests
         await Assert.That(third.Values).IsCollectionEqualTo([Sentinel]);
     }
 
-    /// <summary>Verifies <see cref="ObserverArrayHelpers.RemoveOrNull{T}"/> returns <see langword="null"/>
-    /// when the observer is not present in the array.</summary>
+    /// <summary>Verifies <see cref="ObserverArrayHelpers.RemoveOrNull{T}"/> returns <see langword="null"/> when the observer is not present in the array.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRemoveNotPresent_ThenReturnsNull()
@@ -65,8 +62,7 @@ public class ObserverArrayHelpersTests
         await Assert.That(result).IsNull();
     }
 
-    /// <summary>Verifies <see cref="ObserverArrayHelpers.RemoveOrNull{T}"/> returns the empty
-    /// sentinel when the array contains exactly one observer (the one being removed).</summary>
+    /// <summary>Verifies <see cref="ObserverArrayHelpers.RemoveOrNull{T}"/> returns the empty sentinel when the array contains exactly one observer (the one being removed).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRemoveSingleton_ThenReturnsEmptySentinel()
@@ -80,8 +76,7 @@ public class ObserverArrayHelpersTests
         await Assert.That(result).IsSameReferenceAs(empty);
     }
 
-    /// <summary>Verifies <see cref="ObserverArrayHelpers.RemoveOrNull{T}"/> removes the first
-    /// observer from a multi-element array (no left copy, full right copy).</summary>
+    /// <summary>Verifies <see cref="ObserverArrayHelpers.RemoveOrNull{T}"/> removes the first observer from a multi-element array (no left copy, full right copy).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRemoveFirstFromThree_ThenLeavesTrailingPair()
@@ -100,8 +95,7 @@ public class ObserverArrayHelpersTests
         await Assert.That(ReferenceEquals(result[1], c)).IsTrue();
     }
 
-    /// <summary>Verifies <see cref="ObserverArrayHelpers.RemoveOrNull{T}"/> removes the middle
-    /// observer (both left and right copies non-empty).</summary>
+    /// <summary>Verifies <see cref="ObserverArrayHelpers.RemoveOrNull{T}"/> removes the middle observer (both left and right copies non-empty).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRemoveMiddleFromThree_ThenLeavesFirstAndLast()
@@ -120,8 +114,7 @@ public class ObserverArrayHelpersTests
         await Assert.That(ReferenceEquals(result[1], c)).IsTrue();
     }
 
-    /// <summary>Verifies <see cref="ObserverArrayHelpers.RemoveOrNull{T}"/> removes the last
-    /// observer (full left copy, no right copy).</summary>
+    /// <summary>Verifies <see cref="ObserverArrayHelpers.RemoveOrNull{T}"/> removes the last observer (full left copy, no right copy).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRemoveLastFromThree_ThenLeavesLeadingPair()

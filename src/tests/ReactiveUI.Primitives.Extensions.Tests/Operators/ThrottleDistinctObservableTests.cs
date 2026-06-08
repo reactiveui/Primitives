@@ -38,8 +38,7 @@ public class ThrottleDistinctObservableTests
         await Assert.That(values).IsEmpty();
     }
 
-    /// <summary>Verifies that an <c>OnError</c> arriving after a prior <c>OnCompleted</c> is
-    /// silently dropped.</summary>
+    /// <summary>Verifies that an <c>OnError</c> arriving after a prior <c>OnCompleted</c> is silently dropped.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnErrorAfterCompleted_ThenDropped()

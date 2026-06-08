@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Tests for time-based operators: Throttle, Delay, Timeout, Timer, Interval.
-/// </summary>
+/// <summary>Tests for time-based operators: Throttle, Delay, Timeout, Timer, Interval.</summary>
 public class TimeBasedOperatorTests
 {
     /// <summary>Expected value42 for assertions.</summary>
@@ -330,7 +328,7 @@ public class TimeBasedOperatorTests
     }
 
     /// <summary>
-    /// Verifies that <see cref="SignalAsync.Throttle{T}(IObservableAsync{T}, TimeSpan, TimeProvider?)"/> uses the non-system
+    /// Verifies that <see cref="SignalAsyncExtensions.Throttle{T}(IObservableAsync{T}, TimeSpan, TimeProvider?)"/> uses the non-system
     /// <see cref="TimeProvider"/> code path in <c>DelayAsync</c> when a
     /// custom provider is supplied, and still correctly debounces values.
     /// </summary>
@@ -896,9 +894,7 @@ public class TimeBasedOperatorTests
         await Assert.That(result).IsCollectionEqualTo([1, ExpectedSecond, ExpectedThird]);
     }
 
-    /// <summary>Verifies that an exception thrown by the downstream observer's
-    /// <c>OnCompletedAsync</c> during a <c>Timeout</c> firing is routed to
-    /// <see cref="UnhandledExceptionHandler"/>.</summary>
+    /// <summary>Verifies that an exception thrown by the downstream observer's <c>OnCompletedAsync</c> during a <c>Timeout</c> firing is routed to <see cref="UnhandledExceptionHandler"/>.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTimeoutFiresAndDownstreamCompletionThrows_ThenRoutedToUnhandled()
@@ -923,9 +919,7 @@ public class TimeBasedOperatorTests
     /// </summary>
     private sealed class CustomTimeProvider : TimeProvider
     {
-        /// <summary>
-        /// Creates a timer by delegating to the system <see cref="TimeProvider"/>.
-        /// </summary>
+        /// <summary>Creates a timer by delegating to the system <see cref="TimeProvider"/>.</summary>
         /// <param name="callback">The callback to invoke when the timer fires.</param>
         /// <param name="state">The state object passed to the callback.</param>
         /// <param name="dueTime">The initial delay before the first invocation.</param>
@@ -935,15 +929,10 @@ public class TimeBasedOperatorTests
             System.CreateTimer(callback, state, dueTime, period);
     }
 
-    /// <summary>
-    /// A <see cref="TimeProvider"/> that throws an <see cref="InvalidOperationException"/>
-    /// from <see cref="CreateTimer"/>. Used to test the non-cancellation catch block in timeout observers.
-    /// </summary>
+    /// <summary><see cref="TimeProvider"/> that throws from <see cref="CreateTimer"/> to exercise the non-cancellation catch.</summary>
     private sealed class ThrowingTimeProvider : TimeProvider
     {
-        /// <summary>
-        /// Throws an <see cref="InvalidOperationException"/> instead of creating a timer.
-        /// </summary>
+        /// <summary>Throws an <see cref="InvalidOperationException"/> instead of creating a timer.</summary>
         /// <param name="callback">The callback (unused).</param>
         /// <param name="state">The state (unused).</param>
         /// <param name="dueTime">The due time (unused).</param>
@@ -961,9 +950,7 @@ public class TimeBasedOperatorTests
     /// </summary>
     private sealed class ImmediateFireTimeProvider : TimeProvider
     {
-        /// <summary>
-        /// Invokes the timer callback synchronously and returns a no-op timer.
-        /// </summary>
+        /// <summary>Invokes the timer callback synchronously and returns a no-op timer.</summary>
         /// <param name="callback">The callback to invoke immediately.</param>
         /// <param name="state">The state object passed to the callback.</param>
         /// <param name="dueTime">The initial delay (ignored; fires immediately).</param>
@@ -975,30 +962,21 @@ public class TimeBasedOperatorTests
             return new NoOpTimer();
         }
 
-        /// <summary>
-        /// A timer that performs no operations. Used as the return value from
-        /// <see cref="CreateTimer"/>.
-        /// </summary>
+        /// <summary>A timer that performs no operations. Used as the return value from <see cref="CreateTimer"/>.</summary>
         private sealed class NoOpTimer : ITimer
         {
-            /// <summary>
-            /// No-op change; returns true.
-            /// </summary>
+            /// <summary>No-op change; returns true.</summary>
             /// <param name="dueTime">The due time (ignored).</param>
             /// <param name="period">The period (ignored).</param>
             /// <returns>Always returns true.</returns>
             public bool Change(TimeSpan dueTime, TimeSpan period) => true;
 
-            /// <summary>
-            /// No-op dispose.
-            /// </summary>
+            /// <summary>No-op dispose.</summary>
             public void Dispose()
             {
             }
 
-            /// <summary>
-            /// No-op async dispose.
-            /// </summary>
+            /// <summary>No-op async dispose.</summary>
             /// <returns>A completed <see cref="ValueTask"/>.</returns>
             public ValueTask DisposeAsync() => default;
         }

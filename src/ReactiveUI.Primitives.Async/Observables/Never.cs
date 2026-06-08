@@ -8,17 +8,13 @@ using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides static methods for creating and composing asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides static methods for creating and composing asynchronous observable sequences.</summary>
 /// <remarks>This class contains factory and utility methods for working with asynchronous observables. Use these
 /// methods to construct, transform, or combine observable sequences in asynchronous scenarios. All members are
 /// thread-safe and can be used in concurrent environments.</remarks>
 public static partial class SignalAsync
 {
-    /// <summary>
-    /// Creates an observable sequence that never produces any values and never completes.
-    /// </summary>
+    /// <summary>Creates an observable sequence that never produces any values and never completes.</summary>
     /// <remarks>This method is useful for testing or composing observables where a sequence that remains idle
     /// is required. The returned observable will not invoke any callbacks and will not signal completion or
     /// error.</remarks>
@@ -30,15 +26,11 @@ public static partial class SignalAsync
         Justification = "Public factory API — caller specifies T explicitly: SignalAsync.Never<int>().")]
     public static IObservableAsync<T> Never<T>() => NeverSignalAsync<T>.Instance;
 
-    /// <summary>
-    /// An observable sequence that never produces any values and never completes.
-    /// </summary>
+    /// <summary>An observable sequence that never produces any values and never completes.</summary>
     /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
     internal sealed class NeverSignalAsync<T> : SignalAsync<T>
     {
-        /// <summary>
-        /// Gets the singleton instance of <see cref="NeverSignalAsync{T}"/>.
-        /// </summary>
+        /// <summary>Gets the singleton instance of <see cref="NeverSignalAsync{T}"/>.</summary>
         public static NeverSignalAsync<T> Instance { get; } = new();
 
         /// <inheritdoc/>

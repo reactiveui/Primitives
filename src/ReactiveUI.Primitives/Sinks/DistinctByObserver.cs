@@ -4,36 +4,24 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Observer for distinct-by.
-/// </summary>
+/// <summary>Observer for distinct-by.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 /// <typeparam name="TKey">The key type.</typeparam>
 public sealed class DistinctByObserver<T, TKey> : SingleSourceObserver<T>
 {
-    /// <summary>
-    /// The downstream observer.
-    /// </summary>
+    /// <summary>The downstream observer.</summary>
     private readonly IObserver<T> _observer;
 
-    /// <summary>
-    /// The key selector.
-    /// </summary>
+    /// <summary>The key selector.</summary>
     private readonly Func<T, TKey> _keySelector;
 
-    /// <summary>
-    /// The observed keys.
-    /// </summary>
+    /// <summary>The observed keys.</summary>
     private readonly HashSet<TKey> _seen;
 
-    /// <summary>
-    /// A value indicating whether the observer has terminated.
-    /// </summary>
+    /// <summary>A value indicating whether the observer has terminated.</summary>
     private bool _done;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DistinctByObserver{T,TKey}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="DistinctByObserver{T,TKey}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="keySelector">The key selector.</param>
     /// <param name="comparer">The key comparer.</param>
@@ -41,7 +29,7 @@ public sealed class DistinctByObserver<T, TKey> : SingleSourceObserver<T>
     {
         _observer = observer;
         _keySelector = keySelector;
-        _seen = comparer == null ? [] : new(comparer);
+        _seen = comparer is null ? [] : new(comparer);
     }
 
     /// <inheritdoc/>

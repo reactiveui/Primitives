@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// BehaviorSignal and ReplayLatest tests for <see cref="SignalTests"/>.
-/// </summary>
+/// <summary>BehaviorSignal and ReplayLatest tests for <see cref="SignalTests"/>.</summary>
 public partial class SignalTests
 {
     /// <summary>Tests behavior Signal with start value emits latest first to new subscriber.</summary>
@@ -43,7 +41,8 @@ public partial class SignalTests
     {
         var options = new BehaviorSignalCreationOptions
         {
-            PublishingOption = PublishingOption.Concurrent, IsStateless = false
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = false
         };
         const int StartValue = 100;
         var signal = Signal.CreateBehavior(StartValue, options);
@@ -105,7 +104,8 @@ public partial class SignalTests
     {
         var options = new ReplayLatestSignalCreationOptions
         {
-            PublishingOption = PublishingOption.Concurrent, IsStateless = false
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = false
         };
         var signal = Signal.CreateReplayLatest<int>(options);
 
@@ -140,7 +140,8 @@ public partial class SignalTests
     {
         var options = new BehaviorSignalCreationOptions
         {
-            PublishingOption = PublishingOption.Serial, IsStateless = true
+            PublishingOption = PublishingOption.Serial,
+            IsStateless = true
         };
         var signal = Signal.CreateBehavior("initial", options);
         var items = new List<string>();
@@ -168,7 +169,8 @@ public partial class SignalTests
     {
         var options = new ReplayLatestSignalCreationOptions
         {
-            PublishingOption = PublishingOption.Serial, IsStateless = true
+            PublishingOption = PublishingOption.Serial,
+            IsStateless = true
         };
         var signal = Signal.CreateReplayLatest<int>(options);
 
@@ -199,7 +201,8 @@ public partial class SignalTests
     {
         var options = new ReplayLatestSignalCreationOptions
         {
-            PublishingOption = PublishingOption.Concurrent, IsStateless = true
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = true
         };
         var signal = Signal.CreateReplayLatest<int>(options);
 
@@ -234,7 +237,8 @@ public partial class SignalTests
     {
         var options = new ReplayLatestSignalCreationOptions
         {
-            PublishingOption = PublishingOption.Serial, IsStateless = true
+            PublishingOption = PublishingOption.Serial,
+            IsStateless = true
         };
         var signal = Signal.CreateReplayLatest<int>(options);
 
@@ -264,7 +268,8 @@ public partial class SignalTests
     {
         var options = new ReplayLatestSignalCreationOptions
         {
-            PublishingOption = PublishingOption.Serial, IsStateless = true
+            PublishingOption = PublishingOption.Serial,
+            IsStateless = true
         };
         var signal = Signal.CreateReplayLatest<int>(options);
         var errorTcs = new TaskCompletionSource<Exception>();
@@ -291,7 +296,8 @@ public partial class SignalTests
     {
         var options = new ReplayLatestSignalCreationOptions
         {
-            PublishingOption = PublishingOption.Concurrent, IsStateless = true
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = true
         };
         var signal = Signal.CreateReplayLatest<int>(options);
         var errorTcs = new TaskCompletionSource<Exception>();
@@ -318,7 +324,8 @@ public partial class SignalTests
     {
         var options = new ReplayLatestSignalCreationOptions
         {
-            PublishingOption = PublishingOption.Serial, IsStateless = true
+            PublishingOption = PublishingOption.Serial,
+            IsStateless = true
         };
         var signal = Signal.CreateReplayLatest<int>(options);
         var resultTcs = new TaskCompletionSource<Result>();
@@ -359,7 +366,8 @@ public partial class SignalTests
     {
         var options = new ReplayLatestSignalCreationOptions
         {
-            PublishingOption = PublishingOption.Concurrent, IsStateless = true
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = true
         };
         var signal = Signal.CreateReplayLatest<int>(options);
         var resultTcs = new TaskCompletionSource<Result>();
@@ -386,7 +394,8 @@ public partial class SignalTests
     {
         var options = new ReplayLatestSignalCreationOptions
         {
-            PublishingOption = PublishingOption.Serial, IsStateless = true
+            PublishingOption = PublishingOption.Serial,
+            IsStateless = true
         };
         var signal = Signal.CreateReplayLatest<int>(options);
 
@@ -401,7 +410,8 @@ public partial class SignalTests
     {
         var options = new ReplayLatestSignalCreationOptions
         {
-            PublishingOption = PublishingOption.Concurrent, IsStateless = true
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = true
         };
         var signal = Signal.CreateReplayLatest<int>(options);
 
@@ -416,7 +426,8 @@ public partial class SignalTests
     {
         var options = new BehaviorSignalCreationOptions
         {
-            PublishingOption = PublishingOption.Concurrent, IsStateless = true
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = true
         };
         const int StartValue = 55;
         var signal = Signal.CreateBehavior(StartValue, options);
@@ -597,7 +608,8 @@ public partial class SignalTests
     {
         var options = new ReplayLatestSignalCreationOptions
         {
-            PublishingOption = PublishingOption.Concurrent, IsStateless = false
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = false
         };
         var signal = Signal.CreateReplayLatest<int>(options);
         var errorTcs = new TaskCompletionSource<Exception>();
@@ -624,7 +636,8 @@ public partial class SignalTests
     {
         var options = new ReplayLatestSignalCreationOptions
         {
-            PublishingOption = PublishingOption.Concurrent, IsStateless = false
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = false
         };
         var signal = Signal.CreateReplayLatest<int>(options);
         var resultTcs = new TaskCompletionSource<Result>();
@@ -869,8 +882,7 @@ public partial class SignalTests
         await Assert.That(sub).IsNotNull();
     }
 
-    /// <summary>Exercises the <c>_isDisposed</c> idempotency guard on
-    /// <c>BaseReplayLatestSignalAsync.DisposeAsync</c> — a second dispose is a no-op.</summary>
+    /// <summary>Exercises the <c>_isDisposed</c> idempotency guard on <c>BaseReplayLatestSignalAsync.DisposeAsync</c> — a second dispose is a no-op.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenReplayLatestSignalDisposedTwice_ThenIdempotent()
@@ -883,8 +895,7 @@ public partial class SignalTests
         await Assert.That(signal).IsNotNull();
     }
 
-    /// <summary>Exercises the <c>_isDisposed</c> idempotency guard on
-    /// <c>BaseStatelessReplayLatestSignalAsync.DisposeAsync</c>.</summary>
+    /// <summary>Exercises the <c>_isDisposed</c> idempotency guard on <c>BaseStatelessReplayLatestSignalAsync.DisposeAsync</c>.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenStatelessReplayLastSignalDisposedTwice_ThenIdempotent()

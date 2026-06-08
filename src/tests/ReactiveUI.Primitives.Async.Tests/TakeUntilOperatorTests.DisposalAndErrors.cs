@@ -7,14 +7,10 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// TakeUntil operator tests — disposal, cancellation, forwarding errors, and integration scenarios.
-/// </summary>
+/// <summary>TakeUntil operator tests — disposal, cancellation, forwarding errors, and integration scenarios.</summary>
 public partial class TakeUntilOperatorTests
 {
-    /// <summary>
-    /// Tests TakeUntil(predicate) DisposeAsyncCore when subscription is not null.
-    /// </summary>
+    /// <summary>Tests TakeUntil(predicate) DisposeAsyncCore when subscription is not null.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPredicateStopSignalDisposed_ThenSubscriptionIsDisposed()
@@ -115,9 +111,7 @@ public partial class TakeUntilOperatorTests
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Tests that TakeUntil stops on observable signal.
-    /// </summary>
+    /// <summary>Tests that TakeUntil stops on observable signal.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilObservable_ThenStopsOnSignal()
@@ -154,9 +148,7 @@ public partial class TakeUntilOperatorTests
         await Assert.That(items).DoesNotContain(ThirdItem);
     }
 
-    /// <summary>
-    /// Tests that TakeUntil stops on task completion.
-    /// </summary>
+    /// <summary>Tests that TakeUntil stops on task completion.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTaskStopSignal_ThenStopsOnTaskCompletion()
@@ -192,9 +184,7 @@ public partial class TakeUntilOperatorTests
         await Assert.That(items).DoesNotContain(SecondItem);
     }
 
-    /// <summary>
-    /// Tests that TakeUntil stops on cancellation.
-    /// </summary>
+    /// <summary>Tests that TakeUntil stops on cancellation.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCancellationStopSignal_ThenStopsOnCancellation()
@@ -223,9 +213,7 @@ public partial class TakeUntilOperatorTests
         await Assert.That(items).Contains(1);
     }
 
-    /// <summary>
-    /// Tests that TakeUntil with predicate stops when predicate returns true.
-    /// </summary>
+    /// <summary>Tests that TakeUntil with predicate stops when predicate returns true.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPredicateStopSignal_ThenStopsWhenPredicateTrue()
@@ -237,9 +225,7 @@ public partial class TakeUntilOperatorTests
         await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem]);
     }
 
-    /// <summary>
-    /// Tests that TakeUntil with async predicate stops when predicate returns true.
-    /// </summary>
+    /// <summary>Tests that TakeUntil with async predicate stops when predicate returns true.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilAsyncPredicate_ThenStopsWhenPredicateTrue()
@@ -255,23 +241,17 @@ public partial class TakeUntilOperatorTests
         await Assert.That(result).IsCollectionEqualTo([1, SecondItem]);
     }
 
-    /// <summary>
-    /// Tests that TakeUntil throws on null predicate.
-    /// </summary>
+    /// <summary>Tests that TakeUntil throws on null predicate.</summary>
     [Test]
     public void WhenTakeUntilNullPredicate_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(() =>
         SignalAsync.Return(1).TakeUntil((Func<int, bool>)null!));
 
-    /// <summary>
-    /// Tests that TakeUntil throws on null async predicate.
-    /// </summary>
+    /// <summary>Tests that TakeUntil throws on null async predicate.</summary>
     [Test]
     public void WhenTakeUntilNullAsyncPredicate_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(() =>
         SignalAsync.Return(1).TakeUntil((Func<int, CancellationToken, ValueTask<bool>>)null!));
 
-    /// <summary>
-    /// Verifies that TakeUntil(CompletionSignalDelegate) forwards error resume when SourceFailsWhenOtherFails is false.
-    /// </summary>
+    /// <summary>Verifies that TakeUntil(CompletionSignalDelegate) forwards error resume when SourceFailsWhenOtherFails is false.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilDelegateOtherFailsAndOptionFalse_ThenErrorResumeForwarded()
@@ -313,9 +293,7 @@ public partial class TakeUntilOperatorTests
         await Assert.That(errors).Count().IsGreaterThanOrEqualTo(1);
     }
 
-    /// <summary>
-    /// Verifies that TakeUntil(CompletionSignalDelegate) forwards failure when SourceFailsWhenOtherFails is true.
-    /// </summary>
+    /// <summary>Verifies that TakeUntil(CompletionSignalDelegate) forwards failure when SourceFailsWhenOtherFails is true.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilDelegateOtherFailsAndOptionTrue_ThenCompletesWithFailure()
@@ -348,9 +326,7 @@ public partial class TakeUntilOperatorTests
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that TakeUntil(Task) forwards error resume when task fails and SourceFailsWhenOtherFails is false.
-    /// </summary>
+    /// <summary>Verifies that TakeUntil(Task) forwards error resume when task fails and SourceFailsWhenOtherFails is false.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTaskStopSignalAwaitStopThenCompleteFailsOptionFalse_ThenErrorResumeForwarded()
@@ -380,9 +356,7 @@ public partial class TakeUntilOperatorTests
         await Assert.That(errors).Count().IsGreaterThanOrEqualTo(1);
     }
 
-    /// <summary>
-    /// Verifies that TakeUntil(Task) forwards failure when task fails and SourceFailsWhenOtherFails is true.
-    /// </summary>
+    /// <summary>Verifies that TakeUntil(Task) forwards failure when task fails and SourceFailsWhenOtherFails is true.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTaskStopSignalAwaitStopThenCompleteFailsOptionTrue_ThenCompletesWithFailure()
@@ -410,9 +384,7 @@ public partial class TakeUntilOperatorTests
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that TakeUntil(Task) SourceObserver forwards error resume and completion through parent.
-    /// </summary>
+    /// <summary>Verifies that TakeUntil(Task) SourceObserver forwards error resume and completion through parent.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTaskStopSignalSourceEmitsErrorResume_ThenErrorIsForwarded()
@@ -457,9 +429,7 @@ public partial class TakeUntilOperatorTests
         await Assert.That(completionResult).IsNotNull();
     }
 
-    /// <summary>
-    /// Verifies that TakeUntil(CompletionSignalDelegate) disposes during wait.
-    /// </summary>
+    /// <summary>Verifies that TakeUntil(CompletionSignalDelegate) disposes during wait.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilDelegateDisposedDuringWait_ThenCancelsCleanly()
@@ -598,10 +568,7 @@ public partial class TakeUntilOperatorTests
         await sub.DisposeAsync();
     }
 
-    /// <summary>
-    /// Verifies that when TakeUntil(Task) forwarding completion throws,
-    /// the outer catch block swallows the exception.
-    /// </summary>
+    /// <summary>Verifies that when TakeUntil(Task) forwarding completion throws, the outer catch block swallows the exception.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTaskStopSignalForwardingThrows_ThenOuterCatchSwallows()

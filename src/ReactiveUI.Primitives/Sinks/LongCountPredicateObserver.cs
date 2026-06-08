@@ -4,35 +4,23 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Observer for predicate long-count.
-/// </summary>
+/// <summary>Observer for predicate long-count.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 public sealed class LongCountPredicateObserver<T> : SingleSourceObserver<T>
 {
-    /// <summary>
-    /// The downstream observer.
-    /// </summary>
+    /// <summary>The downstream observer.</summary>
     private readonly IObserver<long> _observer;
 
-    /// <summary>
-    /// The predicate.
-    /// </summary>
+    /// <summary>The predicate.</summary>
     private readonly Func<T, bool> _predicate;
 
-    /// <summary>
-    /// The running count.
-    /// </summary>
+    /// <summary>The running count.</summary>
     private long _count;
 
-    /// <summary>
-    /// A value indicating whether the observer has terminated.
-    /// </summary>
+    /// <summary>A value indicating whether the observer has terminated.</summary>
     private bool _done;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="LongCountPredicateObserver{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="LongCountPredicateObserver{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="predicate">The predicate.</param>
     public LongCountPredicateObserver(IObserver<long> observer, Func<T, bool> predicate)

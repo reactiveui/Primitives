@@ -36,8 +36,7 @@ public partial class CurrentValueSubjectTests
         await Assert.That(c).IsCollectionEqualTo([MultiInitialValue, Update]);
     }
 
-    /// <summary>Verifies that disposing the middle observer of a 3-observer subject does not
-    /// affect the other observers' delivery.</summary>
+    /// <summary>Verifies that disposing the middle observer of a 3-observer subject does not affect the other observers' delivery.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMiddleObserverDisposed_ThenOthersStillReceive()
@@ -168,8 +167,7 @@ public partial class CurrentValueSubjectTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies that subscribing after the subject has completed delivers the cached
-    /// value and an immediate completion.</summary>
+    /// <summary>Verifies that subscribing after the subject has completed delivers the cached value and an immediate completion.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscribeAfterCompleted_ThenReplayThenCompletes()
@@ -210,8 +208,7 @@ public partial class CurrentValueSubjectTests
         await Assert.That(errC).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies that <c>OnCompleted</c> broadcasts to multiple observers and a
-    /// subsequent <c>OnCompleted</c> is a no-op.</summary>
+    /// <summary>Verifies that <c>OnCompleted</c> broadcasts to multiple observers and a subsequent <c>OnCompleted</c> is a no-op.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMultipleObserversAndOnCompleted_ThenAllReceiveCompletionAndSecondIsNoOp()

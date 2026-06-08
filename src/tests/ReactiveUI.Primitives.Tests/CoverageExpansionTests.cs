@@ -9,89 +9,55 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Covers production paths that are only reachable through scheduled and error-handling factory variants.
-/// </summary>
+/// <summary>Covers production paths that are only reachable through scheduled and error-handling factory variants.</summary>
 public class CoverageExpansionTests
 {
-    /// <summary>
-    /// The first expected value.
-    /// </summary>
+    /// <summary>The first expected value.</summary>
     private const int First = 1;
 
-    /// <summary>
-    /// The second expected value.
-    /// </summary>
+    /// <summary>The second expected value.</summary>
     private const int Second = 2;
 
-    /// <summary>
-    /// The third expected value.
-    /// </summary>
+    /// <summary>The third expected value.</summary>
     private const int Third = 3;
 
-    /// <summary>
-    /// The fourth expected value.
-    /// </summary>
+    /// <summary>The fourth expected value.</summary>
     private const int Fourth = 4;
 
-    /// <summary>
-    /// Timeout used when waiting for thread-pool scheduled observer callbacks.
-    /// </summary>
+    /// <summary>Timeout used when waiting for thread-pool scheduled observer callbacks.</summary>
     private const int TimeoutSeconds = 2;
 
-    /// <summary>
-    /// Reused first-error message.
-    /// </summary>
+    /// <summary>Reused first-error message.</summary>
     private const string FirstMessage = "first";
 
-    /// <summary>
-    /// Reused stopped event name.
-    /// </summary>
+    /// <summary>Reused stopped event name.</summary>
     private const string StoppedMessage = "stopped";
 
-    /// <summary>
-    /// Deterministic absolute due time for scheduler overload tests.
-    /// </summary>
+    /// <summary>Deterministic absolute due time for scheduler overload tests.</summary>
     private static readonly DateTimeOffset AbsoluteDueTime = DateTimeOffset.UnixEpoch;
 
-    /// <summary>
-    /// Single-value return expectation.
-    /// </summary>
+    /// <summary>Single-value return expectation.</summary>
     private static readonly int[] SingleFirstExpected = [First];
 
-    /// <summary>
-    /// Expected values produced by the catch params overload.
-    /// </summary>
+    /// <summary>Expected values produced by the catch params overload.</summary>
     private static readonly int[] CatchRecoveryExpected = [First, Second];
 
-    /// <summary>
-    /// Expected values for create-with-state tests.
-    /// </summary>
+    /// <summary>Expected values for create-with-state tests.</summary>
     private static readonly int[] CreateWithStateExpected = [Third];
 
-    /// <summary>
-    /// Awaiter source values.
-    /// </summary>
+    /// <summary>Awaiter source values.</summary>
     private static readonly int[] AwaiterSource = [First, Second];
 
-    /// <summary>
-    /// Expected values from thread-pool observer dispatch.
-    /// </summary>
+    /// <summary>Expected values from thread-pool observer dispatch.</summary>
     private static readonly int[] WitnessOnExpected = [First];
 
-    /// <summary>
-    /// Expected values produced by simple scheduling extension overloads.
-    /// </summary>
+    /// <summary>Expected values produced by simple scheduling extension overloads.</summary>
     private static readonly int[] ScheduleExpected = [First, Second, Third, Fourth];
 
-    /// <summary>
-    /// Expected virtual-time event sequence.
-    /// </summary>
+    /// <summary>Expected virtual-time event sequence.</summary>
     private static readonly string[] VirtualEventsExpected = [FirstMessage, StoppedMessage];
 
-    /// <summary>
-    /// Covers scheduled return, throw, and empty signal implementations.
-    /// </summary>
+    /// <summary>Covers scheduled return, throw, and empty signal implementations.</summary>
     [Test]
     public void ScheduledScalarFactoriesUseNonImmediateSignalImplementations()
     {
@@ -112,9 +78,7 @@ public class CoverageExpansionTests
         Assert.Same(error, thrown[0]);
     }
 
-    /// <summary>
-    /// Covers create-with-state overloads and null validation.
-    /// </summary>
+    /// <summary>Covers create-with-state overloads and null validation.</summary>
     [Test]
     public void CreateWithStateFactoriesInvokeStatefulSubscribeCallbacks()
     {
@@ -153,9 +117,7 @@ public class CoverageExpansionTests
         Assert.Throws<ArgumentNullException>(() => Signal.Lazy<int>(null!));
     }
 
-    /// <summary>
-    /// Covers signal awaiter completion, pre-cancellation, and registered cancellation paths.
-    /// </summary>
+    /// <summary>Covers signal awaiter completion, pre-cancellation, and registered cancellation paths.</summary>
     [Test]
     public void GetAwaiterCoversCompletionAndCancellationPaths()
     {
@@ -179,9 +141,7 @@ public class CoverageExpansionTests
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).GetAwaiter(CancellationToken.None));
     }
 
-    /// <summary>
-    /// Covers catch sequence recovery, final error, empty completion, null source, and enumerator failure branches.
-    /// </summary>
+    /// <summary>Covers catch sequence recovery, final error, empty completion, null source, and enumerator failure branches.</summary>
     [Test]
     public void CatchParamsFactoryCoversRecoveryAndFailureBranches()
     {
@@ -200,7 +160,7 @@ public class CoverageExpansionTests
         Assert.Same(finalError, finalErrors[0]);
 
         var completed = 0;
-        var completedSubscription = Signal.Recover(Array.Empty<IObservable<int>>()).Subscribe(_ => { }, ex => throw ex, () => completed++);
+        var completedSubscription = Signal.Recover<int>().Subscribe(_ => { }, ex => throw ex, () => completed++);
         completedSubscription.Dispose();
         completedSubscription.Dispose();
         Assert.Equal(1, completed);
@@ -225,9 +185,7 @@ public class CoverageExpansionTests
                 .Subscribe(_ => { }, _ => { }, () => { }));
     }
 
-    /// <summary>
-    /// Covers the thread-pool-specialized witness dispatch implementation.
-    /// </summary>
+    /// <summary>Covers the thread-pool-specialized witness dispatch implementation.</summary>
     /// <returns>A task representing asynchronous observer dispatch.</returns>
     [Test]
     public async Task WitnessOnThreadPoolDispatchesNextCompletedAndErrorSignals()
@@ -253,9 +211,7 @@ public class CoverageExpansionTests
         }
     }
 
-    /// <summary>
-    /// Covers simple sequencer extension validation, delayed overloads, state overloads, and recursive scheduling.
-    /// </summary>
+    /// <summary>Covers simple sequencer extension validation, delayed overloads, state overloads, and recursive scheduling.</summary>
     [Test]
     public void SimpleSequencerExtensionsCoverValidationAndRecursiveScheduling()
     {
@@ -310,9 +266,7 @@ public class CoverageExpansionTests
         Assert.Equal(Third, recursiveCount);
     }
 
-    /// <summary>
-    /// Covers virtual-time service lookup, stopwatch, stop, sleep, and nested-run guard paths.
-    /// </summary>
+    /// <summary>Covers virtual-time service lookup, stopwatch, stop, sleep, and nested-run guard paths.</summary>
     [Test]
     public void VirtualTimeSequencerBaseCoversServicesStopwatchAndRunGuards()
     {
@@ -341,9 +295,7 @@ public class CoverageExpansionTests
         Assert.Equal(VirtualEventsExpected, events);
     }
 
-    /// <summary>
-    /// Waits for a task with a bounded timeout.
-    /// </summary>
+    /// <summary>Waits for a task with a bounded timeout.</summary>
     /// <param name="task">The task to wait for.</param>
     /// <returns>A task that completes when the supplied task completes.</returns>
     private static async Task WaitForAsync(Task task)
@@ -358,9 +310,7 @@ public class CoverageExpansionTests
         await task.ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Waits for a task with a bounded timeout and returns its result.
-    /// </summary>
+    /// <summary>Waits for a task with a bounded timeout and returns its result.</summary>
     /// <typeparam name="T">The task result type.</typeparam>
     /// <param name="task">The task to wait for.</param>
     /// <returns>The task result.</returns>
@@ -370,20 +320,14 @@ public class CoverageExpansionTests
         return await task.ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Enumerable test double whose enumerator throws from <see cref="IEnumerator.MoveNext"/>.
-    /// </summary>
+    /// <summary>Enumerable test double whose enumerator throws from <see cref="IEnumerator.MoveNext"/>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     private sealed class ThrowingMoveNextEnumerable<T> : IEnumerable<T>
     {
-        /// <summary>
-        /// Error thrown by the enumerator.
-        /// </summary>
+        /// <summary>Error thrown by the enumerator.</summary>
         private readonly Exception _error;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ThrowingMoveNextEnumerable{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ThrowingMoveNextEnumerable{T}"/> class.</summary>
         /// <param name="error">The error to throw.</param>
         public ThrowingMoveNextEnumerable(Exception error) => _error = error;
 
@@ -393,19 +337,13 @@ public class CoverageExpansionTests
         /// <inheritdoc/>
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-        /// <summary>
-        /// Enumerator test double that fails on movement.
-        /// </summary>
+        /// <summary>Enumerator test double that fails on movement.</summary>
         private sealed class ThrowingMoveNextEnumerator : IEnumerator<T>
         {
-            /// <summary>
-            /// Error thrown by movement.
-            /// </summary>
+            /// <summary>Error thrown by movement.</summary>
             private readonly Exception _error;
 
-            /// <summary>
-            /// Initializes a new instance of the <see cref="ThrowingMoveNextEnumerator"/> class.
-            /// </summary>
+            /// <summary>Initializes a new instance of the <see cref="ThrowingMoveNextEnumerator"/> class.</summary>
             /// <param name="error">The error to throw.</param>
             public ThrowingMoveNextEnumerator(Exception error) => _error = error;
 
@@ -428,20 +366,14 @@ public class CoverageExpansionTests
         }
     }
 
-    /// <summary>
-    /// Enumerable test double that throws when enumeration starts.
-    /// </summary>
+    /// <summary>Enumerable test double that throws when enumeration starts.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     private sealed class ThrowingEnumerable<T> : IEnumerable<T>
     {
-        /// <summary>
-        /// Error thrown by enumeration.
-        /// </summary>
+        /// <summary>Error thrown by enumeration.</summary>
         private readonly Exception _error;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ThrowingEnumerable{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ThrowingEnumerable{T}"/> class.</summary>
         /// <param name="error">The error to throw.</param>
         public ThrowingEnumerable(Exception error) => _error = error;
 

@@ -4,46 +4,32 @@
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// Continuation.
-/// </summary>
+/// <summary>Continuation.</summary>
 public class Continuation : IDisposable
 {
-    /// <summary>
-    /// The barrier used to synchronize phases between the lock holder and the continuation.
-    /// </summary>
+    /// <summary>The barrier used to synchronize phases between the lock holder and the continuation.</summary>
     private readonly Barrier _phaseSync = new(2);
 
-    /// <summary>
-    /// A value indicating whether this instance has been disposed.
-    /// </summary>
+    /// <summary>A value indicating whether this instance has been disposed.</summary>
     private bool _disposedValue;
 
-    /// <summary>
-    /// A value indicating whether the continuation is currently locked.
-    /// </summary>
+    /// <summary>A value indicating whether the continuation is currently locked.</summary>
     private bool _locked;
 
-    /// <summary>
-    /// Gets the number of completed phases.
-    /// </summary>
+    /// <summary>Gets the number of completed phases.</summary>
     /// <value>
     /// The completed phases.
     /// </value>
     public long CompletedPhases => _phaseSync.CurrentPhaseNumber;
 
-    /// <summary>
-    /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-    /// </summary>
+    /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>
-    /// Locks this instance.
-    /// </summary>
+    /// <summary>Locks this instance.</summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
     /// <param name="item">The item.</param>
     /// <param name="observer">The observer.</param>
@@ -83,9 +69,7 @@ public class Continuation : IDisposable
         return new ValueTask(ScheduleSignalPhase());
     }
 
-    /// <summary>
-    /// UnLocks this instance.
-    /// </summary>
+    /// <summary>UnLocks this instance.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     internal Task UnLock()
     {
@@ -98,9 +82,7 @@ public class Continuation : IDisposable
         return ScheduleSignalPhase();
     }
 
-    /// <summary>
-    /// Releases unmanaged and - optionally - managed resources.
-    /// </summary>
+    /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
     protected virtual async void Dispose(bool disposing)
     {

@@ -63,9 +63,7 @@ internal sealed class PropertyChangedObservable<T, TProperty>(
         /// <summary>Disposed flag (0 = active, 1 = disposed). Updated lock-free.</summary>
         private int _disposed;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="PropertyChangedSink"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="PropertyChangedSink"/> class.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="source">The owning instance.</param>
         /// <param name="propertyName">The property name to filter on.</param>
@@ -83,10 +81,7 @@ internal sealed class PropertyChangedObservable<T, TProperty>(
             Handler = OnPropertyChanged;
         }
 
-        /// <summary>
-        /// Gets the bound event handler attached to the source's
-        /// <see cref="INotifyPropertyChanged.PropertyChanged"/> event.
-        /// </summary>
+        /// <summary>Gets the bound event handler attached to the source's <see cref="INotifyPropertyChanged.PropertyChanged"/> event.</summary>
         public PropertyChangedEventHandler Handler { get; }
 
         /// <inheritdoc/>
@@ -100,10 +95,7 @@ internal sealed class PropertyChangedObservable<T, TProperty>(
             _source.PropertyChanged -= Handler;
         }
 
-        /// <summary>
-        /// Bound <see cref="INotifyPropertyChanged.PropertyChanged"/> handler — filters
-        /// by property name then forwards the pre-compiled getter result downstream.
-        /// </summary>
+        /// <summary>Bound <see cref="INotifyPropertyChanged.PropertyChanged"/> handler — filters by property name then forwards the pre-compiled getter result downstream.</summary>
         /// <param name="sender">Event sender (unused).</param>
         /// <param name="e">Event payload carrying the changed property name.</param>
         private void OnPropertyChanged(object? sender, PropertyChangedEventArgs e)

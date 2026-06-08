@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Disposable marker for disposed sinks.
-/// </summary>
+/// <summary>Disposable marker for disposed sinks.</summary>
 public sealed class DisposedMarker : IDisposable
 {
     /// <inheritdoc/>

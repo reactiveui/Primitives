@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Internals;
 
-/// <summary>
-/// An witness that routes notifications through user-supplied asynchronous callbacks.
-/// </summary>
+/// <summary>An witness that routes notifications through user-supplied asynchronous callbacks.</summary>
 /// <typeparam name="T">The type of the elements received by the witness.</typeparam>
 /// <param name="onNextAsync">The asynchronous function invoked for each element.</param>
 /// <param name="onErrorResumeAsync">An optional asynchronous function invoked when a resumable error occurs.</param>

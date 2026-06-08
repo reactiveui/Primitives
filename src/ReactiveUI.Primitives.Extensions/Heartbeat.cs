@@ -13,18 +13,14 @@ namespace ReactiveUI.Primitives.Extensions;
 /// <typeparam name="T">The type of the update value.</typeparam>
 public readonly record struct Heartbeat<T> : IHeartbeat<T>
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Heartbeat{T}"/> struct representing a heartbeat tick.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="Heartbeat{T}"/> struct representing a heartbeat tick.</summary>
     public Heartbeat()
     {
         IsHeartbeat = true;
         Update = default;
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Heartbeat{T}"/> struct representing a value update.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="Heartbeat{T}"/> struct representing a value update.</summary>
     /// <param name="update">The update value.</param>
     public Heartbeat(T? update)
     {

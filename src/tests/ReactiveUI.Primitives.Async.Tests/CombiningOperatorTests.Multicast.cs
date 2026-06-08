@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <content>
-/// Multicast tests for combining operators.
-/// </content>
+/// <summary>Tests for the Multicast operator.</summary>
 public partial class CombiningOperatorTests
 {
     /// <summary>Tests Multicast with ConnectAsync connects and emits.</summary>
@@ -319,9 +317,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 
-    /// <summary>
-    /// Verifies RoutePostDisposalException does nothing when result has no exception.
-    /// </summary>
+    /// <summary>Verifies RoutePostDisposalException does nothing when result has no exception.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRoutePostDisposalExceptionWithSuccess_ThenNoExceptionRouted()
@@ -329,16 +325,14 @@ public partial class CombiningOperatorTests
         Exception? unhandled = null;
         UnhandledExceptionHandler.Register(ex => unhandled = ex);
 
-        SignalAsync.MergeEnumerableSignal<int>.MergeSequenceCoordinator.RoutePostDisposalException(
+        SignalAsyncExtensions.MergeEnumerableSignal<int>.MergeSequenceCoordinator.RoutePostDisposalException(
             Result.Success);
-        SignalAsync.MergeEnumerableSignal<int>.MergeSequenceCoordinator.RoutePostDisposalException(null);
+        SignalAsyncExtensions.MergeEnumerableSignal<int>.MergeSequenceCoordinator.RoutePostDisposalException(null);
 
         await Assert.That(unhandled).IsNull();
     }
 
-    /// <summary>
-    /// Verifies that disposing a RefCount observable with an active connection disposes the connection cleanly.
-    /// </summary>
+    /// <summary>Verifies that disposing a RefCount observable with an active connection disposes the connection cleanly.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRefCountDisposedWithActiveConnection_ThenConnectionIsDisposed()
@@ -372,9 +366,7 @@ public partial class CombiningOperatorTests
         await source.DisposeAsync();
     }
 
-    /// <summary>
-    /// Verifies that disposing a RefCount observable without any subscribers does not throw.
-    /// </summary>
+    /// <summary>Verifies that disposing a RefCount observable without any subscribers does not throw.</summary>
     [Test]
     public void WhenRefCountDisposedWithNoSubscribers_ThenDoesNotThrow()
     {
@@ -386,9 +378,7 @@ public partial class CombiningOperatorTests
         ((IDisposable)(object)refCounted).Dispose();
     }
 
-    /// <summary>
-    /// Verifies that calling Dispose twice on a RefCount observable is idempotent.
-    /// </summary>
+    /// <summary>Verifies that calling Dispose twice on a RefCount observable is idempotent.</summary>
     [Test]
     public void WhenRefCountDisposedTwice_ThenSecondDisposeIsNoop()
     {
@@ -401,8 +391,7 @@ public partial class CombiningOperatorTests
         disposable.Dispose();
     }
 
-    /// <summary>Verifies that calling <c>ConnectAsync</c> with a caller-supplied cancellation
-    /// token takes the linked-CTS slow path.</summary>
+    /// <summary>Verifies that calling <c>ConnectAsync</c> with a caller-supplied cancellation token takes the linked-CTS slow path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMulticastConnectAsyncWithCustomToken_ThenLinkedCtsPathTaken()

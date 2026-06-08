@@ -7,8 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for several small synchronous operators
-/// — <c>Shuffle</c>, <c>Filter</c> (regex), <c>TrySelect</c>.</summary>
+/// <summary>Edge-case coverage for several small synchronous operators — <c>Shuffle</c>, <c>Filter</c> (regex), <c>TrySelect</c>.</summary>
 public partial class SimpleSyncOperatorTests
 {
     /// <summary>Synthetic error message attached to source errors.</summary>

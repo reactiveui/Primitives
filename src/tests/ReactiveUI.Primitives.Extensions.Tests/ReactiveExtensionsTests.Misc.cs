@@ -24,9 +24,7 @@ public partial class ReactiveExtensionsTests
     /// <summary>Hoisted source array used by tests (was inline literal).</summary>
     private static readonly string[] SequenceTest123HelloTest456World = ["test123", "hello", "test456", "world"];
 
-    /// <summary>
-    /// Syncronizes the asynchronous runs with asynchronous tasks in subscriptions.
-    /// </summary>
+    /// <summary>Syncronizes the asynchronous runs with asynchronous tasks in subscriptions.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SyncronizeAsync_RunsWithAsyncTasksInSubscriptions()
@@ -80,9 +78,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsZero();
     }
 
-    /// <summary>
-    /// Tests OnNext with params.
-    /// </summary>
+    /// <summary>Tests OnNext with params.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task OnNext_WithMultipleValues_PushesAll()
@@ -96,9 +92,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2, SampleValue3, SampleValue4, SampleValue5]);
     }
 
-    /// <summary>
-    /// Tests FromArray with scheduler.
-    /// </summary>
+    /// <summary>Tests FromArray with scheduler.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task FromArray_WithScheduler_EmitsElements()
@@ -110,9 +104,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo(source);
     }
 
-    /// <summary>
-    /// Tests Filter with regex.
-    /// </summary>
+    /// <summary>Tests Filter with regex.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Filter_WithRegex_FiltersStrings()
@@ -124,9 +116,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo(["test123", "test456"]);
     }
 
-    /// <summary>
-    /// Tests Shuffle randomizes array.
-    /// </summary>
+    /// <summary>Tests Shuffle randomizes array.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Shuffle_RandomizesArray()
@@ -146,9 +136,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests TakeUntil with predicate.
-    /// </summary>
+    /// <summary>Tests TakeUntil with predicate.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task TakeUntil_WithPredicate_CompletesWhenPredicateTrue()
@@ -165,9 +153,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2, SampleValue5]);
     }
 
-    /// <summary>
-    /// Tests Partition splits sequence.
-    /// </summary>
+    /// <summary>Tests Partition splits sequence.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Partition_SplitsSequence()
@@ -195,9 +181,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests WaitUntil takes first matching.
-    /// </summary>
+    /// <summary>Tests WaitUntil takes first matching.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WaitUntil_TakesFirstMatching()
@@ -214,9 +198,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue7]);
     }
 
-    /// <summary>
-    /// Tests DoOnSubscribe executes on subscribe.
-    /// </summary>
+    /// <summary>Tests DoOnSubscribe executes on subscribe.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task DoOnSubscribe_ExecutesOnSubscribe()
@@ -228,9 +210,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(executed).IsTrue();
     }
 
-    /// <summary>
-    /// Tests DoOnDispose executes on dispose.
-    /// </summary>
+    /// <summary>Tests DoOnDispose executes on dispose.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task DoOnDispose_ExecutesOnDispose()
@@ -244,9 +224,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(executed).IsTrue();
     }
 
-    /// <summary>
-    /// Tests Stale class with update.
-    /// </summary>
+    /// <summary>Tests Stale class with update.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Stale_WithUpdate_IsNotStale()
@@ -260,9 +238,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests Stale class without update.
-    /// </summary>
+    /// <summary>Tests Stale class without update.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Stale_WithoutUpdate_IsStale()
@@ -272,9 +248,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(stale.IsStale).IsTrue();
     }
 
-    /// <summary>
-    /// Tests Stale throws on Update access when stale.
-    /// </summary>
+    /// <summary>Tests Stale throws on Update access when stale.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Stale_WithoutUpdate_ThrowsOnUpdateAccess()
@@ -286,9 +260,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(ex).IsNotNull();
     }
 
-    /// <summary>
-    /// Tests Continuation can be disposed.
-    /// </summary>
+    /// <summary>Tests Continuation can be disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Continuation_CanBeDisposed()
@@ -298,9 +270,7 @@ public partial class ReactiveExtensionsTests
         continuation.Dispose();
     }
 
-    /// <summary>
-    /// Tests Continuation tracks completed phases.
-    /// </summary>
+    /// <summary>Tests Continuation tracks completed phases.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Continuation_TracksCompletedPhases()
@@ -312,9 +282,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(phases).IsGreaterThanOrEqualTo(0);
     }
 
-    /// <summary>
-    /// Tests Pairwise emits previous and current pairs.
-    /// </summary>
+    /// <summary>Tests Pairwise emits previous and current pairs.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Pairwise_EmitsPairs()
@@ -336,9 +304,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests ScanWithInitial starts with initial value.
-    /// </summary>
+    /// <summary>Tests ScanWithInitial starts with initial value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ScanWithInitial_StartsWithInitial()
@@ -354,9 +320,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue10, SampleValue11, SampleValue13]);
     }
 
-    /// <summary>
-    /// Tests SampleLatest samples latest on trigger.
-    /// </summary>
+    /// <summary>Tests SampleLatest samples latest on trigger.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SampleLatest_SamplesLatestOnTrigger()
@@ -376,9 +340,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue3]);
     }
 
-    /// <summary>
-    /// Tests SwitchIfEmpty switches to fallback when empty.
-    /// </summary>
+    /// <summary>Tests SwitchIfEmpty switches to fallback when empty.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SwitchIfEmpty_SwitchesWhenEmpty()
@@ -396,9 +358,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue42]);
     }
 
-    /// <summary>
-    /// Tests ToReadOnlyBehavior creates read-only behavior.
-    /// </summary>
+    /// <summary>Tests ToReadOnlyBehavior creates read-only behavior.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ToReadOnlyBehavior_CreatesReadOnly()
@@ -414,9 +374,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue10, SampleValue20, SampleValue30]);
     }
 
-    /// <summary>
-    /// Tests ToHotTask converts to hot task.
-    /// </summary>
+    /// <summary>Tests ToHotTask converts to hot task.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ToHotTask_ConvertsToTask()
@@ -429,9 +387,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(await task).IsEqualTo(SampleValue42);
     }
 
-    /// <summary>
-    /// Tests ToHotValueTask converts to a hot value task that completes with the first value.
-    /// </summary>
+    /// <summary>Tests ToHotValueTask converts to a hot value task that completes with the first value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ToHotValueTask_ConvertsToValueTask()
@@ -444,9 +400,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(await task).IsEqualTo(SampleValue42);
     }
 
-    /// <summary>
-    /// Tests ToPropertyObservable observes property changes.
-    /// </summary>
+    /// <summary>Tests ToPropertyObservable observes property changes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ToPropertyObservable_ObservesProperty()
@@ -461,9 +415,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([InitialValueLiteral, ChangedValueLiteral]);
     }
 
-    /// <summary>
-    /// Tests SkipWhileNull emits values after the first non-null value, including later nulls.
-    /// </summary>
+    /// <summary>Tests SkipWhileNull emits values after the first non-null value, including later nulls.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SkipWhileNull_WhenFirstValueArrives_EmitsRemainingValues()
@@ -485,9 +437,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo(["first", null, "second"]);
     }
 
-    /// <summary>
-    /// Tests ReplayLastOnSubscribe replays last value to new subscribers.
-    /// </summary>
+    /// <summary>Tests ReplayLastOnSubscribe replays last value to new subscribers.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ReplayLastOnSubscribe_ReplaysLastValueToNewSubscribers()
@@ -519,9 +469,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests LatestOrDefault emits default first then distinct values.
-    /// </summary>
+    /// <summary>Tests LatestOrDefault emits default first then distinct values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLatestOrDefault_ThenEmitsDefaultThenDistinctValues()
@@ -539,9 +487,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue42, 1, SampleValue2]);
     }
 
-    /// <summary>
-    /// Tests OnNext with null observer throws ArgumentNullException.
-    /// </summary>
+    /// <summary>Tests OnNext with null observer throws ArgumentNullException.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnNextWithNullObserver_ThenThrowsArgumentNullException()
@@ -553,9 +499,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(ex).IsNotNull();
     }
 
-    /// <summary>
-    /// Tests OnNext with null events array throws ArgumentNullException.
-    /// </summary>
+    /// <summary>Tests OnNext with null events array throws ArgumentNullException.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnNextWithNullEvents_ThenThrowsArgumentNullException()
@@ -567,9 +511,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(ex).IsNotNull();
     }
 
-    /// <summary>
-    /// Tests SubscribeAsync with all three handlers (onNext, onError, onCompleted).
-    /// </summary>
+    /// <summary>Tests SubscribeAsync with all three handlers (onNext, onError, onCompleted).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscribeAsyncWithAllHandlers_ThenInvokesAll()
@@ -904,19 +846,13 @@ public partial class ReactiveExtensionsTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>
-    /// Test class for INotifyPropertyChanged.
-    /// </summary>
+    /// <summary>Test class for INotifyPropertyChanged.</summary>
     private sealed class TestNotifyPropertyChanged : INotifyPropertyChanged
     {
-        /// <summary>
-        /// Property changed event.
-        /// </summary>
+        /// <summary>Property changed event.</summary>
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        /// <summary>
-        /// Gets or sets the test property.
-        /// </summary>
+        /// <summary>Gets or sets the test property.</summary>
         /// <returns>The test property value.</returns>
         public string TestProperty
         {

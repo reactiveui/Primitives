@@ -39,9 +39,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsTrue();
     }
 
-/// <summary>
-    /// Tests CombineLatestValuesAreAllFalse.
-    /// </summary>
+    /// <summary>Tests CombineLatestValuesAreAllFalse.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task CombineLatestValuesAreAllFalse_WhenAllFalse_ReturnsTrue()
@@ -55,9 +53,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsTrue();
     }
 
-    /// <summary>
-    /// Tests CombineLatestValuesAreAllTrue.
-    /// </summary>
+    /// <summary>Tests CombineLatestValuesAreAllTrue.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task CombineLatestValuesAreAllTrue_WhenAllTrue_ReturnsTrue()
@@ -71,9 +67,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsTrue();
     }
 
-    /// <summary>
-    /// Tests GetMax returns maximum value.
-    /// </summary>
+    /// <summary>Tests GetMax returns maximum value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task GetMax_WithMultipleSources_ReturnsMaximum()
@@ -87,9 +81,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue10);
     }
 
-    /// <summary>
-    /// Tests GetMin returns minimum value.
-    /// </summary>
+    /// <summary>Tests GetMin returns minimum value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task GetMin_WithMultipleSources_ReturnsMinimum()
@@ -103,9 +95,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue3);
     }
 
-    /// <summary>
-    /// Tests GetMin tracking minimum values as sources change over time.
-    /// </summary>
+    /// <summary>Tests GetMin tracking minimum values as sources change over time.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task GetMin_TracksMinimumOverTime()
@@ -131,9 +121,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue3, 1, 0]);
     }
 
-    /// <summary>
-    /// Tests GetMax tracking maximum values as sources change over time.
-    /// </summary>
+    /// <summary>Tests GetMax tracking maximum values as sources change over time.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task GetMax_TracksMaximumOverTime()
@@ -159,9 +147,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue10, SampleValue15, SampleValue20]);
     }
 
-    /// <summary>
-    /// Tests CombineLatestValuesAreAllTrue tracking state changes.
-    /// </summary>
+    /// <summary>Tests CombineLatestValuesAreAllTrue tracking state changes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task CombineLatestValuesAreAllTrue_TracksStateChanges()
@@ -195,9 +181,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([false, false, false, true, false]);
     }
 
-    /// <summary>
-    /// Tests CombineLatestValuesAreAllFalse tracking state changes.
-    /// </summary>
+    /// <summary>Tests CombineLatestValuesAreAllFalse tracking state changes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task CombineLatestValuesAreAllFalse_TracksStateChanges()

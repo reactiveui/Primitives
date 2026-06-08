@@ -7,35 +7,37 @@ using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides extension methods for working with asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
 /// <remarks>The SignalAsync class contains static methods that extend the functionality of asynchronous
 /// observables, enabling advanced filtering, transformation, and composition operations. These methods are intended to
 /// be used with types implementing asynchronous observable patterns, such as SignalAsync{T}.</remarks>
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Projects each element of the observable sequence to the specified reference type and filters out elements
-    /// that are not of that type.
-    /// </summary>
-    /// <remarks>Elements that are not of type TResult are ignored and not included in the resulting
-    /// sequence. This method is useful for working with observable sequences containing heterogeneous types,
-    /// allowing subscribers to focus on elements of a specific type.</remarks>
-    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <typeparam name="TResult">The reference type to filter and project elements to. Must be a class.</typeparam>
+    /// <summary>Type-filtering operators for an observable source sequence.</summary>
     /// <param name="this">The source observable sequence.</param>
-    /// <returns>An observable sequence containing only the elements of type TResult from the original sequence.</returns>
-    [SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "Public extension API — caller specifies TResult explicitly: source.OfType<Derived>().")]
-    public static IObservableAsync<TResult> OfType<T, TResult>(this IObservableAsync<T> @this)
-        where TResult : class
+    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
+    extension<T>(IObservableAsync<T> @this)
     {
-        ArgumentExceptionHelper.ThrowIfNull(@this);
+        /// <summary>
+        /// Projects each element of the observable sequence to the specified reference type and filters out elements
+        /// that are not of that type.
+        /// </summary>
+        /// <remarks>Elements that are not of type TResult are ignored and not included in the resulting
+        /// sequence. This method is useful for working with observable sequences containing heterogeneous types,
+        /// allowing subscribers to focus on elements of a specific type.</remarks>
+        /// <typeparam name="TResult">The reference type to filter and project elements to. Must be a class.</typeparam>
+        /// <returns>An observable sequence containing only the elements of type TResult from the original sequence.</returns>
+        [SuppressMessage(
+            "Major Code Smell",
+            "S4018:Generic methods should provide type parameters",
+            Justification = "Public extension API — caller specifies TResult explicitly: source.OfType<Derived>().")]
+        public IObservableAsync<TResult> OfType<TResult>()
+            where TResult : class
+        {
+            ArgumentExceptionHelper.ThrowIfNull(@this);
 
-        return new OfTypeSignal<T, TResult>(@this);
+            return new OfTypeSignal<T, TResult>(@this);
+        }
     }
 
     /// <summary>Single-observer-layer <c>OfType</c>; non-matching elements are silently dropped.</summary>

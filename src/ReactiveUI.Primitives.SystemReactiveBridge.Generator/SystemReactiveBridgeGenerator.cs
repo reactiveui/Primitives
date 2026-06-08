@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace ReactiveUI.Primitives.SystemReactiveBridge.Generator;
 
-    /// <summary>Emits opt-in System.Reactive-shaped bridge extensions when System.Reactive symbols are visible to the consumer compilation.</summary>
+/// <summary>Emits opt-in System.Reactive-shaped bridge extensions when System.Reactive symbols are visible to the consumer compilation.</summary>
 [Generator(LanguageNames.CSharp)]
 public sealed class SystemReactiveBridgeGenerator : IIncrementalGenerator
 {

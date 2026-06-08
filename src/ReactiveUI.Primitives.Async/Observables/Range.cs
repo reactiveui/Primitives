@@ -4,18 +4,13 @@
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides static methods for creating and manipulating asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides static methods for creating and manipulating asynchronous observable sequences.</summary>
 /// <remarks>The SignalAsync class offers factory methods and utilities for working with asynchronous
 /// observables, enabling reactive programming patterns with support for asynchronous event streams. Members of this
 /// class are thread-safe and designed for use in concurrent environments.</remarks>
 public static partial class SignalAsync
 {
-    /// <summary>
-    /// Creates an observable sequence that emits a range of consecutive integer values, starting from the specified
-    /// value.
-    /// </summary>
+    /// <summary>Creates an observable sequence that emits a range of consecutive integer values, starting from the specified value.</summary>
     /// <remarks>The sequence completes after emitting all values. If <paramref name="count"/> is zero, the
     /// sequence completes immediately without emitting any values. The operation supports cancellation via the
     /// observer's cancellation token.</remarks>

@@ -45,11 +45,7 @@ internal sealed class FromArrayObservable<T>(
             });
     }
 
-    /// <summary>
-    /// Pumps each element of <paramref name="elements"/> into <paramref name="observer"/>
-    /// and signals completion. Errors thrown during enumeration are forwarded
-    /// to <see cref="IObserver{T}.OnError"/>.
-    /// </summary>
+    /// <summary>Pumps each element into the observer and completes, forwarding enumeration errors.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="elements">The elements to pump.</param>
     private static void Pump(IObserver<T> observer, IEnumerable<T> elements)

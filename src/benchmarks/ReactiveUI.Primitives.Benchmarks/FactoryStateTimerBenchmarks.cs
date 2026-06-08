@@ -20,24 +20,16 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class FactoryStateTimerBenchmarks
 {
-    /// <summary>
-    /// The number of values generated or events raised per benchmark iteration.
-    /// </summary>
+    /// <summary>The number of values generated or events raised per benchmark iteration.</summary>
     private const int Count = 16;
 
-    /// <summary>
-    /// The number of virtual-time ticks advanced for interval timer benchmarks.
-    /// </summary>
+    /// <summary>The number of virtual-time ticks advanced for interval timer benchmarks.</summary>
     private const int Ticks = 4;
 
-    /// <summary>
-    /// The upper bound passed as explicit state to the create-with-state benchmarks.
-    /// </summary>
+    /// <summary>The upper bound passed as explicit state to the create-with-state benchmarks.</summary>
     private readonly int _limit = Count;
 
-    /// <summary>
-    /// Benchmarks creating a sequence from explicit state without a per-subscription closure.
-    /// </summary>
+    /// <summary>Benchmarks creating a sequence from explicit state without a per-subscription closure.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesCreateWithState()
@@ -56,9 +48,7 @@ public class FactoryStateTimerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks creating a sequence with a System.Reactive closure.
-    /// </summary>
+    /// <summary>Benchmarks creating a sequence with a System.Reactive closure.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveCreateClosure()
@@ -78,9 +68,7 @@ public class FactoryStateTimerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks creating a sequence with an R3 closure.
-    /// </summary>
+    /// <summary>Benchmarks creating a sequence with an R3 closure.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3CreateClosure()
@@ -100,9 +88,7 @@ public class FactoryStateTimerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks the iterate generator (no R3 equivalent).
-    /// </summary>
+    /// <summary>Benchmarks the iterate generator (no R3 equivalent).</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesIterate()
@@ -112,9 +98,7 @@ public class FactoryStateTimerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks the iterate generator using System.Reactive Generate.
-    /// </summary>
+    /// <summary>Benchmarks the iterate generator using System.Reactive Generate.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveGenerate()
@@ -124,9 +108,7 @@ public class FactoryStateTimerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks an interval timer under virtual time.
-    /// </summary>
+    /// <summary>Benchmarks an interval timer under virtual time.</summary>
     /// <returns>The number of ticks observed.</returns>
     [Benchmark]
     public int PrimitivesEvery()
@@ -138,9 +120,7 @@ public class FactoryStateTimerBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks an interval timer under virtual time using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks an interval timer under virtual time using System.Reactive.</summary>
     /// <returns>The number of ticks observed.</returns>
     [Benchmark]
     public int SystemReactiveInterval()
@@ -152,9 +132,7 @@ public class FactoryStateTimerBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks an interval timer under virtual time using R3.
-    /// </summary>
+    /// <summary>Benchmarks an interval timer under virtual time using R3.</summary>
     /// <returns>The number of ticks observed.</returns>
     [Benchmark]
     public int R3Interval()
@@ -166,9 +144,7 @@ public class FactoryStateTimerBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks a one-shot timer under virtual time.
-    /// </summary>
+    /// <summary>Benchmarks a one-shot timer under virtual time.</summary>
     /// <returns>The number of ticks observed.</returns>
     [Benchmark]
     public int PrimitivesAfter()
@@ -180,9 +156,7 @@ public class FactoryStateTimerBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks a one-shot timer under virtual time using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks a one-shot timer under virtual time using System.Reactive.</summary>
     /// <returns>The number of ticks observed.</returns>
     [Benchmark]
     public int SystemReactiveTimer()
@@ -194,9 +168,7 @@ public class FactoryStateTimerBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks a one-shot timer under virtual time using R3.
-    /// </summary>
+    /// <summary>Benchmarks a one-shot timer under virtual time using R3.</summary>
     /// <returns>The number of ticks observed.</returns>
     [Benchmark]
     public int R3Timer()
@@ -208,9 +180,7 @@ public class FactoryStateTimerBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks bridging a .NET event into an observable.
-    /// </summary>
+    /// <summary>Benchmarks bridging a .NET event into an observable.</summary>
     /// <returns>The number of events observed.</returns>
     [Benchmark]
     public int PrimitivesFromEventPattern()
@@ -226,9 +196,7 @@ public class FactoryStateTimerBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks bridging a .NET event into an observable using System.Reactive (no direct R3 equivalent).
-    /// </summary>
+    /// <summary>Benchmarks bridging a .NET event into an observable using System.Reactive (no direct R3 equivalent).</summary>
     /// <returns>The number of events observed.</returns>
     [Benchmark]
     public int SystemReactiveFromEventPattern()
@@ -244,19 +212,13 @@ public class FactoryStateTimerBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// A minimal event publisher used to drive the event-bridge benchmarks.
-    /// </summary>
+    /// <summary>A minimal event publisher used to drive the event-bridge benchmarks.</summary>
     private sealed class EventSource
     {
-        /// <summary>
-        /// Occurs each time <see cref="Raise"/> is invoked.
-        /// </summary>
+        /// <summary>Occurs each time <see cref="Raise"/> is invoked.</summary>
         public event EventHandler? Tick;
 
-        /// <summary>
-        /// Raises the <see cref="Tick"/> event once.
-        /// </summary>
+        /// <summary>Raises the <see cref="Tick"/> event once.</summary>
         public void Raise() => Tick?.Invoke(this, EventArgs.Empty);
     }
 }

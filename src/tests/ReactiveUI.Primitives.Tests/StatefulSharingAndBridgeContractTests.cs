@@ -12,109 +12,67 @@ using ReactiveUI.Primitives.SystemReactiveBridge.Generator;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests stateful signals, sharing helpers, and bridge source generators.
-/// </summary>
+/// <summary>Tests stateful signals, sharing helpers, and bridge source generators.</summary>
 public class StatefulSharingAndBridgeContractTests
 {
-    /// <summary>
-    /// Initial state value used by projection tests.
-    /// </summary>
+    /// <summary>Initial state value used by projection tests.</summary>
     private const int InitialStateValue = 10;
 
-    /// <summary>
-    /// Updated state value used by projection tests.
-    /// </summary>
+    /// <summary>Updated state value used by projection tests.</summary>
     private const int UpdatedStateValue = 11;
 
-    /// <summary>
-    /// First value observed through a shared signal.
-    /// </summary>
+    /// <summary>First value observed through a shared signal.</summary>
     private const int FirstSharedValue = 1;
 
-    /// <summary>
-    /// Second value observed through a shared signal.
-    /// </summary>
+    /// <summary>Second value observed through a shared signal.</summary>
     private const int SecondSharedValue = 2;
 
-    /// <summary>
-    /// Value emitted after shared subscriptions are disposed.
-    /// </summary>
+    /// <summary>Value emitted after shared subscriptions are disposed.</summary>
     private const int UnobservedSharedValue = 3;
 
-    /// <summary>
-    /// First value observed through replay.
-    /// </summary>
+    /// <summary>First value observed through replay.</summary>
     private const int FirstReplayValue = 4;
 
-    /// <summary>
-    /// Second value observed through replay.
-    /// </summary>
+    /// <summary>Second value observed through replay.</summary>
     private const int SecondReplayValue = 5;
 
-    /// <summary>
-    /// Successful command result.
-    /// </summary>
+    /// <summary>Successful command result.</summary>
     private const int CommandResult = 42;
 
-    /// <summary>
-    /// Generated System.Reactive bridge type marker.
-    /// </summary>
+    /// <summary>Generated System.Reactive bridge type marker.</summary>
     private const string SystemReactiveBridgeName = "SystemReactiveSignalBridge";
 
-    /// <summary>
-    /// Generated System.Reactive scheduler bridge type marker.
-    /// </summary>
+    /// <summary>Generated System.Reactive scheduler bridge type marker.</summary>
     private const string SystemReactiveSchedulerBridgeName = "SystemReactiveSchedulerBridge";
 
-    /// <summary>
-    /// Generated R3 bridge type marker.
-    /// </summary>
+    /// <summary>Generated R3 bridge type marker.</summary>
     private const string R3BridgeName = "R3SignalBridge";
 
-    /// <summary>
-    /// Expected mutable state values.
-    /// </summary>
+    /// <summary>Expected mutable state values.</summary>
     private static readonly int[] ExpectedStateValues = [InitialStateValue, UpdatedStateValue, UpdatedStateValue];
 
-    /// <summary>
-    /// Expected projected read-only state values.
-    /// </summary>
+    /// <summary>Expected projected read-only state values.</summary>
     private static readonly string[] ExpectedReadOnlyValues = ["v:10", "v:11", "v:11"];
 
-    /// <summary>
-    /// Expected values for the first shared subscription.
-    /// </summary>
+    /// <summary>Expected values for the first shared subscription.</summary>
     private static readonly int[] ExpectedFirstSharedValues = [FirstSharedValue];
 
-    /// <summary>
-    /// Expected values for the second shared subscription.
-    /// </summary>
+    /// <summary>Expected values for the second shared subscription.</summary>
     private static readonly int[] ExpectedSecondSharedValues = [FirstSharedValue, SecondSharedValue];
 
-    /// <summary>
-    /// Expected replayed values.
-    /// </summary>
+    /// <summary>Expected replayed values.</summary>
     private static readonly int[] ExpectedReplayValues = [FirstReplayValue, SecondReplayValue];
 
-    /// <summary>
-    /// Expected command results.
-    /// </summary>
+    /// <summary>Expected command results.</summary>
     private static readonly int[] ExpectedCommandResults = [CommandResult];
 
-    /// <summary>
-    /// Expected command running-state notifications.
-    /// </summary>
+    /// <summary>Expected command running-state notifications.</summary>
     private static readonly bool[] ExpectedRunningValues = [false, true, false];
 
-    /// <summary>
-    /// Expected scheduler bridge recursive ordering.
-    /// </summary>
+    /// <summary>Expected scheduler bridge recursive ordering.</summary>
     private static readonly int[] ExpectedBridgeScheduleValues = [FirstSharedValue, SecondSharedValue];
 
-    /// <summary>
-    /// Verifies mutable state exposes latest values and read-only projected values.
-    /// </summary>
+    /// <summary>Verifies mutable state exposes latest values and read-only projected values.</summary>
     [Test]
     public void StatefulSignalsExposeLatestValuesAndReadOnlyProjections()
     {
@@ -135,9 +93,7 @@ public class StatefulSharingAndBridgeContractTests
         Assert.Equal(ExpectedReadOnlyValues, readonlyValues);
     }
 
-    /// <summary>
-    /// Verifies shared and replayed connectable signals control source subscriptions.
-    /// </summary>
+    /// <summary>Verifies shared and replayed connectable signals control source subscriptions.</summary>
     [Test]
     public void ConnectableShareAndReplayLiveControlSourceSubscriptions()
     {
@@ -179,9 +135,7 @@ public class StatefulSharingAndBridgeContractTests
         Assert.Equal(ExpectedReplayValues, replaySecond);
     }
 
-    /// <summary>
-    /// Verifies command signals publish results, failures, and running state.
-    /// </summary>
+    /// <summary>Verifies command signals publish results, failures, and running state.</summary>
     /// <returns>A task that completes when the command assertions finish.</returns>
     [Test]
     public async Task CommandSignalPublishesResultsFailuresAndRunningState()
@@ -220,9 +174,7 @@ public class StatefulSharingAndBridgeContractTests
         Assert.Equal("Command cannot run.", rejected!.Message);
     }
 
-    /// <summary>
-    /// Verifies connectable aliases, auto-connect validation, and replay window overloads.
-    /// </summary>
+    /// <summary>Verifies connectable aliases, auto-connect validation, and replay window overloads.</summary>
     [Test]
     public void ConnectableAliasesValidateAndConnectAtThreshold()
     {
@@ -245,10 +197,10 @@ public class StatefulSharingAndBridgeContractTests
         Assert.Equal(1, sourceSubscriptions);
         Assert.Equal(ExpectedSecondSharedValues[1..], first);
         Assert.Equal(ExpectedSecondSharedValues[1..], second);
-        Assert.Throws<ArgumentNullException>(() => ConnectableSignalMixins.Multicast(null!, new Signal<int>()));
+        Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.Multicast(null!, new Signal<int>()));
         Assert.Throws<ArgumentNullException>(() => Signal.Silent<int>().Multicast(null!));
-        Assert.Throws<ArgumentNullException>(() => ConnectableSignalMixins.AutoShare<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => ConnectableSignalMixins.AutoConnect<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.AutoShare<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.AutoConnect<int>(null!));
         Assert.Throws<ArgumentOutOfRangeException>(() => cold.ShareLive().AutoConnect(-1));
 
         var replayed = cold.Replay(1, TimeSpan.FromSeconds(1));
@@ -260,9 +212,7 @@ public class StatefulSharingAndBridgeContractTests
         Assert.Equal(ExpectedReplayValues[..1], replayValues);
     }
 
-    /// <summary>
-    /// Verifies command aliases, sync execution failures, and disposal branches.
-    /// </summary>
+    /// <summary>Verifies command aliases, sync execution failures, and disposal branches.</summary>
     /// <returns>A task that completes when command assertions finish.</returns>
     [Test]
     public async Task CommandSignalCoversSyncFaultAndDisposalBranches()
@@ -310,9 +260,7 @@ public class StatefulSharingAndBridgeContractTests
         Assert.NotNull(disposed);
     }
 
-    /// <summary>
-    /// Verifies bridge generators emit adapters when external shapes are present.
-    /// </summary>
+    /// <summary>Verifies bridge generators emit adapters when external shapes are present.</summary>
     [Test]
     [RequiresAssemblyFiles]
     [SuppressMessage("Major Code Smell", "S138:Functions should not have too many lines", Justification = "Embedded generator smoke source keeps the emitted API contract local to the test.")]
@@ -419,9 +367,7 @@ public static class BridgeSmoke
         Assert.True(Array.Exists(generatedSources, static text => text.Contains(R3BridgeName, StringComparison.Ordinal)));
     }
 
-    /// <summary>
-    /// Verifies generated System.Reactive scheduler adapters preserve immediate recursive scheduling order.
-    /// </summary>
+    /// <summary>Verifies generated System.Reactive scheduler adapters preserve immediate recursive scheduling order.</summary>
     [Test]
     [RequiresAssemblyFiles]
     [SuppressMessage("Major Code Smell", "S138:Functions should not have too many lines", Justification = "Embedded generator smoke source keeps the emitted API contract local to the test.")]
@@ -537,9 +483,7 @@ public static class BridgeSchedulerRuntimeSmoke
         Assert.Equal(ExpectedBridgeScheduleValues.AsEnumerable(), primitivesToSystem);
     }
 
-    /// <summary>
-    /// Verifies bridge generators skip adapters when external packages are absent.
-    /// </summary>
+    /// <summary>Verifies bridge generators skip adapters when external packages are absent.</summary>
     [Test]
     [RequiresAssemblyFiles]
     public void BridgeGeneratorsDoNotEmitExternalAdaptersWhenExternalPackagesAreAbsent()
@@ -562,9 +506,7 @@ public static class CoreOnlySmoke
         Assert.False(Array.Exists(generatedSources, static text => text.Contains(R3BridgeName, StringComparison.Ordinal)));
     }
 
-    /// <summary>
-    /// Runs the bridge source generators for the supplied source.
-    /// </summary>
+    /// <summary>Runs the bridge source generators for the supplied source.</summary>
     /// <param name="source">Source code to compile.</param>
     /// <returns>Compilation diagnostics and generated source text.</returns>
     [RequiresAssemblyFiles("Calls System.Reflection.Assembly.Location")]
@@ -574,9 +516,7 @@ public static class CoreOnlySmoke
         return (diagnostics, generatedSources);
     }
 
-    /// <summary>
-    /// Runs the bridge source generators and invokes a generated bridge smoke method.
-    /// </summary>
+    /// <summary>Runs the bridge source generators and invokes a generated bridge smoke method.</summary>
     /// <param name="source">Source code to compile.</param>
     /// <param name="typeName">Type containing the method.</param>
     /// <param name="methodName">Static method name.</param>
@@ -602,9 +542,7 @@ public static class CoreOnlySmoke
         return result!;
     }
 
-    /// <summary>
-    /// Compiles the supplied source with bridge source generators.
-    /// </summary>
+    /// <summary>Compiles the supplied source with bridge source generators.</summary>
     /// <param name="source">Source code to compile.</param>
     /// <returns>Compilation diagnostics, generated source text, and updated compilation.</returns>
     [RequiresAssemblyFiles("Calls System.Reflection.Assembly.Location")]

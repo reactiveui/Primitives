@@ -15,23 +15,18 @@ namespace ReactiveUI.Primitives.Async.Signals;
 [System.Diagnostics.DebuggerDisplay("PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
 public sealed record ReplayLatestSignalCreationOptions
 {
-    /// <summary>
-    /// Gets the publishing option to use when processing this item.
-    /// </summary>
-    public required PublishingOption PublishingOption { get; init; }
-
-    /// <summary>
-    /// Gets a value indicating whether the object is stateless.
-    /// </summary>
-    public required bool IsStateless { get; init; }
-
-    /// <summary>
-    /// Gets the default configuration options for creating a ReplayLatestSignal instance.
-    /// </summary>
+    /// <summary>Gets the default configuration options for creating a ReplayLatestSignal instance.</summary>
     /// <remarks>The default options specify serial publishing and stateful behavior. Use this property to
     /// obtain a baseline configuration that can be modified as needed.</remarks>
     public static ReplayLatestSignalCreationOptions Default { get; } = new()
     {
-        PublishingOption = PublishingOption.Serial, IsStateless = false
+        PublishingOption = PublishingOption.Serial,
+        IsStateless = false
     };
+
+    /// <summary>Gets the publishing option to use when processing this item.</summary>
+    public required PublishingOption PublishingOption { get; init; }
+
+    /// <summary>Gets a value indicating whether the object is stateless.</summary>
+    public required bool IsStateless { get; init; }
 }

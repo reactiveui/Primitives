@@ -9,8 +9,7 @@ namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 /// upstream pushes events past its own completion.</summary>
 public class WaitUntilObservableTests
 {
-    /// <summary>Verifies that an <c>OnNext</c> arriving after the predicate has already
-    /// fired and completed the sequence is silently dropped.</summary>
+    /// <summary>Verifies that an <c>OnNext</c> arriving after the predicate has already fired and completed the sequence is silently dropped.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnNextAfterCompleted_ThenDropped()
@@ -31,8 +30,7 @@ public class WaitUntilObservableTests
         await Assert.That(values).IsCollectionEqualTo([Match]);
     }
 
-    /// <summary>Verifies that an <c>OnError</c> arriving after the predicate has fired is
-    /// silently dropped via the <c>_done</c> guard.</summary>
+    /// <summary>Verifies that an <c>OnError</c> arriving after the predicate has fired is silently dropped via the <c>_done</c> guard.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnErrorAfterCompleted_ThenDropped()

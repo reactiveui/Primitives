@@ -7,14 +7,10 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Multicast / RefCount tests.
-/// </summary>
+/// <summary>Multicast / RefCount tests.</summary>
 public class ResultAndInfrastructureTests
 {
-    /// <summary>
-    /// Verifies that MulticastSignalAsync does not throw when ConnectAsync is called twice.
-    /// </summary>
+    /// <summary>Verifies that MulticastSignalAsync does not throw when ConnectAsync is called twice.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMulticastConnectTwice_ThenSecondConnectSucceeds()
@@ -31,9 +27,7 @@ public class ResultAndInfrastructureTests
         await Assert.That(conn2).IsNotNull();
     }
 
-    /// <summary>
-    /// Verifies that MulticastSignalAsync disconnect and reconnect works.
-    /// </summary>
+    /// <summary>Verifies that MulticastSignalAsync disconnect and reconnect works.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMulticastDisconnectAndReconnect_ThenNewConnectionWorks()
@@ -221,9 +215,7 @@ public class ResultAndInfrastructureTests
         await connection.DisposeAsync();
     }
 
-    /// <summary>
-    /// Verifies that RefCount forwards error-resume from the source through the RefCountObserver.
-    /// </summary>
+    /// <summary>Verifies that RefCount forwards error-resume from the source through the RefCountObserver.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRefCountSourceErrorResume_ThenForwardsToSubscriber()

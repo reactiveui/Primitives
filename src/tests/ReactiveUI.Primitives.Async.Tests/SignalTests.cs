@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Tests for SignalAsync factory, all Signal variants, and SignalMixins.
-/// </summary>
+/// <summary>Tests for SignalAsync factory, all Signal variants, and SignalExtensions.</summary>
 public partial class SignalTests
 {
 #if NET9_0_OR_GREATER
@@ -62,7 +60,8 @@ public partial class SignalTests
     {
         var options = new SignalCreationOptions
         {
-            PublishingOption = PublishingOption.Concurrent, IsStateless = false
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = false
         };
         var signal = Signal.Create<int>(options);
         var items = new List<int>();

@@ -15,9 +15,7 @@ namespace ReactiveUI.Primitives.Async.Disposables;
 /// operations are safe to use concurrently from multiple threads.</remarks>
 public class SingleReplaceableDisposableAsync : IAsyncDisposable
 {
-    /// <summary>
-    /// The currently tracked disposable resource, or the disposed sentinel if already disposed.
-    /// </summary>
+    /// <summary>The currently tracked disposable resource, or the disposed sentinel if already disposed.</summary>
     private IAsyncDisposable? _current;
 
     /// <summary>
@@ -62,9 +60,7 @@ public class SingleReplaceableDisposableAsync : IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Asynchronously releases the resources used by the object.
-    /// </summary>
+    /// <summary>Asynchronously releases the resources used by the object.</summary>
     /// <remarks>Subsequent calls to this method after disposal will have no effect. This method is safe to
     /// call multiple times.</remarks>
     /// <returns>A ValueTask that represents the asynchronous dispose operation. The task will be completed when all resources
@@ -87,14 +83,10 @@ public class SingleReplaceableDisposableAsync : IAsyncDisposable
         return default;
     }
 
-    /// <summary>
-    /// A sentinel object used to indicate that the <see cref="SingleReplaceableDisposableAsync"/> has been disposed.
-    /// </summary>
+    /// <summary>A sentinel object used to indicate that the <see cref="SingleReplaceableDisposableAsync"/> has been disposed.</summary>
     internal sealed class DisposedSlotMarker : IAsyncDisposable
     {
-        /// <summary>
-        /// Gets the singleton instance of <see cref="DisposedSlotMarker"/>.
-        /// </summary>
+        /// <summary>Gets the singleton instance of <see cref="DisposedSlotMarker"/>.</summary>
         public static readonly DisposedSlotMarker Instance = new();
 
         /// <inheritdoc/>

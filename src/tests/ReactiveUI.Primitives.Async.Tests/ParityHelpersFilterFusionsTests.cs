@@ -75,8 +75,7 @@ public class ParityHelpersFilterFusionsTests
         await Assert.That(result).IsCollectionEqualTo([Zero, One, Two]);
     }
 
-    /// <summary>Verifies that <c>WaitUntil</c> emits the first matching value and completes,
-    /// dropping subsequent values.</summary>
+    /// <summary>Verifies that <c>WaitUntil</c> emits the first matching value and completes, dropping subsequent values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenWaitUntilMatches_ThenEmitsFirstHitAndCompletes()

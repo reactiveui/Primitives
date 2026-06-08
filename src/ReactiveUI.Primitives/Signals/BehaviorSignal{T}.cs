@@ -7,41 +7,27 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// BehaviourSignal.
-/// </summary>
+/// <summary>BehaviourSignal.</summary>
 /// <typeparam name="T">The Type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class BehaviorSignal<T> : ISignal<T>
 {
-    /// <summary>
-    /// Protects observer and terminal-state mutations.
-    /// </summary>
+    /// <summary>Protects observer and terminal-state mutations.</summary>
     private readonly Lock _gate = new();
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private Broadcaster<T> _broadcaster;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private bool _isStopped;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private T? _lastValue;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private Exception? _lastError;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="BehaviorSignal{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="BehaviorSignal{T}"/> class.</summary>
     /// <param name="defaultValue">The default value.</param>
     public BehaviorSignal(T defaultValue)
     {
@@ -49,9 +35,7 @@ public class BehaviorSignal<T> : ISignal<T>
         _broadcaster = default;
     }
 
-    /// <summary>
-    /// Gets the current value or throws an exception.
-    /// </summary>
+    /// <summary>Gets the current value or throws an exception.</summary>
     /// <value>The initial value passed to the constructor until <see cref="OnNext"/> is called; after which, the last value passed to <see cref="OnNext"/>.</value>
     /// <remarks>
     /// <para><see cref="Value"/> is frozen after <see cref="OnCompleted"/> is called.</para>
@@ -73,25 +57,19 @@ public class BehaviorSignal<T> : ISignal<T>
         }
     }
 
-    /// <summary>
-    /// Gets a value indicating whether this instance has observers.
-    /// </summary>
+    /// <summary>Gets a value indicating whether this instance has observers.</summary>
     /// <value>
     ///   <c>true</c> if this instance has observers; otherwise, <c>false</c>.
     /// </value>
     public bool HasObservers => _broadcaster.HasObservers && !_isStopped && !IsDisposed;
 
-    /// <summary>
-    /// Gets a value indicating whether this instance is disposed.
-    /// </summary>
+    /// <summary>Gets a value indicating whether this instance is disposed.</summary>
     /// <value>
     ///   <c>true</c> if this instance is disposed; otherwise, <c>false</c>.
     /// </value>
     public bool IsDisposed { get; private set; }
 
-    /// <summary>
-    /// Gets the string representation of this object for debugger display purposes.
-    /// </summary>
+    /// <summary>Gets the string representation of this object for debugger display purposes.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string? DebuggerDisplay
     {
@@ -101,9 +79,7 @@ public class BehaviorSignal<T> : ISignal<T>
         }
     }
 
-    /// <summary>
-    /// Tries to get the current value or throws an exception.
-    /// </summary>
+    /// <summary>Tries to get the current value or throws an exception.</summary>
     /// <param name="value">The initial value passed to the constructor until <see cref="OnNext"/> is called; after which, the last value passed to <see cref="OnNext"/>.</param>
     /// <returns>true if a value is available; false if the subject was disposed.</returns>
     /// <remarks>
@@ -131,9 +107,7 @@ public class BehaviorSignal<T> : ISignal<T>
         }
     }
 
-    /// <summary>
-    /// Notifies all subscribed observers about the end of the sequence.
-    /// </summary>
+    /// <summary>Notifies all subscribed observers about the end of the sequence.</summary>
     public void OnCompleted()
     {
         lock (_gate)
@@ -151,14 +125,12 @@ public class BehaviorSignal<T> : ISignal<T>
         _broadcaster.Clear();
     }
 
-    /// <summary>
-    /// Notifies all subscribed observers about the exception.
-    /// </summary>
+    /// <summary>Notifies all subscribed observers about the exception.</summary>
     /// <param name="error">The exception to send to all observers.</param>
     /// <exception cref="ArgumentNullException"><paramref name="error"/> is <c>null</c>.</exception>
     public void OnError(Exception error)
     {
-        if (error == null)
+        if (error is null)
         {
             throw new ArgumentNullException(nameof(error));
         }
@@ -179,9 +151,7 @@ public class BehaviorSignal<T> : ISignal<T>
         _broadcaster.Clear();
     }
 
-    /// <summary>
-    /// Notifies all subscribed observers about the arrival of the specified element in the sequence.
-    /// </summary>
+    /// <summary>Notifies all subscribed observers about the arrival of the specified element in the sequence.</summary>
     /// <param name="value">The value to send to all observers.</param>
     public void OnNext(T value)
     {
@@ -198,15 +168,13 @@ public class BehaviorSignal<T> : ISignal<T>
         _broadcaster.Next(value);
     }
 
-    /// <summary>
-    /// Subscribes an observer to the subject.
-    /// </summary>
+    /// <summary>Subscribes an observer to the subject.</summary>
     /// <param name="observer">Observer to subscribe to the subject.</param>
     /// <returns>Disposable object that can be used to unsubscribe the observer from the subject.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <c>null</c>.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -230,12 +198,12 @@ public class BehaviorSignal<T> : ISignal<T>
             }
         }
 
-        if (subscription != null)
+        if (subscription is not null)
         {
             observer.OnNext(v!);
             return subscription;
         }
-        else if (ex != null)
+        else if (ex is not null)
         {
             observer.OnError(ex);
         }
@@ -247,9 +215,7 @@ public class BehaviorSignal<T> : ISignal<T>
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>
-    /// Releases unmanaged and - optionally - managed resources.
-    /// </summary>
+    /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
     public void Dispose()
     {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
@@ -257,9 +223,7 @@ public class BehaviorSignal<T> : ISignal<T>
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>
-    /// Releases unmanaged and - optionally - managed resources.
-    /// </summary>
+    /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
     protected virtual void Dispose(bool disposing)
     {
@@ -281,9 +245,7 @@ public class BehaviorSignal<T> : ISignal<T>
         IsDisposed = true;
     }
 
-    /// <summary>
-    /// Executes the ThrowIfDisposed operation.
-    /// </summary>
+    /// <summary>Executes the ThrowIfDisposed operation.</summary>
     private void ThrowIfDisposed()
     {
         if (!IsDisposed)
@@ -294,24 +256,16 @@ public class BehaviorSignal<T> : ISignal<T>
         throw new ObjectDisposedException(string.Empty);
     }
 
-    /// <summary>
-    /// Represents the ObserverHandler class.
-    /// </summary>
+    /// <summary>Represents the ObserverHandler class.</summary>
     private sealed class ObserverHandler : IDisposable
     {
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
+        /// <summary>Stores state for the signal implementation.</summary>
         private BehaviorSignal<T>? _subject;
 
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
+        /// <summary>Stores state for the signal implementation.</summary>
         private IObserver<T>? _observer;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ObserverHandler"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ObserverHandler"/> class.</summary>
         /// <param name="subject">The subject value.</param>
         /// <param name="observer">The observer value.</param>
         public ObserverHandler(BehaviorSignal<T> subject, IObserver<T> observer)
@@ -320,14 +274,12 @@ public class BehaviorSignal<T> : ISignal<T>
             _observer = observer;
         }
 
-        /// <summary>
-        /// Executes the Dispose operation.
-        /// </summary>
+        /// <summary>Executes the Dispose operation.</summary>
         public void Dispose()
         {
             var subject = Interlocked.Exchange(ref _subject, null);
             var observer = Interlocked.Exchange(ref _observer, null);
-            if (subject == null || observer == null)
+            if (subject is null || observer is null)
             {
                 return;
             }

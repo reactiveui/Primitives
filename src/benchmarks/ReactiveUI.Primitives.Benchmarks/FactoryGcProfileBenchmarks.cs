@@ -17,19 +17,13 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
 public class FactoryGcProfileBenchmarks
 {
-    /// <summary>
-    /// The scalar factory benchmark scenarios delegated to by this profile.
-    /// </summary>
+    /// <summary>The scalar factory benchmark scenarios delegated to by this profile.</summary>
     private readonly ScalarSignalBenchmarks _scalar = new();
 
-    /// <summary>
-    /// The general factory benchmark scenarios delegated to by this profile.
-    /// </summary>
+    /// <summary>The general factory benchmark scenarios delegated to by this profile.</summary>
     private readonly FactorySignalBenchmarks _factory = new();
 
-    /// <summary>
-    /// The enumerable-adaptation benchmark scenarios delegated to by this profile.
-    /// </summary>
+    /// <summary>The enumerable-adaptation benchmark scenarios delegated to by this profile.</summary>
     private readonly FactoryFromEnumerableBenchmarks _fromEnumerable = new();
 
     /// <summary>Return subscribe (Primitives).</summary>

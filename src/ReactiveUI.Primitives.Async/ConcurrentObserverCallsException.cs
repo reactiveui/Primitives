@@ -18,24 +18,18 @@ namespace ReactiveUI.Primitives.Async;
 [Serializable]
 public class ConcurrentObserverCallsException : Exception
 {
-    /// <summary>
-    /// The default error message describing the concurrent observer call violation.
-    /// </summary>
+    /// <summary>The default error message describing the concurrent observer call violation.</summary>
     private const string DefaultMessage =
         $"Concurrent calls of {nameof(ObserverAsync<>)}.OnNextAsync, {nameof(ObserverAsync<>)}.OnErrorResumeAsync," +
         $" {nameof(ObserverAsync<>)}.OnCompletedAsync are not allowed. There is already a call pending";
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConcurrentObserverCallsException"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ConcurrentObserverCallsException"/> class.</summary>
     public ConcurrentObserverCallsException()
         : base(DefaultMessage)
     {
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConcurrentObserverCallsException"/> class with a specified error message.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ConcurrentObserverCallsException"/> class with a specified error message.</summary>
     /// <param name="message">The message that describes the error.</param>
     public ConcurrentObserverCallsException(string message)
         : base(message)
@@ -54,9 +48,7 @@ public class ConcurrentObserverCallsException : Exception
     }
 
 #if NETFRAMEWORK
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConcurrentObserverCallsException"/> class with serialized data.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ConcurrentObserverCallsException"/> class with serialized data.</summary>
     /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
     /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
     protected ConcurrentObserverCallsException(SerializationInfo info, StreamingContext context)

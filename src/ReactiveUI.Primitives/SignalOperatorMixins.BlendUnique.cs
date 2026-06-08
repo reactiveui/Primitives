@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives;
 /// only when it differs from the previously forwarded one. Folding the merge and distinct-until-changed into a
 /// single sink avoids the extra subscription hop and allocation of <c>sources.Blend().Unique()</c>.
 /// </summary>
-public static partial class LinqMixins
+public static partial class LinqExtensions
 {
     /// <summary>
     /// Concurrently merges the supplied sources and forwards only values that differ from the previously
@@ -34,14 +34,14 @@ public static partial class LinqMixins
     /// <returns>An observable of the distinct merged values.</returns>
     public static IObservable<T> BlendUnique<T>(IObservable<T>[] sources, IEqualityComparer<T>? comparer)
     {
-        if (sources == null)
+        if (sources is null)
         {
             throw new ArgumentNullException(nameof(sources));
         }
 
         for (var i = 0; i < sources.Length; i++)
         {
-            if (sources[i] == null)
+            if (sources[i] is null)
             {
                 throw new ArgumentNullException(nameof(sources));
             }
@@ -72,7 +72,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
