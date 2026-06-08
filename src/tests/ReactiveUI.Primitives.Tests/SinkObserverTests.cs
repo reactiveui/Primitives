@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Behavioural tests for the public observer "sink" types that back the operator implementations.
-/// </summary>
+/// <summary>Behavioural tests for the public observer "sink" types that back the operator implementations.</summary>
 public class SinkObserverTests
 {
     /// <summary>The literal two, used for counts, thresholds, and skip windows.</summary>
@@ -391,9 +389,7 @@ public class SinkObserverTests
         }
     }
 
-    /// <summary>
-    /// Observer that records the notifications it receives.
-    /// </summary>
+    /// <summary>Observer that records the notifications it receives.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     private sealed class Recorder<T> : IObserver<T>
     {

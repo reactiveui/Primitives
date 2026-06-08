@@ -48,10 +48,7 @@ internal sealed class UsingActionObservable<T>(
             });
     }
 
-    /// <summary>
-    /// Invokes the optional action against the resource, signals
-    /// <see cref="RxVoid.Default"/> and completion, then disposes the resource.
-    /// </summary>
+    /// <summary>Invokes the optional action against the resource, signals <see cref="RxVoid.Default"/> and completion, then disposes the resource.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="resource">The resource to use and dispose.</param>
     /// <param name="action">The optional action.</param>

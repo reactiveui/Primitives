@@ -6,31 +6,21 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives;
 
-/// <content>
-/// FlatMap helper implementations.
-/// </content>
-public static partial class LinqMixins
+/// <summary>FlatMap helper implementations.</summary>
+public static partial class LinqExtensions
 {
-    /// <summary>
-    /// Chaining FlatMap signal that avoids the Map + Chain composition path.
-    /// </summary>
+    /// <summary>Chaining FlatMap signal that avoids the Map + Chain composition path.</summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
     private sealed class FlatMapSignal<TSource, TResult> : IObservable<TResult>
     {
-        /// <summary>
-        /// The source observable.
-        /// </summary>
+        /// <summary>The source observable.</summary>
         private readonly IObservable<TSource> _source;
 
-        /// <summary>
-        /// Projects source values to inner observables.
-        /// </summary>
+        /// <summary>Projects source values to inner observables.</summary>
         private readonly Func<TSource, IObservable<TResult>> _selector;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FlatMapSignal{TSource, TResult}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="FlatMapSignal{TSource, TResult}"/> class.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="selector">Projects source values to inner observables.</param>
         internal FlatMapSignal(IObservable<TSource> source, Func<TSource, IObservable<TResult>> selector)
@@ -42,7 +32,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -51,32 +41,22 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Chaining FlatMap signal with an outer/inner result selector.
-    /// </summary>
+    /// <summary>Chaining FlatMap signal with an outer/inner result selector.</summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <typeparam name="TCollection">The inner value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
     private sealed class FlatMapResultSignal<TSource, TCollection, TResult> : IObservable<TResult>
     {
-        /// <summary>
-        /// The source observable.
-        /// </summary>
+        /// <summary>The source observable.</summary>
         private readonly IObservable<TSource> _source;
 
-        /// <summary>
-        /// Projects source values to inner observables.
-        /// </summary>
+        /// <summary>Projects source values to inner observables.</summary>
         private readonly Func<TSource, IObservable<TCollection>> _collectionSelector;
 
-        /// <summary>
-        /// Projects outer and inner values to result values.
-        /// </summary>
+        /// <summary>Projects outer and inner values to result values.</summary>
         private readonly Func<TSource, TCollection, TResult> _resultSelector;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FlatMapResultSignal{TSource, TCollection, TResult}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="FlatMapResultSignal{TSource, TCollection, TResult}"/> class.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="collectionSelector">Projects source values to inner observables.</param>
         /// <param name="resultSelector">Projects outer and inner values to result values.</param>
@@ -93,7 +73,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -106,86 +86,54 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Coordinates chain-style FlatMap subscriptions.
-    /// </summary>
+    /// <summary>Coordinates chain-style FlatMap subscriptions.</summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
     private sealed class FlatMapCoordinator<TSource, TResult> : IDisposable
     {
-        /// <summary>
-        /// Synchronizes subscription state.
-        /// </summary>
+        /// <summary>Synchronizes subscription state.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// The source observable.
-        /// </summary>
+        /// <summary>The source observable.</summary>
         private readonly IObservable<TSource> _source;
 
-        /// <summary>
-        /// Projects source values to inner observables.
-        /// </summary>
+        /// <summary>Projects source values to inner observables.</summary>
         private readonly Func<TSource, IObservable<TResult>> _selector;
 
-        /// <summary>
-        /// The downstream observer.
-        /// </summary>
+        /// <summary>The downstream observer.</summary>
         private readonly IObserver<TResult> _observer;
 
-        /// <summary>
-        /// Observer used for the outer source.
-        /// </summary>
+        /// <summary>Observer used for the outer source.</summary>
         private readonly OuterObserver _outerObserver;
 
-        /// <summary>
-        /// Observer used for active inner sources.
-        /// </summary>
+        /// <summary>Observer used for active inner sources.</summary>
         private readonly InnerObserver _innerObserver;
 
-        /// <summary>
-        /// Queued inner sources waiting for the active inner source to complete.
-        /// </summary>
+        /// <summary>Queued inner sources waiting for the active inner source to complete.</summary>
         private Queue<IObservable<TResult>>? _queue;
 
-        /// <summary>
-        /// Outer subscription.
-        /// </summary>
+        /// <summary>Outer subscription.</summary>
         private IDisposable? _outer;
 
-        /// <summary>
-        /// Active inner subscription.
-        /// </summary>
+        /// <summary>Active inner subscription.</summary>
         private IDisposable? _inner;
 
-        /// <summary>
-        /// Value indicating whether an inner source is active.
-        /// </summary>
+        /// <summary>Value indicating whether an inner source is active.</summary>
         private bool _active;
 
-        /// <summary>
-        /// Value indicating whether the outer source has completed.
-        /// </summary>
+        /// <summary>Value indicating whether the outer source has completed.</summary>
         private bool _outerCompleted;
 
-        /// <summary>
-        /// Value indicating whether the coordinator has stopped.
-        /// </summary>
+        /// <summary>Value indicating whether the coordinator has stopped.</summary>
         private bool _disposed;
 
-        /// <summary>
-        /// Value indicating whether the active inner source is currently subscribing.
-        /// </summary>
+        /// <summary>Value indicating whether the active inner source is currently subscribing.</summary>
         private bool _subscribingInner;
 
-        /// <summary>
-        /// Value indicating whether the active inner source completed while its subscribe call was still on the stack.
-        /// </summary>
+        /// <summary>Value indicating whether the active inner source completed while its subscribe call was still on the stack.</summary>
         private bool _completedInnerWhileSubscribing;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FlatMapCoordinator{TSource, TResult}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="FlatMapCoordinator{TSource, TResult}"/> class.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="selector">Projects source values to inner observables.</param>
         /// <param name="observer">The downstream observer.</param>
@@ -225,9 +173,7 @@ public static partial class LinqMixins
             inner?.Dispose();
         }
 
-        /// <summary>
-        /// Subscribes to the outer source.
-        /// </summary>
+        /// <summary>Subscribes to the outer source.</summary>
         /// <returns>The subscription cleanup.</returns>
         internal IDisposable Run()
         {
@@ -245,9 +191,7 @@ public static partial class LinqMixins
             }
         }
 
-        /// <summary>
-        /// Handles a source value.
-        /// </summary>
+        /// <summary>Handles a source value.</summary>
         /// <param name="value">The source value.</param>
         private void OnOuterNext(TSource value)
         {
@@ -270,9 +214,7 @@ public static partial class LinqMixins
             SubscribeInner(inner);
         }
 
-        /// <summary>
-        /// Handles outer source completion.
-        /// </summary>
+        /// <summary>Handles outer source completion.</summary>
         private void OnOuterCompleted()
         {
             lock (_gate)
@@ -288,9 +230,7 @@ public static partial class LinqMixins
             Drain();
         }
 
-        /// <summary>
-        /// Forwards an inner value.
-        /// </summary>
+        /// <summary>Forwards an inner value.</summary>
         /// <param name="value">The inner value.</param>
         private void OnInnerNext(TResult value)
         {
@@ -305,9 +245,7 @@ public static partial class LinqMixins
             _observer.OnNext(value);
         }
 
-        /// <summary>
-        /// Handles active inner source completion.
-        /// </summary>
+        /// <summary>Handles active inner source completion.</summary>
         private void OnInnerCompleted()
         {
             IDisposable? inner;
@@ -334,9 +272,7 @@ public static partial class LinqMixins
             Drain();
         }
 
-        /// <summary>
-        /// Handles an outer or inner error.
-        /// </summary>
+        /// <summary>Handles an outer or inner error.</summary>
         /// <param name="error">The error.</param>
         private void OnError(Exception error)
         {
@@ -362,9 +298,7 @@ public static partial class LinqMixins
             _observer.OnError(error);
         }
 
-        /// <summary>
-        /// Starts an inner source immediately or queues it behind the active inner source.
-        /// </summary>
+        /// <summary>Starts an inner source immediately or queues it behind the active inner source.</summary>
         /// <param name="inner">The inner source.</param>
         /// <returns><c>true</c> when the source should be subscribed immediately; otherwise, <c>false</c>.</returns>
         private bool TryStartOrQueue(IObservable<TResult> inner)
@@ -387,9 +321,7 @@ public static partial class LinqMixins
             }
         }
 
-        /// <summary>
-        /// Subscribes to an inner source.
-        /// </summary>
+        /// <summary>Subscribes to an inner source.</summary>
         /// <param name="inner">The inner source.</param>
         private void SubscribeInner(IObservable<TResult> inner)
         {
@@ -425,9 +357,7 @@ public static partial class LinqMixins
             Drain();
         }
 
-        /// <summary>
-        /// Completes an inner subscribe call that threw.
-        /// </summary>
+        /// <summary>Completes an inner subscribe call that threw.</summary>
         /// <param name="error">The subscribe error.</param>
         private void CompleteSubscribe(Exception error)
         {
@@ -440,9 +370,7 @@ public static partial class LinqMixins
             OnError(error);
         }
 
-        /// <summary>
-        /// Completes an inner subscribe call.
-        /// </summary>
+        /// <summary>Completes an inner subscribe call.</summary>
         /// <param name="subscription">The inner subscription.</param>
         /// <returns><c>true</c> when the inner source completed synchronously; otherwise, <c>false</c>.</returns>
         private bool CompleteSubscribe(IDisposable subscription)
@@ -460,9 +388,7 @@ public static partial class LinqMixins
             }
         }
 
-        /// <summary>
-        /// Drains queued inner sources and completes when the outer source and queue are finished.
-        /// </summary>
+        /// <summary>Drains queued inner sources and completes when the outer source and queue are finished.</summary>
         private void Drain()
         {
             while (true)
@@ -488,7 +414,7 @@ public static partial class LinqMixins
                     }
                 }
 
-                if (next != null)
+                if (next is not null)
                 {
                     SubscribeInner(next);
                     continue;
@@ -503,19 +429,13 @@ public static partial class LinqMixins
             }
         }
 
-        /// <summary>
-        /// Outer source observer.
-        /// </summary>
+        /// <summary>Outer source observer.</summary>
         private sealed class OuterObserver : IObserver<TSource>
         {
-            /// <summary>
-            /// Owning coordinator.
-            /// </summary>
+            /// <summary>Owning coordinator.</summary>
             private readonly FlatMapCoordinator<TSource, TResult> _parent;
 
-            /// <summary>
-            /// Initializes a new instance of the <see cref="OuterObserver"/> class.
-            /// </summary>
+            /// <summary>Initializes a new instance of the <see cref="OuterObserver"/> class.</summary>
             /// <param name="parent">Owning coordinator.</param>
             internal OuterObserver(FlatMapCoordinator<TSource, TResult> parent) => _parent = parent;
 
@@ -529,19 +449,13 @@ public static partial class LinqMixins
             public void OnNext(TSource value) => _parent.OnOuterNext(value);
         }
 
-        /// <summary>
-        /// Inner source observer.
-        /// </summary>
+        /// <summary>Inner source observer.</summary>
         private sealed class InnerObserver : IObserver<TResult>
         {
-            /// <summary>
-            /// Owning coordinator.
-            /// </summary>
+            /// <summary>Owning coordinator.</summary>
             private readonly FlatMapCoordinator<TSource, TResult> _parent;
 
-            /// <summary>
-            /// Initializes a new instance of the <see cref="InnerObserver"/> class.
-            /// </summary>
+            /// <summary>Initializes a new instance of the <see cref="InnerObserver"/> class.</summary>
             /// <param name="parent">Owning coordinator.</param>
             internal InnerObserver(FlatMapCoordinator<TSource, TResult> parent) => _parent = parent;
 
@@ -556,22 +470,16 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Coordinates chain-style FlatMap subscriptions with a result selector.
-    /// </summary>
+    /// <summary>Coordinates chain-style FlatMap subscriptions with a result selector.</summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <typeparam name="TCollection">The inner value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
     private sealed class FlatMapResultCoordinator<TSource, TCollection, TResult> : IDisposable
     {
-        /// <summary>
-        /// The inner FlatMap coordinator.
-        /// </summary>
+        /// <summary>The inner FlatMap coordinator.</summary>
         private readonly FlatMapCoordinator<TSource, TResult> _inner;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FlatMapResultCoordinator{TSource, TCollection, TResult}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="FlatMapResultCoordinator{TSource, TCollection, TResult}"/> class.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="collectionSelector">Projects source values to inner observables.</param>
         /// <param name="resultSelector">Projects outer and inner values to result values.</param>
@@ -592,39 +500,27 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public void Dispose() => _inner.Dispose();
 
-        /// <summary>
-        /// Subscribes to the outer source.
-        /// </summary>
+        /// <summary>Subscribes to the outer source.</summary>
         /// <returns>The subscription cleanup.</returns>
         internal IDisposable Run() => _inner.Run();
     }
 
-    /// <summary>
-    /// Maps inner values with a captured outer value.
-    /// </summary>
+    /// <summary>Maps inner values with a captured outer value.</summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <typeparam name="TCollection">The inner value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
     private sealed class FlatMapResultInnerSignal<TSource, TCollection, TResult> : IObservable<TResult>
     {
-        /// <summary>
-        /// Captured outer value.
-        /// </summary>
+        /// <summary>Captured outer value.</summary>
         private readonly TSource _sourceValue;
 
-        /// <summary>
-        /// Inner observable.
-        /// </summary>
+        /// <summary>Inner observable.</summary>
         private readonly IObservable<TCollection> _source;
 
-        /// <summary>
-        /// Projects outer and inner values to result values.
-        /// </summary>
+        /// <summary>Projects outer and inner values to result values.</summary>
         private readonly Func<TSource, TCollection, TResult> _selector;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FlatMapResultInnerSignal{TSource, TCollection, TResult}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="FlatMapResultInnerSignal{TSource, TCollection, TResult}"/> class.</summary>
         /// <param name="sourceValue">Captured outer value.</param>
         /// <param name="source">Inner observable.</param>
         /// <param name="selector">Projects outer and inner values to result values.</param>
@@ -641,7 +537,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -649,29 +545,19 @@ public static partial class LinqMixins
             return _source.Subscribe(new ResultObserver(_sourceValue, _selector, observer));
         }
 
-        /// <summary>
-        /// Maps inner source values.
-        /// </summary>
+        /// <summary>Maps inner source values.</summary>
         private sealed class ResultObserver : IObserver<TCollection>
         {
-            /// <summary>
-            /// Captured outer value.
-            /// </summary>
+            /// <summary>Captured outer value.</summary>
             private readonly TSource _sourceValue;
 
-            /// <summary>
-            /// Projects outer and inner values to result values.
-            /// </summary>
+            /// <summary>Projects outer and inner values to result values.</summary>
             private readonly Func<TSource, TCollection, TResult> _selector;
 
-            /// <summary>
-            /// The downstream observer.
-            /// </summary>
+            /// <summary>The downstream observer.</summary>
             private readonly IObserver<TResult> _observer;
 
-            /// <summary>
-            /// Initializes a new instance of the <see cref="ResultObserver"/> class.
-            /// </summary>
+            /// <summary>Initializes a new instance of the <see cref="ResultObserver"/> class.</summary>
             /// <param name="sourceValue">Captured outer value.</param>
             /// <param name="selector">Projects outer and inner values to result values.</param>
             /// <param name="observer">The downstream observer.</param>

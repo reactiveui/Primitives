@@ -4,14 +4,10 @@
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// Provides a sequencer test double that rejects scheduled work.
-/// </summary>
+/// <summary>Provides a sequencer test double that rejects scheduled work.</summary>
 internal sealed class EmptySequencer : ISequencer
 {
-    /// <summary>
-    /// Gets the shared empty sequencer instance.
-    /// </summary>
+    /// <summary>Gets the shared empty sequencer instance.</summary>
     public static EmptySequencer Instance { get; } = new();
 
     /// <inheritdoc/>

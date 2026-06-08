@@ -4,16 +4,12 @@
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// Signal that remembers only its final value and publishes it when completed.
-/// </summary>
+/// <summary>Signal that remembers only its final value and publishes it when completed.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class FinalSignal<T> : AsyncSignal<T>
 {
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 }

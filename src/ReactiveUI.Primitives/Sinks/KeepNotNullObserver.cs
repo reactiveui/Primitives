@@ -19,7 +19,7 @@ public sealed class KeepNotNullObserver<T> : SingleSourceObserver<T?>
     /// <inheritdoc/>
     public override void OnNext(T? value)
     {
-        if (value == null)
+        if (value is null)
         {
             return;
         }

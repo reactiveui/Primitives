@@ -4,10 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Represents a provider for asynchronous push-based notifications that supports asynchronous subscription and
-/// disposal.
-/// </summary>
+/// <summary>Represents a provider for asynchronous push-based notifications that supports asynchronous subscription and disposal.</summary>
 /// <remarks>Use this interface to implement observable sequences that allow observers to subscribe asynchronously
 /// and receive notifications in an asynchronous manner. This is useful for scenarios where subscription or
 /// unsubscription may involve asynchronous operations, such as network or I/O-bound tasks. Implementations should
@@ -16,9 +13,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <typeparam name="T">The type of elements produced by the observable sequence.</typeparam>
 public interface IObservableAsync<T>
 {
-    /// <summary>
-    /// Subscribes the specified asynchronous observer to receive notifications from the observable sequence.
-    /// </summary>
+    /// <summary>Subscribes the specified asynchronous observer to receive notifications from the observable sequence.</summary>
     /// <remarks>The returned <see cref="IAsyncDisposable"/> should be disposed when the observer no longer
     /// wishes to receive notifications. Multiple observers may be subscribed concurrently.</remarks>
     /// <param name="observer">The observer that will receive asynchronous notifications. Cannot be null.</param>

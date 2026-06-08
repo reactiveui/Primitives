@@ -16,8 +16,7 @@ public class ConcurrencyRaceHelpersTests
     /// <summary>Sentinel for the "claimed" state in the tests.</summary>
     private const int Claimed = 1;
 
-    /// <summary>Verifies <see cref="ConcurrencyRaceHelpers.TryClaim"/> succeeds when the state
-    /// is open and transitions it to the claimed sentinel.</summary>
+    /// <summary>Verifies <see cref="ConcurrencyRaceHelpers.TryClaim"/> succeeds when the state is open and transitions it to the claimed sentinel.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTryClaimOpen_ThenReturnsTrueAndTransitions()
@@ -30,8 +29,7 @@ public class ConcurrencyRaceHelpersTests
         await Assert.That(state).IsEqualTo(Claimed);
     }
 
-    /// <summary>Verifies <see cref="ConcurrencyRaceHelpers.TryClaim"/> returns false when the
-    /// state is already claimed and does not mutate it further.</summary>
+    /// <summary>Verifies <see cref="ConcurrencyRaceHelpers.TryClaim"/> returns false when the state is already claimed and does not mutate it further.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTryClaimAlreadyClaimed_ThenReturnsFalse()
@@ -44,8 +42,7 @@ public class ConcurrencyRaceHelpersTests
         await Assert.That(state).IsEqualTo(Claimed);
     }
 
-    /// <summary>Verifies <see cref="ConcurrencyRaceHelpers.TryCancelAsync"/> returns
-    /// <see langword="true"/> when called on an open CTS and the cancellation goes through.</summary>
+    /// <summary>Verifies <see cref="ConcurrencyRaceHelpers.TryCancelAsync"/> returns <see langword="true"/> when called on an open CTS and the cancellation goes through.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTryCancelOpenCts_ThenReturnsTrueAndTokenCancels()
@@ -58,9 +55,7 @@ public class ConcurrencyRaceHelpersTests
         await Assert.That(cts.IsCancellationRequested).IsTrue();
     }
 
-    /// <summary>Verifies <see cref="ConcurrencyRaceHelpers.TryCancelAsync"/> returns
-    /// <see langword="false"/> when called on a disposed CTS and silently swallows the
-    /// <see cref="ObjectDisposedException"/>.</summary>
+    /// <summary>Verifies cancelling a disposed CTS returns false and swallows the dispose exception.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTryCancelDisposedCts_ThenReturnsFalseAndSwallowsObjectDisposed()

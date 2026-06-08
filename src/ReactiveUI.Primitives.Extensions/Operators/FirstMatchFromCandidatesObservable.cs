@@ -56,9 +56,7 @@ internal sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
         return TrySyncLoop(observer);
     }
 
-    /// <summary>
-    /// Tries a synchronous fast-path: each candidate's projected observable is.
-    /// </summary>
+    /// <summary>Tries a synchronous fast-path: each candidate's projected observable is.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <returns>The subscription disposable.</returns>
     internal IDisposable TrySyncLoop(IObserver<TResult> observer)
@@ -288,10 +286,7 @@ internal sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
             Interlocked.Exchange(ref _currentSubscription, null)?.Dispose();
         }
 
-        /// <summary>
-        /// Subscribes to the next candidate's projected observable, or emits the
-        /// fallback if no candidates remain.
-        /// </summary>
+        /// <summary>Subscribes to the next candidate's projected observable, or emits the fallback if no candidates remain.</summary>
         internal void TryNext()
         {
             _looping = true;

@@ -18,24 +18,16 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class OperatorStatefulVariantBenchmarks
 {
-    /// <summary>
-    /// The number of values produced by each benchmarked sequence.
-    /// </summary>
+    /// <summary>The number of values produced by each benchmarked sequence.</summary>
     private const int Count = 16;
 
-    /// <summary>
-    /// The multiplier passed as explicit state to the projection benchmarks.
-    /// </summary>
+    /// <summary>The multiplier passed as explicit state to the projection benchmarks.</summary>
     private readonly int _factor = 3;
 
-    /// <summary>
-    /// The threshold passed as explicit state to the filter benchmarks.
-    /// </summary>
+    /// <summary>The threshold passed as explicit state to the filter benchmarks.</summary>
     private readonly int _threshold = 8;
 
-    /// <summary>
-    /// Benchmarks a stateful projection without a per-subscription closure.
-    /// </summary>
+    /// <summary>Benchmarks a stateful projection without a per-subscription closure.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesMapWith()
@@ -45,9 +37,7 @@ public class OperatorStatefulVariantBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks a stateful projection using a System.Reactive closure.
-    /// </summary>
+    /// <summary>Benchmarks a stateful projection using a System.Reactive closure.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveSelectClosure()
@@ -58,9 +48,7 @@ public class OperatorStatefulVariantBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks a stateful projection using an R3 closure.
-    /// </summary>
+    /// <summary>Benchmarks a stateful projection using an R3 closure.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3SelectClosure()
@@ -71,9 +59,7 @@ public class OperatorStatefulVariantBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks a stateful filter without a per-subscription closure.
-    /// </summary>
+    /// <summary>Benchmarks a stateful filter without a per-subscription closure.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesKeepWith()
@@ -83,9 +69,7 @@ public class OperatorStatefulVariantBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks a stateful filter using a System.Reactive closure.
-    /// </summary>
+    /// <summary>Benchmarks a stateful filter using a System.Reactive closure.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveWhereClosure()
@@ -96,9 +80,7 @@ public class OperatorStatefulVariantBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks a stateful filter using an R3 closure.
-    /// </summary>
+    /// <summary>Benchmarks a stateful filter using an R3 closure.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3WhereClosure()
@@ -109,9 +91,7 @@ public class OperatorStatefulVariantBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks a stateful side-effect without a per-subscription closure.
-    /// </summary>
+    /// <summary>Benchmarks a stateful side-effect without a per-subscription closure.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesTapWith()
@@ -121,9 +101,7 @@ public class OperatorStatefulVariantBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks a stateful side-effect using a System.Reactive closure.
-    /// </summary>
+    /// <summary>Benchmarks a stateful side-effect using a System.Reactive closure.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveDoClosure()
@@ -134,9 +112,7 @@ public class OperatorStatefulVariantBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks a stateful side-effect using an R3 closure.
-    /// </summary>
+    /// <summary>Benchmarks a stateful side-effect using an R3 closure.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3DoClosure()

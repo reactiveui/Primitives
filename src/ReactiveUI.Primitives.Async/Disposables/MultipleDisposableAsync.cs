@@ -26,9 +26,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     /// <summary>Divisor used to decide whether a remove triggers compaction (count * 4 &lt; length).</summary>
     private const int ShrinkOccupancyDivisor = 4;
 
-    /// <summary>
-    /// The synchronization gate protecting all mutable state in this collection.
-    /// </summary>
+    /// <summary>The synchronization gate protecting all mutable state in this collection.</summary>
     private readonly Lock _gate = new();
 
     /// <summary>
@@ -55,9 +53,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     {
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MultipleDisposableAsync"/> class with the specified initial capacity.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="MultipleDisposableAsync"/> class with the specified initial capacity.</summary>
     /// <param name="capacity">The number of elements that the collection can initially store. Must be greater than or equal to 0.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when capacity is less than 0.</exception>
     public MultipleDisposableAsync(int capacity)
@@ -135,14 +131,10 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Gets a value indicating whether the object has been disposed.
-    /// </summary>
+    /// <summary>Gets a value indicating whether the object has been disposed.</summary>
     public bool IsDisposed => Volatile.Read(ref _isDisposed);
 
-    /// <summary>
-    /// Gets the number of elements contained in the collection.
-    /// </summary>
+    /// <summary>Gets the number of elements contained in the collection.</summary>
     public int Count
     {
         get
@@ -180,9 +172,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         return item.DisposeAsync();
     }
 
-    /// <summary>
-    /// Removes the specified item from the collection and disposes it asynchronously.
-    /// </summary>
+    /// <summary>Removes the specified item from the collection and disposes it asynchronously.</summary>
     /// <remarks>If the item is not found in the collection, it is not disposed. This method is
     /// thread-safe.</remarks>
     /// <param name="item">The item to remove and dispose. Cannot be null.</param>
@@ -223,9 +213,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         return true;
     }
 
-    /// <summary>
-    /// Asynchronously disposes all items in the collection and removes them.
-    /// </summary>
+    /// <summary>Asynchronously disposes all items in the collection and removes them.</summary>
     /// <remarks>If the collection is already empty or has been disposed, this method performs no action. Each
     /// item is disposed asynchronously before being removed from the collection. This method is thread-safe.</remarks>
     /// <returns>A task that represents the asynchronous clear operation.</returns>
@@ -264,9 +252,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Determines whether the collection contains the specified asynchronous disposable item.
-    /// </summary>
+    /// <summary>Determines whether the collection contains the specified asynchronous disposable item.</summary>
     /// <remarks>If the collection has been disposed, this method always returns false.</remarks>
     /// <param name="item">The asynchronous disposable item to locate in the collection. Can be null.</param>
     /// <returns>true if the specified item is found in the collection and the collection has not been disposed; otherwise,
@@ -284,9 +270,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Copies the elements of the collection to the specified array, starting at the given array index.
-    /// </summary>
+    /// <summary>Copies the elements of the collection to the specified array, starting at the given array index.</summary>
     /// <param name="array">The one-dimensional array of IAsyncDisposable elements that is the destination of the elements copied from the
     /// collection. The array must have zero-based indexing.</param>
     /// <param name="arrayIndex">The zero-based index in the destination array at which copying begins. Must be non-negative and less than the
@@ -435,8 +419,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         _items = grown;
     }
 
-    /// <summary>Removes null gaps inside <see cref="_items"/> and shrinks the backing array
-    /// to half its capacity. Caller must hold <see cref="_gate"/>.</summary>
+    /// <summary>Removes null gaps inside <see cref="_items"/> and shrinks the backing array to half its capacity. Caller must hold <see cref="_gate"/>.</summary>
     private void CompactInPlace()
     {
         var src = _items!;

@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <content>
-/// CombineLatest tests for combining operators.
-/// </content>
+/// <summary>Tests for the CombineLatest operator.</summary>
 public partial class CombiningOperatorTests
 {
     /// <summary>Tests CombineLatest two sources combines latest values.</summary>
@@ -39,9 +37,7 @@ public partial class CombiningOperatorTests
         await Assert.That(results[0]).IsEqualTo((1, "a"));
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with an empty sources collection completes immediately with success.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with an empty sources collection completes immediately with success.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEmptySources_ThenCompletesImmediately()
@@ -63,9 +59,7 @@ public partial class CombiningOperatorTests
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest completes with success when one source completes without emitting any value.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest completes with success when one source completes without emitting any value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestOneSourceCompletesWithoutEmitting_ThenCompletes()
@@ -94,9 +88,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).IsEmpty();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest propagates a failure when one of the sources errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest propagates a failure when one of the sources errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestOneSourceErrors_ThenFailurePropagates()
@@ -122,9 +114,7 @@ public partial class CombiningOperatorTests
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest forwards error-resume events from inner sources to the downstream observer.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest forwards error-resume events from inner sources to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestSourceErrorResume_ThenForwarded()
@@ -157,9 +147,7 @@ public partial class CombiningOperatorTests
         await Assert.That(errors).Count().IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Verifies that disposing a CombineLatest subscription during active emissions does not throw.
-    /// </summary>
+    /// <summary>Verifies that disposing a CombineLatest subscription during active emissions does not throw.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestDisposedDuringEmission_ThenNoError()

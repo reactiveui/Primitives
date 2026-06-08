@@ -81,8 +81,7 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(result).IsCollectionEqualTo(expected);
     }
 
-    /// <summary>Verifies that <c>ThrottleDistinct</c> suppresses consecutive duplicates upstream
-    /// before any throttle work is scheduled.</summary>
+    /// <summary>Verifies that <c>ThrottleDistinct</c> suppresses consecutive duplicates upstream before any throttle work is scheduled.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenThrottleDistinctConsecutiveDuplicates_ThenSuppressesUpstream()
@@ -116,8 +115,7 @@ public class ParityHelpersOperatorFusionsTests
         }
     }
 
-    /// <summary>Verifies that <c>DebounceUntil</c> with an always-true condition bypasses
-    /// the debounce window and emits inline.</summary>
+    /// <summary>Verifies that <c>DebounceUntil</c> with an always-true condition bypasses the debounce window and emits inline.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDebounceUntilConditionAlwaysTrue_ThenEmitsImmediately()
@@ -129,8 +127,7 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(result).IsCollectionEqualTo(DebounceInputs);
     }
 
-    /// <summary>Verifies that the array fast path of <c>ForEach</c> flattens an
-    /// <c>IObservableAsync&lt;T[]&gt;</c> into a flat sequence of elements.</summary>
+    /// <summary>Verifies that the array fast path of <c>ForEach</c> flattens an <c>IObservableAsync&lt;T[]&gt;</c> into a flat sequence of elements.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForEachOverArray_ThenUsesArrayFastPath()
@@ -144,8 +141,7 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(result).IsCollectionEqualTo(ExpectedArrayFlat);
     }
 
-    /// <summary>Verifies that the <see cref="IReadOnlyList{T}"/> fast path of <c>ForEach</c>
-    /// flattens a list-typed source.</summary>
+    /// <summary>Verifies that the <see cref="IReadOnlyList{T}"/> fast path of <c>ForEach</c> flattens a list-typed source.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForEachOverReadOnlyList_ThenUsesListFastPath()
@@ -161,8 +157,7 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(result).IsCollectionEqualTo(ExpectedListFlat);
     }
 
-    /// <summary>Verifies that the general <see cref="IEnumerable{T}"/> path of <c>ForEach</c>
-    /// flattens a non-array, non-list source.</summary>
+    /// <summary>Verifies that the general <see cref="IEnumerable{T}"/> path of <c>ForEach</c> flattens a non-array, non-list source.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForEachOverGenericEnumerable_ThenUsesEnumeratorPath()
@@ -272,8 +267,7 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(observed!.Message).IsEqualTo(failure.Message);
     }
 
-    /// <summary>Verifies that <c>ScanWithInitial</c> forwards a non-terminal upstream error
-    /// downstream while still emitting the seed.</summary>
+    /// <summary>Verifies that <c>ScanWithInitial</c> forwards a non-terminal upstream error downstream while still emitting the seed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScanWithInitialSourceErrorResumes_ThenForwardsDownstream()
@@ -306,8 +300,7 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(values).IsCollectionEqualTo([ScanSeed]);
     }
 
-    /// <summary>Verifies that <c>ThrottleDistinct</c> forwards a non-terminal upstream error
-    /// downstream.</summary>
+    /// <summary>Verifies that <c>ThrottleDistinct</c> forwards a non-terminal upstream error downstream.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenThrottleDistinctSourceErrorResumes_ThenForwardsDownstream()
@@ -334,8 +327,7 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies that <c>DebounceUntil</c> forwards a non-terminal upstream error
-    /// downstream.</summary>
+    /// <summary>Verifies that <c>DebounceUntil</c> forwards a non-terminal upstream error downstream.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDebounceUntilSourceErrorResumes_ThenForwardsDownstream()
@@ -455,8 +447,7 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(values).Contains(One);
     }
 
-    /// <summary>Verifies that the async-accumulator <c>ScanWithInitial</c> overload forwards
-    /// upstream non-terminal errors downstream.</summary>
+    /// <summary>Verifies that the async-accumulator <c>ScanWithInitial</c> overload forwards upstream non-terminal errors downstream.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScanWithInitialAsyncSourceErrorResumes_ThenForwardsDownstream()
@@ -649,13 +640,12 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(values).IsCollectionEqualTo([Two]);
     }
 
-    /// <summary>Verifies that <see cref="SignalAsync.ThrottleDistinctSignal{T}.ThrottleDistinctWitness.TryClaimEmission"/>
-    /// returns <see langword="false"/> when the id has been superseded by a newer upstream emission.</summary>
+    /// <summary>Verifies ThrottleDistinct <c>TryClaimEmission</c> returns false when the id has been superseded.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenThrottleDistinctTryClaimEmissionSuperseded_ThenReturnsFalse()
     {
-        var observer = new SignalAsync.ThrottleDistinctSignal<int>.ThrottleDistinctWitness(
+        var observer = new SignalAsyncExtensions.ThrottleDistinctSignal<int>.ThrottleDistinctWitness(
             new NoOpAsyncObserver<int>(),
             TimeSpan.FromHours(1),
             TimeProvider.System,
@@ -670,13 +660,12 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(claimed).IsFalse();
     }
 
-    /// <summary>Verifies that <see cref="SignalAsync.ThrottleDistinctSignal{T}.ThrottleDistinctWitness.TryClaimEmission"/>
-    /// returns <see langword="false"/> when the value is a duplicate of the most-recently-emitted one.</summary>
+    /// <summary>Verifies ThrottleDistinct <c>TryClaimEmission</c> returns false for a duplicate of the last-emitted value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenThrottleDistinctTryClaimEmissionDuplicate_ThenReturnsFalse()
     {
-        var observer = new SignalAsync.ThrottleDistinctSignal<int>.ThrottleDistinctWitness(
+        var observer = new SignalAsyncExtensions.ThrottleDistinctSignal<int>.ThrottleDistinctWitness(
             new NoOpAsyncObserver<int>(),
             TimeSpan.FromHours(1),
             TimeProvider.System,
@@ -698,14 +687,12 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(secondClaim).IsFalse();
     }
 
-    /// <summary>Verifies that <see cref="SignalAsync.DebounceUntilSignal{T}.DebounceUntilWitness.IsCurrentEmission"/>
-    /// returns <see langword="true"/> for the most-recent id and <see langword="false"/> for
-    /// stale ids.</summary>
+    /// <summary>Verifies DebounceUntil <c>IsCurrentEmission</c> is true for the latest id and false for stale ids.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDebounceUntilIsCurrentEmission_ThenMatchesIdState()
     {
-        var observer = new SignalAsync.DebounceUntilSignal<int>.DebounceUntilWitness(
+        var observer = new SignalAsyncExtensions.DebounceUntilSignal<int>.DebounceUntilWitness(
             new NoOpAsyncObserver<int>(),
             TimeSpan.FromHours(1),
             static _ => false,
@@ -719,7 +706,7 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(observer.IsCurrentEmission(id: 1)).IsFalse();
     }
 
-    /// <summary>Verifies that <see cref="SignalAsync.PartitionCoordinator{T}.TryAttachSourceSubscription"/>
+    /// <summary>Verifies that <see cref="SignalAsyncExtensions.PartitionCoordinator{T}.TryAttachSourceSubscription"/>
     /// returns <see langword="false"/> when both branches have already been disposed by the time
     /// the source subscription returns — the disposeNow race fast-path that is otherwise only
     /// reachable through a real concurrency race.</summary>
@@ -728,7 +715,7 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenPartitionTryAttachSourceSubscriptionAndBothBranchesGone_ThenReturnsFalse()
     {
         var signal = Signal.Create<int>();
-        var coordinator = new SignalAsync.PartitionCoordinator<int>(signal.Values, static x => x % Two == 0);
+        var coordinator = new SignalAsyncExtensions.PartitionCoordinator<int>(signal.Values, static x => x % Two == 0);
 
         // Subscribe then immediately dispose so both branch slots are null.
         var sub = await coordinator.TrueBranch.SubscribeAsync(static (_, _) => default);
@@ -739,14 +726,13 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(attached).IsFalse();
     }
 
-    /// <summary>Verifies that <see cref="SignalAsync.PartitionCoordinator{T}.TryAttachSourceSubscription"/>
-    /// returns <see langword="true"/> when at least one branch is still alive.</summary>
+    /// <summary>Verifies that <see cref="SignalAsyncExtensions.PartitionCoordinator{T}.TryAttachSourceSubscription"/> returns <see langword="true"/> when at least one branch is still alive.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPartitionTryAttachSourceSubscriptionAndBranchAlive_ThenReturnsTrue()
     {
         var signal = Signal.Create<int>();
-        var coordinator = new SignalAsync.PartitionCoordinator<int>(signal.Values, static x => x % Two == 0);
+        var coordinator = new SignalAsyncExtensions.PartitionCoordinator<int>(signal.Values, static x => x % Two == 0);
 
         await using var sub = await coordinator.TrueBranch.SubscribeAsync(static (_, _) => default);
 
@@ -755,8 +741,7 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(attached).IsTrue();
     }
 
-    /// <summary>Yields values as a generic <see cref="IEnumerable{T}"/> (neither array nor list)
-    /// to drive the slow-path branch of <c>ForEach</c>.</summary>
+    /// <summary>Yields values as a generic <see cref="IEnumerable{T}"/> (neither array nor list) to drive the slow-path branch of <c>ForEach</c>.</summary>
     /// <param name="values">Values to yield.</param>
     /// <returns>A lazily-evaluated enumerable.</returns>
     private static IEnumerable<int> Enumerate(params int[] values)
@@ -791,8 +776,7 @@ public class ParityHelpersOperatorFusionsTests
         public ValueTask DisposeAsync() => default;
     }
 
-    /// <summary>No-op async observer used as a downstream stand-in for direct unit tests of
-    /// observer-internal decision methods.</summary>
+    /// <summary>No-op async observer used as a downstream stand-in for direct unit tests of observer-internal decision methods.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     private sealed class NoOpAsyncObserver<T> : IObserverAsync<T>
     {

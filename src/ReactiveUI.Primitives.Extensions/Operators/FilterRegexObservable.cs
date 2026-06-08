@@ -7,10 +7,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Operator that filters string elements using a <see cref="Regex"/>.
-/// Replaces the closure-based implementation in ReactiveExtensions.Filter.
-/// </summary>
+/// <summary>Operator that filters string elements using a <see cref="Regex"/>. Replaces the closure-based implementation in ReactiveExtensions.Filter.</summary>
 /// <param name="source">The source observable emitting strings.</param>
 /// <param name="regex">The regex to use for filtering.</param>
 internal sealed class FilterRegexObservable(
@@ -26,9 +23,7 @@ internal sealed class FilterRegexObservable(
         return source.Subscribe(new FilterRegexObserver(observer, regex));
     }
 
-    /// <summary>
-    /// Observer that filters strings using regex.
-    /// </summary>
+    /// <summary>Observer that filters strings using regex.</summary>
     /// <param name="downstream">The downstream observer receiving strings that match the regex.</param>
     /// <param name="regex">The regex used for filtering.</param>
     private sealed class FilterRegexObserver(

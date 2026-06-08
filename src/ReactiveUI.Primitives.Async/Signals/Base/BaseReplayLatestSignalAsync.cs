@@ -22,49 +22,31 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// <param name="startValue">An optional initial value to be emitted to new subscribers before any other values are published.</param>
 public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : SignalAsync<T>, ISignalAsync<T>
 {
-    /// <summary>
-    /// The asynchronous gate used to synchronize access to the Signal's mutable state.
-    /// </summary>
+    /// <summary>The asynchronous gate used to synchronize access to the Signal's mutable state.</summary>
     private readonly AsyncSerialGate _gate = new();
 
-    /// <summary>
-    /// The cancellation token source that is cancelled when this instance is disposed.
-    /// </summary>
+    /// <summary>The cancellation token source that is cancelled when this instance is disposed.</summary>
     private readonly CancellationTokenSource _disposedCts = new();
 
-    /// <summary>
-    /// The most recently published value, replayed to new subscribers upon subscription.
-    /// </summary>
+    /// <summary>The most recently published value, replayed to new subscribers upon subscription.</summary>
     private Optional<T> _lastValue = startValue;
 
-    /// <summary>
-    /// The immutable list of currently subscribed observers.
-    /// </summary>
+    /// <summary>The immutable list of currently subscribed observers.</summary>
     private ImmutableArray<IObserverAsync<T>> _observers = [];
 
-    /// <summary>
-    /// The completion result, or <see langword="null"/> if the Signal has not yet completed.
-    /// </summary>
+    /// <summary>The completion result, or <see langword="null"/> if the Signal has not yet completed.</summary>
     private Result? _result;
 
-    /// <summary>
-    /// A value indicating whether this instance has been disposed.
-    /// </summary>
+    /// <summary>A value indicating whether this instance has been disposed.</summary>
     private bool _isDisposed;
 
-    /// <summary>
-    /// Gets an observable sequence that represents the asynchronous values of the Signal.
-    /// </summary>
+    /// <summary>Gets an observable sequence that represents the asynchronous values of the Signal.</summary>
     IObservableAsync<T> ISignalAsync<T>.Values => this;
 
-    /// <summary>
-    /// Gets the cancellation token that is cancelled when this instance is disposed.
-    /// </summary>
+    /// <summary>Gets the cancellation token that is cancelled when this instance is disposed.</summary>
     private CancellationToken DisposedCancellationToken => _disposedCts.Token;
 
-    /// <summary>
-    /// Asynchronously notifies all subscribed observers with the specified value.
-    /// </summary>
+    /// <summary>Asynchronously notifies all subscribed observers with the specified value.</summary>
     /// <remarks>If the sequence has already completed, this method does not notify observers.</remarks>
     /// <param name="value">The value to send to each observer.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the notification operation.</param>
@@ -101,9 +83,7 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
         }
     }
 
-    /// <summary>
-    /// Notifies all observers of an error and resumes asynchronous processing as appropriate.
-    /// </summary>
+    /// <summary>Notifies all observers of an error and resumes asynchronous processing as appropriate.</summary>
     /// <remarks>If the result has already been set, this method returns immediately without notifying
     /// observers. Observers are notified asynchronously.</remarks>
     /// <param name="error">The exception that occurred and will be sent to observers. Cannot be null.</param>
@@ -133,9 +113,7 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
         }
     }
 
-    /// <summary>
-    /// Notifies all registered observers that the asynchronous operation has completed and provides the final result.
-    /// </summary>
+    /// <summary>Notifies all registered observers that the asynchronous operation has completed and provides the final result.</summary>
     /// <remarks>Subsequent calls after the first completion will have no effect. This method is thread-safe
     /// and ensures that observers are notified only once.</remarks>
     /// <param name="result">The result to deliver to observers upon completion. Cannot be null.</param>
@@ -159,9 +137,7 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
         await OnCompletedAsyncCore(observers, result).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Asynchronously releases the unmanaged resources used by the object.
-    /// </summary>
+    /// <summary>Asynchronously releases the unmanaged resources used by the object.</summary>
     /// <returns>A ValueTask that represents the asynchronous dispose operation.</returns>
     public async ValueTask DisposeAsync()
     {
@@ -177,9 +153,7 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>
-    /// Asynchronously notifies the specified observers with the provided value.
-    /// </summary>
+    /// <summary>Asynchronously notifies the specified observers with the provided value.</summary>
     /// <param name="observers">A read-only list of observers to be notified. Cannot be null.</param>
     /// <param name="value">The value to send to each observer.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the notification operation.</param>
@@ -189,9 +163,7 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
         T value,
         CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Handles error recovery for the specified observers by resuming asynchronous processing after an error occurs.
-    /// </summary>
+    /// <summary>Handles error recovery for the specified observers by resuming asynchronous processing after an error occurs.</summary>
     /// <remarks>Override this method to implement custom error recovery logic for asynchronous observers. The
     /// method is called when an error occurs and provides an opportunity to resume or redirect processing for the
     /// affected observers.</remarks>
@@ -204,9 +176,7 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
         Exception error,
         CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Invoked to asynchronously notify all observers of the completion event with the specified result.
-    /// </summary>
+    /// <summary>Invoked to asynchronously notify all observers of the completion event with the specified result.</summary>
     /// <remarks>Implementations should ensure that all observers are notified according to the completion
     /// semantics of the operation. Exceptions thrown during notification may affect the completion of the returned
     /// task.</remarks>
@@ -215,9 +185,7 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
     /// <returns>A ValueTask that represents the asynchronous notification operation.</returns>
     protected abstract ValueTask OnCompletedAsyncCore(ImmutableArray<IObserverAsync<T>> observers, Result result);
 
-    /// <summary>
-    /// Subscribes the specified asynchronous observer to receive notifications from the observable sequence.
-    /// </summary>
+    /// <summary>Subscribes the specified asynchronous observer to receive notifications from the observable sequence.</summary>
     /// <remarks>If the sequence has already completed, the observer will immediately receive the completion
     /// notification and will not be added to the list of active observers. If a last value is available, it is pushed
     /// to the observer upon subscription.</remarks>
@@ -285,9 +253,7 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
         return linkedCts.Token;
     }
 
-    /// <summary>
-    /// Removes an observer from the replay signal under the serialization gate.
-    /// </summary>
+    /// <summary>Removes an observer from the replay signal under the serialization gate.</summary>
     /// <param name="observer">The observer to remove.</param>
     /// <returns>A task that represents the asynchronous removal operation.</returns>
     /// <remarks>The exception handlers are disposal-race guards and are excluded because both paths require the
@@ -314,9 +280,7 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
         }
     }
 
-    /// <summary>
-    /// Removes an observer from the replay signal under the serialization gate.
-    /// </summary>
+    /// <summary>Removes an observer from the replay signal under the serialization gate.</summary>
     /// <param name="observer">The observer to remove.</param>
     /// <returns>A task that represents the asynchronous removal operation.</returns>
     private async ValueTask RemoveObserverCoreAsync(IObserverAsync<T> observer)
@@ -327,17 +291,13 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
         }
     }
 
-    /// <summary>
-    /// Subscription handle that removes an observer from a replay signal when disposed.
-    /// </summary>
+    /// <summary>Subscription handle that removes an observer from a replay signal when disposed.</summary>
     /// <param name="signal">The signal that owns the observer list.</param>
     /// <param name="observer">The observer to remove when the lease is disposed.</param>
     private sealed class ObserverLease(BaseReplayLatestSignalAsync<T> signal, IObserverAsync<T> observer)
         : IAsyncDisposable
     {
-        /// <summary>
-        /// Indicates whether the lease has already removed its observer.
-        /// </summary>
+        /// <summary>Indicates whether the lease has already removed its observer.</summary>
         private int _disposed;
 
         /// <inheritdoc/>

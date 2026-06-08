@@ -12,14 +12,10 @@ namespace ReactiveUI.Primitives;
 /// <typeparam name="T">The type of elements observed.</typeparam>
 public abstract class SingleSourceObserver<T> : IObserver<T>, IDisposable
 {
-    /// <summary>
-    /// Disposed marker.
-    /// </summary>
+    /// <summary>Disposed marker.</summary>
     private static readonly IDisposable DisposedSentinel = new DisposedMarker();
 
-    /// <summary>
-    /// Upstream subscription.
-    /// </summary>
+    /// <summary>Upstream subscription.</summary>
     private IDisposable? _subscription;
 
     /// <inheritdoc/>
@@ -45,7 +41,7 @@ public abstract class SingleSourceObserver<T> : IObserver<T>, IDisposable
     /// <param name="subscription">The upstream subscription.</param>
     public void SetSubscription(IDisposable subscription)
     {
-        if (Interlocked.CompareExchange(ref _subscription, subscription, null) == null)
+        if (Interlocked.CompareExchange(ref _subscription, subscription, null) is null)
         {
             return;
         }
@@ -53,14 +49,12 @@ public abstract class SingleSourceObserver<T> : IObserver<T>, IDisposable
         subscription.Dispose();
     }
 
-    /// <summary>
-    /// Releases the upstream subscription.
-    /// </summary>
+    /// <summary>Releases the upstream subscription.</summary>
     /// <param name="disposing">A value indicating whether managed resources should be disposed.</param>
     protected virtual void Dispose(bool disposing)
     {
         var subscription = Interlocked.Exchange(ref _subscription, DisposedSentinel);
-        if (subscription == null || ReferenceEquals(subscription, DisposedSentinel) || !disposing)
+        if (subscription is null || ReferenceEquals(subscription, DisposedSentinel) || !disposing)
         {
             return;
         }

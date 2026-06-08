@@ -62,8 +62,7 @@ public class SelectLatestAsyncObservableTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies that disposing the subscription before the selector completes
-    /// suppresses any later <c>OnNext</c> / <c>OnCompleted</c>.</summary>
+    /// <summary>Verifies that disposing the subscription before the selector completes suppresses any later <c>OnNext</c> / <c>OnCompleted</c>.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectLatestAsyncDisposedMidFlight_ThenSuppressesEmissionAndCompletion()
@@ -92,8 +91,7 @@ public class SelectLatestAsyncObservableTests
         await Assert.That(completed).IsFalse();
     }
 
-    /// <summary>Verifies that a newer value supersedes a slower in-flight projection,
-    /// so only the latest result is emitted.</summary>
+    /// <summary>Verifies that a newer value supersedes a slower in-flight projection, so only the latest result is emitted.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectLatestAsyncNewerArrives_ThenOlderResultDropped()

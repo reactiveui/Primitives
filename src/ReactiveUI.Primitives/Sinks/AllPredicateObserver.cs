@@ -4,20 +4,14 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Observer for detecting whether all values match a predicate.
-/// </summary>
+/// <summary>Observer for detecting whether all values match a predicate.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 public sealed class AllPredicateObserver<T> : BooleanTerminalObserver<T>
 {
-    /// <summary>
-    /// The predicate.
-    /// </summary>
+    /// <summary>The predicate.</summary>
     private readonly Func<T, bool> _predicate;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AllPredicateObserver{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="AllPredicateObserver{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="predicate">The predicate.</param>
     public AllPredicateObserver(IObserver<bool> observer, Func<T, bool> predicate)

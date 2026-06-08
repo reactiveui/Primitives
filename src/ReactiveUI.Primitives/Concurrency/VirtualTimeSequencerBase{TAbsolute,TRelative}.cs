@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// Base class for virtual time schedulers.
-/// </summary>
+/// <summary>Base class for virtual time schedulers.</summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 /// <typeparam name="TRelative">Relative time representation type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
@@ -43,44 +41,30 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
         Comparer = comparer ?? throw new ArgumentNullException(nameof(comparer));
     }
 
-    /// <summary>
-    /// Gets or sets the scheduler's absolute time clock value.
-    /// </summary>
+    /// <summary>Gets or sets the scheduler's absolute time clock value.</summary>
     public TAbsolute Clock
     {
         get;
         protected set;
     }
 
-    /// <summary>
-    /// Gets a value indicating whether gets whether the scheduler is enabled to run work.
-    /// </summary>
+    /// <summary>Gets a value indicating whether gets whether the scheduler is enabled to run work.</summary>
     public bool IsEnabled { get; private set; }
 
-    /// <summary>
-    /// Gets the scheduler's notion of current time.
-    /// </summary>
+    /// <summary>Gets the scheduler's notion of current time.</summary>
     public DateTimeOffset Now => ToDateTimeOffset(Clock);
 
-    /// <summary>
-    /// Gets the virtual clock as a monotonic timestamp.
-    /// </summary>
+    /// <summary>Gets the virtual clock as a monotonic timestamp.</summary>
     public long Timestamp => Now.UtcTicks;
 
-    /// <summary>
-    /// Gets the comparer used to compare absolute time values.
-    /// </summary>
+    /// <summary>Gets the comparer used to compare absolute time values.</summary>
     protected IComparer<TAbsolute> Comparer { get; }
 
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>
-    /// Advances the scheduler's clock by the specified relative time, running all work scheduled for that timespan.
-    /// </summary>
+    /// <summary>Advances the scheduler's clock by the specified relative time, running all work scheduled for that timespan.</summary>
     /// <param name="time">Relative time to advance the scheduler's clock by.</param>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="time"/> is negative.</exception>
     /// <exception cref="InvalidOperationException">
@@ -113,9 +97,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
         }
     }
 
-    /// <summary>
-    /// Advances the scheduler's clock to the specified time, running all work till that point.
-    /// </summary>
+    /// <summary>Advances the scheduler's clock to the specified time, running all work till that point.</summary>
     /// <param name="time">Absolute time to advance the scheduler's clock to.</param>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="time"/> is in the past.</exception>
     /// <exception cref="InvalidOperationException">
@@ -142,7 +124,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
             do
             {
                 var next = GetNext();
-                if (next != null && Comparer.Compare(next.DueTime, time) <= 0)
+                if (next is not null && Comparer.Compare(next.DueTime, time) <= 0)
                 {
                     if (Comparer.Compare(next.DueTime, Clock) > 0)
                     {
@@ -166,9 +148,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
         }
     }
 
-    /// <summary>
-    /// Gets the service object of the specified type.
-    /// </summary>
+    /// <summary>Gets the service object of the specified type.</summary>
     /// <param name="serviceType">An object that specifies the type of service object to get.</param>
     /// <returns>
     /// A service object of type <paramref name="serviceType" />.
@@ -177,9 +157,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
     /// </returns>
     object? IServiceProvider.GetService(Type serviceType) => GetService(serviceType);
 
-    /// <summary>
-    /// Schedules an action to be executed.
-    /// </summary>
+    /// <summary>Schedules an action to be executed.</summary>
     /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
     /// <param name="state">State passed to the action to be executed.</param>
     /// <param name="action">Action to be executed.</param>
@@ -187,7 +165,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
     public IDisposable Schedule<TState>(TState state, Func<ISequencer, TState, IDisposable> action)
     {
-        if (action == null)
+        if (action is null)
         {
             throw new ArgumentNullException(nameof(action));
         }
@@ -195,9 +173,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
         return ScheduleAbsolute(state, Clock, action);
     }
 
-    /// <summary>
-    /// Schedules an action to be executed after dueTime.
-    /// </summary>
+    /// <summary>Schedules an action to be executed after dueTime.</summary>
     /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
     /// <param name="state">State passed to the action to be executed.</param>
     /// <param name="dueTime">Relative time after which to execute the action.</param>
@@ -206,7 +182,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
     public IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<ISequencer, TState, IDisposable> action)
     {
-        if (action == null)
+        if (action is null)
         {
             throw new ArgumentNullException(nameof(action));
         }
@@ -214,9 +190,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
         return ScheduleRelative(state, ToRelative(dueTime), action);
     }
 
-    /// <summary>
-    /// Schedules an action to be executed at dueTime.
-    /// </summary>
+    /// <summary>Schedules an action to be executed at dueTime.</summary>
     /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
     /// <param name="state">State passed to the action to be executed.</param>
     /// <param name="dueTime">Absolute time at which to execute the action.</param>
@@ -225,7 +199,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
     public IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action)
     {
-        if (action == null)
+        if (action is null)
         {
             throw new ArgumentNullException(nameof(action));
         }
@@ -233,14 +207,12 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
         return ScheduleRelative(state, ToRelative(dueTime - Now), action);
     }
 
-    /// <summary>
-    /// Schedules a work item to be executed at the current virtual clock.
-    /// </summary>
+    /// <summary>Schedules a work item to be executed at the current virtual clock.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item)
     {
-        if (item == null)
+        if (item is null)
         {
             throw new ArgumentNullException(nameof(item));
         }
@@ -256,15 +228,13 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
         });
     }
 
-    /// <summary>
-    /// Schedules a work item to be executed at a sequencer timestamp.
-    /// </summary>
+    /// <summary>Schedules a work item to be executed at a sequencer timestamp.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <param name="dueTimestamp">Absolute sequencer timestamp.</param>
     /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item, long dueTimestamp)
     {
-        if (item == null)
+        if (item is null)
         {
             throw new ArgumentNullException(nameof(item));
         }
@@ -281,9 +251,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
         });
     }
 
-    /// <summary>
-    /// Schedules an action to be executed at dueTime.
-    /// </summary>
+    /// <summary>Schedules an action to be executed at dueTime.</summary>
     /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
     /// <param name="state">State passed to the action to be executed.</param>
     /// <param name="dueTime">Absolute time at which to execute the action.</param>
@@ -291,9 +259,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
     /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
     public abstract IDisposable ScheduleAbsolute<TState>(TState state, TAbsolute dueTime, Func<ISequencer, TState, IDisposable> action);
 
-    /// <summary>
-    /// Schedules an action to be executed at dueTime.
-    /// </summary>
+    /// <summary>Schedules an action to be executed at dueTime.</summary>
     /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
     /// <param name="state">State passed to the action to be executed.</param>
     /// <param name="dueTime">Relative time after which to execute the action.</param>
@@ -301,7 +267,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
     /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
     public IDisposable ScheduleRelative<TState>(TState state, TRelative dueTime, Func<ISequencer, TState, IDisposable> action)
     {
-        if (action == null)
+        if (action is null)
         {
             throw new ArgumentNullException(nameof(action));
         }
@@ -311,9 +277,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
         return ScheduleAbsolute(state, runAt, action);
     }
 
-    /// <summary>
-    /// Advances the scheduler's clock by the specified relative time.
-    /// </summary>
+    /// <summary>Advances the scheduler's clock by the specified relative time.</summary>
     /// <param name="time">Relative time to advance the scheduler's clock by.</param>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="time"/> is negative.</exception>
     public void Sleep(TRelative time)
@@ -329,9 +293,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
         Clock = dt;
     }
 
-    /// <summary>
-    /// Starts the virtual time scheduler.
-    /// </summary>
+    /// <summary>Starts the virtual time scheduler.</summary>
     public void Start()
     {
         if (IsEnabled)
@@ -343,7 +305,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
         do
         {
             var next = GetNext();
-            if (next != null)
+            if (next is not null)
             {
                 if (Comparer.Compare(next.DueTime, Clock) > 0)
                 {
@@ -360,9 +322,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
         while (IsEnabled);
     }
 
-    /// <summary>
-    /// Starts a new stopwatch object.
-    /// </summary>
+    /// <summary>Starts a new stopwatch object.</summary>
     /// <returns>New stopwatch object; started at the time of the request.</returns>
     public IStopwatch StartStopwatch()
     {
@@ -370,25 +330,19 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
         return new VirtualTimeStopwatch(this, start);
     }
 
-    /// <summary>
-    /// Stops the virtual time scheduler.
-    /// </summary>
+    /// <summary>Stops the virtual time scheduler.</summary>
     public void Stop()
     {
         IsEnabled = false;
     }
 
-    /// <summary>
-    /// Adds a relative time value to an absolute time value.
-    /// </summary>
+    /// <summary>Adds a relative time value to an absolute time value.</summary>
     /// <param name="absolute">Absolute time value.</param>
     /// <param name="relative">Relative time value to add.</param>
     /// <returns>The resulting absolute time sum value.</returns>
     protected abstract TAbsolute Add(TAbsolute absolute, TRelative relative);
 
-    /// <summary>
-    /// Gets the next scheduled item to be executed.
-    /// </summary>
+    /// <summary>Gets the next scheduled item to be executed.</summary>
     /// <returns>The next scheduled item.</returns>
     protected abstract IScheduledItem<TAbsolute>? GetNext();
 
@@ -409,44 +363,30 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
         return this;
     }
 
-    /// <summary>
-    /// Converts the absolute time value to a DateTimeOffset value.
-    /// </summary>
+    /// <summary>Converts the absolute time value to a DateTimeOffset value.</summary>
     /// <param name="absolute">Absolute time value to convert.</param>
     /// <returns>The corresponding DateTimeOffset value.</returns>
     protected abstract DateTimeOffset ToDateTimeOffset(TAbsolute absolute);
 
-    /// <summary>
-    /// Converts the TimeSpan value to a relative time value.
-    /// </summary>
+    /// <summary>Converts the TimeSpan value to a relative time value.</summary>
     /// <param name="timeSpan">TimeSpan value to convert.</param>
     /// <returns>The corresponding relative time value.</returns>
     protected abstract TRelative ToRelative(TimeSpan timeSpan);
 
-    /// <summary>
-    /// Converts the current clock value to a <see cref="DateTimeOffset"/>.
-    /// </summary>
+    /// <summary>Converts the current clock value to a <see cref="DateTimeOffset"/>.</summary>
     /// <returns>The current virtual clock as a date-time offset.</returns>
     private DateTimeOffset ClockToDateTimeOffset() => ToDateTimeOffset(Clock);
 
-    /// <summary>
-    /// Stopwatch backed by virtual time.
-    /// </summary>
+    /// <summary>Stopwatch backed by virtual time.</summary>
     private sealed class VirtualTimeStopwatch : IStopwatch
     {
-        /// <summary>
-        /// Parent sequencer that owns the virtual clock.
-        /// </summary>
+        /// <summary>Parent sequencer that owns the virtual clock.</summary>
         private readonly VirtualTimeSequencerBase<TAbsolute, TRelative> _parent;
 
-        /// <summary>
-        /// Start time captured when the stopwatch was created.
-        /// </summary>
+        /// <summary>Start time captured when the stopwatch was created.</summary>
         private readonly DateTimeOffset _start;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="VirtualTimeStopwatch"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="VirtualTimeStopwatch"/> class.</summary>
         /// <param name="parent">Parent virtual-time sequencer.</param>
         /// <param name="start">Start time for elapsed calculations.</param>
         public VirtualTimeStopwatch(VirtualTimeSequencerBase<TAbsolute, TRelative> parent, DateTimeOffset start)
@@ -455,9 +395,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
             _start = start;
         }
 
-        /// <summary>
-        /// Gets the elapsed virtual time.
-        /// </summary>
+        /// <summary>Gets the elapsed virtual time.</summary>
         public TimeSpan Elapsed => _parent.ClockToDateTimeOffset() - _start;
     }
 }

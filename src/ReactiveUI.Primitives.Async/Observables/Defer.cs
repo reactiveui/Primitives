@@ -14,9 +14,7 @@ namespace ReactiveUI.Primitives.Async;
 /// time of subscription rather than at the time of declaration.</remarks>
 public static partial class SignalAsync
 {
-    /// <summary>
-    /// Creates a new observable sequence for each subscription by invoking the specified asynchronous factory function.
-    /// </summary>
+    /// <summary>Creates a new observable sequence for each subscription by invoking the specified asynchronous factory function.</summary>
     /// <remarks>Use this method to defer the creation of the observable sequence until an observer
     /// subscribes. This is useful when the observable sequence depends on per-subscription state or resources, or when
     /// you want to ensure a fresh sequence for each subscriber.</remarks>

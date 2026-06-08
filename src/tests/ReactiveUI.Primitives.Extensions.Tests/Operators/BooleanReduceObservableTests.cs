@@ -176,8 +176,7 @@ public class BooleanReduceObservableTests
         }
     }
 
-    /// <summary>Verifies that when every source completes, the combined sequence completes via
-    /// the per-source <c>OnCompleted</c> path.</summary>
+    /// <summary>Verifies that when every source completes, the combined sequence completes via the per-source <c>OnCompleted</c> path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAllSourcesComplete_ThenForwardsCompletion()

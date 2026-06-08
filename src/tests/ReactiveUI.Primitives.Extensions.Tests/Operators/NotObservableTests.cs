@@ -7,8 +7,7 @@ using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests for <see cref="NotObservable"/> — boolean negation, terminal forwarding,
-/// and the null-observer subscribe guard.</summary>
+/// <summary>Tests for <see cref="NotObservable"/> — boolean negation, terminal forwarding, and the null-observer subscribe guard.</summary>
 public class NotObservableTests
 {
     /// <summary>Verifies values are negated and completion is forwarded.</summary>

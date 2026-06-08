@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Samples the latest value from the source observable whenever a trigger observable emits.
-/// </summary>
+/// <summary>Samples the latest value from the source observable whenever a trigger observable emits.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="trigger">The trigger observable.</param>
@@ -30,40 +28,26 @@ internal sealed class SampleLatestObservable<T>(
         return new DisposableBag(sourceSub, triggerSub, sink);
     }
 
-    /// <summary>
-    /// Sinks the source observable and samples it based on the trigger.
-    /// </summary>
+    /// <summary>Sinks the source observable and samples it based on the trigger.</summary>
     /// <param name="downstream">The downstream observer.</param>
     private sealed class SampleLatestSink(IObserver<T> downstream) : IDisposable
     {
-        /// <summary>
-        /// The gate for synchronization.
-        /// </summary>
+        /// <summary>The gate for synchronization.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// The latest value from the source.
-        /// </summary>
+        /// <summary>The latest value from the source.</summary>
         private T? _latest;
 
-        /// <summary>
-        /// Whether the source has produced a value.
-        /// </summary>
+        /// <summary>Whether the source has produced a value.</summary>
         private bool _hasValue;
 
-        /// <summary>
-        /// Whether the sequence is done.
-        /// </summary>
+        /// <summary>Whether the sequence is done.</summary>
         private bool _done;
 
-        /// <summary>
-        /// Gets the source observer.
-        /// </summary>
+        /// <summary>Gets the source observer.</summary>
         public IObserver<T> SourceObserver => new SourceSampleObserver(this);
 
-        /// <summary>
-        /// Gets the trigger observer.
-        /// </summary>
+        /// <summary>Gets the trigger observer.</summary>
         public IObserver<object> TriggerObserver => new TriggerSampleObserver(this);
 
         /// <inheritdoc/>
@@ -136,9 +120,7 @@ internal sealed class SampleLatestObservable<T>(
             downstream.OnNext(value!);
         }
 
-        /// <summary>
-        /// Observer for source values.
-        /// </summary>
+        /// <summary>Observer for source values.</summary>
         /// <param name="sink">The owning sink.</param>
         private sealed class SourceSampleObserver(SampleLatestSink sink) : IObserver<T>
         {
@@ -152,9 +134,7 @@ internal sealed class SampleLatestObservable<T>(
             public void OnCompleted() => sink.OnSourceCompleted();
         }
 
-        /// <summary>
-        /// Observer for trigger values.
-        /// </summary>
+        /// <summary>Observer for trigger values.</summary>
         /// <param name="sink">The owning sink.</param>
         private sealed class TriggerSampleObserver(SampleLatestSink sink) : IObserver<object>
         {

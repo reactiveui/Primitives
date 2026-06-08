@@ -45,7 +45,10 @@ internal sealed class BufferUntilIdleObservable<T>(
         TimeSpan idleTime,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>Shared gate / timer / done-flag plumbing.</summary>
+        /// <summary>The gate protecting state transitions and downstream notification.</summary>
+        private readonly Lock _gate = new();
+
+        /// <summary>Shared timer / done-flag plumbing.</summary>
         private readonly TimerSinkState<IList<T>> _state = new(downstream);
 
         /// <summary>The current buffer of elements.</summary>
@@ -54,7 +57,7 @@ internal sealed class BufferUntilIdleObservable<T>(
         /// <inheritdoc/>
         public void OnNext(T value)
         {
-            lock (_state.Gate)
+            lock (_gate)
             {
                 if (_state.Done)
                 {
@@ -70,18 +73,30 @@ internal sealed class BufferUntilIdleObservable<T>(
         public void OnError(Exception error)
         {
             Flush();
-            _state.HandleError(error);
+            lock (_gate)
+            {
+                _state.HandleErrorLocked(error);
+            }
         }
 
         /// <inheritdoc/>
         public void OnCompleted()
         {
             Flush();
-            _state.HandleCompleted();
+            lock (_gate)
+            {
+                _state.HandleCompletedLocked();
+            }
         }
 
         /// <inheritdoc/>
-        public void Dispose() => _state.HandleDispose();
+        public void Dispose()
+        {
+            lock (_gate)
+            {
+                _state.HandleDisposeLocked();
+            }
+        }
 
         /// <summary>Schedules a flush after the idle period.</summary>
         private void ScheduleFlush() => _state.Timer.Disposable = scheduler.Schedule(idleTime, Flush);
@@ -90,7 +105,7 @@ internal sealed class BufferUntilIdleObservable<T>(
         private void Flush()
         {
             List<T>? toEmit = null;
-            lock (_state.Gate)
+            lock (_gate)
             {
                 if (_buffer.Count > 0)
                 {

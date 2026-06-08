@@ -15,9 +15,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// <typeparam name="T">The type of the values observed and published by the Signal.</typeparam>
 public interface ISignalAsync<T> : IObserverAsync<T>, IObservableAsync<T>
 {
-    /// <summary>
-    /// Gets an observable sequence that asynchronously provides the current values of the collection.
-    /// </summary>
+    /// <summary>Gets an observable sequence that asynchronously provides the current values of the collection.</summary>
     /// <remarks>The returned sequence emits updates whenever the underlying collection changes. Subscribers
     /// receive notifications asynchronously as values are added, removed, or updated.</remarks>
     IObservableAsync<T> Values { get; }

@@ -12,9 +12,7 @@ namespace ReactiveUI.Primitives.Extensions.Tests;
 /// <summary>Tests for ReactiveExtensionsTests.</summary>
 public partial class ReactiveExtensionsTests
 {
-    /// <summary>
-    /// Tests OnErrorRetry without parameters.
-    /// </summary>
+    /// <summary>Tests OnErrorRetry without parameters.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task OnErrorRetry_RetriesOnError()
@@ -47,9 +45,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests RetryWithBackoff respects max delay.
-    /// </summary>
+    /// <summary>Tests RetryWithBackoff respects max delay.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task RetryWithBackoff_RespectsMaxDelay()
@@ -82,9 +78,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
-    /// <summary>
-    /// Tests OnErrorRetry with error action and retry count.
-    /// </summary>
+    /// <summary>Tests OnErrorRetry with error action and retry count.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task OnErrorRetry_WithErrorActionAndRetryCount_RetriesLimitedTimes()
@@ -113,9 +107,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests OnErrorRetry with delay.
-    /// </summary>
+    /// <summary>Tests OnErrorRetry with delay.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task OnErrorRetry_WithDelay_DelaysRetries()
@@ -154,9 +146,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests OnErrorRetry with delay and no error action.
-    /// </summary>
+    /// <summary>Tests OnErrorRetry with delay and no error action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task OnErrorRetry_WithDelayAndErrorAction_RetriesWithDelay()
@@ -198,9 +188,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests OnErrorRetry with retry count limit.
-    /// </summary>
+    /// <summary>Tests OnErrorRetry with retry count limit.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task OnErrorRetry_WithRetryCount_LimitsRetries()
@@ -237,9 +225,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests OnErrorRetry with retry count and delay.
-    /// </summary>
+    /// <summary>Tests OnErrorRetry with retry count and delay.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task OnErrorRetry_WithRetryCountAndDelay_LimitsRetriesWithDelay()
@@ -277,9 +263,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests OnErrorRetry with retry count, delay, and scheduler.
-    /// </summary>
+    /// <summary>Tests OnErrorRetry with retry count, delay, and scheduler.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task OnErrorRetry_WithRetryCountDelayAndScheduler_RetriesCorrectly()
@@ -318,9 +302,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests OnErrorRetry with action only uses zero-delay retry.
-    /// </summary>
+    /// <summary>Tests OnErrorRetry with action only uses zero-delay retry.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnErrorRetryWithActionOnly_ThenRetriesImmediately()
@@ -354,9 +336,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests OnErrorRetry with delay retries after specified delay.
-    /// </summary>
+    /// <summary>Tests OnErrorRetry with delay retries after specified delay.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnErrorRetryWithDelay_ThenRetriesAfterDelay()
@@ -386,9 +366,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
-    /// <summary>
-    /// Tests RetryWithBackoff rethrows after max retries exceeded.
-    /// </summary>
+    /// <summary>Tests RetryWithBackoff rethrows after max retries exceeded.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRetryWithBackoffExceedsMaxRetries_ThenRethrows()
@@ -407,9 +385,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(caughtError).IsNotNull();
     }
 
-    /// <summary>
-    /// Tests RetryWithBackoff caps delay at maxDelay.
-    /// </summary>
+    /// <summary>Tests RetryWithBackoff caps delay at maxDelay.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRetryWithBackoffDelayExceedsMax_ThenCapsDelay()
@@ -442,9 +418,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
-    /// <summary>
-    /// Tests RetryWithDelay retries with custom delay selector.
-    /// </summary>
+    /// <summary>Tests RetryWithDelay retries with custom delay selector.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRetryWithDelay_ThenRetriesWithCustomDelay()
@@ -471,9 +445,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
-    /// <summary>
-    /// Tests RetryForeverWithDelay retries indefinitely with delay.
-    /// </summary>
+    /// <summary>Tests RetryForeverWithDelay retries indefinitely with delay.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRetryForeverWithDelay_ThenRetriesIndefinitely()
@@ -500,9 +472,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
-    /// <summary>
-    /// Tests RetryWithFixedDelay retries with constant delay between retries.
-    /// </summary>
+    /// <summary>Tests RetryWithFixedDelay retries with constant delay between retries.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRetryWithFixedDelay_ThenRetriesWithConstantDelay()
@@ -529,9 +499,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
-    /// <summary>
-    /// Tests RetryWithBackoff inner retry with max delay cap path.
-    /// </summary>
+    /// <summary>Tests RetryWithBackoff inner retry with max delay cap path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRetryWithBackoffInnerRetry_ThenRetriesAndCapsDelay()
@@ -564,9 +532,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(error).IsNull();
     }
 
-    /// <summary>
-    /// Tests OnErrorRetry with negative delay ticks sets dueTime to zero.
-    /// </summary>
+    /// <summary>Tests OnErrorRetry with negative delay ticks sets dueTime to zero.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnErrorRetryNegativeDelay_ThenUsesZeroDelay()
@@ -601,9 +567,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).Contains(SampleValue42);
     }
 
-    /// <summary>
-    /// Tests OnErrorRetry with retry count check rethrows after exceeding count.
-    /// </summary>
+    /// <summary>Tests OnErrorRetry with retry count check rethrows after exceeding count.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnErrorRetryExceedsRetryCount_ThenRethrows()
@@ -630,9 +594,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(caught).IsTypeOf<InvalidOperationException>();
     }
 
-    /// <summary>
-    /// Tests RetryWithBackoff caps delay at maxDelay when backoff exceeds it.
-    /// </summary>
+    /// <summary>Tests RetryWithBackoff caps delay at maxDelay when backoff exceeds it.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRetryWithBackoffExceedsMaxDelay_ThenCapsAtMaxDelay()

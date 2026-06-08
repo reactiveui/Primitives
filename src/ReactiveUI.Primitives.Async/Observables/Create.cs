@@ -17,9 +17,7 @@ namespace ReactiveUI.Primitives.Async;
 /// with consumers following the observer pattern.</remarks>
 public static partial class SignalAsync
 {
-    /// <summary>
-    /// Creates a new asynchronous observable sequence using the specified subscription function.
-    /// </summary>
+    /// <summary>Creates a new asynchronous observable sequence using the specified subscription function.</summary>
     /// <remarks>The subscription function is responsible for handling observer notifications and managing the
     /// lifetime of the subscription. The returned disposable should release any resources or cancel ongoing operations
     /// when disposed.</remarks>
@@ -35,9 +33,7 @@ public static partial class SignalAsync
             ? throw new ArgumentNullException(nameof(subscribeAsync))
             : new CallbackSignalAsync<T>(subscribeAsync);
 
-    /// <summary>
-    /// Creates a new observable sequence that runs the specified asynchronous job as a background task.
-    /// </summary>
+    /// <summary>Creates a new observable sequence that runs the specified asynchronous job as a background task.</summary>
     /// <typeparam name="T">The type of elements produced by the observable sequence.</typeparam>
     /// <param name="job">A delegate that defines the asynchronous job to execute. The delegate receives an observer to report results and
     /// a cancellation token to observe cancellation requests.</param>
@@ -46,9 +42,7 @@ public static partial class SignalAsync
         Func<IObserverAsync<T>, CancellationToken, ValueTask> job) =>
         CreateBackgroundJobSignal(job, false, null);
 
-    /// <summary>
-    /// Creates a new observable sequence that runs the specified asynchronous job as a background task.
-    /// </summary>
+    /// <summary>Creates a new observable sequence that runs the specified asynchronous job as a background task.</summary>
     /// <typeparam name="T">The type of elements produced by the observable sequence.</typeparam>
     /// <param name="job">A delegate that defines the asynchronous job to execute. The delegate receives an observer to report results and
     /// a cancellation token to observe cancellation requests.</param>

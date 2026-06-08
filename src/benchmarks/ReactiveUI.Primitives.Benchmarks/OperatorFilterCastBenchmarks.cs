@@ -18,19 +18,13 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class OperatorFilterCastBenchmarks
 {
-    /// <summary>
-    /// The number of values produced by each benchmarked sequence.
-    /// </summary>
+    /// <summary>The number of values produced by each benchmarked sequence.</summary>
     private const int Count = 16;
 
-    /// <summary>
-    /// The shared reference projected into each benchmarked sequence.
-    /// </summary>
+    /// <summary>The shared reference projected into each benchmarked sequence.</summary>
     private const string Shared = "x";
 
-    /// <summary>
-    /// Benchmarks filtering out nulls from a nullable reference sequence.
-    /// </summary>
+    /// <summary>Benchmarks filtering out nulls from a nullable reference sequence.</summary>
     /// <returns>The number of non-null values observed.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesKeepNotNull()
@@ -40,9 +34,7 @@ public class OperatorFilterCastBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks filtering out nulls from a nullable reference sequence using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks filtering out nulls from a nullable reference sequence using System.Reactive.</summary>
     /// <returns>The number of non-null values observed.</returns>
     [Benchmark]
     public int SystemReactiveKeepNotNull()
@@ -56,9 +48,7 @@ public class OperatorFilterCastBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks filtering out nulls from a nullable reference sequence using R3.
-    /// </summary>
+    /// <summary>Benchmarks filtering out nulls from a nullable reference sequence using R3.</summary>
     /// <returns>The number of non-null values observed.</returns>
     [Benchmark]
     public int R3KeepNotNull()
@@ -70,9 +60,7 @@ public class OperatorFilterCastBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks filtering a reference sequence by element type.
-    /// </summary>
+    /// <summary>Benchmarks filtering a reference sequence by element type.</summary>
     /// <returns>The number of matching values observed.</returns>
     [Benchmark]
     public int PrimitivesKeepType()
@@ -82,9 +70,7 @@ public class OperatorFilterCastBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks filtering a reference sequence by element type using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks filtering a reference sequence by element type using System.Reactive.</summary>
     /// <returns>The number of matching values observed.</returns>
     [Benchmark]
     public int SystemReactiveKeepType()
@@ -94,9 +80,7 @@ public class OperatorFilterCastBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks filtering a reference sequence by element type using R3.
-    /// </summary>
+    /// <summary>Benchmarks filtering a reference sequence by element type using R3.</summary>
     /// <returns>The number of matching values observed.</returns>
     [Benchmark]
     public int R3KeepType()
@@ -107,9 +91,7 @@ public class OperatorFilterCastBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks casting a reference sequence to a target type.
-    /// </summary>
+    /// <summary>Benchmarks casting a reference sequence to a target type.</summary>
     /// <returns>The number of values observed.</returns>
     [Benchmark]
     public int PrimitivesCastTo()
@@ -119,9 +101,7 @@ public class OperatorFilterCastBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks casting a reference sequence to a target type using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks casting a reference sequence to a target type using System.Reactive.</summary>
     /// <returns>The number of values observed.</returns>
     [Benchmark]
     public int SystemReactiveCastTo()
@@ -131,9 +111,7 @@ public class OperatorFilterCastBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks casting a reference sequence to a target type using R3.
-    /// </summary>
+    /// <summary>Benchmarks casting a reference sequence to a target type using R3.</summary>
     /// <returns>The number of values observed.</returns>
     [Benchmark]
     public int R3CastTo()

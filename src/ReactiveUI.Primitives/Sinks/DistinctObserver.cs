@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Sink that forwards the first occurrence of each value.
-/// </summary>
+/// <summary>Sink that forwards the first occurrence of each value.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 public sealed class DistinctObserver<T> : SingleSourceObserver<T>
 {
@@ -16,9 +14,7 @@ public sealed class DistinctObserver<T> : SingleSourceObserver<T>
     /// <summary>The set of values already observed.</summary>
     private readonly HashSet<T> _seen;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DistinctObserver{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="DistinctObserver{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="seen">The set used to track already-observed values.</param>
     public DistinctObserver(IObserver<T> observer, HashSet<T> seen)

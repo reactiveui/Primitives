@@ -9,30 +9,20 @@ using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Private helper types for parity operators.
-/// </summary>
-public static partial class LinqMixins
+/// <summary>Private helper types for parity operators.</summary>
+public static partial class LinqExtensions
 {
-    /// <summary>
-    /// Prepends a single value without composing through concat and return signals.
-    /// </summary>
+    /// <summary>Prepends a single value without composing through concat and return signals.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class PrependSignal<T> : IInlineSignal<T>
     {
-        /// <summary>
-        /// The source observable.
-        /// </summary>
+        /// <summary>The source observable.</summary>
         private readonly IObservable<T> _source;
 
-        /// <summary>
-        /// The value emitted before source subscription.
-        /// </summary>
+        /// <summary>The value emitted before source subscription.</summary>
         private readonly T _value;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="PrependSignal{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="PrependSignal{T}"/> class.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="value">The prepended value.</param>
         internal PrependSignal(IObservable<T> source, T value)
@@ -44,7 +34,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -60,38 +50,26 @@ public static partial class LinqMixins
             return _source.Subscribe(onNext, onError, onCompleted);
         }
 
-        /// <summary>
-        /// Gets the source observable for operator fusion.
-        /// </summary>
+        /// <summary>Gets the source observable for operator fusion.</summary>
         /// <returns>The source observable.</returns>
         internal IObservable<T> GetSource() => _source;
 
-        /// <summary>
-        /// Gets the prepended value for operator fusion.
-        /// </summary>
+        /// <summary>Gets the prepended value for operator fusion.</summary>
         /// <returns>The prepended value.</returns>
         internal T GetValue() => _value;
     }
 
-    /// <summary>
-    /// Prepends an enumerable without composing through concat and enumerable signals.
-    /// </summary>
+    /// <summary>Prepends an enumerable without composing through concat and enumerable signals.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class StartWithEnumerableSignal<T> : IInlineSignal<T>
     {
-        /// <summary>
-        /// The source observable.
-        /// </summary>
+        /// <summary>The source observable.</summary>
         private readonly IObservable<T> _source;
 
-        /// <summary>
-        /// Values emitted before source subscription.
-        /// </summary>
+        /// <summary>Values emitted before source subscription.</summary>
         private readonly IEnumerable<T> _values;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="StartWithEnumerableSignal{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="StartWithEnumerableSignal{T}"/> class.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="values">Values emitted before source subscription.</param>
         internal StartWithEnumerableSignal(IObservable<T> source, IEnumerable<T> values)
@@ -103,7 +81,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -128,30 +106,20 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Fuses a single prepended value and a single appended value around a source subscription.
-    /// </summary>
+    /// <summary>Fuses a single prepended value and a single appended value around a source subscription.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class PrependAppendSignal<T> : IInlineSignal<T>
     {
-        /// <summary>
-        /// The source observable.
-        /// </summary>
+        /// <summary>The source observable.</summary>
         private readonly IObservable<T> _source;
 
-        /// <summary>
-        /// The value emitted before source subscription.
-        /// </summary>
+        /// <summary>The value emitted before source subscription.</summary>
         private readonly T _prependValue;
 
-        /// <summary>
-        /// The value emitted after source completion.
-        /// </summary>
+        /// <summary>The value emitted after source completion.</summary>
         private readonly T _appendValue;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="PrependAppendSignal{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="PrependAppendSignal{T}"/> class.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="prependValue">The prepended value.</param>
         /// <param name="appendValue">The appended value.</param>
@@ -165,7 +133,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -186,25 +154,17 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Appends a single value after source completion.
-    /// </summary>
+    /// <summary>Appends a single value after source completion.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class AppendSignal<T> : IObservable<T>
     {
-        /// <summary>
-        /// The source observable.
-        /// </summary>
+        /// <summary>The source observable.</summary>
         private readonly IObservable<T> _source;
 
-        /// <summary>
-        /// The value emitted after source completion.
-        /// </summary>
+        /// <summary>The value emitted after source completion.</summary>
         private readonly T _value;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AppendSignal{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="AppendSignal{T}"/> class.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="value">The appended value.</param>
         internal AppendSignal(IObservable<T> source, T value)
@@ -216,7 +176,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -227,25 +187,17 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Emits a default value when the source completes without values.
-    /// </summary>
+    /// <summary>Emits a default value when the source completes without values.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class DefaultIfEmptySignal<T> : IObservable<T>
     {
-        /// <summary>
-        /// The source observable.
-        /// </summary>
+        /// <summary>The source observable.</summary>
         private readonly IObservable<T> _source;
 
-        /// <summary>
-        /// Value emitted for an empty source.
-        /// </summary>
+        /// <summary>Value emitted for an empty source.</summary>
         private readonly T _defaultValue;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DefaultIfEmptySignal{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="DefaultIfEmptySignal{T}"/> class.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="defaultValue">Value emitted for an empty source.</param>
         internal DefaultIfEmptySignal(IObservable<T> source, T defaultValue)
@@ -257,7 +209,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -268,25 +220,17 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Range timestamp projection with no intermediate map observer.
-    /// </summary>
+    /// <summary>Range timestamp projection with no intermediate map observer.</summary>
     /// <typeparam name="T">The range value type.</typeparam>
     private sealed class TimestampRangeSignal<T> : IInlineSignal<Moment<T>>
     {
-        /// <summary>
-        /// The range source.
-        /// </summary>
+        /// <summary>The range source.</summary>
         private readonly RangeSignal _range;
 
-        /// <summary>
-        /// The sequencer used to read timestamps.
-        /// </summary>
+        /// <summary>The sequencer used to read timestamps.</summary>
         private readonly ISequencer _sequencer;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="TimestampRangeSignal{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="TimestampRangeSignal{T}"/> class.</summary>
         /// <param name="range">The range source.</param>
         /// <param name="sequencer">The sequencer used to read timestamps.</param>
         internal TimestampRangeSignal(RangeSignal range, ISequencer sequencer)
@@ -298,7 +242,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<Moment<T>> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -311,7 +255,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(Action<Moment<T>> onNext, Action<Exception> onError, Action onCompleted)
         {
-            if (onNext == null)
+            if (onNext is null)
             {
                 throw new ArgumentNullException(nameof(onNext));
             }
@@ -321,9 +265,7 @@ public static partial class LinqMixins
             return EmptyDisposable.Instance;
         }
 
-        /// <summary>
-        /// Emits timestamped range values.
-        /// </summary>
+        /// <summary>Emits timestamped range values.</summary>
         /// <param name="onNext">The next callback.</param>
         private void Emit(Action<Moment<T>> onNext)
         {
@@ -344,9 +286,7 @@ public static partial class LinqMixins
             }
         }
 
-        /// <summary>
-        /// Emits timestamped range values to an observer without allocating a delegate wrapper.
-        /// </summary>
+        /// <summary>Emits timestamped range values to an observer without allocating a delegate wrapper.</summary>
         /// <param name="observer">The downstream observer.</param>
         private void Emit(IObserver<Moment<T>> observer)
         {
@@ -368,25 +308,17 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Range time-interval projection with no intermediate safe signal closure.
-    /// </summary>
+    /// <summary>Range time-interval projection with no intermediate safe signal closure.</summary>
     /// <typeparam name="T">The range value type.</typeparam>
     private sealed class TimeIntervalRangeSignal<T> : IInlineSignal<TimeInterval<T>>
     {
-        /// <summary>
-        /// The range source.
-        /// </summary>
+        /// <summary>The range source.</summary>
         private readonly RangeSignal _range;
 
-        /// <summary>
-        /// The sequencer used to read timestamps.
-        /// </summary>
+        /// <summary>The sequencer used to read timestamps.</summary>
         private readonly ISequencer _sequencer;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="TimeIntervalRangeSignal{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="TimeIntervalRangeSignal{T}"/> class.</summary>
         /// <param name="range">The range source.</param>
         /// <param name="sequencer">The sequencer used to read timestamps.</param>
         internal TimeIntervalRangeSignal(RangeSignal range, ISequencer sequencer)
@@ -398,7 +330,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TimeInterval<T>> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -411,7 +343,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(Action<TimeInterval<T>> onNext, Action<Exception> onError, Action onCompleted)
         {
-            if (onNext == null)
+            if (onNext is null)
             {
                 throw new ArgumentNullException(nameof(onNext));
             }
@@ -421,9 +353,7 @@ public static partial class LinqMixins
             return EmptyDisposable.Instance;
         }
 
-        /// <summary>
-        /// Emits interval-tagged range values.
-        /// </summary>
+        /// <summary>Emits interval-tagged range values.</summary>
         /// <param name="onNext">The next callback.</param>
         private void Emit(Action<TimeInterval<T>> onNext)
         {
@@ -447,9 +377,7 @@ public static partial class LinqMixins
             }
         }
 
-        /// <summary>
-        /// Emits interval-tagged range values to an observer without allocating a delegate wrapper.
-        /// </summary>
+        /// <summary>Emits interval-tagged range values to an observer without allocating a delegate wrapper.</summary>
         /// <param name="observer">The downstream observer.</param>
         private void Emit(IObserver<TimeInterval<T>> observer)
         {
@@ -474,30 +402,20 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Range delay projection with no safe-signal wrapper allocation.
-    /// </summary>
+    /// <summary>Range delay projection with no safe-signal wrapper allocation.</summary>
     /// <typeparam name="T">The range value type.</typeparam>
     private sealed class ShiftedRangeSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
     {
-        /// <summary>
-        /// The range source.
-        /// </summary>
+        /// <summary>The range source.</summary>
         private readonly RangeSignal _range;
 
-        /// <summary>
-        /// The normalized due time.
-        /// </summary>
+        /// <summary>The normalized due time.</summary>
         private readonly TimeSpan _dueTime;
 
-        /// <summary>
-        /// The sequencer used to schedule the range batch.
-        /// </summary>
+        /// <summary>The sequencer used to schedule the range batch.</summary>
         private readonly ISequencer _sequencer;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ShiftedRangeSignal{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ShiftedRangeSignal{T}"/> class.</summary>
         /// <param name="range">The range source.</param>
         /// <param name="dueTime">The normalized due time.</param>
         /// <param name="sequencer">The sequencer used to schedule the range batch.</param>
@@ -514,7 +432,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -528,12 +446,12 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
         {
-            if (onNext == null)
+            if (onNext is null)
             {
                 throw new ArgumentNullException(nameof(onNext));
             }
 
-            if (onCompleted == null)
+            if (onCompleted is null)
             {
                 throw new ArgumentNullException(nameof(onCompleted));
             }
@@ -545,30 +463,20 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Sample signal with a direct subscription path.
-    /// </summary>
+    /// <summary>Sample signal with a direct subscription path.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class ProbeSignal<T> : IRequireCurrentThread<T>
     {
-        /// <summary>
-        /// The source observable.
-        /// </summary>
+        /// <summary>The source observable.</summary>
         private readonly IObservable<T> _source;
 
-        /// <summary>
-        /// The sample period.
-        /// </summary>
+        /// <summary>The sample period.</summary>
         private readonly TimeSpan _period;
 
-        /// <summary>
-        /// The sequencer used to schedule ticks.
-        /// </summary>
+        /// <summary>The sequencer used to schedule ticks.</summary>
         private readonly ISequencer _sequencer;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ProbeSignal{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ProbeSignal{T}"/> class.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="period">The sample period.</param>
         /// <param name="sequencer">The sequencer used to schedule ticks.</param>
@@ -585,7 +493,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -602,30 +510,20 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Coordinates a sampled observable sequence without the anonymous signal wrapper.
-    /// </summary>
+    /// <summary>Coordinates a sampled observable sequence without the anonymous signal wrapper.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class ProbeCoordinator<T> : IObserver<T>, IDisposable
     {
-        /// <summary>
-        /// The source observable.
-        /// </summary>
+        /// <summary>The source observable.</summary>
         private readonly IObservable<T> _source;
 
-        /// <summary>
-        /// The sample period.
-        /// </summary>
+        /// <summary>The sample period.</summary>
         private readonly TimeSpan _period;
 
-        /// <summary>
-        /// The sequencer used to schedule ticks.
-        /// </summary>
+        /// <summary>The sequencer used to schedule ticks.</summary>
         private readonly ISequencer _sequencer;
 
-        /// <summary>
-        /// The downstream observer.
-        /// </summary>
+        /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer;
 
         /// <summary>
@@ -634,48 +532,32 @@ public static partial class LinqMixins
         /// </summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// The active source subscription.
-        /// </summary>
+        /// <summary>The active source subscription.</summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Usage",
             "CA2213:Disposable fields should be disposed",
             Justification = "Disposed via the thread-safe Interlocked.Exchange teardown in Dispose; CA2213 does not recognize disposal of a field through Interlocked.Exchange.")]
         private IDisposable? _subscription;
 
-        /// <summary>
-        /// The active timer.
-        /// </summary>
+        /// <summary>The active timer.</summary>
         private IDisposable? _timer;
 
-        /// <summary>
-        /// A value indicating whether a sample timer is active.
-        /// </summary>
+        /// <summary>A value indicating whether a sample timer is active.</summary>
         private bool _timerActive;
 
-        /// <summary>
-        /// A value indicating whether a latest value is available.
-        /// </summary>
+        /// <summary>A value indicating whether a latest value is available.</summary>
         private bool _hasLatest;
 
-        /// <summary>
-        /// The latest value.
-        /// </summary>
+        /// <summary>The latest value.</summary>
         private T? _latest;
 
-        /// <summary>
-        /// A value indicating whether the source has completed.
-        /// </summary>
+        /// <summary>A value indicating whether the source has completed.</summary>
         private bool _done;
 
-        /// <summary>
-        /// A value indicating whether the coordinator has been disposed.
-        /// </summary>
+        /// <summary>A value indicating whether the coordinator has been disposed.</summary>
         private int _disposed;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ProbeCoordinator{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ProbeCoordinator{T}"/> class.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="period">The sample period.</param>
         /// <param name="sequencer">The sequencer used to schedule ticks.</param>
@@ -701,9 +583,7 @@ public static partial class LinqMixins
             Interlocked.Exchange(ref _subscription, null)?.Dispose();
         }
 
-        /// <summary>
-        /// Records the latest source value.
-        /// </summary>
+        /// <summary>Records the latest source value.</summary>
         /// <param name="value">The source value.</param>
         public void OnNext(T value)
         {
@@ -729,9 +609,7 @@ public static partial class LinqMixins
             ScheduleNext();
         }
 
-        /// <summary>
-        /// Forwards source errors and releases active resources.
-        /// </summary>
+        /// <summary>Forwards source errors and releases active resources.</summary>
         /// <param name="error">The source error.</param>
         public void OnError(Exception error)
         {
@@ -749,9 +627,7 @@ public static partial class LinqMixins
             Dispose();
         }
 
-        /// <summary>
-        /// Forwards completion and releases active resources.
-        /// </summary>
+        /// <summary>Forwards completion and releases active resources.</summary>
         public void OnCompleted()
         {
             lock (_gate)
@@ -768,9 +644,7 @@ public static partial class LinqMixins
             Dispose();
         }
 
-        /// <summary>
-        /// Starts sampling the source.
-        /// </summary>
+        /// <summary>Starts sampling the source.</summary>
         /// <returns>The coordinator that owns the subscription cleanup.</returns>
         internal ProbeCoordinator<T> Run()
         {
@@ -778,9 +652,7 @@ public static partial class LinqMixins
             return this;
         }
 
-        /// <summary>
-        /// Schedules the next sample tick.
-        /// </summary>
+        /// <summary>Schedules the next sample tick.</summary>
         private void ScheduleNext()
         {
             var timer = _sequencer.Schedule(this, _period, static (_, coordinator) => coordinator.Tick());
@@ -793,9 +665,7 @@ public static partial class LinqMixins
             timer.Dispose();
         }
 
-        /// <summary>
-        /// Handles a sample tick.
-        /// </summary>
+        /// <summary>Handles a sample tick.</summary>
         /// <returns>An empty disposable.</returns>
         private EmptyDisposable Tick()
         {
@@ -818,75 +688,47 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Coordinates quiet-period emission with one active timer.
-    /// </summary>
+    /// <summary>Coordinates quiet-period emission with one active timer.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class CalmCoordinator<T> : IDisposable
     {
-        /// <summary>
-        /// The source observable.
-        /// </summary>
+        /// <summary>The source observable.</summary>
         private readonly IObservable<T> _source;
 
-        /// <summary>
-        /// The normalized quiet period.
-        /// </summary>
+        /// <summary>The normalized quiet period.</summary>
         private readonly TimeSpan _dueTime;
 
-        /// <summary>
-        /// The sequencer used to schedule quiet-period timers.
-        /// </summary>
+        /// <summary>The sequencer used to schedule quiet-period timers.</summary>
         private readonly ISequencer _sequencer;
 
-        /// <summary>
-        /// The synchronization gate.
-        /// </summary>
+        /// <summary>The synchronization gate.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// Active subscription and timer resources.
-        /// </summary>
+        /// <summary>Active subscription and timer resources.</summary>
         private readonly MultipleDisposable _subscriptions = new();
 
-        /// <summary>
-        /// The active timer slot.
-        /// </summary>
+        /// <summary>The active timer slot.</summary>
         private readonly SingleReplaceableDisposable _timer = new();
 
-        /// <summary>
-        /// The downstream observer.
-        /// </summary>
+        /// <summary>The downstream observer.</summary>
         private IObserver<T>? _observer;
 
-        /// <summary>
-        /// The latest source value.
-        /// </summary>
+        /// <summary>The latest source value.</summary>
         private T? _latest;
 
-        /// <summary>
-        /// A value indicating whether a latest source value is waiting to be emitted.
-        /// </summary>
+        /// <summary>A value indicating whether a latest source value is waiting to be emitted.</summary>
         private bool _hasLatest;
 
-        /// <summary>
-        /// A value indicating whether the timer is active.
-        /// </summary>
+        /// <summary>A value indicating whether the timer is active.</summary>
         private bool _timerActive;
 
-        /// <summary>
-        /// The virtual due time for the current quiet period.
-        /// </summary>
+        /// <summary>The virtual due time for the current quiet period.</summary>
         private DateTimeOffset _dueAt;
 
-        /// <summary>
-        /// A value indicating whether a terminal notification has been emitted.
-        /// </summary>
+        /// <summary>A value indicating whether a terminal notification has been emitted.</summary>
         private bool _done;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CalmCoordinator{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="CalmCoordinator{T}"/> class.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="dueTime">The quiet period.</param>
         /// <param name="sequencer">The sequencer used to schedule timers.</param>
@@ -898,24 +740,16 @@ public static partial class LinqMixins
             _dueAt = sequencer.Now;
         }
 
-        /// <summary>
-        /// The action to take when a timer fires.
-        /// </summary>
+        /// <summary>The action to take when a timer fires.</summary>
         private enum TimerAction
         {
-            /// <summary>
-            /// No value is available.
-            /// </summary>
+            /// <summary>No value is available.</summary>
             None,
 
-            /// <summary>
-            /// Emit the captured value.
-            /// </summary>
+            /// <summary>Emit the captured value.</summary>
             Emit,
 
-            /// <summary>
-            /// Reschedule for the remaining quiet period.
-            /// </summary>
+            /// <summary>Reschedule for the remaining quiet period.</summary>
             Reschedule
         }
 
@@ -926,9 +760,7 @@ public static partial class LinqMixins
             _subscriptions.Dispose();
         }
 
-        /// <summary>
-        /// Starts quiet-period coordination.
-        /// </summary>
+        /// <summary>Starts quiet-period coordination.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <returns>The coordinator that owns the subscription cleanup.</returns>
         internal CalmCoordinator<T> Run(IObserver<T> observer)
@@ -939,9 +771,7 @@ public static partial class LinqMixins
             return this;
         }
 
-        /// <summary>
-        /// Records a source value and schedules a timer when needed.
-        /// </summary>
+        /// <summary>Records a source value and schedules a timer when needed.</summary>
         /// <param name="value">The source value.</param>
         private void OnNext(T value)
         {
@@ -966,9 +796,7 @@ public static partial class LinqMixins
             Schedule(_dueTime);
         }
 
-        /// <summary>
-        /// Forwards a terminal error and releases active resources.
-        /// </summary>
+        /// <summary>Forwards a terminal error and releases active resources.</summary>
         /// <param name="error">The terminal error.</param>
         private void OnError(Exception error)
         {
@@ -986,9 +814,7 @@ public static partial class LinqMixins
             Dispose();
         }
 
-        /// <summary>
-        /// Forwards completion and releases active resources.
-        /// </summary>
+        /// <summary>Forwards completion and releases active resources.</summary>
         private void OnCompleted()
         {
             lock (_gate)
@@ -1005,15 +831,11 @@ public static partial class LinqMixins
             Dispose();
         }
 
-        /// <summary>
-        /// Schedules the active timer.
-        /// </summary>
+        /// <summary>Schedules the active timer.</summary>
         /// <param name="delay">The timer delay.</param>
         private void Schedule(TimeSpan delay) => _timer.Create(_sequencer.Schedule(delay, Tick));
 
-        /// <summary>
-        /// Handles a timer tick.
-        /// </summary>
+        /// <summary>Handles a timer tick.</summary>
         private void Tick()
         {
             var action = GetTimerAction(out var delay, out var value);
@@ -1040,9 +862,7 @@ public static partial class LinqMixins
             }
         }
 
-        /// <summary>
-        /// Determines what the active timer should do.
-        /// </summary>
+        /// <summary>Determines what the active timer should do.</summary>
         /// <param name="delay">The remaining delay when rescheduling is needed.</param>
         /// <param name="value">The value to emit.</param>
         /// <returns>The timer action.</returns>
@@ -1102,7 +922,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -1138,7 +958,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -1149,62 +969,40 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Coordinates a two-source fork-join operation.
-    /// </summary>
+    /// <summary>Coordinates a two-source fork-join operation.</summary>
     /// <typeparam name="TLeft">The left value type.</typeparam>
     /// <typeparam name="TRight">The right value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
     private sealed class ForkJoinCoordinator<TLeft, TRight, TResult>
     {
-        /// <summary>
-        /// The synchronization gate.
-        /// </summary>
+        /// <summary>The synchronization gate.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// The downstream observer.
-        /// </summary>
+        /// <summary>The downstream observer.</summary>
         private readonly IObserver<TResult> _observer;
 
-        /// <summary>
-        /// The projection function.
-        /// </summary>
+        /// <summary>The projection function.</summary>
         private readonly Func<TLeft, TRight, TResult> _selector;
 
-        /// <summary>
-        /// A value indicating whether the left source produced a value.
-        /// </summary>
+        /// <summary>A value indicating whether the left source produced a value.</summary>
         private bool _hasLeft;
 
-        /// <summary>
-        /// A value indicating whether the right source produced a value.
-        /// </summary>
+        /// <summary>A value indicating whether the right source produced a value.</summary>
         private bool _hasRight;
 
-        /// <summary>
-        /// A value indicating whether the left source completed.
-        /// </summary>
+        /// <summary>A value indicating whether the left source completed.</summary>
         private bool _leftDone;
 
-        /// <summary>
-        /// A value indicating whether the right source completed.
-        /// </summary>
+        /// <summary>A value indicating whether the right source completed.</summary>
         private bool _rightDone;
 
-        /// <summary>
-        /// The latest left value.
-        /// </summary>
+        /// <summary>The latest left value.</summary>
         private TLeft? _latestLeft;
 
-        /// <summary>
-        /// The latest right value.
-        /// </summary>
+        /// <summary>The latest right value.</summary>
         private TRight? _latestRight;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ForkJoinCoordinator{TLeft, TRight, TResult}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ForkJoinCoordinator{TLeft, TRight, TResult}"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="selector">The projection function.</param>
         internal ForkJoinCoordinator(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
@@ -1213,9 +1011,7 @@ public static partial class LinqMixins
             _selector = selector;
         }
 
-        /// <summary>
-        /// Subscribes to both fork-join sources.
-        /// </summary>
+        /// <summary>Subscribes to both fork-join sources.</summary>
         /// <param name="left">The left source.</param>
         /// <param name="right">The right source.</param>
         /// <returns>The subscription cleanup.</returns>
@@ -1224,9 +1020,7 @@ public static partial class LinqMixins
                 left.Subscribe(OnLeftNext, _observer.OnError, OnLeftCompleted),
                 right.Subscribe(OnRightNext, _observer.OnError, OnRightCompleted));
 
-        /// <summary>
-        /// Records a left value.
-        /// </summary>
+        /// <summary>Records a left value.</summary>
         /// <param name="value">The left value.</param>
         private void OnLeftNext(TLeft value)
         {
@@ -1237,9 +1031,7 @@ public static partial class LinqMixins
             }
         }
 
-        /// <summary>
-        /// Records a right value.
-        /// </summary>
+        /// <summary>Records a right value.</summary>
         /// <param name="value">The right value.</param>
         private void OnRightNext(TRight value)
         {
@@ -1250,9 +1042,7 @@ public static partial class LinqMixins
             }
         }
 
-        /// <summary>
-        /// Marks the left source as complete.
-        /// </summary>
+        /// <summary>Marks the left source as complete.</summary>
         private void OnLeftCompleted()
         {
             if (!CompleteLeft(out var result, out var emit))
@@ -1263,9 +1053,7 @@ public static partial class LinqMixins
             Finish(result, emit);
         }
 
-        /// <summary>
-        /// Marks the right source as complete.
-        /// </summary>
+        /// <summary>Marks the right source as complete.</summary>
         private void OnRightCompleted()
         {
             if (!CompleteRight(out var result, out var emit))
@@ -1276,9 +1064,7 @@ public static partial class LinqMixins
             Finish(result, emit);
         }
 
-        /// <summary>
-        /// Marks the left source complete and computes the result if both sources are complete.
-        /// </summary>
+        /// <summary>Marks the left source complete and computes the result if both sources are complete.</summary>
         /// <param name="result">The result to emit.</param>
         /// <param name="emit">A value indicating whether a result should be emitted.</param>
         /// <returns><c>true</c> when fork-join is ready to finish; otherwise, <c>false</c>.</returns>
@@ -1291,9 +1077,7 @@ public static partial class LinqMixins
             }
         }
 
-        /// <summary>
-        /// Marks the right source complete and computes the result if both sources are complete.
-        /// </summary>
+        /// <summary>Marks the right source complete and computes the result if both sources are complete.</summary>
         /// <param name="result">The result to emit.</param>
         /// <param name="emit">A value indicating whether a result should be emitted.</param>
         /// <returns><c>true</c> when fork-join is ready to finish; otherwise, <c>false</c>.</returns>
@@ -1306,9 +1090,7 @@ public static partial class LinqMixins
             }
         }
 
-        /// <summary>
-        /// Computes the final result when both sources are complete.
-        /// </summary>
+        /// <summary>Computes the final result when both sources are complete.</summary>
         /// <param name="result">The result to emit.</param>
         /// <param name="emit">A value indicating whether a result should be emitted.</param>
         /// <returns><c>true</c> when both sources are complete; otherwise, <c>false</c>.</returns>
@@ -1326,9 +1108,7 @@ public static partial class LinqMixins
             return true;
         }
 
-        /// <summary>
-        /// Emits the final result and completes.
-        /// </summary>
+        /// <summary>Emits the final result and completes.</summary>
         /// <param name="result">The result to emit.</param>
         /// <param name="emit">A value indicating whether a result should be emitted.</param>
         private void Finish(TResult result, bool emit)

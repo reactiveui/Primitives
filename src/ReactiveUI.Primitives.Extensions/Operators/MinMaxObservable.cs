@@ -37,10 +37,7 @@ internal sealed class MinMaxObservable<T>(IReadOnlyList<IObservable<T>> sources,
         return IndexedSubscribeHelper.SubscribeIndexed(_sourceList, sink.OnNext, sink.OnError, sink.OnCompleted);
     }
 
-    /// <summary>
-    /// Sink that holds the latest value per source and emits either the max or the min. Composes
-    /// <see cref="ReduceSinkState{TIn, TOut}"/> for the shared plumbing.
-    /// </summary>
+    /// <summary>Sink that holds the latest value per source and emits either the max or the min. Composes <see cref="ReduceSinkState{TIn, TOut}"/> for the shared plumbing.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="count">The number of sources.</param>
     /// <param name="emitMaximum"><c>true</c> for max; <c>false</c> for min.</param>
@@ -49,44 +46,27 @@ internal sealed class MinMaxObservable<T>(IReadOnlyList<IObservable<T>> sources,
         /// <summary>Shared gate / value cache / terminal-state plumbing.</summary>
         private readonly ReduceSinkState<T, T> _state = new(downstream, count);
 
+        /// <summary>Reduces the per-source latest values to the maximum or minimum.</summary>
+        private readonly Func<T?[], T> _reduce = values =>
+        {
+            var result = values[0]!.Value;
+            for (var i = 1; i < values.Length; i++)
+            {
+                var current = values[i]!.Value;
+                var cmp = current.CompareTo(result);
+                if (emitMaximum ? cmp > 0 : cmp < 0)
+                {
+                    result = current;
+                }
+            }
+
+            return result;
+        };
+
         /// <summary>Handles OnNext from a source.</summary>
         /// <param name="index">Source index.</param>
         /// <param name="value">Emitted value.</param>
-        public void OnNext(int index, T value)
-        {
-            lock (_state.Gate)
-            {
-                if (_state.IsDone)
-                {
-                    return;
-                }
-
-                if (!_state.Values[index].HasValue)
-                {
-                    _state.HasValueCount++;
-                }
-
-                _state.Values[index] = value;
-
-                if (!_state.AllValuesPresent)
-                {
-                    return;
-                }
-
-                var result = _state.Values[0]!.Value;
-                for (var i = 1; i < _state.Values.Length; i++)
-                {
-                    var current = _state.Values[i]!.Value;
-                    var cmp = current.CompareTo(result);
-                    if (emitMaximum ? cmp > 0 : cmp < 0)
-                    {
-                        result = current;
-                    }
-                }
-
-                _state.Downstream.OnNext(result);
-            }
-        }
+        public void OnNext(int index, T value) => _state.HandleNext(index, value, _reduce);
 
         /// <summary>Handles OnError from any source.</summary>
         /// <param name="error">The error.</param>

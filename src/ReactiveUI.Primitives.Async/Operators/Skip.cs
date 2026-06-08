@@ -6,43 +6,39 @@ using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides extension methods for working with asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
 /// <remarks>The SignalAsync class contains static extension methods that enable LINQ-style and other
 /// operations on asynchronous observables. These methods are intended to facilitate the composition and manipulation of
 /// asynchronous data streams in a reactive programming style.</remarks>
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Returns a new observable sequence that skips the specified number of elements from the start of the source
-    /// sequence.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <summary>Element-skipping operators for an observable source sequence.</summary>
     /// <param name="this">The source observable sequence.</param>
-    /// <param name="count">The number of elements to skip. Must be greater than or equal to 0.</param>
-    /// <returns>An observable sequence that contains the elements of the source sequence after the specified number of
-    /// elements have been skipped. If the count is 0, the original sequence is returned.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown if count is less than 0.</exception>
-    public static IObservableAsync<T> Skip<T>(this IObservableAsync<T> @this, int count)
+    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    extension<T>(IObservableAsync<T> @this)
     {
-        ArgumentExceptionHelper.ThrowIfNull(@this);
-#if NET8_0_OR_GREATER
-        ArgumentOutOfRangeException.ThrowIfNegative(count);
-#else
-        if (count < 0)
+        /// <summary>Returns a new observable sequence that skips the specified number of elements from the start of the source sequence.</summary>
+        /// <param name="count">The number of elements to skip. Must be greater than or equal to 0.</param>
+        /// <returns>An observable sequence that contains the elements of the source sequence after the specified number of
+        /// elements have been skipped. If the count is 0, the original sequence is returned.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if count is less than 0.</exception>
+        public IObservableAsync<T> Skip(int count)
         {
-            throw new ArgumentOutOfRangeException(nameof(count));
-        }
+            ArgumentExceptionHelper.ThrowIfNull(@this);
+#if NET8_0_OR_GREATER
+            ArgumentOutOfRangeException.ThrowIfNegative(count);
+#else
+            if (count < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count));
+            }
 #endif
 
-        return count == 0 ? @this : new SkipSignal<T>(@this, count);
+            return count == 0 ? @this : new SkipSignal<T>(@this, count);
+        }
     }
 
-    /// <summary>
-    /// Single-observer-layer <c>Skip(count)</c>. Drops the first <c>count</c> emissions then forwards
-    /// everything subsequent.
-    /// </summary>
+    /// <summary>Single-observer-layer <c>Skip(count)</c>. Drops the first <c>count</c> emissions then forwards everything subsequent.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="count">The number of leading emissions to drop (must be &gt; 0; the zero case bypasses this observable entirely).</param>

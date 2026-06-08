@@ -4,25 +4,17 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Observer for append.
-/// </summary>
+/// <summary>Observer for append.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 public sealed class AppendObserver<T> : SingleSourceObserver<T>
 {
-    /// <summary>
-    /// The downstream observer.
-    /// </summary>
+    /// <summary>The downstream observer.</summary>
     private readonly IObserver<T> _observer;
 
-    /// <summary>
-    /// The appended value.
-    /// </summary>
+    /// <summary>The appended value.</summary>
     private readonly T _value;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AppendObserver{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="AppendObserver{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="value">The appended value.</param>
     public AppendObserver(IObserver<T> observer, T value)

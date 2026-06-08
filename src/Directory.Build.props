@@ -22,7 +22,7 @@
     <IsTestProject>$(MSBuildProjectName.EndsWith('.Tests'))</IsTestProject>
     <DebugType>embedded</DebugType>
 
-    <!-- Analyzer + style enforcement (aligned with NuSourceDocs). -->
+    <!-- Analyzer + style enforcement. -->
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
@@ -30,42 +30,25 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <ReportAnalyzer>true</ReportAnalyzer>
 
-    <!-- Surface source-generator output under obj/Generated for easy inspection. -->
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <CompilerGeneratedFilesOutputPath>$(MSBuildProjectDirectory)/obj/Generated</CompilerGeneratedFilesOutputPath>
-    <!-- Enable building Windows-specific targets on non-Windows platforms -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
-
-    <!-- Publish the repository URL in the built .nupkg (in the NuSpec <Repository> element) -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <!-- Embed source files that are not tracked by the source control manager in the PDB -->
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <!-- Include PDB in the built .nupkg -->
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
 
-  <!-- Define Target Framework Monikers (TFMs) -->
+  <!-- Target Framework Monikers. EnableWindowsTargeting lets the netfx/Windows legs build anywhere. -->
   <PropertyGroup>
-    <!-- Cross-platform TFMs that work on all platforms -->
     <NetTargetFrameworks>net8.0;net9.0;net10.0;net11.0</NetTargetFrameworks>
-
-    <!-- .NET Framework TFMs - EnableWindowsTargeting allows cross-platform compilation -->
     <NetFrameworkTargetFrameworks>net462;net472;net48;net481</NetFrameworkTargetFrameworks>
-
-    <!-- Library projects: net8.0-net11.0, net462, net472, net48, net481 -->
     <LibraryTargetFrameworks>$(NetTargetFrameworks);$(NetFrameworkTargetFrameworks)</LibraryTargetFrameworks>
-
-    <!-- Windows UI integration projects: modern Windows TFMs plus supported .NET Framework TFMs -->
     <WindowsNetTargetFrameworks>net8.0-windows;net9.0-windows;net10.0-windows;net11.0-windows</WindowsNetTargetFrameworks>
     <WindowsLibraryTargetFrameworks>$(WindowsNetTargetFrameworks);$(NetFrameworkTargetFrameworks)</WindowsLibraryTargetFrameworks>
-
-    <!-- Focused platform integration projects. -->
     <BlazorTargetFrameworks>$(NetTargetFrameworks)</BlazorTargetFrameworks>
-    <MauiTargetFrameworks>net9.0;net10.0;net11.0;net11.0-android</MauiTargetFrameworks>
+    <MauiTargetFrameworks>net9.0;net10.0;net11.0</MauiTargetFrameworks>
     <MauiTestTargetFrameworks>net9.0;net10.0;net11.0</MauiTestTargetFrameworks>
     <WinUITargetFrameworks>net8.0-windows10.0.19041.0;net9.0-windows10.0.19041.0;net10.0-windows10.0.19041.0;net11.0-windows10.0.19041.0</WinUITargetFrameworks>
-
-    <!-- Test projects: net8.0, net9.0, net10.0 only -->
     <TestTargetFrameworks>$(NetTargetFrameworks)</TestTargetFrameworks>
   </PropertyGroup>
 
@@ -75,7 +58,6 @@
     <TUnitAssertionsImplicitUsings>true</TUnitAssertionsImplicitUsings>
   </PropertyGroup>
 
-  <!-- MTP Native JSON Configuration -->
   <ItemGroup Condition="'$(IsTestProject)' == 'true'">
     <None Include="$(MSBuildThisFileDirectory)testconfig.json">
       <Link>$(AssemblyName).testconfig.json</Link>
@@ -91,9 +73,7 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All"/>
   </ItemGroup>
 
-  <!-- AOT / trim-compatibility analyzers on .NET 8+ for every project.
-       TUnit is AOT-compatible, so tests opt in too. Netfx TFMs
-       (net462/net472/net481) don't support these — keep them off there. -->
+  <!-- AOT/trim analyzers on net8.0+ (netfx doesn't support them). -->
   <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
     <IsAotCompatible>true</IsAotCompatible>
     <EnableAotAnalyzer>true</EnableAotAnalyzer>
@@ -102,10 +82,6 @@
 
   <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">
     <Features>$(Features);runtime-async=on</Features>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net11.0-android'">
-    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -118,9 +94,6 @@
     <None Include="$(MSBuildThisFileDirectory)..\images\logo.png" Pack="true" PackagePath="\"/>
   </ItemGroup>
 
-  <!-- MinVer (versioning) — replaces Nerdbank.GitVersioning. Floor at the
-       current 2.3 baseline so untagged builds produce 2.3.x-alpha.0.<height>
-       until a v2.3.0 (or later) tag is cut. -->
   <PropertyGroup>
     <MinVerAutoIncrement>minor</MinVerAutoIncrement>
     <MinVerDefaultPreReleaseIdentifiers>alpha.0</MinVerDefaultPreReleaseIdentifiers>
@@ -130,18 +103,37 @@
 
   <ItemGroup>
     <PackageReference Include="MinVer" PrivateAssets="all"/>
-    <PackageReference Include="stylecop.analyzers" PrivateAssets="all"/>
+    <PackageReference Include="StyleSharp.Analyzers" PrivateAssets="all"/>
     <PackageReference Include="Roslynator.Analyzers" PrivateAssets="All"/>
-    <PackageReference Include="Blazor.Common.Analyzers" PrivateAssets="All"/>
     <PackageReference Include="SonarAnalyzer.CSharp" PrivateAssets="all"/>
   </ItemGroup>
-  <ItemGroup>
-    <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" Link="stylecop.json"/>
+
+  <!-- Per-TFM public-API tracking via Roslyn PublicApiAnalyzers (RS0016/RS0017); baselines in
+       PublicAPI/<tfm>/. Tests, benchmarks, and source generators are exempt. -->
+  <PropertyGroup>
+    <TrackPublicApi Condition="'$(TrackPublicApi)' == ''">true</TrackPublicApi>
+    <TrackPublicApi Condition="$(MSBuildProjectDirectory.Contains('tests'))">false</TrackPublicApi>
+    <TrackPublicApi Condition="$(MSBuildProjectDirectory.Contains('benchmarks'))">false</TrackPublicApi>
+    <TrackPublicApi Condition="$(MSBuildProjectName.EndsWith('.Generator'))">false</TrackPublicApi>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TrackPublicApi)' == 'true'">
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+    <AdditionalFiles Include="$(MSBuildProjectDirectory)\PublicAPI\$(TargetFramework)\PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="$(MSBuildProjectDirectory)\PublicAPI\$(TargetFramework)\PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <!-- Alias Lock to the dedicated System.Threading.Lock on .NET 9+ (faster EnterScope fast path),
+     and to a plain object elsewhere (the lock statement falls back to Monitor). -->
+  <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">
+    <Using Include="System.Threading.Lock" Alias="Lock" />
+  </ItemGroup>
+  <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">
+    <Using Include="System.Object" Alias="Lock" />
   </ItemGroup>
 
   <!-- Ban LINQ-to-objects (System.Linq) in shipping code so allocation-heavy LINQ cannot creep
-       into the runtime library or platform adapters. Tests, benchmarks, and the build-time source
-       generators are exempt. -->
+        into the runtime library or platform adapters. Tests, benchmarks, and the build-time source
+        generators are exempt. -->
   <PropertyGroup>
     <BanLinqInShippingCode Condition="'$(BanLinqInShippingCode)' == ''">true</BanLinqInShippingCode>
     <BanLinqInShippingCode Condition="$(MSBuildProjectDirectory.Contains('tests'))">false</BanLinqInShippingCode>
@@ -153,21 +145,8 @@
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" Link="BannedSymbols.txt"/>
   </ItemGroup>
 
-  <!--
-    The .NET SDK + transitive packages auto-load several source generators that
-    have nothing to do in this codebase. Each one still scans the full compilation
-    looking for its trigger attribute, so removing them from @(Analyzer) before
-    CoreCompile shaves real csc time. Audited usage (re-check before re-enabling):
-      ComInterfaceGenerator       — no [GeneratedComInterface]    (~863 ms)
-      ComClassGenerator           — no [GeneratedComClass]        (~141 ms)
-      VtableIndexStubGenerator    — COM vtable, unused             (~37 ms)
-      JSImportGenerator           — no Blazor WASM JS interop      (varies)
-      LibraryImportGenerator      — no [LibraryImport]/[DllImport] (~12.7 s)
-      System.Text.Json.SourceGeneration
-                                  — no JsonSerializable contexts   (~1.1 s)
-    Re-enable any of these the moment the corresponding attribute is introduced;
-    csc will silently produce wrong output otherwise.
-  -->
+  <!-- Drop unused SDK source generators from @(Analyzer) to cut csc time. Re-enable any whose
+       trigger attribute gets introduced, else its codegen is silently skipped. -->
   <Target Name="RemoveUnusedSdkGenerators" BeforeTargets="CoreCompile">
     <ItemGroup>
       <Analyzer Remove="@(Analyzer)"

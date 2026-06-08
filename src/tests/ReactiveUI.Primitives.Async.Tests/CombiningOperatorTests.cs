@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Tests for combining operators: Merge, Concat, CombineLatest, Zip, Prepend, StartWith.
-/// </summary>
+/// <summary>Tests for combining operators: Merge, Concat, CombineLatest, Zip, Prepend, StartWith.</summary>
 public partial class CombiningOperatorTests
 {
     /// <summary>Sample integer value 1.</summary>
@@ -98,19 +96,13 @@ public partial class CombiningOperatorTests
     private readonly object _gate = new();
 #endif
 
-    /// <summary>
-    /// A trackable async disposable resource for verifying disposal in Using tests.
-    /// </summary>
+    /// <summary>A trackable async disposable resource for verifying disposal in Using tests.</summary>
     private sealed class TrackingAsyncDisposable : IAsyncDisposable
     {
-        /// <summary>
-        /// Gets a value indicating whether this resource has been disposed.
-        /// </summary>
+        /// <summary>Gets a value indicating whether this resource has been disposed.</summary>
         public bool IsDisposed { get; private set; }
 
-        /// <summary>
-        /// Gets or sets an arbitrary tag for tracking usage.
-        /// </summary>
+        /// <summary>Gets or sets an arbitrary tag for tracking usage.</summary>
         public string? Tag { get; set; }
 
         /// <inheritdoc/>
@@ -121,22 +113,15 @@ public partial class CombiningOperatorTests
         }
     }
 
-    /// <summary>
-    /// An async disposable that throws on disposal, used to test error handling during cleanup.
-    /// </summary>
+    /// <summary>An async disposable that throws on disposal, used to test error handling during cleanup.</summary>
     private sealed class ThrowingDisposable : IAsyncDisposable
     {
-        /// <summary>
-        /// Throws an <see cref="InvalidOperationException"/> when disposal is attempted.
-        /// </summary>
+        /// <summary>Throws an <see cref="InvalidOperationException"/> when disposal is attempted.</summary>
         /// <returns>Never returns normally.</returns>
         public ValueTask DisposeAsync() => throw new InvalidOperationException("dispose boom");
     }
 
-    /// <summary>
-    /// An enumerable that throws during enumeration, used to trigger the error path
-    /// in MergeEnumerable BeginSubscribing.
-    /// </summary>
+    /// <summary>An enumerable that throws during enumeration, used to trigger the error path in MergeEnumerable BeginSubscribing.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     private sealed class ThrowingEnumerable<T> : IEnumerable<IObservableAsync<T>>
     {
@@ -162,9 +147,7 @@ public partial class CombiningOperatorTests
         /// <inheritdoc/>
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 
-        /// <summary>
-        /// An enumerator that throws on both <see cref="MoveNext"/> and <see cref="Dispose"/>.
-        /// </summary>
+        /// <summary>An enumerator that throws on both <see cref="MoveNext"/> and <see cref="Dispose"/>.</summary>
         private sealed class ThrowingEnumerator : IEnumerator<IObservableAsync<T>>
         {
             /// <inheritdoc/>

@@ -7,14 +7,10 @@ using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// Signals.
-/// </summary>
+/// <summary>Signals.</summary>
 public static partial class Signal
 {
-    /// <summary>
-    /// Empty Signals. Returns only OnCompleted on specified scheduler.
-    /// </summary>
+    /// <summary>Empty Signals. Returns only OnCompleted on specified scheduler.</summary>
     /// <typeparam name="T">The Type.</typeparam>
     /// <param name="scheduler">The scheduler.</param>
     /// <returns>An Signals.</returns>
@@ -32,9 +28,7 @@ public static partial class Signal
         return new EmptySignal<T>(scheduler);
     }
 
-    /// <summary>
-    /// Empty Signals. Returns only OnCompleted on specified scheduler. witness is for type inference.
-    /// </summary>
+    /// <summary>Empty Signals. Returns only OnCompleted on specified scheduler. witness is for type inference.</summary>
     /// <typeparam name="T">The Type.</typeparam>
     /// <param name="scheduler">The scheduler.</param>
     /// <param name="witness">The witness.</param>
@@ -42,9 +36,7 @@ public static partial class Signal
     public static IObservable<T> None<T>(ISequencer scheduler, T witness) =>
         None<T>(scheduler);
 
-    /// <summary>
-    /// Empty Signals. Returns only OnCompleted.
-    /// </summary>
+    /// <summary>Empty Signals. Returns only OnCompleted.</summary>
     /// <typeparam name="T">The Type.</typeparam>
     /// <returns>An Signals.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
@@ -54,9 +46,7 @@ public static partial class Signal
     public static IObservable<T> None<T>() =>
         None<T>(Sequencer.Immediate);
 
-    /// <summary>
-    /// Empty Signals. Returns only OnCompleted. witness is for type inference.
-    /// </summary>
+    /// <summary>Empty Signals. Returns only OnCompleted. witness is for type inference.</summary>
     /// <typeparam name="T">The Type.</typeparam>
     /// <param name="witness">The witness.</param>
     /// <returns>An Signals.</returns>

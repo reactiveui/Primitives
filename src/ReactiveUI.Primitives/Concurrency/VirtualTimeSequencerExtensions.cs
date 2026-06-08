@@ -6,70 +6,62 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// Provides a set of extension methods for virtual time scheduling.
-/// </summary>
+/// <summary>Provides a set of extension methods for virtual time scheduling.</summary>
 public static class VirtualTimeSequencerExtensions
 {
-    /// <summary>
-    /// Schedules an action to be executed at <paramref name="dueTime"/>.
-    /// </summary>
+    /// <summary>Provides virtual-time scheduling extensions for <see cref="VirtualTimeSequencerBase{TAbsolute, TRelative}"/>.</summary>
+    /// <param name="scheduler">Sequencer to execute the action on.</param>
     /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
     /// <typeparam name="TRelative">Relative time representation type.</typeparam>
-    /// <param name="scheduler">Sequencer to execute the action on.</param>
-    /// <param name="dueTime">Relative time after which to execute the action.</param>
-    /// <param name="action">Action to be executed.</param>
-    /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
-    public static IDisposable ScheduleRelative<TAbsolute, TRelative>(this VirtualTimeSequencerBase<TAbsolute, TRelative> scheduler, TRelative dueTime, Action action)
+    extension<TAbsolute, TRelative>(VirtualTimeSequencerBase<TAbsolute, TRelative> scheduler)
         where TAbsolute : IComparable<TAbsolute>
     {
-        if (scheduler == null)
+        /// <summary>Schedules an action to be executed at <paramref name="dueTime"/>.</summary>
+        /// <param name="dueTime">Relative time after which to execute the action.</param>
+        /// <param name="action">Action to be executed.</param>
+        /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+        public IDisposable ScheduleRelative(TRelative dueTime, Action action)
         {
-            throw new ArgumentNullException(nameof(scheduler));
+            if (scheduler is null)
+            {
+                throw new ArgumentNullException(nameof(scheduler));
+            }
+
+            if (action is null)
+            {
+                throw new ArgumentNullException(nameof(action));
+            }
+
+            // As stated in Sequencer.Simple.cs,
+            // an anonymous delegate will allow delegate caching.
+            // Watch https://github.com/dotnet/roslyn/issues/5835 for compiler
+            // support for caching delegates from method groups.
+            return scheduler.ScheduleRelative(action, dueTime, static (_, a) => Invoke(a));
         }
 
-        if (action == null)
+        /// <summary>Schedules an action to be executed at <paramref name="dueTime"/>.</summary>
+        /// <param name="dueTime">Absolute time at which to execute the action.</param>
+        /// <param name="action">Action to be executed.</param>
+        /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+        public IDisposable ScheduleAbsolute(TAbsolute dueTime, Action action)
         {
-            throw new ArgumentNullException(nameof(action));
-        }
+            if (scheduler is null)
+            {
+                throw new ArgumentNullException(nameof(scheduler));
+            }
 
-        // As stated in Sequencer.Simple.cs,
-        // an anonymous delegate will allow delegate caching.
-        // Watch https://github.com/dotnet/roslyn/issues/5835 for compiler
-        // support for caching delegates from method groups.
-        return scheduler.ScheduleRelative(action, dueTime, static (_, a) => Invoke(a));
+            if (action is null)
+            {
+                throw new ArgumentNullException(nameof(action));
+            }
+
+            return scheduler.ScheduleAbsolute(action, dueTime, static (_, a) => Invoke(a));
+        }
     }
 
-    /// <summary>
-    /// Schedules an action to be executed at <paramref name="dueTime"/>.
-    /// </summary>
-    /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
-    /// <typeparam name="TRelative">Relative time representation type.</typeparam>
-    /// <param name="scheduler">Sequencer to execute the action on.</param>
-    /// <param name="dueTime">Absolute time at which to execute the action.</param>
-    /// <param name="action">Action to be executed.</param>
-    /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
-    public static IDisposable ScheduleAbsolute<TAbsolute, TRelative>(this VirtualTimeSequencerBase<TAbsolute, TRelative> scheduler, TAbsolute dueTime, Action action)
-        where TAbsolute : IComparable<TAbsolute>
-    {
-        if (scheduler == null)
-        {
-            throw new ArgumentNullException(nameof(scheduler));
-        }
-
-        if (action == null)
-        {
-            throw new ArgumentNullException(nameof(action));
-        }
-
-        return scheduler.ScheduleAbsolute(action, dueTime, static (_, a) => Invoke(a));
-    }
-
-    /// <summary>
-    /// Invokes an action and returns an empty disposable.
-    /// </summary>
+    /// <summary>Invokes an action and returns an empty disposable.</summary>
     /// <param name="action">Action to invoke.</param>
     /// <returns>An empty disposable.</returns>
     private static EmptyDisposable Invoke(Action action)

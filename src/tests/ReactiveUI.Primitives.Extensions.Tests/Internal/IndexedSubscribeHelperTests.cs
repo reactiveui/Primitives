@@ -8,8 +8,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
 
-/// <summary>Tests for <see cref="IndexedSubscribeHelper"/>, the shared indexed-subscribe loop used
-/// by the synchronous combine-then-reduce operator family.</summary>
+/// <summary>Tests for <see cref="IndexedSubscribeHelper"/>, the shared indexed-subscribe loop used by the synchronous combine-then-reduce operator family.</summary>
 public class IndexedSubscribeHelperTests
 {
     /// <summary>Value emitted by source 0 in the index-threading test.</summary>

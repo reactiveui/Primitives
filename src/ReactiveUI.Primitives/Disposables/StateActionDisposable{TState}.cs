@@ -4,25 +4,17 @@
 
 namespace ReactiveUI.Primitives.Disposables;
 
-/// <summary>
-/// Disposable that invokes a stateful action once.
-/// </summary>
+/// <summary>Disposable that invokes a stateful action once.</summary>
 /// <typeparam name="TState">The state type.</typeparam>
 internal sealed class StateActionDisposable<TState> : IDisposable
 {
-    /// <summary>
-    /// State supplied to the dispose action.
-    /// </summary>
+    /// <summary>State supplied to the dispose action.</summary>
     private readonly TState _state;
 
-    /// <summary>
-    /// Dispose action, cleared after the first invocation.
-    /// </summary>
+    /// <summary>Dispose action, cleared after the first invocation.</summary>
     private Action<TState>? _dispose;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="StateActionDisposable{TState}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="StateActionDisposable{TState}"/> class.</summary>
     /// <param name="state">State passed to the dispose action.</param>
     /// <param name="dispose">The dispose action.</param>
     public StateActionDisposable(TState state, Action<TState> dispose)

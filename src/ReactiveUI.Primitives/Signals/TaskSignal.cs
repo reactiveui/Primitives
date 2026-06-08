@@ -6,14 +6,10 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// TaskSignal.
-/// </summary>
+/// <summary>TaskSignal.</summary>
 public static class TaskSignal
 {
-    /// <summary>
-    /// Creates the specified source.
-    /// </summary>
+    /// <summary>Creates the specified source.</summary>
     /// <typeparam name="TResult">The type of the result.</typeparam>
     /// <param name="observableFactory">The observable factory.</param>
     /// <returns>
@@ -23,9 +19,7 @@ public static class TaskSignal
     public static ITaskSignal<TResult> Create<TResult>(Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory) =>
         Instance(observableFactory, null, null);
 
-    /// <summary>
-    /// Creates the specified source.
-    /// </summary>
+    /// <summary>Creates the specified source.</summary>
     /// <typeparam name="TResult">The type of the result.</typeparam>
     /// <param name="observableFactory">The observable factory.</param>
     /// <param name="scheduler">The scheduler.</param>
@@ -36,9 +30,7 @@ public static class TaskSignal
     public static ITaskSignal<TResult> Create<TResult>(Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory, ISequencer? scheduler) =>
         Instance(observableFactory, scheduler, null);
 
-    /// <summary>
-    /// Creates the specified source.
-    /// </summary>
+    /// <summary>Creates the specified source.</summary>
     /// <typeparam name="TResult">The type of the result.</typeparam>
     /// <param name="observableFactory">The observable factory.</param>
     /// <param name="scheduler">The scheduler.</param>
@@ -53,9 +45,7 @@ public static class TaskSignal
         CancellationTokenSource? cancellationTokenSource) =>
         Instance(observableFactory, scheduler, cancellationTokenSource);
 
-    /// <summary>
-    /// Executes the Instance operation.
-    /// </summary>
+    /// <summary>Executes the Instance operation.</summary>
     /// <typeparam name="TResult">The TResult type.</typeparam>
     /// <param name="observableFactory">The observableFactory value.</param>
     /// <param name="scheduler">The scheduler value.</param>

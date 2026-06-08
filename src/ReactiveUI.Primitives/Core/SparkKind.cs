@@ -4,23 +4,15 @@
 
 namespace ReactiveUI.Primitives.Core;
 
-/// <summary>
-/// Indicates the type of a spark.
-/// </summary>
+/// <summary>Indicates the type of a spark.</summary>
 public enum SparkKind
 {
-    /// <summary>
-    /// Represents an OnNext spark.
-    /// </summary>
+    /// <summary>Represents an OnNext spark.</summary>
     OnNext,
 
-    /// <summary>
-    /// Represents an OnError spark.
-    /// </summary>
+    /// <summary>Represents an OnError spark.</summary>
     OnError,
 
-    /// <summary>
-    /// Represents an OnCompleted spark.
-    /// </summary>
+    /// <summary>Represents an OnCompleted spark.</summary>
     OnCompleted
 }

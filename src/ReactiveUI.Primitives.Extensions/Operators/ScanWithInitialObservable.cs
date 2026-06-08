@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// Scans the source sequence and emits the initial value immediately upon subscription.
-/// </summary>
+/// <summary>Scans the source sequence and emits the initial value immediately upon subscription.</summary>
 /// <typeparam name="TSource">The type of elements in the source sequence.</typeparam>
 /// <typeparam name="TAccumulate">The type of the accumulated value.</typeparam>
 /// <param name="source">The source observable.</param>
@@ -31,9 +29,7 @@ internal sealed class ScanWithInitialObservable<TSource, TAccumulate>(
         return source.Subscribe(sink);
     }
 
-    /// <summary>
-    /// Sink that implements the scan with initial logic.
-    /// </summary>
+    /// <summary>Sink that implements the scan with initial logic.</summary>
     /// <param name="downstream">The observer to forward elements to.</param>
     /// <param name="initial">The initial accumulated value.</param>
     /// <param name="accumulator">The accumulator function.</param>
@@ -42,24 +38,16 @@ internal sealed class ScanWithInitialObservable<TSource, TAccumulate>(
         TAccumulate initial,
         Func<TAccumulate, TSource, TAccumulate> accumulator) : IObserver<TSource>
     {
-        /// <summary>
-        /// The gate to synchronize access to the sink state.
-        /// </summary>
+        /// <summary>The gate to synchronize access to the sink state.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// The current accumulated value.
-        /// </summary>
+        /// <summary>The current accumulated value.</summary>
         private TAccumulate _current = initial;
 
-        /// <summary>
-        /// Whether the sink has finished.
-        /// </summary>
+        /// <summary>Whether the sink has finished.</summary>
         private bool _done;
 
-        /// <summary>
-        /// Initializes the sink by emitting the initial value.
-        /// </summary>
+        /// <summary>Initializes the sink by emitting the initial value.</summary>
         public void Initialize() => downstream.OnNext(_current);
 
         /// <inheritdoc/>

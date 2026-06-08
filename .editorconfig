@@ -1344,6 +1344,12 @@ dotnet_diagnostic.SST2101.severity = error # An explicit collection creation can
 dotnet_diagnostic.SST2200.severity = error # A single-use backing field can use the C# 14 field keyword
 
 ###################
+# PublicApiAnalyzers (RSxxxx) - public API surface tracking
+###################
+dotnet_diagnostic.RS0016.severity = error # public symbol missing from the PublicAPI baseline
+dotnet_diagnostic.RS0017.severity = error # PublicAPI baseline entry no longer in source
+
+###################
 # Trimming Analyzer Warnings (IL2001 - IL2123)
 # See: https://learn.microsoft.com/en-us/dotnet/core/deploying/trimming/trim-warnings/
 ###################
@@ -2066,7 +2072,7 @@ resharper_redundant_to_string_call_highlighting = none # handled by RCS1097
 ###################
 # ReSharper - Naming (matches SA/CA naming rules)
 ###################
-resharper_inconsistent_naming_highlighting = error # partially handled by SA1300 family but IDE1006 isn't enabled; keep ReSharper active
+resharper_inconsistent_naming_highlighting = none # too many false positives on test/fixture naming; SA1300 family covers the real cases
 
 ###################
 # ReSharper - Unused code (matches CA1801 / CA1823 / IDE0051-0052)

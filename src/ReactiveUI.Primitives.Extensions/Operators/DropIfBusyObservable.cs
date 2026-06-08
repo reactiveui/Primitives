@@ -29,9 +29,7 @@ internal sealed class DropIfBusyObservable<T>(
         return new DisposableBag(sub, sink);
     }
 
-    /// <summary>
-    /// Sink that manages the busy state and executes the async action.
-    /// </summary>
+    /// <summary>Sink that manages the busy state and executes the async action.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="asyncAction">The async action to run.</param>
     private sealed class DropIfBusySink(
@@ -83,9 +81,7 @@ internal sealed class DropIfBusyObservable<T>(
         /// <inheritdoc/>
         public void Dispose() => _done = true;
 
-        /// <summary>
-        /// Executes the async action and manages the busy state transition.
-        /// </summary>
+        /// <summary>Executes the async action and manages the busy state transition.</summary>
         /// <param name="value">The value to process.</param>
         /// <returns>A task representing the async operation.</returns>
         private async Task ProcessAsync(T value)

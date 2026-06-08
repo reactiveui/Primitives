@@ -7,81 +7,80 @@ using ReactiveUI.Primitives.Extensions.Internal;
 namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
 
 /// <summary>Direct RxVoid tests for <see cref="TimerSinkState{T}"/> — covers the terminal
-/// idempotency guards across <c>HandleError</c>, <c>HandleCompleted</c>, and <c>HandleDispose</c>.</summary>
+/// idempotency guards across <c>HandleErrorLocked</c>, <c>HandleCompletedLocked</c>, and <c>HandleDisposeLocked</c>.</summary>
 public class TimerSinkStateTests
 {
-    /// <summary>Verifies <c>HandleError</c> forwards the error then marks the state done.</summary>
+    /// <summary>Verifies <c>HandleErrorLocked</c> forwards the error then marks the state done.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenHandleError_ThenForwardsAndMarksDone()
+    public async Task WhenHandleErrorLocked_ThenForwardsAndMarksDone()
     {
         var observer = new RecordingObserver<int>();
         var state = new TimerSinkState<int>(observer);
         var expected = new InvalidOperationException("timer-error");
 
-        state.HandleError(expected);
+        state.HandleErrorLocked(expected);
 
         await Assert.That(state.Done).IsTrue();
         await Assert.That(observer.Errors).Count().IsEqualTo(1);
         await Assert.That(observer.Errors[0]).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies <c>HandleCompleted</c> forwards completion then marks the state done.</summary>
+    /// <summary>Verifies <c>HandleCompletedLocked</c> forwards completion then marks the state done.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenHandleCompleted_ThenForwardsAndMarksDone()
+    public async Task WhenHandleCompletedLocked_ThenForwardsAndMarksDone()
     {
         var observer = new RecordingObserver<int>();
         var state = new TimerSinkState<int>(observer);
 
-        state.HandleCompleted();
+        state.HandleCompletedLocked();
 
         await Assert.That(state.Done).IsTrue();
         await Assert.That(observer.Completions).IsEqualTo(1);
     }
 
-    /// <summary>Exercises the <c>HandleCompleted</c> idempotency guard — once the state is
+    /// <summary>Exercises the <c>HandleCompletedLocked</c> idempotency guard — once the state is
     /// already terminal, a second call returns without re-forwarding to the downstream.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenHandleCompletedAfterError_ThenNoOp()
+    public async Task WhenHandleCompletedLockedAfterError_ThenNoOp()
     {
         var observer = new RecordingObserver<int>();
         var state = new TimerSinkState<int>(observer);
 
-        state.HandleError(new InvalidOperationException("first"));
-        state.HandleCompleted();
+        state.HandleErrorLocked(new InvalidOperationException("first"));
+        state.HandleCompletedLocked();
 
         await Assert.That(observer.Completions).IsEqualTo(0);
         await Assert.That(observer.Errors).Count().IsEqualTo(1);
     }
 
-    /// <summary>Exercises the <c>HandleError</c> idempotency guard — once the state is
+    /// <summary>Exercises the <c>HandleErrorLocked</c> idempotency guard — once the state is
     /// already terminal, a second call returns without re-forwarding.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenHandleErrorAfterCompleted_ThenNoOp()
+    public async Task WhenHandleErrorLockedAfterCompleted_ThenNoOp()
     {
         var observer = new RecordingObserver<int>();
         var state = new TimerSinkState<int>(observer);
 
-        state.HandleCompleted();
-        state.HandleError(new InvalidOperationException("second"));
+        state.HandleCompletedLocked();
+        state.HandleErrorLocked(new InvalidOperationException("second"));
 
         await Assert.That(observer.Errors).IsEmpty();
         await Assert.That(observer.Completions).IsEqualTo(1);
     }
 
-    /// <summary>Verifies <c>HandleDispose</c> marks the state done without forwarding any
-    /// notification to the downstream.</summary>
+    /// <summary>Verifies <c>HandleDisposeLocked</c> marks the state done without forwarding any notification to the downstream.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenHandleDispose_ThenMarksDoneWithoutForwarding()
+    public async Task WhenHandleDisposeLocked_ThenMarksDoneWithoutForwarding()
     {
         var observer = new RecordingObserver<int>();
         var state = new TimerSinkState<int>(observer);
 
-        state.HandleDispose();
+        state.HandleDisposeLocked();
 
         await Assert.That(state.Done).IsTrue();
         await Assert.That(observer.Errors).IsEmpty();

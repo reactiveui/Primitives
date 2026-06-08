@@ -6,154 +6,94 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Covers optimized operator helper implementations that are not exercised by broad contract tests.
-/// </summary>
+/// <summary>Covers optimized operator helper implementations that are not exercised by broad contract tests.</summary>
 public class OperatorCoverageExpansionTests
 {
-    /// <summary>
-    /// The first value.
-    /// </summary>
+    /// <summary>The first value.</summary>
     private const int First = 1;
 
-    /// <summary>
-    /// The second value.
-    /// </summary>
+    /// <summary>The second value.</summary>
     private const int Second = 2;
 
-    /// <summary>
-    /// The third value.
-    /// </summary>
+    /// <summary>The third value.</summary>
     private const int Third = 3;
 
-    /// <summary>
-    /// The fourth value.
-    /// </summary>
+    /// <summary>The fourth value.</summary>
     private const int Fourth = 4;
 
-    /// <summary>
-    /// A value outside the tested ranges.
-    /// </summary>
+    /// <summary>A value outside the tested ranges.</summary>
     private const int MissingRangeValue = 99;
 
-    /// <summary>
-    /// Observed error index for the any error.
-    /// </summary>
+    /// <summary>Observed error index for the any error.</summary>
     private const int AnyErrorIndex = 2;
 
-    /// <summary>
-    /// Observed error index for the distinct error.
-    /// </summary>
+    /// <summary>Observed error index for the distinct error.</summary>
     private const int DistinctErrorIndex = 3;
 
-    /// <summary>
-    /// Observed error index for the outer FlatMap error.
-    /// </summary>
+    /// <summary>Observed error index for the outer FlatMap error.</summary>
     private const int OuterErrorIndex = 2;
 
-    /// <summary>
-    /// The first inner value.
-    /// </summary>
+    /// <summary>The first inner value.</summary>
     private const int FirstInner = 10;
 
-    /// <summary>
-    /// The second inner value.
-    /// </summary>
+    /// <summary>The second inner value.</summary>
     private const int SecondInner = 20;
 
-    /// <summary>
-    /// Selector failure message.
-    /// </summary>
+    /// <summary>Selector failure message.</summary>
     private const string SelectorMessage = "selector";
 
-    /// <summary>
-    /// Inner failure message.
-    /// </summary>
+    /// <summary>Inner failure message.</summary>
     private const string InnerMessage = "inner";
 
-    /// <summary>
-    /// Outer failure message.
-    /// </summary>
+    /// <summary>Outer failure message.</summary>
     private const string OuterMessage = "outer";
 
-    /// <summary>
-    /// All predicate failure message.
-    /// </summary>
+    /// <summary>All predicate failure message.</summary>
     private const string AllMessage = "all";
 
-    /// <summary>
-    /// Source values for aggregate operator tests.
-    /// </summary>
+    /// <summary>Source values for aggregate operator tests.</summary>
     private static readonly int[] AggregateSource = [First, Second, Third, Fourth];
 
-    /// <summary>
-    /// Source values with duplicate keys.
-    /// </summary>
+    /// <summary>Source values with duplicate keys.</summary>
     private static readonly int[] DuplicateKeySource = [First, First, Second, Second, Third];
 
-    /// <summary>
-    /// Single first-value source.
-    /// </summary>
+    /// <summary>Single first-value source.</summary>
     private static readonly int[] SingleFirstSource = [First];
 
-    /// <summary>
-    /// Two-value source for FlatMap projection.
-    /// </summary>
+    /// <summary>Two-value source for FlatMap projection.</summary>
     private static readonly int[] FirstSecondSource = [First, Second];
 
-    /// <summary>
-    /// Single inner-value source.
-    /// </summary>
+    /// <summary>Single inner-value source.</summary>
     private static readonly int[] SingleInnerSource = [FirstInner];
 
-    /// <summary>
-    /// Expected count result for two matching values.
-    /// </summary>
+    /// <summary>Expected count result for two matching values.</summary>
     private static readonly int[] CountTwoExpected = [Second];
 
-    /// <summary>
-    /// Expected distinct count result.
-    /// </summary>
+    /// <summary>Expected distinct count result.</summary>
     private static readonly int[] DistinctCountExpected = [Third];
 
-    /// <summary>
-    /// Expected long count result.
-    /// </summary>
+    /// <summary>Expected long count result.</summary>
     private static readonly long[] LongCountFourExpected = [Fourth];
 
-    /// <summary>
-    /// Expected long predicate count result.
-    /// </summary>
+    /// <summary>Expected long predicate count result.</summary>
     private static readonly long[] LongCountTwoExpected = [Second];
 
-    /// <summary>
-    /// Expected distinct long count result.
-    /// </summary>
+    /// <summary>Expected distinct long count result.</summary>
     private static readonly long[] DistinctLongCountExpected = [Third];
 
-    /// <summary>
-    /// Expected true boolean result.
-    /// </summary>
+    /// <summary>Expected true boolean result.</summary>
     private static readonly bool[] TrueExpected = [true];
 
-    /// <summary>
-    /// Expected false boolean result.
-    /// </summary>
+    /// <summary>Expected false boolean result.</summary>
     private static readonly bool[] FalseExpected = [false];
 
-    /// <summary>
-    /// Expected queued FlatMap values.
-    /// </summary>
+    /// <summary>Expected queued FlatMap values.</summary>
     private static readonly int[] QueuedFlatMapExpected = [FirstInner, SecondInner];
 
-    /// <summary>
-    /// Expected result-selector FlatMap values.
-    /// </summary>
+    /// <summary>Expected result-selector FlatMap values.</summary>
     private static readonly int[] ResultFlatMapExpected = [First + FirstInner, Second + FirstInner];
 
-    /// <summary>
-    /// Covers count, long-count, distinct fast count, and any helper branches.
-    /// </summary>
+    /// <summary>Covers count, long-count, distinct fast count, and any helper branches.</summary>
     [Test]
     public void AggregateHelpersCoverPredicateDistinctAndAnyPaths()
     {
@@ -196,8 +136,10 @@ public class OperatorCoverageExpansionTests
         Assert.Equal(DistinctLongCountExpected, distinctLongCount);
         Assert.Equal(TrueExpected, anyTrue);
         Assert.Equal(FalseExpected, anyFalse);
-        Assert.Equal(new[] { Third }, rangeDistinctCount);
-        Assert.Equal(new long[] { Third }, rangeDistinctLongCount);
+        int[] expectedRangeDistinctCount = [Third];
+        Assert.Equal(expectedRangeDistinctCount, rangeDistinctCount);
+        long[] expectedRangeDistinctLongCount = [Third];
+        Assert.Equal(expectedRangeDistinctLongCount, rangeDistinctLongCount);
         Assert.Equal(TrueExpected, rangeAnyTrue);
         Assert.Equal(FalseExpected, rangeAnyFalse);
         Assert.Equal(TrueExpected, rangeAllTrue);
@@ -206,9 +148,7 @@ public class OperatorCoverageExpansionTests
         Assert.Equal(FalseExpected, rangeContainsFalse);
     }
 
-    /// <summary>
-    /// Covers optimized aggregate observer error paths.
-    /// </summary>
+    /// <summary>Covers optimized aggregate observer error paths.</summary>
     [Test]
     public void AggregateHelpersForwardSourceErrors()
     {
@@ -229,9 +169,7 @@ public class OperatorCoverageExpansionTests
         Assert.Same(distinctError, observed[DistinctErrorIndex]);
     }
 
-    /// <summary>
-    /// Covers predicate exceptions for aggregate boolean terminals.
-    /// </summary>
+    /// <summary>Covers predicate exceptions for aggregate boolean terminals.</summary>
     [Test]
     public void AggregateBooleanTerminalsForwardPredicateErrors()
     {
@@ -243,9 +181,7 @@ public class OperatorCoverageExpansionTests
         Assert.Same(allError, observed[0]);
     }
 
-    /// <summary>
-    /// Covers fused prepend/default-if-empty/append and empty Prepend helpers.
-    /// </summary>
+    /// <summary>Covers fused prepend/default-if-empty/append and empty Prepend helpers.</summary>
     [Test]
     public void PrependAppendDefaultIfEmptyFusionPreservesOrderingAndTerminals()
     {
@@ -264,14 +200,14 @@ public class OperatorCoverageExpansionTests
             .Append(Fourth)
             .Subscribe(emptyPrependValues.Add);
 
-        Assert.Equal(new[] { First, Second, Third }, values);
+        int[] expectedValues = [First, Second, Third];
+        Assert.Equal(expectedValues, values);
         Assert.Equal(1, completed);
-        Assert.Equal(new[] { First, Second, Third, Fourth, Fourth }, emptyPrependValues);
+        int[] expectedEmptyPrependValues = [First, Second, Third, Fourth, Fourth];
+        Assert.Equal(expectedEmptyPrependValues, emptyPrependValues);
     }
 
-    /// <summary>
-    /// Covers FlatMap queuing while an inner signal is active.
-    /// </summary>
+    /// <summary>Covers FlatMap queuing while an inner signal is active.</summary>
     [Test]
     public void FlatMapQueuesInnerSignalsUntilActiveInnerCompletes()
     {
@@ -296,9 +232,7 @@ public class OperatorCoverageExpansionTests
         Assert.Equal(1, completed);
     }
 
-    /// <summary>
-    /// Covers the FlatMap overload with an outer and inner result selector.
-    /// </summary>
+    /// <summary>Covers the FlatMap overload with an outer and inner result selector.</summary>
     [Test]
     public void FlatMapResultSelectorProjectsOuterAndInnerValues()
     {
@@ -311,9 +245,7 @@ public class OperatorCoverageExpansionTests
         Assert.Equal(ResultFlatMapExpected, values);
     }
 
-    /// <summary>
-    /// Covers FlatMap selector, inner, and outer error forwarding.
-    /// </summary>
+    /// <summary>Covers FlatMap selector, inner, and outer error forwarding.</summary>
     [Test]
     public void FlatMapForwardsSelectorInnerAndOuterErrors()
     {
@@ -331,9 +263,7 @@ public class OperatorCoverageExpansionTests
         Assert.Same(outerError, observed[OuterErrorIndex]);
     }
 
-    /// <summary>
-    /// Returns a scalar signal for the supplied value.
-    /// </summary>
+    /// <summary>Returns a scalar signal for the supplied value.</summary>
     /// <param name="value">The value to emit.</param>
     /// <returns>A scalar signal.</returns>
     private static IObservable<int> ReturnValue(int value) => Signal.Emit(value);

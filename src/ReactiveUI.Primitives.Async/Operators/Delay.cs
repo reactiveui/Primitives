@@ -4,60 +4,61 @@
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides Delay extension methods for asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides Delay extension methods for asynchronous observable sequences.</summary>
 /// <remarks>Delay time-shifts the observable sequence by the specified time span. Each element is
 /// emitted after a relative delay from the time it was produced by the source. Errors and completion
 /// are not delayed.</remarks>
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Time-shifts the observable sequence by the specified time span. Each element notification
-    /// is delayed by the specified duration.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
+    /// <summary>Delay operators that time-shift an observable source sequence.</summary>
     /// <param name="this">The source observable sequence.</param>
-    /// <param name="delayInterval">The time span by which to delay each element notification. Must be non-negative.</param>
-    /// <returns>An observable sequence with element notifications time-shifted by the specified duration.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="delayInterval"/> is negative.</exception>
-    public static IObservableAsync<T> Delay<T>(this IObservableAsync<T> @this, TimeSpan delayInterval)
-        => @this.Delay(delayInterval, (TimeProvider?)null);
-
-    /// <summary>
-    /// Time-shifts the observable sequence by the specified time span. Each element notification
-    /// is delayed by the specified duration.
-    /// </summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <param name="this">The source observable sequence.</param>
-    /// <param name="delayInterval">The time span by which to delay each element notification. Must be non-negative.</param>
-    /// <param name="timeProvider">An optional time provider for controlling timing. If null, <see cref="TimeProvider.System"/>
-    /// is used.</param>
-    /// <returns>An observable sequence with element notifications time-shifted by the specified duration.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="delayInterval"/> is negative.</exception>
-    public static IObservableAsync<T> Delay<T>(this IObservableAsync<T> @this, TimeSpan delayInterval, TimeProvider? timeProvider)
+    extension<T>(IObservableAsync<T> @this)
     {
-#if NET8_0_OR_GREATER
-        ArgumentOutOfRangeException.ThrowIfLessThan(delayInterval, TimeSpan.Zero);
-#else
-        if (delayInterval < TimeSpan.Zero)
+        /// <summary>
+        /// Time-shifts the observable sequence by the specified time span. Each element notification
+        /// is delayed by the specified duration.
+        /// </summary>
+        /// <param name="delayInterval">The time span by which to delay each element notification. Must be non-negative.</param>
+        /// <returns>An observable sequence with element notifications time-shifted by the specified duration.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="delayInterval"/> is negative.</exception>
+        public IObservableAsync<T> Delay(TimeSpan delayInterval)
+            => @this.Delay(delayInterval, (TimeProvider?)null);
+
+        /// <summary>
+        /// Time-shifts the observable sequence by the specified time span. Each element notification
+        /// is delayed by the specified duration.
+        /// </summary>
+        /// <param name="delayInterval">The time span by which to delay each element notification. Must be non-negative.</param>
+        /// <param name="timeProvider">An optional time provider for controlling timing. If null, <see cref="TimeProvider.System"/>
+        /// is used.</param>
+        /// <returns>An observable sequence with element notifications time-shifted by the specified duration.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="delayInterval"/> is negative.</exception>
+        public IObservableAsync<T> Delay(TimeSpan delayInterval, TimeProvider? timeProvider)
         {
-            throw new ArgumentOutOfRangeException(nameof(delayInterval));
-        }
+#if NET8_0_OR_GREATER
+            ArgumentOutOfRangeException.ThrowIfLessThan(delayInterval, TimeSpan.Zero);
+#else
+            if (delayInterval < TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(delayInterval));
+            }
 #endif
 
-        if (delayInterval == TimeSpan.Zero)
-        {
-            return @this;
-        }
+            if (delayInterval == TimeSpan.Zero)
+            {
+                return @this;
+            }
 
-        return new DelaySignal<T>(@this, delayInterval, timeProvider ?? TimeProvider.System);
+            return new DelaySignal<T>(@this, delayInterval, timeProvider ?? TimeProvider.System);
+        }
     }
 
-    /// <summary>
-    /// An observable that delays each element notification by a specified duration.
-    /// </summary>
+    /// <summary>An observable that delays each element notification by a specified duration.</summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <param name="source">The source observable sequence.</param>
+    /// <param name="delayInterval">The time span by which to delay each element notification.</param>
+    /// <param name="timeProvider">The time provider used to control timing.</param>
     internal sealed class DelaySignal<T>(IObservableAsync<T> source, TimeSpan delayInterval, TimeProvider timeProvider)
         : SignalAsync<T>
     {
@@ -70,9 +71,11 @@ public static partial class SignalAsync
             return source.SubscribeAsync(delayObserver, cancellationToken);
         }
 
-        /// <summary>
-        /// A witness that delays each element by waiting before forwarding to the downstream witness.
-        /// </summary>
+        /// <summary>A witness that delays each element by waiting before forwarding to the downstream witness.</summary>
+        /// <param name="observer">The downstream observer to forward delayed notifications to.</param>
+        /// <param name="delayInterval">The time span by which to delay each element notification.</param>
+        /// <param name="timeProvider">The time provider used to control timing.</param>
+        /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
         internal sealed class DelayWitness(
             IObserverAsync<T> observer,
             TimeSpan delayInterval,

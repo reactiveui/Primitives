@@ -16,9 +16,7 @@ public partial class ReactiveExtensionsTests
     /// <summary>Expected sequence of first/second/third strings (nullable element type to match WhereIsNotNull source signature).</summary>
     private static readonly string?[] ExpectedFirstSecondThirdNullable = ["first", "second", "third"];
 
-    /// <summary>
-    /// Tests the WhereIsNotNull extension.
-    /// </summary>
+    /// <summary>Tests the WhereIsNotNull extension.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task GivenNull_WhenWhereIsNotNull_ThenNoNotification()
@@ -31,9 +29,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsNull();
     }
 
-    /// <summary>
-    /// Tests the WhereIsNotNull extension.
-    /// </summary>
+    /// <summary>Tests the WhereIsNotNull extension.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task GivenValue_WhenWhereIsNotNull_ThenNotification()
@@ -46,9 +42,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsFalse();
     }
 
-    /// <summary>
-    /// Tests the AsSignal extension.
-    /// </summary>
+    /// <summary>Tests the AsSignal extension.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task GivenObservable_WhenAsSignal_ThenNotifiesUnit()
@@ -61,9 +55,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(RxVoid.Default);
     }
 
-    /// <summary>
-    /// Tests Not inverts boolean.
-    /// </summary>
+    /// <summary>Tests Not inverts boolean.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Not_InvertsBoolean()
@@ -75,9 +67,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsFalse();
     }
 
-    /// <summary>
-    /// Tests WhereTrue filters to true values.
-    /// </summary>
+    /// <summary>Tests WhereTrue filters to true values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhereTrue_FiltersTrueValues()
@@ -89,9 +79,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([true, true, true]);
     }
 
-    /// <summary>
-    /// Tests WhereFalse filters to false values.
-    /// </summary>
+    /// <summary>Tests WhereFalse filters to false values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhereFalse_FiltersFalseValues()
@@ -103,9 +91,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([false, false]);
     }
 
-    /// <summary>
-    /// Tests WhereIsNotNull filters null values.
-    /// </summary>
+    /// <summary>Tests WhereIsNotNull filters null values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhereIsNotNull_FiltersNullValues()
@@ -117,9 +103,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo(["a", "b", "c"]);
     }
 
-    /// <summary>
-    /// Tests AsSignal converts to RxVoid.
-    /// </summary>
+    /// <summary>Tests AsSignal converts to RxVoid.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task AsSignal_ConvertsToUnit()
@@ -131,9 +115,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).Count().IsEqualTo(SampleValue3);
     }
 
-    /// <summary>
-    /// Tests WhereIsNotNull filtering nulls over time.
-    /// </summary>
+    /// <summary>Tests WhereIsNotNull filtering nulls over time.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhereIsNotNull_FiltersNullsOverTime()
@@ -154,9 +136,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo(ExpectedFirstSecondThirdNullable);
     }
 
-    /// <summary>
-    /// Tests Not operator inverting boolean values over time.
-    /// </summary>
+    /// <summary>Tests Not operator inverting boolean values over time.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Not_InvertsBooleanValuesOverTime()
@@ -175,9 +155,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([false, true, false, true]);
     }
 
-    /// <summary>
-    /// Tests AsSignal converting values to RxVoid over time.
-    /// </summary>
+    /// <summary>Tests AsSignal converting values to RxVoid over time.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task AsSignal_ConvertsToUnitOverTime()

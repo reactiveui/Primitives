@@ -7,27 +7,19 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Resource-scoped signal.
-/// </summary>
+/// <summary>Resource-scoped signal.</summary>
 /// <typeparam name="TResource">Resource type.</typeparam>
 /// <typeparam name="T">Value type.</typeparam>
 internal sealed class UseSignal<TResource, T> : IObservable<T>
     where TResource : IDisposable
 {
-    /// <summary>
-    /// Resource factory.
-    /// </summary>
+    /// <summary>Resource factory.</summary>
     private readonly Func<TResource> _resourceFactory;
 
-    /// <summary>
-    /// Signal factory.
-    /// </summary>
+    /// <summary>Signal factory.</summary>
     private readonly Func<TResource, IObservable<T>> _signalFactory;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="UseSignal{TResource,T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="UseSignal{TResource,T}"/> class.</summary>
     /// <param name="resourceFactory">Resource factory.</param>
     /// <param name="signalFactory">Signal factory.</param>
     public UseSignal(Func<TResource> resourceFactory, Func<TResource, IObservable<T>> signalFactory)
@@ -39,7 +31,7 @@ internal sealed class UseSignal<TResource, T> : IObservable<T>
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -71,34 +63,22 @@ internal sealed class UseSignal<TResource, T> : IObservable<T>
         return sink;
     }
 
-    /// <summary>
-    /// Subscription sink that owns the resource and inner subscription.
-    /// </summary>
+    /// <summary>Subscription sink that owns the resource and inner subscription.</summary>
     private sealed class UseObserver : IObserver<T>, IDisposable
     {
-        /// <summary>
-        /// Owned resource.
-        /// </summary>
+        /// <summary>Owned resource.</summary>
         private readonly IDisposable? _resource;
 
-        /// <summary>
-        /// Wrapped observer.
-        /// </summary>
+        /// <summary>Wrapped observer.</summary>
         private IObserver<T> _observer;
 
-        /// <summary>
-        /// Inner subscription.
-        /// </summary>
+        /// <summary>Inner subscription.</summary>
         private IDisposable? _subscription;
 
-        /// <summary>
-        /// Non-zero once stopped.
-        /// </summary>
+        /// <summary>Non-zero once stopped.</summary>
         private int _stopped;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="UseObserver"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="UseObserver"/> class.</summary>
         /// <param name="observer">Wrapped observer.</param>
         /// <param name="resource">Owned resource.</param>
         public UseObserver(IObserver<T> observer, TResource resource)
@@ -107,18 +87,16 @@ internal sealed class UseSignal<TResource, T> : IObservable<T>
             _resource = resource;
         }
 
-        /// <summary>
-        /// Assigns the inner subscription.
-        /// </summary>
+        /// <summary>Assigns the inner subscription.</summary>
         /// <param name="subscription">Inner subscription.</param>
         public void SetSubscription(IDisposable subscription)
         {
-            if (subscription == null)
+            if (subscription is null)
             {
                 throw new ArgumentNullException(nameof(subscription));
             }
 
-            if (Interlocked.CompareExchange(ref _subscription, subscription, null) != null)
+            if (Interlocked.CompareExchange(ref _subscription, subscription, null) is not null)
             {
                 subscription.Dispose();
                 return;
@@ -154,7 +132,7 @@ internal sealed class UseSignal<TResource, T> : IObservable<T>
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
-            if (error == null)
+            if (error is null)
             {
                 throw new ArgumentNullException(nameof(error));
             }
@@ -195,9 +173,7 @@ internal sealed class UseSignal<TResource, T> : IObservable<T>
         /// <inheritdoc/>
         public void Dispose() => Stop();
 
-        /// <summary>
-        /// Stops and releases owned resources.
-        /// </summary>
+        /// <summary>Stops and releases owned resources.</summary>
         private void Stop()
         {
             if (Interlocked.Exchange(ref _stopped, 1) != 0)
@@ -208,9 +184,7 @@ internal sealed class UseSignal<TResource, T> : IObservable<T>
             Release();
         }
 
-        /// <summary>
-        /// Releases owned resources.
-        /// </summary>
+        /// <summary>Releases owned resources.</summary>
         private void Release()
         {
             _observer = EmptyWitness<T>.Instance;

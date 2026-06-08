@@ -6,94 +6,58 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// SubjectTests.
-/// </summary>
+/// <summary>SubjectTests.</summary>
 public class SignalTests
 {
-    /// <summary>
-    /// Number of values expected in pair buffers.
-    /// </summary>
+    /// <summary>Number of values expected in pair buffers.</summary>
     private const int PairCount = 2;
 
-    /// <summary>
-    /// Number of values skipped between non-overlapping buffers.
-    /// </summary>
+    /// <summary>Number of values skipped between non-overlapping buffers.</summary>
     private const int SkipCount = 2;
 
-    /// <summary>
-    /// Test value two.
-    /// </summary>
+    /// <summary>Test value two.</summary>
     private const int ValueTwo = 2;
 
-    /// <summary>
-    /// Test value three.
-    /// </summary>
+    /// <summary>Test value three.</summary>
     private const int ValueThree = 3;
 
-    /// <summary>
-    /// Test value four.
-    /// </summary>
+    /// <summary>Test value four.</summary>
     private const int ValueFour = 4;
 
-    /// <summary>
-    /// Test value five.
-    /// </summary>
+    /// <summary>Test value five.</summary>
     private const int ValueFive = 5;
 
-    /// <summary>
-    /// Test value six.
-    /// </summary>
+    /// <summary>Test value six.</summary>
     private const int ValueSix = 6;
 
-    /// <summary>
-    /// Test value seven.
-    /// </summary>
+    /// <summary>Test value seven.</summary>
     private const int ValueSeven = 7;
 
-    /// <summary>
-    /// Test value eight.
-    /// </summary>
+    /// <summary>Test value eight.</summary>
     private const int ValueEight = 8;
 
-    /// <summary>
-    /// Divisor used by even-value filters.
-    /// </summary>
+    /// <summary>Divisor used by even-value filters.</summary>
     private const int EvenDivisor = 2;
 
-    /// <summary>
-    /// Multiplier used by select projection tests.
-    /// </summary>
+    /// <summary>Multiplier used by select projection tests.</summary>
     private const int SelectMultiplier = 2;
 
-    /// <summary>
-    /// Expected first pair of buffered values.
-    /// </summary>
+    /// <summary>Expected first pair of buffered values.</summary>
     private static readonly int[] FirstPair = [1, ValueTwo];
 
-    /// <summary>
-    /// Expected second pair of buffered values.
-    /// </summary>
+    /// <summary>Expected second pair of buffered values.</summary>
     private static readonly int[] SecondPair = [ValueThree, ValueFour];
 
-    /// <summary>
-    /// Expected third pair of buffered values.
-    /// </summary>
+    /// <summary>Expected third pair of buffered values.</summary>
     private static readonly int[] ThirdPair = [ValueFive, ValueSix];
 
-    /// <summary>
-    /// Expected single RxVoid notification.
-    /// </summary>
+    /// <summary>Expected single RxVoid notification.</summary>
     private static readonly RxVoid[] SingleRxVoid = [RxVoid.Default];
 
-    /// <summary>
-    /// Expected pair of RxVoid notifications.
-    /// </summary>
+    /// <summary>Expected pair of RxVoid notifications.</summary>
     private static readonly RxVoid[] DoubleRxVoid = [RxVoid.Default, RxVoid.Default];
 
-    /// <summary>
-    /// Called when [next].
-    /// </summary>
+    /// <summary>Called when [next].</summary>
     [Test]
     public void OnNext()
     {
@@ -114,9 +78,7 @@ public class SignalTests
         Assert.Equal(PairCount, value);
     }
 
-    /// <summary>
-    /// Called when [next disposed].
-    /// </summary>
+    /// <summary>Called when [next disposed].</summary>
     [Test]
     public void OnNextDisposed()
     {
@@ -127,9 +89,7 @@ public class SignalTests
         Assert.Throws<ObjectDisposedException>(() => subject.OnNext(1));
     }
 
-    /// <summary>
-    /// Called when [next disposed subscriber].
-    /// </summary>
+    /// <summary>Called when [next disposed subscriber].</summary>
     [Test]
     public void OnNextDisposedSubscriber()
     {
@@ -143,9 +103,7 @@ public class SignalTests
         Assert.Equal(0, value);
     }
 
-    /// <summary>
-    /// Called when [completed].
-    /// </summary>
+    /// <summary>Called when [completed].</summary>
     [Test]
     public void OnCompleted()
     {
@@ -159,9 +117,7 @@ public class SignalTests
         Assert.True(completed);
     }
 
-    /// <summary>
-    /// Called when [completed no op].
-    /// </summary>
+    /// <summary>Called when [completed no op].</summary>
     [Test]
     public void OnCompleted_NoErrors()
     {
@@ -172,9 +128,7 @@ public class SignalTests
         subject.OnCompleted();
     }
 
-    /// <summary>
-    /// Called when [completed once].
-    /// </summary>
+    /// <summary>Called when [completed once].</summary>
     [Test]
     public void OnCompletedOnce()
     {
@@ -192,9 +146,7 @@ public class SignalTests
         Assert.Equal(1, completed);
     }
 
-    /// <summary>
-    /// Called when [completed disposed].
-    /// </summary>
+    /// <summary>Called when [completed disposed].</summary>
     [Test]
     public void OnCompletedDisposed()
     {
@@ -205,9 +157,7 @@ public class SignalTests
         Assert.Throws<ObjectDisposedException>(subject.OnCompleted);
     }
 
-    /// <summary>
-    /// Called when [completed disposed subscriber].
-    /// </summary>
+    /// <summary>Called when [completed disposed subscriber].</summary>
     [Test]
     public void OnCompletedDisposedSubscriber()
     {
@@ -221,9 +171,7 @@ public class SignalTests
         Assert.False(completed);
     }
 
-    /// <summary>
-    /// Called when [error].
-    /// </summary>
+    /// <summary>Called when [error].</summary>
     [Test]
     public void OnError()
     {
@@ -237,9 +185,7 @@ public class SignalTests
         Assert.True(error);
     }
 
-    /// <summary>
-    /// Called when [error once].
-    /// </summary>
+    /// <summary>Called when [error once].</summary>
     [Test]
     public void OnErrorOnce()
     {
@@ -257,9 +203,7 @@ public class SignalTests
         Assert.Equal(1, errors);
     }
 
-    /// <summary>
-    /// Called when [error disposed].
-    /// </summary>
+    /// <summary>Called when [error disposed].</summary>
     [Test]
     public void OnErrorDisposed()
     {
@@ -270,9 +214,7 @@ public class SignalTests
         Assert.Throws<ObjectDisposedException>(() => subject.OnError(new InvalidOperationException()));
     }
 
-    /// <summary>
-    /// Called when [error disposed subscriber].
-    /// </summary>
+    /// <summary>Called when [error disposed subscriber].</summary>
     [Test]
     public void OnErrorDisposedSubscriber()
     {
@@ -286,9 +228,7 @@ public class SignalTests
         Assert.False(error);
     }
 
-    /// <summary>
-    /// Verifies the single observer fast path emits, terminates, and detaches cleanly.
-    /// </summary>
+    /// <summary>Verifies the single observer fast path emits, terminates, and detaches cleanly.</summary>
     [Test]
     public void SingleObserverSubscriptionReceivesLifecycleAndDetaches()
     {
@@ -316,9 +256,7 @@ public class SignalTests
         Assert.False(faulted.HasObservers);
     }
 
-    /// <summary>
-    /// Called when [error rethrows by default].
-    /// </summary>
+    /// <summary>Called when [error rethrows by default].</summary>
     [Test]
     public void OnErrorRethrowsByDefault()
     {
@@ -329,23 +267,17 @@ public class SignalTests
         Assert.Throws<ArgumentException>(() => subject.OnError(new ArgumentException()));
     }
 
-    /// <summary>
-    /// Called when [error null throws].
-    /// </summary>
+    /// <summary>Called when [error null throws].</summary>
     [Test]
     public void OnErrorNullThrows() =>
         Assert.Throws<ArgumentNullException>(() => new Signal<int>().OnError(null!));
 
-    /// <summary>
-    /// Subscribes the null throws.
-    /// </summary>
+    /// <summary>Subscribes the null throws.</summary>
     [Test]
     public void SubscribeNullThrows() =>
         Assert.Throws<ArgumentNullException>(() => new Signal<int>().Subscribe(null!));
 
-    /// <summary>
-    /// Subscribes the disposed throws.
-    /// </summary>
+    /// <summary>Subscribes the disposed throws.</summary>
     [Test]
     public void SubscribeDisposedThrows()
     {
@@ -356,9 +288,7 @@ public class SignalTests
         Assert.Throws<ObjectDisposedException>(() => subject.Subscribe(_ => { }));
     }
 
-    /// <summary>
-    /// Subscribes the on completed.
-    /// </summary>
+    /// <summary>Subscribes the on completed.</summary>
     [Test]
     public void SubscribeOnCompleted()
     {
@@ -371,9 +301,7 @@ public class SignalTests
         Assert.True(completed);
     }
 
-    /// <summary>
-    /// Subscribes the on error.
-    /// </summary>
+    /// <summary>Subscribes the on error.</summary>
     [Test]
     public void SubscribeOnError()
     {
@@ -386,9 +314,7 @@ public class SignalTests
         Assert.True(error);
     }
 
-    /// <summary>
-    /// Subscribes action observers, converts to multi-observer dispatch, and removes each observer independently.
-    /// </summary>
+    /// <summary>Subscribes action observers, converts to multi-observer dispatch, and removes each observer independently.</summary>
     [Test]
     public void SubscribeActionObservers_DisposeIndependently()
     {
@@ -420,9 +346,7 @@ public class SignalTests
         Assert.False(subject.HasObservers);
     }
 
-    /// <summary>
-    /// Subjects the where.
-    /// </summary>
+    /// <summary>Subjects the where.</summary>
     [Test]
     public void SubjectWhere()
     {
@@ -434,9 +358,7 @@ public class SignalTests
         subject.Dispose();
     }
 
-    /// <summary>
-    /// Subjects the select.
-    /// </summary>
+    /// <summary>Subjects the select.</summary>
     [Test]
     public void SubjectSelect()
     {
@@ -446,9 +368,7 @@ public class SignalTests
         subject.Dispose();
     }
 
-    /// <summary>
-    /// Subjects the buffer.
-    /// </summary>
+    /// <summary>Subjects the buffer.</summary>
     [Test]
     public void SubjectBuffer()
     {
@@ -467,9 +387,7 @@ public class SignalTests
         subject.Dispose();
     }
 
-    /// <summary>
-    /// Subjects the buffer skip2.
-    /// </summary>
+    /// <summary>Subjects the buffer skip2.</summary>
     [Test]
     public void SubjectBufferTake2Skip2()
     {
@@ -491,9 +409,7 @@ public class SignalTests
         subject.Dispose();
     }
 
-    /// <summary>
-    /// Subjects the rx void.
-    /// </summary>
+    /// <summary>Subjects the rx void.</summary>
     [Test]
     public void SubjectRxVoid()
     {
@@ -507,41 +423,27 @@ public class SignalTests
         subject.Dispose();
     }
 
-    /// <summary>
-    /// Records integer observer lifecycle calls.
-    /// </summary>
+    /// <summary>Records integer observer lifecycle calls.</summary>
     private sealed class RecordingObserver : IObserver<int>
     {
-        /// <summary>
-        /// Gets the total of observed values.
-        /// </summary>
+        /// <summary>Gets the total of observed values.</summary>
         public int Total { get; private set; }
 
-        /// <summary>
-        /// Gets the number of completion calls.
-        /// </summary>
+        /// <summary>Gets the number of completion calls.</summary>
         public int Completed { get; private set; }
 
-        /// <summary>
-        /// Gets the number of error calls.
-        /// </summary>
+        /// <summary>Gets the number of error calls.</summary>
         public int Errors { get; private set; }
 
-        /// <summary>
-        /// Receives the next value.
-        /// </summary>
+        /// <summary>Receives the next value.</summary>
         /// <param name="value">The value.</param>
         public void OnNext(int value) => Total += value;
 
-        /// <summary>
-        /// Receives an error.
-        /// </summary>
+        /// <summary>Receives an error.</summary>
         /// <param name="error">The error.</param>
         public void OnError(Exception error) => Errors++;
 
-        /// <summary>
-        /// Receives completion.
-        /// </summary>
+        /// <summary>Receives completion.</summary>
         public void OnCompleted() => Completed++;
     }
 }

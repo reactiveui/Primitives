@@ -7,24 +7,16 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Represents the ImmutableReturnInt32Signal class.
-/// </summary>
+/// <summary>Represents the ImmutableReturnInt32Signal class.</summary>
 internal sealed class ImmutableReturnInt32Signal : IRequireCurrentThread<int>, IInlineSignal<int>
 {
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private const int MinCachedValue = -1;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private const int MaxCachedValue = 9;
 
-    /// <summary>
-    /// Executes the new operation.
-    /// </summary>
+    /// <summary>Executes the new operation.</summary>
     /// <returns>The result.</returns>
     private static readonly ImmutableReturnInt32Signal[] Caches =
     [
@@ -41,20 +33,14 @@ internal sealed class ImmutableReturnInt32Signal : IRequireCurrentThread<int>, I
             new(9),
     ];
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly int _x;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ImmutableReturnInt32Signal"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ImmutableReturnInt32Signal"/> class.</summary>
     /// <param name="x">The x value.</param>
     internal ImmutableReturnInt32Signal(int x) => _x = x;
 
-    /// <summary>
-    /// Executes the GetInt32Signals operation.
-    /// </summary>
+    /// <summary>Executes the GetInt32Signals operation.</summary>
     /// <param name="x">The x value.</param>
     /// <returns>The result.</returns>
     public static IObservable<int> GetInt32Signals(int x)
@@ -67,15 +53,11 @@ internal sealed class ImmutableReturnInt32Signal : IRequireCurrentThread<int>, I
         return new ImmediateReturnSignal<int>(x);
     }
 
-    /// <summary>
-    /// Executes the IsRequiredSubscribeOnCurrentThread operation.
-    /// </summary>
+    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>
-    /// Executes the Subscribe operation.
-    /// </summary>
+    /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<int> observer)
@@ -85,9 +67,7 @@ internal sealed class ImmutableReturnInt32Signal : IRequireCurrentThread<int>, I
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>
-    /// Executes the Subscribe operation.
-    /// </summary>
+    /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="onNext">The onNext value.</param>
     /// <param name="onError">The onError value.</param>
     /// <param name="onCompleted">The onCompleted value.</param>

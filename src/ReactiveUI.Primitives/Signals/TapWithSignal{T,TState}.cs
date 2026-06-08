@@ -23,9 +23,7 @@ internal sealed class TapWithSignal<T, TState> : IRequireCurrentThread<T>
     /// <summary>The action invoked for each value and the state.</summary>
     private readonly Action<TState, T> _onNext;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TapWithSignal{T, TState}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="TapWithSignal{T, TState}"/> class.</summary>
     /// <param name="source">The source sequence.</param>
     /// <param name="state">The state passed to the action.</param>
     /// <param name="onNext">The action invoked for each value and the state.</param>
@@ -36,21 +34,17 @@ internal sealed class TapWithSignal<T, TState> : IRequireCurrentThread<T>
         _onNext = onNext;
     }
 
-    /// <summary>
-    /// Determines whether the sink must subscribe on the current thread.
-    /// </summary>
+    /// <summary>Determines whether the sink must subscribe on the current thread.</summary>
     /// <returns><see langword="true"/> when the source requires current-thread subscription.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() =>
         _source is IRequireCurrentThread<T> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread();
 
-    /// <summary>
-    /// Subscribes the observer to the tapped sequence.
-    /// </summary>
+    /// <summary>Subscribes the observer to the tapped sequence.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <returns>The subscription handle.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -73,9 +67,7 @@ internal sealed class TapWithSignal<T, TState> : IRequireCurrentThread<T>
         /// <summary>Whether a terminal notification has been forwarded.</summary>
         private bool _stopped;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="TapWithObserver"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="TapWithObserver"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="state">The state passed to the action.</param>
         /// <param name="onNext">The action invoked for each value and the state.</param>

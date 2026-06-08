@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Subscribes to an observable sequence and executes an asynchronous handler for each element.
-/// </summary>
+/// <summary>Subscribes to an observable sequence and executes an asynchronous handler for each element.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 internal sealed class SubscribeAsyncObservable<T> : IDisposable
 {
@@ -39,9 +37,7 @@ internal sealed class SubscribeAsyncObservable<T> : IDisposable
     /// <summary>Whether the sink has been disposed.</summary>
     private bool _disposed;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SubscribeAsyncObservable{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="SubscribeAsyncObservable{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="onNext">The asynchronous element handler.</param>
     /// <param name="onError">The error handler.</param>

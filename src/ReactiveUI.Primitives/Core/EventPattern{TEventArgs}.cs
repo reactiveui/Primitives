@@ -4,17 +4,13 @@
 
 namespace ReactiveUI.Primitives.Core;
 
-/// <summary>
-/// Represents a .NET event notification as a value.
-/// </summary>
+/// <summary>Represents a .NET event notification as a value.</summary>
 /// <typeparam name="TEventArgs">The event arguments type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public readonly struct EventPattern<TEventArgs> : IEquatable<EventPattern<TEventArgs>>
     where TEventArgs : EventArgs
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventPattern{TEventArgs}"/> struct.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="EventPattern{TEventArgs}"/> struct.</summary>
     /// <param name="sender">The event sender.</param>
     /// <param name="eventArgs">The event arguments.</param>
     public EventPattern(object? sender, TEventArgs eventArgs)
@@ -23,33 +19,23 @@ public readonly struct EventPattern<TEventArgs> : IEquatable<EventPattern<TEvent
         EventArgs = eventArgs ?? throw new ArgumentNullException(nameof(eventArgs));
     }
 
-    /// <summary>
-    /// Gets the event sender.
-    /// </summary>
+    /// <summary>Gets the event sender.</summary>
     public object? Sender { get; }
 
-    /// <summary>
-    /// Gets the event arguments.
-    /// </summary>
+    /// <summary>Gets the event arguments.</summary>
     public TEventArgs EventArgs { get; }
 
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString();
 
-    /// <summary>
-    /// Compares two event pattern values for equality.
-    /// </summary>
+    /// <summary>Compares two event pattern values for equality.</summary>
     /// <param name="left">The first value.</param>
     /// <param name="right">The second value.</param>
     /// <returns><see langword="true"/> when the values are equal; otherwise, <see langword="false"/>.</returns>
     public static bool operator ==(EventPattern<TEventArgs> left, EventPattern<TEventArgs> right) => left.Equals(right);
 
-    /// <summary>
-    /// Compares two event pattern values for inequality.
-    /// </summary>
+    /// <summary>Compares two event pattern values for inequality.</summary>
     /// <param name="left">The first value.</param>
     /// <param name="right">The second value.</param>
     /// <returns><see langword="true"/> when the values are not equal; otherwise, <see langword="false"/>.</returns>

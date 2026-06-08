@@ -6,78 +6,61 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides extension methods for working with asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
 /// <remarks>The methods in this class enable querying and aggregating data from asynchronous observables in a
 /// manner similar to LINQ operators. These extensions are designed to be used with types that implement asynchronous
 /// observable patterns, allowing for efficient and composable asynchronous data processing.</remarks>
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Asynchronously returns the number of elements in the sequence that satisfy an optional predicate.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
+    /// <summary>Asynchronous 64-bit element-counting operators for an observable source sequence.</summary>
     /// <param name="this">The source observable sequence.</param>
-    /// <param name="predicate">A function to test each element for a condition. If null, all elements are counted.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the number of elements that
-    /// satisfy the predicate, or the total number of elements if the predicate is null.</returns>
-    public static ValueTask<long> LongCountAsync<T>(this IObservableAsync<T> @this, Func<T, bool>? predicate)
-        => @this.LongCountAsync(predicate, CancellationToken.None);
-
-    /// <summary>
-    /// Asynchronously returns the number of elements in the sequence that satisfy an optional predicate.
-    /// </summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <param name="this">The source observable sequence.</param>
-    /// <param name="predicate">A function to test each element for a condition. If null, all elements are counted.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the number of elements that
-    /// satisfy the predicate, or the total number of elements if the predicate is null.</returns>
-    public static async ValueTask<long> LongCountAsync<T>(
-        this IObservableAsync<T> @this,
-        Func<T, bool>? predicate,
-        CancellationToken cancellationToken)
+    extension<T>(IObservableAsync<T> @this)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        var observer = new LongCountTaskWitness<T>(predicate, cancellationToken);
-        await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-        return await observer.AwaitResultAsync().ConfigureAwait(false);
+        /// <summary>Asynchronously returns the number of elements in the sequence that satisfy an optional predicate.</summary>
+        /// <param name="predicate">A function to test each element for a condition. If null, all elements are counted.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the number of elements that
+        /// satisfy the predicate, or the total number of elements if the predicate is null.</returns>
+        public ValueTask<long> LongCountAsync(Func<T, bool>? predicate)
+            => @this.LongCountAsync(predicate, CancellationToken.None);
+
+        /// <summary>Asynchronously returns the number of elements in the sequence that satisfy an optional predicate.</summary>
+        /// <param name="predicate">A function to test each element for a condition. If null, all elements are counted.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the number of elements that
+        /// satisfy the predicate, or the total number of elements if the predicate is null.</returns>
+        public async ValueTask<long> LongCountAsync(
+            Func<T, bool>? predicate,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var observer = new LongCountTaskWitness<T>(predicate, cancellationToken);
+            await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+            return await observer.AwaitResultAsync().ConfigureAwait(false);
+        }
+
+        /// <summary>Asynchronously returns the total number of elements in the sequence as a 64-bit integer.</summary>
+        /// <returns>A value task representing the asynchronous operation. The result contains the number of elements in the
+        /// sequence as a 64-bit integer.</returns>
+        public ValueTask<long> LongCountAsync()
+            => @this.LongCountAsync(null, CancellationToken.None);
+
+        /// <summary>Asynchronously returns the total number of elements in the sequence as a 64-bit integer.</summary>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+        /// <returns>A value task representing the asynchronous operation. The result contains the number of elements in the
+        /// sequence as a 64-bit integer.</returns>
+        public ValueTask<long> LongCountAsync(CancellationToken cancellationToken)
+            => @this.LongCountAsync(null, cancellationToken);
     }
 
-    /// <summary>
-    /// Asynchronously returns the total number of elements in the sequence as a 64-bit integer.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <param name="this">The source observable sequence.</param>
-    /// <returns>A value task representing the asynchronous operation. The result contains the number of elements in the
-    /// sequence as a 64-bit integer.</returns>
-    public static ValueTask<long> LongCountAsync<T>(this IObservableAsync<T> @this)
-        => @this.LongCountAsync(null, CancellationToken.None);
-
-    /// <summary>
-    /// Asynchronously returns the total number of elements in the sequence as a 64-bit integer.
-    /// </summary>
-    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <param name="this">The source observable sequence.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-    /// <returns>A value task representing the asynchronous operation. The result contains the number of elements in the
-    /// sequence as a 64-bit integer.</returns>
-    public static ValueTask<long> LongCountAsync<T>(this IObservableAsync<T> @this, CancellationToken cancellationToken)
-        => @this.LongCountAsync(null, cancellationToken);
-
-    /// <summary>
-    /// Witness that counts elements in a sequence as a 64-bit integer, optionally filtered by a predicate.
-    /// </summary>
+    /// <summary>Witness that counts elements in a sequence as a 64-bit integer, optionally filtered by a predicate.</summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="predicate">An optional predicate to filter elements. If null, all elements are counted.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     internal sealed class LongCountTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
         : TaskResultWitnessAsyncBase<T, long>(cancellationToken)
     {
-        /// <summary>
-        /// The running count of elements that satisfy the predicate.
-        /// </summary>
+        /// <summary>The running count of elements that satisfy the predicate.</summary>
         private long _count;
 
         /// <inheritdoc/>

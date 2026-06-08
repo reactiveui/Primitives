@@ -4,20 +4,14 @@
 
 namespace ReactiveUI.Primitives.Core;
 
-/// <summary>
-/// Observer that rejects every notification because the subscription has already been disposed.
-/// </summary>
+/// <summary>Observer that rejects every notification because the subscription has already been disposed.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
 internal sealed class DisposedWitness<T> : IObserver<T>
 {
-    /// <summary>
-    /// Gets the shared disposed witness instance.
-    /// </summary>
+    /// <summary>Gets the shared disposed witness instance.</summary>
     public static readonly DisposedWitness<T> Instance = new();
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DisposedWitness{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="DisposedWitness{T}"/> class.</summary>
     private DisposedWitness()
     {
     }

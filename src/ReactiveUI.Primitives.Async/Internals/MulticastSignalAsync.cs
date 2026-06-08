@@ -9,38 +9,26 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Internals;
 
-/// <summary>
-/// A connectable observable that multicasts notifications from a source observable through a signal.
-/// </summary>
+/// <summary>A connectable observable that multicasts notifications from a source observable through a signal.</summary>
 /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
 /// <param name="source">The source signal to multicast.</param>
 /// <param name="signal">The signal used to broadcast notifications to multiple observers.</param>
 internal sealed class MulticastSignalAsync<T>(IObservableAsync<T> source, ISignalAsync<T> signal)
     : ConnectableSignalAsync<T>, IDisposable
 {
-    /// <summary>
-    /// The cancellation token source that is cancelled when this instance is disposed.
-    /// </summary>
+    /// <summary>The cancellation token source that is cancelled when this instance is disposed.</summary>
     private readonly CancellationTokenSource _disposedCts = new();
 
-    /// <summary>
-    /// The asynchronous gate used to synchronize connection and disconnection operations.
-    /// </summary>
+    /// <summary>The asynchronous gate used to synchronize connection and disconnection operations.</summary>
     private readonly AsyncSerialGate _gate = new();
 
-    /// <summary>
-    /// The current connection subscription, or <see langword="null"/> if not connected.
-    /// </summary>
+    /// <summary>The current connection subscription, or <see langword="null"/> if not connected.</summary>
     private SingleAssignmentDisposableAsync? _connection;
 
-    /// <summary>
-    /// A value indicating whether this instance has been disposed.
-    /// </summary>
+    /// <summary>A value indicating whether this instance has been disposed.</summary>
     private int _isDisposed;
 
-    /// <summary>
-    /// Gets the cancellation token that is cancelled when this instance is disposed.
-    /// </summary>
+    /// <summary>Gets the cancellation token that is cancelled when this instance is disposed.</summary>
     private CancellationToken DisposedCancellationToken => _disposedCts.Token;
 
     /// <summary>
@@ -73,7 +61,7 @@ internal sealed class MulticastSignalAsync<T>(IObservableAsync<T> source, ISigna
         {
             using (await _gate.EnterAsync(token).ConfigureAwait(false))
             {
-                if (_connection != null)
+                if (_connection is not null)
                 {
                     return _connection;
                 }
@@ -106,9 +94,7 @@ internal sealed class MulticastSignalAsync<T>(IObservableAsync<T> source, ISigna
         }
     }
 
-    /// <summary>
-    /// Releases all resources used by the current instance of the class.
-    /// </summary>
+    /// <summary>Releases all resources used by the current instance of the class.</summary>
     /// <remarks>Call this method when you are finished using the object to release unmanaged resources and
     /// perform other cleanup operations. After calling Dispose, the object should not be used.</remarks>
     [SuppressMessage(
@@ -128,9 +114,7 @@ internal sealed class MulticastSignalAsync<T>(IObservableAsync<T> source, ISigna
         _disposedCts.Dispose();
     }
 
-    /// <summary>
-    /// Subscribes the specified asynchronous observer to receive notifications from the sequence.
-    /// </summary>
+    /// <summary>Subscribes the specified asynchronous observer to receive notifications from the sequence.</summary>
     /// <param name="observer">The asynchronous observer that will receive notifications. Cannot be null.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the subscription operation.</param>
     /// <returns>A task that represents the asynchronous subscription operation. The result contains an object that can be

@@ -11,14 +11,10 @@ using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests for internal infrastructure coverage.
-/// </summary>
+/// <summary>Tests for internal infrastructure coverage.</summary>
 public partial class InternalInfrastructureCoverageTests
 {
-    /// <summary>
-    /// Covers factory scheduling, task continuations, and timer aliases with deterministic time.
-    /// </summary>
+    /// <summary>Covers factory scheduling, task continuations, and timer aliases with deterministic time.</summary>
     /// <returns>A task that completes when asynchronous continuations are observed.</returns>
     [Test]
     public async Task FactoryAliasesScheduledRangesTasksAndTimersCoverRemainderBranches()
@@ -91,9 +87,7 @@ public partial class InternalInfrastructureCoverageTests
         Assert.Throws<ArgumentNullException>(() => Signal.After(TimeSpan.Zero, TimeSpan.FromTicks(One), null!));
     }
 
-    /// <summary>
-    /// Covers task-signal cancellation registration and disposal branches.
-    /// </summary>
+    /// <summary>Covers task-signal cancellation registration and disposal branches.</summary>
     [Test]
     public void TaskSignalCoversCancellationAndDisposeBranches()
     {
@@ -111,9 +105,7 @@ public partial class InternalInfrastructureCoverageTests
         Assert.Throws<ArgumentNullException>(() => _ = new TaskSignal<int>(null!));
     }
 
-    /// <summary>
-    /// Covers non-completed task factory continuations for success, fault, cancellation, and disposed subscriptions.
-    /// </summary>
+    /// <summary>Covers non-completed task factory continuations for success, fault, cancellation, and disposed subscriptions.</summary>
     /// <returns>A task that completes when all continuations have been observed.</returns>
     [Test]
     public async Task TaskFactoryContinuationsCoverPendingTaskBranches()
@@ -157,9 +149,7 @@ public partial class InternalInfrastructureCoverageTests
         Assert.Contains(nameof(TaskCanceledException), finalErrors);
     }
 
-    /// <summary>
-    /// Covers small value/factory/inline branches with public surface behavior.
-    /// </summary>
+    /// <summary>Covers small value/factory/inline branches with public surface behavior.</summary>
     [Test]
     public void ValueFactoryAndInlineBranchesCoverPublicEdgeBehavior()
     {
@@ -222,9 +212,7 @@ public partial class InternalInfrastructureCoverageTests
         Assert.Equal(ExpectedMappedErrors, mappedErrors);
     }
 
-    /// <summary>
-    /// Covers low-level equality, scheduling, witness, and create/defer/throw observer defensive paths.
-    /// </summary>
+    /// <summary>Covers low-level equality, scheduling, witness, and create/defer/throw observer defensive paths.</summary>
     [Test]
     public void LowLevelReflectionAndSchedulingPathsCoverRemainingBranches()
     {

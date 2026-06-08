@@ -204,9 +204,7 @@ public partial class CombineLatestOperatorTests
         await failTask;
     }
 
-    /// <summary>
-    /// Verifies that CombineLatestEnumerable OnErrorResumeAsync returns early when disposed.
-    /// </summary>
+    /// <summary>Verifies that CombineLatestEnumerable OnErrorResumeAsync returns early when disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableOnErrorResumeAfterDispose_ThenReturnsEarly()
@@ -247,9 +245,7 @@ public partial class CombineLatestOperatorTests
         await failTask;
     }
 
-    /// <summary>
-    /// Verifies that CombineLatestEnumerable OnCompleted returns early for an already-completed index.
-    /// </summary>
+    /// <summary>Verifies that CombineLatestEnumerable OnCompleted returns early for an already-completed index.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableDoubleComplete_ThenSecondIsIgnored()
@@ -284,9 +280,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(completionCount).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatestEnumerable completes when a source completes without emitting.
-    /// </summary>
+    /// <summary>Verifies that CombineLatestEnumerable completes when a source completes without emitting.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableSourceCompletesWithoutValue_ThenCompletesImmediately()
@@ -313,9 +307,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatestEnumerable returns early when disposed during subscribe loop.
-    /// </summary>
+    /// <summary>Verifies that CombineLatestEnumerable returns early when disposed during subscribe loop.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableDisposedDuringSubscribeLoop_ThenReturnsEarly()

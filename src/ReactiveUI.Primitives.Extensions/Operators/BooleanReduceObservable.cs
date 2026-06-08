@@ -92,43 +92,24 @@ internal sealed class BooleanReduceObservable(IEnumerable<IObservable<bool>> sou
         /// <summary>Shared gate / value cache / terminal-state plumbing.</summary>
         private readonly ReduceSinkState<bool, bool> _state = new(downstream, count);
 
+        /// <summary>Reduces the per-source latest values to whether every source holds the target value.</summary>
+        private readonly Func<bool?[], bool> _reduce = values =>
+        {
+            for (var i = 0; i < values.Length; i++)
+            {
+                if (values[i] != target)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        };
+
         /// <summary>Handles OnNext from a source.</summary>
         /// <param name="index">Source index.</param>
         /// <param name="value">Emitted value.</param>
-        public void OnNext(int index, bool value)
-        {
-            lock (_state.Gate)
-            {
-                if (_state.IsDone)
-                {
-                    return;
-                }
-
-                if (!_state.Values[index].HasValue)
-                {
-                    _state.HasValueCount++;
-                }
-
-                _state.Values[index] = value;
-
-                if (!_state.AllValuesPresent)
-                {
-                    return;
-                }
-
-                var matches = true;
-                for (var i = 0; i < _state.Values.Length; i++)
-                {
-                    if (_state.Values[i] != target)
-                    {
-                        matches = false;
-                        break;
-                    }
-                }
-
-                _state.Downstream.OnNext(matches);
-            }
-        }
+        public void OnNext(int index, bool value) => _state.HandleNext(index, value, _reduce);
 
         /// <summary>Handles OnError from any source.</summary>
         /// <param name="error">The error.</param>

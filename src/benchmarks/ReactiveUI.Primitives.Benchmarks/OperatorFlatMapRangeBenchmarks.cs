@@ -9,15 +9,11 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks for flattening selectors.
-/// </summary>
+/// <summary>Benchmarks for flattening selectors.</summary>
 [MemoryDiagnoser]
 public class OperatorFlatMapRangeBenchmarks
 {
-    /// <summary>
-    /// Baseline flatten and map chain using primitives.
-    /// </summary>
+    /// <summary>Baseline flatten and map chain using primitives.</summary>
     /// <returns>The sum of emitted values.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesFlatMapRange()
@@ -28,9 +24,7 @@ public class OperatorFlatMapRangeBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Flatten and map chain using System.Reactive.
-    /// </summary>
+    /// <summary>Flatten and map chain using System.Reactive.</summary>
     /// <returns>The sum of emitted values.</returns>
     [Benchmark]
     public int SystemReactiveSelectManyRange()
@@ -41,9 +35,7 @@ public class OperatorFlatMapRangeBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Flatten and map chain using R3.
-    /// </summary>
+    /// <summary>Flatten and map chain using R3.</summary>
     /// <returns>The sum of emitted values.</returns>
     [Benchmark]
     public int R3SelectManyRange()

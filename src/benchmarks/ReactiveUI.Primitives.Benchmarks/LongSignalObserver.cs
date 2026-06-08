@@ -4,34 +4,22 @@
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Long observer used by Signal and System.Reactive benchmark cases.
-/// </summary>
+/// <summary>Long observer used by Signal and System.Reactive benchmark cases.</summary>
 internal sealed class LongSignalObserver : IObserver<long>
 {
-    /// <summary>
-    /// Gets the total of received values.
-    /// </summary>
+    /// <summary>Gets the total of received values.</summary>
     public long Total { get; private set; }
 
-    /// <summary>
-    /// Gets the number of onNext calls.
-    /// </summary>
+    /// <summary>Gets the number of onNext calls.</summary>
     public int NextCount { get; private set; }
 
-    /// <summary>
-    /// Gets the last value observed.
-    /// </summary>
+    /// <summary>Gets the last value observed.</summary>
     public long LastValue { get; private set; }
 
-    /// <summary>
-    /// Gets the number of terminal completions observed.
-    /// </summary>
+    /// <summary>Gets the number of terminal completions observed.</summary>
     public int CompletionCount { get; private set; }
 
-    /// <summary>
-    /// Gets the number of errors observed.
-    /// </summary>
+    /// <summary>Gets the number of errors observed.</summary>
     public int ErrorCount { get; private set; }
 
     /// <inheritdoc/>

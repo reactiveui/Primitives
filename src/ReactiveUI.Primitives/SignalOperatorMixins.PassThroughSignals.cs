@@ -7,12 +7,12 @@ using ReactiveUI.Primitives.Core;
 
 namespace ReactiveUI.Primitives;
 
-/// <content>
+/// <summary>
 /// Dedicated signals/sinks for single-source pass-through operators (Tap, IgnoreValues, Spark,
 /// Unspark, TimeInterval), replacing the per-subscription <c>Signal.CreateSafe(observer =&gt; ...)</c>
 /// closure with a signal that holds the parameters and a sink that forwards.
-/// </content>
-public static partial class LinqMixins
+/// </summary>
+public static partial class LinqExtensions
 {
     /// <summary>Dedicated signal for <c>Tap</c> (side-effecting pass-through).</summary>
     /// <typeparam name="T">The value type.</typeparam>
@@ -46,7 +46,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -71,7 +71,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -96,7 +96,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<Spark<T>> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -121,7 +121,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -154,7 +154,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TimeInterval<T>> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }

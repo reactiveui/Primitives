@@ -14,20 +14,14 @@ using RxSubject = System.Reactive.Subjects.Subject<int>;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks for time and scheduler operators.
-/// </summary>
+/// <summary>Benchmarks for time and scheduler operators.</summary>
 [MemoryDiagnoser]
 public class OperatorTimeSchedulerBenchmarks
 {
-    /// <summary>
-    /// The number of values produced by each benchmarked sequence.
-    /// </summary>
+    /// <summary>The number of values produced by each benchmarked sequence.</summary>
     private const int Count = 16;
 
-    /// <summary>
-    /// Benchmarks delayed range delivery.
-    /// </summary>
+    /// <summary>Benchmarks delayed range delivery.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesDelayRange()
@@ -39,9 +33,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks delayed range delivery using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks delayed range delivery using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveDelayRange()
@@ -53,9 +45,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks delayed range delivery using R3.
-    /// </summary>
+    /// <summary>Benchmarks delayed range delivery using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3DelayRange()
@@ -71,9 +61,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks delayed subscription.
-    /// </summary>
+    /// <summary>Benchmarks delayed subscription.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesDelayStartRange()
@@ -85,9 +73,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks delayed subscription using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks delayed subscription using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveDelayStartRange()
@@ -101,9 +87,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks delayed subscription using R3.
-    /// </summary>
+    /// <summary>Benchmarks delayed subscription using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3DelayStartRange()
@@ -119,9 +103,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks throttle over a burst.
-    /// </summary>
+    /// <summary>Benchmarks throttle over a burst.</summary>
     /// <returns>The last observed value.</returns>
     [Benchmark]
     public int PrimitivesThrottleBurst()
@@ -139,9 +121,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.LastValue;
     }
 
-    /// <summary>
-    /// Benchmarks throttle over a burst using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks throttle over a burst using System.Reactive.</summary>
     /// <returns>The last observed value.</returns>
     [Benchmark]
     public int SystemReactiveThrottleBurst()
@@ -159,9 +139,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.LastValue;
     }
 
-    /// <summary>
-    /// Benchmarks debounce over a burst using R3.
-    /// </summary>
+    /// <summary>Benchmarks debounce over a burst using R3.</summary>
     /// <returns>The last observed value.</returns>
     [Benchmark]
     public int R3ThrottleBurst()
@@ -180,9 +158,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.LastValue;
     }
 
-    /// <summary>
-    /// Benchmarks sampling the latest value.
-    /// </summary>
+    /// <summary>Benchmarks sampling the latest value.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesSampleLatest()
@@ -196,9 +172,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks sampling the latest value using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks sampling the latest value using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveSampleLatest()
@@ -212,9 +186,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks sampling the latest value using R3 throttle-last semantics.
-    /// </summary>
+    /// <summary>Benchmarks sampling the latest value using R3 throttle-last semantics.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3SampleLatest()
@@ -229,9 +201,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks timestamp projection.
-    /// </summary>
+    /// <summary>Benchmarks timestamp projection.</summary>
     /// <returns>The number of timestamps observed.</returns>
     [Benchmark]
     public int PrimitivesTimestampRange()
@@ -241,9 +211,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks timestamp projection using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks timestamp projection using System.Reactive.</summary>
     /// <returns>The number of timestamps observed.</returns>
     [Benchmark]
     public int SystemReactiveTimestampRange()
@@ -253,9 +221,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks timestamp projection using R3.
-    /// </summary>
+    /// <summary>Benchmarks timestamp projection using R3.</summary>
     /// <returns>The number of timestamps observed.</returns>
     [Benchmark]
     public int R3TimestampRange()
@@ -265,9 +231,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks time-interval projection.
-    /// </summary>
+    /// <summary>Benchmarks time-interval projection.</summary>
     /// <returns>The number of intervals observed.</returns>
     [Benchmark]
     public int PrimitivesTimeIntervalRange()
@@ -277,9 +241,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks time-interval projection using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks time-interval projection using System.Reactive.</summary>
     /// <returns>The number of intervals observed.</returns>
     [Benchmark]
     public int SystemReactiveTimeIntervalRange()
@@ -291,9 +253,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks time-interval projection using R3.
-    /// </summary>
+    /// <summary>Benchmarks time-interval projection using R3.</summary>
     /// <returns>The number of intervals observed.</returns>
     [Benchmark]
     public int R3TimeIntervalRange()
@@ -303,9 +263,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks timeout error delivery after a source becomes idle.
-    /// </summary>
+    /// <summary>Benchmarks timeout error delivery after a source becomes idle.</summary>
     /// <returns>The number of timeout errors observed.</returns>
     [Benchmark]
     public int PrimitivesTimeoutIdle()
@@ -319,9 +277,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.ErrorCount;
     }
 
-    /// <summary>
-    /// Benchmarks timeout error delivery after a source becomes idle using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks timeout error delivery after a source becomes idle using System.Reactive.</summary>
     /// <returns>The number of timeout errors observed.</returns>
     [Benchmark]
     public int SystemReactiveTimeoutIdle()
@@ -335,9 +291,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.ErrorCount;
     }
 
-    /// <summary>
-    /// Benchmarks timeout error delivery after a source becomes idle using R3.
-    /// </summary>
+    /// <summary>Benchmarks timeout error delivery after a source becomes idle using R3.</summary>
     /// <returns>The number of timeout errors observed.</returns>
     [Benchmark]
     public int R3TimeoutIdle()
@@ -355,9 +309,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.ErrorCount;
     }
 
-    /// <summary>
-    /// Benchmarks immediate observe-on dispatch.
-    /// </summary>
+    /// <summary>Benchmarks immediate observe-on dispatch.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesObserveOnImmediate()
@@ -367,9 +319,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks immediate observe-on dispatch using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks immediate observe-on dispatch using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveObserveOnImmediate()
@@ -379,9 +329,7 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks immediate observe-on dispatch using R3.
-    /// </summary>
+    /// <summary>Benchmarks immediate observe-on dispatch using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3ObserveOnImmediate()
@@ -392,28 +340,20 @@ public class OperatorTimeSchedulerBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// A synchronization context that invokes callbacks synchronously on the calling thread.
-    /// </summary>
+    /// <summary>A synchronization context that invokes callbacks synchronously on the calling thread.</summary>
     private sealed class ImmediateSynchronizationContext : SynchronizationContext, IDisposable
     {
-        /// <summary>
-        /// Invokes the callback synchronously.
-        /// </summary>
+        /// <summary>Invokes the callback synchronously.</summary>
         /// <param name="d">The callback to invoke.</param>
         /// <param name="state">The state passed to the callback.</param>
         public override void Post(SendOrPostCallback d, object? state) => d(state);
 
-        /// <summary>
-        /// Invokes the callback synchronously.
-        /// </summary>
+        /// <summary>Invokes the callback synchronously.</summary>
         /// <param name="d">The callback to invoke.</param>
         /// <param name="state">The state passed to the callback.</param>
         public override void Send(SendOrPostCallback d, object? state) => d(state);
 
-        /// <summary>
-        /// Releases the resources used by the synchronization context.
-        /// </summary>
+        /// <summary>Releases the resources used by the synchronization context.</summary>
         public void Dispose()
         {
         }

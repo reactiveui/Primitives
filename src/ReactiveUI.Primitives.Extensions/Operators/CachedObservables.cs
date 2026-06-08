@@ -6,13 +6,9 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Shared, cached observable singletons for frequently emitted trivial values.
-/// </summary>
+/// <summary>Shared, cached observable singletons for frequently emitted trivial values.</summary>
 public static class CachedObservables
 {
-    /// <summary>
-    /// Gets a cached observable that synchronously emits a single <see cref="RxVoid.Default"/> and completes.
-    /// </summary>
+    /// <summary>Gets a cached observable that synchronously emits a single <see cref="RxVoid.Default"/> and completes.</summary>
     public static IObservable<RxVoid> UnitDefault { get; } = new SingleValueObservable<RxVoid>(RxVoid.Default);
 }

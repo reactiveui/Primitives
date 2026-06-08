@@ -6,26 +6,18 @@ using ReactiveUI.Primitives.Core;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// Represents the MapSignal class.
-/// </summary>
+/// <summary>Represents the MapSignal class.</summary>
 /// <typeparam name="TSource">The TSource type.</typeparam>
 /// <typeparam name="TResult">The TResult type.</typeparam>
 public sealed class MapSignal<TSource, TResult> : IRequireCurrentThread<TResult>
 {
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly IObservable<TSource> _source;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly Func<TSource, TResult> _selector;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MapSignal{TSource,TResult}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="MapSignal{TSource,TResult}"/> class.</summary>
     /// <param name="source">The source value.</param>
     /// <param name="selector">The selector value.</param>
     public MapSignal(IObservable<TSource> source, Func<TSource, TResult> selector)
@@ -34,21 +26,17 @@ public sealed class MapSignal<TSource, TResult> : IRequireCurrentThread<TResult>
         _selector = selector;
     }
 
-    /// <summary>
-    /// Executes the IsRequiredSubscribeOnCurrentThread operation.
-    /// </summary>
+    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() =>
         _source is IRequireCurrentThread<TSource> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread();
 
-    /// <summary>
-    /// Executes the Subscribe operation.
-    /// </summary>
+    /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<TResult> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -56,29 +44,19 @@ public sealed class MapSignal<TSource, TResult> : IRequireCurrentThread<TResult>
         return _source.Subscribe(new MapObserver(observer, _selector));
     }
 
-    /// <summary>
-    /// Represents the MapObserver class.
-    /// </summary>
+    /// <summary>Represents the MapObserver class.</summary>
     private sealed class MapObserver : IObserver<TSource>
     {
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
+        /// <summary>Stores state for the signal implementation.</summary>
         private readonly IObserver<TResult> _observer;
 
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
+        /// <summary>Stores state for the signal implementation.</summary>
         private readonly Func<TSource, TResult> _selector;
 
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
+        /// <summary>Stores state for the signal implementation.</summary>
         private bool _stopped;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MapObserver"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="MapObserver"/> class.</summary>
         /// <param name="observer">The observer value.</param>
         /// <param name="selector">The selector value.</param>
         public MapObserver(IObserver<TResult> observer, Func<TSource, TResult> selector)
@@ -87,9 +65,7 @@ public sealed class MapSignal<TSource, TResult> : IRequireCurrentThread<TResult>
             _selector = selector;
         }
 
-        /// <summary>
-        /// Executes the OnCompleted operation.
-        /// </summary>
+        /// <summary>Executes the OnCompleted operation.</summary>
         public void OnCompleted()
         {
             if (_stopped)
@@ -101,9 +77,7 @@ public sealed class MapSignal<TSource, TResult> : IRequireCurrentThread<TResult>
             _observer.OnCompleted();
         }
 
-        /// <summary>
-        /// Executes the OnError operation.
-        /// </summary>
+        /// <summary>Executes the OnError operation.</summary>
         /// <param name="error">The error value.</param>
         public void OnError(Exception error)
         {
@@ -116,9 +90,7 @@ public sealed class MapSignal<TSource, TResult> : IRequireCurrentThread<TResult>
             _observer.OnError(error);
         }
 
-        /// <summary>
-        /// Executes the OnNext operation.
-        /// </summary>
+        /// <summary>Executes the OnNext operation.</summary>
         /// <param name="value">The value.</param>
         public void OnNext(TSource value)
         {

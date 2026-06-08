@@ -4,30 +4,20 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Observer for long-counting all values.
-/// </summary>
+/// <summary>Observer for long-counting all values.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 public sealed class LongCountObserver<T> : SingleSourceObserver<T>
 {
-    /// <summary>
-    /// The downstream observer.
-    /// </summary>
+    /// <summary>The downstream observer.</summary>
     private readonly IObserver<long> _observer;
 
-    /// <summary>
-    /// The running count.
-    /// </summary>
+    /// <summary>The running count.</summary>
     private long _count;
 
-    /// <summary>
-    /// A value indicating whether the observer has terminated.
-    /// </summary>
+    /// <summary>A value indicating whether the observer has terminated.</summary>
     private bool _done;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="LongCountObserver{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="LongCountObserver{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     public LongCountObserver(IObserver<long> observer) => _observer = observer;
 

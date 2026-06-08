@@ -45,9 +45,7 @@ internal sealed class ScheduledValueObservable<T> : IObservable<T>
     /// <summary><c>true</c> when a delay is configured (relative or absolute).</summary>
     private readonly bool _hasDelay;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ScheduledValueObservable{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ScheduledValueObservable{T}"/> class.</summary>
     /// <param name="value">The value to emit.</param>
     /// <param name="scheduler">The scheduler used to dispatch the emission.</param>
     /// <param name="dueTime">Optional relative delay before emission.</param>
@@ -113,10 +111,7 @@ internal sealed class ScheduledValueObservable<T> : IObservable<T>
         });
     }
 
-    /// <summary>
-    /// Carries the per-subscription state into the scheduled callback so the
-    /// scheduler lambda does not capture any fields.
-    /// </summary>
+    /// <summary>Carries the per-subscription state into the scheduled callback so the scheduler lambda does not capture any fields.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="value">The value to emit.</param>
     /// <param name="transform">The optional transform.</param>
@@ -127,10 +122,7 @@ internal sealed class ScheduledValueObservable<T> : IObservable<T>
         Func<T, T>? transform,
         Action<T>? action)
     {
-        /// <summary>
-        /// Applies the optional side-effect and transform, then emits the value
-        /// followed by completion to the captured observer.
-        /// </summary>
+        /// <summary>Applies the optional side-effect and transform, then emits the value followed by completion to the captured observer.</summary>
         public void Emit()
         {
             // Preserves the original Observable.Create-based semantics: the

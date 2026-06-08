@@ -6,29 +6,19 @@ using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests for internal observable helper operators.
-/// </summary>
+/// <summary>Tests for internal observable helper operators.</summary>
 public class ObservableMixinsTests
 {
-    /// <summary>
-    /// First emitted source value.
-    /// </summary>
+    /// <summary>First emitted source value.</summary>
     private const int FirstValue = 1;
 
-    /// <summary>
-    /// Second emitted source value.
-    /// </summary>
+    /// <summary>Second emitted source value.</summary>
     private const int SecondValue = 2;
 
-    /// <summary>
-    /// Stopper signal value.
-    /// </summary>
+    /// <summary>Stopper signal value.</summary>
     private const string StopValue = "stop";
 
-    /// <summary>
-    /// Verifies that <c>TakeUntil</c> completes when the other observable emits.
-    /// </summary>
+    /// <summary>Verifies that <c>TakeUntil</c> completes when the other observable emits.</summary>
     [Test]
     public void WhenOtherEmits_ThenCompletesAndStopsForwardingSource()
     {
@@ -48,9 +38,7 @@ public class ObservableMixinsTests
         Assert.True(completed);
     }
 
-    /// <summary>
-    /// Verifies that <c>TakeUntil</c> keeps the source alive when the other observable completes without a value.
-    /// </summary>
+    /// <summary>Verifies that <c>TakeUntil</c> keeps the source alive when the other observable completes without a value.</summary>
     [Test]
     public void WhenOtherCompletesWithoutValue_ThenSourceContinues()
     {
@@ -71,9 +59,7 @@ public class ObservableMixinsTests
         Assert.True(completed);
     }
 
-    /// <summary>
-    /// Verifies that <c>TakeUntil</c> forwards errors from the other observable.
-    /// </summary>
+    /// <summary>Verifies that <c>TakeUntil</c> forwards errors from the other observable.</summary>
     [Test]
     public void WhenOtherErrors_ThenErrorIsForwardedAndSourceStops()
     {
@@ -96,9 +82,7 @@ public class ObservableMixinsTests
         Assert.False(completed);
     }
 
-    /// <summary>
-    /// Throws when an unexpected error arrives.
-    /// </summary>
+    /// <summary>Throws when an unexpected error arrives.</summary>
     /// <param name="exception">The unexpected exception.</param>
     private static void ThrowUnexpectedError(Exception exception) =>
         throw new InvalidOperationException("Unexpected error.", exception);

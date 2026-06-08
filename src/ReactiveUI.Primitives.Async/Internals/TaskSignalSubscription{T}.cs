@@ -16,14 +16,10 @@ namespace ReactiveUI.Primitives.Async.Internals;
 /// <param name="observer">The observer that receives notifications for the subscription. Cannot be null.</param>
 internal abstract class TaskSignalSubscription<T>(IObserverAsync<T> observer) : IAsyncDisposable
 {
-    /// <summary>
-    /// The task completion source used to signal when the subscription's asynchronous operation has finished.
-    /// </summary>
+    /// <summary>The task completion source used to signal when the subscription's asynchronous operation has finished.</summary>
     private readonly TaskCompletionSource<bool> _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    /// <summary>
-    /// The cancellation token source used to cancel the subscription's asynchronous operation upon disposal.
-    /// </summary>
+    /// <summary>The cancellation token source used to cancel the subscription's asynchronous operation upon disposal.</summary>
     private readonly CancellationTokenSource _cts = new();
 
     /// <summary>Managed-thread ID of the thread currently inside <see cref="ExecuteAsync"/>, or
@@ -36,23 +32,17 @@ internal abstract class TaskSignalSubscription<T>(IObserverAsync<T> observer) : 
     /// signalled so no observer notifications race the dispose.</summary>
     private int _runningThreadId;
 
-    /// <summary>
-    /// Indicates whether disposal has already been initiated to prevent double-disposal.
-    /// </summary>
+    /// <summary>Indicates whether disposal has already been initiated to prevent double-disposal.</summary>
     private int _disposed;
 
-    /// <summary>
-    /// Starts the operation synchronously using the current cancellation token.
-    /// </summary>
+    /// <summary>Starts the operation synchronously using the current cancellation token.</summary>
     /// <remarks>This method initiates the asynchronous operation and does not wait for its completion. To
     /// monitor progress or handle completion, use the asynchronous counterpart directly. The
     /// <see cref="ValueTask"/> returned by <see cref="ExecuteAsync"/> is converted to a <see cref="Task"/>
     /// before being discarded so the fire-and-forget pattern stays compatible with CA2012.</remarks>
     public void Start() => _ = ExecuteAsync(_cts.Token).AsTask();
 
-    /// <summary>
-    /// Asynchronously releases the resources used by the object and cancels any ongoing operations.
-    /// </summary>
+    /// <summary>Asynchronously releases the resources used by the object and cancels any ongoing operations.</summary>
     /// <remarks>Call this method to ensure that all resources are released and any pending operations
     /// are cancelled before the object is discarded. Await the returned ValueTask to guarantee that disposal has
     /// completed.</remarks>
@@ -92,9 +82,7 @@ internal abstract class TaskSignalSubscription<T>(IObserverAsync<T> observer) : 
         }
     }
 
-    /// <summary>
-    /// Executes the subscription's core logic, handling exceptions by completing the observer with a failure result.
-    /// </summary>
+    /// <summary>Executes the subscription's core logic, handling exceptions by completing the observer with a failure result.</summary>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
     internal async ValueTask ExecuteAsync(CancellationToken cancellationToken)
@@ -115,9 +103,7 @@ internal abstract class TaskSignalSubscription<T>(IObserverAsync<T> observer) : 
         }
     }
 
-    /// <summary>
-    /// When overridden in a derived class, executes the core subscription logic asynchronously.
-    /// </summary>
+    /// <summary>When overridden in a derived class, executes the core subscription logic asynchronously.</summary>
     /// <param name="observer">The observer that receives notifications.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>

@@ -7,19 +7,13 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Concatenates synchronous integer ranges without outer observable/coordinator overhead.
-/// </summary>
+/// <summary>Concatenates synchronous integer ranges without outer observable/coordinator overhead.</summary>
 internal sealed class RangeConcatSignal : IRequireCurrentThread<int>, IInlineSignal<int>
 {
-    /// <summary>
-    /// Source ranges to emit in order.
-    /// </summary>
+    /// <summary>Source ranges to emit in order.</summary>
     private readonly RangeSignal[] _ranges;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="RangeConcatSignal"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="RangeConcatSignal"/> class.</summary>
     /// <param name="ranges">The source ranges.</param>
     public RangeConcatSignal(RangeSignal[] ranges) => _ranges = ranges;
 
@@ -29,7 +23,7 @@ internal sealed class RangeConcatSignal : IRequireCurrentThread<int>, IInlineSig
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<int> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -50,12 +44,12 @@ internal sealed class RangeConcatSignal : IRequireCurrentThread<int>, IInlineSig
     /// <inheritdoc/>
     public IDisposable Subscribe(Action<int> onNext, Action<Exception> onError, Action onCompleted)
     {
-        if (onNext == null)
+        if (onNext is null)
         {
             throw new ArgumentNullException(nameof(onNext));
         }
 
-        if (onCompleted == null)
+        if (onCompleted is null)
         {
             throw new ArgumentNullException(nameof(onCompleted));
         }

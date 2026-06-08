@@ -7,62 +7,40 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// Read-only state projection backed directly by a source state signal.
-/// </summary>
+/// <summary>Read-only state projection backed directly by a source state signal.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TResult">The projected value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{Value}")]
 public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResult>, IObserver<TSource>, IDisposable
 {
-    /// <summary>
-    /// Projection function.
-    /// </summary>
+    /// <summary>Projection function.</summary>
     private readonly Func<TSource, TResult> _selector;
 
-    /// <summary>
-    /// Protects mutable state and subscriptions.
-    /// </summary>
+    /// <summary>Protects mutable state and subscriptions.</summary>
     private readonly Lock _gate = new();
 
-    /// <summary>
-    /// Source subscription, assigned by the factory after construction.
-    /// </summary>
+    /// <summary>Source subscription, assigned by the factory after construction.</summary>
     private IDisposable? _subscription;
 
-    /// <summary>
-    /// Current subscribers.
-    /// </summary>
+    /// <summary>Current subscribers.</summary>
     private Broadcaster<TResult> _broadcaster;
 
-    /// <summary>
-    /// Last projected value.
-    /// </summary>
+    /// <summary>Last projected value.</summary>
     private TResult? _lastValue;
 
-    /// <summary>
-    /// Last terminal error.
-    /// </summary>
+    /// <summary>Last terminal error.</summary>
     private Exception? _lastError;
 
-    /// <summary>
-    /// Set after at least one value has been projected.
-    /// </summary>
+    /// <summary>Set after at least one value has been projected.</summary>
     private bool _hasValue;
 
-    /// <summary>
-    /// Non-zero after terminal or disposal.
-    /// </summary>
+    /// <summary>Non-zero after terminal or disposal.</summary>
     private bool _isStopped;
 
-    /// <summary>
-    /// Non-zero after disposal.
-    /// </summary>
+    /// <summary>Non-zero after disposal.</summary>
     private bool _isDisposed;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ProjectedReadOnlyState{TSource,TResult}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ProjectedReadOnlyState{TSource,TResult}"/> class.</summary>
     /// <param name="selector">Projection function.</param>
     private ProjectedReadOnlyState(Func<TSource, TResult> selector)
     {
@@ -70,9 +48,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
         _broadcaster = default;
     }
 
-    /// <summary>
-    /// Gets the current projected value.
-    /// </summary>
+    /// <summary>Gets the current projected value.</summary>
     public TResult Value
     {
         get
@@ -83,9 +59,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
         }
     }
 
-    /// <summary>
-    /// Gets the stream of current and subsequent values.
-    /// </summary>
+    /// <summary>Gets the stream of current and subsequent values.</summary>
     public IObservable<TResult> Changed => this;
 
     /// <summary>
@@ -97,12 +71,12 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     /// <returns>The fully-initialized projected read-only state.</returns>
     public static ProjectedReadOnlyState<TSource, TResult> Create(StateSignal<TSource> source, Func<TSource, TResult> selector)
     {
-        if (source == null)
+        if (source is null)
         {
             throw new ArgumentNullException(nameof(source));
         }
 
-        if (selector == null)
+        if (selector is null)
         {
             throw new ArgumentNullException(nameof(selector));
         }
@@ -140,7 +114,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     /// <inheritdoc/>
     public void OnError(Exception error)
     {
-        if (error == null)
+        if (error is null)
         {
             throw new ArgumentNullException(nameof(error));
         }
@@ -188,7 +162,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TResult> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -208,7 +182,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
             }
         }
 
-        if (error != null)
+        if (error is not null)
         {
             observer.OnError(error);
             return EmptyDisposable.Instance;
@@ -243,9 +217,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
         }
     }
 
-    /// <summary>
-    /// Removes a subscriber.
-    /// </summary>
+    /// <summary>Removes a subscriber.</summary>
     /// <param name="observer">Observer to remove.</param>
     private void Remove(IObserver<TResult> observer)
     {
@@ -255,9 +227,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
         }
     }
 
-    /// <summary>
-    /// Throws if disposed.
-    /// </summary>
+    /// <summary>Throws if disposed.</summary>
     private void ThrowIfDisposed()
     {
         if (!_isDisposed)
@@ -268,24 +238,16 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
         throw new ObjectDisposedException(nameof(ProjectedReadOnlyState<TSource, TResult>));
     }
 
-    /// <summary>
-    /// Projection subscription.
-    /// </summary>
+    /// <summary>Projection subscription.</summary>
     private sealed class Subscription : IDisposable
     {
-        /// <summary>
-        /// Parent projection.
-        /// </summary>
+        /// <summary>Parent projection.</summary>
         private ProjectedReadOnlyState<TSource, TResult>? _parent;
 
-        /// <summary>
-        /// Observer to remove.
-        /// </summary>
+        /// <summary>Observer to remove.</summary>
         private IObserver<TResult>? _observer;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Subscription"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="Subscription"/> class.</summary>
         /// <param name="parent">Parent projection.</param>
         /// <param name="observer">Observer to remove.</param>
         public Subscription(ProjectedReadOnlyState<TSource, TResult> parent, IObserver<TResult> observer)
@@ -299,7 +261,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
         {
             var parent = Interlocked.Exchange(ref _parent, null);
             var observer = Interlocked.Exchange(ref _observer, null);
-            if (parent == null || observer == null)
+            if (parent is null || observer is null)
             {
                 return;
             }

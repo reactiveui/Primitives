@@ -14,9 +14,7 @@ namespace ReactiveUI.Primitives.Async.Internals;
 /// <typeparam name="TResult">The downstream element type.</typeparam>
 internal abstract class CombineLatestCoordinatorBase<TResult> : IAsyncDisposable
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CombineLatestCoordinatorBase{TResult}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="CombineLatestCoordinatorBase{TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="sourceCount">The number of upstream sources (e.g. 2 for arity-2).</param>
     protected CombineLatestCoordinatorBase(IObserverAsync<TResult> observer, int sourceCount)
@@ -32,11 +30,7 @@ internal abstract class CombineLatestCoordinatorBase<TResult> : IAsyncDisposable
     /// from this base.</summary>
     internal Lock ValuesLock { get; } = new();
 
-    /// <summary>
-    /// Subscribes to every source observable via <see cref="SubscribeAtAsync"/>. Renamed from the
-    /// obvious <c>SubscribeAsync</c> to avoid Sonar S3218 shadowing of
-    /// <see cref="SignalAsync{TResult}.SubscribeAsync"/>.
-    /// </summary>
+    /// <summary>Subscribes to every source observable via <see cref="SubscribeAtAsync"/>.</summary>
     /// <param name="cancellationToken">A token to cancel the subscription.</param>
     /// <returns>A task representing the asynchronous subscribe operation.</returns>
     public async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
@@ -51,10 +45,7 @@ internal abstract class CombineLatestCoordinatorBase<TResult> : IAsyncDisposable
     /// <inheritdoc/>
     public ValueTask DisposeAsync() => Lifecycle.DisposeAsync();
 
-    /// <summary>
-    /// Relays an upstream error to the downstream observer; thin shim with the
-    /// <c>(error, ct)</c> signature that <see cref="IObservableAsync{T}.SubscribeAsync"/> expects.
-    /// </summary>
+    /// <summary>Relays an upstream error to the downstream observer; thin shim with the <c>(error, ct)</c> signature that <see cref="IObservableAsync{T}.SubscribeAsync"/> expects.</summary>
     /// <param name="error">The error to forward.</param>
     /// <param name="cancellationToken">Ignored — the lifecycle uses its own dispose token.</param>
     /// <returns>A ValueTask representing the asynchronous forward.</returns>

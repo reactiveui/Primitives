@@ -7,9 +7,7 @@ using AsyncObs = ReactiveUI.Primitives.Async.SignalAsync;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Tests for async parity helpers that mirror the synchronous helper surface in the repository.
-/// </summary>
+/// <summary>Tests for async parity helpers that mirror the synchronous helper surface in the repository.</summary>
 [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "TUnit requires instance methods")]
 public class ParityOperatorTests
 {
@@ -40,9 +38,7 @@ public class ParityOperatorTests
     /// <summary>Hoisted source array used by tests (was inline literal).</summary>
     private static readonly int[] Sequence42 = [42];
 
-    /// <summary>
-    /// Tests that WhereIsNotNull filters null values and narrows the result type.
-    /// </summary>
+    /// <summary>Tests that WhereIsNotNull filters null values and narrows the result type.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenWhereIsNotNull_ThenNullValuesAreFiltered()
@@ -57,9 +53,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo(["alpha", "beta"]);
     }
 
-    /// <summary>
-    /// Tests that CombineLatestValuesAreAllTrue evaluates the latest boolean state across an enumerable of sources.
-    /// </summary>
+    /// <summary>Tests that CombineLatestValuesAreAllTrue evaluates the latest boolean state across an enumerable of sources.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestValuesAreAllTrue_ThenEvaluatesAggregateState()
@@ -71,9 +65,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsFalse();
     }
 
-    /// <summary>
-    /// Tests that CombineLatestValuesAreAllTrue returns true when all sources emit true.
-    /// </summary>
+    /// <summary>Tests that CombineLatestValuesAreAllTrue returns true when all sources emit true.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestValuesAreAllTrue_WithAllTrue_ThenReturnsTrue()
@@ -85,9 +77,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsTrue();
     }
 
-    /// <summary>
-    /// Tests that CombineLatestValuesAreAllTrue returns true when no sources are provided.
-    /// </summary>
+    /// <summary>Tests that CombineLatestValuesAreAllTrue returns true when no sources are provided.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestValuesAreAllTrue_WithEmptySources_ThenReturnsTrue()
@@ -99,9 +89,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsTrue();
     }
 
-    /// <summary>
-    /// Tests that GetMax returns the maximum latest value across all sources.
-    /// </summary>
+    /// <summary>Tests that GetMax returns the maximum latest value across all sources.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenGetMax_ThenReturnsMaximumLatestValue()
@@ -117,9 +105,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(LargestValue);
     }
 
-    /// <summary>
-    /// Tests that GetMax returns the single value when only one source is provided.
-    /// </summary>
+    /// <summary>Tests that GetMax returns the single value when only one source is provided.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenGetMax_WithSingleSource_ThenReturnsThatValue()
@@ -131,9 +117,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(SingleSourceValue);
     }
 
-    /// <summary>
-    /// Tests that ScanWithInitial emits the seed before emitting accumulated values.
-    /// </summary>
+    /// <summary>Tests that ScanWithInitial emits the seed before emitting accumulated values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScanWithInitial_ThenSeedIsEmittedFirst()
@@ -151,9 +135,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo([Seed, 1, SumAfterTwo, SumAfterThree]);
     }
 
-    /// <summary>
-    /// Tests that Pairwise emits adjacent pairs.
-    /// </summary>
+    /// <summary>Tests that Pairwise emits adjacent pairs.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPairwise_ThenAdjacentPairsAreProduced()
@@ -178,9 +160,7 @@ public class ParityOperatorTests
         await Assert.That(result[ThirdPairIndex]).IsEqualTo((ThirdPairFirst, ThirdPairSecond));
     }
 
-    /// <summary>
-    /// Tests that Pairwise produces an empty sequence when the source has fewer than two elements.
-    /// </summary>
+    /// <summary>Tests that Pairwise produces an empty sequence when the source has fewer than two elements.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPairwise_WithSingleElement_ThenProducesEmptySequence()
@@ -193,9 +173,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEmpty();
     }
 
-    /// <summary>
-    /// Tests that Partition splits a source into true and false branches.
-    /// </summary>
+    /// <summary>Tests that Partition splits a source into true and false branches.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage(
@@ -231,9 +209,7 @@ public class ParityOperatorTests
         await Assert.That(falseTask.Result).IsCollectionEqualTo([1, Emit3, Emit5]);
     }
 
-    /// <summary>
-    /// Tests that DoOnSubscribe runs for each subscription.
-    /// </summary>
+    /// <summary>Tests that DoOnSubscribe runs for each subscription.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage(
@@ -252,9 +228,7 @@ public class ParityOperatorTests
         await Assert.That(subscriptions).IsEqualTo(ExpectedSubscriptions);
     }
 
-    /// <summary>
-    /// Tests that CatchIgnore suppresses terminal failures and completes with an empty result set.
-    /// </summary>
+    /// <summary>Tests that CatchIgnore suppresses terminal failures and completes with an empty result set.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCatchIgnore_ThenFailureIsSuppressed()
@@ -266,9 +240,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEmpty();
     }
 
-    /// <summary>
-    /// Tests that Start executes the supplied function and publishes its result.
-    /// </summary>
+    /// <summary>Tests that Start executes the supplied function and publishes its result.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenStartFunction_ThenPublishesFunctionResult()
@@ -278,9 +250,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(CanonicalAnswer);
     }
 
-    /// <summary>
-    /// Tests that AsSignal converts each source value into RxVoid.Default.
-    /// </summary>
+    /// <summary>Tests that AsSignal converts each source value into RxVoid.Default.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsSignal_ThenEmitsUnitForEachValue()
@@ -298,9 +268,7 @@ public class ParityOperatorTests
         await Assert.That(result[LastIndex]).IsEqualTo(RxVoid.Default);
     }
 
-    /// <summary>
-    /// Tests that CatchIgnore with a typed exception suppresses matching exceptions and invokes the action.
-    /// </summary>
+    /// <summary>Tests that CatchIgnore with a typed exception suppresses matching exceptions and invokes the action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage(
@@ -320,9 +288,7 @@ public class ParityOperatorTests
         await Assert.That(captured!.Message).IsEqualTo("typed boom");
     }
 
-    /// <summary>
-    /// Tests that CatchIgnore with a typed exception re-throws when the exception type does not match.
-    /// </summary>
+    /// <summary>Tests that CatchIgnore with a typed exception re-throws when the exception type does not match.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCatchIgnoreTyped_WithNonMatchingException_ThenPropagatesError()
@@ -337,9 +303,7 @@ public class ParityOperatorTests
         await Assert.That(resultTask).ThrowsException();
     }
 
-    /// <summary>
-    /// Tests that CatchAndReturn emits the fallback value on terminal failure.
-    /// </summary>
+    /// <summary>Tests that CatchAndReturn emits the fallback value on terminal failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCatchAndReturn_ThenEmitsFallbackOnFailure()
@@ -351,9 +315,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo([FallbackSentinel]);
     }
 
-    /// <summary>
-    /// Tests that CatchAndReturn with a typed exception emits the factory result on a matching failure.
-    /// </summary>
+    /// <summary>Tests that CatchAndReturn with a typed exception emits the factory result on a matching failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCatchAndReturnTyped_WithMatchingException_ThenEmitsFactoryResult()
@@ -365,9 +327,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo(["caught: boom"]);
     }
 
-    /// <summary>
-    /// Tests that CatchAndReturn with a typed exception re-throws when the exception type does not match.
-    /// </summary>
+    /// <summary>Tests that CatchAndReturn with a typed exception re-throws when the exception type does not match.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCatchAndReturnTyped_WithNonMatchingException_ThenPropagatesError()
@@ -380,9 +340,7 @@ public class ParityOperatorTests
         await Assert.That(resultTask).ThrowsException();
     }
 
-    /// <summary>
-    /// Tests that the async DoOnSubscribe overload executes the asynchronous action before subscription.
-    /// </summary>
+    /// <summary>Tests that the async DoOnSubscribe overload executes the asynchronous action before subscription.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage(
@@ -406,9 +364,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(SourceValue);
     }
 
-    /// <summary>
-    /// Tests that DropIfBusy drops values emitted while the async action is still running.
-    /// </summary>
+    /// <summary>Tests that DropIfBusy drops values emitted while the async action is still running.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage(
@@ -473,9 +429,7 @@ public class ParityOperatorTests
         await Assert.That(result).DoesNotContain(DroppedValueB);
     }
 
-    /// <summary>
-    /// Tests that DropIfBusy passes through all values when the action completes synchronously.
-    /// </summary>
+    /// <summary>Tests that DropIfBusy passes through all values when the action completes synchronously.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDropIfBusy_WithFastAction_ThenAllValuesPassThrough()
@@ -490,9 +444,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo([1, Second, Third]);
     }
 
-    /// <summary>
-    /// Tests that LatestOrDefault emits the default value first and suppresses a duplicate first source value.
-    /// </summary>
+    /// <summary>Tests that LatestOrDefault emits the default value first and suppresses a duplicate first source value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLatestOrDefault_ThenEmitsDefaultFirstAndSuppressesDuplicate()
@@ -507,9 +459,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo([0, 1, Third]);
     }
 
-    /// <summary>
-    /// Tests that LatestOrDefault emits both default and first source value when they differ.
-    /// </summary>
+    /// <summary>Tests that LatestOrDefault emits both default and first source value when they differ.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLatestOrDefault_WithDifferentFirst_ThenEmitsBoth()
@@ -524,9 +474,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo([0, First, Second]);
     }
 
-    /// <summary>
-    /// Tests that LogErrors invokes the logger callback when an error-resume is observed.
-    /// </summary>
+    /// <summary>Tests that LogErrors invokes the logger callback when an error-resume is observed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage(
@@ -571,9 +519,7 @@ public class ParityOperatorTests
         await Assert.That(logged[0].Message).IsEqualTo("logged error");
     }
 
-    /// <summary>
-    /// Tests that WaitUntil emits only the first value satisfying the predicate.
-    /// </summary>
+    /// <summary>Tests that WaitUntil emits only the first value satisfying the predicate.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenWaitUntil_ThenEmitsFirstMatchingValue()
@@ -587,9 +533,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo([FirstMatch]);
     }
 
-    /// <summary>
-    /// Tests that ObserveOnSafe with a null AsyncContext returns the source unchanged.
-    /// </summary>
+    /// <summary>Tests that ObserveOnSafe with a null AsyncContext returns the source unchanged.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnSafeAsyncContext_WithNull_ThenReturnsSourceUnchanged()
@@ -602,9 +546,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Tests that ObserveOnSafe with a non-null AsyncContext applies ObserveOn.
-    /// </summary>
+    /// <summary>Tests that ObserveOnSafe with a non-null AsyncContext applies ObserveOn.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnSafeAsyncContext_WithValue_ThenAppliesObserveOn()
@@ -618,9 +560,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(CanonicalAnswer);
     }
 
-    /// <summary>
-    /// Tests that ObserveOnSafe with a null TaskScheduler returns the source unchanged.
-    /// </summary>
+    /// <summary>Tests that ObserveOnSafe with a null TaskScheduler returns the source unchanged.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnSafeTaskScheduler_WithNull_ThenReturnsSourceUnchanged()
@@ -633,9 +573,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Tests that ObserveOnSafe with a non-null TaskScheduler applies ObserveOn.
-    /// </summary>
+    /// <summary>Tests that ObserveOnSafe with a non-null TaskScheduler applies ObserveOn.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnSafeTaskScheduler_WithValue_ThenAppliesObserveOn()
@@ -647,9 +585,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(CanonicalAnswer);
     }
 
-    /// <summary>
-    /// Tests that ObserveOnIf with true condition applies ObserveOn with AsyncContext.
-    /// </summary>
+    /// <summary>Tests that ObserveOnIf with true condition applies ObserveOn with AsyncContext.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnIfAsyncContext_WithTrueCondition_ThenAppliesObserveOn()
@@ -663,9 +599,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(CanonicalAnswer);
     }
 
-    /// <summary>
-    /// Tests that ObserveOnIf with false condition returns the source unchanged for AsyncContext.
-    /// </summary>
+    /// <summary>Tests that ObserveOnIf with false condition returns the source unchanged for AsyncContext.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnIfAsyncContext_WithFalseCondition_ThenReturnsSourceUnchanged()
@@ -679,9 +613,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(CanonicalAnswer);
     }
 
-    /// <summary>
-    /// Tests that ObserveOnIf with true condition applies ObserveOn with TaskScheduler.
-    /// </summary>
+    /// <summary>Tests that ObserveOnIf with true condition applies ObserveOn with TaskScheduler.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnIfTaskScheduler_WithTrueCondition_ThenAppliesObserveOn()
@@ -693,9 +625,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(CanonicalAnswer);
     }
 
-    /// <summary>
-    /// Tests that ObserveOnIf with false condition returns the source unchanged for TaskScheduler.
-    /// </summary>
+    /// <summary>Tests that ObserveOnIf with false condition returns the source unchanged for TaskScheduler.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnIfTaskScheduler_WithFalseCondition_ThenReturnsSourceUnchanged()
@@ -707,9 +637,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(CanonicalAnswer);
     }
 
-    /// <summary>
-    /// Tests that ReplayLastOnSubscribe replays the initial value and subsequent source values.
-    /// </summary>
+    /// <summary>Tests that ReplayLastOnSubscribe replays the initial value and subsequent source values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenReplayLastOnSubscribe_ThenReplaysInitialAndSourceValues()
@@ -721,9 +649,7 @@ public class ParityOperatorTests
         await Assert.That(firstResult).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Tests that ThrottleDistinct emits only distinct values after throttling.
-    /// </summary>
+    /// <summary>Tests that ThrottleDistinct emits only distinct values after throttling.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage(
@@ -762,9 +688,7 @@ public class ParityOperatorTests
         await Assert.That(results[0]).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Tests that the async ScanWithInitial overload emits the seed followed by accumulated values.
-    /// </summary>
+    /// <summary>Tests that the async ScanWithInitial overload emits the seed followed by accumulated values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScanWithInitialAsync_ThenSeedIsEmittedFirst()
@@ -784,9 +708,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo([Seed, 1, SumAfterTwo, SumAfterThree]);
     }
 
-    /// <summary>
-    /// Tests that DebounceUntil immediately emits values that satisfy the condition.
-    /// </summary>
+    /// <summary>Tests that DebounceUntil immediately emits values that satisfy the condition.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage(
@@ -814,9 +736,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(EmittedValue);
     }
 
-    /// <summary>
-    /// Tests that DebounceUntil delays values that do not satisfy the condition.
-    /// </summary>
+    /// <summary>Tests that DebounceUntil delays values that do not satisfy the condition.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage(
@@ -852,9 +772,7 @@ public class ParityOperatorTests
         await Assert.That(results[0]).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Tests that GetMin returns the minimum latest value across all sources.
-    /// </summary>
+    /// <summary>Tests that GetMin returns the minimum latest value across all sources.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenGetMin_ThenReturnsMinimumLatestValue()
@@ -870,9 +788,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(SmallestValue);
     }
 
-    /// <summary>
-    /// Tests that GetMin returns the single value when only one source is provided.
-    /// </summary>
+    /// <summary>Tests that GetMin returns the single value when only one source is provided.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenGetMin_WithSingleSource_ThenReturnsThatValue()
@@ -884,9 +800,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(SingleSourceValue);
     }
 
-    /// <summary>
-    /// Tests that CombineLatestValuesAreAllFalse returns true when all sources emit false.
-    /// </summary>
+    /// <summary>Tests that CombineLatestValuesAreAllFalse returns true when all sources emit false.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestValuesAreAllFalse_WithAllFalse_ThenReturnsTrue()
@@ -898,9 +812,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsTrue();
     }
 
-    /// <summary>
-    /// Tests that CombineLatestValuesAreAllFalse returns false when any source emits true.
-    /// </summary>
+    /// <summary>Tests that CombineLatestValuesAreAllFalse returns false when any source emits true.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestValuesAreAllFalse_WithSomeTrue_ThenReturnsFalse()
@@ -912,9 +824,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsFalse();
     }
 
-    /// <summary>
-    /// Tests that CombineLatestValuesAreAllFalse returns true when no sources are provided.
-    /// </summary>
+    /// <summary>Tests that CombineLatestValuesAreAllFalse returns true when no sources are provided.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestValuesAreAllFalse_WithEmptySources_ThenReturnsTrue()
@@ -926,9 +836,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsTrue();
     }
 
-    /// <summary>
-    /// Tests that ForEach flattens enumerable elements into individual values.
-    /// </summary>
+    /// <summary>Tests that ForEach flattens enumerable elements into individual values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForEach_ThenFlattensEnumerableElements()
@@ -944,9 +852,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo([1, Second, Third, Fourth]);
     }
 
-    /// <summary>
-    /// Tests that Not negates each boolean value.
-    /// </summary>
+    /// <summary>Tests that Not negates each boolean value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenNot_ThenNegatesBooleanValues()
@@ -959,9 +865,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo([false, true, false]);
     }
 
-    /// <summary>
-    /// Tests that SkipWhileNull skips leading nulls and emits from the first non-null value onwards.
-    /// </summary>
+    /// <summary>Tests that SkipWhileNull skips leading nulls and emits from the first non-null value onwards.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSkipWhileNull_ThenSkipsLeadingNulls()
@@ -977,9 +881,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo(["first", null!, "second"]);
     }
 
-    /// <summary>
-    /// Tests that Start with an Action emits RxVoid.Default.
-    /// </summary>
+    /// <summary>Tests that Start with an Action emits RxVoid.Default.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage(
@@ -998,9 +900,7 @@ public class ParityOperatorTests
         void Run() => executed = true;
     }
 
-    /// <summary>
-    /// Tests that Start with an Action and a TaskScheduler executes on the scheduler.
-    /// </summary>
+    /// <summary>Tests that Start with an Action and a TaskScheduler executes on the scheduler.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage(
@@ -1019,9 +919,7 @@ public class ParityOperatorTests
         void Run() => executed = true;
     }
 
-    /// <summary>
-    /// Tests that Start with a function and a TaskScheduler executes on the scheduler.
-    /// </summary>
+    /// <summary>Tests that Start with a function and a TaskScheduler executes on the scheduler.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenStartFunction_WithScheduler_ThenExecutesOnScheduler()
@@ -1031,9 +929,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(FallbackSentinel);
     }
 
-    /// <summary>
-    /// Tests that WhereFalse filters to only false values.
-    /// </summary>
+    /// <summary>Tests that WhereFalse filters to only false values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenWhereFalse_ThenFiltersToFalseValues()
@@ -1046,9 +942,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo([false, false, false]);
     }
 
-    /// <summary>
-    /// Tests that WhereTrue filters to only true values.
-    /// </summary>
+    /// <summary>Tests that WhereTrue filters to only true values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenWhereTrue_ThenFiltersToTrueValues()
@@ -1061,9 +955,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo([true, true, true]);
     }
 
-    /// <summary>
-    /// Tests that CombineLatestValuesAreAllFalse materializes a non-collection enumerable source.
-    /// </summary>
+    /// <summary>Tests that CombineLatestValuesAreAllFalse materializes a non-collection enumerable source.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestValuesAreAllFalse_WithNonCollectionEnumerable_ThenMaterializesAndEvaluates()
@@ -1079,9 +971,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsTrue();
     }
 
-    /// <summary>
-    /// Tests that CombineLatestValuesAreAllTrue materializes a non-collection enumerable source.
-    /// </summary>
+    /// <summary>Tests that CombineLatestValuesAreAllTrue materializes a non-collection enumerable source.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestValuesAreAllTrue_WithNonCollectionEnumerable_ThenMaterializesAndEvaluates()
@@ -1097,9 +987,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsTrue();
     }
 
-    /// <summary>
-    /// Tests that CatchAndReturn passes through source values when no error occurs.
-    /// </summary>
+    /// <summary>Tests that CatchAndReturn passes through source values when no error occurs.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCatchAndReturn_WithNoError_ThenPassesThroughSourceValues()
@@ -1114,9 +1002,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo([1, Second, Third]);
     }
 
-    /// <summary>
-    /// Tests that CatchIgnore passes through source values when no error occurs.
-    /// </summary>
+    /// <summary>Tests that CatchIgnore passes through source values when no error occurs.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCatchIgnore_WithNoError_ThenPassesThroughSourceValues()
@@ -1131,9 +1017,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsCollectionEqualTo([1, Second, Third]);
     }
 
-    /// <summary>
-    /// Tests that the async DoOnSubscribe overload runs on each subscription.
-    /// </summary>
+    /// <summary>Tests that the async DoOnSubscribe overload runs on each subscription.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage(
@@ -1156,9 +1040,7 @@ public class ParityOperatorTests
         await Assert.That(count).IsEqualTo(ExpectedSubscriptions);
     }
 
-    /// <summary>
-    /// Tests that GetMax picks the maximum when the first source has the largest value.
-    /// </summary>
+    /// <summary>Tests that GetMax picks the maximum when the first source has the largest value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenGetMax_WithMaxInFirstSource_ThenReturnsCorrectMax()
@@ -1171,9 +1053,7 @@ public class ParityOperatorTests
         await Assert.That(result).IsEqualTo(LargestValue);
     }
 
-    /// <summary>
-    /// Tests that GetMin picks the minimum when the first source has the smallest value.
-    /// </summary>
+    /// <summary>Tests that GetMin picks the minimum when the first source has the smallest value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenGetMin_WithMinInFirstSource_ThenReturnsCorrectMin()

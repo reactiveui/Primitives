@@ -17,19 +17,13 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class ConnectableMulticastBenchmarks
 {
-    /// <summary>
-    /// The inclusive start value of the range used by each benchmark.
-    /// </summary>
+    /// <summary>The inclusive start value of the range used by each benchmark.</summary>
     private const int Start = 1;
 
-    /// <summary>
-    /// The number of elements produced by the range used by each benchmark.
-    /// </summary>
+    /// <summary>The number of elements produced by the range used by each benchmark.</summary>
     private const int Count = 32;
 
-    /// <summary>
-    /// Benchmarks multicasting through a caller-supplied hub.
-    /// </summary>
+    /// <summary>Benchmarks multicasting through a caller-supplied hub.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesMulticastConnect()
@@ -41,9 +35,7 @@ public class ConnectableMulticastBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks multicasting through a caller-supplied subject using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks multicasting through a caller-supplied subject using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveMulticastConnect()
@@ -55,9 +47,7 @@ public class ConnectableMulticastBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks multicasting through a caller-supplied subject using R3.
-    /// </summary>
+    /// <summary>Benchmarks multicasting through a caller-supplied subject using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3MulticastConnect()

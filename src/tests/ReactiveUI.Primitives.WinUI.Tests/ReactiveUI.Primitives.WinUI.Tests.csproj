@@ -1,11 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- DispatcherQueueSequencer wraps the concrete WinUI Microsoft.UI.Dispatching.DispatcherQueue. The
-       project targets plain .NET everywhere and adds the WinUI TFMs only on Windows, so the test host
-       launches on the cross-platform CI leg. The WinUI TFM (via the Choose below) turns on UseWinUI,
-       references the WinUI library, and compiles the real dispatcher tests + API approval (self-contained
-       so DispatcherQueueController activation works without a machine-wide runtime); the cross-platform
-       build compiles only the API approval test, which is a no-op there. -->
+       project targets plain .NET everywhere and adds the WinUI TFMs only on Windows. The WinUI TFM (via
+       the Choose below) turns on UseWinUI, references the WinUI library, and compiles the real dispatcher
+       tests (self-contained so DispatcherQueueController activation works without a machine-wide runtime);
+       the cross-platform build compiles only the placeholder so the host reports a discovered test. -->
   <PropertyGroup>
     <TargetFrameworks>$(NetTargetFrameworks)</TargetFrameworks>
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(WinUITargetFrameworks)</TargetFrameworks>
@@ -28,10 +27,9 @@
         <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
       </PropertyGroup>
       <ItemGroup>
-        <PackageReference Include="PublicApiGenerator" />
-        <Compile Include="..\Shared\ApiApprovalExtensions.cs" Link="ApiApprovalExtensions.cs" />
         <ProjectReference Include="..\..\ReactiveUI.Primitives.WinUI\ReactiveUI.Primitives.WinUI.csproj" />
         <Compile Include="DispatcherQueueSequencerTests.cs" />
+        <Compile Remove="CrossPlatformPlaceholderTests.cs" />
       </ItemGroup>
     </When>
   </Choose>

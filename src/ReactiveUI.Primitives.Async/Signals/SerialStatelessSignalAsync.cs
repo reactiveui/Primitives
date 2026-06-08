@@ -6,9 +6,7 @@ using System.Collections.Immutable;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
-/// <summary>
-/// Represents a stateless asynchronous Signal that notifies observers of events in a serial, sequential manner.
-/// </summary>
+/// <summary>Represents a stateless asynchronous Signal that notifies observers of events in a serial, sequential manner.</summary>
 /// <remarks>Observers are notified one at a time in the order they are registered. Each observer receives the
 /// event only after the previous observer has completed processing. This class is suitable for scenarios where event
 /// delivery order and sequential processing are required. Thread safety and ordering are managed internally.</remarks>

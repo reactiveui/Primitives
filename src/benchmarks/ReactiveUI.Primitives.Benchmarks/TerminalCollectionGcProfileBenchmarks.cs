@@ -17,9 +17,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
 public class TerminalCollectionGcProfileBenchmarks
 {
-    /// <summary>
-    /// The delegate benchmark instance that performs the measured work.
-    /// </summary>
+    /// <summary>The delegate benchmark instance that performs the measured work.</summary>
     private readonly TerminalCollectionBenchmarks _b = new();
 
     /// <summary>ToList (Primitives).</summary>

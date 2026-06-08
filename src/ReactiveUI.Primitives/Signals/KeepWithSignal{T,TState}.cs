@@ -23,9 +23,7 @@ internal sealed class KeepWithSignal<T, TState> : IRequireCurrentThread<T>
     /// <summary>The predicate applied to each source value and the state.</summary>
     private readonly Func<TState, T, bool> _predicate;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="KeepWithSignal{T, TState}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="KeepWithSignal{T, TState}"/> class.</summary>
     /// <param name="source">The source sequence.</param>
     /// <param name="state">The state passed to the predicate.</param>
     /// <param name="predicate">The predicate applied to each source value and the state.</param>
@@ -36,21 +34,17 @@ internal sealed class KeepWithSignal<T, TState> : IRequireCurrentThread<T>
         _predicate = predicate;
     }
 
-    /// <summary>
-    /// Determines whether the sink must subscribe on the current thread.
-    /// </summary>
+    /// <summary>Determines whether the sink must subscribe on the current thread.</summary>
     /// <returns><see langword="true"/> when the source requires current-thread subscription.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() =>
         _source is IRequireCurrentThread<T> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread();
 
-    /// <summary>
-    /// Subscribes the observer to the filtered sequence.
-    /// </summary>
+    /// <summary>Subscribes the observer to the filtered sequence.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <returns>The subscription handle.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -73,9 +67,7 @@ internal sealed class KeepWithSignal<T, TState> : IRequireCurrentThread<T>
         /// <summary>Whether a terminal notification has been forwarded.</summary>
         private bool _stopped;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="KeepWithObserver"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="KeepWithObserver"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="state">The state passed to the predicate.</param>
         /// <param name="predicate">The predicate applied to each source value and the state.</param>

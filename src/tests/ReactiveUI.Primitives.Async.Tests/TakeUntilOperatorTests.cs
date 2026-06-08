@@ -749,8 +749,7 @@ public partial class TakeUntilOperatorTests
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
-    /// <summary>Verifies the predicate overload with a cancellable token reaches the
-    /// CT-linked branch.</summary>
+    /// <summary>Verifies the predicate overload with a cancellable token reaches the CT-linked branch.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPredicateStopSignalWithCancellationToken_ThenCompletesOnCancellation()
@@ -774,8 +773,7 @@ public partial class TakeUntilOperatorTests
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
-    /// <summary>Verifies the async-predicate overload with a cancellable token reaches the
-    /// CT-linked branch.</summary>
+    /// <summary>Verifies the async-predicate overload with a cancellable token reaches the CT-linked branch.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilAsyncPredicateWithCancellationToken_ThenCompletesOnCancellation()

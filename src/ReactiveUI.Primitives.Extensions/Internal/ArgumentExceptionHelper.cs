@@ -15,9 +15,7 @@ namespace ReactiveUI.Primitives.Extensions.Internal;
 [ExcludeFromCodeCoverage]
 internal static class ArgumentExceptionHelper
 {
-    /// <summary>
-    /// Throws an <see cref="ArgumentNullException"/> if <paramref name="argument"/> is null.
-    /// </summary>
+    /// <summary>Throws an <see cref="ArgumentNullException"/> if <paramref name="argument"/> is null.</summary>
     /// <param name="argument">The reference type argument to validate as non-null.</param>
     /// <param name="paramName">The name of the parameter with which <paramref name="argument"/> corresponds.</param>
     public static void ThrowIfNull(
@@ -80,9 +78,7 @@ internal static class ArgumentExceptionHelper
         return argument;
     }
 
-    /// <summary>
-    /// Throws an exception if <paramref name="argument"/> is null or empty.
-    /// </summary>
+    /// <summary>Throws an exception if <paramref name="argument"/> is null or empty.</summary>
     /// <param name="argument">The string argument to validate as non-null and non-empty.</param>
     /// <param name="paramName">The name of the parameter with which <paramref name="argument"/> corresponds.</param>
     /// <exception cref="ArgumentNullException"><paramref name="argument"/> is null.</exception>

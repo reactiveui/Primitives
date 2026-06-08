@@ -8,9 +8,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Debounces a sequence until a condition becomes true for an element.
-/// </summary>
+/// <summary>Debounces a sequence until a condition becomes true for an element.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="debounce">The debounce duration.</param>
@@ -49,13 +47,16 @@ internal sealed class DebounceUntilObservable<T>(
         Func<T, bool> condition,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>Shared gate / timer / done-flag plumbing.</summary>
+        /// <summary>The gate protecting state transitions and downstream notification.</summary>
+        private readonly Lock _gate = new();
+
+        /// <summary>Shared timer / done-flag plumbing.</summary>
         private readonly TimerSinkState<T> _state = new(downstream);
 
         /// <inheritdoc/>
         public void OnNext(T value)
         {
-            lock (_state.Gate)
+            lock (_gate)
             {
                 if (_state.Done)
                 {
@@ -78,19 +79,37 @@ internal sealed class DebounceUntilObservable<T>(
         }
 
         /// <inheritdoc/>
-        public void OnError(Exception error) => _state.HandleError(error);
+        public void OnError(Exception error)
+        {
+            lock (_gate)
+            {
+                _state.HandleErrorLocked(error);
+            }
+        }
 
         /// <inheritdoc/>
-        public void OnCompleted() => _state.HandleCompleted();
+        public void OnCompleted()
+        {
+            lock (_gate)
+            {
+                _state.HandleCompletedLocked();
+            }
+        }
 
         /// <inheritdoc/>
-        public void Dispose() => _state.HandleDispose();
+        public void Dispose()
+        {
+            lock (_gate)
+            {
+                _state.HandleDisposeLocked();
+            }
+        }
 
         /// <summary>Emits a debounced value when the sink is still active.</summary>
         /// <param name="value">The debounced value.</param>
         private void EmitDebounced(T value)
         {
-            lock (_state.Gate)
+            lock (_gate)
             {
                 if (!_state.Done)
                 {

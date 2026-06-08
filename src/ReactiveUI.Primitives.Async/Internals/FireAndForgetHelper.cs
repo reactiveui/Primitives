@@ -15,9 +15,7 @@ namespace ReactiveUI.Primitives.Async.Internals;
 [ExcludeFromCodeCoverage]
 public static class FireAndForgetHelper
 {
-    /// <summary>
-    /// Executes an async action as fire-and-forget, swallowing all exceptions.
-    /// </summary>
+    /// <summary>Executes an async action as fire-and-forget, swallowing all exceptions.</summary>
     /// <param name="action">The async action to execute.</param>
     [SuppressMessage(
         "Major Bug",

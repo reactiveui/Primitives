@@ -4,59 +4,39 @@
 
 namespace ReactiveUI.Primitives.Core;
 
-/// <summary>
-/// Binary heap priority queue that preserves insertion order for equal-priority items.
-/// </summary>
+/// <summary>Binary heap priority queue that preserves insertion order for equal-priority items.</summary>
 /// <typeparam name="T">The queued item type.</typeparam>
 internal sealed class PriorityQueue<T>
     where T : IComparable<T>
 {
-    /// <summary>
-    /// Default queue capacity.
-    /// </summary>
+    /// <summary>Default queue capacity.</summary>
     private const int DefaultCapacity = 16;
 
-    /// <summary>
-    /// Number of children per heap node.
-    /// </summary>
+    /// <summary>Number of children per heap node.</summary>
     private const int HeapBranchingFactor = 2;
 
-    /// <summary>
-    /// Offset from a node's doubled index to its left child.
-    /// </summary>
+    /// <summary>Offset from a node's doubled index to its left child.</summary>
     private const int LeftChildOffset = 1;
 
-    /// <summary>
-    /// Offset from a node's doubled index to its right child.
-    /// </summary>
+    /// <summary>Offset from a node's doubled index to its right child.</summary>
     private const int RightChildOffset = 2;
 
-    /// <summary>
-    /// Capacity divisor used to shrink sparse queues.
-    /// </summary>
+    /// <summary>Capacity divisor used to shrink sparse queues.</summary>
     private const int ShrinkDivisor = 4;
 
-    /// <summary>
-    /// Monotonic tie-breaker for equal-priority items.
-    /// </summary>
+    /// <summary>Monotonic tie-breaker for equal-priority items.</summary>
     private long _count = long.MinValue;
 
-    /// <summary>
-    /// Heap storage.
-    /// </summary>
+    /// <summary>Heap storage.</summary>
     private IndexedItem[] _items;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PriorityQueue{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="PriorityQueue{T}"/> class.</summary>
     public PriorityQueue()
         : this(DefaultCapacity)
     {
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PriorityQueue{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="PriorityQueue{T}"/> class.</summary>
     /// <param name="capacity">Initial queue capacity.</param>
     public PriorityQueue(int capacity)
     {
@@ -69,14 +49,10 @@ internal sealed class PriorityQueue<T>
         Count = 0;
     }
 
-    /// <summary>
-    /// Gets the number of queued items.
-    /// </summary>
+    /// <summary>Gets the number of queued items.</summary>
     public int Count { get; private set; }
 
-    /// <summary>
-    /// Removes and returns the highest-priority item.
-    /// </summary>
+    /// <summary>Removes and returns the highest-priority item.</summary>
     /// <returns>The highest-priority item.</returns>
     public T Dequeue()
     {
@@ -85,9 +61,7 @@ internal sealed class PriorityQueue<T>
         return result;
     }
 
-    /// <summary>
-    /// Adds an item to the queue.
-    /// </summary>
+    /// <summary>Adds an item to the queue.</summary>
     /// <param name="item">Item to enqueue.</param>
     public void Enqueue(T item)
     {
@@ -103,9 +77,7 @@ internal sealed class PriorityQueue<T>
         Percolate(index);
     }
 
-    /// <summary>
-    /// Returns the highest-priority item without removing it.
-    /// </summary>
+    /// <summary>Returns the highest-priority item without removing it.</summary>
     /// <returns>The highest-priority item.</returns>
     public T Peek()
     {
@@ -117,9 +89,7 @@ internal sealed class PriorityQueue<T>
         return _items[0].Value;
     }
 
-    /// <summary>
-    /// Removes a matching item from the queue.
-    /// </summary>
+    /// <summary>Removes a matching item from the queue.</summary>
     /// <param name="item">Item to remove.</param>
     /// <returns><see langword="true"/> when the item was found and removed; otherwise, <see langword="false"/>.</returns>
     public bool Remove(T item)
@@ -136,9 +106,7 @@ internal sealed class PriorityQueue<T>
         return false;
     }
 
-    /// <summary>
-    /// Restores heap order from the supplied index downward.
-    /// </summary>
+    /// <summary>Restores heap order from the supplied index downward.</summary>
     /// <param name="index">Index to heapify.</param>
     private void Heapify(int index)
     {
@@ -174,17 +142,13 @@ internal sealed class PriorityQueue<T>
         }
     }
 
-    /// <summary>
-    /// Determines whether the left index has higher priority than the right index.
-    /// </summary>
+    /// <summary>Determines whether the left index has higher priority than the right index.</summary>
     /// <param name="left">Candidate item index.</param>
     /// <param name="right">Current item index.</param>
     /// <returns><see langword="true"/> when the left item should be ordered before the right item.</returns>
     private bool IsHigherPriority(int left, int right) => _items[left].CompareTo(_items[right]) < 0;
 
-    /// <summary>
-    /// Restores heap order from the supplied index upward.
-    /// </summary>
+    /// <summary>Restores heap order from the supplied index upward.</summary>
     /// <param name="index">Index to percolate.</param>
     /// <returns>The final index of the percolated item.</returns>
     private int Percolate(int index)
@@ -206,9 +170,7 @@ internal sealed class PriorityQueue<T>
         return index;
     }
 
-    /// <summary>
-    /// Removes the item at the supplied index.
-    /// </summary>
+    /// <summary>Removes the item at the supplied index.</summary>
     /// <param name="index">Index to remove.</param>
     private void RemoveAt(int index)
     {
@@ -230,23 +192,17 @@ internal sealed class PriorityQueue<T>
         Array.Copy(temp, 0, _items, 0, Count);
     }
 
-    /// <summary>
-    /// Heap item with an insertion-order tie-breaker.
-    /// </summary>
+    /// <summary>Heap item with an insertion-order tie-breaker.</summary>
     internal struct IndexedItem : IComparable<IndexedItem>, IEquatable<IndexedItem>
     {
-        /// <summary>
-        /// Insertion order id.
-        /// </summary>
-        public long Id;
+        /// <summary>Gets or sets the insertion order id.</summary>
+        public long Id { get; set; }
 
-        /// <summary>
-        /// Queued value.
-        /// </summary>
-        public T Value;
+        /// <summary>Gets or sets the queued value.</summary>
+        public T Value { get; set; }
 
         /// <inheritdoc/>
-        public int CompareTo(IndexedItem other)
+        public readonly int CompareTo(IndexedItem other)
         {
             var c = Value.CompareTo(other.Value);
             if (c == 0)

@@ -32,8 +32,7 @@ public partial class TerminalOperatorTests
         await Assert.That(result).IsEqualTo(ExpectedCount);
     }
 
-    /// <summary>Exercises the <c>FirstOrDefaultAsync(cancellationToken)</c> overload — the
-    /// no-default-no-predicate shortcut.</summary>
+    /// <summary>Exercises the <c>FirstOrDefaultAsync(cancellationToken)</c> overload — the no-default-no-predicate shortcut.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstOrDefaultAsyncWithCancellationTokenOverload_ThenReturnsFirst()
@@ -43,8 +42,7 @@ public partial class TerminalOperatorTests
         await Assert.That(result).IsEqualTo(ExpectedFirst);
     }
 
-    /// <summary>Exercises the <c>LastOrDefaultAsync(cancellationToken)</c> overload — the
-    /// no-default-no-predicate shortcut.</summary>
+    /// <summary>Exercises the <c>LastOrDefaultAsync(cancellationToken)</c> overload — the no-default-no-predicate shortcut.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLastOrDefaultAsyncWithCancellationTokenOverload_ThenReturnsLast()
@@ -55,8 +53,7 @@ public partial class TerminalOperatorTests
         await Assert.That(result).IsEqualTo(ExpectedLast);
     }
 
-    /// <summary>Exercises the <c>SingleOrDefaultAsync(cancellationToken)</c> overload — the
-    /// no-default-no-predicate shortcut.</summary>
+    /// <summary>Exercises the <c>SingleOrDefaultAsync(cancellationToken)</c> overload — the no-default-no-predicate shortcut.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleOrDefaultAsyncWithCancellationTokenOverload_ThenReturnsValue()

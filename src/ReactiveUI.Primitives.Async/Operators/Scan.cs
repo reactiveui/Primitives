@@ -14,46 +14,45 @@ namespace ReactiveUI.Primitives.Async;
 /// asynchronous observables. These operations are useful for scenarios where intermediate results or running totals are
 /// needed as items are received. All methods are designed to work with asynchronous patterns and support cancellation
 /// via tokens.</remarks>
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Applies an accumulator function over the observable sequence and returns each intermediate result
-    /// using the specified asynchronous accumulator.
-    /// </summary>
-    /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
+    /// <summary>Scan (running accumulation) operators for an observable source sequence.</summary>
     /// <param name="this">The source observable sequence.</param>
-    /// <param name="seed">The initial accumulator value.</param>
-    /// <param name="accumulator">An asynchronous accumulator function to be invoked on each element. Receives the current accumulator value,
-    /// the current element, and a cancellation token.</param>
-    /// <returns>An observable sequence containing the accumulated values produced after each element is processed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> is null.</exception>
-    public static IObservableAsync<TAcc> Scan<T, TAcc>(
-        this IObservableAsync<T> @this,
-        TAcc seed,
-        Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(accumulator);
-
-        return new ScanAsyncSignal<T, TAcc>(@this, seed, accumulator);
-    }
-
-    /// <summary>
-    /// Applies an accumulator function over the observable sequence and returns each intermediate result.
-    /// </summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
-    /// <param name="this">The source observable sequence.</param>
-    /// <param name="seed">The initial accumulator value.</param>
-    /// <param name="accumulator">An accumulator function to be invoked on each element. Receives the current accumulator value and the
-    /// current element.</param>
-    /// <returns>An observable sequence containing the accumulated values produced after each element is processed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> is null.</exception>
-    public static IObservableAsync<TAcc> Scan<T, TAcc>(this IObservableAsync<T> @this, TAcc seed, Func<TAcc, T, TAcc> accumulator)
+    extension<T>(IObservableAsync<T> @this)
     {
-        ArgumentExceptionHelper.ThrowIfNull(accumulator);
+        /// <summary>
+        /// Applies an accumulator function over the observable sequence and returns each intermediate result
+        /// using the specified asynchronous accumulator.
+        /// </summary>
+        /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
+        /// <param name="seed">The initial accumulator value.</param>
+        /// <param name="accumulator">An asynchronous accumulator function to be invoked on each element. Receives the current accumulator value,
+        /// the current element, and a cancellation token.</param>
+        /// <returns>An observable sequence containing the accumulated values produced after each element is processed.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> is null.</exception>
+        public IObservableAsync<TAcc> Scan<TAcc>(
+            TAcc seed,
+            Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(accumulator);
 
-        return new ScanSyncSignal<T, TAcc>(@this, seed, accumulator);
+            return new ScanAsyncSignal<T, TAcc>(@this, seed, accumulator);
+        }
+
+        /// <summary>Applies an accumulator function over the observable sequence and returns each intermediate result.</summary>
+        /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
+        /// <param name="seed">The initial accumulator value.</param>
+        /// <param name="accumulator">An accumulator function to be invoked on each element. Receives the current accumulator value and the
+        /// current element.</param>
+        /// <returns>An observable sequence containing the accumulated values produced after each element is processed.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> is null.</exception>
+        public IObservableAsync<TAcc> Scan<TAcc>(TAcc seed, Func<TAcc, T, TAcc> accumulator)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(accumulator);
+
+            return new ScanSyncSignal<T, TAcc>(@this, seed, accumulator);
+        }
     }
 
     /// <summary>

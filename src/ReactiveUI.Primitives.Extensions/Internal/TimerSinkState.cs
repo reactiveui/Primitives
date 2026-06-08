@@ -17,58 +17,46 @@ namespace ReactiveUI.Primitives.Extensions.Internal;
 /// <param name="downstream">The downstream observer terminal callbacks fan out to.</param>
 internal sealed class TimerSinkState<T>(IObserver<T> downstream)
 {
-    /// <summary>Gets the gate protecting state transitions and downstream notification.</summary>
-    public Lock Gate { get; } = new();
-
     /// <summary>Gets the timer slot used by the operator's OnNext logic to schedule deferred emissions.</summary>
     public SwapDisposable Timer { get; } = new();
 
     /// <summary>
     /// Gets a value indicating whether the sink has reached a terminal state (OnError, OnCompleted,
-    /// or Dispose). Read inside the gate by callers that need to short-circuit a deferred operation.
+    /// or Dispose). Read inside the owning sink's gate by callers that need to short-circuit a deferred operation.
     /// </summary>
     public bool Done { get; private set; }
 
-    /// <summary>Forwards a terminal error to the downstream observer and tears the sink down.</summary>
+    /// <summary>Forwards a terminal error to the downstream observer and tears the sink down. The caller must hold the sink's gate.</summary>
     /// <param name="error">The error to forward.</param>
-    public void HandleError(Exception error)
+    public void HandleErrorLocked(Exception error)
     {
-        lock (Gate)
+        if (Done)
         {
-            if (Done)
-            {
-                return;
-            }
-
-            Done = true;
-            Timer.Dispose();
-            downstream.OnError(error);
+            return;
         }
+
+        Done = true;
+        Timer.Dispose();
+        downstream.OnError(error);
     }
 
-    /// <summary>Forwards completion to the downstream observer and tears the sink down.</summary>
-    public void HandleCompleted()
+    /// <summary>Forwards completion to the downstream observer and tears the sink down. The caller must hold the sink's gate.</summary>
+    public void HandleCompletedLocked()
     {
-        lock (Gate)
+        if (Done)
         {
-            if (Done)
-            {
-                return;
-            }
-
-            Done = true;
-            Timer.Dispose();
-            downstream.OnCompleted();
+            return;
         }
+
+        Done = true;
+        Timer.Dispose();
+        downstream.OnCompleted();
     }
 
-    /// <summary>Marks the sink terminal and disposes the timer without forwarding a notification.</summary>
-    public void HandleDispose()
+    /// <summary>Marks the sink terminal and disposes the timer without forwarding a notification. The caller must hold the sink's gate.</summary>
+    public void HandleDisposeLocked()
     {
-        lock (Gate)
-        {
-            Done = true;
-            Timer.Dispose();
-        }
+        Done = true;
+        Timer.Dispose();
     }
 }

@@ -20,8 +20,12 @@ namespace ReactiveUI.Primitives.Extensions.Internal;
 /// <typeparam name="T">The element type carried by <see cref="DrainNotificationKind.Next"/> notifications.</typeparam>
 /// <param name="scheduler">The scheduler each drain pass runs on.</param>
 /// <param name="target">The sink whose <see cref="IDrainTarget.Drain"/> the scheduled pass invokes.</param>
-internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget target)
+/// <param name="gate">The gate, owned by the composing sink, protecting the queue and terminal state.</param>
+internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget target, Lock gate)
 {
+    /// <summary>The gate protecting the queue, drain flag, done flag, and the composing sink's own operator-specific state.</summary>
+    private readonly Lock _gate = gate;
+
     /// <summary>The FIFO queue of pending upstream notifications.</summary>
     private readonly Queue<Notification> _queue = new();
 
@@ -34,12 +38,8 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
     /// <summary><see langword="true"/> once a terminal notification has been delivered or the sink disposed.</summary>
     private bool _done;
 
-    /// <summary>Gets the gate protecting the queue, drain flag, done flag, and the composing sink's own
-    /// operator-specific state. Sinks lock this directly when guarding their extra fields.</summary>
-    public Lock Gate { get; } = new();
-
     /// <summary>Gets a value indicating whether the sink has reached a terminal state. Read inside
-    /// <see cref="Gate"/> by callers that need to short-circuit once terminated.</summary>
+    /// the sink's gate by callers that need to short-circuit once terminated.</summary>
     public bool Done => _done;
 
     /// <summary>Enqueues an OnNext notification and schedules a drain pass if one isn't already running.</summary>
@@ -57,7 +57,7 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
     /// <param name="subscription">The upstream subscription handle.</param>
     public void Attach(IDisposable subscription)
     {
-        lock (Gate)
+        lock (_gate)
         {
             if (!_done)
             {
@@ -69,13 +69,12 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
         subscription.Dispose();
     }
 
-    /// <summary>Dequeues the next pending notification, clearing the drain flag when the queue empties or
-    /// the sink has terminated.</summary>
+    /// <summary>Dequeues the next pending notification, clearing the drain flag when the queue empties or the sink has terminated.</summary>
     /// <param name="notification">The dequeued notification when this returns <see langword="true"/>.</param>
     /// <returns><see langword="true"/> if a notification was dequeued; otherwise <see langword="false"/>.</returns>
     public bool TryDequeue(out Notification notification)
     {
-        lock (Gate)
+        lock (_gate)
         {
             if (_done || _queue.Count == 0)
             {
@@ -89,34 +88,34 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
         }
     }
 
-    /// <summary>Marks the sink terminated and drops any still-queued notifications. Locks <see cref="Gate"/>.</summary>
+    /// <summary>Marks the sink terminated and drops any still-queued notifications. Locks the gate.</summary>
     public void Terminate()
     {
-        lock (Gate)
+        lock (_gate)
         {
             _done = true;
             _queue.Clear();
         }
     }
 
-    /// <summary>Marks the sink terminated without clearing the queue. Caller must hold <see cref="Gate"/>;
+    /// <summary>Marks the sink terminated without clearing the queue. Caller must hold the gate;
     /// the still-queued notifications are abandoned because <see cref="TryDequeue"/> checks the done flag first.</summary>
     public void MarkDoneLocked() => _done = true;
 
-    /// <summary>Begins disposal under <see cref="Gate"/>: marks the sink done, clears the queue, and detaches
+    /// <summary>Begins disposal under the gate: marks the sink done, clears the queue, and detaches
     /// the upstream subscription — returned to the caller so it is disposed outside the gate. Returns
     /// <see langword="null"/> when already disposed.</summary>
     /// <returns>The upstream subscription to dispose outside the gate, or <see langword="null"/>.</returns>
     public IDisposable? BeginDispose()
     {
-        lock (Gate)
+        lock (_gate)
         {
             return _done ? null : BeginDisposeLocked();
         }
     }
 
     /// <summary>Marks the sink done, clears the queue, and detaches the upstream subscription, returning it for
-    /// disposal outside the gate. Caller must hold <see cref="Gate"/> and have confirmed <see cref="Done"/> is
+    /// disposal outside the gate. Caller must hold the gate and have confirmed <see cref="Done"/> is
     /// <see langword="false"/>. Lets a composing sink dispose its own scheduled-work slot atomically with the
     /// done transition under the same lock.</summary>
     /// <returns>The upstream subscription to dispose outside the gate, or <see langword="null"/>.</returns>
@@ -133,7 +132,7 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
     /// <param name="notification">The notification to forward to the drain loop.</param>
     private void Enqueue(in Notification notification)
     {
-        lock (Gate)
+        lock (_gate)
         {
             if (_done)
             {

@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Internals;
 
-/// <summary>
-/// Relays notifications from the base observer pipeline to another asynchronous observer.
-/// </summary>
+/// <summary>Relays notifications from the base observer pipeline to another asynchronous observer.</summary>
 /// <typeparam name="T">The type of elements received by the witness.</typeparam>
 /// <param name="observer">The witness that receives the relayed notifications.</param>
 internal sealed class RelayWitnessAsync<T>(IObserverAsync<T> observer) : ObserverAsync<T>

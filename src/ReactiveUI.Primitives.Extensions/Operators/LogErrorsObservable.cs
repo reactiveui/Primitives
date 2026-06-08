@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Forwards source values verbatim, invokes the logger on error, then propagates the error downstream.
-/// </summary>
+/// <summary>Forwards source values verbatim, invokes the logger on error, then propagates the error downstream.</summary>
 /// <typeparam name="T">Element type.</typeparam>
 /// <param name="source">Upstream source.</param>
 /// <param name="logger">Invoked once with the source error before downstream sees it.</param>

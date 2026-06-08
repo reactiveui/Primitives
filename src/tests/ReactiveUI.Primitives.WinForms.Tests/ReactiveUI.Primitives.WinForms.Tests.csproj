@@ -1,10 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- ControlSequencer wraps a concrete System.Windows.Forms.Control. The project targets plain .NET
-       everywhere and adds the -windows TFMs only on Windows, so the test host launches on the
-       cross-platform CI leg. The windows TFM (via the Choose below) turns on UseWindowsForms, references
-       the WinForms library, and compiles the real dispatcher tests + API approval; the cross-platform
-       build compiles only the API approval test, which is a no-op there. -->
+       everywhere and adds the -windows TFMs only on Windows. The windows TFM (via the Choose below) turns
+       on UseWindowsForms, references the WinForms library, and compiles the real control tests; the
+       cross-platform build compiles only the placeholder so the host reports a discovered test. -->
   <PropertyGroup>
     <TargetFrameworks>$(NetTargetFrameworks)</TargetFrameworks>
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(WindowsNetTargetFrameworks)</TargetFrameworks>
@@ -24,10 +23,9 @@
         <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
       </PropertyGroup>
       <ItemGroup>
-        <PackageReference Include="PublicApiGenerator" />
-        <Compile Include="..\Shared\ApiApprovalExtensions.cs" Link="ApiApprovalExtensions.cs" />
         <ProjectReference Include="..\..\ReactiveUI.Primitives.WinForms\ReactiveUI.Primitives.WinForms.csproj" />
         <Compile Include="ControlSequencerTests.cs" />
+        <Compile Remove="CrossPlatformPlaceholderTests.cs" />
       </ItemGroup>
     </When>
   </Choose>

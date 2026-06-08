@@ -4,14 +4,10 @@
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Provides a reusable disposable test instance.
-/// </summary>
+/// <summary>Provides a reusable disposable test instance.</summary>
 internal sealed class DummyDisposable : IDisposable
 {
-    /// <summary>
-    /// Gets the shared disposable instance.
-    /// </summary>
+    /// <summary>Gets the shared disposable instance.</summary>
     public static DummyDisposable Instance { get; } = new();
 
     /// <inheritdoc/>

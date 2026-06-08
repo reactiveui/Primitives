@@ -1,10 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- DispatcherSequencer wraps the concrete WPF System.Windows.Threading.Dispatcher. The project targets
-       plain .NET everywhere and adds the -windows TFMs only on Windows, so the test host launches on the
-       cross-platform CI leg. The windows TFM (via the Choose below) turns on UseWPF, references the WPF
-       library, and compiles the real dispatcher tests + API approval; the cross-platform build compiles
-       only the API approval test, which is a no-op there (the surface is approved on the windows leg). -->
+       plain .NET everywhere and adds the -windows TFMs only on Windows. The windows TFM (via the Choose
+       below) turns on UseWPF, references the WPF library, and compiles the real dispatcher tests; the
+       cross-platform build compiles only the skipped placeholder so the host reports a discovered test. -->
   <PropertyGroup>
     <TargetFrameworks>$(NetTargetFrameworks)</TargetFrameworks>
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(WindowsNetTargetFrameworks)</TargetFrameworks>
@@ -24,10 +23,9 @@
         <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
       </PropertyGroup>
       <ItemGroup>
-        <PackageReference Include="PublicApiGenerator" />
-        <Compile Include="..\Shared\ApiApprovalExtensions.cs" Link="ApiApprovalExtensions.cs" />
         <ProjectReference Include="..\..\ReactiveUI.Primitives.Wpf\ReactiveUI.Primitives.Wpf.csproj" />
         <Compile Include="DispatcherSequencerTests.cs" />
+        <Compile Remove="CrossPlatformPlaceholderTests.cs" />
       </ItemGroup>
     </When>
   </Choose>

@@ -6,15 +6,13 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async.Tests.Internals;
 
-/// <summary>Tests for <see cref="PooledDelaySource"/>, the pooled <c>IValueTaskSource</c> backing
-/// <c>DelayAsync</c> on non-System <see cref="TimeProvider"/> implementations.</summary>
+/// <summary>Tests for <see cref="PooledDelaySource"/>, the pooled <c>IValueTaskSource</c> backing <c>DelayAsync</c> on non-System <see cref="TimeProvider"/> implementations.</summary>
 public class PooledDelaySourceTests
 {
     /// <summary>The delay used by the happy-path test.</summary>
     private static readonly TimeSpan ShortDelay = TimeSpan.FromMilliseconds(20);
 
-    /// <summary>Verifies that a pre-cancelled token fails the source immediately with
-    /// <see cref="OperationCanceledException"/> — the BeginAsync early-return path.</summary>
+    /// <summary>Verifies that a pre-cancelled token fails the source immediately with <see cref="OperationCanceledException"/> — the BeginAsync early-return path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPreCancelledToken_ThenFailsWithOperationCanceled()
@@ -59,8 +57,7 @@ public class PooledDelaySourceTests
         await Assert.That(ex).IsNotNull();
     }
 
-    /// <summary>Custom <see cref="TimeProvider"/> that is NOT <see cref="TimeProvider.System"/>; ensures BeginAsync
-    /// uses the non-System path. Delegates timer creation to System under the hood.</summary>
+    /// <summary>Non-System <see cref="TimeProvider"/> that forces BeginAsync down the non-System path.</summary>
     private sealed class NonSystemTimeProvider : TimeProvider
     {
         /// <inheritdoc/>

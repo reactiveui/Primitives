@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// TakeUntil operator tests — CompletionSignalDelegate overload and option behavior.
-/// </summary>
+/// <summary>TakeUntil operator tests — CompletionSignalDelegate overload and option behavior.</summary>
 public partial class TakeUntilOperatorTests
 {
     /// <summary>String literal "subscribe failed" used by multiple tests.</summary>
@@ -197,9 +195,7 @@ public partial class TakeUntilOperatorTests
             await throwingSource.TakeUntil(x => x > FifthItem).SubscribeAsync((_, _) => default, null));
     }
 
-    /// <summary>
-    /// Verifies that TakeUntil with a predicate that becomes true mid-stream stops emitting further elements.
-    /// </summary>
+    /// <summary>Verifies that TakeUntil with a predicate that becomes true mid-stream stops emitting further elements.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPredicateStopSignalBecomesTrueMidStream_ThenStopsEmitting()
@@ -226,9 +222,7 @@ public partial class TakeUntilOperatorTests
             await throwingSource.TakeUntil(cts.Token).SubscribeAsync((_, _) => default, null));
     }
 
-    /// <summary>
-    /// Verifies that TakeUntil with a cancellation token stops emission when the token is canceled during active subscription.
-    /// </summary>
+    /// <summary>Verifies that TakeUntil with a cancellation token stops emission when the token is canceled during active subscription.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilTokenCanceledDuringEmission_ThenEmissionStops()
@@ -281,9 +275,7 @@ public partial class TakeUntilOperatorTests
             await throwingSource.TakeUntil(stopSignal).SubscribeAsync((_, _) => default, null));
     }
 
-    /// <summary>
-    /// Verifies that TakeUntil with a Task disposes the subscription and rethrows when the source throws during subscribe.
-    /// </summary>
+    /// <summary>Verifies that TakeUntil with a Task disposes the subscription and rethrows when the source throws during subscribe.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTaskStopSignalSourceThrowsOnSubscribe_ThenDisposesAndRethrows()
@@ -296,9 +288,7 @@ public partial class TakeUntilOperatorTests
             await throwingSource.TakeUntil(tcs.Task).SubscribeAsync((_, _) => default, null));
     }
 
-    /// <summary>
-    /// Verifies that TakeUntil with a Task that completes mid-stream stops further emissions and completes with success.
-    /// </summary>
+    /// <summary>Verifies that TakeUntil with a Task that completes mid-stream stops further emissions and completes with success.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTaskStopSignalCompletesMidStream_ThenStopsEmissions()
@@ -349,9 +339,7 @@ public partial class TakeUntilOperatorTests
                 .SubscribeAsync((_, _) => default, null));
     }
 
-    /// <summary>
-    /// Verifies that TakeUntil with another observable that emits an item causes source to complete.
-    /// </summary>
+    /// <summary>Verifies that TakeUntil with another observable that emits an item causes source to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilOtherObservableEmitsItem_ThenSourceCompletes()
@@ -403,9 +391,7 @@ public partial class TakeUntilOperatorTests
             }).SubscribeAsync((_, _) => default, null));
     }
 
-    /// <summary>
-    /// Verifies that TakeUntil with an async predicate that becomes true mid-stream stops emitting further elements.
-    /// </summary>
+    /// <summary>Verifies that TakeUntil with an async predicate that becomes true mid-stream stops emitting further elements.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilAsyncPredicateBecomesTrueMidStream_ThenStopsEmitting()
@@ -421,9 +407,7 @@ public partial class TakeUntilOperatorTests
         await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem]);
     }
 
-    /// <summary>
-    /// Tests TakeUntil with Task overload stops emitting when task completes.
-    /// </summary>
+    /// <summary>Tests TakeUntil with Task overload stops emitting when task completes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTaskStopSignal_ThenStopsWhenTaskCompletes()
@@ -451,9 +435,7 @@ public partial class TakeUntilOperatorTests
         await Assert.That(items).Contains(1);
     }
 
-    /// <summary>
-    /// Tests TakeUntil with CancellationToken stops emitting when token is canceled.
-    /// </summary>
+    /// <summary>Tests TakeUntil with CancellationToken stops emitting when token is canceled.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCancellationStopSignal_ThenStopsWhenCanceled()
@@ -479,9 +461,7 @@ public partial class TakeUntilOperatorTests
         await Assert.That(items).Contains(1);
     }
 
-    /// <summary>
-    /// Tests TakeUntil with CompletionSignalDelegate stops emitting when delegate signal completes.
-    /// </summary>
+    /// <summary>Tests TakeUntil with CompletionSignalDelegate stops emitting when delegate signal completes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilCompletionDelegate_ThenStopsWhenSignalCompletes()

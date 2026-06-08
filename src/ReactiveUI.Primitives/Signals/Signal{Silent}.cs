@@ -6,14 +6,10 @@ using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// Signals.
-/// </summary>
+/// <summary>Signals.</summary>
 public static partial class Signal
 {
-    /// <summary>
-    /// Non-Terminating Signals. It's no returns, never finish.
-    /// </summary>
+    /// <summary>Non-Terminating Signals. It's no returns, never finish.</summary>
     /// <typeparam name="T">The type.</typeparam>
     /// <returns>An Signals.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
@@ -22,9 +18,7 @@ public static partial class Signal
         Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Silent<T>() => ImmutableNeverSignal<T>.Instance;
 
-    /// <summary>
-    /// Non-Terminating Signals. It's no returns, never finish. witness is for type inference.
-    /// </summary>
+    /// <summary>Non-Terminating Signals. It's no returns, never finish. witness is for type inference.</summary>
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="witness">The witness.</param>
     /// <returns>An Signals.</returns>

@@ -12,24 +12,16 @@ using ReactiveUI.Primitives.SystemReactiveBridge.Generator;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Contract tests for bridge source generators that conditionally emit async adapter APIs.
-/// </summary>
+/// <summary>Contract tests for bridge source generators that conditionally emit async adapter APIs.</summary>
 public sealed class AsyncBridgeGeneratorContractTests
 {
-    /// <summary>
-    /// The generated System.Reactive async bridge type name.
-    /// </summary>
+    /// <summary>The generated System.Reactive async bridge type name.</summary>
     private const string SystemReactiveAsyncBridgeName = "SystemReactiveAsyncBridge";
 
-    /// <summary>
-    /// The generated R3 async bridge type name.
-    /// </summary>
+    /// <summary>The generated R3 async bridge type name.</summary>
     private const string R3AsyncBridgeName = "R3AsyncBridge";
 
-    /// <summary>
-    /// Verifies bridge generators emit async adapter extensions when async primitives are referenced.
-    /// </summary>
+    /// <summary>Verifies bridge generators emit async adapter extensions when async primitives are referenced.</summary>
     [Test]
     [RequiresAssemblyFiles]
     public void BridgeGeneratorsEmitAsyncAdaptersOnlyWhenAsyncShapesArePresent()
@@ -116,9 +108,7 @@ public static class AsyncBridgeSmoke
         Assert.True(Array.Exists(generatedSources, static text => text.Contains(R3AsyncBridgeName, StringComparison.Ordinal)));
     }
 
-    /// <summary>
-    /// Verifies bridge generators skip async adapter extensions when async primitives are absent.
-    /// </summary>
+    /// <summary>Verifies bridge generators skip async adapter extensions when async primitives are absent.</summary>
     [Test]
     [RequiresAssemblyFiles]
     public void BridgeGeneratorsSkipAsyncAdaptersWhenAsyncAssemblyIsAbsent()
@@ -197,9 +187,7 @@ public static class CoreOnlySmoke
         Assert.False(Array.Exists(generatedSources, static text => text.Contains(R3AsyncBridgeName, StringComparison.Ordinal)));
     }
 
-    /// <summary>
-    /// Runs the System.Reactive and R3 bridge generators against an in-memory compilation.
-    /// </summary>
+    /// <summary>Runs the System.Reactive and R3 bridge generators against an in-memory compilation.</summary>
     /// <param name="source">The source text to compile.</param>
     /// <param name="includeAsyncReference">Whether to include the async primitives assembly reference.</param>
     /// <returns>The diagnostics and generated source texts produced by the generator run.</returns>

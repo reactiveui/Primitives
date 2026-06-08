@@ -22,9 +22,7 @@ internal sealed class NotObservable(IObservable<bool> source) : IObservable<bool
         return source.Subscribe(new NotObserver(observer));
     }
 
-    /// <summary>
-    /// Forwarding observer that negates every boolean <see cref="OnNext"/>.
-    /// </summary>
+    /// <summary>Forwarding observer that negates every boolean <see cref="OnNext"/>.</summary>
     /// <param name="downstream">The downstream observer.</param>
     private sealed class NotObserver(IObserver<bool> downstream) : IObserver<bool>
     {

@@ -4,39 +4,25 @@
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Captures unhandled async exceptions while restoring the previous process-wide handler on disposal.
-/// </summary>
+/// <summary>Captures unhandled async exceptions while restoring the previous process-wide handler on disposal.</summary>
 internal sealed class UnhandledExceptionCapture : IDisposable
 {
-    /// <summary>
-    /// The polling interval used while waiting for delayed fire-and-forget callbacks.
-    /// </summary>
+    /// <summary>The polling interval used while waiting for delayed fire-and-forget callbacks.</summary>
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(10);
 
-    /// <summary>
-    /// Synchronizes access to the captured exception list.
-    /// </summary>
-    private readonly object _gate = new();
+    /// <summary>Synchronizes access to the captured exception list.</summary>
+    private readonly Lock _gate = new();
 
-    /// <summary>
-    /// Exceptions captured through the temporary unhandled exception handler.
-    /// </summary>
+    /// <summary>Exceptions captured through the temporary unhandled exception handler.</summary>
     private readonly List<Exception> _exceptions = [];
 
-    /// <summary>
-    /// The handler that was active before this capture was installed.
-    /// </summary>
+    /// <summary>The handler that was active before this capture was installed.</summary>
     private readonly Action<Exception> _previousHandler;
 
-    /// <summary>
-    /// Tracks whether the capture has already restored the previous handler.
-    /// </summary>
+    /// <summary>Tracks whether the capture has already restored the previous handler.</summary>
     private bool _disposed;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="UnhandledExceptionCapture"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="UnhandledExceptionCapture"/> class.</summary>
     public UnhandledExceptionCapture()
     {
         _previousHandler = UnhandledExceptionHandler.CurrentHandler;
@@ -46,9 +32,7 @@ internal sealed class UnhandledExceptionCapture : IDisposable
     /// <inheritdoc/>
     public void Dispose() => Restore();
 
-    /// <summary>
-    /// Waits for an exception with the expected message.
-    /// </summary>
+    /// <summary>Waits for an exception with the expected message.</summary>
     /// <param name="message">The expected exception message.</param>
     /// <param name="timeout">Maximum time to wait.</param>
     /// <returns>The matched exception, or <see langword="null"/> if no match is observed.</returns>
@@ -58,9 +42,7 @@ internal sealed class UnhandledExceptionCapture : IDisposable
         return WaitForAsync(ex => ex.Message == message, timeout);
     }
 
-    /// <summary>
-    /// Waits for a captured exception that satisfies the supplied predicate.
-    /// </summary>
+    /// <summary>Waits for a captured exception that satisfies the supplied predicate.</summary>
     /// <param name="predicate">The predicate used to find the expected exception.</param>
     /// <param name="timeout">Maximum time to wait.</param>
     /// <returns>The matched exception, or <see langword="null"/> if no match is observed.</returns>
@@ -80,9 +62,7 @@ internal sealed class UnhandledExceptionCapture : IDisposable
         return match ?? Find(predicate);
     }
 
-    /// <summary>
-    /// Stores an exception routed through the temporary handler.
-    /// </summary>
+    /// <summary>Stores an exception routed through the temporary handler.</summary>
     /// <param name="exception">The routed exception.</param>
     private void Capture(Exception exception)
     {
@@ -92,9 +72,7 @@ internal sealed class UnhandledExceptionCapture : IDisposable
         }
     }
 
-    /// <summary>
-    /// Finds the first captured exception that matches the predicate.
-    /// </summary>
+    /// <summary>Finds the first captured exception that matches the predicate.</summary>
     /// <param name="predicate">The predicate used to find the expected exception.</param>
     /// <returns>The matched exception, or <see langword="null"/> if none match.</returns>
     private Exception? Find(Func<Exception, bool> predicate)
@@ -113,9 +91,7 @@ internal sealed class UnhandledExceptionCapture : IDisposable
         return null;
     }
 
-    /// <summary>
-    /// Restores the previously registered unhandled exception handler.
-    /// </summary>
+    /// <summary>Restores the previously registered unhandled exception handler.</summary>
     private void Restore()
     {
         if (_disposed)

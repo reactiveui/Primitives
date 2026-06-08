@@ -6,14 +6,10 @@ using System.Collections;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Minimal assertion helpers used by the TUnit tests.
-/// </summary>
+/// <summary>Minimal assertion helpers used by the TUnit tests.</summary>
 internal static class Assert
 {
-    /// <summary>
-    /// Verifies that a condition is true.
-    /// </summary>
+    /// <summary>Verifies that a condition is true.</summary>
     /// <param name="condition">The condition to verify.</param>
     public static void True(bool condition)
     {
@@ -25,15 +21,11 @@ internal static class Assert
         throw new InvalidOperationException($"Expected {nameof(condition)} to be true.");
     }
 
-    /// <summary>
-    /// Verifies that a nullable condition is true.
-    /// </summary>
+    /// <summary>Verifies that a nullable condition is true.</summary>
     /// <param name="condition">The nullable condition to verify.</param>
     public static void True(bool? condition) => True(condition.GetValueOrDefault());
 
-    /// <summary>
-    /// Verifies that a condition is false.
-    /// </summary>
+    /// <summary>Verifies that a condition is false.</summary>
     /// <param name="condition">The condition to verify.</param>
     public static void False(bool condition)
     {
@@ -45,15 +37,11 @@ internal static class Assert
         throw new InvalidOperationException($"Expected {nameof(condition)} to be false.");
     }
 
-    /// <summary>
-    /// Verifies that a nullable condition is false.
-    /// </summary>
+    /// <summary>Verifies that a nullable condition is false.</summary>
     /// <param name="condition">The nullable condition to verify.</param>
     public static void False(bool? condition) => False(condition.GetValueOrDefault());
 
-    /// <summary>
-    /// Verifies that two sequences contain equal values in order.
-    /// </summary>
+    /// <summary>Verifies that two sequences contain equal values in order.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="expected">The expected sequence.</param>
     /// <param name="actual">The actual sequence.</param>
@@ -77,9 +65,7 @@ internal static class Assert
         throw new InvalidOperationException($"Expected {Format(expected)}, {nameof(actual)} {Format(actual)}.");
     }
 
-    /// <summary>
-    /// Verifies that two boxed values are equal.
-    /// </summary>
+    /// <summary>Verifies that two boxed values are equal.</summary>
     /// <param name="expected">The expected value.</param>
     /// <param name="actual">The actual value.</param>
     public static void Equal(object? expected, object? actual)
@@ -92,9 +78,7 @@ internal static class Assert
         throw new InvalidOperationException($"Expected {Format(expected)}, {nameof(actual)} {Format(actual)}.");
     }
 
-    /// <summary>
-    /// Verifies that two values are equal.
-    /// </summary>
+    /// <summary>Verifies that two values are equal.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="expected">The expected value.</param>
     /// <param name="actual">The actual value.</param>
@@ -108,9 +92,7 @@ internal static class Assert
         throw new InvalidOperationException($"Expected {Format(expected)}, {nameof(actual)} {Format(actual)}.");
     }
 
-    /// <summary>
-    /// Verifies that two values are not equal.
-    /// </summary>
+    /// <summary>Verifies that two values are not equal.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="notExpected">The value that should not be produced.</param>
     /// <param name="actual">The actual value.</param>
@@ -124,9 +106,7 @@ internal static class Assert
         throw new InvalidOperationException($"Did not expect {Format(actual)}.");
     }
 
-    /// <summary>
-    /// Verifies that two references point to the same instance.
-    /// </summary>
+    /// <summary>Verifies that two references point to the same instance.</summary>
     /// <typeparam name="T">The reference type.</typeparam>
     /// <param name="expected">The expected instance.</param>
     /// <param name="actual">The actual instance.</param>
@@ -141,9 +121,7 @@ internal static class Assert
         throw new InvalidOperationException("Expected both references to point to the same instance.");
     }
 
-    /// <summary>
-    /// Verifies that a value is not null.
-    /// </summary>
+    /// <summary>Verifies that a value is not null.</summary>
     /// <param name="value">The value to verify.</param>
     public static void NotNull(object? value)
     {
@@ -155,9 +133,7 @@ internal static class Assert
         throw new InvalidOperationException($"Expected {nameof(value)} not to be null.");
     }
 
-    /// <summary>
-    /// Verifies that a collection contains a value.
-    /// </summary>
+    /// <summary>Verifies that a collection contains a value.</summary>
     /// <typeparam name="T">The collection element type.</typeparam>
     /// <param name="expected">The expected value.</param>
     /// <param name="collection">The collection to inspect.</param>
@@ -176,9 +152,7 @@ internal static class Assert
         throw new InvalidOperationException($"Expected {nameof(collection)} to contain {Format(expected)}.");
     }
 
-    /// <summary>
-    /// Verifies that a collection does not contain a value.
-    /// </summary>
+    /// <summary>Verifies that a collection does not contain a value.</summary>
     /// <typeparam name="T">The collection element type.</typeparam>
     /// <param name="expected">The value that should not be present.</param>
     /// <param name="collection">The collection to inspect.</param>
@@ -197,9 +171,7 @@ internal static class Assert
         throw new InvalidOperationException($"Expected {nameof(collection)} not to contain {Format(expected)}.");
     }
 
-    /// <summary>
-    /// Verifies that an action throws the expected exception type.
-    /// </summary>
+    /// <summary>Verifies that an action throws the expected exception type.</summary>
     /// <typeparam name="TException">The expected exception type.</typeparam>
     /// <param name="action">The action to execute.</param>
     /// <param name="expectedException">An optional marker used to infer the expected exception type.</param>
@@ -232,9 +204,7 @@ internal static class Assert
         throw new InvalidOperationException($"Expected exception {expectedExceptionType.FullName}, but no exception was thrown.");
     }
 
-    /// <summary>
-    /// Formats a value for assertion failure messages.
-    /// </summary>
+    /// <summary>Formats a value for assertion failure messages.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="value">The value to format.</param>
     /// <returns>The formatted value.</returns>
@@ -258,9 +228,7 @@ internal static class Assert
         return value.ToString() ?? "<null>";
     }
 
-    /// <summary>
-    /// Determines whether two sequences contain equal values in order.
-    /// </summary>
+    /// <summary>Determines whether two sequences contain equal values in order.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="expected">The expected sequence.</param>
     /// <param name="actual">The actual sequence.</param>
@@ -286,9 +254,7 @@ internal static class Assert
         return !actualEnumerator.MoveNext();
     }
 
-    /// <summary>
-    /// Determines whether a sequence contains a value.
-    /// </summary>
+    /// <summary>Determines whether a sequence contains a value.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="expected">The expected value.</param>
     /// <param name="collection">The collection to inspect.</param>
@@ -306,9 +272,7 @@ internal static class Assert
         return false;
     }
 
-    /// <summary>
-    /// Formats a sequence for assertion failure messages.
-    /// </summary>
+    /// <summary>Formats a sequence for assertion failure messages.</summary>
     /// <param name="enumerable">The sequence to format.</param>
     /// <returns>The formatted sequence.</returns>
     private static string FormatEnumerable(IEnumerable enumerable)

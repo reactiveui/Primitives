@@ -4,20 +4,14 @@
 
 namespace ReactiveUI.Primitives.Core;
 
-/// <summary>
-/// Observer that ignores values and completion and rethrows errors.
-/// </summary>
+/// <summary>Observer that ignores values and completion and rethrows errors.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
 internal sealed class ThrowWitness<T> : IObserver<T>
 {
-    /// <summary>
-    /// Gets the shared throw witness instance.
-    /// </summary>
+    /// <summary>Gets the shared throw witness instance.</summary>
     public static readonly ThrowWitness<T> Instance = new();
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ThrowWitness{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ThrowWitness{T}"/> class.</summary>
     private ThrowWitness()
     {
     }

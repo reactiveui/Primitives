@@ -37,7 +37,7 @@ internal sealed class ResumeSignal<T> : IRequireCurrentThread<T>
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }

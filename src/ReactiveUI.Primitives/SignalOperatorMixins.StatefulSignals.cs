@@ -6,13 +6,13 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives;
 
-/// <content>
+/// <summary>
 /// Dedicated <see cref="IObservable{T}"/> implementations for the stateful single-source operators.
 /// Building through these instead of <c>Signal.CreateSafe(observer =&gt; ...)</c> removes the
 /// per-subscription closure, delegate, CreateSafe wrapper, and safe-guard sink, leaving only the
 /// signal object at chain-build time and the operator sink at subscribe time.
-/// </content>
-public static partial class LinqMixins
+/// </summary>
+public static partial class LinqExtensions
 {
     /// <summary>Dedicated signal for <c>Take</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
@@ -36,7 +36,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -75,7 +75,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -108,7 +108,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -158,7 +158,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -197,7 +197,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -236,7 +236,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TAccumulate> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -275,7 +275,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TAccumulate> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -308,7 +308,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -341,7 +341,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -367,7 +367,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -392,7 +392,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }

@@ -14,19 +14,13 @@ namespace ReactiveUI.Primitives.Async;
 /// class does not handle exceptions of type OperationCanceledException.</remarks>
 public static class UnhandledExceptionHandler
 {
-    /// <summary>
-    /// The currently registered handler action invoked when an unhandled exception occurs.
-    /// </summary>
+    /// <summary>The currently registered handler action invoked when an unhandled exception occurs.</summary>
     private static Action<Exception> _unhandledException = TraceUnhandledException;
 
-    /// <summary>
-    /// Gets the currently registered handler. Used for save/restore in tests.
-    /// </summary>
+    /// <summary>Gets the currently registered handler. Used for save/restore in tests.</summary>
     internal static Action<Exception> CurrentHandler => _unhandledException;
 
-    /// <summary>
-    /// Registers a handler to be invoked when an unhandled exception occurs.
-    /// </summary>
+    /// <summary>Registers a handler to be invoked when an unhandled exception occurs.</summary>
     /// <remarks>Registering a new handler replaces any previously registered handler. The handler
     /// will be called for each unhandled exception that occurs after registration.</remarks>
     /// <param name="unhandledExceptionHandler">An action to execute when an unhandled exception is encountered. The exception instance is passed as a
@@ -34,9 +28,7 @@ public static class UnhandledExceptionHandler
     public static void Register(Action<Exception> unhandledExceptionHandler) =>
         _unhandledException = unhandledExceptionHandler;
 
-    /// <summary>
-    /// Invokes the application's unhandled exception handler for exceptions that are not operation cancellations.
-    /// </summary>
+    /// <summary>Invokes the application's unhandled exception handler for exceptions that are not operation cancellations.</summary>
     /// <remarks>OperationCanceledException instances are ignored and not passed to the
     /// handler.</remarks>
     /// <param name="e">The exception to be processed by the unhandled exception handler. Cannot be null.</param>
@@ -57,9 +49,7 @@ public static class UnhandledExceptionHandler
         }
     }
 
-    /// <summary>
-    /// Handles unhandled exceptions by writing an error message to the console output.
-    /// </summary>
+    /// <summary>Handles unhandled exceptions by writing an error message to the console output.</summary>
     /// <remarks>This method is intended to be used as a default handler for unhandled exceptions in
     /// an application. It writes the exception details to the standard console output for diagnostic
     /// purposes.</remarks>

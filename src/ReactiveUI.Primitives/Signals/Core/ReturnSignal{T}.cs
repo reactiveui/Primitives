@@ -7,25 +7,17 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Represents the ReturnSignal class.
-/// </summary>
+/// <summary>Represents the ReturnSignal class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
 internal sealed class ReturnSignal<T> : SignalsBase<T>
 {
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly T _value;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly ISequencer _scheduler;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ReturnSignal{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ReturnSignal{T}"/> class.</summary>
     /// <param name="value">The value.</param>
     /// <param name="scheduler">The scheduler value.</param>
     public ReturnSignal(T value, ISequencer scheduler)
@@ -35,9 +27,7 @@ internal sealed class ReturnSignal<T> : SignalsBase<T>
         _scheduler = scheduler;
     }
 
-    /// <summary>
-    /// Executes the SubscribeCore operation.
-    /// </summary>
+    /// <summary>Executes the SubscribeCore operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <param name="cancel">The cancel value.</param>
     /// <returns>The result.</returns>
@@ -59,14 +49,10 @@ internal sealed class ReturnSignal<T> : SignalsBase<T>
         });
     }
 
-    /// <summary>
-    /// Represents the Return class.
-    /// </summary>
+    /// <summary>Represents the Return class.</summary>
     internal sealed class Return : WitnessBase<T, T>
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Return"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="Return"/> class.</summary>
         /// <param name="observer">The observer value.</param>
         /// <param name="cancel">The cancel value.</param>
         public Return(IObserver<T> observer, IDisposable cancel)
@@ -74,9 +60,7 @@ internal sealed class ReturnSignal<T> : SignalsBase<T>
         {
         }
 
-        /// <summary>
-        /// Executes the OnNext operation.
-        /// </summary>
+        /// <summary>Executes the OnNext operation.</summary>
         /// <param name="value">The value.</param>
         public override void OnNext(T value)
         {
@@ -91,9 +75,7 @@ internal sealed class ReturnSignal<T> : SignalsBase<T>
             }
         }
 
-        /// <summary>
-        /// Executes the OnError operation.
-        /// </summary>
+        /// <summary>Executes the OnError operation.</summary>
         /// <param name="error">The error value.</param>
         public override void OnError(Exception error)
         {
@@ -107,9 +89,7 @@ internal sealed class ReturnSignal<T> : SignalsBase<T>
             }
         }
 
-        /// <summary>
-        /// Executes the OnCompleted operation.
-        /// </summary>
+        /// <summary>Executes the OnCompleted operation.</summary>
         public override void OnCompleted()
         {
             try

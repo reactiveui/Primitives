@@ -9,14 +9,10 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies core runtime contracts for sparks, witnesses, disposables, and sequencers.
-/// </summary>
+/// <summary>Verifies core runtime contracts for sparks, witnesses, disposables, and sequencers.</summary>
 public class CoreRuntimeContractTests
 {
-    /// <summary>
-    /// Verifies completed sparks compare equal by value for each value type.
-    /// </summary>
+    /// <summary>Verifies completed sparks compare equal by value for each value type.</summary>
     [Test]
     public void CompletedSparksAreEqualPerValueType()
     {
@@ -27,9 +23,7 @@ public class CoreRuntimeContractTests
         Assert.Equal(first, second);
     }
 
-    /// <summary>
-    /// Verifies delegate witnesses route next, error, and completion callbacks.
-    /// </summary>
+    /// <summary>Verifies delegate witnesses route next, error, and completion callbacks.</summary>
     [Test]
     public void WitnessCreateRoutesCallbacks()
     {
@@ -49,9 +43,7 @@ public class CoreRuntimeContractTests
         Assert.Equal(expected, calls);
     }
 
-    /// <summary>
-    /// Verifies safe witnesses ignore notifications after termination and dispose once.
-    /// </summary>
+    /// <summary>Verifies safe witnesses ignore notifications after termination and dispose once.</summary>
     [Test]
     public void SafeWitnessIgnoresSignalsAfterTerminalAndDisposesOnce()
     {
@@ -77,9 +69,7 @@ public class CoreRuntimeContractTests
         Assert.Equal(1, disposed);
     }
 
-    /// <summary>
-    /// Verifies a null disposable action uses the shared empty disposable.
-    /// </summary>
+    /// <summary>Verifies a null disposable action uses the shared empty disposable.</summary>
     [Test]
     public void ActionDisposableNullActionIsDisposedAfterDispose()
     {
@@ -89,9 +79,7 @@ public class CoreRuntimeContractTests
         Assert.True(disposable.IsDisposed);
     }
 
-    /// <summary>
-    /// Verifies removing one disposable leaves the others attached until disposal.
-    /// </summary>
+    /// <summary>Verifies removing one disposable leaves the others attached until disposal.</summary>
     [Test]
     public void MultipleDisposableRemoveDisposesOnlyTheRequestedItem()
     {
@@ -112,9 +100,7 @@ public class CoreRuntimeContractTests
         Assert.Equal(1, second);
     }
 
-    /// <summary>
-    /// Verifies assigning a disposed single slot disposes the incoming disposable immediately.
-    /// </summary>
+    /// <summary>Verifies assigning a disposed single slot disposes the incoming disposable immediately.</summary>
     [Test]
     public void SingleDisposableCreateAfterDisposeDisposesIncomingDisposableImmediately()
     {
@@ -128,9 +114,7 @@ public class CoreRuntimeContractTests
         Assert.Equal(1, disposed);
     }
 
-    /// <summary>
-    /// Verifies a replaceable disposable invokes its disposal action only once.
-    /// </summary>
+    /// <summary>Verifies a replaceable disposable invokes its disposal action only once.</summary>
     [Test]
     public void SingleReplaceableDisposableRunsActionOnlyOnce()
     {
@@ -143,9 +127,7 @@ public class CoreRuntimeContractTests
         Assert.Equal(1, actionCount);
     }
 
-    /// <summary>
-    /// Verifies nested current-thread work is queued until the current action finishes.
-    /// </summary>
+    /// <summary>Verifies nested current-thread work is queued until the current action finishes.</summary>
     [Test]
     public void CurrentThreadSequencerQueuesNestedWorkUntilCurrentActionCompletes()
     {
@@ -165,9 +147,7 @@ public class CoreRuntimeContractTests
         Assert.Equal(expected, calls);
     }
 
-    /// <summary>
-    /// Verifies the immediate sequencer waits until an absolute due time.
-    /// </summary>
+    /// <summary>Verifies the immediate sequencer waits until an absolute due time.</summary>
     [Test]
     public void ImmediateSequencerHonorsAbsoluteDueTime()
     {
@@ -179,9 +159,7 @@ public class CoreRuntimeContractTests
         Assert.True(elapsed.Elapsed >= TimeSpan.FromMilliseconds(20));
     }
 
-    /// <summary>
-    /// Verifies virtual-clock work runs only after the clock reaches the due time.
-    /// </summary>
+    /// <summary>Verifies virtual-clock work runs only after the clock reaches the due time.</summary>
     [Test]
     public void VirtualClockRunsScheduledWorkOnlyWhenAdvancedPastDueTime()
     {
@@ -200,9 +178,7 @@ public class CoreRuntimeContractTests
         Assert.Equal(expected, calls);
     }
 
-    /// <summary>
-    /// Verifies virtual-clock timestamp scheduling converts monotonic ticks back to virtual time.
-    /// </summary>
+    /// <summary>Verifies virtual-clock timestamp scheduling converts monotonic ticks back to virtual time.</summary>
     [Test]
     public void VirtualClockConvertsMonotonicTimestampDeltasToVirtualTime()
     {
@@ -222,9 +198,7 @@ public class CoreRuntimeContractTests
         Assert.Equal(expected, calls);
     }
 
-    /// <summary>
-    /// Verifies default sequencer aliases expose migration-friendly names.
-    /// </summary>
+    /// <summary>Verifies default sequencer aliases expose migration-friendly names.</summary>
     [Test]
     public void SchedulerDefaultAliasesExposeMigrationFriendlyNames()
     {
@@ -233,9 +207,7 @@ public class CoreRuntimeContractTests
         Assert.Same(ThreadPoolSequencer.Instance, ThreadPoolSequencer.Instance);
     }
 
-    /// <summary>
-    /// Verifies nullable time value structs use deterministic null hash codes.
-    /// </summary>
+    /// <summary>Verifies nullable time value structs use deterministic null hash codes.</summary>
     [Test]
     public void NullableValueTimeStructsUseDeterministicNullHashCodes()
     {
@@ -249,9 +221,7 @@ public class CoreRuntimeContractTests
         Assert.Equal(interval.GetHashCode() ^ NullHashSeed, timeInterval.GetHashCode());
     }
 
-    /// <summary>
-    /// Verifies scheduled-item constructor argument validation.
-    /// </summary>
+    /// <summary>Verifies scheduled-item constructor argument validation.</summary>
     [Test]
     public void ScheduledItemConstructorValidatesSchedulerAndAction()
     {
@@ -270,19 +240,13 @@ public class CoreRuntimeContractTests
             GC.KeepAlive(new ScheduledItem<DateTimeOffset, int>(scheduler, state, action, DateTimeOffset.UnixEpoch));
     }
 
-    /// <summary>
-    /// Test work item that invokes a supplied callback.
-    /// </summary>
+    /// <summary>Test work item that invokes a supplied callback.</summary>
     private sealed class CallbackWorkItem : IWorkItem
     {
-        /// <summary>
-        /// Callback invoked by the work item.
-        /// </summary>
+        /// <summary>Callback invoked by the work item.</summary>
         private readonly Action _callback;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CallbackWorkItem"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="CallbackWorkItem"/> class.</summary>
         /// <param name="callback">Callback invoked by the work item.</param>
         public CallbackWorkItem(Action callback) => _callback = callback;
 

@@ -19,19 +19,13 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class OperatorPassThroughBenchmarks
 {
-    /// <summary>
-    /// The number of values produced by each benchmarked sequence.
-    /// </summary>
+    /// <summary>The number of values produced by each benchmarked sequence.</summary>
     private const int Count = 16;
 
-    /// <summary>
-    /// The number of attempts used by the retry-on-error benchmarks.
-    /// </summary>
+    /// <summary>The number of attempts used by the retry-on-error benchmarks.</summary>
     private const int RetryCount = 2;
 
-    /// <summary>
-    /// Benchmarks a side-effecting pass-through over a range.
-    /// </summary>
+    /// <summary>Benchmarks a side-effecting pass-through over a range.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesTapRange()
@@ -41,9 +35,7 @@ public class OperatorPassThroughBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks a side-effecting pass-through over a range using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks a side-effecting pass-through over a range using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveTapRange()
@@ -53,9 +45,7 @@ public class OperatorPassThroughBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks a side-effecting pass-through over a range using R3.
-    /// </summary>
+    /// <summary>Benchmarks a side-effecting pass-through over a range using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3TapRange()
@@ -66,9 +56,7 @@ public class OperatorPassThroughBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks dropping values while forwarding completion.
-    /// </summary>
+    /// <summary>Benchmarks dropping values while forwarding completion.</summary>
     /// <returns>The number of completions observed.</returns>
     [Benchmark]
     public int PrimitivesIgnoreValuesRange()
@@ -78,9 +66,7 @@ public class OperatorPassThroughBenchmarks
         return observer.CompletionCount;
     }
 
-    /// <summary>
-    /// Benchmarks dropping values while forwarding completion using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks dropping values while forwarding completion using System.Reactive.</summary>
     /// <returns>The number of completions observed.</returns>
     [Benchmark]
     public int SystemReactiveIgnoreValuesRange()
@@ -90,9 +76,7 @@ public class OperatorPassThroughBenchmarks
         return observer.CompletionCount;
     }
 
-    /// <summary>
-    /// Benchmarks dropping values while forwarding completion using R3.
-    /// </summary>
+    /// <summary>Benchmarks dropping values while forwarding completion using R3.</summary>
     /// <returns>The number of completions observed.</returns>
     [Benchmark]
     public int R3IgnoreValuesRange()
@@ -102,9 +86,7 @@ public class OperatorPassThroughBenchmarks
         return observer.CompletionCount;
     }
 
-    /// <summary>
-    /// Benchmarks materializing notifications over a range.
-    /// </summary>
+    /// <summary>Benchmarks materializing notifications over a range.</summary>
     /// <returns>The number of materialized notifications observed.</returns>
     [Benchmark]
     public int PrimitivesMaterializeRange()
@@ -114,9 +96,7 @@ public class OperatorPassThroughBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks materializing notifications over a range using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks materializing notifications over a range using System.Reactive.</summary>
     /// <returns>The number of materialized notifications observed.</returns>
     [Benchmark]
     public int SystemReactiveMaterializeRange()
@@ -126,9 +106,7 @@ public class OperatorPassThroughBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks materializing notifications over a range using R3.
-    /// </summary>
+    /// <summary>Benchmarks materializing notifications over a range using R3.</summary>
     /// <returns>The number of materialized notifications observed.</returns>
     [Benchmark]
     public int R3MaterializeRange()
@@ -138,9 +116,7 @@ public class OperatorPassThroughBenchmarks
         return observer.Count;
     }
 
-    /// <summary>
-    /// Benchmarks a materialize/dematerialize round-trip over a range.
-    /// </summary>
+    /// <summary>Benchmarks a materialize/dematerialize round-trip over a range.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesDematerializeRange()
@@ -150,9 +126,7 @@ public class OperatorPassThroughBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks a materialize/dematerialize round-trip over a range using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks a materialize/dematerialize round-trip over a range using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveDematerializeRange()
@@ -162,9 +136,7 @@ public class OperatorPassThroughBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks a materialize/dematerialize round-trip over a range using R3.
-    /// </summary>
+    /// <summary>Benchmarks a materialize/dematerialize round-trip over a range using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3DematerializeRange()
@@ -176,9 +148,7 @@ public class OperatorPassThroughBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks deferring subscription onto an immediate scheduler.
-    /// </summary>
+    /// <summary>Benchmarks deferring subscription onto an immediate scheduler.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesSubscribeOnImmediate()
@@ -188,9 +158,7 @@ public class OperatorPassThroughBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks deferring subscription onto an immediate scheduler using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks deferring subscription onto an immediate scheduler using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveSubscribeOnImmediate()
@@ -200,9 +168,7 @@ public class OperatorPassThroughBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks deferring subscription onto an immediate synchronization context using R3.
-    /// </summary>
+    /// <summary>Benchmarks deferring subscription onto an immediate synchronization context using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3SubscribeOnImmediate()
@@ -215,9 +181,7 @@ public class OperatorPassThroughBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks retry-on-error over a non-erroring range (no retries taken).
-    /// </summary>
+    /// <summary>Benchmarks retry-on-error over a non-erroring range (no retries taken).</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesReattemptRange()
@@ -227,9 +191,7 @@ public class OperatorPassThroughBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks retry-on-error over a non-erroring range using System.Reactive (no R3 equivalent).
-    /// </summary>
+    /// <summary>Benchmarks retry-on-error over a non-erroring range using System.Reactive (no R3 equivalent).</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveReattemptRange()
@@ -239,28 +201,20 @@ public class OperatorPassThroughBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// A synchronization context that invokes callbacks synchronously on the calling thread.
-    /// </summary>
+    /// <summary>A synchronization context that invokes callbacks synchronously on the calling thread.</summary>
     private sealed class ImmediateSynchronizationContext : SynchronizationContext, IDisposable
     {
-        /// <summary>
-        /// Invokes the callback synchronously.
-        /// </summary>
+        /// <summary>Invokes the callback synchronously.</summary>
         /// <param name="d">The callback to invoke.</param>
         /// <param name="state">The state passed to the callback.</param>
         public override void Post(SendOrPostCallback d, object? state) => d(state);
 
-        /// <summary>
-        /// Invokes the callback synchronously.
-        /// </summary>
+        /// <summary>Invokes the callback synchronously.</summary>
         /// <param name="d">The callback to invoke.</param>
         /// <param name="state">The state passed to the callback.</param>
         public override void Send(SendOrPostCallback d, object? state) => d(state);
 
-        /// <summary>
-        /// Releases the resources used by the synchronization context.
-        /// </summary>
+        /// <summary>Releases the resources used by the synchronization context.</summary>
         public void Dispose()
         {
         }

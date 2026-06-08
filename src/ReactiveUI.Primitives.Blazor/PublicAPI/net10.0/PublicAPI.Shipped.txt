@@ -1,0 +1,15 @@
+#nullable enable
+ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase
+ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase.Dispose() -> void
+ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase.InvalidateAsync() -> System.Threading.Tasks.Task!
+ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase.IsDisposed.get -> bool
+ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase.Observe<T>(System.IObservable<T>! source, System.Action<T>! onNext, System.Action<System.Exception!>? onError, System.Action? onCompleted, bool refreshAfterCallbacks) -> System.IDisposable!
+ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase.Observe<T>(System.IObservable<T>! source, System.Action<T>! onNext, System.Action<System.Exception!>? onError, System.Action? onCompleted) -> System.IDisposable!
+ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase.Observe<T>(System.IObservable<T>! source, System.Action<T>! onNext) -> System.IDisposable!
+ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase.ReactiveComponentBase() -> void
+ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase.RendererSequencer.get -> ReactiveUI.Primitives.Concurrency.ISequencer!
+ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase.Track(System.IDisposable! subscription) -> System.IDisposable!
+ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer
+ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer.BlazorRendererSequencer(System.Func<System.Action!, System.Threading.Tasks.Task!>! invokeAsync) -> void
+virtual ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase.Dispose(bool disposing) -> void
+virtual ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase.OnObservedError(System.Exception! error) -> void

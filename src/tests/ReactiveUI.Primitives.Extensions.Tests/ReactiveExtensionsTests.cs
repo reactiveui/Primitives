@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
-/// <summary>
-/// Tests Reactive Extensions.
-/// </summary>
+/// <summary>Tests Reactive Extensions.</summary>
 public partial class ReactiveExtensionsTests
 {
     /// <summary>Sample integer value (2) used by multiple tests.</summary>

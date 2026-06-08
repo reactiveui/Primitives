@@ -6,122 +6,76 @@ using BenchmarkDotNet.Attributes;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks the complete synchronous ReactiveUI.Primitives.Extensions public helper surface.
-/// </summary>
+/// <summary>Benchmarks the complete synchronous ReactiveUI.Primitives.Extensions public helper surface.</summary>
 [MemoryDiagnoser]
 public partial class ReactiveExtensionsComparisonBenchmarks
 {
-    /// <summary>
-    /// The number of values emitted by range-based scenarios.
-    /// </summary>
+    /// <summary>The number of values emitted by range-based scenarios.</summary>
     private const int Count = 32;
 
-    /// <summary>
-    /// The multiplier used by candidate projection scenarios.
-    /// </summary>
+    /// <summary>The multiplier used by candidate projection scenarios.</summary>
     private const int CandidateMultiplier = 2;
 
-    /// <summary>
-    /// The divisor used by even-number predicates.
-    /// </summary>
+    /// <summary>The divisor used by even-number predicates.</summary>
     private const int EvenDivisor = 2;
 
-    /// <summary>
-    /// The fallback value used by catch and latest scenarios.
-    /// </summary>
+    /// <summary>The fallback value used by catch and latest scenarios.</summary>
     private const int Fallback = 42;
 
-    /// <summary>
-    /// The first scalar value used by min and max comparisons.
-    /// </summary>
+    /// <summary>The first scalar value used by min and max comparisons.</summary>
     private const int FirstValue = 1;
 
-    /// <summary>
-    /// The match threshold used by predicate scenarios.
-    /// </summary>
+    /// <summary>The match threshold used by predicate scenarios.</summary>
     private const int Match = 8;
 
-    /// <summary>
-    /// The concurrency cap used by concurrent scenarios.
-    /// </summary>
+    /// <summary>The concurrency cap used by concurrent scenarios.</summary>
     private const int MaxConcurrency = 4;
 
-    /// <summary>
-    /// The multiplier used by where-select scenarios.
-    /// </summary>
+    /// <summary>The multiplier used by where-select scenarios.</summary>
     private const int ResultMultiplier = 3;
 
-    /// <summary>
-    /// The second scalar value used by min and max comparisons.
-    /// </summary>
+    /// <summary>The second scalar value used by min and max comparisons.</summary>
     private const int SecondValue = 2;
 
-    /// <summary>
-    /// The scalar payload used by single-value scenarios.
-    /// </summary>
+    /// <summary>The scalar payload used by single-value scenarios.</summary>
     private const int Value = 7;
 
-    /// <summary>
-    /// The scheduler tick used by virtual-time scenarios.
-    /// </summary>
+    /// <summary>The scheduler tick used by virtual-time scenarios.</summary>
     private static readonly TimeSpan Tick = TimeSpan.FromTicks(1);
 
-    /// <summary>
-    /// The timeout used by blocking subscription helpers.
-    /// </summary>
+    /// <summary>The timeout used by blocking subscription helpers.</summary>
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(1);
 
-    /// <summary>
-    /// The exception instance used by error-path scenarios.
-    /// </summary>
+    /// <summary>The exception instance used by error-path scenarios.</summary>
     private static readonly Exception Boom = new InvalidOperationException("benchmark");
 
-    /// <summary>
-    /// Boolean payloads used by predicate and combine-latest scenarios.
-    /// </summary>
+    /// <summary>Boolean payloads used by predicate and combine-latest scenarios.</summary>
     private static readonly bool[] BooleanValues = [true, false, false, true, false, true, false, false];
 
-    /// <summary>
-    /// Character payloads used by buffer-until scenarios.
-    /// </summary>
+    /// <summary>Character payloads used by buffer-until scenarios.</summary>
     private static readonly char[] BufferCharacters = "xx[abc]yy[de]".ToCharArray();
 
-    /// <summary>
-    /// Integer payloads used by array-backed scenarios.
-    /// </summary>
+    /// <summary>Integer payloads used by array-backed scenarios.</summary>
     private static readonly int[] Values = CreateValues();
 
-    /// <summary>
-    /// Nullable string payloads used by null-filtering scenarios.
-    /// </summary>
+    /// <summary>Nullable string payloads used by null-filtering scenarios.</summary>
     private static readonly string?[] NullableStrings = ["one", null, "two", null, "three"];
 
-    /// <summary>
-    /// String payloads used by skip-while-null scenarios.
-    /// </summary>
+    /// <summary>String payloads used by skip-while-null scenarios.</summary>
     private static readonly string[] SkipStrings = ["one", null!, "two", null!, "three"];
 
-    /// <summary>
-    /// String payloads used by regex filter scenarios.
-    /// </summary>
+    /// <summary>String payloads used by regex filter scenarios.</summary>
     private static readonly string[] StringValues = ["0", "1", "2", "3", "4", "5"];
 
-    /// <summary>
-    /// The ReactiveUI.Primitives benchmark scenario list.
-    /// </summary>
+    /// <summary>The ReactiveUI.Primitives benchmark scenario list.</summary>
     private static readonly ExtensionScenario[] PrimitivesScenarioItems =
         CreateLibraryScenarios(ExtensionsLibrary.Primitives);
 
-    /// <summary>
-    /// The ReactiveUI.Extensions benchmark scenario list.
-    /// </summary>
+    /// <summary>The ReactiveUI.Extensions benchmark scenario list.</summary>
     private static readonly ExtensionScenario[] PackageScenarioItems =
         CreateLibraryScenarios(ExtensionsLibrary.ReactiveUIExtensions);
 
-    /// <summary>
-    /// The System.Reactive comparison scenario list.
-    /// </summary>
+    /// <summary>The System.Reactive comparison scenario list.</summary>
     private static readonly ExtensionScenario[] SystemReactiveScenarioItems =
     [
         Scenario("AsSignal", SystemReactiveAsSignal),
@@ -152,9 +106,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         Scenario("WhereTrue", SystemReactiveWhereTrue),
     ];
 
-    /// <summary>
-    /// The R3 comparison scenario list.
-    /// </summary>
+    /// <summary>The R3 comparison scenario list.</summary>
     private static readonly ExtensionScenario[] R3ScenarioItems =
     [
         Scenario("AsSignal", R3AsSignal),
@@ -171,81 +123,57 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         Scenario("WhereTrue", R3WhereTrue),
     ];
 
-    /// <summary>
-    /// Identifies the library implementation used by paired scenario runners.
-    /// </summary>
+    /// <summary>Identifies the library implementation used by paired scenario runners.</summary>
     private enum ExtensionsLibrary
     {
-        /// <summary>
-        /// The ReactiveUI.Primitives.Extensions implementation.
-        /// </summary>
+        /// <summary>The ReactiveUI.Primitives.Extensions implementation.</summary>
         Primitives,
 
-        /// <summary>
-        /// The ReactiveUI.Extensions implementation.
-        /// </summary>
+        /// <summary>The ReactiveUI.Extensions implementation.</summary>
         ReactiveUIExtensions,
     }
 
-    /// <summary>
-    /// Gets the ReactiveUI.Primitives scenarios.
-    /// </summary>
+    /// <summary>Gets the ReactiveUI.Primitives scenarios.</summary>
     public IEnumerable<ExtensionScenario> PrimitivesScenarios => PrimitivesScenarioItems;
 
-    /// <summary>
-    /// Gets the ReactiveUI.Extensions scenarios.
-    /// </summary>
+    /// <summary>Gets the ReactiveUI.Extensions scenarios.</summary>
     public IEnumerable<ExtensionScenario> ReactiveUIExtensionsScenarios => PackageScenarioItems;
 
-    /// <summary>
-    /// Gets the System.Reactive comparison scenarios.
-    /// </summary>
+    /// <summary>Gets the System.Reactive comparison scenarios.</summary>
     public IEnumerable<ExtensionScenario> SystemReactiveScenarios => SystemReactiveScenarioItems;
 
-    /// <summary>
-    /// Gets the R3 comparison scenarios.
-    /// </summary>
+    /// <summary>Gets the R3 comparison scenarios.</summary>
     public IEnumerable<ExtensionScenario> R3Scenarios => R3ScenarioItems;
 
-    /// <summary>
-    /// Runs a ReactiveUI.Primitives scenario.
-    /// </summary>
+    /// <summary>Runs a ReactiveUI.Primitives scenario.</summary>
     /// <param name="scenario">The scenario to run.</param>
     /// <returns>The benchmark checksum.</returns>
     [Benchmark]
     [ArgumentsSource(nameof(PrimitivesScenarios))]
     public int Primitives(ExtensionScenario scenario) => scenario.Run();
 
-    /// <summary>
-    /// Runs a ReactiveUI.Extensions scenario.
-    /// </summary>
+    /// <summary>Runs a ReactiveUI.Extensions scenario.</summary>
     /// <param name="scenario">The scenario to run.</param>
     /// <returns>The benchmark checksum.</returns>
     [Benchmark]
     [ArgumentsSource(nameof(ReactiveUIExtensionsScenarios))]
     public int ReactiveUIExtensions(ExtensionScenario scenario) => scenario.Run();
 
-    /// <summary>
-    /// Runs a System.Reactive comparison scenario.
-    /// </summary>
+    /// <summary>Runs a System.Reactive comparison scenario.</summary>
     /// <param name="scenario">The scenario to run.</param>
     /// <returns>The benchmark checksum.</returns>
     [Benchmark]
     [ArgumentsSource(nameof(SystemReactiveScenarios))]
     public int SystemReactive(ExtensionScenario scenario) => scenario.Run();
 
-    /// <summary>
-    /// Runs an R3 comparison scenario.
-    /// </summary>
+    /// <summary>Runs an R3 comparison scenario.</summary>
     /// <param name="scenario">The scenario to run.</param>
     /// <returns>The benchmark checksum.</returns>
     [Benchmark]
     [ArgumentsSource(nameof(R3Scenarios))]
     public int R3Library(ExtensionScenario scenario) => scenario.Run();
 
-    /// <summary>
-    /// Creates the full paired library scenario list.
-    /// </summary>
+    /// <summary>Creates the full paired library scenario list.</summary>
     /// <param name="library">The paired library to benchmark.</param>
     /// <returns>The scenario list.</returns>
     private static ExtensionScenario[] CreateLibraryScenarios(ExtensionsLibrary library) =>
@@ -254,9 +182,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         ..CreateSupplementalLibraryScenarios(library),
     ];
 
-    /// <summary>
-    /// Creates the core paired library scenario list.
-    /// </summary>
+    /// <summary>Creates the core paired library scenario list.</summary>
     /// <param name="library">The paired library to benchmark.</param>
     /// <returns>The core scenario list.</returns>
     private static ExtensionScenario[] CreateCoreLibraryScenarios(ExtensionsLibrary library) =>
@@ -299,9 +225,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         Scenario("Pairwise", () => RunPairwise(library)),
     ];
 
-    /// <summary>
-    /// Creates the supplemental paired library scenario list.
-    /// </summary>
+    /// <summary>Creates the supplemental paired library scenario list.</summary>
     /// <param name="library">The paired library to benchmark.</param>
     /// <returns>The supplemental scenario list.</returns>
     private static ExtensionScenario[] CreateSupplementalLibraryScenarios(ExtensionsLibrary library) =>
@@ -359,9 +283,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         Scenario("WithLimitedConcurrency", () => RunWithLimitedConcurrency(library)),
     ];
 
-    /// <summary>
-    /// Creates a named benchmark scenario.
-    /// </summary>
+    /// <summary>Creates a named benchmark scenario.</summary>
     /// <param name="name">The scenario name.</param>
     /// <param name="run">The delegate that runs the scenario.</param>
     /// <returns>The benchmark scenario.</returns>

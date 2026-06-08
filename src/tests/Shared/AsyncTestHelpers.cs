@@ -4,14 +4,10 @@
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Shared test helpers for async observable tests.
-/// </summary>
+/// <summary>Shared test helpers for async observable tests.</summary>
 internal static class AsyncTestHelpers
 {
-    /// <summary>
-    /// Collects all items and the completion result from an async observable.
-    /// </summary>
+    /// <summary>Collects all items and the completion result from an async observable.</summary>
     /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
     /// <param name="source">The async observable to collect from.</param>
     /// <param name="cancellationToken">Optional cancellation token.</param>
@@ -65,9 +61,7 @@ internal static class AsyncTestHelpers
         return (items, completion);
     }
 
-    /// <summary>
-    /// Collects all items from an async observable using ToListAsync.
-    /// </summary>
+    /// <summary>Collects all items from an async observable using ToListAsync.</summary>
     /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
     /// <param name="source">The async observable to collect from.</param>
     /// <param name="timeoutMs">The timeout in milliseconds before the operation is cancelled.</param>
@@ -80,9 +74,7 @@ internal static class AsyncTestHelpers
         return await source.ToListAsync(cts.Token);
     }
 
-    /// <summary>
-    /// Waits until the provided condition is met or the timeout expires.
-    /// </summary>
+    /// <summary>Waits until the provided condition is met or the timeout expires.</summary>
     /// <param name="condition">Condition to evaluate.</param>
     /// <param name="timeout">Maximum time to wait.</param>
     /// <param name="pollInterval">Optional polling interval.</param>
@@ -93,10 +85,7 @@ internal static class AsyncTestHelpers
         TimeSpan? pollInterval = null) =>
         WaitForConditionAsync(condition, timeout, TimeProvider.System, pollInterval);
 
-    /// <summary>
-    /// Waits until the provided condition is met or the timeout expires, using the supplied
-    /// <see cref="TimeProvider"/> for deadline calculation.
-    /// </summary>
+    /// <summary>Waits until the provided condition is met or the timeout expires, using the supplied <see cref="TimeProvider"/> for deadline calculation.</summary>
     /// <param name="condition">Condition to evaluate.</param>
     /// <param name="timeout">Maximum time to wait.</param>
     /// <param name="timeProvider">Time provider used to compute the wait deadline.</param>

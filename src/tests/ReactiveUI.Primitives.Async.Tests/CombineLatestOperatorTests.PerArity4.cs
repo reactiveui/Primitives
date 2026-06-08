@@ -6,14 +6,10 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Tests for CombineLatest operator with 4 sources.
-/// </summary>
+/// <summary>Tests for CombineLatest operator with 4 sources.</summary>
 public partial class CombineLatestOperatorTests
 {
-    /// <summary>
-    /// Verifies that CombineLatest with 4 sources propagates failure when source 1 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 4 sources propagates failure when source 1 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest4Sources_Source1Errors_ThenFailurePropagates()
@@ -41,9 +37,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 4 sources propagates failure when source 2 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 4 sources propagates failure when source 2 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest4Sources_Source2Errors_ThenFailurePropagates()
@@ -71,9 +65,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 4 sources propagates failure when source 3 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 4 sources propagates failure when source 3 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest4Sources_Source3Errors_ThenFailurePropagates()
@@ -101,9 +93,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 4 sources propagates failure when source 4 errors.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 4 sources propagates failure when source 4 errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest4Sources_Source4Errors_ThenFailurePropagates()
@@ -131,9 +121,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 4 sources completes when source 1 is the last to complete.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 4 sources completes when source 1 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest4Sources_Source1CompletesLast_ThenCombinedCompletes()
@@ -168,9 +156,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 4 sources completes when source 2 is the last to complete.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 4 sources completes when source 2 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest4Sources_Source2CompletesLast_ThenCombinedCompletes()
@@ -205,9 +191,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 4 sources completes when source 3 is the last to complete.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 4 sources completes when source 3 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest4Sources_Source3CompletesLast_ThenCombinedCompletes()
@@ -242,9 +226,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 4 sources completes when source 4 is the last to complete.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 4 sources completes when source 4 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest4Sources_Source4CompletesLast_ThenCombinedCompletes()
@@ -279,9 +261,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 4 sources handles disposal during active emission gracefully.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 4 sources handles disposal during active emission gracefully.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest4Sources_DisposedDuringEmission_ThenNoError()
@@ -318,9 +298,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest with 4 sources ignores error resume after disposal.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest with 4 sources ignores error resume after disposal.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatest4Sources_ErrorResumeAfterDisposal_ThenIgnored()

@@ -20,22 +20,16 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// <typeparam name="T">The type of the elements processed and broadcast by the Signal.</typeparam>
 public abstract class BaseStatelessSignalAsync<T> : SignalAsync<T>, ISignalAsync<T>
 {
-    /// <summary>
-    /// The immutable array of currently subscribed observers.
-    /// </summary>
+    /// <summary>The immutable array of currently subscribed observers.</summary>
     private ImmutableArray<IObserverAsync<T>> _observers = [];
 
-    /// <summary>
-    /// Gets an observable sequence that represents the current and future values of the Signal.
-    /// </summary>
+    /// <summary>Gets an observable sequence that represents the current and future values of the Signal.</summary>
     /// <remarks>Subscribers to this property receive all values published by the Signal, including those
     /// emitted after subscription. The returned sequence may emit values asynchronously, depending on the
     /// implementation.</remarks>
     IObservableAsync<T> ISignalAsync<T>.Values => this;
 
-    /// <summary>
-    /// Asynchronously notifies all subscribed observers of a new value.
-    /// </summary>
+    /// <summary>Asynchronously notifies all subscribed observers of a new value.</summary>
     /// <param name="value">The value to send to each observer.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the notification operation.</param>
     /// <returns>A ValueTask that represents the asynchronous notification operation.</returns>
@@ -52,16 +46,12 @@ public abstract class BaseStatelessSignalAsync<T> : SignalAsync<T>, ISignalAsync
     public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
         OnErrorResumeAsyncCore(_observers, error, cancellationToken);
 
-    /// <summary>
-    /// Notifies all registered observers that the operation has completed and provides the final result asynchronously.
-    /// </summary>
+    /// <summary>Notifies all registered observers that the operation has completed and provides the final result asynchronously.</summary>
     /// <param name="result">The result to deliver to observers upon completion. Cannot be null.</param>
     /// <returns>A ValueTask that represents the asynchronous notification operation.</returns>
     public ValueTask OnCompletedAsync(Result result) => OnCompletedAsyncCore(_observers, result);
 
-    /// <summary>
-    /// Asynchronously releases resources used by the current instance.
-    /// </summary>
+    /// <summary>Asynchronously releases resources used by the current instance.</summary>
     /// <remarks>After calling this method, the instance should not be used. This method is intended to be
     /// called when the object is no longer needed, to ensure that all resources are properly released.</remarks>
     /// <returns>A ValueTask that represents the asynchronous dispose operation.</returns>
@@ -72,9 +62,7 @@ public abstract class BaseStatelessSignalAsync<T> : SignalAsync<T>, ISignalAsync
         return default;
     }
 
-    /// <summary>
-    /// Subscribes the specified asynchronous observer to receive notifications from the observable sequence.
-    /// </summary>
+    /// <summary>Subscribes the specified asynchronous observer to receive notifications from the observable sequence.</summary>
     /// <remarks>Disposing the returned <see cref="IAsyncDisposable"/> will remove the observer from the
     /// subscription list. The subscription is established immediately upon calling this method.</remarks>
     /// <param name="observer">The asynchronous observer that will receive notifications. Cannot be null.</param>
@@ -101,9 +89,7 @@ public abstract class BaseStatelessSignalAsync<T> : SignalAsync<T>, ISignalAsync
         return new(disposable);
     }
 
-    /// <summary>
-    /// Asynchronously notifies the specified observers with the provided value.
-    /// </summary>
+    /// <summary>Asynchronously notifies the specified observers with the provided value.</summary>
     /// <param name="observers">A read-only list of observers to be notified. Cannot be null.</param>
     /// <param name="value">The value to send to each observer.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the notification operation.</param>
@@ -113,9 +99,7 @@ public abstract class BaseStatelessSignalAsync<T> : SignalAsync<T>, ISignalAsync
         T value,
         CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Handles error recovery for the specified observers by resuming asynchronous processing after an error occurs.
-    /// </summary>
+    /// <summary>Handles error recovery for the specified observers by resuming asynchronous processing after an error occurs.</summary>
     /// <remarks>Implementations should ensure that observers are notified or resumed appropriately based on
     /// the error. This method is intended to be called when an error occurs during asynchronous observation, allowing
     /// custom error handling strategies.</remarks>
@@ -128,9 +112,7 @@ public abstract class BaseStatelessSignalAsync<T> : SignalAsync<T>, ISignalAsync
         Exception error,
         CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Invoked to asynchronously notify all observers of the completion event with the specified result.
-    /// </summary>
+    /// <summary>Invoked to asynchronously notify all observers of the completion event with the specified result.</summary>
     /// <remarks>Implementations should ensure that all observers are notified, and handle any exceptions
     /// according to the desired notification semantics.</remarks>
     /// <param name="observers">The collection of observers to be notified. Cannot be null.</param>

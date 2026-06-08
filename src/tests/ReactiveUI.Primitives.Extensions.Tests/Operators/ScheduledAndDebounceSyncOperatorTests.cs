@@ -257,8 +257,7 @@ public class ScheduledAndDebounceSyncOperatorTests
         await Assert.That(results).IsCollectionEqualTo([Value1]);
     }
 
-    /// <summary>Verifies that <c>Schedule(this IObservable&lt;T&gt;, DateTimeOffset, ISequencer)</c>
-    /// dispatches each <c>OnNext</c> at the absolute time.</summary>
+    /// <summary>Verifies that <c>Schedule(this IObservable&lt;T&gt;, DateTimeOffset, ISequencer)</c> dispatches each <c>OnNext</c> at the absolute time.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScheduleSourceAbsolute_ThenEmitsAtTime()

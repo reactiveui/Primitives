@@ -14,23 +14,18 @@ namespace ReactiveUI.Primitives.Async.Signals;
 [System.Diagnostics.DebuggerDisplay("PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
 public sealed record SignalCreationOptions
 {
-    /// <summary>
-    /// Gets the publishing option to use when processing the item.
-    /// </summary>
-    public required PublishingOption PublishingOption { get; init; }
-
-    /// <summary>
-    /// Gets a value indicating whether the object is stateless.
-    /// </summary>
-    public required bool IsStateless { get; init; }
-
-    /// <summary>
-    /// Gets the default configuration for Signal creation options.
-    /// </summary>
+    /// <summary>Gets the default configuration for Signal creation options.</summary>
     /// <remarks>The default options use serial publishing and are not stateless. Use this property as a
     /// baseline when configuring new Signals if standard behavior is desired.</remarks>
     public static SignalCreationOptions Default { get; } = new()
     {
-        PublishingOption = PublishingOption.Serial, IsStateless = false
+        PublishingOption = PublishingOption.Serial,
+        IsStateless = false
     };
+
+    /// <summary>Gets the publishing option to use when processing the item.</summary>
+    public required PublishingOption PublishingOption { get; init; }
+
+    /// <summary>Gets a value indicating whether the object is stateless.</summary>
+    public required bool IsStateless { get; init; }
 }

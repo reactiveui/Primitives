@@ -39,8 +39,7 @@ public class ThrottleAndWaitOperatorCoverageTests
     /// <summary>Match threshold large enough that no Sample value satisfies the predicate.</summary>
     private const int NoMatchThreshold = 100;
 
-    /// <summary>Value that does satisfy <see cref="NoMatchThreshold"/> so the dispose test can confirm
-    /// nothing is delivered after disposal.</summary>
+    /// <summary>Value that does satisfy <see cref="NoMatchThreshold"/> so the dispose test can confirm nothing is delivered after disposal.</summary>
     private const int MatchValue = 500;
 
     /// <summary>Verifies that <c>ThrottleOnScheduler</c> forwards source errors and cancels the pending emission.</summary>

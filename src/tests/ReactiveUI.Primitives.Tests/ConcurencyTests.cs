@@ -7,39 +7,25 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests task-pool sequencer behavior.
-/// </summary>
+/// <summary>Tests task-pool sequencer behavior.</summary>
 public class ConcurencyTests
 {
-    /// <summary>
-    /// Defines the maximum time to wait for scheduled work in tests.
-    /// </summary>
+    /// <summary>Defines the maximum time to wait for scheduled work in tests.</summary>
     private static readonly TimeSpan ScheduleTimeout = TimeSpan.FromSeconds(5);
 
-    /// <summary>
-    /// Defines the maximum tolerated difference between sequencer and system time.
-    /// </summary>
+    /// <summary>Defines the maximum tolerated difference between sequencer and system time.</summary>
     private static readonly TimeSpan ClockTolerance = TimeSpan.FromSeconds(1);
 
-    /// <summary>
-    /// Defines the short due time used by delayed scheduling tests.
-    /// </summary>
+    /// <summary>Defines the short due time used by delayed scheduling tests.</summary>
     private static readonly TimeSpan ShortDueTime = TimeSpan.FromMilliseconds(10);
 
-    /// <summary>
-    /// Defines the due time used by cancellation tests.
-    /// </summary>
+    /// <summary>Defines the due time used by cancellation tests.</summary>
     private static readonly TimeSpan CancelDueTime = TimeSpan.FromMilliseconds(200);
 
-    /// <summary>
-    /// Defines the observation window used after canceling scheduled work.
-    /// </summary>
+    /// <summary>Defines the observation window used after canceling scheduled work.</summary>
     private static readonly TimeSpan CancelObservationWindow = TimeSpan.FromMilliseconds(400);
 
-    /// <summary>
-    /// Verifies that scheduling state returns a disposable.
-    /// </summary>
+    /// <summary>Verifies that scheduling state returns a disposable.</summary>
     [Test]
     public void TestCreate()
     {
@@ -49,9 +35,7 @@ public class ConcurencyTests
         disposable.Dispose();
     }
 
-    /// <summary>
-    /// Verifies that the task-pool sequencer reports current UTC time.
-    /// </summary>
+    /// <summary>Verifies that the task-pool sequencer reports current UTC time.</summary>
     [Test]
     public void TaskPoolNow()
     {
@@ -60,9 +44,7 @@ public class ConcurencyTests
         Assert.True(delta.Duration() < ClockTolerance);
     }
 
-    /// <summary>
-    /// Verifies that immediate work is scheduled on a different thread.
-    /// </summary>
+    /// <summary>Verifies that immediate work is scheduled on a different thread.</summary>
     [Test]
     public void TaskPoolScheduleAction()
     {
@@ -78,9 +60,7 @@ public class ConcurencyTests
         Assert.True(completed.Wait(ScheduleTimeout));
     }
 
-    /// <summary>
-    /// Verifies that work due immediately is scheduled on a different thread.
-    /// </summary>
+    /// <summary>Verifies that work due immediately is scheduled on a different thread.</summary>
     [Test]
     public void TaskPoolScheduleActionDueNow()
     {
@@ -96,9 +76,7 @@ public class ConcurencyTests
         Assert.True(completed.Wait(ScheduleTimeout));
     }
 
-    /// <summary>
-    /// Verifies that delayed work is scheduled on a different thread.
-    /// </summary>
+    /// <summary>Verifies that delayed work is scheduled on a different thread.</summary>
     [Test]
     public void TaskPoolScheduleActionDue()
     {
@@ -114,9 +92,7 @@ public class ConcurencyTests
         Assert.True(completed.Wait(ScheduleTimeout));
     }
 
-    /// <summary>
-    /// Verifies that canceled delayed work does not run.
-    /// </summary>
+    /// <summary>Verifies that canceled delayed work does not run.</summary>
     [Test]
     public void TaskPoolScheduleActionCancel()
     {
@@ -135,9 +111,7 @@ public class ConcurencyTests
         Assert.Equal(0, Volatile.Read(ref runCount));
     }
 
-    /// <summary>
-    /// Verifies that delays larger than <see cref="int.MaxValue"/> milliseconds are accepted.
-    /// </summary>
+    /// <summary>Verifies that delays larger than <see cref="int.MaxValue"/> milliseconds are accepted.</summary>
     [Test]
     public void TaskPoolDelayLargerThanIntMaxValue()
     {

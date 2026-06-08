@@ -8,9 +8,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Throttles a sequence until a predicate becomes true for an element.
-/// </summary>
+/// <summary>Throttles a sequence until a predicate becomes true for an element.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="throttle">The throttle duration.</param>
@@ -20,19 +18,13 @@ internal sealed class ThrottleUntilTrueObservable<T>(
     TimeSpan throttle,
     Func<T, bool> predicate) : IObservable<T>
 {
-    /// <summary>
-    /// The source observable.
-    /// </summary>
+    /// <summary>The source observable.</summary>
     private readonly IObservable<T> _source = InvalidOperationExceptionHelper.Check(source);
 
-    /// <summary>
-    /// The throttle duration.
-    /// </summary>
+    /// <summary>The throttle duration.</summary>
     private readonly TimeSpan _throttle = throttle;
 
-    /// <summary>
-    /// The predicate to determine if an element should be emitted immediately or throttled.
-    /// </summary>
+    /// <summary>The predicate to determine if an element should be emitted immediately or throttled.</summary>
     private readonly Func<T, bool> _predicate = InvalidOperationExceptionHelper.Check(predicate);
 
     /// <inheritdoc/>
@@ -45,9 +37,7 @@ internal sealed class ThrottleUntilTrueObservable<T>(
         return new DisposableBag(subscription, sink);
     }
 
-    /// <summary>
-    /// Sinks the source observable and throttles elements until a predicate is true.
-    /// </summary>
+    /// <summary>Sinks the source observable and throttles elements until a predicate is true.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="throttle">The throttle duration.</param>
     /// <param name="predicate">The predicate.</param>
@@ -58,34 +48,22 @@ internal sealed class ThrottleUntilTrueObservable<T>(
         Func<T, bool> predicate,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>
-        /// The gate for synchronization.
-        /// </summary>
+        /// <summary>The gate for synchronization.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// The downstream observer.
-        /// </summary>
+        /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _downstream = downstream;
 
-        /// <summary>
-        /// The throttle duration.
-        /// </summary>
+        /// <summary>The throttle duration.</summary>
         private readonly TimeSpan _throttle = throttle;
 
-        /// <summary>
-        /// The predicate.
-        /// </summary>
+        /// <summary>The predicate.</summary>
         private readonly Func<T, bool> _predicate = predicate;
 
-        /// <summary>
-        /// The timer for throttling.
-        /// </summary>
+        /// <summary>The timer for throttling.</summary>
         private readonly SwapDisposable _timer = new();
 
-        /// <summary>
-        /// Whether the sequence is done.
-        /// </summary>
+        /// <summary>Whether the sequence is done.</summary>
         private bool _done;
 
         /// <inheritdoc/>

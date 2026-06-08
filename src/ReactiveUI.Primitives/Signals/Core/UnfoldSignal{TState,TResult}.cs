@@ -7,36 +7,24 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Finite state expansion signal.
-/// </summary>
+/// <summary>Finite state expansion signal.</summary>
 /// <typeparam name="TState">State type.</typeparam>
 /// <typeparam name="TResult">Result type.</typeparam>
 internal sealed class UnfoldSignal<TState, TResult> : IRequireCurrentThread<TResult>, IInlineSignal<TResult>
 {
-    /// <summary>
-    /// Initial state.
-    /// </summary>
+    /// <summary>Initial state.</summary>
     private readonly TState _initialState;
 
-    /// <summary>
-    /// Loop condition.
-    /// </summary>
+    /// <summary>Loop condition.</summary>
     private readonly Func<TState, bool> _condition;
 
-    /// <summary>
-    /// State iterator.
-    /// </summary>
+    /// <summary>State iterator.</summary>
     private readonly Func<TState, TState> _iterate;
 
-    /// <summary>
-    /// Result selector.
-    /// </summary>
+    /// <summary>Result selector.</summary>
     private readonly Func<TState, TResult> _resultSelector;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="UnfoldSignal{TState,TResult}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="UnfoldSignal{TState,TResult}"/> class.</summary>
     /// <param name="initialState">Initial state.</param>
     /// <param name="condition">Loop condition.</param>
     /// <param name="iterate">State iterator.</param>
@@ -59,7 +47,7 @@ internal sealed class UnfoldSignal<TState, TResult> : IRequireCurrentThread<TRes
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TResult> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -78,7 +66,7 @@ internal sealed class UnfoldSignal<TState, TResult> : IRequireCurrentThread<TRes
     /// <inheritdoc/>
     public IDisposable Subscribe(Action<TResult> onNext, Action<Exception> onError, Action onCompleted)
     {
-        if (onNext == null)
+        if (onNext is null)
         {
             throw new ArgumentNullException(nameof(onNext));
         }

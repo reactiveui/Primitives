@@ -7,14 +7,10 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <content>
-/// Switch tests for combining operators.
-/// </content>
+/// <summary>Tests for the Switch operator.</summary>
 public partial class CombiningOperatorTests
 {
-    /// <summary>
-    /// Verifies that switch propagates an error when the outer source completes with a failure.
-    /// </summary>
+    /// <summary>Verifies that switch propagates an error when the outer source completes with a failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSwitchOuterSourceErrors_ThenFailurePropagates()
@@ -41,9 +37,7 @@ public partial class CombiningOperatorTests
         await outer.DisposeAsync();
     }
 
-    /// <summary>
-    /// Verifies that switch propagates a failure when the inner source errors.
-    /// </summary>
+    /// <summary>Verifies that switch propagates a failure when the inner source errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSwitchInnerSourceErrors_ThenFailurePropagates()
@@ -72,9 +66,7 @@ public partial class CombiningOperatorTests
         await outer.DisposeAsync();
     }
 
-    /// <summary>
-    /// Verifies that disposing a switch subscription while an inner source is active does not throw.
-    /// </summary>
+    /// <summary>Verifies that disposing a switch subscription while an inner source is active does not throw.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSwitchDisposedDuringInnerSubscription_ThenNoError()
@@ -211,10 +203,7 @@ public partial class CombiningOperatorTests
         await outer.DisposeAsync();
     }
 
-    /// <summary>
-    /// Verifies that error-resume events from the outer source in Switch are forwarded
-    /// to the downstream observer.
-    /// </summary>
+    /// <summary>Verifies that error-resume events from the outer source in Switch are forwarded to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSwitchOuterErrorResume_ThenForwardedToObserver()
@@ -248,10 +237,7 @@ public partial class CombiningOperatorTests
         await Assert.That(errors[0].Message).IsEqualTo(OuterWarningMessage);
     }
 
-    /// <summary>
-    /// Verifies that error-resume events from the inner source in Switch are forwarded
-    /// to the downstream observer.
-    /// </summary>
+    /// <summary>Verifies that error-resume events from the inner source in Switch are forwarded to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSwitchInnerErrorResume_ThenForwardedToObserver()
@@ -439,9 +425,7 @@ public partial class CombiningOperatorTests
         await outer.DisposeAsync();
     }
 
-    /// <summary>
-    /// Tests that Switch emits from the latest inner sequence.
-    /// </summary>
+    /// <summary>Tests that Switch emits from the latest inner sequence.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSwitch_ThenEmitsFromLatestInnerSequence()

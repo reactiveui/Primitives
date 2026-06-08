@@ -47,8 +47,7 @@ public class ConcurrentSignalBaseTests
         await Assert.That(capture.Value).IsEqualTo(ForwardedValue);
     }
 
-    /// <summary>Verifies that the synchronous-fast-path branch fires every observer when each
-    /// returns a synchronously-completed <see cref="ValueTask"/>.</summary>
+    /// <summary>Verifies that the synchronous-fast-path branch fires every observer when each returns a synchronously-completed <see cref="ValueTask"/>.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRelayNextAsyncMultipleSync_ThenAllReceive()
@@ -69,8 +68,7 @@ public class ConcurrentSignalBaseTests
         await Assert.That(c.Value).IsEqualTo(ForwardedValue);
     }
 
-    /// <summary>Verifies that the slow-path branch (Task.WhenAll) runs every observer when
-    /// any of them returns a non-completed <see cref="ValueTask"/>.</summary>
+    /// <summary>Verifies that the slow-path branch (Task.WhenAll) runs every observer when any of them returns a non-completed <see cref="ValueTask"/>.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRelayNextAsyncSlowPath_ThenWhenAllForwarded()

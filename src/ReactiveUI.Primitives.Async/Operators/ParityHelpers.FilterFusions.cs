@@ -6,15 +6,12 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Fused filter / projection observables that back the parity-helper extension methods in
-/// <see cref="SignalAsync"/>.
-/// </summary>
+/// <summary>Fused filter / projection observables that back the parity-helper extension methods in <see cref="SignalAsyncExtensions"/>.</summary>
 [SuppressMessage(
     "Major Code Smell",
     "S3604:Member initializer values should not be redundant",
     Justification = "Primary-constructor parameters are captured into observer state.")]
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
     /// <summary>
     /// Fuses the previous <c>Create&lt;(T, T)&gt;</c> + closure-based <c>Pairwise</c> implementation
@@ -380,9 +377,7 @@ public static partial class SignalAsync
         }
     }
 
-    /// <summary>
-    /// Fuses <c>source.Select(static value =&gt; !value)</c> into a single observer layer.
-    /// </summary>
+    /// <summary>Fuses <c>source.Select(static value =&gt; !value)</c> into a single observer layer.</summary>
     /// <param name="source">The boolean source observable.</param>
     internal sealed class NotSignal(IObservableAsync<bool> source) : SignalAsync<bool>
     {
@@ -424,9 +419,7 @@ public static partial class SignalAsync
         }
     }
 
-    /// <summary>
-    /// Fuses <c>source.Where(static value =&gt; value)</c> into a single observer layer.
-    /// </summary>
+    /// <summary>Fuses <c>source.Where(static value =&gt; value)</c> into a single observer layer.</summary>
     /// <param name="source">The boolean source observable.</param>
     internal sealed class WhereTrueSignal(IObservableAsync<bool> source) : SignalAsync<bool>
     {
@@ -468,9 +461,7 @@ public static partial class SignalAsync
         }
     }
 
-    /// <summary>
-    /// Fuses <c>source.Where(static value =&gt; !value)</c> into a single observer layer.
-    /// </summary>
+    /// <summary>Fuses <c>source.Where(static value =&gt; !value)</c> into a single observer layer.</summary>
     /// <param name="source">The boolean source observable.</param>
     internal sealed class WhereFalseSignal(IObservableAsync<bool> source) : SignalAsync<bool>
     {

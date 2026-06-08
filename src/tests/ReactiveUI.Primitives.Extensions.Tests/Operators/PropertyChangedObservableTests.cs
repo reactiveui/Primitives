@@ -152,22 +152,16 @@ public class PropertyChangedObservableTests
     /// <summary>Test owner that fires <see cref="INotifyPropertyChanged"/> on property writes.</summary>
     private sealed class ObservableOwner : INotifyPropertyChanged
     {
-        /// <summary>Backing field for <see cref="Value"/>.</summary>
-        private int _value;
-
-        /// <summary>Backing field for <see cref="Other"/>.</summary>
-        private string _other = string.Empty;
-
         /// <inheritdoc/>
         public event PropertyChangedEventHandler? PropertyChanged;
 
         /// <summary>Gets or sets the value being observed by the test.</summary>
         public int Value
         {
-            get => _value;
+            get;
             set
             {
-                _value = value;
+                field = value;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
             }
         }
@@ -175,13 +169,13 @@ public class PropertyChangedObservableTests
         /// <summary>Gets or sets the unrelated property used to validate name-filtering.</summary>
         public string Other
         {
-            get => _other;
+            get;
             set
             {
-                _other = value;
+                field = value;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Other)));
             }
-        }
+        } = string.Empty;
     }
 
     /// <summary>Test owner whose getter succeeds on the first read but throws on subsequent reads.</summary>

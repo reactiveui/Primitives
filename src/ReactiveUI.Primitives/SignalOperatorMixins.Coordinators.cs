@@ -9,10 +9,8 @@ using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Coordinator helpers for multi-source signal operators.
-/// </summary>
-public static partial class LinqMixins
+/// <summary>Coordinator helpers for multi-source signal operators.</summary>
+public static partial class LinqExtensions
 {
     /// <summary>
     /// Range-specialized WithLatest (Latch): emits each left range value paired with the right
@@ -45,7 +43,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -75,7 +73,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -98,7 +96,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -136,7 +134,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -174,7 +172,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -212,7 +210,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -281,7 +279,7 @@ public static partial class LinqMixins
         /// <param name="source">The inner source.</param>
         private void OnSource(IObservable<T> source)
         {
-            if (source == null)
+            if (source is null)
             {
                 _observer.OnError(new InvalidOperationException("Chain source contained null."));
                 return;
@@ -340,7 +338,7 @@ public static partial class LinqMixins
                 }
             }
 
-            if (next == null)
+            if (next is null)
             {
                 return;
             }
@@ -363,7 +361,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -414,7 +412,7 @@ public static partial class LinqMixins
         /// <param name="source">The inner source.</param>
         private void OnSource(IObservable<T> source)
         {
-            if (source == null)
+            if (source is null)
             {
                 OnAnyError(new InvalidOperationException("Blend source contained null."));
                 return;
@@ -524,7 +522,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -608,30 +606,20 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Timeout signal with a direct subscription path.
-    /// </summary>
+    /// <summary>Timeout signal with a direct subscription path.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class ExpireSignal<T> : IRequireCurrentThread<T>
     {
-        /// <summary>
-        /// The source observable.
-        /// </summary>
+        /// <summary>The source observable.</summary>
         private readonly IObservable<T> _source;
 
-        /// <summary>
-        /// The timeout period.
-        /// </summary>
+        /// <summary>The timeout period.</summary>
         private readonly TimeSpan _dueTime;
 
-        /// <summary>
-        /// The sequencer used to schedule the timeout.
-        /// </summary>
+        /// <summary>The sequencer used to schedule the timeout.</summary>
         private readonly ISequencer _sequencer;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ExpireSignal{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ExpireSignal{T}"/> class.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="dueTime">The timeout period.</param>
         /// <param name="sequencer">The sequencer used to schedule the timeout.</param>
@@ -650,7 +638,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -667,58 +655,40 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Coordinates timeout delivery with one active timer.
-    /// </summary>
+    /// <summary>Coordinates timeout delivery with one active timer.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
     {
-        /// <summary>
-        /// The source observable.
-        /// </summary>
+        /// <summary>The source observable.</summary>
         private readonly IObservable<T> _source;
 
-        /// <summary>
-        /// The timeout period.
-        /// </summary>
+        /// <summary>The timeout period.</summary>
         private readonly TimeSpan _dueTime;
 
-        /// <summary>
-        /// The sequencer used to schedule the timeout.
-        /// </summary>
+        /// <summary>The sequencer used to schedule the timeout.</summary>
         private readonly ISequencer _sequencer;
 
-        /// <summary>
-        /// The downstream observer.
-        /// </summary>
+        /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer;
 
-        /// <summary>
-        /// The active source subscription.
-        /// </summary>
+        /// <summary>The active source subscription.</summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Usage",
             "CA2213:Disposable fields should be disposed",
             Justification = "Disposed via the thread-safe Interlocked.Exchange teardown in Dispose; CA2213 does not recognize disposal of a field through Interlocked.Exchange.")]
         private IDisposable? _subscription;
 
-        /// <summary>
-        /// The active timeout timer.
-        /// </summary>
+        /// <summary>The active timeout timer.</summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Usage",
             "CA2213:Disposable fields should be disposed",
             Justification = "Disposed via the thread-safe Interlocked.Exchange teardown in Dispose; CA2213 does not recognize disposal of a field through Interlocked.Exchange.")]
         private IDisposable? _timer;
 
-        /// <summary>
-        /// A value indicating whether the timeout or source has terminated.
-        /// </summary>
+        /// <summary>A value indicating whether the timeout or source has terminated.</summary>
         private int _done;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ExpireCoordinator{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ExpireCoordinator{T}"/> class.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="dueTime">The timeout period.</param>
         /// <param name="sequencer">The sequencer used to schedule the timeout.</param>
@@ -786,9 +756,7 @@ public static partial class LinqMixins
             _observer.OnNext(value);
         }
 
-        /// <summary>
-        /// Starts observing the source and timeout timer.
-        /// </summary>
+        /// <summary>Starts observing the source and timeout timer.</summary>
         /// <returns>The coordinator that owns the subscription cleanup.</returns>
         internal ExpireCoordinator<T> Run()
         {
@@ -803,9 +771,7 @@ public static partial class LinqMixins
             return this;
         }
 
-        /// <summary>
-        /// Emits the timeout error.
-        /// </summary>
+        /// <summary>Emits the timeout error.</summary>
         /// <returns>An empty disposable.</returns>
         private EmptyDisposable EmitTimeout()
         {
@@ -827,46 +793,30 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Coordinates race subscriptions and forwards only the winning source.
-    /// </summary>
+    /// <summary>Coordinates race subscriptions and forwards only the winning source.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class RaceCoordinator<T> : IDisposable
     {
-        /// <summary>
-        /// The downstream observer.
-        /// </summary>
+        /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer;
 
-        /// <summary>
-        /// The active subscriptions.
-        /// </summary>
+        /// <summary>The active subscriptions.</summary>
         private readonly MultipleDisposable _subscriptions = new();
 
-        /// <summary>
-        /// The winning source index.
-        /// </summary>
+        /// <summary>The winning source index.</summary>
         private int _winner = -1;
 
-        /// <summary>
-        /// The next source index.
-        /// </summary>
+        /// <summary>The next source index.</summary>
         private int _index;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RaceCoordinator{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="RaceCoordinator{T}"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         internal RaceCoordinator(IObserver<T> observer) => _observer = observer;
 
-        /// <summary>
-        /// Releases the active subscriptions.
-        /// </summary>
+        /// <summary>Releases the active subscriptions.</summary>
         public void Dispose() => _subscriptions.Dispose();
 
-        /// <summary>
-        /// Starts observing the candidate source streams.
-        /// </summary>
+        /// <summary>Starts observing the candidate source streams.</summary>
         /// <param name="sources">The candidate source streams.</param>
         /// <returns>The coordinator that owns the subscription cleanup.</returns>
         internal RaceCoordinator<T> Run(IObservable<IObservable<T>> sources)
@@ -875,9 +825,7 @@ public static partial class LinqMixins
             return this;
         }
 
-        /// <summary>
-        /// Forwards a value from a candidate source.
-        /// </summary>
+        /// <summary>Forwards a value from a candidate source.</summary>
         /// <param name="candidate">The candidate source index.</param>
         /// <param name="value">The value to forward.</param>
         private void OnNext(int candidate, T value)
@@ -890,9 +838,7 @@ public static partial class LinqMixins
             _observer.OnNext(value);
         }
 
-        /// <summary>
-        /// Forwards an error from a candidate source.
-        /// </summary>
+        /// <summary>Forwards an error from a candidate source.</summary>
         /// <param name="candidate">The candidate source index.</param>
         /// <param name="error">The error to forward.</param>
         private void OnError(int candidate, Exception error)
@@ -905,9 +851,7 @@ public static partial class LinqMixins
             _observer.OnError(error);
         }
 
-        /// <summary>
-        /// Forwards completion from a candidate source.
-        /// </summary>
+        /// <summary>Forwards completion from a candidate source.</summary>
         /// <param name="candidate">The candidate source index.</param>
         private void OnCompleted(int candidate)
         {
@@ -919,17 +863,13 @@ public static partial class LinqMixins
             _observer.OnCompleted();
         }
 
-        /// <summary>
-        /// Handles completion of the outer sequence.
-        /// </summary>
+        /// <summary>Handles completion of the outer sequence.</summary>
         private void OnOuterCompleted()
         {
             // Race completion is controlled by the first inner source to win.
         }
 
-        /// <summary>
-        /// Subscribes to a candidate source.
-        /// </summary>
+        /// <summary>Subscribes to a candidate source.</summary>
         /// <param name="source">The source to observe.</param>
         private void OnSource(IObservable<T> source)
         {
@@ -940,9 +880,7 @@ public static partial class LinqMixins
                 () => OnCompleted(current)));
         }
 
-        /// <summary>
-        /// Attempts to make a candidate source the winner.
-        /// </summary>
+        /// <summary>Attempts to make a candidate source the winner.</summary>
         /// <param name="candidate">The candidate source index.</param>
         /// <returns><c>true</c> when the candidate is the winning source; otherwise, <c>false</c>.</returns>
         private bool Win(int candidate)
@@ -962,57 +900,37 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Coordinates a two-source zip operation.
-    /// </summary>
+    /// <summary>Coordinates a two-source zip operation.</summary>
     /// <typeparam name="TLeft">The left value type.</typeparam>
     /// <typeparam name="TRight">The right value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
     private sealed class ZipCoordinator<TLeft, TRight, TResult>
     {
-        /// <summary>
-        /// The synchronization gate.
-        /// </summary>
+        /// <summary>The synchronization gate.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// The downstream observer.
-        /// </summary>
+        /// <summary>The downstream observer.</summary>
         private readonly IObserver<TResult> _observer;
 
-        /// <summary>
-        /// The projection function.
-        /// </summary>
+        /// <summary>The projection function.</summary>
         private readonly Func<TLeft, TRight, TResult> _selector;
 
-        /// <summary>
-        /// The queued left values.
-        /// </summary>
+        /// <summary>The queued left values.</summary>
         private readonly Queue<TLeft> _leftQueue = new();
 
-        /// <summary>
-        /// The queued right values.
-        /// </summary>
+        /// <summary>The queued right values.</summary>
         private readonly Queue<TRight> _rightQueue = new();
 
-        /// <summary>
-        /// A value indicating whether the left source completed.
-        /// </summary>
+        /// <summary>A value indicating whether the left source completed.</summary>
         private bool _leftCompleted;
 
-        /// <summary>
-        /// A value indicating whether the right source completed.
-        /// </summary>
+        /// <summary>A value indicating whether the right source completed.</summary>
         private bool _rightCompleted;
 
-        /// <summary>
-        /// A value indicating whether completion has been emitted downstream.
-        /// </summary>
+        /// <summary>A value indicating whether completion has been emitted downstream.</summary>
         private bool _completed;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ZipCoordinator{TLeft, TRight, TResult}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="ZipCoordinator{TLeft, TRight, TResult}"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="selector">The projection function.</param>
         internal ZipCoordinator(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
@@ -1021,9 +939,7 @@ public static partial class LinqMixins
             _selector = selector;
         }
 
-        /// <summary>
-        /// Subscribes to both zip sources.
-        /// </summary>
+        /// <summary>Subscribes to both zip sources.</summary>
         /// <param name="left">The left source.</param>
         /// <param name="right">The right source.</param>
         /// <returns>The subscription cleanup.</returns>
@@ -1032,9 +948,7 @@ public static partial class LinqMixins
                 left.Subscribe(OnLeftNext, _observer.OnError, OnLeftCompleted),
                 right.Subscribe(OnRightNext, _observer.OnError, OnRightCompleted));
 
-        /// <summary>
-        /// Queues a left value.
-        /// </summary>
+        /// <summary>Queues a left value.</summary>
         /// <param name="value">The value to queue.</param>
         private void OnLeftNext(TLeft value)
         {
@@ -1046,9 +960,7 @@ public static partial class LinqMixins
             Drain();
         }
 
-        /// <summary>
-        /// Queues a right value.
-        /// </summary>
+        /// <summary>Queues a right value.</summary>
         /// <param name="value">The value to queue.</param>
         private void OnRightNext(TRight value)
         {
@@ -1060,9 +972,7 @@ public static partial class LinqMixins
             Drain();
         }
 
-        /// <summary>
-        /// Marks the left source as complete.
-        /// </summary>
+        /// <summary>Marks the left source as complete.</summary>
         private void OnLeftCompleted()
         {
             lock (_gate)
@@ -1073,9 +983,7 @@ public static partial class LinqMixins
             Drain();
         }
 
-        /// <summary>
-        /// Marks the right source as complete.
-        /// </summary>
+        /// <summary>Marks the right source as complete.</summary>
         private void OnRightCompleted()
         {
             lock (_gate)
@@ -1118,67 +1026,43 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Coordinates a two-source combine-latest operation.
-    /// </summary>
+    /// <summary>Coordinates a two-source combine-latest operation.</summary>
     /// <typeparam name="TLeft">The left value type.</typeparam>
     /// <typeparam name="TRight">The right value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
     private sealed class CombineLatestCoordinator<TLeft, TRight, TResult>
     {
-        /// <summary>
-        /// The synchronization gate.
-        /// </summary>
+        /// <summary>The synchronization gate.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// The downstream observer.
-        /// </summary>
+        /// <summary>The downstream observer.</summary>
         private readonly IObserver<TResult> _observer;
 
-        /// <summary>
-        /// The projection function.
-        /// </summary>
+        /// <summary>The projection function.</summary>
         private readonly Func<TLeft, TRight, TResult> _selector;
 
-        /// <summary>
-        /// A value indicating whether the left source has produced a value.
-        /// </summary>
+        /// <summary>A value indicating whether the left source has produced a value.</summary>
         private bool _hasLeft;
 
-        /// <summary>
-        /// A value indicating whether the right source has produced a value.
-        /// </summary>
+        /// <summary>A value indicating whether the right source has produced a value.</summary>
         private bool _hasRight;
 
-        /// <summary>
-        /// A value indicating whether the left source completed.
-        /// </summary>
+        /// <summary>A value indicating whether the left source completed.</summary>
         private bool _leftDone;
 
-        /// <summary>
-        /// A value indicating whether the right source completed.
-        /// </summary>
+        /// <summary>A value indicating whether the right source completed.</summary>
         private bool _rightDone;
 
-        /// <summary>
-        /// The latest left value.
-        /// </summary>
+        /// <summary>The latest left value.</summary>
         private TLeft? _latestLeft;
 
-        /// <summary>
-        /// The latest right value.
-        /// </summary>
+        /// <summary>The latest right value.</summary>
         private TRight? _latestRight;
 
-        /// <summary>
-        /// A value indicating whether completion has been emitted downstream.
-        /// </summary>
+        /// <summary>A value indicating whether completion has been emitted downstream.</summary>
         private bool _completed;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CombineLatestCoordinator{TLeft, TRight, TResult}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="CombineLatestCoordinator{TLeft, TRight, TResult}"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="selector">The projection function.</param>
         internal CombineLatestCoordinator(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
@@ -1187,9 +1071,7 @@ public static partial class LinqMixins
             _selector = selector;
         }
 
-        /// <summary>
-        /// Subscribes to both combine-latest sources.
-        /// </summary>
+        /// <summary>Subscribes to both combine-latest sources.</summary>
         /// <param name="left">The left source.</param>
         /// <param name="right">The right source.</param>
         /// <returns>The subscription cleanup.</returns>
@@ -1217,9 +1099,7 @@ public static partial class LinqMixins
             }
         }
 
-        /// <summary>
-        /// Handles a right value.
-        /// </summary>
+        /// <summary>Handles a right value.</summary>
         /// <param name="value">The right value.</param>
         private void OnRightNext(TRight value)
         {
@@ -1234,9 +1114,7 @@ public static partial class LinqMixins
             }
         }
 
-        /// <summary>
-        /// Marks the left source as complete.
-        /// </summary>
+        /// <summary>Marks the left source as complete.</summary>
         private void OnLeftCompleted()
         {
             lock (_gate)
@@ -1252,9 +1130,7 @@ public static partial class LinqMixins
             }
         }
 
-        /// <summary>
-        /// Marks the right source as complete.
-        /// </summary>
+        /// <summary>Marks the right source as complete.</summary>
         private void OnRightCompleted()
         {
             lock (_gate)
@@ -1270,9 +1146,7 @@ public static partial class LinqMixins
             }
         }
 
-        /// <summary>
-        /// Projects the current latest values.
-        /// </summary>
+        /// <summary>Projects the current latest values.</summary>
         /// <param name="result">The projected value.</param>
         /// <returns><c>true</c> when both sources have values; otherwise, <c>false</c>.</returns>
         private bool TryProject(out TResult result)
@@ -1288,65 +1162,43 @@ public static partial class LinqMixins
         }
     }
 
-    /// <summary>
-    /// Coordinates a switch operation.
-    /// </summary>
+    /// <summary>Coordinates a switch operation.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class SwitchCoordinator<T> : IDisposable
     {
-        /// <summary>
-        /// The synchronization gate.
-        /// </summary>
+        /// <summary>The synchronization gate.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// The downstream observer.
-        /// </summary>
+        /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer;
 
-        /// <summary>
-        /// The active subscriptions.
-        /// </summary>
+        /// <summary>The active subscriptions.</summary>
         private readonly MultipleDisposable _subscriptions = new();
 
-        /// <summary>
-        /// The active inner subscription.
-        /// </summary>
+        /// <summary>The active inner subscription.</summary>
         private readonly SingleReplaceableDisposable _innerSlot = new();
 
-        /// <summary>
-        /// A value indicating whether the outer source completed.
-        /// </summary>
+        /// <summary>A value indicating whether the outer source completed.</summary>
         private bool _outerCompleted;
 
-        /// <summary>
-        /// A value indicating whether an inner source is active.
-        /// </summary>
+        /// <summary>A value indicating whether an inner source is active.</summary>
         private bool _innerActive;
 
-        /// <summary>
-        /// The current inner source version.
-        /// </summary>
+        /// <summary>The current inner source version.</summary>
         private int _version;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SwitchCoordinator{T}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="SwitchCoordinator{T}"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         internal SwitchCoordinator(IObserver<T> observer) => _observer = observer;
 
-        /// <summary>
-        /// Releases the active subscriptions.
-        /// </summary>
+        /// <summary>Releases the active subscriptions.</summary>
         public void Dispose()
         {
             _innerSlot.Dispose();
             _subscriptions.Dispose();
         }
 
-        /// <summary>
-        /// Subscribes to the outer source.
-        /// </summary>
+        /// <summary>Subscribes to the outer source.</summary>
         /// <param name="sources">The outer source.</param>
         /// <returns>The coordinator that owns the subscription cleanup.</returns>
         internal SwitchCoordinator<T> Run(IObservable<IObservable<T>> sources)
@@ -1356,9 +1208,7 @@ public static partial class LinqMixins
             return this;
         }
 
-        /// <summary>
-        /// Switches to a new inner source.
-        /// </summary>
+        /// <summary>Switches to a new inner source.</summary>
         /// <param name="source">The new inner source.</param>
         private void OnSource(IObservable<T> source)
         {
@@ -1378,9 +1228,7 @@ public static partial class LinqMixins
                 () => OnCompleted(current)));
         }
 
-        /// <summary>
-        /// Marks the outer source as complete.
-        /// </summary>
+        /// <summary>Marks the outer source as complete.</summary>
         private void OnOuterCompleted()
         {
             lock (_gate)
@@ -1391,9 +1239,7 @@ public static partial class LinqMixins
             TryComplete();
         }
 
-        /// <summary>
-        /// Forwards an inner value when it belongs to the current source.
-        /// </summary>
+        /// <summary>Forwards an inner value when it belongs to the current source.</summary>
         /// <param name="version">The inner version.</param>
         /// <param name="value">The value to forward.</param>
         private void OnNext(int version, T value)
@@ -1406,9 +1252,7 @@ public static partial class LinqMixins
             _observer.OnNext(value);
         }
 
-        /// <summary>
-        /// Forwards an inner error when it belongs to the current source.
-        /// </summary>
+        /// <summary>Forwards an inner error when it belongs to the current source.</summary>
         /// <param name="version">The inner version.</param>
         /// <param name="error">The error to forward.</param>
         private void OnError(int version, Exception error)
@@ -1421,9 +1265,7 @@ public static partial class LinqMixins
             _observer.OnError(error);
         }
 
-        /// <summary>
-        /// Completes an inner source when it belongs to the current source.
-        /// </summary>
+        /// <summary>Completes an inner source when it belongs to the current source.</summary>
         /// <param name="version">The inner version.</param>
         private void OnCompleted(int version)
         {
@@ -1438,16 +1280,12 @@ public static partial class LinqMixins
             TryComplete();
         }
 
-        /// <summary>
-        /// Determines whether a version is the current inner source.
-        /// </summary>
+        /// <summary>Determines whether a version is the current inner source.</summary>
         /// <param name="version">The candidate version.</param>
         /// <returns><c>true</c> if the version is current; otherwise, <c>false</c>.</returns>
         private bool IsCurrent(int version) => version == Volatile.Read(ref _version);
 
-        /// <summary>
-        /// Completes the observer when both outer and inner sources are complete.
-        /// </summary>
+        /// <summary>Completes the observer when both outer and inner sources are complete.</summary>
         private void TryComplete()
         {
             lock (_gate)

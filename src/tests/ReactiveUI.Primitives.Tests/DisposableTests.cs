@@ -6,14 +6,10 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// DisposableTests.
-/// </summary>
+/// <summary>DisposableTests.</summary>
 public class DisposableTests
 {
-    /// <summary>
-    /// Called when [dispose once].
-    /// </summary>
+    /// <summary>Called when [dispose once].</summary>
     [Test]
     public void OnlyDisposeOnce()
     {
@@ -29,9 +25,7 @@ public class DisposableTests
         Assert.Equal(1, disposed);
     }
 
-    /// <summary>
-    /// Empties the disposable.
-    /// </summary>
+    /// <summary>Empties the disposable.</summary>
     [Test]
     public void EmptyDisposableInstanceDoesNothing()
     {
@@ -41,9 +35,7 @@ public class DisposableTests
         disposable.Dispose();
     }
 
-    /// <summary>
-    /// Verifies cancellation disposable state transitions with the default owned token source.
-    /// </summary>
+    /// <summary>Verifies cancellation disposable state transitions with the default owned token source.</summary>
     [Test]
     public void CancellationDisposableDefaultConstructorCancelsOwnedToken()
     {
@@ -63,9 +55,7 @@ public class DisposableTests
         Assert.True(disposable.IsDisposed);
     }
 
-    /// <summary>
-    /// Singles the disposable dispose.
-    /// </summary>
+    /// <summary>Singles the disposable dispose.</summary>
     [Test]
     public void SingleDisposableDispose()
     {
@@ -74,9 +64,7 @@ public class DisposableTests
         Assert.True(disposable.IsDisposed);
     }
 
-    /// <summary>
-    /// Singles the disposable dispose with action.
-    /// </summary>
+    /// <summary>Singles the disposable dispose with action.</summary>
     [Test]
     public void SingleDisposableDisposeWithAction()
     {
@@ -95,9 +83,7 @@ public class DisposableTests
         Assert.Equal(1, disposed);
     }
 
-    /// <summary>
-    /// Multiples the disposable dispose.
-    /// </summary>
+    /// <summary>Multiples the disposable dispose.</summary>
     [Test]
     public void MultipleDisposableDispose()
     {
@@ -106,9 +92,7 @@ public class DisposableTests
         Assert.True(disposable.IsDisposed);
     }
 
-    /// <summary>
-    /// Multiples the disposable with items dispose.
-    /// </summary>
+    /// <summary>Multiples the disposable with items dispose.</summary>
     [Test]
     public void MultipleDisposableWithItemsDispose()
     {

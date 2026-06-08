@@ -1,0 +1,4 @@
+#nullable enable
+ReactiveUI.Primitives.Concurrency.ControlSequencer
+ReactiveUI.Primitives.Concurrency.ControlSequencer.Control.get -> System.Windows.Forms.Control!
+ReactiveUI.Primitives.Concurrency.ControlSequencer.ControlSequencer(System.Windows.Forms.Control! control) -> void

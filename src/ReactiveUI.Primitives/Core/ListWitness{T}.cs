@@ -4,26 +4,18 @@
 
 namespace ReactiveUI.Primitives.Core;
 
-/// <summary>
-/// Observer that forwards notifications to an immutable observer list.
-/// </summary>
+/// <summary>Observer that forwards notifications to an immutable observer list.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
 internal sealed class ListWitness<T> : IObserver<T>
 {
-    /// <summary>
-    /// Immutable observer snapshot.
-    /// </summary>
+    /// <summary>Immutable observer snapshot.</summary>
     private readonly ImmutableList<IObserver<T>> _observers;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ListWitness{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ListWitness{T}"/> class.</summary>
     /// <param name="observers">Observers that receive forwarded notifications.</param>
     public ListWitness(ImmutableList<IObserver<T>> observers) => _observers = observers;
 
-    /// <summary>
-    /// Gets a value indicating whether the list contains observers.
-    /// </summary>
+    /// <summary>Gets a value indicating whether the list contains observers.</summary>
     public bool HasObservers => _observers.Items.Length > 0;
 
     /// <inheritdoc/>
@@ -56,16 +48,12 @@ internal sealed class ListWitness<T> : IObserver<T>
         }
     }
 
-    /// <summary>
-    /// Returns a witness with the observer added.
-    /// </summary>
+    /// <summary>Returns a witness with the observer added.</summary>
     /// <param name="observer">Observer to add.</param>
     /// <returns>The updated observer list witness.</returns>
     internal IObserver<T> Add(IObserver<T> observer) => new ListWitness<T>(_observers.Add(observer));
 
-    /// <summary>
-    /// Returns a witness with the observer removed.
-    /// </summary>
+    /// <summary>Returns a witness with the observer removed.</summary>
     /// <param name="observer">Observer to remove.</param>
     /// <returns>The updated observer list witness.</returns>
     internal IObserver<T> Remove(IObserver<T> observer)

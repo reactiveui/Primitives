@@ -11,9 +11,7 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// dispose guard, error forwarding, and the all-sources-emit happy path.</summary>
 public partial class CombineLatestArityTests
 {
-    /// <summary>
-    /// Verifies that CombineLatest9 disposes on subscription failure (catch block).
-    /// </summary>
+    /// <summary>Verifies that CombineLatest9 disposes on subscription failure (catch block).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
@@ -47,9 +45,7 @@ public partial class CombineLatestArityTests
                 .SubscribeAsync((_, _) => default, null));
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest9 OnNextCombined guard returns when disposed.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest9 OnNextCombined guard returns when disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
@@ -105,9 +101,7 @@ public partial class CombineLatestArityTests
         await Assert.That(results).Count().IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest9 forwards a source error to the downstream observer.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest9 forwards a source error to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
@@ -155,9 +149,7 @@ public partial class CombineLatestArityTests
         await Assert.That(receivedError).IsEqualTo(expected);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest9 produces the selector's result once every source has emitted at least once.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest9 produces the selector's result once every source has emitted at least once.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
@@ -230,9 +222,7 @@ public partial class CombineLatestArityTests
         await s9.OnCompletedAsync(Result.Success);
     }
 
-    /// <summary>
-    /// Verifies that CombineLatest9 completes once every source has completed.
-    /// </summary>
+    /// <summary>Verifies that CombineLatest9 completes once every source has completed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]

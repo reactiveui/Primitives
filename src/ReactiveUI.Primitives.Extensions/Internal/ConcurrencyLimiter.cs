@@ -51,6 +51,10 @@ internal sealed class ConcurrencyLimiter<T> : IObservable<T>
     /// <summary>Gets or sets a value indicating whether the limiter has been disposed by any
     /// consumer. Exposed to internal tests; production paths set it via
     /// <see cref="Subscription.Dispose"/>.</summary>
+    [SuppressMessage(
+        "RoslynCommonAnalyzers",
+        "SST2200:Replace this single-use backing field with the 'field' keyword",
+        Justification = "Atomic Volatile.Read/Interlocked.Exchange need an 'int' backing field; the 'field' keyword would force 'bool'.")]
     internal bool Disposed
     {
         get => Volatile.Read(ref _disposed) != 0;
@@ -105,7 +109,7 @@ internal sealed class ConcurrencyLimiter<T> : IObservable<T>
                 ClearRator();
                 if (!subscription.Disposed)
                 {
-                    subscription.Observer.OnError((completed.Exception == null
+                    subscription.Observer.OnError((completed.Exception is null
                         ? new OperationCanceledException()
                         : completed.Exception.InnerException)!);
                 }
@@ -114,7 +118,7 @@ internal sealed class ConcurrencyLimiter<T> : IObservable<T>
             }
 
             subscription.Observer.OnNext(completed.Result);
-            if (--_outstanding == 0 && _rator == null)
+            if (--_outstanding == 0 && _rator is null)
             {
                 subscription.Observer.OnCompleted();
             }

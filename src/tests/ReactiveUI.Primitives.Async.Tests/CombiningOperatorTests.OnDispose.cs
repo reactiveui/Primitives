@@ -8,14 +8,10 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <content>
-/// OnDispose tests for combining operators.
-/// </content>
+/// <summary>Tests for the OnDispose operator.</summary>
 public partial class CombiningOperatorTests
 {
-    /// <summary>
-    /// Verifies that the synchronous OnDispose overload forwards OnNext values to the downstream observer.
-    /// </summary>
+    /// <summary>Verifies that the synchronous OnDispose overload forwards OnNext values to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnDisposeSyncOnNext_ThenForwardsValues()
@@ -45,9 +41,7 @@ public partial class CombiningOperatorTests
         await Assert.That(disposed).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that the synchronous OnDispose overload forwards OnErrorResume to the downstream observer.
-    /// </summary>
+    /// <summary>Verifies that the synchronous OnDispose overload forwards OnErrorResume to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnDisposeSyncOnErrorResume_ThenForwardsError()
@@ -75,9 +69,7 @@ public partial class CombiningOperatorTests
         await Assert.That(errors[0].Message).IsEqualTo("resume");
     }
 
-    /// <summary>
-    /// Verifies that the synchronous OnDispose overload forwards OnCompleted with failure to the downstream observer.
-    /// </summary>
+    /// <summary>Verifies that the synchronous OnDispose overload forwards OnCompleted with failure to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnDisposeSyncOnCompletedFailure_ThenForwardsFailure()
@@ -105,9 +97,7 @@ public partial class CombiningOperatorTests
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that the synchronous OnDispose action is invoked when the subscription is explicitly disposed.
-    /// </summary>
+    /// <summary>Verifies that the synchronous OnDispose action is invoked when the subscription is explicitly disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnDisposeSyncExplicitDispose_ThenActionInvoked()
@@ -128,9 +118,7 @@ public partial class CombiningOperatorTests
         await Assert.That(disposed).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that the asynchronous OnDispose overload forwards OnNext values to the downstream observer.
-    /// </summary>
+    /// <summary>Verifies that the asynchronous OnDispose overload forwards OnNext values to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCleanupBranchAsyncOnNext_ThenForwardsValues()
@@ -164,9 +152,7 @@ public partial class CombiningOperatorTests
         await Assert.That(disposed).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that the asynchronous OnDispose overload forwards OnErrorResume to the downstream observer.
-    /// </summary>
+    /// <summary>Verifies that the asynchronous OnDispose overload forwards OnErrorResume to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCleanupBranchAsyncOnErrorResume_ThenForwardsError()
@@ -194,9 +180,7 @@ public partial class CombiningOperatorTests
         await Assert.That(errors[0].Message).IsEqualTo("async resume");
     }
 
-    /// <summary>
-    /// Verifies that the asynchronous OnDispose overload forwards OnCompleted with failure to the downstream observer.
-    /// </summary>
+    /// <summary>Verifies that the asynchronous OnDispose overload forwards OnCompleted with failure to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCleanupBranchAsyncOnCompletedFailure_ThenForwardsFailure()
@@ -224,9 +208,7 @@ public partial class CombiningOperatorTests
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that the asynchronous OnDispose callback is invoked when the subscription is explicitly disposed.
-    /// </summary>
+    /// <summary>Verifies that the asynchronous OnDispose callback is invoked when the subscription is explicitly disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCleanupBranchAsyncExplicitDispose_ThenCallbackInvoked()
@@ -251,29 +233,25 @@ public partial class CombiningOperatorTests
         await Assert.That(disposed).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies MergeCoordinator.RelayNextAsync pre-gate disposed guard returns early.
-    /// </summary>
+    /// <summary>Verifies MergeCoordinator.RelayNextAsync pre-gate disposed guard returns early.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeCoordinatorDisposed_ThenRelayNextAsyncReturnsDirectly()
     {
         var observer = new CallbackWitnessAsync<int>((_, _) => default);
-        var subscription = new SignalAsync.MergeCoordinator<int>(observer);
+        var subscription = new SignalAsyncExtensions.MergeCoordinator<int>(observer);
         await subscription.DisposeAsync();
 
         await subscription.RelayNextAsync(Sentinel99, CancellationToken.None);
     }
 
-    /// <summary>
-    /// Verifies MergeCoordinator.RelayErrorAsync pre-gate disposed guard returns early.
-    /// </summary>
+    /// <summary>Verifies MergeCoordinator.RelayErrorAsync pre-gate disposed guard returns early.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeCoordinatorDisposed_ThenRelayErrorAsyncReturnsDirectly()
     {
         var observer = new CallbackWitnessAsync<int>((_, _) => default);
-        var subscription = new SignalAsync.MergeCoordinator<int>(observer);
+        var subscription = new SignalAsyncExtensions.MergeCoordinator<int>(observer);
         await subscription.DisposeAsync();
 
         await subscription.RelayErrorAsync(new InvalidOperationException("test"), CancellationToken.None);
@@ -304,7 +282,7 @@ public partial class CombiningOperatorTests
                 await allowCompletion.Task;
             });
 
-        var subscription = new SignalAsync.MergeCoordinator<int>(observer);
+        var subscription = new SignalAsyncExtensions.MergeCoordinator<int>(observer);
 
         // Trigger FinishAsync with failure - blocks on observer.OnCompletedAsync
         var failTask = Task.Run(() =>
@@ -320,9 +298,7 @@ public partial class CombiningOperatorTests
         await failTask;
     }
 
-    /// <summary>
-    /// Verifies MergeCoordinator.RelayErrorAsync post-gate disposed guard.
-    /// </summary>
+    /// <summary>Verifies MergeCoordinator.RelayErrorAsync post-gate disposed guard.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeCoordinatorDisposedWhileGateHeld_ThenRelayErrorAsyncPostGateReturns()
@@ -344,7 +320,7 @@ public partial class CombiningOperatorTests
                 await allowCompletion.Task;
             });
 
-        var subscription = new SignalAsync.MergeCoordinator<int>(observer);
+        var subscription = new SignalAsyncExtensions.MergeCoordinator<int>(observer);
 
         var failTask = Task.Run(() =>
             subscription.FinishAsync(Result.Failure(new InvalidOperationException("fail"))));
@@ -358,9 +334,7 @@ public partial class CombiningOperatorTests
         await failTask;
     }
 
-    /// <summary>
-    /// Verifies that MergeSequenceCoordinator.RelayNextAsync returns early when called directly after disposal.
-    /// </summary>
+    /// <summary>Verifies that MergeSequenceCoordinator.RelayNextAsync returns early when called directly after disposal.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeSequenceCoordinatorDisposed_ThenOnNextReturnsDirectly()
@@ -368,16 +342,14 @@ public partial class CombiningOperatorTests
         var observer = new CallbackWitnessAsync<int>((_, _) => default);
         IObservableAsync<int>[] sources = [];
         var subscription =
-            new SignalAsync.MergeEnumerableSignal<int>.MergeSequenceCoordinator(observer, sources);
+            new SignalAsyncExtensions.MergeEnumerableSignal<int>.MergeSequenceCoordinator(observer, sources);
         subscription.BeginSubscribing();
         await subscription.DisposeAsync();
 
         await subscription.RelayNextAsync(Sentinel99, CancellationToken.None);
     }
 
-    /// <summary>
-    /// Verifies that MergeSequenceCoordinator.RelayErrorAsync returns early when called directly after disposal.
-    /// </summary>
+    /// <summary>Verifies that MergeSequenceCoordinator.RelayErrorAsync returns early when called directly after disposal.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeSequenceCoordinatorDisposed_ThenOnErrorResumeReturnsDirectly()
@@ -385,7 +357,7 @@ public partial class CombiningOperatorTests
         var observer = new CallbackWitnessAsync<int>((_, _) => default);
         IObservableAsync<int>[] sources = [];
         var subscription =
-            new SignalAsync.MergeEnumerableSignal<int>.MergeSequenceCoordinator(observer, sources);
+            new SignalAsyncExtensions.MergeEnumerableSignal<int>.MergeSequenceCoordinator(observer, sources);
         subscription.BeginSubscribing();
         await subscription.DisposeAsync();
 

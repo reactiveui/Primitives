@@ -7,79 +7,76 @@ using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides extension methods for composing and handling asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides extension methods for composing and handling asynchronous observable sequences.</summary>
 /// <remarks>The methods in this class enable advanced error handling and composition scenarios for asynchronous
 /// observables. These extensions are intended to be used with the SignalAsync{T} type to facilitate robust,
 /// composable, and resilient asynchronous data streams.</remarks>
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Creates a new observable sequence that continues with a handler-provided sequence when an exception occurs
-    /// in the source sequence.
-    /// </summary>
-    /// <remarks>Use this method to recover from errors in the source sequence by switching to an
-    /// alternative observable sequence. The handler function is called with the exception, allowing custom error
-    /// recovery logic. If the handler itself throws an exception, the resulting sequence completes with that
-    /// exception.</remarks>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <summary>Error-handling operators for an observable source sequence.</summary>
     /// <param name="source">The source observable sequence.</param>
-    /// <param name="handler">A function that receives the exception thrown by the source sequence and returns an alternative observable
-    /// sequence to continue with.</param>
-    /// <returns>An observable sequence that emits items from the source sequence, or from the handler-provided sequence if
-    /// an exception is encountered.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
-    public static IObservableAsync<T> Catch<T>(this IObservableAsync<T> source, Func<Exception, IObservableAsync<T>> handler)
-        => source.Catch(handler, null);
-
-    /// <summary>
-    /// Creates a new observable sequence that continues with a handler-provided sequence when an exception occurs
-    /// in the source sequence.
-    /// </summary>
-    /// <remarks>Use this method to recover from errors in the source sequence by switching to an
-    /// alternative observable sequence. The handler function is called with the exception, allowing custom error
-    /// recovery logic. If the handler itself throws an exception, the resulting sequence completes with that
-    /// exception.</remarks>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    /// <param name="source">The source observable sequence.</param>
-    /// <param name="handler">A function that receives the exception thrown by the source sequence and returns an alternative observable
-    /// sequence to continue with.</param>
-    /// <param name="onErrorResume">An optional asynchronous callback invoked when an error occurs. If not specified, the observer's default
-    /// error handler is used.</param>
-    /// <returns>An observable sequence that emits items from the source sequence, or from the handler-provided sequence if
-    /// an exception is encountered.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
-    public static IObservableAsync<T> Catch<T>(
-        this IObservableAsync<T> source,
-        Func<Exception, IObservableAsync<T>> handler,
-        Func<Exception, CancellationToken, ValueTask>? onErrorResume)
+    extension<T>(IObservableAsync<T> source)
     {
-        ArgumentExceptionHelper.ThrowIfNull(source);
-        ArgumentExceptionHelper.ThrowIfNull(handler);
+        /// <summary>
+        /// Creates a new observable sequence that continues with a handler-provided sequence when an exception occurs
+        /// in the source sequence.
+        /// </summary>
+        /// <remarks>Use this method to recover from errors in the source sequence by switching to an
+        /// alternative observable sequence. The handler function is called with the exception, allowing custom error
+        /// recovery logic. If the handler itself throws an exception, the resulting sequence completes with that
+        /// exception.</remarks>
+        /// <param name="handler">A function that receives the exception thrown by the source sequence and returns an alternative observable
+        /// sequence to continue with.</param>
+        /// <returns>An observable sequence that emits items from the source sequence, or from the handler-provided sequence if
+        /// an exception is encountered.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
+        public IObservableAsync<T> Catch(Func<Exception, IObservableAsync<T>> handler)
+            => source.Catch(handler, null);
 
-        return new CatchSignal<T>(source, handler, onErrorResume);
-    }
-
-    /// <summary>
-    /// Continues the observable sequence with an alternative sequence provided by the specified handler when an
-    /// error occurs, and ignores the error after invoking the handler.
-    /// </summary>
-    /// <remarks>If an error occurs and the handler is invoked, the error is also reported to the
-    /// global unhandled exception handler before being ignored. This method allows the sequence to continue without
-    /// propagating the error to subscribers.</remarks>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    /// <param name="source">The source observable sequence.</param>
-    /// <param name="handler">A function that receives the exception and returns an alternative observable sequence to resume with after
-    /// an error occurs.</param>
-    /// <returns>An observable sequence that resumes with the sequence returned by the handler when an error is encountered,
-    /// and ignores the error after handling.</returns>
-    public static IObservableAsync<T> CatchAndIgnoreErrorResume<T>(this IObservableAsync<T> source, Func<Exception, IObservableAsync<T>> handler) =>
-        source.Catch(handler, static (error, _) =>
+        /// <summary>
+        /// Creates a new observable sequence that continues with a handler-provided sequence when an exception occurs
+        /// in the source sequence.
+        /// </summary>
+        /// <remarks>Use this method to recover from errors in the source sequence by switching to an
+        /// alternative observable sequence. The handler function is called with the exception, allowing custom error
+        /// recovery logic. If the handler itself throws an exception, the resulting sequence completes with that
+        /// exception.</remarks>
+        /// <param name="handler">A function that receives the exception thrown by the source sequence and returns an alternative observable
+        /// sequence to continue with.</param>
+        /// <param name="onErrorResume">An optional asynchronous callback invoked when an error occurs. If not specified, the observer's default
+        /// error handler is used.</param>
+        /// <returns>An observable sequence that emits items from the source sequence, or from the handler-provided sequence if
+        /// an exception is encountered.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
+        public IObservableAsync<T> Catch(
+            Func<Exception, IObservableAsync<T>> handler,
+            Func<Exception, CancellationToken, ValueTask>? onErrorResume)
         {
-            UnhandledExceptionHandler.ReportUnhandledException(error);
-            return default;
-        });
+            ArgumentExceptionHelper.ThrowIfNull(source);
+            ArgumentExceptionHelper.ThrowIfNull(handler);
+
+            return new CatchSignal<T>(source, handler, onErrorResume);
+        }
+
+        /// <summary>
+        /// Continues the observable sequence with an alternative sequence provided by the specified handler when an
+        /// error occurs, and ignores the error after invoking the handler.
+        /// </summary>
+        /// <remarks>If an error occurs and the handler is invoked, the error is also reported to the
+        /// global unhandled exception handler before being ignored. This method allows the sequence to continue without
+        /// propagating the error to subscribers.</remarks>
+        /// <param name="handler">A function that receives the exception and returns an alternative observable sequence to resume with after
+        /// an error occurs.</param>
+        /// <returns>An observable sequence that resumes with the sequence returned by the handler when an error is encountered,
+        /// and ignores the error after handling.</returns>
+        public IObservableAsync<T> CatchAndIgnoreErrorResume(Func<Exception, IObservableAsync<T>> handler) =>
+            source.Catch(handler, static (error, _) =>
+            {
+                UnhandledExceptionHandler.ReportUnhandledException(error);
+                return default;
+            });
+    }
 
     /// <summary>
     /// Observable wrapper for <see cref="Catch{T}(IObservableAsync{T}, Func{Exception,IObservableAsync{T}}, Func{Exception,CancellationToken,ValueTask}?)"/>.

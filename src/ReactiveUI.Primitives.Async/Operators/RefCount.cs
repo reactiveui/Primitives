@@ -10,26 +10,28 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides extension methods for working with asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
 /// <remarks>The methods in this class enable advanced operations on asynchronous observables, such as reference
 /// counting for connectable observables. These utilities are intended to be used with types that implement asynchronous
 /// observer patterns.</remarks>
-public static partial class SignalAsync
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Returns an observable sequence that connects to the underlying connectable observable when the first observer
-    /// subscribes, and disconnects when the last observer unsubscribes.
-    /// </summary>
-    /// <remarks>This operator is useful for sharing a single subscription to the underlying connectable
-    /// observable among multiple subscribers. When the last observer unsubscribes, the connection to the source is
-    /// automatically disposed.</remarks>
-    /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
+    /// <summary>Reference-counting operators for a connectable observable source sequence.</summary>
     /// <param name="source">The connectable observable sequence to ref count. Cannot be null.</param>
-    /// <returns>An observable sequence that stays connected to the source as long as there is at least one subscription.</returns>
-    public static SignalAsync<T> RefCount<T>(this ConnectableSignalAsync<T> source) =>
-        new RefCountSignal<T>(source);
+    /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
+    extension<T>(ConnectableSignalAsync<T> source)
+    {
+        /// <summary>
+        /// Returns an observable sequence that connects to the underlying connectable observable when the first observer
+        /// subscribes, and disconnects when the last observer unsubscribes.
+        /// </summary>
+        /// <remarks>This operator is useful for sharing a single subscription to the underlying connectable
+        /// observable among multiple subscribers. When the last observer unsubscribes, the connection to the source is
+        /// automatically disposed.</remarks>
+        /// <returns>An observable sequence that stays connected to the source as long as there is at least one subscription.</returns>
+        public SignalAsync<T> RefCount() =>
+            new RefCountSignal<T>(source);
+    }
 
     /// <summary>
     /// Async observable that automatically connects to the underlying connectable source when the first
@@ -39,34 +41,22 @@ public static partial class SignalAsync
     /// <param name="source">The connectable observable to manage with reference counting.</param>
     internal sealed class RefCountSignal<T>(ConnectableSignalAsync<T> source) : SignalAsync<T>, IDisposable
     {
-        /// <summary>
-        /// The asynchronous gate used to serialize subscribe and dispose operations.
-        /// </summary>
+        /// <summary>The asynchronous gate used to serialize subscribe and dispose operations.</summary>
         private readonly AsyncSerialGate _gate = new();
 
-        /// <summary>
-        /// The current number of active subscribers.
-        /// </summary>
+        /// <summary>The current number of active subscribers.</summary>
         private int _refCount;
 
-        /// <summary>
-        /// The single-assignment disposable holding the connection to the underlying connectable source.
-        /// </summary>
+        /// <summary>The single-assignment disposable holding the connection to the underlying connectable source.</summary>
         private SingleAssignmentDisposableAsync? _connection;
 
-        /// <summary>
-        /// Indicates whether this instance has been disposed.
-        /// </summary>
+        /// <summary>Indicates whether this instance has been disposed.</summary>
         private bool _disposedValue;
 
-        /// <summary>
-        /// Disposes the ref-count observable, releasing the connection gate and any active connection.
-        /// </summary>
+        /// <summary>Disposes the ref-count observable, releasing the connection gate and any active connection.</summary>
         public void Dispose() => Dispose(true);
 
-        /// <summary>
-        /// Releases managed resources if <paramref name="disposing"/> is true.
-        /// </summary>
+        /// <summary>Releases managed resources if <paramref name="disposing"/> is true.</summary>
         /// <param name="disposing">True to release managed resources; false when called from a finalizer.</param>
         [SuppressMessage(
             "Major Bug",
@@ -127,34 +117,26 @@ public static partial class SignalAsync
         internal sealed class RefCountWitness(RefCountSignal<T> parent, IObserverAsync<T> observer)
             : ObserverAsync<T>
         {
-            /// <summary>
-            /// Forwards an element to the downstream witness.
-            /// </summary>
+            /// <summary>Forwards an element to the downstream witness.</summary>
             /// <param name="value">The element to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
                 observer.OnNextAsync(value, cancellationToken);
 
-            /// <summary>
-            /// Forwards a non-fatal error to the downstream witness.
-            /// </summary>
+            /// <summary>Forwards a non-fatal error to the downstream witness.</summary>
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 observer.OnErrorResumeAsync(error, cancellationToken);
 
-            /// <summary>
-            /// Forwards completion to the downstream observer.
-            /// </summary>
+            /// <summary>Forwards completion to the downstream observer.</summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override ValueTask OnCompletedAsyncCore(Result result) => observer.OnCompletedAsync(result);
 
-            /// <summary>
-            /// Decrements the parent's reference count and disconnects from the source when it reaches zero.
-            /// </summary>
+            /// <summary>Decrements the parent's reference count and disconnects from the source when it reaches zero.</summary>
             /// <returns>A task representing the asynchronous disposal operation.</returns>
             [DebuggerStepThrough]
             protected override async ValueTask DisposeAsyncCore()

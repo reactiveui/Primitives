@@ -197,9 +197,9 @@ public class RunAllObservableTests
         return output;
     }
 
-    /// <summary>Synchronously-erroring observable used to drive the sync-error path of
-    /// <c>RunAll.RunNext</c>.</summary>
+    /// <summary>Synchronously-erroring observable used to drive the sync-error path of <c>RunAll.RunNext</c>.</summary>
     /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="error">The exception to emit synchronously.</param>
     private sealed class SyncErroringObservable<T>(Exception error) : IObservable<T>
     {
         /// <inheritdoc/>

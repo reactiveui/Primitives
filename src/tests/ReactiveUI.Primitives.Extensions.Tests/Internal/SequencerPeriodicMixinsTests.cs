@@ -34,5 +34,5 @@ public class SequencerPeriodicMixinsTests
     /// <summary>Invokes the tick method to exercise the disposed tick guard.</summary>
     /// <param name="subscription">The subscription under test.</param>
     private static void InvokeTick(IDisposable subscription) =>
-        ((SequencerPeriodicMixins.PeriodicSubscription<Action>)subscription).Tick();
+        ((SequencerPeriodicExtensions.PeriodicSubscription<Action>)subscription).Tick();
 }

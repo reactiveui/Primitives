@@ -18,9 +18,7 @@ public class FactorySignalTests
     /// <summary>Hoisted source array used by tests (was inline literal).</summary>
     private static readonly int[] Sequence123 = [1, 2, 3];
 
-    /// <summary>
-    /// Tests Return emits single value.
-    /// </summary>
+    /// <summary>Tests Return emits single value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenReturnSingleValue_ThenEmitsValueAndCompletes()
@@ -31,9 +29,7 @@ public class FactorySignalTests
         await Assert.That(result[0]).IsEqualTo(SentinelValue);
     }
 
-    /// <summary>
-    /// Tests Return emits string.
-    /// </summary>
+    /// <summary>Tests Return emits string.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenReturnString_ThenEmitsStringAndCompletes()
@@ -43,9 +39,7 @@ public class FactorySignalTests
         await Assert.That(result).IsCollectionEqualTo(["hello"]);
     }
 
-    /// <summary>
-    /// Tests Empty completes with no items.
-    /// </summary>
+    /// <summary>Tests Empty completes with no items.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenEmpty_ThenCompletesWithNoItems()
@@ -55,9 +49,7 @@ public class FactorySignalTests
         await Assert.That(result).IsEmpty();
     }
 
-    /// <summary>
-    /// Tests Throw completes with exception.
-    /// </summary>
+    /// <summary>Tests Throw completes with exception.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenThrow_ThenCompletesWithException()
@@ -79,16 +71,12 @@ public class FactorySignalTests
         await Assert.That(thrown!.Message).IsEqualTo("test error");
     }
 
-    /// <summary>
-    /// Tests Throw rejects null exception.
-    /// </summary>
+    /// <summary>Tests Throw rejects null exception.</summary>
     [Test]
     public void WhenThrowNullException_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(() => SignalAsync.Throw<int>(null!));
 
-    /// <summary>
-    /// Tests Never does not complete within timeout.
-    /// </summary>
+    /// <summary>Tests Never does not complete within timeout.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenNever_ThenDoesNotCompleteWithinTimeout()
@@ -118,9 +106,7 @@ public class FactorySignalTests
         await Assert.That(completed).IsFalse();
     }
 
-    /// <summary>
-    /// Tests Range from zero emits sequential integers.
-    /// </summary>
+    /// <summary>Tests Range from zero emits sequential integers.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRangeFromZero_ThenEmitsSequentialIntegers()
@@ -133,9 +119,7 @@ public class FactorySignalTests
         await Assert.That(result).IsCollectionEqualTo([0, 1, ExpectedThird, ExpectedFourth, ExpectedFifth]);
     }
 
-    /// <summary>
-    /// Tests Range from non-zero emits correct range.
-    /// </summary>
+    /// <summary>Tests Range from non-zero emits correct range.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRangeFromNonZero_ThenEmitsCorrectRange()
@@ -148,9 +132,7 @@ public class FactorySignalTests
         await Assert.That(result).IsCollectionEqualTo([ExpectedFirst, ExpectedSecond, ExpectedThird]);
     }
 
-    /// <summary>
-    /// Tests Range with count zero emits nothing.
-    /// </summary>
+    /// <summary>Tests Range with count zero emits nothing.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRangeCountZero_ThenEmitsNothing()
@@ -160,9 +142,7 @@ public class FactorySignalTests
         await Assert.That(result).IsEmpty();
     }
 
-    /// <summary>
-    /// Tests FromAsync with value emits single value.
-    /// </summary>
+    /// <summary>Tests FromAsync with value emits single value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFromAsyncWithValue_ThenEmitsSingleValue()
@@ -179,9 +159,7 @@ public class FactorySignalTests
         await Assert.That(result).IsCollectionEqualTo([ExpectedValue]);
     }
 
-    /// <summary>
-    /// Tests FromAsync void executes action.
-    /// </summary>
+    /// <summary>Tests FromAsync void executes action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFromAsyncVoid_ThenEmitsUnit()
@@ -198,9 +176,7 @@ public class FactorySignalTests
         await Assert.That(executed).IsTrue();
     }
 
-    /// <summary>
-    /// Tests Defer creates new sequence per subscription.
-    /// </summary>
+    /// <summary>Tests Defer creates new sequence per subscription.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDefer_ThenCreatesNewSequencePerSubscription()
@@ -220,9 +196,7 @@ public class FactorySignalTests
         await Assert.That(second).IsEqualTo(ExpectedSecondValue);
     }
 
-    /// <summary>
-    /// Tests async Defer creates new sequence per subscription.
-    /// </summary>
+    /// <summary>Tests async Defer creates new sequence per subscription.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDeferAsync_ThenCreatesNewSequencePerSubscription()
@@ -243,9 +217,7 @@ public class FactorySignalTests
         await Assert.That(second).IsEqualTo(ExpectedSecondValue);
     }
 
-    /// <summary>
-    /// Tests Create with custom subscription logic.
-    /// </summary>
+    /// <summary>Tests Create with custom subscription logic.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCreate_ThenCustomSubscriptionLogicRuns()
@@ -264,17 +236,13 @@ public class FactorySignalTests
         await Assert.That(result).IsCollectionEqualTo([1, SecondItem]);
     }
 
-    /// <summary>
-    /// Tests Create with null subscribe function.
-    /// </summary>
+    /// <summary>Tests Create with null subscribe function.</summary>
     [Test]
     public void WhenCreateWithNullSubscribeFunc_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(() =>
             SignalAsync.Create<int>(null!));
 
-    /// <summary>
-    /// Tests CreateAsBackgroundJob runs on background.
-    /// </summary>
+    /// <summary>Tests CreateAsBackgroundJob runs on background.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCreateAsBackgroundJob_ThenRunsOnBackground()
@@ -293,9 +261,7 @@ public class FactorySignalTests
         await Assert.That(result).IsCollectionEqualTo([SentinelValue]);
     }
 
-    /// <summary>
-    /// Tests Timer single shot emits one value.
-    /// </summary>
+    /// <summary>Tests Timer single shot emits one value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTimerSingleShot_ThenEmitsSingleValueAfterDelay()
@@ -308,9 +274,7 @@ public class FactorySignalTests
         await Assert.That(result[0]).IsEqualTo(0L);
     }
 
-    /// <summary>
-    /// Tests Timer periodic emits multiple values.
-    /// </summary>
+    /// <summary>Tests Timer periodic emits multiple values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTimerPeriodic_ThenEmitsMultipleValues()
@@ -337,25 +301,19 @@ public class FactorySignalTests
         await Assert.That(items[0]).IsEqualTo(0L);
     }
 
-    /// <summary>
-    /// Tests Timer negative due time.
-    /// </summary>
+    /// <summary>Tests Timer negative due time.</summary>
     [Test]
     public void WhenTimerNegativeDueTime_ThenThrowsArgumentOutOfRange() =>
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             SignalAsync.Timer(TimeSpan.FromMilliseconds(-1)));
 
-    /// <summary>
-    /// Tests Timer periodic with non-positive period.
-    /// </summary>
+    /// <summary>Tests Timer periodic with non-positive period.</summary>
     [Test]
     public void WhenTimerPeriodicNonPositivePeriod_ThenThrowsArgumentOutOfRange() =>
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             SignalAsync.Timer(TimeSpan.Zero, TimeSpan.Zero));
 
-    /// <summary>
-    /// Tests IEnumerable to SignalAsync.
-    /// </summary>
+    /// <summary>Tests IEnumerable to SignalAsync.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenEnumerableToAsyncSignal_ThenEmitsAllItems()
@@ -369,9 +327,7 @@ public class FactorySignalTests
         await Assert.That(result).IsCollectionEqualTo([1, ExpectedSecond, ExpectedThird]);
     }
 
-    /// <summary>
-    /// Tests IAsyncEnumerable to SignalAsync.
-    /// </summary>
+    /// <summary>Tests IAsyncEnumerable to SignalAsync.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsyncEnumerableToAsyncSignal_ThenEmitsAllItems()
@@ -398,9 +354,7 @@ public class FactorySignalTests
         }
     }
 
-    /// <summary>
-    /// Tests Task to SignalAsync.
-    /// </summary>
+    /// <summary>Tests Task to SignalAsync.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTaskToAsyncSignal_ThenEmitsTaskResult()
@@ -414,9 +368,7 @@ public class FactorySignalTests
         await Assert.That(result).IsEqualTo(ExpectedResult);
     }
 
-    /// <summary>
-    /// Tests void Task to SignalAsync.
-    /// </summary>
+    /// <summary>Tests void Task to SignalAsync.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenVoidTaskToAsyncSignal_ThenEmitsUnit()
@@ -427,9 +379,7 @@ public class FactorySignalTests
         await source.WaitCompletionAsync();
     }
 
-    /// <summary>
-    /// Tests Interval emits periodic values.
-    /// </summary>
+    /// <summary>Tests Interval emits periodic values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenIntervalWithCancellation_ThenEmitsPeriodicValues()
@@ -472,9 +422,7 @@ public class FactorySignalTests
         await Assert.That(items[0]).IsEqualTo(1L);
     }
 
-    /// <summary>
-    /// Tests that EmitEnumerableAsync returns early when the cancellation token is already cancelled.
-    /// </summary>
+    /// <summary>Tests that EmitEnumerableAsync returns early when the cancellation token is already cancelled.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenEmitEnumerableAsyncWithCancelledToken_ThenReturnsEarly()
@@ -490,14 +438,12 @@ public class FactorySignalTests
         });
 
         const int RangeCount = 100;
-        await SignalAsync.EmitEnumerableAsync(Enumerable.Range(0, RangeCount), observer, cts.Token);
+        await SignalAsyncExtensions.EmitEnumerableAsync(Enumerable.Range(0, RangeCount), observer, cts.Token);
 
         await Assert.That(items).IsEmpty();
     }
 
-    /// <summary>
-    /// Tests that the parameterless SubscribeAsync overload subscribes and disposes without error.
-    /// </summary>
+    /// <summary>Tests that the parameterless SubscribeAsync overload subscribes and disposes without error.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscribeAsyncParameterless_ThenSubscribesAndDisposes()
@@ -507,9 +453,7 @@ public class FactorySignalTests
         await Assert.That(sub).IsNotNull();
     }
 
-    /// <summary>
-    /// Tests that SubscribeAsync with only an async onNext delegate and no cancellation token subscribes correctly.
-    /// </summary>
+    /// <summary>Tests that SubscribeAsync with only an async onNext delegate and no cancellation token subscribes correctly.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscribeAsyncWithOnNextAsyncOnly_ThenReceivesItems()
@@ -530,9 +474,7 @@ public class FactorySignalTests
         await Assert.That(items).IsCollectionEqualTo([EmittedValue]);
     }
 
-    /// <summary>
-    /// Tests that SubscribeAsync with an async onNext delegate and explicit cancellation token subscribes correctly.
-    /// </summary>
+    /// <summary>Tests that SubscribeAsync with an async onNext delegate and explicit cancellation token subscribes correctly.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscribeAsyncWithOnNextAsyncAndCancellationToken_ThenReceivesItems()
@@ -556,9 +498,7 @@ public class FactorySignalTests
         await Assert.That(items).IsCollectionEqualTo([EmittedValue]);
     }
 
-    /// <summary>
-    /// Tests that the sync SubscribeAsync overload invokes the onErrorResume action when an error occurs.
-    /// </summary>
+    /// <summary>Tests that the sync SubscribeAsync overload invokes the onErrorResume action when an error occurs.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscribeAsyncSyncOverloadWithError_ThenInvokesOnErrorResume()
@@ -583,9 +523,7 @@ public class FactorySignalTests
         await Assert.That(error.Message).IsEqualTo("sync error");
     }
 
-    /// <summary>
-    /// Tests that the sync SubscribeAsync overload invokes the onCompleted action when the sequence completes.
-    /// </summary>
+    /// <summary>Tests that the sync SubscribeAsync overload invokes the onCompleted action when the sequence completes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscribeAsyncSyncOverloadWithCompletion_ThenInvokesOnCompleted()
@@ -603,9 +541,7 @@ public class FactorySignalTests
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Tests that SubscribeAsync with null onErrorResume completes normally.
-    /// </summary>
+    /// <summary>Tests that SubscribeAsync with null onErrorResume completes normally.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscribeAsyncWithNullOnErrorResume_ThenCompletesNormally()
@@ -624,9 +560,7 @@ public class FactorySignalTests
         await Assert.That(items).IsCollectionEqualTo([SentinelValue]);
     }
 
-    /// <summary>
-    /// Tests that SubscribeAsync with null onCompleted completes normally.
-    /// </summary>
+    /// <summary>Tests that SubscribeAsync with null onCompleted completes normally.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscribeAsyncWithNullOnCompleted_ThenCompletesNormally()

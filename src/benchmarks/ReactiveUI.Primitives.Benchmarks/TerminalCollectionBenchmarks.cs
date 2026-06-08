@@ -8,25 +8,17 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks for terminal and collection APIs.
-/// </summary>
+/// <summary>Benchmarks for terminal and collection APIs.</summary>
 [MemoryDiagnoser]
 public class TerminalCollectionBenchmarks
 {
-    /// <summary>
-    /// The number of values produced by each benchmarked sequence.
-    /// </summary>
+    /// <summary>The number of values produced by each benchmarked sequence.</summary>
     private const int Count = 32;
 
-    /// <summary>
-    /// The divisor used by the even-number predicate benchmarks.
-    /// </summary>
+    /// <summary>The divisor used by the even-number predicate benchmarks.</summary>
     private const int EvenDivisor = 2;
 
-    /// <summary>
-    /// Benchmarks collecting into a list signal.
-    /// </summary>
+    /// <summary>Benchmarks collecting into a list signal.</summary>
     /// <returns>The collected count.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesCollectList()
@@ -36,9 +28,7 @@ public class TerminalCollectionBenchmarks
         return result;
     }
 
-    /// <summary>
-    /// Benchmarks collecting into a list using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks collecting into a list using System.Reactive.</summary>
     /// <returns>The collected count.</returns>
     [Benchmark]
     public int SystemReactiveCollectList()
@@ -48,18 +38,14 @@ public class TerminalCollectionBenchmarks
         return result;
     }
 
-    /// <summary>
-    /// Benchmarks collecting into a list using R3.
-    /// </summary>
+    /// <summary>Benchmarks collecting into a list using R3.</summary>
     /// <returns>The collected count.</returns>
     [Benchmark]
     public async Task<int> R3CollectList() =>
         (await R3.ObservableExtensions.ToListAsync(R3.Observable.Range(1, Count), CancellationToken.None)
             .ConfigureAwait(false)).Count;
 
-    /// <summary>
-    /// Benchmarks collecting into an array signal.
-    /// </summary>
+    /// <summary>Benchmarks collecting into an array signal.</summary>
     /// <returns>The collected count.</returns>
     [Benchmark]
     public int PrimitivesCollectArray()
@@ -69,9 +55,7 @@ public class TerminalCollectionBenchmarks
         return result;
     }
 
-    /// <summary>
-    /// Benchmarks collecting into an array using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks collecting into an array using System.Reactive.</summary>
     /// <returns>The collected count.</returns>
     [Benchmark]
     public int SystemReactiveCollectArray()
@@ -81,89 +65,67 @@ public class TerminalCollectionBenchmarks
         return result;
     }
 
-    /// <summary>
-    /// Benchmarks collecting into an array using R3.
-    /// </summary>
+    /// <summary>Benchmarks collecting into an array using R3.</summary>
     /// <returns>The collected count.</returns>
     [Benchmark]
     public async Task<int> R3CollectArray() =>
         (await R3.ObservableExtensions.ToArrayAsync(R3.Observable.Range(1, Count), CancellationToken.None)
             .ConfigureAwait(false)).Length;
 
-    /// <summary>
-    /// Benchmarks asynchronous array collection.
-    /// </summary>
+    /// <summary>Benchmarks asynchronous array collection.</summary>
     /// <returns>The collected count.</returns>
     [Benchmark]
     public async Task<int> PrimitivesCollectArrayAsync() => (await Signal.Sequence(1, Count).CollectArrayAsync().ConfigureAwait(false)).Length;
 
-    /// <summary>
-    /// Benchmarks asynchronous array collection using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks asynchronous array collection using System.Reactive.</summary>
     /// <returns>The collected count.</returns>
     [Benchmark]
     public async Task<int> SystemReactiveCollectArrayAsync() => (await RxObservable.Range(1, Count).ToArrayAsync().ToTask().ConfigureAwait(false)).Length;
 
-    /// <summary>
-    /// Benchmarks asynchronous array collection using R3.
-    /// </summary>
+    /// <summary>Benchmarks asynchronous array collection using R3.</summary>
     /// <returns>The collected count.</returns>
     [Benchmark]
     public async Task<int> R3CollectArrayAsync() =>
         (await R3.ObservableExtensions.ToArrayAsync(R3.Observable.Range(1, Count), CancellationToken.None)
             .ConfigureAwait(false)).Length;
 
-    /// <summary>
-    /// Benchmarks first-value task conversion.
-    /// </summary>
+    /// <summary>Benchmarks first-value task conversion.</summary>
     /// <returns>The first value.</returns>
     [Benchmark]
     public Task<int> PrimitivesFirstAsync() =>
         Signal.Sequence(1, Count).FirstAsync();
 
-    /// <summary>
-    /// Benchmarks first-value task conversion using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks first-value task conversion using System.Reactive.</summary>
     /// <returns>The first value.</returns>
     [Benchmark]
     public Task<int> SystemReactiveFirstAsync() =>
         RxObservable.Range(1, Count).FirstAsync().ToTask();
 
-    /// <summary>
-    /// Benchmarks first-value task conversion using R3.
-    /// </summary>
+    /// <summary>Benchmarks first-value task conversion using R3.</summary>
     /// <returns>The first value.</returns>
     [Benchmark]
     public Task<int> R3FirstAsync() =>
         R3.ObservableExtensions.FirstAsync(R3.Observable.Range(1, Count), CancellationToken.None);
 
-    /// <summary>
-    /// Benchmarks last-value task conversion.
-    /// </summary>
+    /// <summary>Benchmarks last-value task conversion.</summary>
     /// <returns>The last value.</returns>
     [Benchmark]
     public Task<int> PrimitivesToTask() =>
         Signal.Sequence(1, Count).ToTask();
 
-    /// <summary>
-    /// Benchmarks last-value task conversion using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks last-value task conversion using System.Reactive.</summary>
     /// <returns>The last value.</returns>
     [Benchmark]
     public Task<int> SystemReactiveToTask() =>
         RxObservable.Range(1, Count).ToTask();
 
-    /// <summary>
-    /// Benchmarks last-value task conversion using R3.
-    /// </summary>
+    /// <summary>Benchmarks last-value task conversion using R3.</summary>
     /// <returns>The last value.</returns>
     [Benchmark]
     public Task<int> R3ToTask() =>
         R3.ObservableExtensions.LastAsync(R3.Observable.Range(1, Count), CancellationToken.None);
 
-    /// <summary>
-    /// Benchmarks predicate count.
-    /// </summary>
+    /// <summary>Benchmarks predicate count.</summary>
     /// <returns>The matching count.</returns>
     [Benchmark]
     public int PrimitivesCountPredicate()
@@ -173,9 +135,7 @@ public class TerminalCollectionBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks predicate count using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks predicate count using System.Reactive.</summary>
     /// <returns>The matching count.</returns>
     [Benchmark]
     public int SystemReactiveCountPredicate()
@@ -185,9 +145,7 @@ public class TerminalCollectionBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks predicate count using R3.
-    /// </summary>
+    /// <summary>Benchmarks predicate count using R3.</summary>
     /// <returns>The matching count.</returns>
     [Benchmark]
     public Task<int> R3CountPredicate() =>
@@ -196,9 +154,7 @@ public class TerminalCollectionBenchmarks
             static value => value % EvenDivisor == 0,
             CancellationToken.None);
 
-    /// <summary>
-    /// Benchmarks predicate long-count over a range signal.
-    /// </summary>
+    /// <summary>Benchmarks predicate long-count over a range signal.</summary>
     /// <returns>The matching count.</returns>
     [Benchmark]
     public long PrimitivesLongCountPredicate()
@@ -208,9 +164,7 @@ public class TerminalCollectionBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks predicate long-count using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks predicate long-count using System.Reactive.</summary>
     /// <returns>The matching count.</returns>
     [Benchmark]
     public long SystemReactiveLongCountPredicate()
@@ -220,9 +174,7 @@ public class TerminalCollectionBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks predicate long-count using R3.
-    /// </summary>
+    /// <summary>Benchmarks predicate long-count using R3.</summary>
     /// <returns>The matching count.</returns>
     [Benchmark]
     public async Task<long> R3LongCountPredicate() =>
@@ -231,9 +183,7 @@ public class TerminalCollectionBenchmarks
             static value => value % EvenDivisor == 0,
             CancellationToken.None).ConfigureAwait(false);
 
-    /// <summary>
-    /// Benchmarks all over a range signal.
-    /// </summary>
+    /// <summary>Benchmarks all over a range signal.</summary>
     /// <returns>One when all values match.</returns>
     [Benchmark]
     public int PrimitivesAllRange()
@@ -243,9 +193,7 @@ public class TerminalCollectionBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks all over a range using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks all over a range using System.Reactive.</summary>
     /// <returns>One when all values match.</returns>
     [Benchmark]
     public int SystemReactiveAllRange()
@@ -255,9 +203,7 @@ public class TerminalCollectionBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks all over a range using R3.
-    /// </summary>
+    /// <summary>Benchmarks all over a range using R3.</summary>
     /// <returns>One when all values match.</returns>
     [Benchmark]
     public async Task<int> R3AllRange() =>
@@ -266,9 +212,7 @@ public class TerminalCollectionBenchmarks
             static value => value > 0,
             CancellationToken.None).ConfigureAwait(false) ? 1 : 0;
 
-    /// <summary>
-    /// Benchmarks contains over a range signal.
-    /// </summary>
+    /// <summary>Benchmarks contains over a range signal.</summary>
     /// <returns>One when the value is present.</returns>
     [Benchmark]
     public int PrimitivesContainsRange()
@@ -278,9 +222,7 @@ public class TerminalCollectionBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks contains over a range using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks contains over a range using System.Reactive.</summary>
     /// <returns>One when the value is present.</returns>
     [Benchmark]
     public int SystemReactiveContainsRange()
@@ -290,9 +232,7 @@ public class TerminalCollectionBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks contains over a range using R3.
-    /// </summary>
+    /// <summary>Benchmarks contains over a range using R3.</summary>
     /// <returns>One when the value is present.</returns>
     [Benchmark]
     public async Task<int> R3ContainsRange() =>
@@ -301,9 +241,7 @@ public class TerminalCollectionBenchmarks
             Count,
             CancellationToken.None).ConfigureAwait(false) ? 1 : 0;
 
-    /// <summary>
-    /// Benchmarks all and contains terminal predicates.
-    /// </summary>
+    /// <summary>Benchmarks all and contains terminal predicates.</summary>
     /// <returns>The number of true results.</returns>
     [Benchmark]
     public int PrimitivesAllContains()
@@ -315,9 +253,7 @@ public class TerminalCollectionBenchmarks
         return allObserver.Total + containsObserver.Total;
     }
 
-    /// <summary>
-    /// Benchmarks all and contains terminal predicates using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks all and contains terminal predicates using System.Reactive.</summary>
     /// <returns>The number of true results.</returns>
     [Benchmark]
     public int SystemReactiveAllContains()
@@ -329,9 +265,7 @@ public class TerminalCollectionBenchmarks
         return allObserver.Total + containsObserver.Total;
     }
 
-    /// <summary>
-    /// Benchmarks all and contains terminal predicates using R3.
-    /// </summary>
+    /// <summary>Benchmarks all and contains terminal predicates using R3.</summary>
     /// <returns>The number of true results.</returns>
     [Benchmark]
     public async Task<int> R3AllContains()

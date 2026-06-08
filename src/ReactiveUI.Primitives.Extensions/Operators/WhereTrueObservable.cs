@@ -23,10 +23,7 @@ internal sealed class WhereTrueObservable(IObservable<bool> source) : IObservabl
         return source.Subscribe(new WhereTrueObserver(observer));
     }
 
-    /// <summary>
-    /// Forwarding observer that drops <c>false</c> values and passes <c>true</c>
-    /// values, terminal error and completion through unchanged.
-    /// </summary>
+    /// <summary>Forwarding observer that drops <c>false</c> values and passes <c>true</c> values, terminal error and completion through unchanged.</summary>
     /// <param name="downstream">The downstream observer.</param>
     private sealed class WhereTrueObserver(IObserver<bool> downstream) : IObserver<bool>
     {

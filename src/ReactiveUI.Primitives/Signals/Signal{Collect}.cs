@@ -7,62 +7,12 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// Create Signals functionality.
-/// </summary>
+/// <summary>Create Signals functionality.</summary>
 public static partial class Signal
 {
-    /// <summary>
-    /// Collects values into time-windowed batches using the default sequencer.
-    /// </summary>
+    /// <summary>Coordinates time-windowed buffering for a single subscription.</summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
-    /// <param name="source">The source signal.</param>
-    /// <param name="timeSpan">The duration of each buffer window.</param>
-    /// <returns>A signal that emits batches of source values.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
-    public static IObservable<IList<TSource>> Collect<TSource>(
-        this IObservable<TSource> source,
-        TimeSpan timeSpan) =>
-        source.Collect(timeSpan, Sequencer.Default);
-
-    /// <summary>
-    /// Collects values into time-windowed batches.
-    /// </summary>
-    /// <typeparam name="TSource">The source value type.</typeparam>
-    /// <param name="source">The source signal.</param>
-    /// <param name="timeSpan">The duration of each buffer window.</param>
-    /// <param name="sequencer">The sequencer used to schedule buffer flushes.</param>
-    /// <returns>A signal that emits batches of source values.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
-    public static IObservable<IList<TSource>> Collect<TSource>(
-        this IObservable<TSource> source,
-        TimeSpan timeSpan,
-        ISequencer sequencer)
-    {
-        if (source == null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
-
-        if (sequencer == null)
-        {
-            throw new ArgumentNullException(nameof(sequencer));
-        }
-
-        if (timeSpan <= TimeSpan.Zero)
-        {
-            return source.Map(static value => (IList<TSource>)[value]);
-        }
-
-        return Create<IList<TSource>>(observer =>
-            new CollectCoordinator<TSource>(observer, timeSpan, sequencer).Subscribe(source));
-    }
-
-    /// <summary>
-    /// Coordinates time-windowed buffering for a single subscription.
-    /// </summary>
-    /// <typeparam name="TSource">The source value type.</typeparam>
-    private sealed class CollectCoordinator<TSource> : IDisposable
+    internal sealed class CollectCoordinator<TSource> : IDisposable
     {
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<IList<TSource>> _observer;
@@ -88,9 +38,7 @@ public static partial class Signal
         /// <summary>Whether the source has terminated.</summary>
         private bool _stopped;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CollectCoordinator{TSource}"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="CollectCoordinator{TSource}"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="timeSpan">The buffer window duration.</param>
         /// <param name="sequencer">The sequencer used to schedule flushes.</param>
@@ -104,9 +52,7 @@ public static partial class Signal
         /// <inheritdoc/>
         public void Dispose() => _disposables.Dispose();
 
-        /// <summary>
-        /// Subscribes to the source and returns the coordinator as the subscription.
-        /// </summary>
+        /// <summary>Subscribes to the source and returns the coordinator as the subscription.</summary>
         /// <param name="source">The source signal.</param>
         /// <returns>The subscription that tears down source and scheduled flush work.</returns>
         internal CollectCoordinator<TSource> Subscribe(IObservable<TSource> source)

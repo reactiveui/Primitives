@@ -4,30 +4,20 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Observer for detecting whether any value matches a predicate.
-/// </summary>
+/// <summary>Observer for detecting whether any value matches a predicate.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 public sealed class AnyPredicateObserver<T> : SingleSourceObserver<T>
 {
-    /// <summary>
-    /// The downstream observer.
-    /// </summary>
+    /// <summary>The downstream observer.</summary>
     private readonly IObserver<bool> _observer;
 
-    /// <summary>
-    /// The predicate.
-    /// </summary>
+    /// <summary>The predicate.</summary>
     private readonly Func<T, bool> _predicate;
 
-    /// <summary>
-    /// A value indicating whether the observer has terminated.
-    /// </summary>
+    /// <summary>A value indicating whether the observer has terminated.</summary>
     private bool _done;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AnyPredicateObserver{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="AnyPredicateObserver{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="predicate">The predicate.</param>
     public AnyPredicateObserver(IObserver<bool> observer, Func<T, bool> predicate)

@@ -6,14 +6,10 @@ using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <content>
-/// Subscribe tests for combining operators.
-/// </content>
+/// <summary>Tests for the Subscribe operator.</summary>
 public partial class CombiningOperatorTests
 {
-    /// <summary>
-    /// Tests that SubscribeAsync with Action{T} overload works correctly.
-    /// </summary>
+    /// <summary>Tests that SubscribeAsync with Action{T} overload works correctly.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscribeAsyncWithActionOverload_ThenReceivesItems()
@@ -30,9 +26,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 
-    /// <summary>
-    /// Tests SubscribeAsync sync overload with error and completion handlers where both are null.
-    /// </summary>
+    /// <summary>Tests SubscribeAsync sync overload with error and completion handlers where both are null.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscribeAsyncSyncOverloadWithNullHandlers_ThenOnlyOnNextCalled()
@@ -53,9 +47,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 
-    /// <summary>
-    /// Tests SubscribeAsync sync overload with a non-null onErrorResume handler invoked.
-    /// </summary>
+    /// <summary>Tests SubscribeAsync sync overload with a non-null onErrorResume handler invoked.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscribeAsyncSyncOverloadWithErrorHandler_ThenErrorHandlerCalled()
@@ -82,9 +74,7 @@ public partial class CombiningOperatorTests
         await Assert.That(receivedError!.Message).IsEqualTo("test error");
     }
 
-    /// <summary>
-    /// Tests SubscribeAsync sync overload with a non-null onCompleted handler invoked.
-    /// </summary>
+    /// <summary>Tests SubscribeAsync sync overload with a non-null onCompleted handler invoked.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscribeAsyncSyncOverloadWithCompletedHandler_ThenCompletedCalled()

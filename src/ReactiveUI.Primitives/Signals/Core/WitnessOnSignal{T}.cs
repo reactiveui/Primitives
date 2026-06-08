@@ -8,25 +8,17 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Represents the WitnessOnSignal class.
-/// </summary>
+/// <summary>Represents the WitnessOnSignal class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
 internal sealed class WitnessOnSignal<T> : SignalsBase<T>
 {
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly IObservable<T> _source;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly ISequencer _scheduler;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="WitnessOnSignal{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="WitnessOnSignal{T}"/> class.</summary>
     /// <param name="source">The source value.</param>
     /// <param name="scheduler">The scheduler value.</param>
     public WitnessOnSignal(IObservable<T> source, ISequencer scheduler)
@@ -36,28 +28,20 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
         _scheduler = scheduler;
     }
 
-    /// <summary>
-    /// Executes the SubscribeCore operation.
-    /// </summary>
+    /// <summary>Executes the SubscribeCore operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <param name="cancel">The cancel value.</param>
     /// <returns>The result.</returns>
     protected override IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
         new WitnessOn(this, observer, cancel).Run();
 
-    /// <summary>
-    /// Represents the WitnessOn class.
-    /// </summary>
+    /// <summary>Represents the WitnessOn class.</summary>
     private sealed class WitnessOn : WitnessBase<T, T>, IWorkItem, IsDisposed
     {
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
+        /// <summary>Stores state for the signal implementation.</summary>
         private readonly WitnessOnSignal<T> _parent;
 
-        /// <summary>
-        /// Synchronization gate guarding the queued actions and scheduling state.
-        /// </summary>
+        /// <summary>Synchronization gate guarding the queued actions and scheduling state.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>
@@ -66,19 +50,13 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
         /// </summary>
         private readonly Queue<Notification> _actions = new();
 
-        /// <summary>
-        /// Stores state for the signal implementation.
-        /// </summary>
+        /// <summary>Stores state for the signal implementation.</summary>
         private bool _isDisposed;
 
-        /// <summary>
-        /// Tracks whether a drain has been scheduled.
-        /// </summary>
+        /// <summary>Tracks whether a drain has been scheduled.</summary>
         private bool _isScheduled;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="WitnessOn"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="WitnessOn"/> class.</summary>
         /// <param name="parent">The parent value.</param>
         /// <param name="observer">The observer value.</param>
         /// <param name="cancel">The cancel value.</param>
@@ -97,9 +75,7 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
             }
         }
 
-        /// <summary>
-        /// Executes the Run operation.
-        /// </summary>
+        /// <summary>Executes the Run operation.</summary>
         /// <returns>The result.</returns>
         public MultipleDisposable Run()
         {
@@ -110,26 +86,18 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
             return new(sourceDisposable, this);
         }
 
-        /// <summary>
-        /// Executes the OnNext operation.
-        /// </summary>
+        /// <summary>Executes the OnNext operation.</summary>
         /// <param name="value">The value.</param>
         public override void OnNext(T value) => QueueAction(Notification.OnNext(value));
 
-        /// <summary>
-        /// Executes the OnError operation.
-        /// </summary>
+        /// <summary>Executes the OnError operation.</summary>
         /// <param name="error">The error value.</param>
         public override void OnError(Exception error) => QueueAction(Notification.OnError(error));
 
-        /// <summary>
-        /// Executes the OnCompleted operation.
-        /// </summary>
+        /// <summary>Executes the OnCompleted operation.</summary>
         public override void OnCompleted() => QueueAction(Notification.OnCompleted());
 
-        /// <summary>
-        /// Executes the scheduled queue drain.
-        /// </summary>
+        /// <summary>Executes the scheduled queue drain.</summary>
         public void Execute()
         {
             while (true)
@@ -163,9 +131,7 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
             }
         }
 
-        /// <summary>
-        /// Executes the Dispose operation.
-        /// </summary>
+        /// <summary>Executes the Dispose operation.</summary>
         /// <param name="disposing">The disposing value.</param>
         protected override void Dispose(bool disposing)
         {
@@ -178,9 +144,7 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
             base.Dispose(disposing);
         }
 
-        /// <summary>
-        /// Executes the QueueAction operation.
-        /// </summary>
+        /// <summary>Executes the QueueAction operation.</summary>
         /// <param name="data">The data value.</param>
         private void QueueAction(in Notification data)
         {
@@ -203,9 +167,7 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
             _parent._scheduler.Schedule(this);
         }
 
-        /// <summary>
-        /// Executes the Dispatch operation.
-        /// </summary>
+        /// <summary>Executes the Dispatch operation.</summary>
         /// <param name="action">The action value.</param>
         private void Dispatch(in Notification action)
         {
@@ -231,15 +193,10 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
             }
         }
 
-        /// <summary>
-        /// Value-type observer notification used for the dispatch queue to avoid a per-OnNext
-        /// heap allocation.
-        /// </summary>
+        /// <summary>Value-type observer notification used for the dispatch queue to avoid a per-OnNext heap allocation.</summary>
         private readonly record struct Notification
         {
-            /// <summary>
-            /// Initializes a new instance of the <see cref="Notification"/> struct.
-            /// </summary>
+            /// <summary>Initializes a new instance of the <see cref="Notification"/> struct.</summary>
             /// <param name="kind">The notification kind.</param>
             /// <param name="value">The OnNext value.</param>
             /// <param name="exception">The OnError exception.</param>
@@ -250,38 +207,26 @@ internal sealed class WitnessOnSignal<T> : SignalsBase<T>
                 Exception = exception!;
             }
 
-            /// <summary>
-            /// Gets the notification kind.
-            /// </summary>
+            /// <summary>Gets the notification kind.</summary>
             public SparkKind Kind { get; }
 
-            /// <summary>
-            /// Gets the value for an OnNext notification.
-            /// </summary>
+            /// <summary>Gets the value for an OnNext notification.</summary>
             public T Value { get; }
 
-            /// <summary>
-            /// Gets the exception for an OnError notification.
-            /// </summary>
+            /// <summary>Gets the exception for an OnError notification.</summary>
             public Exception Exception { get; }
 
-            /// <summary>
-            /// Creates an OnNext notification.
-            /// </summary>
+            /// <summary>Creates an OnNext notification.</summary>
             /// <param name="value">The value.</param>
             /// <returns>The notification.</returns>
             public static Notification OnNext(T value) => new(SparkKind.OnNext, value, null);
 
-            /// <summary>
-            /// Creates an OnError notification.
-            /// </summary>
+            /// <summary>Creates an OnError notification.</summary>
             /// <param name="error">The error.</param>
             /// <returns>The notification.</returns>
             public static Notification OnError(Exception error) => new(SparkKind.OnError, default!, error);
 
-            /// <summary>
-            /// Creates an OnCompleted notification.
-            /// </summary>
+            /// <summary>Creates an OnCompleted notification.</summary>
             /// <returns>The notification.</returns>
             public static Notification OnCompleted() => new(SparkKind.OnCompleted, default!, null);
         }

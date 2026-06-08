@@ -4,25 +4,17 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Observer for detecting whether any value is present.
-/// </summary>
+/// <summary>Observer for detecting whether any value is present.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 public sealed class AnyObserver<T> : SingleSourceObserver<T>
 {
-    /// <summary>
-    /// The downstream observer.
-    /// </summary>
+    /// <summary>The downstream observer.</summary>
     private readonly IObserver<bool> _observer;
 
-    /// <summary>
-    /// A value indicating whether the observer has terminated.
-    /// </summary>
+    /// <summary>A value indicating whether the observer has terminated.</summary>
     private bool _done;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AnyObserver{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="AnyObserver{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     public AnyObserver(IObserver<bool> observer) => _observer = observer;
 

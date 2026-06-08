@@ -4,13 +4,9 @@
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// Represents a scheduled unit of work.
-/// </summary>
+/// <summary>Represents a scheduled unit of work.</summary>
 public interface IWorkItem
 {
-    /// <summary>
-    /// Executes the scheduled work.
-    /// </summary>
+    /// <summary>Executes the scheduled work.</summary>
     void Execute();
 }

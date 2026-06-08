@@ -7,8 +7,7 @@ using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
-/// <summary>Tests for <see cref="CurrentValueSubject{T}"/>, <see cref="SingleValueObservable{T}"/>,
-/// and the <see cref="CachedObservables"/> singletons.</summary>
+/// <summary>Tests for <see cref="CurrentValueSubject{T}"/>, <see cref="SingleValueObservable{T}"/>, and the <see cref="CachedObservables"/> singletons.</summary>
 public partial class CurrentValueSubjectTests
 {
     /// <summary>Initial value used by subject tests so the replay value is unambiguous.</summary>

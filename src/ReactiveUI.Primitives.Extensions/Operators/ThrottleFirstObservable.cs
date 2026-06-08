@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Throttles a sequence by only emitting the first element in each window.
-/// </summary>
+/// <summary>Throttles a sequence by only emitting the first element in each window.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="window">The window duration.</param>
@@ -29,9 +27,7 @@ internal sealed class ThrottleFirstObservable<T>(
         return source.Subscribe(new ThrottleFirstObserver(observer, window, scheduler));
     }
 
-    /// <summary>
-    /// Observer that implements the throttle first logic.
-    /// </summary>
+    /// <summary>Observer that implements the throttle first logic.</summary>
     /// <param name="downstream">The observer to forward elements to.</param>
     /// <param name="window">The window duration.</param>
     /// <param name="scheduler">The scheduler to use for timing.</param>
@@ -40,24 +36,16 @@ internal sealed class ThrottleFirstObservable<T>(
         TimeSpan window,
         ISequencer scheduler) : IObserver<T>
     {
-        /// <summary>
-        /// The gate to synchronize access to the observer state.
-        /// </summary>
+        /// <summary>The gate to synchronize access to the observer state.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// The last time an element was emitted.
-        /// </summary>
+        /// <summary>The last time an element was emitted.</summary>
         private DateTimeOffset _last;
 
-        /// <summary>
-        /// Whether at least one element has been emitted.
-        /// </summary>
+        /// <summary>Whether at least one element has been emitted.</summary>
         private bool _hasLast;
 
-        /// <summary>
-        /// Whether the observer has finished.
-        /// </summary>
+        /// <summary>Whether the observer has finished.</summary>
         private bool _done;
 
         /// <inheritdoc/>

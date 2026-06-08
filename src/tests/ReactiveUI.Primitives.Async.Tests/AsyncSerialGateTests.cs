@@ -6,8 +6,7 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>Coverage for <see cref="AsyncSerialGate"/> — uncontended fast path, same-thread reentry,
-/// contended slow path, double-dispose idempotency.</summary>
+/// <summary>Coverage for <see cref="AsyncSerialGate"/> — uncontended fast path, same-thread reentry, contended slow path, double-dispose idempotency.</summary>
 [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "TUnit requires instance methods")]
 public class AsyncSerialGateTests
 {
@@ -37,11 +36,18 @@ public class AsyncSerialGateTests
     {
         using var gate = new AsyncSerialGate();
 
-        using (await gate.EnterAsync())
-        using (await gate.EnterAsync())
-        using (await gate.EnterAsync())
+        var lease1 = await gate.EnterAsync();
+        var lease2 = await gate.EnterAsync();
+        var lease3 = await gate.EnterAsync();
+        try
         {
             await Assert.That(gate).IsNotNull();
+        }
+        finally
+        {
+            lease3.Dispose();
+            lease2.Dispose();
+            lease1.Dispose();
         }
 
         // Gate must release cleanly after nested acquisitions.
@@ -51,8 +57,7 @@ public class AsyncSerialGateTests
         }
     }
 
-    /// <summary>Verifies that a contended waiter resumes via the semaphore-signal slow path
-    /// once the owning lock is released.</summary>
+    /// <summary>Verifies that a contended waiter resumes via the semaphore-signal slow path once the owning lock is released.</summary>
     /// <remarks>This intentionally avoids a "waiter has not resumed within Xms" timing assertion —
     /// such a probe is unreliable across CI runners. What matters for coverage is that the slow path
     /// (semaphore park + retry CAS) actually runs; we drive that by serialising two contenders so the

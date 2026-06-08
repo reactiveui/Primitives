@@ -9,25 +9,17 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks for connectable and share APIs.
-/// </summary>
+/// <summary>Benchmarks for connectable and share APIs.</summary>
 [MemoryDiagnoser]
 public class ConnectableShareBenchmarks
 {
-    /// <summary>
-    /// The inclusive start value of the range used by each benchmark.
-    /// </summary>
+    /// <summary>The inclusive start value of the range used by each benchmark.</summary>
     private const int Start = 1;
 
-    /// <summary>
-    /// The number of elements produced by the range used by each benchmark.
-    /// </summary>
+    /// <summary>The number of elements produced by the range used by each benchmark.</summary>
     private const int Count = 32;
 
-    /// <summary>
-    /// Benchmarks publish-live connection.
-    /// </summary>
+    /// <summary>Benchmarks publish-live connection.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesPublishLiveConnect()
@@ -39,9 +31,7 @@ public class ConnectableShareBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks publish connection using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks publish connection using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactivePublishLiveConnect()
@@ -53,9 +43,7 @@ public class ConnectableShareBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks publish connection using R3.
-    /// </summary>
+    /// <summary>Benchmarks publish connection using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3PublishLiveConnect()
@@ -67,9 +55,7 @@ public class ConnectableShareBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks share-live reference counting.
-    /// </summary>
+    /// <summary>Benchmarks share-live reference counting.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesShareLiveSubscribe()
@@ -79,9 +65,7 @@ public class ConnectableShareBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks share/reference counting using System.Reactive publish-refcount.
-    /// </summary>
+    /// <summary>Benchmarks share/reference counting using System.Reactive publish-refcount.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveShareLiveSubscribe()
@@ -92,9 +76,7 @@ public class ConnectableShareBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks share/reference counting using R3.
-    /// </summary>
+    /// <summary>Benchmarks share/reference counting using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3ShareLiveSubscribe()
@@ -104,9 +86,7 @@ public class ConnectableShareBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks replay-live late subscription.
-    /// </summary>
+    /// <summary>Benchmarks replay-live late subscription.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesReplayLiveLateSubscribe()
@@ -118,9 +98,7 @@ public class ConnectableShareBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks replay late subscription using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks replay late subscription using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveReplayLiveLateSubscribe()
@@ -132,9 +110,7 @@ public class ConnectableShareBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks replay late subscription using R3.
-    /// </summary>
+    /// <summary>Benchmarks replay late subscription using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3ReplayLiveLateSubscribe()
@@ -146,9 +122,7 @@ public class ConnectableShareBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks ref-count subscription.
-    /// </summary>
+    /// <summary>Benchmarks ref-count subscription.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesRefCountSubscribe()
@@ -158,9 +132,7 @@ public class ConnectableShareBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks ref-count subscription using R3.
-    /// </summary>
+    /// <summary>Benchmarks ref-count subscription using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3RefCountSubscribe()
@@ -172,9 +144,7 @@ public class ConnectableShareBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks auto-connect subscription.
-    /// </summary>
+    /// <summary>Benchmarks auto-connect subscription.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesAutoConnectSubscribe()
@@ -184,9 +154,7 @@ public class ConnectableShareBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks auto-connect subscription using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks auto-connect subscription using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveAutoConnectSubscribe()

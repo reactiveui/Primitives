@@ -4,27 +4,28 @@
 
 namespace ReactiveUI.Primitives.Extensions.Internal;
 
-/// <summary>
-/// Internal subscribe helpers that adapt delegate triples to a proper observer.
-/// </summary>
+/// <summary>Internal subscribe helpers that adapt delegate triples to a proper observer.</summary>
 internal static class ObservableSubscribeExtensions
 {
-    /// <summary>
-    /// Subscribes using delegate callbacks for OnNext / OnError / OnCompleted. Unique name to
-    /// avoid the System.Reactive <c>Subscribe(onNext, onError, onCompleted)</c> ambiguity; the
-    /// delegates are wrapped by the core <see cref="SubscribeMixins"/> sink rather than a
-    /// duplicated observer.
-    /// </summary>
+    /// <summary>Delegate-callback subscribe helpers for an observable source.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The source observable.</param>
-    /// <param name="onNext">Per-value callback.</param>
-    /// <param name="onError">Error callback.</param>
-    /// <param name="onCompleted">Completion callback.</param>
-    /// <returns>The subscription disposable.</returns>
-    public static IDisposable SubscribeCallbacks<T>(
-        this IObservable<T> source,
-        Action<T> onNext,
-        Action<Exception> onError,
-        Action onCompleted) =>
-        source.Subscribe(onNext, onError, onCompleted);
+    extension<T>(IObservable<T> source)
+    {
+        /// <summary>
+        /// Subscribes using delegate callbacks for OnNext / OnError / OnCompleted. Unique name to
+        /// avoid the System.Reactive <c>Subscribe(onNext, onError, onCompleted)</c> ambiguity; the
+        /// delegates are wrapped by the core <see cref="SubscribeExtensions"/> sink rather than a
+        /// duplicated observer.
+        /// </summary>
+        /// <param name="onNext">Per-value callback.</param>
+        /// <param name="onError">Error callback.</param>
+        /// <param name="onCompleted">Completion callback.</param>
+        /// <returns>The subscription disposable.</returns>
+        public IDisposable SubscribeCallbacks(
+            Action<T> onNext,
+            Action<Exception> onError,
+            Action onCompleted) =>
+            source.Subscribe(onNext, onError, onCompleted);
+    }
 }

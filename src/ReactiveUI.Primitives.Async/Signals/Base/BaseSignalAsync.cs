@@ -20,31 +20,21 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// <typeparam name="T">The type of elements processed by the Signal and observed by subscribers.</typeparam>
 public abstract class BaseSignalAsync<T> : SignalAsync<T>, ISignalAsync<T>
 {
-    /// <summary>
-    /// The lock object used to synchronize access to the Signal's mutable state.
-    /// </summary>
+    /// <summary>The lock object used to synchronize access to the Signal's mutable state.</summary>
     private readonly Lock _gate = new();
 
-    /// <summary>
-    /// The immutable list of currently subscribed observers.
-    /// </summary>
+    /// <summary>The immutable list of currently subscribed observers.</summary>
     private ImmutableArray<IObserverAsync<T>> _observers = [];
 
-    /// <summary>
-    /// The completion result, or <see langword="null"/> if the Signal has not yet completed.
-    /// </summary>
+    /// <summary>The completion result, or <see langword="null"/> if the Signal has not yet completed.</summary>
     private Result? _result;
 
-    /// <summary>
-    /// Gets an observable sequence that represents the asynchronous values published by the Signal.
-    /// </summary>
+    /// <summary>Gets an observable sequence that represents the asynchronous values published by the Signal.</summary>
     /// <remarks>Subscribers receive notifications for each value published after they subscribe. The sequence
     /// may complete or error according to the Signal's state.</remarks>
     IObservableAsync<T> ISignalAsync<T>.Values => this;
 
-    /// <summary>
-    /// Asynchronously notifies all subscribed observers of a new value.
-    /// </summary>
+    /// <summary>Asynchronously notifies all subscribed observers of a new value.</summary>
     /// <remarks>If the sequence has already completed, this method does not notify observers.</remarks>
     /// <param name="value">The value to send to each observer.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the notification operation.</param>
@@ -66,9 +56,7 @@ public abstract class BaseSignalAsync<T> : SignalAsync<T>, ISignalAsync<T>
         return OnNextAsyncCore(observers, value, cancellationToken);
     }
 
-    /// <summary>
-    /// Notifies all observers of an error and allows asynchronous error handling to resume observation.
-    /// </summary>
+    /// <summary>Notifies all observers of an error and allows asynchronous error handling to resume observation.</summary>
     /// <remarks>If the sequence has already completed or an error has previously been signaled, this method
     /// has no effect.</remarks>
     /// <param name="error">The exception that occurred and will be sent to observers. Cannot be null.</param>
@@ -91,9 +79,7 @@ public abstract class BaseSignalAsync<T> : SignalAsync<T>, ISignalAsync<T>
         return OnErrorResumeAsyncCore(observers, error, cancellationToken);
     }
 
-    /// <summary>
-    /// Notifies all registered observers that the asynchronous operation has completed and provides the final result.
-    /// </summary>
+    /// <summary>Notifies all registered observers that the asynchronous operation has completed and provides the final result.</summary>
     /// <remarks>If the operation has already completed, this method returns immediately without notifying
     /// observers again. This method is thread-safe and ensures that observers are notified only once.</remarks>
     /// <param name="result">The result to deliver to observers upon completion. Cannot be null.</param>
@@ -117,9 +103,7 @@ public abstract class BaseSignalAsync<T> : SignalAsync<T>, ISignalAsync<T>
         return OnCompletedAsyncCore(observers, result);
     }
 
-    /// <summary>
-    /// Asynchronously releases the unmanaged resources used by the object.
-    /// </summary>
+    /// <summary>Asynchronously releases the unmanaged resources used by the object.</summary>
     /// <returns>A ValueTask that represents the asynchronous dispose operation.</returns>
     public ValueTask DisposeAsync()
     {
@@ -127,9 +111,7 @@ public abstract class BaseSignalAsync<T> : SignalAsync<T>, ISignalAsync<T>
         return default;
     }
 
-    /// <summary>
-    /// Subscribes the specified asynchronous observer to receive notifications from the observable sequence.
-    /// </summary>
+    /// <summary>Subscribes the specified asynchronous observer to receive notifications from the observable sequence.</summary>
     /// <remarks>If the observable sequence has already completed, the observer receives the completion
     /// notification immediately and the returned disposable is a no-op. Otherwise, the observer is added to the list of
     /// active observers and will receive future notifications until unsubscribed or the sequence completes.</remarks>
@@ -164,9 +146,7 @@ public abstract class BaseSignalAsync<T> : SignalAsync<T>, ISignalAsync<T>
         return new WitnessLease(this, observer);
     }
 
-    /// <summary>
-    /// Asynchronously notifies the specified observers with the provided value.
-    /// </summary>
+    /// <summary>Asynchronously notifies the specified observers with the provided value.</summary>
     /// <param name="observers">A read-only list of observers to be notified. Cannot be null.</param>
     /// <param name="value">The value to send to each observer.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the notification operation.</param>
@@ -176,9 +156,7 @@ public abstract class BaseSignalAsync<T> : SignalAsync<T>, ISignalAsync<T>
         T value,
         CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Handles error recovery for the specified observers by resuming asynchronous processing after an error occurs.
-    /// </summary>
+    /// <summary>Handles error recovery for the specified observers by resuming asynchronous processing after an error occurs.</summary>
     /// <remarks>Override this method to implement custom error recovery strategies for observers. The method
     /// is called when an error occurs during asynchronous processing, allowing derived classes to determine how to
     /// resume or notify observers. If the operation is canceled via the provided cancellation token, the returned task
@@ -192,9 +170,7 @@ public abstract class BaseSignalAsync<T> : SignalAsync<T>, ISignalAsync<T>
         Exception error,
         CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Invoked to asynchronously notify all observers of the completion event with the specified result.
-    /// </summary>
+    /// <summary>Invoked to asynchronously notify all observers of the completion event with the specified result.</summary>
     /// <remarks>Implementations should ensure that all observers are notified, and handle any exceptions that
     /// may occur during notification according to the desired error-handling policy.</remarks>
     /// <param name="observers">A read-only list of observers to be notified. Cannot be null.</param>
@@ -202,9 +178,7 @@ public abstract class BaseSignalAsync<T> : SignalAsync<T>, ISignalAsync<T>
     /// <returns>A ValueTask that represents the asynchronous notification operation.</returns>
     protected abstract ValueTask OnCompletedAsyncCore(ImmutableArray<IObserverAsync<T>> observers, Result result);
 
-    /// <summary>
-    /// Removes an observer from the current subscription list.
-    /// </summary>
+    /// <summary>Removes an observer from the current subscription list.</summary>
     /// <param name="observer">The observer to remove.</param>
     private void RemoveObserver(IObserverAsync<T> observer)
     {
@@ -214,16 +188,12 @@ public abstract class BaseSignalAsync<T> : SignalAsync<T>, ISignalAsync<T>
         }
     }
 
-    /// <summary>
-    /// Subscription handle that removes an witness from its owning signal when disposed.
-    /// </summary>
+    /// <summary>Subscription handle that removes an witness from its owning signal when disposed.</summary>
     /// <param name="signal">The signal that owns the witness list.</param>
     /// <param name="observer">The witness to remove when the lease is disposed.</param>
     private sealed class WitnessLease(BaseSignalAsync<T> signal, IObserverAsync<T> observer) : IAsyncDisposable
     {
-        /// <summary>
-        /// Indicates whether the lease has already removed its witness.
-        /// </summary>
+        /// <summary>Indicates whether the lease has already removed its witness.</summary>
         private int _disposed;
 
         /// <inheritdoc/>

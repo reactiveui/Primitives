@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Forwards source values; on any source error, emits the stored fallback then completes.
-/// </summary>
+/// <summary>Forwards source values; on any source error, emits the stored fallback then completes.</summary>
 /// <typeparam name="T">Element type.</typeparam>
 /// <param name="source">Upstream source.</param>
 /// <param name="fallback">Value emitted on the error path.</param>

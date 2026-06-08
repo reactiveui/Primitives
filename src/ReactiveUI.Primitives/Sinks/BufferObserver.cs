@@ -89,7 +89,7 @@ public sealed class BufferObserver<T> : SingleSourceObserver<T>
 
         try
         {
-            if (buffer != null && length > 0)
+            if (buffer is not null && length > 0)
             {
                 _observer.OnNext(Trim(buffer, length));
             }

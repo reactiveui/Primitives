@@ -7,23 +7,17 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Represents an infinite repetition signal.
-/// </summary>
+/// <summary>Represents an infinite repetition signal.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 internal sealed class LoopSignal<T> : SignalsBase<T>
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="LoopSignal{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="LoopSignal{T}"/> class.</summary>
     /// <param name="value">The value repeated by the signal.</param>
     public LoopSignal(T value)
         : base(true) =>
         Value = value;
 
-    /// <summary>
-    /// Gets the repeated value.
-    /// </summary>
+    /// <summary>Gets the repeated value.</summary>
     public T Value { get; }
 
     /// <inheritdoc/>
@@ -44,9 +38,7 @@ internal sealed class LoopSignal<T> : SignalsBase<T>
             self();
         });
 
-    /// <summary>
-    /// Checks whether a cancellation handle has been disposed.
-    /// </summary>
+    /// <summary>Checks whether a cancellation handle has been disposed.</summary>
     /// <param name="disposable">The cancellation handle.</param>
     /// <returns><see langword="true"/> when the handle is disposed.</returns>
     private static bool IsDisposed(IDisposable disposable) =>

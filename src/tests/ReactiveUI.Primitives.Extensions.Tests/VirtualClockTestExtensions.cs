@@ -6,24 +6,21 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
-/// <summary>
-/// Compatibility helpers for tests migrated from Microsoft.Reactive.Testing.
-/// </summary>
+/// <summary>Compatibility helpers for tests migrated from Microsoft.Reactive.Testing.</summary>
 internal static class VirtualClockTestExtensions
 {
-    /// <summary>
-    /// Advances a virtual clock by ticks.
-    /// </summary>
+    /// <summary>Tick-based advancement helpers for a virtual clock.</summary>
     /// <param name="clock">The virtual clock.</param>
-    /// <param name="ticks">The number of ticks to advance.</param>
-    public static void AdvanceBy(this VirtualClock clock, long ticks) =>
-        clock.AdvanceBy(TimeSpan.FromTicks(ticks));
+    extension(VirtualClock clock)
+    {
+        /// <summary>Advances a virtual clock by ticks.</summary>
+        /// <param name="ticks">The number of ticks to advance.</param>
+        public void AdvanceBy(long ticks) =>
+            clock.AdvanceBy(TimeSpan.FromTicks(ticks));
 
-    /// <summary>
-    /// Advances a virtual clock to an absolute tick value.
-    /// </summary>
-    /// <param name="clock">The virtual clock.</param>
-    /// <param name="ticks">The absolute tick value.</param>
-    public static void AdvanceTo(this VirtualClock clock, long ticks) =>
-        clock.AdvanceTo(new DateTimeOffset(ticks, TimeSpan.Zero));
+        /// <summary>Advances a virtual clock to an absolute tick value.</summary>
+        /// <param name="ticks">The absolute tick value.</param>
+        public void AdvanceTo(long ticks) =>
+            clock.AdvanceTo(new DateTimeOffset(ticks, TimeSpan.Zero));
+    }
 }

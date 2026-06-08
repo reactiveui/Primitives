@@ -7,35 +7,23 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Zips two synchronous integer ranges without coordinator queues.
-/// </summary>
+/// <summary>Zips two synchronous integer ranges without coordinator queues.</summary>
 /// <typeparam name="TResult">The result value type.</typeparam>
 internal sealed class RangeZipSignal<TResult> : IRequireCurrentThread<TResult>, IInlineSignal<TResult>
 {
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly int _leftStart;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly int _rightStart;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly int _count;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly Func<int, int, TResult> _selector;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="RangeZipSignal{TResult}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="RangeZipSignal{TResult}"/> class.</summary>
     /// <param name="left">The left range source.</param>
     /// <param name="right">The right range source.</param>
     /// <param name="selector">The projection function.</param>
@@ -47,20 +35,16 @@ internal sealed class RangeZipSignal<TResult> : IRequireCurrentThread<TResult>, 
         _selector = selector;
     }
 
-    /// <summary>
-    /// Executes the IsRequiredSubscribeOnCurrentThread operation.
-    /// </summary>
+    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>
-    /// Executes the Subscribe operation.
-    /// </summary>
+    /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<TResult> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -74,16 +58,14 @@ internal sealed class RangeZipSignal<TResult> : IRequireCurrentThread<TResult>, 
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>
-    /// Executes the Subscribe operation.
-    /// </summary>
+    /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="onNext">The onNext value.</param>
     /// <param name="onError">The onError value.</param>
     /// <param name="onCompleted">The onCompleted value.</param>
     /// <returns>The result.</returns>
     public IDisposable Subscribe(Action<TResult> onNext, Action<Exception> onError, Action onCompleted)
     {
-        if (onNext == null)
+        if (onNext is null)
         {
             throw new ArgumentNullException(nameof(onNext));
         }

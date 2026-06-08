@@ -13,20 +13,14 @@ using RxDisposable = System.Reactive.Disposables.Disposable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks for low-level runtime and sequencing primitives.
-/// </summary>
+/// <summary>Benchmarks for low-level runtime and sequencing primitives.</summary>
 [MemoryDiagnoser]
 public class CoreRuntimeBenchmarks
 {
-    /// <summary>
-    /// The value forwarded through the witness and observer benchmarks.
-    /// </summary>
+    /// <summary>The value forwarded through the witness and observer benchmarks.</summary>
     private const int ForwardedValue = 42;
 
-    /// <summary>
-    /// Baseline multi-action dispose path for <see cref="Pocket"/>.
-    /// </summary>
+    /// <summary>Baseline multi-action dispose path for <see cref="Pocket"/>.</summary>
     /// <returns>The number of disposal callbacks executed.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesPocketDispose()
@@ -41,9 +35,7 @@ public class CoreRuntimeBenchmarks
         return disposed;
     }
 
-    /// <summary>
-    /// Composite disposable dispose path in System.Reactive.
-    /// </summary>
+    /// <summary>Composite disposable dispose path in System.Reactive.</summary>
     /// <returns>The number of disposal callbacks executed.</returns>
     [Benchmark]
     public int SystemReactiveCompositeDispose()
@@ -58,9 +50,7 @@ public class CoreRuntimeBenchmarks
         return disposed;
     }
 
-    /// <summary>
-    /// Composite disposable dispose path in R3.
-    /// </summary>
+    /// <summary>Composite disposable dispose path in R3.</summary>
     /// <returns>The number of disposal callbacks executed.</returns>
     [Benchmark]
     public int R3CompositeDispose()
@@ -75,9 +65,7 @@ public class CoreRuntimeBenchmarks
         return disposed;
     }
 
-    /// <summary>
-    /// Schedule and execute one action on current-thread sequencer.
-    /// </summary>
+    /// <summary>Schedule and execute one action on current-thread sequencer.</summary>
     /// <returns>The executed marker value.</returns>
     [Benchmark]
     public int PrimitivesCurrentThreadSchedule()
@@ -87,9 +75,7 @@ public class CoreRuntimeBenchmarks
         return value;
     }
 
-    /// <summary>
-    /// Schedule and execute one action on System.Reactive current-thread scheduler.
-    /// </summary>
+    /// <summary>Schedule and execute one action on System.Reactive current-thread scheduler.</summary>
     /// <returns>The executed marker value.</returns>
     [Benchmark]
     public int SystemReactiveCurrentThreadSchedule()
@@ -99,9 +85,7 @@ public class CoreRuntimeBenchmarks
         return value;
     }
 
-    /// <summary>
-    /// Immediate dispatch through R3 return subscription.
-    /// </summary>
+    /// <summary>Immediate dispatch through R3 return subscription.</summary>
     /// <returns>The executed marker value.</returns>
     [Benchmark]
     public int R3CurrentThreadSchedule()
@@ -111,9 +95,7 @@ public class CoreRuntimeBenchmarks
         return observer.LastValue;
     }
 
-    /// <summary>
-    /// Wrap a witness with the safe witness helper.
-    /// </summary>
+    /// <summary>Wrap a witness with the safe witness helper.</summary>
     /// <returns>The forwarded value.</returns>
     [Benchmark]
     public int PrimitivesSafeWitness()
@@ -125,9 +107,7 @@ public class CoreRuntimeBenchmarks
         return value;
     }
 
-    /// <summary>
-    /// Notify a System.Reactive observer created from delegates.
-    /// </summary>
+    /// <summary>Notify a System.Reactive observer created from delegates.</summary>
     /// <returns>The forwarded value.</returns>
     [Benchmark]
     public int SystemReactiveSafeWitness()
@@ -139,9 +119,7 @@ public class CoreRuntimeBenchmarks
         return value;
     }
 
-    /// <summary>
-    /// Notify an R3 observer created from delegates.
-    /// </summary>
+    /// <summary>Notify an R3 observer created from delegates.</summary>
     /// <returns>The forwarded value.</returns>
     [Benchmark]
     public int R3SafeWitness()
@@ -153,9 +131,7 @@ public class CoreRuntimeBenchmarks
         return value;
     }
 
-    /// <summary>
-    /// Allocating a completed spark should remain allocation efficient.
-    /// </summary>
+    /// <summary>Allocating a completed spark should remain allocation efficient.</summary>
     /// <returns>An integer marker extracted from kind.</returns>
     [Benchmark]
     public int PrimitivesCompletedSpark()
@@ -164,9 +140,7 @@ public class CoreRuntimeBenchmarks
         return (int)spark.Kind;
     }
 
-    /// <summary>
-    /// Allocating a completed notification with System.Reactive.
-    /// </summary>
+    /// <summary>Allocating a completed notification with System.Reactive.</summary>
     /// <returns>An integer marker extracted from kind.</returns>
     [Benchmark]
     public int SystemReactiveCompletedSpark()
@@ -175,9 +149,7 @@ public class CoreRuntimeBenchmarks
         return (int)notification.Kind;
     }
 
-    /// <summary>
-    /// Allocating a completed notification with R3.
-    /// </summary>
+    /// <summary>Allocating a completed notification with R3.</summary>
     /// <returns>An integer marker extracted from kind.</returns>
     [Benchmark]
     public int R3CompletedSpark()

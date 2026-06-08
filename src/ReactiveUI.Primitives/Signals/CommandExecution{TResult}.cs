@@ -7,35 +7,23 @@ using System.Runtime.ExceptionServices;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// Awaitable command execution result that avoids allocating a completed task for synchronous commands.
-/// </summary>
+/// <summary>Awaitable command execution result that avoids allocating a completed task for synchronous commands.</summary>
 /// <typeparam name="TResult">The command result type.</typeparam>
 public readonly record struct CommandExecution<TResult>
 {
-    /// <summary>
-    /// Asynchronous execution task, when execution did not complete synchronously.
-    /// </summary>
+    /// <summary>Asynchronous execution task, when execution did not complete synchronously.</summary>
     private readonly Task<TResult>? _task;
 
-    /// <summary>
-    /// Synchronous result.
-    /// </summary>
+    /// <summary>Synchronous result.</summary>
     private readonly TResult? _result;
 
-    /// <summary>
-    /// Synchronous exception.
-    /// </summary>
+    /// <summary>Synchronous exception.</summary>
     private readonly Exception? _exception;
 
-    /// <summary>
-    /// Captured-context preference for task continuations.
-    /// </summary>
+    /// <summary>Captured-context preference for task continuations.</summary>
     private readonly bool _continueOnCapturedContext;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CommandExecution{TResult}"/> struct.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="CommandExecution{TResult}"/> struct.</summary>
     /// <param name="result">Synchronous result.</param>
     internal CommandExecution(TResult result)
     {
@@ -45,9 +33,7 @@ public readonly record struct CommandExecution<TResult>
         _continueOnCapturedContext = true;
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CommandExecution{TResult}"/> struct.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="CommandExecution{TResult}"/> struct.</summary>
     /// <param name="task">Asynchronous execution task.</param>
     internal CommandExecution(Task<TResult> task)
     {
@@ -57,9 +43,7 @@ public readonly record struct CommandExecution<TResult>
         _continueOnCapturedContext = true;
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CommandExecution{TResult}"/> struct.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="CommandExecution{TResult}"/> struct.</summary>
     /// <param name="exception">Synchronous exception.</param>
     internal CommandExecution(Exception exception)
     {
@@ -69,9 +53,7 @@ public readonly record struct CommandExecution<TResult>
         _continueOnCapturedContext = true;
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CommandExecution{TResult}"/> struct.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="CommandExecution{TResult}"/> struct.</summary>
     /// <param name="task">Asynchronous execution task.</param>
     /// <param name="result">Synchronous result.</param>
     /// <param name="exception">Synchronous exception.</param>
@@ -84,48 +66,32 @@ public readonly record struct CommandExecution<TResult>
         _continueOnCapturedContext = continueOnCapturedContext;
     }
 
-    /// <summary>
-    /// Configures whether task continuations marshal back to the captured context.
-    /// </summary>
+    /// <summary>Configures whether task continuations marshal back to the captured context.</summary>
     /// <param name="continueOnCapturedContext">Whether to continue on the captured context.</param>
     /// <returns>A configured command execution awaitable.</returns>
     public CommandExecution<TResult> ConfigureAwait(bool continueOnCapturedContext) =>
         new(_task, _result, _exception, continueOnCapturedContext);
 
-    /// <summary>
-    /// Gets the awaiter.
-    /// </summary>
+    /// <summary>Gets the awaiter.</summary>
     /// <returns>The awaiter.</returns>
     public Awaiter GetAwaiter() => new(_task, _result, _exception, _continueOnCapturedContext);
 
-    /// <summary>
-    /// Awaiter for command execution.
-    /// </summary>
+    /// <summary>Awaiter for command execution.</summary>
     public readonly record struct Awaiter : ICriticalNotifyCompletion
     {
-        /// <summary>
-        /// Asynchronous execution task.
-        /// </summary>
+        /// <summary>Asynchronous execution task.</summary>
         private readonly Task<TResult>? _task;
 
-        /// <summary>
-        /// Synchronous result.
-        /// </summary>
+        /// <summary>Synchronous result.</summary>
         private readonly TResult? _result;
 
-        /// <summary>
-        /// Synchronous exception.
-        /// </summary>
+        /// <summary>Synchronous exception.</summary>
         private readonly Exception? _exception;
 
-        /// <summary>
-        /// Captured-context preference.
-        /// </summary>
+        /// <summary>Captured-context preference.</summary>
         private readonly bool _continueOnCapturedContext;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Awaiter"/> struct.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="Awaiter"/> struct.</summary>
         /// <param name="task">Asynchronous execution task.</param>
         /// <param name="result">Synchronous result.</param>
         /// <param name="exception">Synchronous exception.</param>
@@ -138,14 +104,10 @@ public readonly record struct CommandExecution<TResult>
             _continueOnCapturedContext = continueOnCapturedContext;
         }
 
-        /// <summary>
-        /// Gets a value indicating whether the command execution is complete.
-        /// </summary>
+        /// <summary>Gets a value indicating whether the command execution is complete.</summary>
         public bool IsCompleted => _task?.IsCompleted != false;
 
-        /// <summary>
-        /// Gets the command result or rethrows the command exception.
-        /// </summary>
+        /// <summary>Gets the command result or rethrows the command exception.</summary>
         /// <returns>The command result.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Major Code Smell",
@@ -153,12 +115,12 @@ public readonly record struct CommandExecution<TResult>
             Justification = "Awaiter GetResult must be synchronous; it runs only after completion and unwraps exceptions without AggregateException wrapping.")]
         public TResult GetResult()
         {
-            if (_task != null)
+            if (_task is not null)
             {
                 return _task.GetAwaiter().GetResult();
             }
 
-            if (_exception != null)
+            if (_exception is not null)
             {
                 ExceptionDispatchInfo.Capture(_exception).Throw();
             }

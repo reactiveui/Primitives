@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <content>
-/// PrependStartWith tests for combining operators.
-/// </content>
+/// <summary>Tests for the Prepend and StartWith operators.</summary>
 public partial class CombiningOperatorTests
 {
     /// <summary>Tests Prepend value comes first.</summary>
@@ -70,9 +68,7 @@ public partial class CombiningOperatorTests
         await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
     }
 
-    /// <summary>
-    /// Verifies that prepend stops emitting when the subscription is disposed during the prepend phase.
-    /// </summary>
+    /// <summary>Verifies that prepend stops emitting when the subscription is disposed during the prepend phase.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPrependDisposedDuringPrependPhase_ThenStopsEmitting()
@@ -95,9 +91,7 @@ public partial class CombiningOperatorTests
         // Just verify no exception was thrown - the disposal was clean
     }
 
-    /// <summary>
-    /// Tests Prepend cancellation during the prepend phase, exercising the OperationCanceledException catch path.
-    /// </summary>
+    /// <summary>Tests Prepend cancellation during the prepend phase, exercising the OperationCanceledException catch path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPrependCancelledDuringValues_ThenOperationCanceledExceptionCaught()
@@ -131,9 +125,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).Contains(SampleValue5);
     }
 
-    /// <summary>
-    /// Tests that Prepend error during source subscription triggers OnCompletedAsync with failure.
-    /// </summary>
+    /// <summary>Tests that Prepend error during source subscription triggers OnCompletedAsync with failure.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPrependSourceThrowsDuringSubscription_ThenCompletesWithFailure()
@@ -167,9 +159,7 @@ public partial class CombiningOperatorTests
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that Prepend emits prepended values before source values.
-    /// </summary>
+    /// <summary>Verifies that Prepend emits prepended values before source values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPrepend_ThenEmitsPrependedValuesFirst()
@@ -178,9 +168,7 @@ public partial class CombiningOperatorTests
         await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4, SampleValue5]);
     }
 
-    /// <summary>
-    /// Verifies that Prepend with a single value emits the value before source.
-    /// </summary>
+    /// <summary>Verifies that Prepend with a single value emits the value before source.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPrependSingleValue_ThenEmitsValueBeforeSource()
@@ -189,9 +177,7 @@ public partial class CombiningOperatorTests
         await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 
-    /// <summary>
-    /// Verifies that Prepend handles cancellation during prepend phase without error.
-    /// </summary>
+    /// <summary>Verifies that Prepend handles cancellation during prepend phase without error.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPrependCancelledDuringPrepend_ThenStopsGracefully()
@@ -229,9 +215,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).Contains(SampleValue2);
     }
 
-    /// <summary>
-    /// Verifies that StartWith emits a value before the source values.
-    /// </summary>
+    /// <summary>Verifies that StartWith emits a value before the source values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenStartWith_ThenEmitsValueBeforeSource()
@@ -243,9 +227,7 @@ public partial class CombiningOperatorTests
         await Assert.That(result).IsCollectionEqualTo([0, 1, SampleValue2, SampleValue3]);
     }
 
-    /// <summary>
-    /// Verifies that Prepend cancellation during prepended values returns early.
-    /// </summary>
+    /// <summary>Verifies that Prepend cancellation during prepended values returns early.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPrependCancelledDuringValues_ThenStopsEarly()
@@ -276,9 +258,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4, SampleValue5]);
     }
 
-    /// <summary>
-    /// Verifies that Prepend handles source subscription errors.
-    /// </summary>
+    /// <summary>Verifies that Prepend handles source subscription errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPrependSourceThrows_ThenCompletesWithFailure()
@@ -307,9 +287,7 @@ public partial class CombiningOperatorTests
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that Prepend handles OperationCanceledException during source subscription.
-    /// </summary>
+    /// <summary>Verifies that Prepend handles OperationCanceledException during source subscription.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPrependSourceCancelled_ThenSwallowsCancellation()
@@ -345,9 +323,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2]);
     }
 
-    /// <summary>
-    /// Verifies that StartWith with an explicit IEnumerable{T} argument exercises the IEnumerable overload.
-    /// </summary>
+    /// <summary>Verifies that StartWith with an explicit IEnumerable{T} argument exercises the IEnumerable overload.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenStartWithIEnumerable_ThenEmitsEnumerableBeforeSource()

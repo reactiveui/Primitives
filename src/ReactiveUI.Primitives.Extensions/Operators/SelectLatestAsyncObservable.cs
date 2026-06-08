@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Projects each element to an asynchronous operation, but only the result of the latest operation is emitted.
-/// </summary>
+/// <summary>Projects each element to an asynchronous operation, but only the result of the latest operation is emitted.</summary>
 /// <typeparam name="TSource">The type of elements in the source sequence.</typeparam>
 /// <typeparam name="TResult">The type of the result of the asynchronous operation.</typeparam>
 /// <param name="source">The source observable.</param>
@@ -30,9 +28,7 @@ internal sealed class SelectLatestAsyncObservable<TSource, TResult>(
         return new DisposableBag(sub, sink);
     }
 
-    /// <summary>
-    /// Sink that manages the latest async projection.
-    /// </summary>
+    /// <summary>Sink that manages the latest async projection.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="selector">The async selector.</param>
     private sealed class SelectLatestAsyncSink(

@@ -15,8 +15,7 @@ public class ObserveOnAsyncSignalTests
     /// <summary>Single sentinel emitted by the happy-path tests.</summary>
     private const int Sentinel = 7;
 
-    /// <summary>Verifies the <c>forceYielding: true</c> overload forwards values via the
-    /// context-switching slow path.</summary>
+    /// <summary>Verifies the <c>forceYielding: true</c> overload forwards values via the context-switching slow path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForceYielding_ThenValueForwarded()
@@ -28,8 +27,7 @@ public class ObserveOnAsyncSignalTests
         await Assert.That(result).IsEqualTo(Sentinel);
     }
 
-    /// <summary>Verifies the <c>forceYielding: true</c> overload routes <c>OnErrorResume</c>
-    /// through the context-switching slow path.</summary>
+    /// <summary>Verifies the <c>forceYielding: true</c> overload routes <c>OnErrorResume</c> through the context-switching slow path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForceYieldingSourceErrors_ThenErrorForwarded()
@@ -51,8 +49,7 @@ public class ObserveOnAsyncSignalTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies the <c>forceYielding: true</c> overload routes the completion
-    /// notification through the context-switching slow path.</summary>
+    /// <summary>Verifies the <c>forceYielding: true</c> overload routes the completion notification through the context-switching slow path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForceYieldingSourceEmpty_ThenCompletesSuccessfully()
@@ -64,8 +61,7 @@ public class ObserveOnAsyncSignalTests
         await Assert.That(result).IsEmpty();
     }
 
-    /// <summary>Verifies the <c>SynchronizationContext</c> + <c>forceYielding: true</c> overload
-    /// also forwards values.</summary>
+    /// <summary>Verifies the <c>SynchronizationContext</c> + <c>forceYielding: true</c> overload also forwards values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSyncContextForceYielding_ThenEmits()
@@ -235,18 +231,15 @@ public class ObserveOnAsyncSignalTests
         /// <summary>Captures the <c>OnCompletedAsync</c> result, if a TCS was supplied.</summary>
         private readonly TaskCompletionSource<Result>? _onCompleted;
 
-        /// <summary>Initializes a new instance of the <see cref="CapturingAsyncObserver{T}"/> class
-        /// with an <c>OnNext</c> capture target.</summary>
+        /// <summary>Initializes a new instance of the <see cref="CapturingAsyncObserver{T}"/> class with an <c>OnNext</c> capture target.</summary>
         /// <param name="onNext">The TCS that receives the first <c>OnNextAsync</c> value.</param>
         public CapturingAsyncObserver(TaskCompletionSource<T> onNext) => _onNext = onNext;
 
-        /// <summary>Initializes a new instance of the <see cref="CapturingAsyncObserver{T}"/> class
-        /// with an <c>OnErrorResume</c> capture target.</summary>
+        /// <summary>Initializes a new instance of the <see cref="CapturingAsyncObserver{T}"/> class with an <c>OnErrorResume</c> capture target.</summary>
         /// <param name="onError">The TCS that receives the first <c>OnErrorResumeAsync</c> exception.</param>
         public CapturingAsyncObserver(TaskCompletionSource<Exception> onError) => _onError = onError;
 
-        /// <summary>Initializes a new instance of the <see cref="CapturingAsyncObserver{T}"/> class
-        /// with an <c>OnCompleted</c> capture target.</summary>
+        /// <summary>Initializes a new instance of the <see cref="CapturingAsyncObserver{T}"/> class with an <c>OnCompleted</c> capture target.</summary>
         /// <param name="onCompleted">The TCS that receives the <c>OnCompletedAsync</c> result.</param>
         public CapturingAsyncObserver(TaskCompletionSource<Result> onCompleted) => _onCompleted = onCompleted;
 

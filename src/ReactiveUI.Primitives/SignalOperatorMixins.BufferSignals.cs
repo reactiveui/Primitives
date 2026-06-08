@@ -4,12 +4,12 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <content>
+/// <summary>
 /// Dedicated cold signal/sink for <c>Buffer</c>. Each subscription gets its own lightweight sink
 /// (no broadcaster, no eager subscription); windows are buffered into a single array of the known
 /// window size and emitted directly, with only a partial trailing window copied to an exact size.
-/// </content>
-public static partial class LinqMixins
+/// </summary>
+public static partial class LinqExtensions
 {
     /// <summary>Dedicated cold signal for <c>Buffer</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
@@ -38,7 +38,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<IList<T>> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }

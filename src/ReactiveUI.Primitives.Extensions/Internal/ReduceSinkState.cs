@@ -16,6 +16,9 @@ namespace ReactiveUI.Primitives.Extensions.Internal;
 internal sealed class ReduceSinkState<TIn, TOut>
     where TIn : struct
 {
+    /// <summary>The synchronization gate held across every state read/write and every downstream notification.</summary>
+    private readonly Lock _gate = new();
+
     /// <summary>Initializes a new instance of the <see cref="ReduceSinkState{TIn, TOut}"/> class.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="count">The number of sources.</param>
@@ -25,9 +28,6 @@ internal sealed class ReduceSinkState<TIn, TOut>
         Values = new TIn?[count];
         Completed = new bool[count];
     }
-
-    /// <summary>Gets the synchronization gate held across every state read/write and every downstream notification.</summary>
-    public Lock Gate { get; } = new();
 
     /// <summary>Gets the downstream observer that receives reduced values, error, and completion.</summary>
     public IObserver<TOut> Downstream { get; }
@@ -50,13 +50,40 @@ internal sealed class ReduceSinkState<TIn, TOut>
     /// <summary>Gets a value indicating whether every source has produced at least one value.</summary>
     public bool AllValuesPresent => HasValueCount >= Values.Length;
 
-    /// <summary>
-    /// Forwards a terminal error to the downstream observer and marks the sink terminal. Idempotent.
-    /// </summary>
+    /// <summary>Records source <paramref name="index"/>'s latest value and emits the reduced result once every source has one. Runs under the gate.</summary>
+    /// <param name="index">The 0-based source index that emitted.</param>
+    /// <param name="value">The latest value from that source.</param>
+    /// <param name="reduce">Projects the per-source latest values into the downstream result.</param>
+    public void HandleNext(int index, TIn value, Func<TIn?[], TOut> reduce)
+    {
+        lock (_gate)
+        {
+            if (IsDone)
+            {
+                return;
+            }
+
+            if (!Values[index].HasValue)
+            {
+                HasValueCount++;
+            }
+
+            Values[index] = value;
+
+            if (!AllValuesPresent)
+            {
+                return;
+            }
+
+            Downstream.OnNext(reduce(Values));
+        }
+    }
+
+    /// <summary>Forwards a terminal error to the downstream observer and marks the sink terminal. Idempotent.</summary>
     /// <param name="error">The error to forward.</param>
     public void HandleError(Exception error)
     {
-        lock (Gate)
+        lock (_gate)
         {
             if (IsDone)
             {
@@ -75,7 +102,7 @@ internal sealed class ReduceSinkState<TIn, TOut>
     /// <param name="index">The 0-based source index that just completed.</param>
     public void HandleCompleted(int index)
     {
-        lock (Gate)
+        lock (_gate)
         {
             if (IsDone || Completed[index])
             {

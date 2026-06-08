@@ -18,14 +18,14 @@ public sealed class SparkObserver<T> : SingleSourceObserver<T>
     public SparkObserver(IObserver<Spark<T>> observer) => _observer = observer;
 
     /// <inheritdoc/>
-    public override void OnNext(T value) => _observer.OnNext(Core.Spark.CreateOnNext(value));
+    public override void OnNext(T value) => _observer.OnNext(Spark.CreateOnNext(value));
 
     /// <inheritdoc/>
     public override void OnError(Exception error)
     {
         try
         {
-            _observer.OnNext(Core.Spark.CreateOnError<T>(error));
+            _observer.OnNext(Spark.CreateOnError<T>(error));
             _observer.OnCompleted();
         }
         finally
@@ -39,7 +39,7 @@ public sealed class SparkObserver<T> : SingleSourceObserver<T>
     {
         try
         {
-            _observer.OnNext(Core.Spark.CreateOnCompleted<T>());
+            _observer.OnNext(Spark.CreateOnCompleted<T>());
             _observer.OnCompleted();
         }
         finally

@@ -6,40 +6,30 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// ITaskSignal.
-/// </summary>
+/// <summary>ITaskSignal.</summary>
 /// <typeparam name="T">The object that provides notification information.</typeparam>
 /// <seealso cref="IObservable&lt;T&gt;" />
 public interface ITaskSignal<out T> : IObservable<T>, IsDisposed
 {
-    /// <summary>
-    /// Gets the cancellation token source.
-    /// </summary>
+    /// <summary>Gets the cancellation token source.</summary>
     /// <value>
     /// The cancellation token source.
     /// </value>
     CancellationTokenSource? CancellationTokenSource { get; }
 
-    /// <summary>
-    /// Gets a value indicating whether this instance is cancellation requested.
-    /// </summary>
+    /// <summary>Gets a value indicating whether this instance is cancellation requested.</summary>
     /// <value>
     ///   <c>true</c> if this instance is cancellation requested; otherwise, <c>false</c>.
     /// </value>
     bool IsCancellationRequested { get; }
 
-    /// <summary>
-    /// Gets the source.
-    /// </summary>
+    /// <summary>Gets the source.</summary>
     /// <value>
     /// The source.
     /// </value>
     IObservable<T>? Source { get; }
 
-    /// <summary>
-    /// Gets the operation canceled.
-    /// </summary>
+    /// <summary>Gets the operation canceled.</summary>
     /// <param name="observer">The observer.</param>
     void GetOperationCanceled(IObserver<Exception> observer);
 }

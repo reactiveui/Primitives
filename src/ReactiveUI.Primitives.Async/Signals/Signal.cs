@@ -16,9 +16,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// options to customize the Signal's behavior according to your application's requirements.</remarks>
 public static class Signal
 {
-    /// <summary>
-    /// Creates a new asynchronous Signal instance for the specified type.
-    /// </summary>
+    /// <summary>Creates a new asynchronous Signal instance for the specified type.</summary>
     /// <remarks>The created Signal uses the default Signal creation options. Use the overload that accepts
     /// <see cref="SignalCreationOptions"/> to customize Signal behavior.</remarks>
     /// <typeparam name="T">The type of elements processed by the Signal.</typeparam>
@@ -29,9 +27,7 @@ public static class Signal
         Justification = "Public factory API — caller specifies T explicitly: Signal.Create<int>().")]
     public static ISignalAsync<T> Create<T>() => Create<T>(SignalCreationOptions.Default);
 
-    /// <summary>
-    /// Creates a new asynchronous Signal instance with the specified publishing and state options.
-    /// </summary>
+    /// <summary>Creates a new asynchronous Signal instance with the specified publishing and state options.</summary>
     /// <remarks>Use this method to create an ISignalAsync{T} with the desired concurrency and state
     /// management characteristics. The returned Signal type depends on the values provided in the options
     /// parameter.</remarks>
@@ -54,9 +50,7 @@ public static class Signal
             _ => throw new ArgumentOutOfRangeException()
         };
 
-    /// <summary>
-    /// Creates a new asynchronous behavior Signal initialized with the specified starting value.
-    /// </summary>
+    /// <summary>Creates a new asynchronous behavior Signal initialized with the specified starting value.</summary>
     /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
     /// <param name="startValue">The initial value to be emitted to new subscribers and stored as the current value of the Signal.</param>
     /// <returns>An asynchronous behavior Signal that holds the specified starting value and emits it to new subscribers.</returns>
@@ -83,9 +77,7 @@ public static class Signal
             _ => throw new ArgumentOutOfRangeException()
         };
 
-    /// <summary>
-    /// Creates a new asynchronous Signal that replays only the most recent value to new subscribers.
-    /// </summary>
+    /// <summary>Creates a new asynchronous Signal that replays only the most recent value to new subscribers.</summary>
     /// <remarks>The returned Signal will only retain the most recent value published. When a new subscriber
     /// subscribes, it immediately receives the latest value, if any, followed by subsequent values. This is useful for
     /// scenarios where only the most recent state is relevant to new observers.</remarks>

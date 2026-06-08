@@ -17,9 +17,7 @@ public partial class ReactiveExtensionsTests
     /// <summary>Fallback value used by FirstMatchFromCandidates when no candidate matches.</summary>
     private const string CandidateFallback = "fallback";
 
-    /// <summary>
-    /// Verifies that WhereSelect forwards only values that satisfy the predicate, projected through the selector.
-    /// </summary>
+    /// <summary>Verifies that WhereSelect forwards only values that satisfy the predicate, projected through the selector.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenWhereSelect_ThenEmitsOnlyMatchingProjectedValues()
@@ -177,9 +175,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([CandidateFallback]);
     }
 
-    /// <summary>
-    /// Verifies that FirstMatchFromCandidates skips candidates whose projection errors and continues walking the list.
-    /// </summary>
+    /// <summary>Verifies that FirstMatchFromCandidates skips candidates whose projection errors and continues walking the list.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstMatchFromCandidatesProjectionErrors_ThenSkipsAndContinues()

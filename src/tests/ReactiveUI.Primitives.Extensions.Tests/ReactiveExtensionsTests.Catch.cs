@@ -9,9 +9,7 @@ namespace ReactiveUI.Primitives.Extensions.Tests;
 /// <summary>Tests for ReactiveExtensionsTests.</summary>
 public partial class ReactiveExtensionsTests
 {
-    /// <summary>
-    /// Tests CatchIgnore without error action.
-    /// </summary>
+    /// <summary>Tests CatchIgnore without error action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task CatchIgnore_OnError_ReturnsEmpty()
@@ -32,9 +30,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests CatchIgnore with error action.
-    /// </summary>
+    /// <summary>Tests CatchIgnore with error action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task CatchIgnore_WithErrorAction_CallsActionAndReturnsEmpty()
@@ -57,9 +53,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests CatchAndReturn with fallback value.
-    /// </summary>
+    /// <summary>Tests CatchAndReturn with fallback value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task CatchAndReturn_OnError_ReturnsFallback()
@@ -75,9 +69,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2, SampleValue99]);
     }
 
-    /// <summary>
-    /// Tests LogErrors invokes the logger when the source faults.
-    /// </summary>
+    /// <summary>Tests LogErrors invokes the logger when the source faults.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task LogErrors_WhenSourceErrors_InvokesLogger()
@@ -98,9 +90,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests CatchAndReturn with factory recovers from a specific exception type.
-    /// </summary>
+    /// <summary>Tests CatchAndReturn with factory recovers from a specific exception type.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCatchAndReturnWithFactory_ThenRecoverFromException()

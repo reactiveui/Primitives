@@ -8,9 +8,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Debounces a sequence but emits the first value immediately.
-/// </summary>
+/// <summary>Debounces a sequence but emits the first value immediately.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="dueTime">The debounce duration.</param>
@@ -32,9 +30,7 @@ internal sealed class DebounceImmediateObservable<T>(
         return new DisposableBag(subscription, sink);
     }
 
-    /// <summary>
-    /// Sink for the debounce immediate observable.
-    /// </summary>
+    /// <summary>Sink for the debounce immediate observable.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="dueTime">The debounce duration.</param>
     /// <param name="scheduler">The scheduler to use for timing.</param>
@@ -43,34 +39,22 @@ internal sealed class DebounceImmediateObservable<T>(
         TimeSpan dueTime,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>
-        /// The gate for thread safety.
-        /// </summary>
+        /// <summary>The gate for thread safety.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// The timer for debouncing.
-        /// </summary>
+        /// <summary>The timer for debouncing.</summary>
         private readonly SwapDisposable _timer = new();
 
-        /// <summary>
-        /// Whether the first value has been emitted.
-        /// </summary>
+        /// <summary>Whether the first value has been emitted.</summary>
         private bool _isFirst = true;
 
-        /// <summary>
-        /// The last value received.
-        /// </summary>
+        /// <summary>The last value received.</summary>
         private T? _lastValue;
 
-        /// <summary>
-        /// Whether a value is pending.
-        /// </summary>
+        /// <summary>Whether a value is pending.</summary>
         private bool _hasValue;
 
-        /// <summary>
-        /// Whether the sequence is done.
-        /// </summary>
+        /// <summary>Whether the sequence is done.</summary>
         private bool _done;
 
         /// <inheritdoc/>
@@ -140,9 +124,7 @@ internal sealed class DebounceImmediateObservable<T>(
             }
         }
 
-        /// <summary>
-        /// Emits the last value if any.
-        /// </summary>
+        /// <summary>Emits the last value if any.</summary>
         private void Emit()
         {
             T? toEmit;

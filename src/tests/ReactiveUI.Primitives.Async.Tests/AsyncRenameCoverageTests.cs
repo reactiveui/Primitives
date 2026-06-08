@@ -9,14 +9,10 @@ using PrimitiveAssert = ReactiveUI.Primitives.Tests.Assert;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Covers renamed async internal members and scheduler adapters that are part of the current PR diff.
-/// </summary>
+/// <summary>Covers renamed async internal members and scheduler adapters that are part of the current PR diff.</summary>
 public sealed class AsyncRenameCoverageTests
 {
-    /// <summary>
-    /// Verifies renamed <see cref="AsyncContext"/> default-context and sequencer scheduler members.
-    /// </summary>
+    /// <summary>Verifies renamed <see cref="AsyncContext"/> default-context and sequencer scheduler members.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task AsyncContextRenamedMembersExposeDefaultAndSequencerSchedulerPaths()
@@ -57,9 +53,7 @@ public sealed class AsyncRenameCoverageTests
         PrimitiveAssert.False(scheduler.TryExecuteTaskInlineForTesting(new Task(() => { }), taskWasPreviouslyQueued: false));
     }
 
-    /// <summary>
-    /// Verifies current-context capture and explicit awaiter scheduling branches.
-    /// </summary>
+    /// <summary>Verifies current-context capture and explicit awaiter scheduling branches.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task AsyncContextCurrentAndSwitcherBranchesCoverCustomSchedulersAndCancellation()
@@ -99,9 +93,7 @@ public sealed class AsyncRenameCoverageTests
         await scheduled.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Verifies task-signal completion failures are routed through the unhandled exception hook.
-    /// </summary>
+    /// <summary>Verifies task-signal completion failures are routed through the unhandled exception hook.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task TaskSignalSubscriptionCompleteWithFailureReportsThrownCompletion()
@@ -118,9 +110,7 @@ public sealed class AsyncRenameCoverageTests
         PrimitiveAssert.Same(expected, reported!);
     }
 
-    /// <summary>
-    /// Verifies renamed <see cref="ObserverAsync{T}"/> disposal members track and dispose an assigned source subscription.
-    /// </summary>
+    /// <summary>Verifies renamed <see cref="ObserverAsync{T}"/> disposal members track and dispose an assigned source subscription.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task ObserverAsyncRenamedDisposalMembersTrackAssignedSubscription()
@@ -137,9 +127,7 @@ public sealed class AsyncRenameCoverageTests
         PrimitiveAssert.Equal(1, disposed);
     }
 
-    /// <summary>
-    /// Verifies observer disposal reports failures thrown by the assigned source subscription.
-    /// </summary>
+    /// <summary>Verifies observer disposal reports failures thrown by the assigned source subscription.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task ObserverAsyncDisposeReportsAssignedSubscriptionFailure()
@@ -155,10 +143,7 @@ public sealed class AsyncRenameCoverageTests
         PrimitiveAssert.Same(expected, reported!);
     }
 
-    /// <summary>
-    /// Verifies renamed <see cref="ObserverAsync{T}.RouteObserverErrorAsync"/> routes canceled and thrown handlers
-    /// through the unhandled exception hook.
-    /// </summary>
+    /// <summary>Verifies renamed <see cref="ObserverAsync{T}.RouteObserverErrorAsync"/> routes canceled and thrown handlers through the unhandled exception hook.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task RouteObserverErrorAsyncReportsCanceledAndThrownHandlerPaths()
@@ -191,9 +176,7 @@ public sealed class AsyncRenameCoverageTests
         PrimitiveAssert.Same(handlerError, handlerReported!);
     }
 
-    /// <summary>
-    /// Verifies completion slow-path failures are routed through the renamed unhandled exception hook.
-    /// </summary>
+    /// <summary>Verifies completion slow-path failures are routed through the renamed unhandled exception hook.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task ObserverAsyncCompletionSlowPathReportsThrownCompletion()
@@ -208,9 +191,7 @@ public sealed class AsyncRenameCoverageTests
         PrimitiveAssert.Same(expected, reported!);
     }
 
-    /// <summary>
-    /// Test observer exposing the renamed internal observer members.
-    /// </summary>
+    /// <summary>Test observer exposing the renamed internal observer members.</summary>
     /// <param name="onError">Optional error handler used by <see cref="OnErrorResumeAsyncCore"/>.</param>
     /// <param name="onCompleted">Optional completion handler used by <see cref="OnCompletedAsyncCore"/>.</param>
     private sealed class RenameCoverageObserver(
@@ -229,9 +210,7 @@ public sealed class AsyncRenameCoverageTests
         protected override ValueTask OnNextAsyncCore(int value, CancellationToken cancellationToken) => default;
     }
 
-    /// <summary>
-    /// Async disposable that invokes a callback when disposed.
-    /// </summary>
+    /// <summary>Async disposable that invokes a callback when disposed.</summary>
     /// <param name="onDispose">The callback invoked during disposal.</param>
     private sealed class CallbackAsyncDisposable(Action onDispose) : IAsyncDisposable
     {
@@ -243,9 +222,7 @@ public sealed class AsyncRenameCoverageTests
         }
     }
 
-    /// <summary>
-    /// Async disposable that throws the supplied exception when disposed.
-    /// </summary>
+    /// <summary>Async disposable that throws the supplied exception when disposed.</summary>
     /// <param name="error">The exception thrown during disposal.</param>
     private sealed class ThrowingAsyncDisposable(Exception error) : IAsyncDisposable
     {
@@ -253,9 +230,7 @@ public sealed class AsyncRenameCoverageTests
         public ValueTask DisposeAsync() => throw error;
     }
 
-    /// <summary>
-    /// Observer that throws when completion is delivered.
-    /// </summary>
+    /// <summary>Observer that throws when completion is delivered.</summary>
     /// <param name="error">The exception to throw from completion.</param>
     private sealed class ThrowingCompletionObserver(Exception error) : IObserverAsync<int>
     {
@@ -272,9 +247,7 @@ public sealed class AsyncRenameCoverageTests
         public ValueTask OnNextAsync(int value, CancellationToken cancellationToken) => default;
     }
 
-    /// <summary>
-    /// Synchronization-context-backed sequencer used to exercise <see cref="AsyncContext.From(ISequencer)"/>.
-    /// </summary>
+    /// <summary>Synchronization-context-backed sequencer used to exercise <see cref="AsyncContext.From(ISequencer)"/>.</summary>
     private sealed class SynchronizationSequencer : SynchronizationContext, ISequencer
     {
         /// <inheritdoc/>
@@ -290,19 +263,13 @@ public sealed class AsyncRenameCoverageTests
         public void Schedule(IWorkItem item, long dueTimestamp) => Schedule(item);
     }
 
-    /// <summary>
-    /// Sequencer that queues scheduled work until the test drains it.
-    /// </summary>
+    /// <summary>Sequencer that queues scheduled work until the test drains it.</summary>
     private sealed class QueuedSequencer : ISequencer
     {
-        /// <summary>
-        /// Fixed deterministic timestamp.
-        /// </summary>
+        /// <summary>Fixed deterministic timestamp.</summary>
         private static readonly DateTimeOffset FixedNow = new(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
-        /// <summary>
-        /// Scheduled work items.
-        /// </summary>
+        /// <summary>Scheduled work items.</summary>
         private readonly ConcurrentQueue<IWorkItem> _items = new();
 
         /// <inheritdoc/>
@@ -317,9 +284,7 @@ public sealed class AsyncRenameCoverageTests
         /// <inheritdoc/>
         public void Schedule(IWorkItem item, long dueTimestamp) => Schedule(item);
 
-        /// <summary>
-        /// Executes all queued work items.
-        /// </summary>
+        /// <summary>Executes all queued work items.</summary>
         public void DrainAll()
         {
             while (_items.TryDequeue(out var item))

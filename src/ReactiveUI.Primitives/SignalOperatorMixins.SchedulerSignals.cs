@@ -7,13 +7,13 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives;
 
-/// <content>
+/// <summary>
 /// Dedicated signals for the scheduler/time operators, replacing the per-subscription
 /// <c>Signal.Create(observer =&gt; ...)</c> closures. The current-thread variants follow the
 /// <c>ExpireSignal</c>/<c>ProbeSignal</c> pattern: implement <see cref="Core.IRequireCurrentThread{T}"/>
 /// and schedule the subscription onto the current-thread sequencer when required.
-/// </content>
-public static partial class LinqMixins
+/// </summary>
+public static partial class LinqExtensions
 {
     /// <summary>Dedicated signal for <c>Calm</c> (quiet-period debounce).</summary>
     /// <typeparam name="T">The value type.</typeparam>
@@ -45,7 +45,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -92,7 +92,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -143,7 +143,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -181,7 +181,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }
@@ -214,7 +214,7 @@ public static partial class LinqMixins
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer == null)
+            if (observer is null)
             {
                 throw new ArgumentNullException(nameof(observer));
             }

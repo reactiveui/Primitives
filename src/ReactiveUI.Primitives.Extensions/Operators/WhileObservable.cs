@@ -60,9 +60,7 @@ internal sealed class WhileObservable(
         /// <summary>Whether the sink has been disposed.</summary>
         private int _disposed;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="WhileSink"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="WhileSink"/> class.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="condition">The loop predicate.</param>
         /// <param name="action">The action invoked per iteration.</param>
@@ -89,10 +87,7 @@ internal sealed class WhileObservable(
             _current.Dispose();
         }
 
-        /// <summary>
-        /// Performs a single iteration: checks the predicate, runs the action,
-        /// emits <see cref="RxVoid.Default"/>, and schedules the next iteration.
-        /// </summary>
+        /// <summary>Performs a single iteration: checks the predicate, runs the action, emits <see cref="RxVoid.Default"/>, and schedules the next iteration.</summary>
         private void Iterate()
         {
             if (Volatile.Read(ref _disposed) == 1)
@@ -127,10 +122,7 @@ internal sealed class WhileObservable(
             });
         }
 
-        /// <summary>
-        /// Runs the per-iteration action, emits <see cref="RxVoid.Default"/>, and re-enters
-        /// <see cref="Iterate"/> to evaluate the predicate for the next iteration.
-        /// </summary>
+        /// <summary>Runs the per-iteration action, emits <see cref="RxVoid.Default"/>, and re-enters <see cref="Iterate"/> to evaluate the predicate for the next iteration.</summary>
         private void RunActionAndContinue()
         {
             if (Volatile.Read(ref _disposed) == 1)

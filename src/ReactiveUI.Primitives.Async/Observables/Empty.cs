@@ -8,17 +8,13 @@ using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides factory methods for creating asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides factory methods for creating asynchronous observable sequences.</summary>
 /// <remarks>The SignalAsync class contains static methods for constructing instances of asynchronous
 /// observables. Use these methods to create observable sequences that support asynchronous notification
 /// patterns.</remarks>
 public static partial class SignalAsync
 {
-    /// <summary>
-    /// Creates an observable sequence that completes immediately without emitting any items.
-    /// </summary>
+    /// <summary>Creates an observable sequence that completes immediately without emitting any items.</summary>
     /// <remarks>This method is useful for representing an empty sequence in asynchronous or reactive
     /// scenarios. The returned sequence signals completion to observers as soon as it is subscribed to.
     /// The returned instance is a process-wide singleton per element type — no allocation occurs after the

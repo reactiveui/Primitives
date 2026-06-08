@@ -8,9 +8,7 @@ using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
-/// <summary>
-/// Provides helper methods for forwarding asynchronous observer notifications concurrently to multiple observers.
-/// </summary>
+/// <summary>Provides helper methods for forwarding asynchronous observer notifications concurrently to multiple observers.</summary>
 /// <remarks>The methods in this class are intended for scenarios where multiple asynchronous observers need to be
 /// notified in parallel. All observer notifications are dispatched concurrently, and the returned ValueTask completes
 /// when all observer operations have finished. If the observers collection is empty, the methods complete immediately.
@@ -18,9 +16,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// behavior.</remarks>
 public static class Concurrent
 {
-    /// <summary>
-    /// Forwards the specified value to all observers concurrently by invoking their OnNextAsync methods.
-    /// </summary>
+    /// <summary>Forwards the specified value to all observers concurrently by invoking their OnNextAsync methods.</summary>
     /// <remarks>If the observers list is empty, the returned ValueTask is already completed. All OnNextAsync
     /// calls are started concurrently; exceptions from observers are aggregated in the returned task.</remarks>
     /// <typeparam name="T">The type of the value to forward to the observers.</typeparam>

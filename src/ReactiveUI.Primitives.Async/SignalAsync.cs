@@ -15,10 +15,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <typeparam name="T">The type of the elements produced by the observable sequence.</typeparam>
 public abstract class SignalAsync<T> : IObservableAsync<T>
 {
-    /// <summary>
-    /// Asynchronously subscribes the specified asynchronous observer to receive notifications from the observable
-    /// sequence.
-    /// </summary>
+    /// <summary>Asynchronously subscribes the specified asynchronous observer to receive notifications from the observable sequence.</summary>
     /// <remarks>The returned <see cref="IAsyncDisposable"/> should be disposed when the observer no longer
     /// wishes to receive notifications. Multiple calls to this method with the same observer will result in multiple
     /// independent subscriptions.</remarks>
@@ -30,9 +27,7 @@ public abstract class SignalAsync<T> : IObservableAsync<T>
         SubscribeAsync(IObserverAsync<T> observer, CancellationToken cancellationToken) =>
         SubscribeAsyncCore(observer, cancellationToken);
 
-    /// <summary>
-    /// Subscribes the specified asynchronous observer to receive notifications from the observable sequence.
-    /// </summary>
+    /// <summary>Subscribes the specified asynchronous observer to receive notifications from the observable sequence.</summary>
     /// <remarks>The returned disposable should be disposed when the observer no longer wishes to receive
     /// notifications. Multiple calls to this method may result in multiple independent subscriptions.</remarks>
     /// <param name="observer">The observer that will receive asynchronous notifications. Cannot be null.</param>

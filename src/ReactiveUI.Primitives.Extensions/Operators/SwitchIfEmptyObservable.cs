@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Provides a fallback observable if the source sequence completes without emitting any elements.
-/// </summary>
+/// <summary>Provides a fallback observable if the source sequence completes without emitting any elements.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="fallback">The fallback observable.</param>
@@ -30,9 +28,7 @@ internal sealed class SwitchIfEmptyObservable<T>(
         return sink;
     }
 
-    /// <summary>
-    /// The sink for the <see cref="SwitchIfEmptyObservable{T}"/>.
-    /// </summary>
+    /// <summary>The sink for the <see cref="SwitchIfEmptyObservable{T}"/>.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="fallback">The fallback observable.</param>
     private sealed class SwitchIfEmptySink(
@@ -51,9 +47,7 @@ internal sealed class SwitchIfEmptyObservable<T>(
         /// <summary>Whether the sink has completed or been disposed.</summary>
         private bool _done;
 
-        /// <summary>
-        /// Sets the subscription to the source observable.
-        /// </summary>
+        /// <summary>Sets the subscription to the source observable.</summary>
         /// <param name="sub">The subscription.</param>
         public void SetSubscription(IDisposable sub) => _subscription.Disposable = sub;
 

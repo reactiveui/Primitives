@@ -13,9 +13,7 @@ namespace ReactiveUI.Primitives.Extensions.Tests;
 /// <summary>Tests for ReactiveExtensionsTests.</summary>
 public partial class ReactiveExtensionsTests
 {
-    /// <summary>
-    /// Syncronizes the asynchronous runs with asynchronous tasks in subscriptions.
-    /// </summary>
+    /// <summary>Syncronizes the asynchronous runs with asynchronous tasks in subscriptions.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SubscribeSynchronus_RunsWithAsyncTasksInSubscriptions()
@@ -58,9 +56,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(Volatile.Read(ref result)).IsZero();
     }
 
-    /// <summary>
-    /// Syncronizes the asynchronous runs with asynchronous tasks in subscriptions.
-    /// </summary>
+    /// <summary>Syncronizes the asynchronous runs with asynchronous tasks in subscriptions.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SynchronizeSynchronous_RunsWithAsyncTasksInSubscriptions()
@@ -112,9 +108,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(Volatile.Read(ref result)).IsZero();
     }
 
-    /// <summary>
-    /// Syncronizes the asynchronous runs with asynchronous tasks in subscriptions.
-    /// </summary>
+    /// <summary>Syncronizes the asynchronous runs with asynchronous tasks in subscriptions.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SubscribeAsync_RunsWithAsyncTasksInSubscriptions()
@@ -157,9 +151,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(Volatile.Read(ref result)).IsZero();
     }
 
-    /// <summary>
-    /// Tests WithLimitedConcurrency.
-    /// </summary>
+    /// <summary>Tests WithLimitedConcurrency.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous RxVoid test.</returns>
     [Test]
     public async Task WithLimitedConcurrency_LimitsConcurrentTasks()
@@ -309,9 +301,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(completed).IsFalse();
     }
 
-    /// <summary>
-    /// Tests SynchronizeSynchronous provides sync lock.
-    /// </summary>
+    /// <summary>Tests SynchronizeSynchronous provides sync lock.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SynchronizeSynchronous_ProvidesSyncLock()
@@ -336,9 +326,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests SynchronizeAsync provides sync lock.
-    /// </summary>
+    /// <summary>Tests SynchronizeAsync provides sync lock.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SynchronizeAsync_ProvidesSyncLock()
@@ -362,9 +350,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests SubscribeAsync with onNext and onError.
-    /// </summary>
+    /// <summary>Tests SubscribeAsync with onNext and onError.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous RxVoid test.</returns>
     [Test]
     public async Task SubscribeAsync_WithOnNextAndOnError_HandlesError()
@@ -396,9 +382,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests SubscribeSynchronous with full callbacks.
-    /// </summary>
+    /// <summary>Tests SubscribeSynchronous with full callbacks.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SubscribeSynchronous_WithFullCallbacks_ExecutesAll()
@@ -431,9 +415,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests SubscribeSynchronous with onNext and onError.
-    /// </summary>
+    /// <summary>Tests SubscribeSynchronous with onNext and onError.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SubscribeSynchronous_WithOnNextAndOnError_HandlesError()
@@ -465,9 +447,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests SubscribeSynchronous with onNext and onCompleted.
-    /// </summary>
+    /// <summary>Tests SubscribeSynchronous with onNext and onCompleted.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SubscribeSynchronous_WithOnNextAndOnCompleted_CompletesCorrectly()
@@ -497,9 +477,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests SubscribeSynchronous with only onNext.
-    /// </summary>
+    /// <summary>Tests SubscribeSynchronous with only onNext.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SubscribeSynchronous_WithOnlyOnNext_ProcessesValues()
@@ -526,9 +504,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2, SampleValue3]);
     }
 
-    /// <summary>
-    /// Tests SubscribeAsync with onNext and onCompleted.
-    /// </summary>
+    /// <summary>Tests SubscribeAsync with onNext and onCompleted.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SubscribeAsync_WithOnNextAndOnCompleted_CompletesCorrectly()

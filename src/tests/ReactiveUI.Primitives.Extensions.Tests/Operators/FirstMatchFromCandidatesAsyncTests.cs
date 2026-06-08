@@ -134,8 +134,7 @@ public class FirstMatchFromCandidatesAsyncTests
         await Assert.That(results).IsCollectionEqualTo(["GOOD"]);
     }
 
-    /// <summary>Verifies that disposing the async sink before the projection emits prevents any
-    /// downstream notifications.</summary>
+    /// <summary>Verifies that disposing the async sink before the projection emits prevents any downstream notifications.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsyncSinkDisposedBeforeEmission_ThenNoDownstreamNotifications()
@@ -159,8 +158,7 @@ public class FirstMatchFromCandidatesAsyncTests
         await Assert.That(completed).IsFalse();
     }
 
-    /// <summary>Verifies that a thrown projection on the async path is skipped and the loop continues
-    /// to the next candidate.</summary>
+    /// <summary>Verifies that a thrown projection on the async path is skipped and the loop continues to the next candidate.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsyncProjectionFactoryThrows_ThenSkipsAndContinues()

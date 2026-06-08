@@ -11,14 +11,10 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
-/// <summary>
-/// Tests for ReactiveExtensions around scheduling.
-/// </summary>
+/// <summary>Tests for ReactiveExtensions around scheduling.</summary>
 public partial class ReactiveExtensionsTests
 {
-    /// <summary>
-    /// Tests DetectStale marks stream as stale.
-    /// </summary>
+    /// <summary>Tests DetectStale marks stream as stale.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task DetectStale_WhenInactive_MarksAsStale()
@@ -44,9 +40,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests Heartbeat injects heartbeats.
-    /// </summary>
+    /// <summary>Tests Heartbeat injects heartbeats.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Heartbeat_WhenInactive_InjectsHeartbeats()
@@ -76,9 +70,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests ObserveOnSafe with null scheduler.
-    /// </summary>
+    /// <summary>Tests ObserveOnSafe with null scheduler.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ObserveOnSafe_WithNullScheduler_ReturnsSource()
@@ -89,9 +81,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsSameReferenceAs(source);
     }
 
-    /// <summary>
-    /// Tests ObserveOnSafe with scheduler.
-    /// </summary>
+    /// <summary>Tests ObserveOnSafe with scheduler.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ObserveOnSafe_WithScheduler_ObservesOnScheduler()
@@ -108,9 +98,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Tests Start with Action and null scheduler.
-    /// </summary>
+    /// <summary>Tests Start with Action and null scheduler.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Start_WithActionAndNullScheduler_ExecutesAction()
@@ -123,9 +111,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(executed).IsTrue();
     }
 
-    /// <summary>
-    /// Tests Start with function and null scheduler executes immediately.
-    /// </summary>
+    /// <summary>Tests Start with function and null scheduler executes immediately.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Start_WithFunctionAndNullScheduler_ReturnsComputedValue()
@@ -135,9 +121,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
-    /// <summary>
-    /// Tests ScheduleSafe with null scheduler executes immediately.
-    /// </summary>
+    /// <summary>Tests ScheduleSafe with null scheduler executes immediately.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ScheduleSafe_WithNullScheduler_ExecutesImmediately()
@@ -153,9 +137,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests Heartbeat class with update.
-    /// </summary>
+    /// <summary>Tests Heartbeat class with update.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Heartbeat_WithUpdate_IsNotHeartbeat()
@@ -169,9 +151,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests Heartbeat class without update.
-    /// </summary>
+    /// <summary>Tests Heartbeat class without update.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Heartbeat_WithoutUpdate_IsHeartbeat()
@@ -181,9 +161,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(heartbeat.IsHeartbeat).IsTrue();
     }
 
-    /// <summary>
-    /// Tests Schedule with value and TimeSpan and function.
-    /// </summary>
+    /// <summary>Tests Schedule with value and TimeSpan and function.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Schedule_WithValueTimeSpanAndFunction_DelaysAndTransforms()
@@ -201,9 +179,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue20);
     }
 
-    /// <summary>
-    /// Tests Schedule with observable, TimeSpan and function.
-    /// </summary>
+    /// <summary>Tests Schedule with observable, TimeSpan and function.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Schedule_WithObservableTimeSpanAndFunction_DelaysAndTransforms()
@@ -222,9 +198,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue20]);
     }
 
-    /// <summary>
-    /// Tests SyncTimer creates shared observable that produces ticks.
-    /// </summary>
+    /// <summary>Tests SyncTimer creates shared observable that produces ticks.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SyncTimer_ProducesSharedTicks()
@@ -247,9 +221,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests Using with action executes the action.
-    /// </summary>
+    /// <summary>Tests Using with action executes the action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Using_WithAction_ExecutesActionImmediately()
@@ -262,9 +234,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(executed).IsTrue();
     }
 
-    /// <summary>
-    /// Tests Using with action and null scheduler executes immediately.
-    /// </summary>
+    /// <summary>Tests Using with action and null scheduler executes immediately.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Using_WithActionAndNullScheduler_ExecutesActionImmediately()
@@ -277,9 +247,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(executed).IsTrue();
     }
 
-    /// <summary>
-    /// Tests Using with function transforms the value.
-    /// </summary>
+    /// <summary>Tests Using with function transforms the value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Using_WithFunction_TransformsValue()
@@ -292,9 +260,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
-    /// <summary>
-    /// Tests Schedule with TimeSpan and action.
-    /// </summary>
+    /// <summary>Tests Schedule with TimeSpan and action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Schedule_WithTimeSpanAndAction_ExecutesAction()
@@ -308,9 +274,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(executed).IsTrue();
     }
 
-    /// <summary>
-    /// Tests Schedule with observable, DateTimeOffset and action delays emission until the scheduler advances.
-    /// </summary>
+    /// <summary>Tests Schedule with observable, DateTimeOffset and action delays emission until the scheduler advances.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Schedule_WithObservableDateTimeOffsetAndAction_DelaysAndExecutesAction()
@@ -341,9 +305,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests Schedule with observable, TimeSpan and action.
-    /// </summary>
+    /// <summary>Tests Schedule with observable, TimeSpan and action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Schedule_WithObservableTimeSpanAndAction_ExecutesAction()
@@ -359,9 +321,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(executed).IsTrue();
     }
 
-    /// <summary>
-    /// Tests Schedule with DateTimeOffset and action.
-    /// </summary>
+    /// <summary>Tests Schedule with DateTimeOffset and action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Schedule_WithDateTimeOffsetAndAction_ExecutesAction()
@@ -375,9 +335,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(executed).IsTrue();
     }
 
-    /// <summary>
-    /// Tests Schedule with observable, DateTimeOffset and action.
-    /// </summary>
+    /// <summary>Tests Schedule with observable, DateTimeOffset and action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Schedule_WithObservableDateTimeOffsetAndAction_ExecutesAction()
@@ -393,9 +351,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(executed).IsTrue();
     }
 
-    /// <summary>
-    /// Tests Schedule with function and scheduler.
-    /// </summary>
+    /// <summary>Tests Schedule with function and scheduler.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Schedule_WithFunction_TransformsValue()
@@ -409,9 +365,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue84);
     }
 
-    /// <summary>
-    /// Tests Schedule with observable and function.
-    /// </summary>
+    /// <summary>Tests Schedule with observable and function.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Schedule_WithObservableAndFunction_TransformsValue()
@@ -427,9 +381,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue84);
     }
 
-    /// <summary>
-    /// Tests Schedule with TimeSpan and function.
-    /// </summary>
+    /// <summary>Tests Schedule with TimeSpan and function.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Schedule_WithTimeSpanAndFunction_TransformsValue()
@@ -443,9 +395,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue84);
     }
 
-    /// <summary>
-    /// Tests Schedule with observable, TimeSpan and function.
-    /// </summary>
+    /// <summary>Tests Schedule with observable, TimeSpan and function.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Schedule_WithObservableTimeSpanAndFunction_TransformsValue()
@@ -461,9 +411,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue84);
     }
 
-    /// <summary>
-    /// Tests ObserveOnIf with bool condition and single scheduler when true.
-    /// </summary>
+    /// <summary>Tests ObserveOnIf with bool condition and single scheduler when true.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ObserveOnIf_WithBoolConditionTrue_ObservesOnScheduler()
@@ -482,9 +430,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([1]);
     }
 
-    /// <summary>
-    /// Tests ObserveOnIf with bool condition and single scheduler when false.
-    /// </summary>
+    /// <summary>Tests ObserveOnIf with bool condition and single scheduler when false.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ObserveOnIf_WithBoolConditionFalse_DoesNotObserveOnScheduler()
@@ -499,9 +445,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([1]);
     }
 
-    /// <summary>
-    /// Tests ObserveOnIf with bool condition and two schedulers when true.
-    /// </summary>
+    /// <summary>Tests ObserveOnIf with bool condition and two schedulers when true.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ObserveOnIf_WithBoolConditionTrue_ObservesOnTrueScheduler()
@@ -520,9 +464,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([1]);
     }
 
-    /// <summary>
-    /// Tests ObserveOnIf with bool condition and two schedulers when false.
-    /// </summary>
+    /// <summary>Tests ObserveOnIf with bool condition and two schedulers when false.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ObserveOnIf_WithBoolConditionFalse_ObservesOnFalseScheduler()
@@ -541,9 +483,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([1]);
     }
 
-    /// <summary>
-    /// Tests ObserveOnIf with reactive condition routes notifications to both schedulers as the condition changes.
-    /// </summary>
+    /// <summary>Tests ObserveOnIf with reactive condition routes notifications to both schedulers as the condition changes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ObserveOnIf_WithReactiveCondition_ObservesOnMatchingScheduler()
@@ -571,9 +511,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2]);
     }
 
-    /// <summary>
-    /// Tests ObserveOnIf with reactive condition and single scheduler observes only when condition is true.
-    /// </summary>
+    /// <summary>Tests ObserveOnIf with reactive condition and single scheduler observes only when condition is true.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ObserveOnIf_WithReactiveConditionAndSingleScheduler_ObservesOnlyWhenEnabled()
@@ -597,9 +535,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2]);
     }
 
-    /// <summary>
-    /// Tests SyncTimer without scheduler uses default scheduler and produces ticks.
-    /// </summary>
+    /// <summary>Tests SyncTimer without scheduler uses default scheduler and produces ticks.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSyncTimerCalledWithoutScheduler_ThenProducesTicks()
@@ -614,9 +550,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
     }
 
-    /// <summary>
-    /// Tests Start with null scheduler executes the action directly.
-    /// </summary>
+    /// <summary>Tests Start with null scheduler executes the action directly.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenStartActionWithNullScheduler_ThenExecutesAction()
@@ -632,9 +566,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(executed).IsTrue();
     }
 
-    /// <summary>
-    /// Tests Start with function and null scheduler returns computed result.
-    /// </summary>
+    /// <summary>Tests Start with function and null scheduler returns computed result.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenStartFuncWithNullScheduler_ThenReturnsResult()
@@ -644,9 +576,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
-    /// <summary>
-    /// Tests ScheduleSafe with TimeSpan and null scheduler uses Thread.Sleep path.
-    /// </summary>
+    /// <summary>Tests ScheduleSafe with TimeSpan and null scheduler uses Thread.Sleep path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScheduleSafeWithTimeSpanAndNullScheduler_ThenSleepsAndExecutes()
@@ -662,9 +592,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests Using with Action invokes the action and disposes the resource.
-    /// </summary>
+    /// <summary>Tests Using with Action invokes the action and disposes the resource.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenUsingWithActionAndNoScheduler_ThenExecutesAndDisposes()
@@ -677,9 +605,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(actionExecuted).IsTrue();
     }
 
-    /// <summary>
-    /// Tests Schedule with value and TimeSpan emits value after delay.
-    /// </summary>
+    /// <summary>Tests Schedule with value and TimeSpan emits value after delay.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScheduleValueWithTimeSpan_ThenEmitsAfterDelay()
@@ -697,9 +623,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
-    /// <summary>
-    /// Tests Schedule with observable and TimeSpan delays each emitted value.
-    /// </summary>
+    /// <summary>Tests Schedule with observable and TimeSpan delays each emitted value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScheduleObservableWithTimeSpan_ThenDelaysValues()
@@ -719,9 +643,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue10]);
     }
 
-    /// <summary>
-    /// Tests Schedule with value and DateTimeOffset emits value at due time.
-    /// </summary>
+    /// <summary>Tests Schedule with value and DateTimeOffset emits value at due time.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScheduleValueWithDateTimeOffset_ThenEmitsAtDueTime()
@@ -740,9 +662,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
-    /// <summary>
-    /// Tests Schedule with observable and DateTimeOffset delays values to due time.
-    /// </summary>
+    /// <summary>Tests Schedule with observable and DateTimeOffset delays values to due time.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScheduleObservableWithDateTimeOffset_ThenDelaysValues()
@@ -763,9 +683,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue10]);
     }
 
-    /// <summary>
-    /// Tests Schedule with action and TimeSpan executes action then emits value.
-    /// </summary>
+    /// <summary>Tests Schedule with action and TimeSpan executes action then emits value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScheduleValueWithTimeSpanAndAction_ThenExecutesActionAndEmits()
@@ -788,9 +706,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests Using with Func overload returns the function result.
-    /// </summary>
+    /// <summary>Tests Using with Func overload returns the function result.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenUsingWithFunc_ThenReturnsFunctionResult()
@@ -801,9 +717,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
-    /// <summary>
-    /// Tests While with scheduler repeatedly executes action while condition holds.
-    /// </summary>
+    /// <summary>Tests While with scheduler repeatedly executes action while condition holds.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenWhileWithScheduler_ThenExecutesActionOnScheduler()
@@ -829,9 +743,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).Count().IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Tests Schedule with action, observable source, and TimeSpan overload.
-    /// </summary>
+    /// <summary>Tests Schedule with action, observable source, and TimeSpan overload.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScheduleWithActionAndTimeSpan_ThenExecutesActionAndEmits()
@@ -851,9 +763,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue10]);
     }
 
-    /// <summary>
-    /// Tests Heartbeat timer subscription null check path by quickly disposing.
-    /// </summary>
+    /// <summary>Tests Heartbeat timer subscription null check path by quickly disposing.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenHeartbeatSourceEmits_ThenTimerSubscriptionDisposed()
@@ -877,9 +787,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results[1].Update).IsEqualTo(SampleValue2);
     }
 
-    /// <summary>
-    /// Tests Using with Action and null scheduler disposes the object after executing the action.
-    /// </summary>
+    /// <summary>Tests Using with Action and null scheduler disposes the object after executing the action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenUsingWithActionAndNullScheduler_ThenDisposesObject()

@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Tests for error handling operators: Catch, CatchAndIgnoreErrorResume, OnErrorResumeAsFailure, Retry.
-/// </summary>
+/// <summary>Tests for error handling operators: Catch, CatchAndIgnoreErrorResume, OnErrorResumeAsFailure, Retry.</summary>
 public class ErrorHandlingOperatorTests
 {
     /// <summary>Tests Catch with fallback switches to fallback.</summary>
@@ -561,8 +559,8 @@ public class ErrorHandlingOperatorTests
         await Assert.That(attempt).IsEqualTo(ExpectedAttempts);
     }
 
-    /// <summary>Async disposable that throws on <see cref="IAsyncDisposable.DisposeAsync"/>.
-    /// Used to verify dispose-failure routing in operators that swallow secondary errors.</summary>
+    /// <summary>Async disposable that throws on <see cref="IAsyncDisposable.DisposeAsync"/>. Used to verify dispose-failure routing in operators that swallow secondary errors.</summary>
+    /// <param name="error">The exception thrown when the disposable is disposed.</param>
     private sealed class ThrowingDisposable(Exception error) : IAsyncDisposable
     {
         /// <inheritdoc/>

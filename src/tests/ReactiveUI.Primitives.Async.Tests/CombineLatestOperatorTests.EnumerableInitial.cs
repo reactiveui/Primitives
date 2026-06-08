@@ -10,9 +10,7 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests for CombineLatestOperatorTests.</summary>
 public partial class CombineLatestOperatorTests
 {
-    /// <summary>
-    /// Tests CombineLatestEnumerable SubscribeAsyncCore catch block when a source throws during subscription.
-    /// </summary>
+    /// <summary>Tests CombineLatestEnumerable SubscribeAsyncCore catch block when a source throws during subscription.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableSourceThrowsDuringSubscribe_ThenDisposesAndRethrows()
@@ -25,9 +23,7 @@ public partial class CombineLatestOperatorTests
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await sources.CombineLatest().ToListAsync());
     }
 
-    /// <summary>
-    /// Tests CombineLatestEnumerable OnErrorResumeAsync is forwarded when disposed is not set.
-    /// </summary>
+    /// <summary>Tests CombineLatestEnumerable OnErrorResumeAsync is forwarded when disposed is not set.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableErrorResume_ThenForwardedToObserver()
@@ -57,9 +53,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(received!.Message).IsEqualTo("resume");
     }
 
-    /// <summary>
-    /// Tests CombineLatestEnumerable OnErrorResumeAsync returns early when disposed.
-    /// </summary>
+    /// <summary>Tests CombineLatestEnumerable OnErrorResumeAsync returns early when disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableErrorResumeAfterDisposed_ThenIgnored()
@@ -87,9 +81,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(received).IsNull();
     }
 
-    /// <summary>
-    /// Tests that CombineLatestEnumerable completes when a source completes without ever emitting a value.
-    /// </summary>
+    /// <summary>Tests that CombineLatestEnumerable completes when a source completes without ever emitting a value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestEnumerableSourceCompletesWithoutEmitting_ThenCompletes()
@@ -121,9 +113,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
     }
 
-    /// <summary>
-    /// Tests that CombineLatestValuesAreAllFalse returns true for an empty source set.
-    /// </summary>
+    /// <summary>Tests that CombineLatestValuesAreAllFalse returns true for an empty source set.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestValuesAreAllFalseWithNoSources_ThenReturnsTrue()
@@ -136,9 +126,7 @@ public partial class CombineLatestOperatorTests
         await Assert.That(result).IsTrue();
     }
 
-    /// <summary>
-    /// Tests CombineLatestValuesAreAllTrue with empty IEnumerable returns true (vacuous truth).
-    /// </summary>
+    /// <summary>Tests CombineLatestValuesAreAllTrue with empty IEnumerable returns true (vacuous truth).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCombineLatestValuesAreAllTrueEmptyList_ThenReturnsTrue()

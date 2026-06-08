@@ -8,9 +8,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Detects when a sequence becomes stale (no emissions for a specified period).
-/// </summary>
+/// <summary>Detects when a sequence becomes stale (no emissions for a specified period).</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="stalenessPeriod">The period after which the sequence is considered stale.</param>
@@ -45,18 +43,20 @@ internal sealed class DetectStaleObservable<T>(
         TimeSpan stalenessPeriod,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>Shared gate / timer / done-flag plumbing.</summary>
+        /// <summary>The gate protecting state transitions and downstream notification.</summary>
+        private readonly Lock _gate = new();
+
+        /// <summary>Shared timer / done-flag plumbing.</summary>
         private readonly TimerSinkState<Stale<T>> _state = new(downstream);
 
-        /// <summary>Upstream subscription handle, set once via <see cref="AttachSourceSubscription"/>
-        /// so the sink can tear it down on dispose without a wrapper bag.</summary>
+        /// <summary>Upstream subscription handle, set once via <see cref="AttachSourceSubscription"/> so the sink can tear it down on dispose without a wrapper bag.</summary>
         private IDisposable? _sourceSubscription;
 
         /// <summary>Records the upstream subscription for disposal.</summary>
         /// <param name="subscription">The upstream subscription handle.</param>
         public void AttachSourceSubscription(IDisposable subscription)
         {
-            lock (_state.Gate)
+            lock (_gate)
             {
                 if (_state.Done)
                 {
@@ -74,7 +74,7 @@ internal sealed class DetectStaleObservable<T>(
         /// <inheritdoc/>
         public void OnNext(T value)
         {
-            lock (_state.Gate)
+            lock (_gate)
             {
                 if (_state.Done)
                 {
@@ -87,15 +87,31 @@ internal sealed class DetectStaleObservable<T>(
         }
 
         /// <inheritdoc/>
-        public void OnError(Exception error) => _state.HandleError(error);
+        public void OnError(Exception error)
+        {
+            lock (_gate)
+            {
+                _state.HandleErrorLocked(error);
+            }
+        }
 
         /// <inheritdoc/>
-        public void OnCompleted() => _state.HandleCompleted();
+        public void OnCompleted()
+        {
+            lock (_gate)
+            {
+                _state.HandleCompletedLocked();
+            }
+        }
 
         /// <inheritdoc/>
         public void Dispose()
         {
-            _state.HandleDispose();
+            lock (_gate)
+            {
+                _state.HandleDisposeLocked();
+            }
+
             Interlocked.Exchange(ref _sourceSubscription, null)?.Dispose();
         }
 
@@ -109,7 +125,7 @@ internal sealed class DetectStaleObservable<T>(
         /// <returns>The singleton empty disposable for the scheduler contract.</returns>
         private EmptyDisposable OnStaleTimer()
         {
-            lock (_state.Gate)
+            lock (_gate)
             {
                 if (!_state.Done)
                 {

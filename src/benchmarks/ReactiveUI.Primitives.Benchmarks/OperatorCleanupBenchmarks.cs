@@ -9,26 +9,17 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks the cleanup/finalizer operator (OnCleanup) against System.Reactive Finally and
-/// R3 Do(onDisposed).
-/// </summary>
+/// <summary>Benchmarks the cleanup/finalizer operator (OnCleanup) against System.Reactive Finally and R3 Do(onDisposed).</summary>
 [MemoryDiagnoser]
 public class OperatorCleanupBenchmarks
 {
-    /// <summary>
-    /// The inclusive start value of the range used by each benchmark.
-    /// </summary>
+    /// <summary>The inclusive start value of the range used by each benchmark.</summary>
     private const int Start = 1;
 
-    /// <summary>
-    /// The number of elements produced by the range used by each benchmark.
-    /// </summary>
+    /// <summary>The number of elements produced by the range used by each benchmark.</summary>
     private const int Count = 16;
 
-    /// <summary>
-    /// Benchmarks running a cleanup action on termination.
-    /// </summary>
+    /// <summary>Benchmarks running a cleanup action on termination.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesOnCleanup()
@@ -38,9 +29,7 @@ public class OperatorCleanupBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks running a cleanup action on termination using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks running a cleanup action on termination using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveFinally()
@@ -50,9 +39,7 @@ public class OperatorCleanupBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks running a cleanup action on termination using R3.
-    /// </summary>
+    /// <summary>Benchmarks running a cleanup action on termination using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3DoOnDisposed()

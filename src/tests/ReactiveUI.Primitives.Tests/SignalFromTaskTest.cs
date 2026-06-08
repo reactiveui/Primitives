@@ -6,29 +6,19 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// SignalFromTaskTest.
-/// </summary>
+/// <summary>SignalFromTaskTest.</summary>
 public class SignalFromTaskTest
 {
-    /// <summary>
-    /// Maximum wait for cancellation callbacks that are intentionally driven by timers.
-    /// </summary>
+    /// <summary>Maximum wait for cancellation callbacks that are intentionally driven by timers.</summary>
     private const int CancellationCallbackTimeoutMilliseconds = 15000;
 
-    /// <summary>
-    /// Delay used before checking that a task has started.
-    /// </summary>
+    /// <summary>Delay used before checking that a task has started.</summary>
     private const int InitialDelayMilliseconds = 500;
 
-    /// <summary>
-    /// Delay before token cancellation is requested.
-    /// </summary>
+    /// <summary>Delay before token cancellation is requested.</summary>
     private const int TokenCancellationDelayMilliseconds = 1000;
 
-    /// <summary>
-    /// Delay used to simulate cancellation cleanup.
-    /// </summary>
+    /// <summary>Delay used to simulate cancellation cleanup.</summary>
     private const int CleanupDelayMilliseconds = 5000;
 
     /// <summary>
@@ -39,59 +29,37 @@ public class SignalFromTaskTest
     /// </summary>
     private const int CleanupWorkMilliseconds = 250;
 
-    /// <summary>
-    /// Delay used to wait for cancellation cleanup to finish.
-    /// </summary>
+    /// <summary>Delay used to wait for cancellation cleanup to finish.</summary>
     private const int CancellationWaitDelayMilliseconds = 6000;
 
-    /// <summary>
-    /// Delay used by the command body.
-    /// </summary>
+    /// <summary>Delay used by the command body.</summary>
     private const int CommandDelayMilliseconds = 10000;
 
-    /// <summary>
-    /// Delay used to wait for normal command completion.
-    /// </summary>
+    /// <summary>Delay used to wait for normal command completion.</summary>
     private const int CompletionWaitDelayMilliseconds = 11000;
 
-    /// <summary>
-    /// Exception message used by user exception tests.
-    /// </summary>
+    /// <summary>Exception message used by user exception tests.</summary>
     private const string BreakExecutionMessage = "break execution";
 
-    /// <summary>
-    /// Status text recorded when a command starts.
-    /// </summary>
+    /// <summary>Status text recorded when a command starts.</summary>
     private const string StartedCommand = "started command";
 
-    /// <summary>
-    /// Status text recorded when cancellation cleanup starts.
-    /// </summary>
+    /// <summary>Status text recorded when cancellation cleanup starts.</summary>
     private const string StartingCancellingCommand = "starting cancelling command";
 
-    /// <summary>
-    /// Status text recorded when cancellation cleanup finishes.
-    /// </summary>
+    /// <summary>Status text recorded when cancellation cleanup finishes.</summary>
     private const string FinishedCancellingCommand = "finished cancelling command";
 
-    /// <summary>
-    /// Status text recorded when the command completes normally.
-    /// </summary>
+    /// <summary>Status text recorded when the command completes normally.</summary>
     private const string FinishedCommandNormally = "finished command Normally";
 
-    /// <summary>
-    /// Status text recorded by the exception handler.
-    /// </summary>
+    /// <summary>Status text recorded by the exception handler.</summary>
     private const string ExceptionShouldBeHere = "Exception Should Be here";
 
-    /// <summary>
-    /// Status text recorded by the finalizer callback.
-    /// </summary>
+    /// <summary>Status text recorded by the finalizer callback.</summary>
     private const string ShouldAlwaysComeHere = "Should always come here.";
 
-    /// <summary>
-    /// Signals from task handles user exceptions.
-    /// </summary>
+    /// <summary>Signals from task handles user exceptions.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTaskHandlesUserExceptions()
@@ -138,9 +106,7 @@ public class SignalFromTaskTest
         Assert.False(result);
     }
 
-    /// <summary>
-    /// Signals from task handles cancellation.
-    /// </summary>
+    /// <summary>Signals from task handles cancellation.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTaskHandlesCancellation()
@@ -184,9 +150,7 @@ public class SignalFromTaskTest
         Assert.False(result);
     }
 
-    /// <summary>
-    /// Signals from task handles token cancellation.
-    /// </summary>
+    /// <summary>Signals from task handles token cancellation.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTaskHandlesTokenCancellation()
@@ -245,9 +209,7 @@ public class SignalFromTaskTest
         Assert.False(result);
     }
 
-    /// <summary>
-    /// Signals from task handles cancellation in base.
-    /// </summary>
+    /// <summary>Signals from task handles cancellation in base.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTaskHandlesCancellationInBase()
@@ -283,9 +245,7 @@ public class SignalFromTaskTest
         Assert.Equal(ShouldAlwaysComeHere, statusTrail.LastMessage);
     }
 
-    /// <summary>
-    /// Signals from task handles completion.
-    /// </summary>
+    /// <summary>Signals from task handles completion.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTaskHandlesCompletion()
@@ -328,9 +288,7 @@ public class SignalFromTaskTest
         Assert.True(result);
     }
 
-    /// <summary>
-    /// Signals from task t handles user exceptions.
-    /// </summary>
+    /// <summary>Signals from task t handles user exceptions.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTask_T_HandlesUserExceptions()
@@ -377,9 +335,7 @@ public class SignalFromTaskTest
         Assert.False(result);
     }
 
-    /// <summary>
-    /// Signals from task t handles cancellation.
-    /// </summary>
+    /// <summary>Signals from task t handles cancellation.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTask_T_HandlesCancellation()
@@ -423,9 +379,7 @@ public class SignalFromTaskTest
         Assert.False(result);
     }
 
-    /// <summary>
-    /// Signals from task t handles token cancellation.
-    /// </summary>
+    /// <summary>Signals from task t handles token cancellation.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTask_T_HandlesTokenCancellation()
@@ -484,9 +438,7 @@ public class SignalFromTaskTest
         Assert.False(result);
     }
 
-    /// <summary>
-    /// Signals from task t handles cancellation in base.
-    /// </summary>
+    /// <summary>Signals from task t handles cancellation in base.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTask_T_HandlesCancellationInBase()
@@ -522,9 +474,7 @@ public class SignalFromTaskTest
         Assert.Equal(ShouldAlwaysComeHere, statusTrail.LastMessage);
     }
 
-    /// <summary>
-    /// Signals from task t handles completion.
-    /// </summary>
+    /// <summary>Signals from task t handles completion.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTask_T_HandlesCompletion()
@@ -567,16 +517,12 @@ public class SignalFromTaskTest
         Assert.True(result);
     }
 
-    /// <summary>
-    /// Gets the recorded status messages.
-    /// </summary>
+    /// <summary>Gets the recorded status messages.</summary>
     /// <param name="statusTrail">The status trail.</param>
     /// <returns>The recorded messages.</returns>
     private static string[] StatusMessages(StatusTrail statusTrail) => statusTrail.Messages();
 
-    /// <summary>
-    /// Waits for a timed test callback to complete.
-    /// </summary>
+    /// <summary>Waits for a timed test callback to complete.</summary>
     /// <param name="task">The task to await.</param>
     /// <param name="timeoutMilliseconds">The timeout in milliseconds.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -592,18 +538,14 @@ public class SignalFromTaskTest
         await task.ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Records a status message.
-    /// </summary>
+    /// <summary>Records a status message.</summary>
     /// <param name="statusTrail">The status trail.</param>
     /// <param name="position">The current status position.</param>
     /// <param name="message">The message to record.</param>
     private static void RecordStatus(StatusTrail statusTrail, ref int position, string message) =>
         statusTrail.Add(ref position, message);
 
-    /// <summary>
-    /// Records synchronous cancellation cleanup.
-    /// </summary>
+    /// <summary>Records synchronous cancellation cleanup.</summary>
     /// <param name="statusTrail">The status trail.</param>
     /// <param name="position">The current status position.</param>
     private static void RecordCancellationCleanup(StatusTrail statusTrail, ref int position)
@@ -613,9 +555,7 @@ public class SignalFromTaskTest
         RecordStatus(statusTrail, ref position, FinishedCancellingCommand);
     }
 
-    /// <summary>
-    /// Cancels the source after the token cancellation delay.
-    /// </summary>
+    /// <summary>Cancels the source after the token cancellation delay.</summary>
     /// <param name="cts">The cancellation source.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private static async Task CancelAfterDelayAsync(CancellationTokenSource cts)
@@ -624,24 +564,16 @@ public class SignalFromTaskTest
         await cts.CancelAsync().ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Thread-safe status trail used by async cancellation tests.
-    /// </summary>
+    /// <summary>Thread-safe status trail used by async cancellation tests.</summary>
     private sealed class StatusTrail
     {
-        /// <summary>
-        /// Synchronizes access to the recorded statuses.
-        /// </summary>
-        private readonly object _gate = new();
+        /// <summary>Synchronizes access to the recorded statuses.</summary>
+        private readonly Lock _gate = new();
 
-        /// <summary>
-        /// Stores the recorded status positions and messages.
-        /// </summary>
+        /// <summary>Stores the recorded status positions and messages.</summary>
         private readonly List<(int Position, string Message)> _items = [];
 
-        /// <summary>
-        /// Gets the last recorded status message.
-        /// </summary>
+        /// <summary>Gets the last recorded status message.</summary>
         public string LastMessage
         {
             get
@@ -653,9 +585,7 @@ public class SignalFromTaskTest
             }
         }
 
-        /// <summary>
-        /// Adds a status message.
-        /// </summary>
+        /// <summary>Adds a status message.</summary>
         /// <param name="position">The current status position.</param>
         /// <param name="message">The message.</param>
         public void Add(ref int position, string message)
@@ -666,9 +596,7 @@ public class SignalFromTaskTest
             }
         }
 
-        /// <summary>
-        /// Creates a snapshot of the recorded messages.
-        /// </summary>
+        /// <summary>Creates a snapshot of the recorded messages.</summary>
         /// <returns>The message snapshot.</returns>
         public string[] Messages()
         {

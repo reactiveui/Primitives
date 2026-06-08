@@ -6,36 +6,24 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Connectable hot signal that subscribes to its source only when connected.
-/// </summary>
+/// <summary>Connectable hot signal that subscribes to its source only when connected.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class ConnectableSignal<T> : IObservable<T>
 {
-    /// <summary>
-    /// Synchronizes connection state.
-    /// </summary>
+    /// <summary>Synchronizes connection state.</summary>
     private readonly Lock _gate = new();
 
-    /// <summary>
-    /// Source sequence to connect.
-    /// </summary>
+    /// <summary>Source sequence to connect.</summary>
     private readonly IObservable<T> _source;
 
-    /// <summary>
-    /// Multicast hub that receives source values.
-    /// </summary>
+    /// <summary>Multicast hub that receives source values.</summary>
     private readonly ISignal<T> _hub;
 
-    /// <summary>
-    /// Active source connection.
-    /// </summary>
+    /// <summary>Active source connection.</summary>
     private IDisposable? _connection;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConnectableSignal{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ConnectableSignal{T}"/> class.</summary>
     /// <param name="source">The cold or hot source sequence.</param>
     /// <param name="hub">The multicast hub.</param>
     public ConnectableSignal(IObservable<T> source, ISignal<T> hub)
@@ -44,15 +32,11 @@ public sealed class ConnectableSignal<T> : IObservable<T>
         _hub = hub ?? throw new ArgumentNullException(nameof(hub));
     }
 
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>
-    /// Subscribes the hub to the source if it is not already connected.
-    /// </summary>
+    /// <summary>Subscribes the hub to the source if it is not already connected.</summary>
     /// <returns>A handle that disconnects the source subscription.</returns>
     public IDisposable Connect()
     {
@@ -69,9 +53,7 @@ public sealed class ConnectableSignal<T> : IObservable<T>
     /// <inheritdoc />
     public IDisposable Subscribe(IObserver<T> observer) => _hub.Subscribe(observer);
 
-    /// <summary>
-    /// Disconnect handle for an active source connection.
-    /// </summary>
+    /// <summary>Disconnect handle for an active source connection.</summary>
     private sealed class Connection : IDisposable
     {
         /// <summary>The owning connectable signal.</summary>
@@ -93,7 +75,7 @@ public sealed class ConnectableSignal<T> : IObservable<T>
         public void Dispose()
         {
             var sourceSubscription = Interlocked.Exchange(ref _sourceSubscription, null);
-            if (sourceSubscription == null)
+            if (sourceSubscription is null)
             {
                 return;
             }

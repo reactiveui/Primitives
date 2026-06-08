@@ -6,26 +6,18 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Represents the CreateSignal class.
-/// </summary>
+/// <summary>Represents the CreateSignal class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
 /// <typeparam name="TState">The TState type.</typeparam>
 internal sealed class CreateSignal<T, TState> : SignalsBase<T>
 {
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly TState _state;
 
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly Func<TState, IObserver<T>, IDisposable> _subscribe;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CreateSignal{T,TState}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="CreateSignal{T,TState}"/> class.</summary>
     /// <param name="state">The state value.</param>
     /// <param name="subscribe">The subscribe value.</param>
     public CreateSignal(TState state, Func<TState, IObserver<T>, IDisposable> subscribe)
@@ -35,9 +27,7 @@ internal sealed class CreateSignal<T, TState> : SignalsBase<T>
         _subscribe = subscribe;
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CreateSignal{T,TState}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="CreateSignal{T,TState}"/> class.</summary>
     /// <param name="state">The state value.</param>
     /// <param name="subscribe">The subscribe value.</param>
     /// <param name="isRequiredSubscribeOnCurrentThread">The isRequiredSubscribeOnCurrentThread value.</param>
@@ -48,9 +38,7 @@ internal sealed class CreateSignal<T, TState> : SignalsBase<T>
         _subscribe = subscribe;
     }
 
-    /// <summary>
-    /// Executes the SubscribeCore operation.
-    /// </summary>
+    /// <summary>Executes the SubscribeCore operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <param name="cancel">The cancel value.</param>
     /// <returns>The result.</returns>
@@ -60,14 +48,10 @@ internal sealed class CreateSignal<T, TState> : SignalsBase<T>
         return _subscribe(_state, observer) ?? EmptyDisposable.Instance;
     }
 
-    /// <summary>
-    /// Represents the Create class.
-    /// </summary>
+    /// <summary>Represents the Create class.</summary>
     private sealed class Create : WitnessBase<T, T>
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Create"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="Create"/> class.</summary>
         /// <param name="observer">The observer value.</param>
         /// <param name="cancel">The cancel value.</param>
         public Create(IObserver<T> observer, IDisposable cancel)
@@ -75,15 +59,11 @@ internal sealed class CreateSignal<T, TState> : SignalsBase<T>
         {
         }
 
-        /// <summary>
-        /// Executes the OnNext operation.
-        /// </summary>
+        /// <summary>Executes the OnNext operation.</summary>
         /// <param name="value">The value.</param>
         public override void OnNext(T value) => Observer.OnNext(value);
 
-        /// <summary>
-        /// Executes the OnError operation.
-        /// </summary>
+        /// <summary>Executes the OnError operation.</summary>
         /// <param name="error">The error value.</param>
         public override void OnError(Exception error)
         {
@@ -97,9 +77,7 @@ internal sealed class CreateSignal<T, TState> : SignalsBase<T>
             }
         }
 
-        /// <summary>
-        /// Executes the OnCompleted operation.
-        /// </summary>
+        /// <summary>Executes the OnCompleted operation.</summary>
         public override void OnCompleted()
         {
             try

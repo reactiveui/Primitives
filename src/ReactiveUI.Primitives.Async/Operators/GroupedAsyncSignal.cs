@@ -4,17 +4,13 @@
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Represents an asynchronous observable sequence that is grouped by a specified key.
-/// </summary>
+/// <summary>Represents an asynchronous observable sequence that is grouped by a specified key.</summary>
 /// <remarks>Each instance corresponds to a group within the parent observable, identified by its key. Observers
 /// can subscribe to receive elements belonging to the group associated with the specified key.</remarks>
 /// <typeparam name="TKey">The type of the key used to group elements in the observable sequence.</typeparam>
 /// <typeparam name="TValue">The type of the elements contained in the grouped observable sequence.</typeparam>
 public abstract class GroupedAsyncSignal<TKey, TValue> : SignalAsync<TValue>
 {
-    /// <summary>
-    /// Gets the key associated with the current object.
-    /// </summary>
+    /// <summary>Gets the key associated with the current object.</summary>
     public abstract TKey Key { get; }
 }

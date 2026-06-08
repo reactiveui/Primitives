@@ -6,69 +6,71 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// Extension methods for <see cref="IObserver{T}"/>.
-/// </summary>
+/// <summary>Extension methods for <see cref="IObserver{T}"/>.</summary>
 public static class ObserverExtensions
 {
-    /// <summary>
-    /// Emits each element from <paramref name="source"/> to <paramref name="observer"/>
-    /// via <see cref="IObserver{T}.OnNext(T)"/> using a fast-path iteration for known
-    /// concrete collection types (<see cref="List{T}"/>, arrays, <see cref="IList{T}"/>).
-    /// Avoids the per-iteration enumerator allocation that <c>foreach</c> over a bare
-    /// <see cref="IEnumerable{T}"/> would incur on these common shapes.
-    /// </summary>
+    /// <summary>Fast-path iteration helpers for emitting collections to an observer.</summary>
     /// <typeparam name="T">The type of elements in the source collection.</typeparam>
     /// <param name="observer">The observer to emit elements to.</param>
-    /// <param name="source">The source collection to iterate.</param>
-    public static void FastForEach<T>(this IObserver<T> observer, IEnumerable<T> source)
+    extension<T>(IObserver<T> observer)
     {
-        ArgumentExceptionHelper.ThrowIfNull(observer);
-        ArgumentExceptionHelper.ThrowIfNull(source);
-
-        if (source is T[] array)
+        /// <summary>
+        /// Emits each element from <paramref name="source"/> to the observer
+        /// via <see cref="IObserver{T}.OnNext(T)"/> using a fast-path iteration for known
+        /// concrete collection types (<see cref="List{T}"/>, arrays, <see cref="IList{T}"/>).
+        /// Avoids the per-iteration enumerator allocation that <c>foreach</c> over a bare
+        /// <see cref="IEnumerable{T}"/> would incur on these common shapes.
+        /// </summary>
+        /// <param name="source">The source collection to iterate.</param>
+        public void FastForEach(IEnumerable<T> source)
         {
-            for (var i = 0; i < array.Length; i++)
+            ArgumentExceptionHelper.ThrowIfNull(observer);
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            if (source is T[] array)
             {
-                observer.OnNext(array[i]);
+                for (var i = 0; i < array.Length; i++)
+                {
+                    observer.OnNext(array[i]);
+                }
+
+                return;
             }
 
-            return;
-        }
-
-        if (source is List<T> fullList)
-        {
-            for (var i = 0; i < fullList.Count; i++)
+            if (source is List<T> fullList)
             {
-                observer.OnNext(fullList[i]);
+                for (var i = 0; i < fullList.Count; i++)
+                {
+                    observer.OnNext(fullList[i]);
+                }
+
+                return;
             }
 
-            return;
-        }
-
-        if (source is IList<T> list)
-        {
-            for (var i = 0; i < list.Count; i++)
+            if (source is IList<T> list)
             {
-                observer.OnNext(list[i]);
+                for (var i = 0; i < list.Count; i++)
+                {
+                    observer.OnNext(list[i]);
+                }
+
+                return;
             }
 
-            return;
-        }
-
-        if (source is IReadOnlyList<T> readOnlyList)
-        {
-            for (var i = 0; i < readOnlyList.Count; i++)
+            if (source is IReadOnlyList<T> readOnlyList)
             {
-                observer.OnNext(readOnlyList[i]);
+                for (var i = 0; i < readOnlyList.Count; i++)
+                {
+                    observer.OnNext(readOnlyList[i]);
+                }
+
+                return;
             }
 
-            return;
-        }
-
-        foreach (var item in source)
-        {
-            observer.OnNext(item);
+            foreach (var item in source)
+            {
+                observer.OnNext(item);
+            }
         }
     }
 }

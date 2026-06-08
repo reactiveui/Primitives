@@ -8,40 +8,26 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks for higher-order combinators.
-/// </summary>
+/// <summary>Benchmarks for higher-order combinators.</summary>
 [MemoryDiagnoser]
 public class OperatorHigherOrderBenchmarks
 {
-    /// <summary>
-    /// The inclusive start value of the primary range used by each benchmark.
-    /// </summary>
+    /// <summary>The inclusive start value of the primary range used by each benchmark.</summary>
     private const int Start = 1;
 
-    /// <summary>
-    /// The inclusive start value of the alternate range used by racing/switching benchmarks.
-    /// </summary>
+    /// <summary>The inclusive start value of the alternate range used by racing/switching benchmarks.</summary>
     private const int AltStart = 100;
 
-    /// <summary>
-    /// The inclusive start value of the right-hand range used by combining benchmarks.
-    /// </summary>
+    /// <summary>The inclusive start value of the right-hand range used by combining benchmarks.</summary>
     private const int RightStart = 10;
 
-    /// <summary>
-    /// The number of trailing elements retained by the fork-join-equivalent benchmarks.
-    /// </summary>
+    /// <summary>The number of trailing elements retained by the fork-join-equivalent benchmarks.</summary>
     private const int TakeLastCount = 1;
 
-    /// <summary>
-    /// The number of elements produced by each range used by the benchmarks.
-    /// </summary>
+    /// <summary>The number of elements produced by each range used by the benchmarks.</summary>
     private const int Count = 16;
 
-    /// <summary>
-    /// Benchmarks concatenating inner ranges.
-    /// </summary>
+    /// <summary>Benchmarks concatenating inner ranges.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesConcatRanges()
@@ -51,9 +37,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks concatenating ranges using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks concatenating ranges using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveConcatRanges()
@@ -64,9 +48,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks concatenating ranges using R3.
-    /// </summary>
+    /// <summary>Benchmarks concatenating ranges using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3ConcatRanges()
@@ -77,9 +59,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks merging inner ranges.
-    /// </summary>
+    /// <summary>Benchmarks merging inner ranges.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesMergeRanges()
@@ -89,9 +69,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks merging ranges using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks merging ranges using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveMergeRanges()
@@ -102,9 +80,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks merging ranges using R3.
-    /// </summary>
+    /// <summary>Benchmarks merging ranges using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3MergeRanges()
@@ -115,9 +91,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks racing two sources.
-    /// </summary>
+    /// <summary>Benchmarks racing two sources.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesRaceRanges()
@@ -127,9 +101,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks racing two sources using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks racing two sources using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveRaceRanges()
@@ -140,9 +112,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks racing two sources using R3.
-    /// </summary>
+    /// <summary>Benchmarks racing two sources using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3RaceRanges()
@@ -153,9 +123,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks switching to the latest inner source.
-    /// </summary>
+    /// <summary>Benchmarks switching to the latest inner source.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesSwitchRanges()
@@ -167,9 +135,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks switching to the latest inner source using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks switching to the latest inner source using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveSwitchRanges()
@@ -181,9 +147,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks switching to the latest inner source using R3.
-    /// </summary>
+    /// <summary>Benchmarks switching to the latest inner source using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3SwitchRanges()
@@ -197,9 +161,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks combine-latest over ranges.
-    /// </summary>
+    /// <summary>Benchmarks combine-latest over ranges.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesCombineLatestRanges()
@@ -212,9 +174,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks combine-latest over ranges using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks combine-latest over ranges using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveCombineLatestRanges()
@@ -227,9 +187,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks combine-latest over ranges using R3.
-    /// </summary>
+    /// <summary>Benchmarks combine-latest over ranges using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3CombineLatestRanges()
@@ -242,9 +200,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks with-latest over ranges.
-    /// </summary>
+    /// <summary>Benchmarks with-latest over ranges.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesWithLatestRanges()
@@ -256,9 +212,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks with-latest over ranges using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks with-latest over ranges using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveWithLatestRanges()
@@ -271,9 +225,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks with-latest over ranges using R3.
-    /// </summary>
+    /// <summary>Benchmarks with-latest over ranges using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3WithLatestRanges()
@@ -286,9 +238,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks fork-join over ranges.
-    /// </summary>
+    /// <summary>Benchmarks fork-join over ranges.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int PrimitivesForkJoinRanges()
@@ -301,9 +251,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks fork-join over ranges using System.Reactive.
-    /// </summary>
+    /// <summary>Benchmarks fork-join over ranges using System.Reactive.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int SystemReactiveForkJoinRanges()
@@ -319,9 +267,7 @@ public class OperatorHigherOrderBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Benchmarks fork-join-equivalent last combined value over ranges using R3.
-    /// </summary>
+    /// <summary>Benchmarks fork-join-equivalent last combined value over ranges using R3.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int R3ForkJoinRanges()

@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Tests for DisposableAsync, CompositeDisposableAsync, SingleAssignmentDisposableAsync, and SerialDisposableAsync.
-/// </summary>
+/// <summary>Tests for DisposableAsync, CompositeDisposableAsync, SingleAssignmentDisposableAsync, and SerialDisposableAsync.</summary>
 public class DisposableTests
 {
     /// <summary>Tests DisposableAsync.Empty dispose does nothing.</summary>
@@ -391,9 +389,7 @@ public class DisposableTests
         await composite.DisposeAsync();
     }
 
-    /// <summary>
-    /// Verifies that CopyTo on a disposed CompositeDisposableAsync returns without copying.
-    /// </summary>
+    /// <summary>Verifies that CopyTo on a disposed CompositeDisposableAsync returns without copying.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCompositeCopyToAfterDispose_ThenNoItemsCopied()
@@ -409,10 +405,7 @@ public class DisposableTests
         await Assert.That(array[0]).IsNull();
     }
 
-    /// <summary>
-    /// Verifies that CopyTo throws ArgumentOutOfRangeException when there is insufficient space
-    /// in the destination array.
-    /// </summary>
+    /// <summary>Verifies that CopyTo throws ArgumentOutOfRangeException when there is insufficient space in the destination array.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCompositeCopyToInsufficientSpace_ThenThrowsArgumentOutOfRange()
@@ -429,9 +422,7 @@ public class DisposableTests
         await Assert.That(composite.IsDisposed).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that CopyTo throws ArgumentOutOfRangeException for negative arrayIndex.
-    /// </summary>
+    /// <summary>Verifies that CopyTo throws ArgumentOutOfRangeException for negative arrayIndex.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCompositeCopyToNegativeIndex_ThenThrowsArgumentOutOfRange()
@@ -445,8 +436,7 @@ public class DisposableTests
         await Assert.That(composite.IsDisposed).IsTrue();
     }
 
-    /// <summary>Exercises the <c>arrayIndex &gt;= array.Length</c> branch of the
-    /// <c>CompositeDisposableAsync.CopyTo</c> bounds check.</summary>
+    /// <summary>Exercises the <c>arrayIndex &gt;= array.Length</c> branch of the <c>CompositeDisposableAsync.CopyTo</c> bounds check.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCompositeCopyToIndexAtArrayLength_ThenThrowsArgumentOutOfRange()
@@ -564,10 +554,7 @@ public class DisposableTests
         await Assert.That(sad.IsDisposed).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that double assignment on the static SetDisposableAsync helper throws
-    /// InvalidOperationException.
-    /// </summary>
+    /// <summary>Verifies that double assignment on the static SetDisposableAsync helper throws InvalidOperationException.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleAssignmentDoubleAssignNonNull_ThenThrowsInvalidOperation()
@@ -603,7 +590,7 @@ public class DisposableTests
         await Assert.That(disposable).IsNotNull();
     }
 
-    /// <summary>Tests DisposableAsyncMixins ToDisposableAsync wraps IDisposable correctly.</summary>
+    /// <summary>Tests DisposableAsyncExtensions ToDisposableAsync wraps IDisposable correctly.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenToDisposableAsync_ThenWrapsIDisposable()
@@ -842,16 +829,12 @@ public class DisposableTests
         await Assert.That(ex).IsTypeOf<InvalidOperationException>();
     }
 
-    /// <summary>
-    /// Verifies that DisposableAsync.Create throws ArgumentNullException when given a null delegate.
-    /// </summary>
+    /// <summary>Verifies that DisposableAsync.Create throws ArgumentNullException when given a null delegate.</summary>
     [Test]
     public void WhenDisposableAsyncCreateNull_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(() => DisposableAsync.Create(null!));
 
-    /// <summary>
-    /// Verifies that DisposableAsyncMixins.ToDisposableAsync throws ArgumentNullException for null input.
-    /// </summary>
+    /// <summary>Verifies that DisposableAsyncExtensions.ToDisposableAsync throws ArgumentNullException for null input.</summary>
     [Test]
     public void WhenToDisposableAsyncNull_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(() => ((IDisposable)null!).ToDisposableAsync());
@@ -900,10 +883,7 @@ public class DisposableTests
         await Assert.That(disposedCount).IsEqualTo(ExpectedDisposedCount);
     }
 
-    /// <summary>
-    /// Verifies that the DisposedSlotMarker.DisposeAsync returns a completed ValueTask
-    /// without throwing.
-    /// </summary>
+    /// <summary>Verifies that the DisposedSlotMarker.DisposeAsync returns a completed ValueTask without throwing.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSerialDisposedSlotMarkerDisposeAsync_ThenReturnsCompletedValueTask()
@@ -1104,15 +1084,11 @@ public class DisposableTests
         await composite.DisposeAsync();
     }
 
-    /// <summary>
-    /// Helper disposable for testing ToDisposableAsync.
-    /// </summary>
+    /// <summary>Helper disposable for testing ToDisposableAsync.</summary>
     /// <param name="onDispose">The action to invoke on disposal.</param>
     private sealed class TestSyncDisposable(Action onDispose) : IDisposable
     {
-        /// <summary>
-        /// Disposes the resource and invokes the disposal callback.
-        /// </summary>
+        /// <summary>Disposes the resource and invokes the disposal callback.</summary>
         public void Dispose() => onDispose();
     }
 }

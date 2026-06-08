@@ -10,9 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Tests;
 /// <summary>Tests for ReactiveExtensionsTests.</summary>
 public partial class ReactiveExtensionsTests
 {
-    /// <summary>
-    /// Tests ForEach flattens enumerables.
-    /// </summary>
+    /// <summary>Tests ForEach flattens enumerables.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task ForEach_FlattensEnumerables()
@@ -24,9 +22,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2, SampleValue3]);
     }
 
-    /// <summary>
-    /// Tests FastForEach with List source emits all items via OnNext.
-    /// </summary>
+    /// <summary>Tests FastForEach with List source emits all items via OnNext.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFastForEachWithList_ThenEmitsAllItems()
@@ -38,9 +34,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2, SampleValue3]);
     }
 
-    /// <summary>
-    /// Tests FastForEach with array source emits all items via OnNext.
-    /// </summary>
+    /// <summary>Tests FastForEach with array source emits all items via OnNext.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFastForEachWithArray_ThenEmitsAllItems()
@@ -52,9 +46,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2, SampleValue3]);
     }
 
-    /// <summary>
-    /// Tests FastForEach with generic IEnumerable source emits all items.
-    /// </summary>
+    /// <summary>Tests FastForEach with generic IEnumerable source emits all items.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFastForEachWithEnumerable_ThenEmitsAllItems()
@@ -73,9 +65,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>
-    /// Tests FastForEach with IList branch using ArraySegment which implements IList but not List or T[].
-    /// </summary>
+    /// <summary>Tests FastForEach with IList branch using ArraySegment which implements IList but not List or T[].</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFastForEachWithIList_ThenEmitsAllItems()
@@ -88,9 +78,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue10, SampleValue20, SampleValue30]);
     }
 
-    /// <summary>
-    /// Tests FastForEach with an array passed through ForEach (Observable of IEnumerable).
-    /// </summary>
+    /// <summary>Tests FastForEach with an array passed through ForEach (Observable of IEnumerable).</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFastForEachWithArrayViaForEach_ThenEmitsAllItems()
@@ -103,9 +91,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo([SampleValue10, SampleValue20, SampleValue30]);
     }
 
-    /// <summary>
-    /// Tests FastForEach with an IList source.
-    /// </summary>
+    /// <summary>Tests FastForEach with an IList source.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFastForEach_GivenIList_ThenAllItemsEmitted()
@@ -122,9 +108,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(received).IsCollectionEqualTo([1, SampleValue2, SampleValue3]);
     }
 
-    /// <summary>
-    /// Tests FastForEach with an array source.
-    /// </summary>
+    /// <summary>Tests FastForEach with an array source.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFastForEach_GivenArray_ThenAllItemsEmitted()
@@ -141,9 +125,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(received).IsCollectionEqualTo([SampleValue10, SampleValue20, SampleValue30]);
     }
 
-    /// <summary>
-    /// Tests FastForEach with a plain IEnumerable source.
-    /// </summary>
+    /// <summary>Tests FastForEach with a plain IEnumerable source.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFastForEach_GivenIEnumerable_ThenAllItemsEmitted()

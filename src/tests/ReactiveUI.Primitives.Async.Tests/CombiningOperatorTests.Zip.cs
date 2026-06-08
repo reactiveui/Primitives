@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <content>
-/// Zip tests for combining operators.
-/// </content>
+/// <summary>Tests for the Zip operator.</summary>
 public partial class CombiningOperatorTests
 {
     /// <summary>Tests Zip two sequences pairs by index.</summary>
@@ -56,9 +54,7 @@ public partial class CombiningOperatorTests
     public void WhenZipNullArguments_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(() =>
         ((SignalAsync<int>)null!).Zip(SignalAsync.Return(1), (a, b) => a + b));
 
-    /// <summary>
-    /// Verifies that zip propagates a failure when the first source errors.
-    /// </summary>
+    /// <summary>Verifies that zip propagates a failure when the first source errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenZipFirstSourceErrors_ThenFailurePropagates()
@@ -82,9 +78,7 @@ public partial class CombiningOperatorTests
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that zip propagates a failure when the second source errors.
-    /// </summary>
+    /// <summary>Verifies that zip propagates a failure when the second source errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenZipSecondSourceErrors_ThenFailurePropagates()
@@ -176,9 +170,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).IsCollectionEqualTo([RangeOffset101, RangeOffset103]);
     }
 
-    /// <summary>
-    /// Tests that Zip OnErrorResumeAsync from first source is forwarded to observer.
-    /// </summary>
+    /// <summary>Tests that Zip OnErrorResumeAsync from first source is forwarded to observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenZipFirstSourceErrorResume_ThenForwardedToObserver()
@@ -206,9 +198,7 @@ public partial class CombiningOperatorTests
         await Assert.That(received!.Message).IsEqualTo("first error");
     }
 
-    /// <summary>
-    /// Tests that Zip OnErrorResumeAsync from second source is forwarded to observer.
-    /// </summary>
+    /// <summary>Tests that Zip OnErrorResumeAsync from second source is forwarded to observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenZipSecondSourceErrorResume_ThenForwardedToObserver()
@@ -236,9 +226,7 @@ public partial class CombiningOperatorTests
         await Assert.That(received!.Message).IsEqualTo("second error");
     }
 
-    /// <summary>
-    /// Tests that Zip ignores items from first source after done flag is set.
-    /// </summary>
+    /// <summary>Tests that Zip ignores items from first source after done flag is set.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenZipFirstSourceEmitsAfterDone_ThenIgnored()
@@ -276,9 +264,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).IsEmpty();
     }
 
-    /// <summary>
-    /// Tests that Zip buffers items correctly when second source produces before first.
-    /// </summary>
+    /// <summary>Tests that Zip buffers items correctly when second source produces before first.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenZipSecondEmitsBeforeFirst_ThenBuffersAndPairs()
@@ -312,9 +298,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).IsCollectionEqualTo(["1-a", "2-b"]);
     }
 
-    /// <summary>
-    /// Tests that Zip OnCompleted1Async returns early when done is already set.
-    /// </summary>
+    /// <summary>Tests that Zip OnCompleted1Async returns early when done is already set.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenZipFirstSourceCompletedTwice_ThenSecondCompletionIgnored()
@@ -445,9 +429,7 @@ public partial class CombiningOperatorTests
         await Assert.That(result).IsCollectionEqualTo([RangeOffset101]);
     }
 
-    /// <summary>
-    /// Tests Zip where first source is empty, exercising the _done early return.
-    /// </summary>
+    /// <summary>Tests Zip where first source is empty, exercising the _done early return.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenZipFirstSourceEmpty_ThenNoOutput()
@@ -460,9 +442,7 @@ public partial class CombiningOperatorTests
         await Assert.That(result).IsEmpty();
     }
 
-    /// <summary>
-    /// Verifies that Zip OnNext returns early after one source has already completed and set _done.
-    /// </summary>
+    /// <summary>Verifies that Zip OnNext returns early after one source has already completed and set _done.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenZipOnNextAfterDone_ThenReturnsEarly()
@@ -500,9 +480,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).IsEmpty();
     }
 
-    /// <summary>
-    /// Verifies that Zip OnNext1 returns early after done.
-    /// </summary>
+    /// <summary>Verifies that Zip OnNext1 returns early after done.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenZipOnNext1AfterDone_ThenReturnsEarly()
@@ -540,9 +518,7 @@ public partial class CombiningOperatorTests
         await Assert.That(items).IsEmpty();
     }
 
-    /// <summary>
-    /// Verifies that Zip OnCompleted1Async returns early when _done is already true.
-    /// </summary>
+    /// <summary>Verifies that Zip OnCompleted1Async returns early when _done is already true.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenZipOnCompleted1AfterDone_ThenReturnsEarly()

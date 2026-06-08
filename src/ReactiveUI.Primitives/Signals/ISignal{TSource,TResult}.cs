@@ -6,16 +6,12 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// ISubject.
-/// </summary>
+/// <summary>ISubject.</summary>
 /// <typeparam name="TSource">The type of the source.</typeparam>
 /// <typeparam name="TResult">The type of the result.</typeparam>
 public interface ISignal<in TSource, out TResult> : IObserver<TSource>, IObservable<TResult>, IsDisposed
 {
-    /// <summary>
-    /// Gets a value indicating whether this instance has observers.
-    /// </summary>
+    /// <summary>Gets a value indicating whether this instance has observers.</summary>
     /// <value>
     ///   <c>true</c> if this instance has observers; otherwise, <c>false</c>.
     /// </value>

@@ -8,14 +8,10 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
-/// <summary>
-/// Tests disposable extensions.
-/// </summary>
+/// <summary>Tests disposable extensions.</summary>
 public class DisposableExtensionsTests
 {
-    /// <summary>
-    /// Tests DisposeWith returns a disposable.
-    /// </summary>
+    /// <summary>Tests DisposeWith returns a disposable.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task GivenNull_WhenDisposeWith_ThenExceptionThrown()
@@ -30,9 +26,7 @@ public class DisposableExtensionsTests
         await Assert.That(result).IsTypeOf<ArgumentNullException>();
     }
 
-    /// <summary>
-    /// Tests DisposeWith disposes the underlying disposable.
-    /// </summary>
+    /// <summary>Tests DisposeWith disposes the underlying disposable.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task GivenDisposable_WhenDisposeWith_ThenDisposed()
@@ -49,9 +43,7 @@ public class DisposableExtensionsTests
         await Assert.That(sut.IsDisposed).IsTrue();
     }
 
-    /// <summary>
-    /// Tests DisposeWith returns the original disposable.
-    /// </summary>
+    /// <summary>Tests DisposeWith returns the original disposable.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task GivenDisposable_WhenDisposeWith_ThenReturnsDisposable()

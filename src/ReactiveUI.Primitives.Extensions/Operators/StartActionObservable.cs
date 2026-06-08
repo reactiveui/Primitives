@@ -8,9 +8,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Operator that runs an action and completes immediately.
-/// </summary>
+/// <summary>Operator that runs an action and completes immediately.</summary>
 /// <param name="action">The action to run.</param>
 /// <param name="scheduler">An optional scheduler; <c>null</c> runs the action synchronously inline.</param>
 internal sealed class StartActionObservable(Action action, ISequencer? scheduler) : IObservable<RxVoid>
@@ -36,11 +34,7 @@ internal sealed class StartActionObservable(Action action, ISequencer? scheduler
         });
     }
 
-    /// <summary>
-    /// Runs <paramref name="action"/> and signals <paramref name="observer"/>
-    /// with <see cref="RxVoid.Default"/> followed by completion. Exceptions
-    /// thrown by the action are forwarded to <see cref="IObserver{T}.OnError"/>.
-    /// </summary>
+    /// <summary>Runs the action, then signals the observer with <see cref="RxVoid.Default"/> and completion.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="action">The action to invoke.</param>
     private static void Run(IObserver<RxVoid> observer, Action action)

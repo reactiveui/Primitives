@@ -27,9 +27,7 @@ internal sealed class TakeUntilLifecycle<T> : IAsyncDisposable
     /// <summary>Registration that propagates the subscribe-time cancellation token into <see cref="_cts"/>.</summary>
     private CancellationTokenRegistration _externalLinkRegistration;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TakeUntilLifecycle{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="TakeUntilLifecycle{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     public TakeUntilLifecycle(IObserverAsync<T> observer)
     {

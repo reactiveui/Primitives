@@ -9,15 +9,11 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks for default-if-empty, prepend/append, and equivalent operators.
-/// </summary>
+/// <summary>Benchmarks for default-if-empty, prepend/append, and equivalent operators.</summary>
 [MemoryDiagnoser]
 public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
 {
-    /// <summary>
-    /// Baseline start-with / default-if-empty / append chain using primitives.
-    /// </summary>
+    /// <summary>Baseline start-with / default-if-empty / append chain using primitives.</summary>
     /// <returns>The sum of emitted values.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesStartWithAppendDefaultIfEmpty()
@@ -31,9 +27,7 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Default-if-empty over an immediate empty primitives source.
-    /// </summary>
+    /// <summary>Default-if-empty over an immediate empty primitives source.</summary>
     /// <returns>The emitted default value.</returns>
     [Benchmark]
     public int PrimitivesDefaultIfEmptyEmpty()
@@ -45,9 +39,7 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Equivalent composition using System.Reactive.
-    /// </summary>
+    /// <summary>Equivalent composition using System.Reactive.</summary>
     /// <returns>The sum of emitted values.</returns>
     [Benchmark]
     public int SystemReactiveStartWithAppendDefaultIfEmpty()
@@ -61,9 +53,7 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Default-if-empty over an immediate empty System.Reactive source.
-    /// </summary>
+    /// <summary>Default-if-empty over an immediate empty System.Reactive source.</summary>
     /// <returns>The emitted default value.</returns>
     [Benchmark]
     public int SystemReactiveDefaultIfEmptyEmpty()
@@ -74,9 +64,7 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Equivalent chain using R3.
-    /// </summary>
+    /// <summary>Equivalent chain using R3.</summary>
     /// <returns>The sum of emitted values.</returns>
     [Benchmark]
     public int R3PrependAppendDefaultIfEmpty()
@@ -93,9 +81,7 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Default-if-empty over an immediate empty R3 source.
-    /// </summary>
+    /// <summary>Default-if-empty over an immediate empty R3 source.</summary>
     /// <returns>The emitted default value.</returns>
     [Benchmark]
     public int R3DefaultIfEmptyEmpty()

@@ -49,7 +49,10 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _downstream;
 
-        /// <summary>Shared queue / gate / scheduled-drain machinery.</summary>
+        /// <summary>The gate protecting the queue and terminal state.</summary>
+        private readonly Lock _gate = new();
+
+        /// <summary>Shared queue / scheduled-drain machinery.</summary>
         private readonly ScheduledDrainState<T> _state;
 
         /// <summary>Initializes a new instance of the <see cref="ObserveOnSink"/> class.</summary>
@@ -58,7 +61,7 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
         public ObserveOnSink(IObserver<T> downstream, ISequencer scheduler)
         {
             _downstream = downstream;
-            _state = new ScheduledDrainState<T>(scheduler, this);
+            _state = new ScheduledDrainState<T>(scheduler, this, _gate);
         }
 
         /// <summary>Records the upstream subscription so <see cref="Dispose"/> can tear it down.</summary>
@@ -85,25 +88,25 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
                 switch (notification.Kind)
                 {
                     case DrainNotificationKind.Next:
-                    {
-                        _downstream.OnNext(notification.Value);
-                        break;
-                    }
+                        {
+                            _downstream.OnNext(notification.Value);
+                            break;
+                        }
 
                     case DrainNotificationKind.Error:
-                    {
-                        _state.Terminate();
-                        _downstream.OnError(notification.Error!);
-                        return;
-                    }
+                        {
+                            _state.Terminate();
+                            _downstream.OnError(notification.Error!);
+                            return;
+                        }
 
                     default:
-                    {
-                        // DrainNotificationKind has only three values; the discard arm absorbs Completed.
-                        _state.Terminate();
-                        _downstream.OnCompleted();
-                        return;
-                    }
+                        {
+                            // DrainNotificationKind has only three values; the discard arm absorbs Completed.
+                            _state.Terminate();
+                            _downstream.OnCompleted();
+                            return;
+                        }
                 }
             }
         }

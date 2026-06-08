@@ -8,9 +8,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
-/// <summary>
-/// Ported coverage for the migrated synchronous extension operators using primitives runtime types.
-/// </summary>
+/// <summary>Ported coverage for the migrated synchronous extension operators using primitives runtime types.</summary>
 public sealed class ReactiveExtensionsPortedTests
 {
     /// <summary>Candidate keys probed by the first-match test.</summary>

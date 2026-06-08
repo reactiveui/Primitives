@@ -4,21 +4,23 @@
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides extension methods for working with asynchronous observable sequences.
-/// </summary>
-public static partial class SignalAsync
+/// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
+public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Transforms an observable sequence of observable sequences into a single observable sequence that emits
-    /// values from the most recent inner observable sequence.
-    /// </summary>
-    /// <remarks>This operator is commonly used to switch to a new data stream whenever a new inner
-    /// observable is produced, unsubscribing from the previous inner observable. Only items from the latest inner
-    /// observable are emitted to subscribers.</remarks>
-    /// <typeparam name="T">The type of the elements in the inner observable sequences.</typeparam>
+    /// <summary>Switch operators for an observable source sequence of inner observable sequences.</summary>
     /// <param name="this">The source observable sequence of observable sequences.</param>
-    /// <returns>An observable sequence that emits items from the most recently emitted inner observable sequence. When a new
-    /// inner sequence is emitted, the previous one is unsubscribed.</returns>
-    public static IObservableAsync<T> Switch<T>(this IObservableAsync<IObservableAsync<T>> @this) => new SwitchSignal<T>(@this);
+    /// <typeparam name="T">The type of the elements in the inner observable sequences.</typeparam>
+    extension<T>(IObservableAsync<IObservableAsync<T>> @this)
+    {
+        /// <summary>
+        /// Transforms an observable sequence of observable sequences into a single observable sequence that emits
+        /// values from the most recent inner observable sequence.
+        /// </summary>
+        /// <remarks>This operator is commonly used to switch to a new data stream whenever a new inner
+        /// observable is produced, unsubscribing from the previous inner observable. Only items from the latest inner
+        /// observable are emitted to subscribers.</remarks>
+        /// <returns>An observable sequence that emits items from the most recently emitted inner observable sequence. When a new
+        /// inner sequence is emitted, the previous one is unsubscribed.</returns>
+        public IObservableAsync<T> Switch() => new SwitchSignal<T>(@this);
+    }
 }

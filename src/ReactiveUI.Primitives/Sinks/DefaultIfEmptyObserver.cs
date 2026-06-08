@@ -4,30 +4,20 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Observer for default-if-empty.
-/// </summary>
+/// <summary>Observer for default-if-empty.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 public sealed class DefaultIfEmptyObserver<T> : SingleSourceObserver<T>
 {
-    /// <summary>
-    /// The downstream observer.
-    /// </summary>
+    /// <summary>The downstream observer.</summary>
     private readonly IObserver<T> _observer;
 
-    /// <summary>
-    /// Value emitted for an empty source.
-    /// </summary>
+    /// <summary>Value emitted for an empty source.</summary>
     private readonly T _defaultValue;
 
-    /// <summary>
-    /// A value indicating whether the source produced any values.
-    /// </summary>
+    /// <summary>A value indicating whether the source produced any values.</summary>
     private bool _seen;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DefaultIfEmptyObserver{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="DefaultIfEmptyObserver{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="defaultValue">Value emitted for an empty source.</param>
     public DefaultIfEmptyObserver(IObserver<T> observer, T defaultValue)

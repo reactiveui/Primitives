@@ -7,37 +7,27 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Represents the immediate Throw signal fast path.
-/// </summary>
+/// <summary>Represents the immediate Throw signal fast path.</summary>
 /// <typeparam name="T">The T type.</typeparam>
 internal sealed class ImmediateThrowSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
 {
-    /// <summary>
-    /// Stores the terminal error.
-    /// </summary>
+    /// <summary>Stores the terminal error.</summary>
     private readonly Exception _error;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ImmediateThrowSignal{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ImmediateThrowSignal{T}"/> class.</summary>
     /// <param name="error">The terminal error.</param>
     public ImmediateThrowSignal(Exception error) => _error = error;
 
-    /// <summary>
-    /// Executes the IsRequiredSubscribeOnCurrentThread operation.
-    /// </summary>
+    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>
-    /// Executes the Subscribe operation.
-    /// </summary>
+    /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -46,9 +36,7 @@ internal sealed class ImmediateThrowSignal<T> : IRequireCurrentThread<T>, IInlin
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>
-    /// Executes the Subscribe operation.
-    /// </summary>
+    /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="onNext">The onNext value.</param>
     /// <param name="onError">The onError value.</param>
     /// <param name="onCompleted">The onCompleted value.</param>

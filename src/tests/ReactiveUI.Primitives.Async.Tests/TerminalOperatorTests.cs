@@ -16,12 +16,10 @@ public partial class TerminalOperatorTests
     /// <summary>String literal "resume error" used by multiple tests.</summary>
     private const string ResumeErrorMessage = "resume error";
 
-    /// <summary>Expected exception text when a single/first observer terminates on an empty source
-    /// without a predicate.</summary>
+    /// <summary>Expected exception text when a single/first observer terminates on an empty source without a predicate.</summary>
     private const string NoElementsMessage = "Sequence contains no elements.";
 
-    /// <summary>Expected exception text when a single/first observer terminates with a predicate
-    /// that never matches.</summary>
+    /// <summary>Expected exception text when a single/first observer terminates with a predicate that never matches.</summary>
     private const string NoMatchingElementsMessage = "Sequence contains no matching elements.";
 
     /// <summary>Expected exception text when SingleAsync sees more than one element with no predicate.</summary>

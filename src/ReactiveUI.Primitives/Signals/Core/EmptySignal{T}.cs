@@ -7,27 +7,19 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Represents the EmptySignal class.
-/// </summary>
+/// <summary>Represents the EmptySignal class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
 internal sealed class EmptySignal<T> : SignalsBase<T>
 {
-    /// <summary>
-    /// Stores state for the signal implementation.
-    /// </summary>
+    /// <summary>Stores state for the signal implementation.</summary>
     private readonly ISequencer _scheduler;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EmptySignal{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="EmptySignal{T}"/> class.</summary>
     /// <param name="scheduler">The scheduler value.</param>
     public EmptySignal(ISequencer scheduler)
         : base(false) => _scheduler = scheduler;
 
-    /// <summary>
-    /// Executes the SubscribeCore operation.
-    /// </summary>
+    /// <summary>Executes the SubscribeCore operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <param name="cancel">The cancel value.</param>
     /// <returns>The result.</returns>
@@ -44,14 +36,10 @@ internal sealed class EmptySignal<T> : SignalsBase<T>
         return _scheduler.Schedule(observer.OnCompleted);
     }
 
-    /// <summary>
-    /// Represents the Empty class.
-    /// </summary>
+    /// <summary>Represents the Empty class.</summary>
     internal sealed class Empty : WitnessBase<T, T>
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Empty"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="Empty"/> class.</summary>
         /// <param name="observer">The observer value.</param>
         /// <param name="cancel">The cancel value.</param>
         public Empty(IObserver<T> observer, IDisposable cancel)
@@ -59,9 +47,7 @@ internal sealed class EmptySignal<T> : SignalsBase<T>
         {
         }
 
-        /// <summary>
-        /// Executes the OnNext operation.
-        /// </summary>
+        /// <summary>Executes the OnNext operation.</summary>
         /// <param name="value">The value.</param>
         public override void OnNext(T value)
         {
@@ -76,9 +62,7 @@ internal sealed class EmptySignal<T> : SignalsBase<T>
             }
         }
 
-        /// <summary>
-        /// Executes the OnError operation.
-        /// </summary>
+        /// <summary>Executes the OnError operation.</summary>
         /// <param name="error">The error value.</param>
         public override void OnError(Exception error)
         {
@@ -92,9 +76,7 @@ internal sealed class EmptySignal<T> : SignalsBase<T>
             }
         }
 
-        /// <summary>
-        /// Executes the OnCompleted operation.
-        /// </summary>
+        /// <summary>Executes the OnCompleted operation.</summary>
         public override void OnCompleted()
         {
             try

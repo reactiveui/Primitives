@@ -24,46 +24,30 @@ public sealed class DisposableBag : IsDisposed
     /// <summary>Growth factor for the overflow array.</summary>
     private const int OverflowGrowthFactor = 2;
 
-    /// <summary>
-    /// The synchronization object.
-    /// </summary>
+    /// <summary>The synchronization object.</summary>
     private readonly Lock _gate = new();
 
-    /// <summary>
-    /// The first disposable slot.
-    /// </summary>
+    /// <summary>The first disposable slot.</summary>
     private IDisposable? _slot0;
 
-    /// <summary>
-    /// The second disposable slot.
-    /// </summary>
+    /// <summary>The second disposable slot.</summary>
     private IDisposable? _slot1;
 
-    /// <summary>
-    /// The overflow array for additional disposables.
-    /// </summary>
+    /// <summary>The overflow array for additional disposables.</summary>
     private IDisposable[]? _overflow;
 
-    /// <summary>
-    /// The number of disposables in the overflow array.
-    /// </summary>
+    /// <summary>The number of disposables in the overflow array.</summary>
     private int _overflowCount;
 
-    /// <summary>
-    /// Indicates whether the bag has been disposed.
-    /// </summary>
+    /// <summary>Indicates whether the bag has been disposed.</summary>
     private bool _disposed;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DisposableBag"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="DisposableBag"/> class.</summary>
     public DisposableBag()
     {
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DisposableBag"/> class with two pre-populated slots.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="DisposableBag"/> class with two pre-populated slots.</summary>
     /// <param name="first">The first disposable.</param>
     /// <param name="second">The second disposable.</param>
     public DisposableBag(IDisposable first, IDisposable second)
@@ -72,9 +56,7 @@ public sealed class DisposableBag : IsDisposed
         _slot1 = second;
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DisposableBag"/> class with three pre-populated slots.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="DisposableBag"/> class with three pre-populated slots.</summary>
     /// <param name="first">The first disposable.</param>
     /// <param name="second">The second disposable.</param>
     /// <param name="third">The third disposable.</param>
@@ -87,22 +69,15 @@ public sealed class DisposableBag : IsDisposed
         _overflowCount = 1;
     }
 
-    /// <summary>
-    /// Gets a value indicating whether this instance has been disposed.
-    /// </summary>
+    /// <summary>Gets a value indicating whether this instance has been disposed.</summary>
     public bool IsDisposed => Volatile.Read(ref _disposed);
 
-    /// <summary>
-    /// Gets the debugger display text.
-    /// </summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>
-    /// Adds a disposable to the bag. If the bag is already disposed, the supplied
-    /// disposable is disposed immediately.
-    /// </summary>
+    /// <summary>Adds a disposable to the bag. If the bag is already disposed, the supplied disposable is disposed immediately.</summary>
     /// <param name="disposable">The disposable to add.</param>
     public void Add(IDisposable disposable)
     {

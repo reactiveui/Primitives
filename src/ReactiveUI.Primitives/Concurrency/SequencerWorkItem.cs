@@ -4,37 +4,25 @@
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// Disposable scheduled work item used by UI-backed sequencers.
-/// </summary>
+/// <summary>Disposable scheduled work item used by UI-backed sequencers.</summary>
 /// <typeparam name="TSequencer">The sequencer type passed to the scheduled action.</typeparam>
 /// <typeparam name="TState">The scheduled state type.</typeparam>
 internal sealed class SequencerWorkItem<TSequencer, TState> : IDisposable
     where TSequencer : ISequencer
 {
-    /// <summary>
-    /// Sequencer passed to the scheduled action.
-    /// </summary>
+    /// <summary>Sequencer passed to the scheduled action.</summary>
     private readonly TSequencer _sequencer;
 
-    /// <summary>
-    /// State passed to the scheduled action.
-    /// </summary>
+    /// <summary>State passed to the scheduled action.</summary>
     private readonly TState _state;
 
-    /// <summary>
-    /// Action invoked when the scheduled item runs.
-    /// </summary>
+    /// <summary>Action invoked when the scheduled item runs.</summary>
     private readonly Func<ISequencer, TState, IDisposable> _action;
 
-    /// <summary>
-    /// Tracks cancellation.
-    /// </summary>
+    /// <summary>Tracks cancellation.</summary>
     private int _isDisposed;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SequencerWorkItem{TSequencer, TState}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="SequencerWorkItem{TSequencer, TState}"/> class.</summary>
     /// <param name="sequencer">Sequencer passed to the action.</param>
     /// <param name="state">State passed to the action.</param>
     /// <param name="action">Action to invoke.</param>
@@ -45,14 +33,10 @@ internal sealed class SequencerWorkItem<TSequencer, TState> : IDisposable
         _action = action;
     }
 
-    /// <summary>
-    /// Cancels the work item.
-    /// </summary>
+    /// <summary>Cancels the work item.</summary>
     public void Dispose() => Interlocked.Exchange(ref _isDisposed, 1);
 
-    /// <summary>
-    /// Invokes the scheduled action if it has not been cancelled.
-    /// </summary>
+    /// <summary>Invokes the scheduled action if it has not been cancelled.</summary>
     public void Invoke()
     {
         if (Volatile.Read(ref _isDisposed) != 0)

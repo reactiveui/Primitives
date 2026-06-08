@@ -8,20 +8,14 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks for single value signal construction and observation.
-/// </summary>
+/// <summary>Benchmarks for single value signal construction and observation.</summary>
 [MemoryDiagnoser]
 public class ScalarSignalBenchmarks
 {
-    /// <summary>
-    /// The single value emitted by each scalar signal under test.
-    /// </summary>
+    /// <summary>The single value emitted by each scalar signal under test.</summary>
     private const int ScalarValue = 42;
 
-    /// <summary>
-    /// Baseline single-value sequence with ReactiveUI.Primitives.
-    /// </summary>
+    /// <summary>Baseline single-value sequence with ReactiveUI.Primitives.</summary>
     /// <returns>The observed value.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesReturnSubscribe()
@@ -31,9 +25,7 @@ public class ScalarSignalBenchmarks
         return observer.LastValue;
     }
 
-    /// <summary>
-    /// Single-value sequence using System.Reactive.
-    /// </summary>
+    /// <summary>Single-value sequence using System.Reactive.</summary>
     /// <returns>The observed value.</returns>
     [Benchmark]
     public int SystemReactiveReturnSubscribe()
@@ -43,9 +35,7 @@ public class ScalarSignalBenchmarks
         return observer.LastValue;
     }
 
-    /// <summary>
-    /// Single-value sequence using R3.
-    /// </summary>
+    /// <summary>Single-value sequence using R3.</summary>
     /// <returns>The observed value.</returns>
     [Benchmark]
     public int R3ReturnSubscribe()

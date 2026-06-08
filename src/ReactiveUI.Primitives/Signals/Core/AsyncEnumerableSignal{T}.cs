@@ -1,21 +1,16 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals.Core;
 
-/// <summary>
-/// Async-enumerable observable adapter.
-/// </summary>
+/// <summary>Async-enumerable observable adapter.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 internal sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AsyncEnumerableSignal{T}"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="AsyncEnumerableSignal{T}"/> class.</summary>
     /// <param name="values">The source async enumerable.</param>
     /// <param name="cancellationToken">The cancellation token used by the adapter.</param>
     public AsyncEnumerableSignal(IAsyncEnumerable<T> values, CancellationToken cancellationToken)
@@ -33,7 +28,7 @@ internal sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer == null)
+        if (observer is null)
         {
             throw new ArgumentNullException(nameof(observer));
         }
@@ -62,7 +57,7 @@ internal sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
             }
 
             var current = Volatile.Read(ref enumerator);
-            if (current == null)
+            if (current is null)
             {
                 return;
             }
@@ -90,9 +85,7 @@ internal sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
         }
     }
 
-    /// <summary>
-    /// Pumps the async enumerable into an observer.
-    /// </summary>
+    /// <summary>Pumps the async enumerable into an observer.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="cts">The subscription cancellation source.</param>
     /// <param name="setEnumerator">Captures the active enumerator.</param>
@@ -124,7 +117,7 @@ internal sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
         }
         finally
         {
-            if (enumerator != null)
+            if (enumerator is not null)
             {
                 await enumerator.DisposeAsync().ConfigureAwait(false);
             }

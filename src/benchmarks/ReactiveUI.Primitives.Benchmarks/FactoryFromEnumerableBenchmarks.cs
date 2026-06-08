@@ -9,15 +9,11 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks for enumerable-to-observable adapter factories.
-/// </summary>
+/// <summary>Benchmarks for enumerable-to-observable adapter factories.</summary>
 [MemoryDiagnoser]
 public class FactoryFromEnumerableBenchmarks
 {
-    /// <summary>
-    /// The source values streamed through each enumerable adapter under test.
-    /// </summary>
+    /// <summary>The source values streamed through each enumerable adapter under test.</summary>
     private static readonly int[] Values =
     [
         0, 1, 2, 3, 4, 5, 6, 7,
@@ -26,9 +22,7 @@ public class FactoryFromEnumerableBenchmarks
         24, 25, 26, 27, 28, 29, 30, 31,
     ];
 
-    /// <summary>
-    /// Baseline enumerable adapter using ReactiveUI.Primitives.
-    /// </summary>
+    /// <summary>Baseline enumerable adapter using ReactiveUI.Primitives.</summary>
     /// <returns>The sum of emitted values.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesFromEnumerableSubscribe()
@@ -38,9 +32,7 @@ public class FactoryFromEnumerableBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Enumerable adapter using System.Reactive.
-    /// </summary>
+    /// <summary>Enumerable adapter using System.Reactive.</summary>
     /// <returns>The sum of emitted values.</returns>
     [Benchmark]
     public int SystemReactiveToObservableSubscribe()
@@ -50,9 +42,7 @@ public class FactoryFromEnumerableBenchmarks
         return observer.Total;
     }
 
-    /// <summary>
-    /// Enumerable adapter using R3.
-    /// </summary>
+    /// <summary>Enumerable adapter using R3.</summary>
     /// <returns>The sum of emitted values.</returns>
     [Benchmark]
     public int R3ToObservableSubscribe()

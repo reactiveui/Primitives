@@ -6,8 +6,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
 
-/// <summary>Tests for <see cref="ReduceSinkState{TIn, TOut}"/>, the shared state object used by
-/// the synchronous combine-then-reduce operator family.</summary>
+/// <summary>Tests for <see cref="ReduceSinkState{TIn, TOut}"/>, the shared state object used by the synchronous combine-then-reduce operator family.</summary>
 public class ReduceSinkStateTests
 {
     /// <summary>Verifies that a freshly-constructed state reports zero values seen and is not terminal.</summary>
