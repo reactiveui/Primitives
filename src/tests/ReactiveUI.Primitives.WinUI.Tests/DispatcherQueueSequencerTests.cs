@@ -11,27 +11,20 @@ namespace ReactiveUI.Primitives.WinUI.Tests;
 /// <summary>
 /// Tests for <see cref="DispatcherQueueSequencer"/>, exercised against a real WinUI
 /// <see cref="DispatcherQueue"/> running on a dedicated thread so both the immediate and timer-based
-/// dispatch paths run end to end. Compiled only on Windows builds (see the csproj); the API approval test
-/// runs everywhere.
+/// dispatch paths run end to end. Compiled only on Windows builds (see the csproj).
 /// </summary>
 public sealed class DispatcherQueueSequencerTests
 {
-    /// <summary>
-    /// Maximum time to wait for work to be marshalled onto the dispatcher-queue thread before failing.
-    /// </summary>
+    /// <summary>Maximum time to wait for work to be marshalled onto the dispatcher-queue thread before failing.</summary>
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
 
-    /// <summary>
-    /// Verifies the constructor rejects a null dispatcher queue.
-    /// </summary>
+    /// <summary>Verifies the constructor rejects a null dispatcher queue.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullDispatcherQueue() =>
         await Assert.That(() => new DispatcherQueueSequencer(null!)).Throws<ArgumentNullException>();
 
-    /// <summary>
-    /// Verifies immediate work is enqueued to and executed on the dispatcher-queue thread.
-    /// </summary>
+    /// <summary>Verifies immediate work is enqueued to and executed on the dispatcher-queue thread.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ImmediateScheduleExecutesOnQueueThread()
@@ -46,9 +39,7 @@ public sealed class DispatcherQueueSequencerTests
         await Assert.That(ranOnQueueThread).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies work due in the future is executed on the dispatcher-queue thread via the queue timer.
-    /// </summary>
+    /// <summary>Verifies work due in the future is executed on the dispatcher-queue thread via the queue timer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task DelayedScheduleExecutesOnQueueThread()
@@ -64,19 +55,13 @@ public sealed class DispatcherQueueSequencerTests
         await Assert.That(ranOnQueueThread).IsTrue();
     }
 
-    /// <summary>
-    /// Work item that invokes a delegate when executed.
-    /// </summary>
+    /// <summary>Work item that invokes a delegate when executed.</summary>
     private sealed class DelegateWorkItem : IWorkItem
     {
-        /// <summary>
-        /// The action to run on execution.
-        /// </summary>
+        /// <summary>The action to run on execution.</summary>
         private readonly Action _action;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DelegateWorkItem"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="DelegateWorkItem"/> class.</summary>
         /// <param name="action">The action to run on execution.</param>
         public DelegateWorkItem(Action action) => _action = action;
 
@@ -84,28 +69,20 @@ public sealed class DispatcherQueueSequencerTests
         public void Execute() => _action();
     }
 
-    /// <summary>
-    /// Hosts a WinUI <see cref="DispatcherQueue"/> on a dedicated thread and shuts the queue down on disposal.
-    /// </summary>
+    /// <summary>Hosts a WinUI <see cref="DispatcherQueue"/> on a dedicated thread and shuts the queue down on disposal.</summary>
     private sealed class DispatcherQueueHarness : IAsyncDisposable
     {
-        /// <summary>
-        /// The controller owning the dedicated dispatcher-queue thread.
-        /// </summary>
+        /// <summary>The controller owning the dedicated dispatcher-queue thread.</summary>
         private readonly DispatcherQueueController _controller;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DispatcherQueueHarness"/> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="DispatcherQueueHarness"/> class.</summary>
         public DispatcherQueueHarness()
         {
             _controller = DispatcherQueueController.CreateOnDedicatedThread();
             DispatcherQueue = _controller.DispatcherQueue;
         }
 
-        /// <summary>
-        /// Gets the hosted dispatcher queue.
-        /// </summary>
+        /// <summary>Gets the hosted dispatcher queue.</summary>
         public DispatcherQueue DispatcherQueue { get; }
 
         /// <inheritdoc/>
