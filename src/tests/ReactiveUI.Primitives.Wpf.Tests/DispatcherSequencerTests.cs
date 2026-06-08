@@ -69,19 +69,13 @@ public sealed class DispatcherSequencerTests
         public void Execute() => _action();
     }
 
-    /// <summary>
-    /// Hosts a WPF <see cref="Dispatcher"/> on a dedicated STA thread and pumps its message loop,
-    /// shutting the loop down and joining the thread on disposal.
-    /// </summary>
+    /// <summary>Hosts a WPF <see cref="Dispatcher"/> on a dedicated STA thread and pumps its message loop, shutting it down and joining the thread on disposal.</summary>
     private sealed class DispatcherHarness : IDisposable
     {
         /// <summary>The thread running the dispatcher message loop.</summary>
         private readonly Thread _thread;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DispatcherHarness"/> class and waits until the
-        /// dispatcher is running.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="DispatcherHarness"/> class and waits until the dispatcher is running.</summary>
         public DispatcherHarness()
         {
             using var ready = new ManualResetEventSlim(false);
