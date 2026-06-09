@@ -9,7 +9,7 @@ public class SinkTerminalTests
 {
     private const int Value = 7;
 
-    /// <summary><see cref="SinkTerminal.Fault{TResult}"/> forwards the error downstream and disposes the sink.</summary>
+    /// <summary><see cref="SinkTerminal.Fault{TResult}(System.IObserver{TResult}, System.Exception, System.IDisposable)"/> forwards the error downstream and disposes the sink.</summary>
     [Test]
     public void FaultForwardsTheErrorAndDisposesTheSink()
     {
@@ -65,6 +65,98 @@ public class SinkTerminalTests
             SinkTerminal.Fault(observer, new InvalidOperationException("downstream"), sink));
 
         Assert.Equal(1, sink.DisposeCount);
+    }
+
+    /// <summary>The latched <c>Fault</c> overload forwards the error, disposes the sink, and sets the latch when it is not yet set.</summary>
+    [Test]
+    public void FaultWithLatchForwardsAndSetsTheLatchWhenNotDone()
+    {
+        var observer = new Recorder<int>();
+        var sink = new TrackingDisposable();
+        var error = new InvalidOperationException("boom");
+        var done = false;
+
+        SinkTerminal.Fault(observer, error, sink, ref done);
+
+        Assert.True(done);
+        Assert.Same(error, observer.Errors[0]);
+        Assert.Equal(1, sink.DisposeCount);
+    }
+
+    /// <summary>The latched <c>Fault</c> overload does nothing once the latch is already set.</summary>
+    [Test]
+    public void FaultWithLatchIsNoOpWhenAlreadyDone()
+    {
+        var observer = new Recorder<int>();
+        var sink = new TrackingDisposable();
+        var done = true;
+
+        SinkTerminal.Fault(observer, new InvalidOperationException("ignored"), sink, ref done);
+
+        Assert.True(done);
+        Assert.Equal(0, observer.Errors.Count);
+        Assert.Equal(0, sink.DisposeCount);
+    }
+
+    /// <summary>The latched value <c>Complete</c> overload emits, completes, disposes, and sets the latch when it is not yet set.</summary>
+    [Test]
+    public void CompleteWithValueAndLatchEmitsAndSetsTheLatchWhenNotDone()
+    {
+        var observer = new Recorder<int>();
+        var sink = new TrackingDisposable();
+        var done = false;
+
+        SinkTerminal.Complete(observer, Value, sink, ref done);
+
+        Assert.True(done);
+        Assert.Equal<int>([Value], observer.Values);
+        Assert.Equal(1, observer.Completed);
+        Assert.Equal(1, sink.DisposeCount);
+    }
+
+    /// <summary>The latched value <c>Complete</c> overload does nothing once the latch is already set.</summary>
+    [Test]
+    public void CompleteWithValueAndLatchIsNoOpWhenAlreadyDone()
+    {
+        var observer = new Recorder<int>();
+        var sink = new TrackingDisposable();
+        var done = true;
+
+        SinkTerminal.Complete(observer, Value, sink, ref done);
+
+        Assert.Equal(0, observer.Values.Count);
+        Assert.Equal(0, observer.Completed);
+        Assert.Equal(0, sink.DisposeCount);
+    }
+
+    /// <summary>The latched valueless <c>Complete</c> overload completes, disposes, and sets the latch when it is not yet set.</summary>
+    [Test]
+    public void CompleteWithoutValueAndLatchCompletesAndSetsTheLatchWhenNotDone()
+    {
+        var observer = new Recorder<int>();
+        var sink = new TrackingDisposable();
+        var done = false;
+
+        SinkTerminal.Complete(observer, sink, ref done);
+
+        Assert.True(done);
+        Assert.Equal(0, observer.Values.Count);
+        Assert.Equal(1, observer.Completed);
+        Assert.Equal(1, sink.DisposeCount);
+    }
+
+    /// <summary>The latched valueless <c>Complete</c> overload does nothing once the latch is already set.</summary>
+    [Test]
+    public void CompleteWithoutValueAndLatchIsNoOpWhenAlreadyDone()
+    {
+        var observer = new Recorder<int>();
+        var sink = new TrackingDisposable();
+        var done = true;
+
+        SinkTerminal.Complete(observer, sink, ref done);
+
+        Assert.Equal(0, observer.Completed);
+        Assert.Equal(0, sink.DisposeCount);
     }
 
     /// <summary>An observer that records all values, errors, and completion counts.</summary>

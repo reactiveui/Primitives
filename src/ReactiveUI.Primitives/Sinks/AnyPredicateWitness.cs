@@ -37,33 +37,14 @@ public sealed class AnyPredicateWitness<T> : IObserver<T>, IDisposable
             return;
         }
 
-        _done = true;
-        SinkTerminal.Complete(_observer, true, this);
+        SinkTerminal.Complete(_observer, true, this, ref _done);
     }
 
     /// <inheritdoc/>
-    public void OnError(Exception error)
-    {
-        if (_done)
-        {
-            return;
-        }
-
-        _done = true;
-        SinkTerminal.Fault(_observer, error, this);
-    }
+    public void OnError(Exception error) => SinkTerminal.Fault(_observer, error, this, ref _done);
 
     /// <inheritdoc/>
-    public void OnCompleted()
-    {
-        if (_done)
-        {
-            return;
-        }
-
-        _done = true;
-        SinkTerminal.Complete(_observer, false, this);
-    }
+    public void OnCompleted() => SinkTerminal.Complete(_observer, false, this, ref _done);
 
     /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
     /// <param name="subscription">The upstream subscription.</param>

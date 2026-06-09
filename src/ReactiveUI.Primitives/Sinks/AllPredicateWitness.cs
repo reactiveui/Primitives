@@ -57,16 +57,7 @@ public sealed class AllPredicateWitness<T> : IObserver<T>, IDisposable
     }
 
     /// <inheritdoc/>
-    public void OnError(Exception error)
-    {
-        if (_done)
-        {
-            return;
-        }
-
-        _done = true;
-        SinkTerminal.Fault(_observer, error, this);
-    }
+    public void OnError(Exception error) => SinkTerminal.Fault(_observer, error, this, ref _done);
 
     /// <inheritdoc/>
     public void OnCompleted() => EmitCompleted(true);
@@ -80,14 +71,5 @@ public sealed class AllPredicateWitness<T> : IObserver<T>, IDisposable
 
     /// <summary>Emits the terminal boolean value and completes the observer.</summary>
     /// <param name="value">The terminal result.</param>
-    private void EmitCompleted(bool value)
-    {
-        if (_done)
-        {
-            return;
-        }
-
-        _done = true;
-        SinkTerminal.Complete(_observer, value, this);
-    }
+    private void EmitCompleted(bool value) => SinkTerminal.Complete(_observer, value, this, ref _done);
 }
