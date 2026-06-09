@@ -60,14 +60,7 @@ public sealed class TakeWhileWitness<T> : SingleSourceWitness<T>
         }
 
         _completed = true;
-        try
-        {
-            _observer.OnError(error);
-        }
-        finally
-        {
-            Dispose();
-        }
+        SinkTerminal.Fault(_observer, error, this);
     }
 
     /// <inheritdoc/>
@@ -82,13 +75,6 @@ public sealed class TakeWhileWitness<T> : SingleSourceWitness<T>
         }
 
         _completed = true;
-        try
-        {
-            _observer.OnCompleted();
-        }
-        finally
-        {
-            Dispose();
-        }
+        SinkTerminal.Complete(_observer, this);
     }
 }

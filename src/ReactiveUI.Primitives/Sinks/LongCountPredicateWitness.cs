@@ -49,14 +49,7 @@ public sealed class LongCountPredicateWitness<T> : SingleSourceWitness<T>
         }
 
         _done = true;
-        try
-        {
-            _observer.OnError(error);
-        }
-        finally
-        {
-            Dispose();
-        }
+        SinkTerminal.Fault(_observer, error, this);
     }
 
     /// <inheritdoc/>
@@ -68,14 +61,6 @@ public sealed class LongCountPredicateWitness<T> : SingleSourceWitness<T>
         }
 
         _done = true;
-        try
-        {
-            _observer.OnNext(_count);
-            _observer.OnCompleted();
-        }
-        finally
-        {
-            Dispose();
-        }
+        SinkTerminal.Complete(_observer, _count, this);
     }
 }

@@ -70,14 +70,7 @@ public sealed class BufferWitness<T> : SingleSourceWitness<T>
     public override void OnError(Exception error)
     {
         _buffer = null;
-        try
-        {
-            _observer.OnError(error);
-        }
-        finally
-        {
-            Dispose();
-        }
+        SinkTerminal.Fault(_observer, error, this);
     }
 
     /// <inheritdoc/>

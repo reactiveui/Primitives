@@ -53,26 +53,12 @@ public sealed class UniqueWitness<T> : SingleSourceWitness<T>
     /// <inheritdoc/>
     public override void OnError(Exception error)
     {
-        try
-        {
-            _observer.OnError(error);
-        }
-        finally
-        {
-            Dispose();
-        }
+        SinkTerminal.Fault(_observer, error, this);
     }
 
     /// <inheritdoc/>
     public override void OnCompleted()
     {
-        try
-        {
-            _observer.OnCompleted();
-        }
-        finally
-        {
-            Dispose();
-        }
+        SinkTerminal.Complete(_observer, this);
     }
 }

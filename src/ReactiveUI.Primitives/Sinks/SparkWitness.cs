@@ -23,28 +23,12 @@ public sealed class SparkWitness<T> : SingleSourceWitness<T>
     /// <inheritdoc/>
     public override void OnError(Exception error)
     {
-        try
-        {
-            _observer.OnNext(Spark.CreateOnError<T>(error));
-            _observer.OnCompleted();
-        }
-        finally
-        {
-            Dispose();
-        }
+        SinkTerminal.Complete(_observer, Spark.CreateOnError<T>(error), this);
     }
 
     /// <inheritdoc/>
     public override void OnCompleted()
     {
-        try
-        {
-            _observer.OnNext(Spark.CreateOnCompleted<T>());
-            _observer.OnCompleted();
-        }
-        finally
-        {
-            Dispose();
-        }
+        SinkTerminal.Complete(_observer, Spark.CreateOnCompleted<T>(), this);
     }
 }

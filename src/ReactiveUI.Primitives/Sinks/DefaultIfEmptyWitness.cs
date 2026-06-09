@@ -44,14 +44,7 @@ public sealed class DefaultIfEmptyWitness<T> : SingleSourceWitness<T>
     /// <inheritdoc/>
     public override void OnError(Exception error)
     {
-        try
-        {
-            _observer.OnError(error);
-        }
-        finally
-        {
-            Dispose();
-        }
+        SinkTerminal.Fault(_observer, error, this);
     }
 
     /// <inheritdoc/>
