@@ -226,45 +226,45 @@ public class SinkObserverTests
         Assert.True(r.Values[0]);
     }
 
-    /// <summary>Verifies <see cref="CountWitness{T}"/> emits the element count on completion.</summary>
+    /// <summary>Verifies <see cref="CountAggregator{T}"/> emits the element count on completion.</summary>
     [Test]
     public void CountEmitsCount()
     {
         var r = new Recorder<int>();
-        var sink = new CountWitness<int>(r);
+        var sink = new AggregateWitness<int, int, CountAggregator<int>>(r, default);
         Feed(sink, SourceTriple);
         sink.OnCompleted();
         Assert.Equal(Three, r.Values[0]);
     }
 
-    /// <summary>Verifies <see cref="CountPredicateWitness{T}"/> counts only matching values.</summary>
+    /// <summary>Verifies <see cref="CountPredicateAggregator{T}"/> counts only matching values.</summary>
     [Test]
     public void CountPredicateCountsMatches()
     {
         var r = new Recorder<int>();
-        var sink = new CountPredicateWitness<int>(r, static x => x > 1);
+        var sink = new AggregateWitness<int, int, CountPredicateAggregator<int>>(r, new CountPredicateAggregator<int>(static x => x > 1));
         Feed(sink, SourceTriple);
         sink.OnCompleted();
         Assert.Equal(Two, r.Values[0]);
     }
 
-    /// <summary>Verifies <see cref="LongCountWitness{T}"/> emits the element count on completion.</summary>
+    /// <summary>Verifies <see cref="LongCountAggregator{T}"/> emits the element count on completion.</summary>
     [Test]
     public void LongCountEmitsCount()
     {
         var r = new Recorder<long>();
-        var sink = new LongCountWitness<int>(r);
+        var sink = new AggregateWitness<int, long, LongCountAggregator<int>>(r, default);
         Feed(sink, SourceTriple);
         sink.OnCompleted();
         Assert.Equal((long)Three, r.Values[0]);
     }
 
-    /// <summary>Verifies <see cref="LongCountPredicateWitness{T}"/> counts only matching values.</summary>
+    /// <summary>Verifies <see cref="LongCountPredicateAggregator{T}"/> counts only matching values.</summary>
     [Test]
     public void LongCountPredicateCountsMatches()
     {
         var r = new Recorder<long>();
-        var sink = new LongCountPredicateWitness<int>(r, static x => x > 1);
+        var sink = new AggregateWitness<int, long, LongCountPredicateAggregator<int>>(r, new LongCountPredicateAggregator<int>(static x => x > 1));
         Feed(sink, SourceTriple);
         sink.OnCompleted();
         Assert.Equal((long)Two, r.Values[0]);
@@ -279,26 +279,37 @@ public class SinkObserverTests
         Assert.Equal(ExpectedOneTwo.AsEnumerable(), r.Values);
     }
 
-    /// <summary>Verifies <see cref="DistinctByCountWitness{T, TKey}"/> counts distinct keys.</summary>
+    /// <summary>Verifies <see cref="DistinctByCountAggregator{T, TKey}"/> counts distinct keys.</summary>
     [Test]
     public void DistinctByCountCountsKeys()
     {
         var r = new Recorder<int>();
-        var sink = new DistinctByCountWitness<int, int>(r, static x => x % Two, null);
+        var sink = new AggregateWitness<int, int, DistinctByCountAggregator<int, int>>(r, new DistinctByCountAggregator<int, int>(static x => x % Two, null));
         Feed(sink, Source);
         sink.OnCompleted();
         Assert.Equal(Two, r.Values[0]);
     }
 
-    /// <summary>Verifies <see cref="DistinctByLongCountWitness{T, TKey}"/> counts distinct keys.</summary>
+    /// <summary>Verifies <see cref="DistinctByLongCountAggregator{T, TKey}"/> counts distinct keys.</summary>
     [Test]
     public void DistinctByLongCountCountsKeys()
     {
         var r = new Recorder<long>();
-        var sink = new DistinctByLongCountWitness<int, int>(r, static x => x % Two, null);
+        var sink = new AggregateWitness<int, long, DistinctByLongCountAggregator<int, int>>(r, new DistinctByLongCountAggregator<int, int>(static x => x % Two, null));
         Feed(sink, Source);
         sink.OnCompleted();
         Assert.Equal((long)Two, r.Values[0]);
+    }
+
+    /// <summary>Verifies a user-defined <see cref="IAggregator{T,TResult,TSelf}"/> drives <see cref="AggregateWitness{T,TResult,TAggregator}"/>.</summary>
+    [Test]
+    public void CustomAggregatorIsDrivenByAggregateWitness()
+    {
+        var r = new Recorder<int>();
+        var sink = new AggregateWitness<int, int, SumAggregator>(r, default);
+        Feed(sink, SourceTriple);
+        sink.OnCompleted();
+        Assert.Equal(Six, r.Values[0]);
     }
 
     /// <summary>Verifies <see cref="UniqueByWitness{T, TKey}"/> suppresses adjacent duplicates by key.</summary>
@@ -387,6 +398,18 @@ public class SinkObserverTests
         {
             sink.OnNext(value);
         }
+    }
+
+    /// <summary>A user-defined accumulator that sums observed values, exercising the public <see cref="IAggregator{T,TResult,TSelf}"/> contract.</summary>
+    private readonly record struct SumAggregator : IAggregator<int, int, SumAggregator>
+    {
+        private SumAggregator(int result) => Result = result;
+
+        /// <inheritdoc/>
+        public int Result { get; }
+
+        /// <inheritdoc/>
+        public SumAggregator Add(int value) => new(Result + value);
     }
 
     /// <summary>Observer that records the notifications it receives.</summary>

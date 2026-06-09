@@ -82,7 +82,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            var sink = new DistinctByCountWitness<T, TKey>(observer, _keySelector, _comparer);
+            var sink = new AggregateWitness<T, int, DistinctByCountAggregator<T, TKey>>(observer, new DistinctByCountAggregator<T, TKey>(_keySelector, _comparer));
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -102,7 +102,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            var sink = new DistinctByLongCountWitness<T, TKey>(observer, _keySelector, _comparer);
+            var sink = new AggregateWitness<T, long, DistinctByLongCountAggregator<T, TKey>>(observer, new DistinctByLongCountAggregator<T, TKey>(_keySelector, _comparer));
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -160,7 +160,7 @@ public static partial class LinqExtensions
                 return countSource.SubscribeCount(observer);
             }
 
-            var sink = new CountWitness<T>(observer);
+            var sink = new AggregateWitness<T, int, CountAggregator<T>>(observer, default);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -203,7 +203,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            var sink = new CountPredicateWitness<T>(observer, _predicate);
+            var sink = new AggregateWitness<T, int, CountPredicateAggregator<T>>(observer, new CountPredicateAggregator<T>(_predicate));
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -271,7 +271,7 @@ public static partial class LinqExtensions
                 return countSource.SubscribeLongCount(observer);
             }
 
-            var sink = new LongCountWitness<T>(observer);
+            var sink = new AggregateWitness<T, long, LongCountAggregator<T>>(observer, default);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -314,7 +314,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            var sink = new LongCountPredicateWitness<T>(observer, _predicate);
+            var sink = new AggregateWitness<T, long, LongCountPredicateAggregator<T>>(observer, new LongCountPredicateAggregator<T>(_predicate));
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
