@@ -38,9 +38,10 @@ internal sealed class TaskResultCompletionSource<T>(CancellationToken cancellati
 
     /// <summary>Completes the result successfully and disposes <paramref name="owner"/>.</summary>
     /// <param name="value">The result value.</param>
-    /// <param name="owner">The owner to dispose after publishing the result.</param>
+    /// <param name="owner">The owner to dispose after publishing the result. Disposed via the reentrant path
+    /// because this runs from within the owner's own in-flight notification.</param>
     /// <returns>A task that completes when the owner has been disposed.</returns>
-    public async ValueTask SetResultAndDisposeAsync(T value, IAsyncDisposable owner)
+    public async ValueTask SetResultAndDisposeAsync(T value, IReentrantAsyncDisposable owner)
     {
         try
         {
@@ -48,15 +49,16 @@ internal sealed class TaskResultCompletionSource<T>(CancellationToken cancellati
         }
         finally
         {
-            await owner.DisposeAsync().ConfigureAwait(false);
+            await owner.DisposeFromNotificationAsync().ConfigureAwait(false);
         }
     }
 
     /// <summary>Completes the result with an exception and disposes <paramref name="owner"/>.</summary>
     /// <param name="exception">The exception that faults the result.</param>
-    /// <param name="owner">The owner to dispose after publishing the exception.</param>
+    /// <param name="owner">The owner to dispose after publishing the exception. Disposed via the reentrant path
+    /// because this runs from within the owner's own in-flight notification.</param>
     /// <returns>A task that completes when the owner has been disposed.</returns>
-    public async ValueTask SetExceptionAndDisposeAsync(Exception exception, IAsyncDisposable owner)
+    public async ValueTask SetExceptionAndDisposeAsync(Exception exception, IReentrantAsyncDisposable owner)
     {
         try
         {
@@ -64,7 +66,7 @@ internal sealed class TaskResultCompletionSource<T>(CancellationToken cancellati
         }
         finally
         {
-            await owner.DisposeAsync().ConfigureAwait(false);
+            await owner.DisposeFromNotificationAsync().ConfigureAwait(false);
         }
     }
 

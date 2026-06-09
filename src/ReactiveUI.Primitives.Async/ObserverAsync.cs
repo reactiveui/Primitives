@@ -4,6 +4,7 @@
 
 using System.Diagnostics;
 using ReactiveUI.Primitives.Async.Disposables;
+using ReactiveUI.Primitives.Async.Internals;
 using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
@@ -15,7 +16,7 @@ namespace ReactiveUI.Primitives.Async;
 /// Instances are not thread-safe for concurrent notification handling; notifications are processed sequentially, and
 /// reentrant calls are detected and reported as unhandled exceptions.</remarks>
 /// <typeparam name="T">The type of the elements received by the observer.</typeparam>
-public abstract class ObserverAsync<T> : IObserverAsync<T>
+public abstract class ObserverAsync<T> : IObserverAsync<T>, IReentrantAsyncDisposable
 {
     /// <summary>Lazily-created CTS that signals disposal to in-flight operations. Stays
     /// <see langword="null"/> until someone requests <see cref="InternalDisposedToken"/>,
@@ -27,6 +28,13 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
     /// <summary>Disposal latch. Set independently of <see cref="_disposeCts"/> so the lazy-CTS
     /// path can detect post-dispose state before the CTS has been materialized.</summary>
     private int _disposed;
+
+    /// <summary>Set when disposal is requested from within this observer's own in-flight notification
+    /// (see <see cref="IReentrantAsyncDisposable.DisposeFromNotificationAsync"/>). Tells
+    /// <see cref="DisposeAsyncCore"/> to skip the in-flight-call wait, which would otherwise self-join on the
+    /// very call awaiting the dispose once its continuation has hopped threads. Monotonic: only ever set, never
+    /// cleared, since disposal happens once.</summary>
+    private int _disposeFromNotification;
 
     /// <summary>Packed call-state: high 32 bits hold the managed-thread ID of the thread
     /// currently inside <c>OnNext/OnError/OnCompleted</c>; low 32 bits hold the in-flight call
@@ -189,6 +197,16 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         await DisposeAsyncCore().ConfigureAwait(false);
 
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>Disposes this observer from within its own in-flight notification, skipping the in-flight-call
+    /// wait that would otherwise self-deadlock once the notification continuation has hopped threads.</summary>
+    /// <returns>A <see cref="ValueTask"/> representing the asynchronous dispose operation.</returns>
+    [DebuggerStepThrough]
+    ValueTask IReentrantAsyncDisposable.DisposeFromNotificationAsync()
+    {
+        Volatile.Write(ref _disposeFromNotification, 1);
+        return DisposeAsync();
     }
 
     /// <summary>Sets the source subscription disposable for this observer.</summary>
@@ -385,7 +403,9 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>
         var initialCount = (int)initialState;
         var initialThreadId = (int)(initialState >> 32);
 
-        if (initialCount > 0 && initialThreadId != Environment.CurrentManagedThreadId)
+        if (initialCount > 0
+            && initialThreadId != Environment.CurrentManagedThreadId
+            && Volatile.Read(ref _disposeFromNotification) == 0)
         {
             var tcs = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
             Volatile.Write(ref _allCallsCompletedTcs, tcs);
