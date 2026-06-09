@@ -1247,3 +1247,12 @@ ReactiveUI.Primitives.UnsparkWitness<T>.OnCompleted() -> void
 ReactiveUI.Primitives.UnsparkWitness<T>.OnError(System.Exception! error) -> void
 ReactiveUI.Primitives.UnsparkWitness<T>.OnNext(ReactiveUI.Primitives.Core.Spark<T> spark) -> void
 ReactiveUI.Primitives.UnsparkWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Synchronize() -> System.IObservable<T>!
+ReactiveUI.Primitives.SynchronizeWitness<T>
+ReactiveUI.Primitives.SynchronizeWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.SynchronizeWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.SynchronizeWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.SynchronizeWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.SynchronizeWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.SynchronizeWitness<T>.SynchronizeWitness(System.IObserver<T>! observer) -> void
+static ReactiveUI.Primitives.LinqExtensions.Synchronize<T>(this System.IObservable<T>! source) -> System.IObservable<T>!

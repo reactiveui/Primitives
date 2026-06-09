@@ -164,4 +164,29 @@ public static partial class LinqExtensions
             return sink;
         }
     }
+
+    /// <summary>Dedicated signal for <c>Synchronize</c> (gates notifications so downstream sees the serialized grammar).</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class SynchronizeSignal<T> : IObservable<T>
+    {
+        /// <summary>The source observable.</summary>
+        private readonly IObservable<T> _source;
+
+        /// <summary>Initializes a new instance of the <see cref="SynchronizeSignal{T}"/> class.</summary>
+        /// <param name="source">The source observable.</param>
+        internal SynchronizeSignal(IObservable<T> source) => _source = source;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            if (observer is null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            var sink = new SynchronizeWitness<T>(observer);
+            sink.SetSubscription(_source.Subscribe(sink));
+            return sink;
+        }
+    }
 }
