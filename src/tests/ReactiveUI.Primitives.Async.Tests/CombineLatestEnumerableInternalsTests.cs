@@ -7,10 +7,10 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Direct unit tests for the internal types inside
 /// <c>CombineLatestEnumerableSignal{TSource,TResult}</c> that the public API path doesn't
 /// fully exercise — specifically the contractual <see cref="IAsyncDisposable.DisposeAsync"/>
-/// stub on <c>IndexedObserver</c>.</summary>
+/// stub on <c>IndexedWitness</c>.</summary>
 public class CombineLatestEnumerableInternalsTests
 {
-    /// <summary>Verifies the per-source <c>IndexedObserver</c>'s no-op <c>DisposeAsync</c> —
+    /// <summary>Verifies the per-source <c>IndexedWitness</c>'s no-op <c>DisposeAsync</c> —
     /// required by the <see cref="IObserverAsync{T}"/> contract but never invoked by the
     /// pipeline, so coverage of the line otherwise relies on a direct call.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -18,7 +18,7 @@ public class CombineLatestEnumerableInternalsTests
     public async Task WhenIndexedObserverDisposed_ThenNoOp()
     {
         var sources = new[] { SignalAsync.Return(1) };
-        var downstream = new NoOpObserver();
+        var downstream = new NoOpWitness();
         var subscription = new SignalAsyncExtensions.CombineLatestEnumerableSignal<int, int>.EnumerableCombineLatestCoordinator(
             sources,
             downstream,
@@ -31,7 +31,7 @@ public class CombineLatestEnumerableInternalsTests
     }
 
     /// <summary>No-op downstream observer.</summary>
-    private sealed class NoOpObserver : IObserverAsync<int>
+    private sealed class NoOpWitness : IObserverAsync<int>
     {
         /// <inheritdoc/>
         public ValueTask OnNextAsync(int value, CancellationToken cancellationToken) => default;

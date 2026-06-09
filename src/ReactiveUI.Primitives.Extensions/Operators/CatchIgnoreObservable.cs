@@ -26,13 +26,13 @@ internal sealed class CatchIgnoreObservable<TSource, TException>(
     public IDisposable Subscribe(IObserver<TSource> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return _source.Subscribe(new CatchIgnoreObserver(observer, _errorAction));
+        return _source.Subscribe(new CatchIgnoreWitness(observer, _errorAction));
     }
 
     /// <summary>Observer that catches specific exceptions.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="errorAction">The error action.</param>
-    private sealed class CatchIgnoreObserver(
+    private sealed class CatchIgnoreWitness(
         IObserver<TSource> downstream,
         Action<TException> errorAction) : IObserver<TSource>
     {

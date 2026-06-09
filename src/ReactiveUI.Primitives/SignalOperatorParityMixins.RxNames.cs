@@ -148,6 +148,46 @@ public static partial class LinqExtensions
             return new TapSignal<T>(source, onNext, static _ => { }, static () => { });
         }
 
+        /// <summary>
+        /// Serializes notifications behind a gate so downstream operators observe the single-threaded
+        /// <c>OnNext*</c> then <c>OnError</c>|<c>OnCompleted</c> grammar even when the source delivers
+        /// concurrently. System.Reactive name for the same operation.
+        /// </summary>
+        /// <returns>A sequence that forwards the source notifications one at a time.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Synchronize()
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            return new SynchronizeSignal<T>(source);
+        }
+
+        /// <summary>
+        /// Serializes notifications behind the supplied <paramref name="gate"/>, so this sequence and every other
+        /// sequence synchronized on the same gate observe the single-threaded grammar relative to one another.
+        /// System.Reactive name for the same operation.
+        /// </summary>
+        /// <param name="gate">The gate shared with other synchronized sequences.</param>
+        /// <returns>A sequence that forwards the source notifications one at a time under the shared gate.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="gate"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Synchronize(Lock gate)
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            if (gate is null)
+            {
+                throw new ArgumentNullException(nameof(gate));
+            }
+
+            return new SynchronizeSignal<T>(source, gate);
+        }
+
         /// <summary>Invokes a stateful action for each value while preserving the sequence. State-carrying name for <c>TapWith</c>.</summary>
         /// <typeparam name="TState">The state type.</typeparam>
         /// <param name="state">The state passed to <paramref name="onNext"/>.</param>

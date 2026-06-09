@@ -139,7 +139,7 @@ public static partial class LinqExtensions
             }
 
             observer.OnNext(_prependValue);
-            var sink = new AppendObserver<T>(observer, _appendValue);
+            var sink = new AppendWitness<T>(observer, _appendValue);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -148,7 +148,7 @@ public static partial class LinqExtensions
         public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
         {
             onNext(_prependValue);
-            var sink = new AppendDelegateObserver<T>(onNext, onError, onCompleted, _appendValue);
+            var sink = new AppendDelegateWitness<T>(onNext, onError, onCompleted, _appendValue);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -181,7 +181,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new AppendObserver<T>(observer, _value);
+            var sink = new AppendWitness<T>(observer, _value);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -214,7 +214,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new DefaultIfEmptyObserver<T>(observer, _defaultValue);
+            var sink = new DefaultIfEmptyWitness<T>(observer, _defaultValue);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }

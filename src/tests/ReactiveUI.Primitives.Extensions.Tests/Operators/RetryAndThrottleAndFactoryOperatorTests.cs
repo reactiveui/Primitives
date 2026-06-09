@@ -304,7 +304,7 @@ public class RetryAndThrottleAndFactoryOperatorTests
     [Test]
     public async Task WhenSubscribeAndCompleteSourceErrors_ThenSwallows()
     {
-        // The NoopObserver inside SubscribeAndComplete must absorb the error without throwing.
+        // The NoopWitness inside SubscribeAndComplete must absorb the error without throwing.
         var captured = new InvalidOperationException("ignored");
         Observable.Throw<RxVoid>(captured).SubscribeAndComplete();
 

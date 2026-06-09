@@ -53,7 +53,7 @@ public class StatefulSignalBenchmarks
     /// <returns>The final observed sum plus the latest value.</returns>
     private static int EmitAndReadStateSignal(int count)
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subject = new StateSignal<int>(0);
         using var subscription = subject.Subscribe(observer);
         for (var i = 1; i <= count; i++)
@@ -69,7 +69,7 @@ public class StatefulSignalBenchmarks
     /// <returns>The final observed sum plus the latest value.</returns>
     private static int EmitAndReadSystemBehaviorSubject(int count)
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subject = new RxBehaviorSubject(0);
         using var subscription = subject.Subscribe(observer);
         for (var i = 1; i <= count; i++)
@@ -85,7 +85,7 @@ public class StatefulSignalBenchmarks
     /// <returns>The final observed sum plus the latest value.</returns>
     private static int EmitAndReadR3BehaviorSubject(int count)
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subject = new R3.BehaviorSubject<int>(0);
         using var subscription = subject.Subscribe(observer);
         for (var i = 1; i <= count; i++)

@@ -48,7 +48,7 @@ internal static class R3SignalBridge
             throw new global::System.ArgumentNullException(nameof(source));
         }
 
-        return global::ReactiveUI.Primitives.Signals.Signal.Create<T>(observer => source.Subscribe(new R3ToPrimitivesObserver<T>(observer)));
+        return global::ReactiveUI.Primitives.Signals.Signal.Create<T>(observer => source.Subscribe(new R3ToPrimitivesWitness<T>(observer)));
     }
 
     /// <summary>
@@ -61,14 +61,14 @@ internal static class R3SignalBridge
             throw new global::System.ArgumentNullException(nameof(source));
         }
 
-        return global::R3.Observable.Create<T>(observer => source.Subscribe(new PrimitivesToR3Observer<T>(observer)));
+        return global::R3.Observable.Create<T>(observer => source.Subscribe(new PrimitivesToR3Witness<T>(observer)));
     }
 
-    private sealed class R3ToPrimitivesObserver<T> : global::R3.Observer<T>
+    private sealed class R3ToPrimitivesWitness<T> : global::R3.Observer<T>
     {
         private readonly global::System.IObserver<T> _observer;
 
-        public R3ToPrimitivesObserver(global::System.IObserver<T> observer) => _observer = observer;
+        public R3ToPrimitivesWitness(global::System.IObserver<T> observer) => _observer = observer;
 
         protected override void OnNextCore(T value) => _observer.OnNext(value);
 
@@ -86,11 +86,11 @@ internal static class R3SignalBridge
         }
     }
 
-    private sealed class PrimitivesToR3Observer<T> : global::System.IObserver<T>
+    private sealed class PrimitivesToR3Witness<T> : global::System.IObserver<T>
     {
         private readonly global::R3.Observer<T> _observer;
 
-        public PrimitivesToR3Observer(global::R3.Observer<T> observer) => _observer = observer;
+        public PrimitivesToR3Witness(global::R3.Observer<T> observer) => _observer = observer;
 
         public void OnNext(T value) => _observer.OnNext(value);
 
@@ -124,7 +124,7 @@ internal static class R3AsyncBridge
 
         return global::ReactiveUI.Primitives.Async.SignalAsync.Create<T>((observer, cancellationToken) =>
             new global::System.Threading.Tasks.ValueTask<global::System.IAsyncDisposable>(
-                new AsyncDisposableAdapter(source.Subscribe(new R3ToAsyncObserver<T>(observer, cancellationToken)))));
+                new AsyncDisposableAdapter(source.Subscribe(new R3ToAsyncWitness<T>(observer, cancellationToken)))));
     }
 
     /// <summary>
@@ -144,7 +144,7 @@ internal static class R3AsyncBridge
         });
     }
 
-    private sealed class R3ToAsyncObserver<T>(
+    private sealed class R3ToAsyncWitness<T>(
         global::ReactiveUI.Primitives.Async.IObserverAsync<T> observer,
         global::System.Threading.CancellationToken cancellationToken) : global::R3.Observer<T>
     {
@@ -162,7 +162,7 @@ internal static class R3AsyncBridge
         }
     }
 
-    private sealed class AsyncToR3Observer<T>(global::R3.Observer<T> observer)
+    private sealed class AsyncToR3Witness<T>(global::R3.Observer<T> observer)
         : global::ReactiveUI.Primitives.Async.IObserverAsync<T>
     {
         public global::System.Threading.Tasks.ValueTask OnNextAsync(T value, global::System.Threading.CancellationToken cancellationToken)
@@ -237,7 +237,7 @@ internal static class R3AsyncBridge
     {
         try
         {
-            return await source.SubscribeAsync(new AsyncToR3Observer<T>(observer), cancellationToken).ConfigureAwait(false);
+            return await source.SubscribeAsync(new AsyncToR3Witness<T>(observer), cancellationToken).ConfigureAwait(false);
         }
         catch (global::System.OperationCanceledException)
         {

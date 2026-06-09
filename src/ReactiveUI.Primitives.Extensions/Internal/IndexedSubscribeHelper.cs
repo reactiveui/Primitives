@@ -41,7 +41,7 @@ internal static class IndexedSubscribeHelper
         var composite = new DisposableBag();
         for (var i = 0; i < sources.Count; i++)
         {
-            composite.Add(sources[i].Subscribe(new IndexedObserver<T>(i, onNext, onError, onCompleted)));
+            composite.Add(sources[i].Subscribe(new IndexedWitness<T>(i, onNext, onError, onCompleted)));
         }
 
         return composite;
@@ -53,7 +53,7 @@ internal static class IndexedSubscribeHelper
     /// <param name="onNext">Per-source OnNext hook.</param>
     /// <param name="onError">Shared OnError hook.</param>
     /// <param name="onCompleted">Per-source OnCompleted hook.</param>
-    private sealed class IndexedObserver<T>(
+    private sealed class IndexedWitness<T>(
         int index,
         Action<int, T> onNext,
         Action<Exception> onError,

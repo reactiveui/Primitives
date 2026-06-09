@@ -80,12 +80,12 @@ internal static class AllocationProbe
     {
         // Shared, reused observer: allocated once here, never inside a measured op, so its bytes
         // are excluded from every measurement.
-        var observer = new IntSignalObserver();
-        var sparkObserver = new CountingSignalObserver<Spark<int>>();
-        var intervalObserver = new CountingSignalObserver<TimeInterval<int>>();
-        var listObserver = new CountingSignalObserver<IList<int>>();
-        var arrayObserver = new CountingSignalObserver<int[]>();
-        var stringObserver = new CountingSignalObserver<string>();
+        var observer = new IntSignalWitness();
+        var sparkObserver = new CountingSignalWitness<Spark<int>>();
+        var intervalObserver = new CountingSignalWitness<TimeInterval<int>>();
+        var listObserver = new CountingSignalWitness<IList<int>>();
+        var arrayObserver = new CountingSignalWitness<int[]>();
+        var stringObserver = new CountingSignalWitness<string>();
         var error = new InvalidOperationException("probe");
         var failSource = Signal.Fail<int>(error, Sequencer.Immediate);
         var handles = new IDisposable[FanOut];
@@ -122,7 +122,7 @@ internal static class AllocationProbe
 
     /// <summary>Probes factory and source allocation.</summary>
     /// <param name="observer">The reused observer.</param>
-    private static void ProbeFactories(IntSignalObserver observer)
+    private static void ProbeFactories(IntSignalWitness observer)
     {
         Row("RangeSubscribe (baseline)", () => Signal.Sequence(0, Count).Subscribe(observer).Dispose());
         Row("Return", () => Signal.Emit(ReturnValue).Subscribe(observer).Dispose());
@@ -131,7 +131,7 @@ internal static class AllocationProbe
 
     /// <summary>Probes stateful single-source operator allocation.</summary>
     /// <param name="observer">The reused observer.</param>
-    private static void ProbeStatefulOperators(IntSignalObserver observer)
+    private static void ProbeStatefulOperators(IntSignalWitness observer)
     {
         Row("Skip", () => Signal.Sequence(0, Count).Skip(Window).Subscribe(observer).Dispose());
         Row("Distinct", () => Signal.Sequence(0, Count).Distinct().Subscribe(observer).Dispose());
@@ -145,7 +145,7 @@ internal static class AllocationProbe
 
     /// <summary>Probes projection and combination operator allocation.</summary>
     /// <param name="observer">The reused observer.</param>
-    private static void ProbeProjection(IntSignalObserver observer)
+    private static void ProbeProjection(IntSignalWitness observer)
     {
         Row("Map", () => Signal.Sequence(0, Count).Map(static x => x + 1).Subscribe(observer).Dispose());
         Row("Keep", () => Signal.Sequence(0, Count).Keep(static x => (x & 1) == 0).Subscribe(observer).Dispose());
@@ -164,11 +164,11 @@ internal static class AllocationProbe
     /// <param name="listObserver">The reused list observer.</param>
     /// <param name="arrayObserver">The reused array observer.</param>
     private static void ProbePassThroughTerminal(
-        IntSignalObserver observer,
-        CountingSignalObserver<Spark<int>> sparkObserver,
-        CountingSignalObserver<TimeInterval<int>> intervalObserver,
-        CountingSignalObserver<IList<int>> listObserver,
-        CountingSignalObserver<int[]> arrayObserver)
+        IntSignalWitness observer,
+        CountingSignalWitness<Spark<int>> sparkObserver,
+        CountingSignalWitness<TimeInterval<int>> intervalObserver,
+        CountingSignalWitness<IList<int>> listObserver,
+        CountingSignalWitness<int[]> arrayObserver)
     {
         Row("Tap", () => Signal.Sequence(0, Count).Tap(static _ => { }).Subscribe(observer).Dispose());
         Row("IgnoreValues", () => Signal.Sequence(0, Count).IgnoreValues().Subscribe(observer).Dispose());
@@ -187,9 +187,9 @@ internal static class AllocationProbe
     /// <param name="stringObserver">The reused string observer.</param>
     /// <param name="failSource">The shared failing source.</param>
     private static void ProbeCoverageGap(
-        IntSignalObserver observer,
-        CountingSignalObserver<IList<int>> listObserver,
-        CountingSignalObserver<string> stringObserver,
+        IntSignalWitness observer,
+        CountingSignalWitness<IList<int>> listObserver,
+        CountingSignalWitness<string> stringObserver,
         IObservable<int> failSource)
     {
         Row("Take", () => Signal.Sequence(0, Count).Take(Window).Subscribe(observer).Dispose());
@@ -224,7 +224,7 @@ internal static class AllocationProbe
 
     /// <summary>Probes subject construction, subscription, and single-emit allocation.</summary>
     /// <param name="observer">The reused observer.</param>
-    private static void ProbeSubjects(IntSignalObserver observer)
+    private static void ProbeSubjects(IntSignalWitness observer)
     {
         Row("Signal", () => EmitOnce(new Signal<int>(), observer));
         Row("StateSignal", () => EmitOnce(new StateSignal<int>(0), observer));
@@ -233,7 +233,7 @@ internal static class AllocationProbe
 
     /// <summary>Probes connectable operator allocation.</summary>
     /// <param name="observer">The reused observer.</param>
-    private static void ProbeConnectable(IntSignalObserver observer)
+    private static void ProbeConnectable(IntSignalWitness observer)
     {
         Row("Publish", () =>
         {
@@ -249,7 +249,7 @@ internal static class AllocationProbe
     /// <summary>Probes subscribe/dispose churn allocation.</summary>
     /// <param name="observer">The reused observer.</param>
     /// <param name="handles">The reused subscription-handle buffer.</param>
-    private static void ProbeChurn(IntSignalObserver observer, IDisposable[] handles) =>
+    private static void ProbeChurn(IntSignalWitness observer, IDisposable[] handles) =>
         Row("Signal fan-out churn", () =>
         {
             using var subject = new Signal<int>();

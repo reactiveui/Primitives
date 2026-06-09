@@ -41,11 +41,11 @@ public sealed class MapSignal<TSource, TResult> : IRequireCurrentThread<TResult>
             throw new ArgumentNullException(nameof(observer));
         }
 
-        return _source.Subscribe(new MapObserver(observer, _selector));
+        return _source.Subscribe(new MapWitness(observer, _selector));
     }
 
-    /// <summary>Represents the MapObserver class.</summary>
-    private sealed class MapObserver : IObserver<TSource>
+    /// <summary>Represents the MapWitness class.</summary>
+    private sealed class MapWitness : IObserver<TSource>
     {
         /// <summary>Stores state for the signal implementation.</summary>
         private readonly IObserver<TResult> _observer;
@@ -56,10 +56,10 @@ public sealed class MapSignal<TSource, TResult> : IRequireCurrentThread<TResult>
         /// <summary>Stores state for the signal implementation.</summary>
         private bool _stopped;
 
-        /// <summary>Initializes a new instance of the <see cref="MapObserver"/> class.</summary>
+        /// <summary>Initializes a new instance of the <see cref="MapWitness"/> class.</summary>
         /// <param name="observer">The observer value.</param>
         /// <param name="selector">The selector value.</param>
-        public MapObserver(IObserver<TResult> observer, Func<TSource, TResult> selector)
+        public MapWitness(IObserver<TResult> observer, Func<TSource, TResult> selector)
         {
             _observer = observer;
             _selector = selector;

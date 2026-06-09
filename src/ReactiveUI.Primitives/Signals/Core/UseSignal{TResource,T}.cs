@@ -49,7 +49,7 @@ internal sealed class UseSignal<TResource, T> : IObservable<T>
             return EmptyDisposable.Instance;
         }
 
-        var sink = new UseObserver(observer, resource);
+        var sink = new UseWitness(observer, resource);
         try
         {
             sink.SetSubscription(source.Subscribe(sink));
@@ -64,7 +64,7 @@ internal sealed class UseSignal<TResource, T> : IObservable<T>
     }
 
     /// <summary>Subscription sink that owns the resource and inner subscription.</summary>
-    private sealed class UseObserver : IObserver<T>, IDisposable
+    private sealed class UseWitness : IObserver<T>, IDisposable
     {
         /// <summary>Owned resource.</summary>
         private readonly IDisposable? _resource;
@@ -78,10 +78,10 @@ internal sealed class UseSignal<TResource, T> : IObservable<T>
         /// <summary>Non-zero once stopped.</summary>
         private int _stopped;
 
-        /// <summary>Initializes a new instance of the <see cref="UseObserver"/> class.</summary>
+        /// <summary>Initializes a new instance of the <see cref="UseWitness"/> class.</summary>
         /// <param name="observer">Wrapped observer.</param>
         /// <param name="resource">Owned resource.</param>
-        public UseObserver(IObserver<T> observer, TResource resource)
+        public UseWitness(IObserver<T> observer, TResource resource)
         {
             _observer = observer;
             _resource = resource;

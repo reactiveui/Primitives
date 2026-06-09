@@ -197,7 +197,7 @@ public class ConflateObservableTests
     [Test]
     public async Task WhenSinkEnqueuedAfterDispose_ThenSilentlyDropped()
     {
-        var downstream = new RecordingObserver<int>();
+        var downstream = new RecordingWitness<int>();
         var scheduler = new VirtualClock();
         var sink = new ConflateObservable<int>.ConflateSink(
             downstream,
@@ -222,7 +222,7 @@ public class ConflateObservableTests
     [Test]
     public async Task WhenSinkEventsAfterTerminated_ThenDropped()
     {
-        var downstream = new RecordingObserver<int>();
+        var downstream = new RecordingWitness<int>();
         var scheduler = new VirtualClock();
         var sink = new ConflateObservable<int>.ConflateSink(
             downstream,
@@ -247,7 +247,7 @@ public class ConflateObservableTests
     /// and marshaller — does not race with a scheduler, so the assertion sees exactly the
     /// notifications that were forwarded.</summary>
     /// <typeparam name="T">The element type.</typeparam>
-    private sealed class RecordingObserver<T> : IObserver<T>
+    private sealed class RecordingWitness<T> : IObserver<T>
     {
         /// <summary>Gets the captured <c>OnNext</c> values in order.</summary>
         public List<T> Values { get; } = [];

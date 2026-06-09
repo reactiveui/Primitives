@@ -21,12 +21,12 @@ internal sealed class WhereIsNotNullObservable<T>(IObservable<T> source) : IObse
     {
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return source.Subscribe(new WhereIsNotNullObserver(observer));
+        return source.Subscribe(new WhereIsNotNullWitness(observer));
     }
 
     /// <summary>Forwarding observer that suppresses null <see cref="OnNext"/> values and passes <see cref="OnError"/> and <see cref="OnCompleted"/> through unchanged.</summary>
     /// <param name="downstream">The downstream observer.</param>
-    private sealed class WhereIsNotNullObserver(IObserver<T> downstream) : IObserver<T>
+    private sealed class WhereIsNotNullWitness(IObserver<T> downstream) : IObserver<T>
     {
         /// <inheritdoc/>
         public void OnNext(T value)

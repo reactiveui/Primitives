@@ -49,7 +49,7 @@ internal sealed class ScheduledSourceObservable<T> : IObservable<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new ScheduledSourceObserver(observer, _config);
+        var sink = new ScheduledSourceWitness(observer, _config);
         return _source.Subscribe(sink);
     }
 
@@ -89,7 +89,7 @@ internal sealed class ScheduledSourceObservable<T> : IObservable<T>
     /// <summary>Per-value sink that schedules each <see cref="OnNext"/> through the configured sequencer.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="config">The captured scheduling configuration.</param>
-    private sealed class ScheduledSourceObserver(IObserver<T> downstream, ScheduleConfig<T> config) : IObserver<T>
+    private sealed class ScheduledSourceWitness(IObserver<T> downstream, ScheduleConfig<T> config) : IObserver<T>
     {
         /// <inheritdoc/>
         public void OnNext(T value)

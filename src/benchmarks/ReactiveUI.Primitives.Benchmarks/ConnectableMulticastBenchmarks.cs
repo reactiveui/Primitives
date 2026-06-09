@@ -28,7 +28,7 @@ public class ConnectableMulticastBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesMulticastConnect()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         var connectable = Signal.Sequence(Start, Count).Multicast(new Signal<int>());
         using var subscription = connectable.Subscribe(observer);
         using var connection = connectable.Connect();
@@ -40,7 +40,7 @@ public class ConnectableMulticastBenchmarks
     [Benchmark]
     public int SystemReactiveMulticastConnect()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         var connectable = RxObservable.Range(Start, Count).Multicast(new Subject<int>());
         using var subscription = connectable.Subscribe(observer);
         using var connection = connectable.Connect();
@@ -52,7 +52,7 @@ public class ConnectableMulticastBenchmarks
     [Benchmark]
     public int R3MulticastConnect()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         var connectable = R3.ObservableExtensions.Multicast(R3.Observable.Range(Start, Count), new R3.Subject<int>());
         using var subscription = connectable.Subscribe(observer);
         using var connection = connectable.Connect();

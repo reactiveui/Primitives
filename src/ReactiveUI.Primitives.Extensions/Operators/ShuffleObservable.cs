@@ -21,13 +21,13 @@ internal sealed class ShuffleObservable<T>(IObservable<T[]> source) : IObservabl
     {
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return source.Subscribe(new ShuffleObserver(observer));
+        return source.Subscribe(new ShuffleWitness(observer));
     }
 
     /// <summary>Observer that shuffles arrays in place.</summary>
     /// <param name="downstream">The downstream observer receiving shuffled arrays.</param>
     [SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Shuffle is non-cryptographic; Random is faster.")]
-    private sealed class ShuffleObserver(IObserver<T[]> downstream) : IObserver<T[]>
+    private sealed class ShuffleWitness(IObserver<T[]> downstream) : IObserver<T[]>
     {
 #if !NET8_0_OR_GREATER
         /// <summary>Per-thread <see cref="Random"/> used by the netfx fallback path.</summary>

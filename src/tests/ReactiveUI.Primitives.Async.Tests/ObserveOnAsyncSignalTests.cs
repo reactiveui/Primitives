@@ -177,7 +177,7 @@ public class ObserveOnAsyncSignalTests
     public async Task WhenForwardAfterContextSwitchAsyncInvokedDirectly_ThenValueForwarded()
     {
         var captured = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var downstream = new CapturingAsyncObserver<int>(captured);
+        var downstream = new CapturingAsyncWitness<int>(captured);
         var sut = new ContextSwitchSignalAsync<int>.ContextSwitchWitness(downstream, AsyncContext.Default, forceYielding: true);
 
         await sut.ForwardAfterContextSwitchAsync(Sentinel, CancellationToken.None);
@@ -192,7 +192,7 @@ public class ObserveOnAsyncSignalTests
     public async Task WhenForwardErrorAfterContextSwitchAsyncInvokedDirectly_ThenErrorForwarded()
     {
         var captured = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var downstream = new CapturingAsyncObserver<int>(captured);
+        var downstream = new CapturingAsyncWitness<int>(captured);
         var sut = new ContextSwitchSignalAsync<int>.ContextSwitchWitness(downstream, AsyncContext.Default, forceYielding: true);
         var expected = new InvalidOperationException("slow-path-error");
 
@@ -208,7 +208,7 @@ public class ObserveOnAsyncSignalTests
     public async Task WhenForwardCompletionAfterContextSwitchAsyncInvokedDirectly_ThenCompletionForwarded()
     {
         var captured = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var downstream = new CapturingAsyncObserver<int>(captured);
+        var downstream = new CapturingAsyncWitness<int>(captured);
         var sut = new ContextSwitchSignalAsync<int>.ContextSwitchWitness(downstream, AsyncContext.Default, forceYielding: true);
 
         await sut.ForwardCompletionAfterContextSwitchAsync(Result.Success);
@@ -220,7 +220,7 @@ public class ObserveOnAsyncSignalTests
     /// <summary>Test observer that captures the first <c>OnNextAsync</c> value, the first
     /// <c>OnErrorResumeAsync</c> exception, and the <c>OnCompletedAsync</c> result via TCSes.</summary>
     /// <typeparam name="T">The element type.</typeparam>
-    private sealed class CapturingAsyncObserver<T> : IObserverAsync<T>
+    private sealed class CapturingAsyncWitness<T> : IObserverAsync<T>
     {
         /// <summary>Captures the first <c>OnNextAsync</c> value, if a TCS was supplied.</summary>
         private readonly TaskCompletionSource<T>? _onNext;
@@ -231,17 +231,17 @@ public class ObserveOnAsyncSignalTests
         /// <summary>Captures the <c>OnCompletedAsync</c> result, if a TCS was supplied.</summary>
         private readonly TaskCompletionSource<Result>? _onCompleted;
 
-        /// <summary>Initializes a new instance of the <see cref="CapturingAsyncObserver{T}"/> class with an <c>OnNext</c> capture target.</summary>
+        /// <summary>Initializes a new instance of the <see cref="CapturingAsyncWitness{T}"/> class with an <c>OnNext</c> capture target.</summary>
         /// <param name="onNext">The TCS that receives the first <c>OnNextAsync</c> value.</param>
-        public CapturingAsyncObserver(TaskCompletionSource<T> onNext) => _onNext = onNext;
+        public CapturingAsyncWitness(TaskCompletionSource<T> onNext) => _onNext = onNext;
 
-        /// <summary>Initializes a new instance of the <see cref="CapturingAsyncObserver{T}"/> class with an <c>OnErrorResume</c> capture target.</summary>
+        /// <summary>Initializes a new instance of the <see cref="CapturingAsyncWitness{T}"/> class with an <c>OnErrorResume</c> capture target.</summary>
         /// <param name="onError">The TCS that receives the first <c>OnErrorResumeAsync</c> exception.</param>
-        public CapturingAsyncObserver(TaskCompletionSource<Exception> onError) => _onError = onError;
+        public CapturingAsyncWitness(TaskCompletionSource<Exception> onError) => _onError = onError;
 
-        /// <summary>Initializes a new instance of the <see cref="CapturingAsyncObserver{T}"/> class with an <c>OnCompleted</c> capture target.</summary>
+        /// <summary>Initializes a new instance of the <see cref="CapturingAsyncWitness{T}"/> class with an <c>OnCompleted</c> capture target.</summary>
         /// <param name="onCompleted">The TCS that receives the <c>OnCompletedAsync</c> result.</param>
-        public CapturingAsyncObserver(TaskCompletionSource<Result> onCompleted) => _onCompleted = onCompleted;
+        public CapturingAsyncWitness(TaskCompletionSource<Result> onCompleted) => _onCompleted = onCompleted;
 
         /// <inheritdoc/>
         public ValueTask OnNextAsync(T value, CancellationToken cancellationToken)

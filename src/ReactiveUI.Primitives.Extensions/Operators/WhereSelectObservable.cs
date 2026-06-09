@@ -29,7 +29,7 @@ internal sealed class WhereSelectObservable<TIn, TOut>(
         InvalidOperationExceptionHelper.ThrowIfNull(predicate);
         InvalidOperationExceptionHelper.ThrowIfNull(selector);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return source.Subscribe(new WhereSelectObserver(observer, predicate, selector));
+        return source.Subscribe(new WhereSelectWitness(observer, predicate, selector));
     }
 
     /// <summary>
@@ -40,7 +40,7 @@ internal sealed class WhereSelectObservable<TIn, TOut>(
     /// <param name="downstream">The downstream observer receiving projected values.</param>
     /// <param name="predicate">Filter delegate.</param>
     /// <param name="selector">Projection delegate.</param>
-    private sealed class WhereSelectObserver(
+    private sealed class WhereSelectWitness(
         IObserver<TOut> downstream,
         Func<TIn, bool> predicate,
         Func<TIn, TOut> selector) : IObserver<TIn>

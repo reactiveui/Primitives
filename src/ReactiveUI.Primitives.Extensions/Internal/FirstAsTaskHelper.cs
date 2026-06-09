@@ -18,14 +18,14 @@ internal static class FirstAsTaskHelper
     public static Task<T> FirstAsTask<T>(IObservable<T> source)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
-        var observer = new FirstObserver<T>();
+        var observer = new FirstWitness<T>();
         observer.Subscription = source.Subscribe(observer);
         return observer.Task;
     }
 
     /// <summary>Combined TaskCompletionSource + IObserver — one heap allocation per call instead of two.</summary>
     /// <typeparam name="T">The element type.</typeparam>
-    private sealed class FirstObserver<T>() : TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously), IObserver<T>
+    private sealed class FirstWitness<T>() : TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously), IObserver<T>
     {
         /// <summary>Latches to <c>1</c> once the task has been settled so subsequent callbacks are no-ops.</summary>
         private int _settled;

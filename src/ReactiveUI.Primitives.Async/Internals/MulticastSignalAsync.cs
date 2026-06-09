@@ -126,7 +126,7 @@ internal sealed class MulticastSignalAsync<T>(IObservableAsync<T> source, ISigna
         // The downstream observer (when it itself is an ObserverAsync) receives the wrap's dispose
         // token through the broadcast chain — pre-linking it here eliminates the per-emission
         // linked-CTS allocation that the downstream's TryEnter would otherwise produce. The wrap
-        // itself benefits from SignalAsyncObserver forwarding CancellationToken.None to the
+        // itself benefits from SignalAsyncWitness forwarding CancellationToken.None to the
         // signal (the wrap's TryEnter sees None and fast-paths), so no wrap-side link is needed.
         var wrap = new RelayWitnessAsync<T>(observer);
         if (observer is ObserverAsync<T> downstream)

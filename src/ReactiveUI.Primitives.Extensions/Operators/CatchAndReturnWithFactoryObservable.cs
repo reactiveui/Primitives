@@ -25,7 +25,7 @@ internal sealed class CatchAndReturnWithFactoryObservable<T, TException>(
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         InvalidOperationExceptionHelper.ThrowIfNull(fallbackFactory);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return source.Subscribe(new CatchAndReturnWithFactoryObserver(observer, fallbackFactory));
+        return source.Subscribe(new CatchAndReturnWithFactoryWitness(observer, fallbackFactory));
     }
 
     /// <summary>
@@ -35,7 +35,7 @@ internal sealed class CatchAndReturnWithFactoryObservable<T, TException>(
     /// </summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="fallbackFactory">The fallback factory.</param>
-    private sealed class CatchAndReturnWithFactoryObserver(
+    private sealed class CatchAndReturnWithFactoryWitness(
         IObserver<T> downstream,
         Func<TException, T> fallbackFactory) : IObserver<T>
     {

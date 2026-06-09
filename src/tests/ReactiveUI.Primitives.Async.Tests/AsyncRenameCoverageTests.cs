@@ -100,7 +100,7 @@ public sealed class AsyncRenameCoverageTests
     {
         using var unhandled = new UnhandledExceptionCapture();
         var expected = new InvalidOperationException("task-signal-completion");
-        var observer = new ThrowingCompletionObserver(expected);
+        var observer = new ThrowingCompletionWitness(expected);
 
         await TaskSignalSubscription<int>.CompleteWithFailureAsync(
             observer,
@@ -116,7 +116,7 @@ public sealed class AsyncRenameCoverageTests
     public async Task ObserverAsyncRenamedDisposalMembersTrackAssignedSubscription()
     {
         var disposed = 0;
-        var observer = new RenameCoverageObserver();
+        var observer = new RenameCoverageWitness();
 
         PrimitiveAssert.False(observer.HasDisposed);
 
@@ -134,7 +134,7 @@ public sealed class AsyncRenameCoverageTests
     {
         using var unhandled = new UnhandledExceptionCapture();
         var expected = new InvalidOperationException("assigned-dispose");
-        var observer = new RenameCoverageObserver();
+        var observer = new RenameCoverageWitness();
 
         await observer.AssignSourceSubscriptionAsync(new ThrowingAsyncDisposable(expected)).ConfigureAwait(false);
         await observer.DisposeAsync().ConfigureAwait(false);
@@ -149,7 +149,7 @@ public sealed class AsyncRenameCoverageTests
     public async Task RouteObserverErrorAsyncReportsCanceledAndThrownHandlerPaths()
     {
         using var unhandled = new UnhandledExceptionCapture();
-        var canceledObserver = new RenameCoverageObserver();
+        var canceledObserver = new RenameCoverageWitness();
         var canceledError = new InvalidOperationException("route-canceled");
         using var cancellation = new CancellationTokenSource();
         await cancellation.CancelAsync().ConfigureAwait(false);
@@ -160,7 +160,7 @@ public sealed class AsyncRenameCoverageTests
         PrimitiveAssert.Same(canceledError, canceledReported!);
 
         var operationCanceledError = new InvalidOperationException("route-operation-canceled");
-        var operationCanceledObserver = new RenameCoverageObserver((_, _) => throw new OperationCanceledException());
+        var operationCanceledObserver = new RenameCoverageWitness((_, _) => throw new OperationCanceledException());
 
         await operationCanceledObserver.RouteObserverErrorAsync(operationCanceledError, CancellationToken.None).ConfigureAwait(false);
 
@@ -168,7 +168,7 @@ public sealed class AsyncRenameCoverageTests
         PrimitiveAssert.Same(operationCanceledError, operationCanceledReported!);
 
         var handlerError = new InvalidOperationException("route-handler");
-        var throwingObserver = new RenameCoverageObserver((_, _) => throw handlerError);
+        var throwingObserver = new RenameCoverageWitness((_, _) => throw handlerError);
 
         await throwingObserver.RouteObserverErrorAsync(new InvalidOperationException("source"), CancellationToken.None).ConfigureAwait(false);
 
@@ -183,7 +183,7 @@ public sealed class AsyncRenameCoverageTests
     {
         using var unhandled = new UnhandledExceptionCapture();
         var expected = new InvalidOperationException("completion-slow");
-        var observer = new RenameCoverageObserver(onCompleted: _ => new ValueTask(Task.FromException(expected)));
+        var observer = new RenameCoverageWitness(onCompleted: _ => new ValueTask(Task.FromException(expected)));
 
         await observer.OnCompletedAsync(Result.Success).ConfigureAwait(false);
 
@@ -194,7 +194,7 @@ public sealed class AsyncRenameCoverageTests
     /// <summary>Test observer exposing the renamed internal observer members.</summary>
     /// <param name="onError">Optional error handler used by <see cref="OnErrorResumeAsyncCore"/>.</param>
     /// <param name="onCompleted">Optional completion handler used by <see cref="OnCompletedAsyncCore"/>.</param>
-    private sealed class RenameCoverageObserver(
+    private sealed class RenameCoverageWitness(
         Func<Exception, CancellationToken, ValueTask>? onError = null,
         Func<Result, ValueTask>? onCompleted = null) : ObserverAsync<int>
     {
@@ -232,7 +232,7 @@ public sealed class AsyncRenameCoverageTests
 
     /// <summary>Observer that throws when completion is delivered.</summary>
     /// <param name="error">The exception to throw from completion.</param>
-    private sealed class ThrowingCompletionObserver(Exception error) : IObserverAsync<int>
+    private sealed class ThrowingCompletionWitness(Exception error) : IObserverAsync<int>
     {
         /// <inheritdoc/>
         public ValueTask DisposeAsync() => default;

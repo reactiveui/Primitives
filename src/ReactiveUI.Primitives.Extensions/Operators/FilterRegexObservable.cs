@@ -20,13 +20,13 @@ internal sealed class FilterRegexObservable(
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         InvalidOperationExceptionHelper.ThrowIfNull(regex);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return source.Subscribe(new FilterRegexObserver(observer, regex));
+        return source.Subscribe(new FilterRegexWitness(observer, regex));
     }
 
     /// <summary>Observer that filters strings using regex.</summary>
     /// <param name="downstream">The downstream observer receiving strings that match the regex.</param>
     /// <param name="regex">The regex used for filtering.</param>
-    private sealed class FilterRegexObserver(
+    private sealed class FilterRegexWitness(
         IObserver<string> downstream,
         Regex regex) : IObserver<string>
     {

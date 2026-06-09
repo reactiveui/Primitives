@@ -24,13 +24,13 @@ internal sealed class TakeUntilInclusiveObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(predicate);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        return source.Subscribe(new TakeUntilInclusiveObserver(observer, predicate));
+        return source.Subscribe(new TakeUntilInclusiveWitness(observer, predicate));
     }
 
     /// <summary>The observer for the <see cref="TakeUntilInclusiveObservable{T}"/>.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="predicate">The predicate to determine when to stop taking elements.</param>
-    private sealed class TakeUntilInclusiveObserver(
+    private sealed class TakeUntilInclusiveWitness(
         IObserver<T> downstream,
         Func<T, bool> predicate) : IObserver<T>
     {

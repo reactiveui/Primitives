@@ -15,7 +15,7 @@ public class ReduceSinkStateTests
     public async Task WhenFreshState_ThenZeroValuesAndNotTerminal()
     {
         const int SourceCount = 3;
-        var observer = new CaptureObserver<int>();
+        var observer = new CaptureWitness<int>();
         var state = new ReduceSinkState<int, int>(observer, SourceCount);
 
         await Assert.That(state.HasValueCount).IsEqualTo(0);
@@ -33,7 +33,7 @@ public class ReduceSinkStateTests
     {
         const int FirstSeed = 1;
         const int SecondSeed = 2;
-        var observer = new CaptureObserver<int>();
+        var observer = new CaptureWitness<int>();
         var state = new ReduceSinkState<int, int>(observer, count: 2);
 
         state.Values[0] = FirstSeed;
@@ -50,7 +50,7 @@ public class ReduceSinkStateTests
     [Test]
     public async Task WhenHandleError_ThenForwardsAndIsTerminal()
     {
-        var observer = new CaptureObserver<int>();
+        var observer = new CaptureWitness<int>();
         var state = new ReduceSinkState<int, int>(observer, count: 2);
         var error = new InvalidOperationException("boom");
 
@@ -70,7 +70,7 @@ public class ReduceSinkStateTests
         const int SeedValue1 = 1;
         const int SeedValue2 = 2;
         const int SeededValueCount = 2;
-        var observer = new CaptureObserver<int>();
+        var observer = new CaptureWitness<int>();
         var state = new ReduceSinkState<int, int>(observer, count: 2);
 
         // Seed both values so completion-without-value path isn't triggered.
@@ -93,7 +93,7 @@ public class ReduceSinkStateTests
     public async Task WhenSourceCompletesWithoutValue_ThenDownstreamCompletesEarly()
     {
         const int FirstSeed = 1;
-        var observer = new CaptureObserver<int>();
+        var observer = new CaptureWitness<int>();
         var state = new ReduceSinkState<int, int>(observer, count: 2);
 
         // Source 0 emitted; source 1 completes without a value.
@@ -111,7 +111,7 @@ public class ReduceSinkStateTests
     [Test]
     public async Task WhenSameSourceCompletesTwice_ThenSecondCallIgnored()
     {
-        var observer = new CaptureObserver<int>();
+        var observer = new CaptureWitness<int>();
         var state = new ReduceSinkState<int, int>(observer, count: 2);
 
         state.HandleCompleted(0);
@@ -122,7 +122,7 @@ public class ReduceSinkStateTests
 
     /// <summary>Tiny capture observer used by the helper tests.</summary>
     /// <typeparam name="T">Captured element type.</typeparam>
-    private sealed class CaptureObserver<T> : IObserver<T>
+    private sealed class CaptureWitness<T> : IObserver<T>
     {
         /// <summary>Gets the captured OnNext values in order.</summary>
         public List<T> Values { get; } = [];

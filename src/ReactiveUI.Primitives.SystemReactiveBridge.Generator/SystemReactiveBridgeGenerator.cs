@@ -358,12 +358,12 @@ internal static class SystemReactiveAsyncBridge
                     global::ReactiveUI.Primitives.Async.Disposables.DisposableAsync.Empty);
             }
 
-            var bridge = new BridgeObserver(observer, cancellationToken);
+            var bridge = new BridgeWitness(observer, cancellationToken);
             var subscription = source.Subscribe(bridge);
             return new global::System.Threading.Tasks.ValueTask<global::System.IAsyncDisposable>(new AsyncDisposableAdapter(subscription));
         }
 
-        private sealed class BridgeObserver(
+        private sealed class BridgeWitness(
             global::ReactiveUI.Primitives.Async.IObserverAsync<T> observer,
             global::System.Threading.CancellationToken cancellationToken) : global::System.IObserver<T>
         {
@@ -399,7 +399,7 @@ internal static class SystemReactiveAsyncBridge
         {
             try
             {
-                return await source.SubscribeAsync(new BridgeAsyncObserver(observer), cancellationToken).ConfigureAwait(false);
+                return await source.SubscribeAsync(new BridgeAsyncWitness(observer), cancellationToken).ConfigureAwait(false);
             }
             catch (global::System.OperationCanceledException)
             {
@@ -412,7 +412,7 @@ internal static class SystemReactiveAsyncBridge
             }
         }
 
-        private sealed class BridgeAsyncObserver(global::System.IObserver<T> observer)
+        private sealed class BridgeAsyncWitness(global::System.IObserver<T> observer)
             : global::ReactiveUI.Primitives.Async.IObserverAsync<T>
         {
             public global::System.Threading.Tasks.ValueTask OnNextAsync(T value, global::System.Threading.CancellationToken cancellationToken)

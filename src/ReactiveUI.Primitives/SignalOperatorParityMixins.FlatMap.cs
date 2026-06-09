@@ -104,10 +104,10 @@ public static partial class LinqExtensions
         private readonly IObserver<TResult> _observer;
 
         /// <summary>Observer used for the outer source.</summary>
-        private readonly OuterObserver _outerObserver;
+        private readonly OuterWitness _outerObserver;
 
         /// <summary>Observer used for active inner sources.</summary>
-        private readonly InnerObserver _innerObserver;
+        private readonly InnerWitness _innerObserver;
 
         /// <summary>Queued inner sources waiting for the active inner source to complete.</summary>
         private Queue<IObservable<TResult>>? _queue;
@@ -430,14 +430,14 @@ public static partial class LinqExtensions
         }
 
         /// <summary>Outer source observer.</summary>
-        private sealed class OuterObserver : IObserver<TSource>
+        private sealed class OuterWitness : IObserver<TSource>
         {
             /// <summary>Owning coordinator.</summary>
             private readonly FlatMapCoordinator<TSource, TResult> _parent;
 
-            /// <summary>Initializes a new instance of the <see cref="OuterObserver"/> class.</summary>
+            /// <summary>Initializes a new instance of the <see cref="OuterWitness"/> class.</summary>
             /// <param name="parent">Owning coordinator.</param>
-            internal OuterObserver(FlatMapCoordinator<TSource, TResult> parent) => _parent = parent;
+            internal OuterWitness(FlatMapCoordinator<TSource, TResult> parent) => _parent = parent;
 
             /// <inheritdoc/>
             public void OnCompleted() => _parent.OnOuterCompleted();
@@ -450,14 +450,14 @@ public static partial class LinqExtensions
         }
 
         /// <summary>Inner source observer.</summary>
-        private sealed class InnerObserver : IObserver<TResult>
+        private sealed class InnerWitness : IObserver<TResult>
         {
             /// <summary>Owning coordinator.</summary>
             private readonly FlatMapCoordinator<TSource, TResult> _parent;
 
-            /// <summary>Initializes a new instance of the <see cref="InnerObserver"/> class.</summary>
+            /// <summary>Initializes a new instance of the <see cref="InnerWitness"/> class.</summary>
             /// <param name="parent">Owning coordinator.</param>
-            internal InnerObserver(FlatMapCoordinator<TSource, TResult> parent) => _parent = parent;
+            internal InnerWitness(FlatMapCoordinator<TSource, TResult> parent) => _parent = parent;
 
             /// <inheritdoc/>
             public void OnCompleted() => _parent.OnInnerCompleted();
@@ -542,11 +542,11 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            return _source.Subscribe(new ResultObserver(_sourceValue, _selector, observer));
+            return _source.Subscribe(new ResultWitness(_sourceValue, _selector, observer));
         }
 
         /// <summary>Maps inner source values.</summary>
-        private sealed class ResultObserver : IObserver<TCollection>
+        private sealed class ResultWitness : IObserver<TCollection>
         {
             /// <summary>Captured outer value.</summary>
             private readonly TSource _sourceValue;
@@ -557,11 +557,11 @@ public static partial class LinqExtensions
             /// <summary>The downstream observer.</summary>
             private readonly IObserver<TResult> _observer;
 
-            /// <summary>Initializes a new instance of the <see cref="ResultObserver"/> class.</summary>
+            /// <summary>Initializes a new instance of the <see cref="ResultWitness"/> class.</summary>
             /// <param name="sourceValue">Captured outer value.</param>
             /// <param name="selector">Projects outer and inner values to result values.</param>
             /// <param name="observer">The downstream observer.</param>
-            internal ResultObserver(
+            internal ResultWitness(
                 TSource sourceValue,
                 Func<TSource, TCollection, TResult> selector,
                 IObserver<TResult> observer)

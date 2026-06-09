@@ -15,7 +15,7 @@ public class TimerSinkStateTests
     [Test]
     public async Task WhenHandleErrorLocked_ThenForwardsAndMarksDone()
     {
-        var observer = new RecordingObserver<int>();
+        var observer = new RecordingWitness<int>();
         var state = new TimerSinkState<int>(observer);
         var expected = new InvalidOperationException("timer-error");
 
@@ -31,7 +31,7 @@ public class TimerSinkStateTests
     [Test]
     public async Task WhenHandleCompletedLocked_ThenForwardsAndMarksDone()
     {
-        var observer = new RecordingObserver<int>();
+        var observer = new RecordingWitness<int>();
         var state = new TimerSinkState<int>(observer);
 
         state.HandleCompletedLocked();
@@ -46,7 +46,7 @@ public class TimerSinkStateTests
     [Test]
     public async Task WhenHandleCompletedLockedAfterError_ThenNoOp()
     {
-        var observer = new RecordingObserver<int>();
+        var observer = new RecordingWitness<int>();
         var state = new TimerSinkState<int>(observer);
 
         state.HandleErrorLocked(new InvalidOperationException("first"));
@@ -62,7 +62,7 @@ public class TimerSinkStateTests
     [Test]
     public async Task WhenHandleErrorLockedAfterCompleted_ThenNoOp()
     {
-        var observer = new RecordingObserver<int>();
+        var observer = new RecordingWitness<int>();
         var state = new TimerSinkState<int>(observer);
 
         state.HandleCompletedLocked();
@@ -77,7 +77,7 @@ public class TimerSinkStateTests
     [Test]
     public async Task WhenHandleDisposeLocked_ThenMarksDoneWithoutForwarding()
     {
-        var observer = new RecordingObserver<int>();
+        var observer = new RecordingWitness<int>();
         var state = new TimerSinkState<int>(observer);
 
         state.HandleDisposeLocked();
@@ -89,7 +89,7 @@ public class TimerSinkStateTests
 
     /// <summary>Recording observer used by the direct <c>TimerSinkState</c> tests.</summary>
     /// <typeparam name="T">The element type.</typeparam>
-    private sealed class RecordingObserver<T> : IObserver<T>
+    private sealed class RecordingWitness<T> : IObserver<T>
     {
         /// <summary>Gets the captured errors.</summary>
         public List<Exception> Errors { get; } = [];

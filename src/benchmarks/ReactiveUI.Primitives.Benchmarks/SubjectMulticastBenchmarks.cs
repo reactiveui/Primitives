@@ -60,7 +60,7 @@ public class SubjectMulticastBenchmarks
     private static int EmitThroughSignal(int observerCount)
     {
         using var subject = new Signal<int>();
-        var observers = new IntSignalObserver[observerCount];
+        var observers = new IntSignalWitness[observerCount];
         var subscriptions = new IDisposable[observerCount];
         for (var i = 0; i < observerCount; i++)
         {
@@ -87,7 +87,7 @@ public class SubjectMulticastBenchmarks
     private static int EmitThroughSystemSubject(int observerCount)
     {
         using var subject = new RxSubject();
-        var observers = new IntSignalObserver[observerCount];
+        var observers = new IntSignalWitness[observerCount];
         var subscriptions = new IDisposable[observerCount];
         for (var i = 0; i < observerCount; i++)
         {
@@ -114,7 +114,7 @@ public class SubjectMulticastBenchmarks
     private static int EmitThroughR3Subject(int observerCount)
     {
         using var subject = new R3.Subject<int>();
-        var observers = new IntR3Observer[observerCount];
+        var observers = new IntR3Witness[observerCount];
         var subscriptions = new IDisposable[observerCount];
         for (var i = 0; i < observerCount; i++)
         {

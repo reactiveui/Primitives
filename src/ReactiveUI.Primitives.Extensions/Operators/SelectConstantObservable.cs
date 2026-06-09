@@ -25,7 +25,7 @@ internal sealed class SelectConstantObservable<TSource, TResult>(
     {
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return source.Subscribe(new SelectConstantObserver(observer, constant));
+        return source.Subscribe(new SelectConstantWitness(observer, constant));
     }
 
     /// <summary>
@@ -34,7 +34,7 @@ internal sealed class SelectConstantObservable<TSource, TResult>(
     /// </summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="constant">The constant value to emit.</param>
-    private sealed class SelectConstantObserver(IObserver<TResult> downstream, TResult constant) : IObserver<TSource>
+    private sealed class SelectConstantWitness(IObserver<TResult> downstream, TResult constant) : IObserver<TSource>
     {
         /// <inheritdoc/>
         public void OnNext(TSource value) => downstream.OnNext(constant);

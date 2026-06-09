@@ -75,14 +75,14 @@ public class AsyncExtensionsComparisonBenchmarks
     public async Task<int> PrimitivesSignalBroadcastAsync()
     {
         var signal = PrimitivesAsyncSignalFactory.Create<int>();
-        var observers = new PrimitivesCountingObserver[SubscriberCount];
+        var observers = new PrimitivesCountingWitness[SubscriberCount];
         var subscriptions = new IAsyncDisposable[SubscriberCount];
 
         try
         {
             for (var i = 0; i < SubscriberCount; i++)
             {
-                var observer = new PrimitivesCountingObserver();
+                var observer = new PrimitivesCountingWitness();
                 observers[i] = observer;
                 subscriptions[i] = await signal.SubscribeAsync(observer, CancellationToken.None)
                     .ConfigureAwait(false);
@@ -108,14 +108,14 @@ public class AsyncExtensionsComparisonBenchmarks
     public async Task<int> ExtensionsSubjectBroadcastAsync()
     {
         var subject = ExtensionsAsyncSubject.Create<int>();
-        var observers = new ExtensionsCountingObserver[SubscriberCount];
+        var observers = new ExtensionsCountingWitness[SubscriberCount];
         var subscriptions = new IAsyncDisposable[SubscriberCount];
 
         try
         {
             for (var i = 0; i < SubscriberCount; i++)
             {
-                var observer = new ExtensionsCountingObserver();
+                var observer = new ExtensionsCountingWitness();
                 observers[i] = observer;
                 subscriptions[i] = await subject.SubscribeAsync(observer, CancellationToken.None)
                     .ConfigureAwait(false);
@@ -138,7 +138,7 @@ public class AsyncExtensionsComparisonBenchmarks
     /// <summary>Sums the totals recorded by primitive async observers.</summary>
     /// <param name="observers">The observers to sum.</param>
     /// <returns>The combined observed total.</returns>
-    private static int Sum(PrimitivesCountingObserver[] observers)
+    private static int Sum(PrimitivesCountingWitness[] observers)
     {
         var total = 0;
         for (var i = 0; i < observers.Length; i++)
@@ -152,7 +152,7 @@ public class AsyncExtensionsComparisonBenchmarks
     /// <summary>Sums the totals recorded by ReactiveUI.Extensions async observers.</summary>
     /// <param name="observers">The observers to sum.</param>
     /// <returns>The combined observed total.</returns>
-    private static int Sum(ExtensionsCountingObserver[] observers)
+    private static int Sum(ExtensionsCountingWitness[] observers)
     {
         var total = 0;
         for (var i = 0; i < observers.Length; i++)
@@ -178,7 +178,7 @@ public class AsyncExtensionsComparisonBenchmarks
     }
 
     /// <summary>Observer that accumulates primitive async signal values.</summary>
-    private sealed class PrimitivesCountingObserver : Async.ObserverAsync<int>
+    private sealed class PrimitivesCountingWitness : Async.ObserverAsync<int>
     {
         /// <summary>Gets the accumulated value total.</summary>
         public int Total { get; private set; }
@@ -199,7 +199,7 @@ public class AsyncExtensionsComparisonBenchmarks
     }
 
     /// <summary>Observer that accumulates ReactiveUI.Extensions async subject values.</summary>
-    private sealed class ExtensionsCountingObserver : ReactiveUI.Extensions.Async.ObserverAsync<int>
+    private sealed class ExtensionsCountingWitness : ReactiveUI.Extensions.Async.ObserverAsync<int>
     {
         /// <summary>Gets the accumulated value total.</summary>
         public int Total { get; private set; }

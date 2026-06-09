@@ -29,7 +29,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunPartition</c> result.</returns>
     private static int RunPartition(ExtensionsLibrary library)
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         if (library == ExtensionsLibrary.Primitives)
         {
             var (even, odd) = PrimitivesExtensions.Partition(ArraySource(library), static value => (value & 1) == 0);
@@ -309,14 +309,14 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         if (library == ExtensionsLibrary.Primitives)
         {
             var clock = new TestClock();
-            var observer = new CountingSignalObserver<DateTime>();
+            var observer = new CountingSignalWitness<DateTime>();
             using var subscription = PrimitivesExtensions.SyncTimer(Tick, clock).Subscribe(observer);
             clock.AdvanceBy(Tick);
             return observer.Count + observer.CompletionCount;
         }
 
         var scheduler = new HistoricalScheduler();
-        var packageObserver = new CountingSignalObserver<DateTime>();
+        var packageObserver = new CountingSignalWitness<DateTime>();
         using var packageSubscription = PackageExtensions.SyncTimer(Tick, scheduler).Subscribe(packageObserver);
         scheduler.AdvanceBy(Tick);
         return packageObserver.Count + packageObserver.CompletionCount;
@@ -400,7 +400,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     private static int RunToPropertyObservable(ExtensionsLibrary library)
     {
         var source = new PropertySource();
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = (library == ExtensionsLibrary.Primitives
                 ? PrimitivesExtensions.ToPropertyObservable(source, static item => item.CurrentValue)
                 : PackageExtensions.ToPropertyObservable(source, static item => item.CurrentValue))
@@ -414,7 +414,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunToReadOnlyBehavior</c> result.</returns>
     private static int RunToReadOnlyBehavior(ExtensionsLibrary library)
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         if (library == ExtensionsLibrary.Primitives)
         {
             var (observable, sink) = PrimitivesExtensions.ToReadOnlyBehavior(Value);

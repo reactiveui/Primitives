@@ -31,13 +31,13 @@ internal sealed class SelectManyThenObservable<TSource, TMid, TResult>(
         InvalidOperationExceptionHelper.ThrowIfNull(first);
         InvalidOperationExceptionHelper.ThrowIfNull(second);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return source.Subscribe(new SourceObserver(observer, first, second));
+        return source.Subscribe(new SourceWitness(observer, first, second));
     }
 
     /// <summary>Receives the source value and subscribes to the first projection. Holds a single
-    /// reusable <see cref="MidObserver"/> created at subscribe time — the mid observer captures
+    /// reusable <see cref="MidWitness"/> created at subscribe time — the mid observer captures
     /// only <c>downstream</c> and <c>second</c>, so the same instance handles every source emission.</summary>
-    private sealed class SourceObserver : IObserver<TSource>
+    private sealed class SourceWitness : IObserver<TSource>
     {
         /// <summary>The downstream observer that ultimately receives <typeparamref name="TResult"/> values.</summary>
         private readonly IObserver<TResult> _downstream;
@@ -46,20 +46,20 @@ internal sealed class SelectManyThenObservable<TSource, TMid, TResult>(
         private readonly Func<TSource, IObservable<TMid>> _first;
 
         /// <summary>Pre-allocated intermediate observer shared across every source emission.</summary>
-        private readonly MidObserver _midObserver;
+        private readonly MidWitness _midObserver;
 
-        /// <summary>Initializes a new instance of the <see cref="SourceObserver"/> class and primes the reusable mid observer.</summary>
+        /// <summary>Initializes a new instance of the <see cref="SourceWitness"/> class and primes the reusable mid observer.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="first">First projection delegate.</param>
         /// <param name="second">Second projection delegate.</param>
-        public SourceObserver(
+        public SourceWitness(
             IObserver<TResult> downstream,
             Func<TSource, IObservable<TMid>> first,
             Func<TMid, IObservable<TResult>> second)
         {
             _downstream = downstream;
             _first = first;
-            _midObserver = new MidObserver(downstream, second);
+            _midObserver = new MidWitness(downstream, second);
         }
 
         /// <inheritdoc/>
@@ -86,7 +86,7 @@ internal sealed class SelectManyThenObservable<TSource, TMid, TResult>(
     /// observable directly to <c>downstream</c> — no separate final-stage observer needed.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="second">Second projection delegate.</param>
-    private sealed class MidObserver(
+    private sealed class MidWitness(
         IObserver<TResult> downstream,
         Func<TMid, IObservable<TResult>> second) : IObserver<TMid>
     {

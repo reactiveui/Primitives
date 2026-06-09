@@ -70,19 +70,19 @@ public sealed class RealWorldReactiveScenarioTests
     public void DefaultIfEmptyCoversHotSourceEmptyNonEmptyErrorAndObserverGuard()
     {
         var emptySource = new Signal<string?>();
-        var empty = new RecordingObserver<string?>();
+        var empty = new RecordingWitness<string?>();
         emptySource.DefaultIfEmpty(FallbackValue).Subscribe(empty);
         emptySource.OnCompleted();
 
         var nonEmptySource = new Signal<string?>();
-        var nonEmpty = new RecordingObserver<string?>();
+        var nonEmpty = new RecordingWitness<string?>();
         nonEmptySource.DefaultIfEmpty(FallbackValue).Subscribe(nonEmpty);
         nonEmptySource.OnNext(null);
         nonEmptySource.OnNext("actual");
         nonEmptySource.OnCompleted();
 
         var errorSource = new Signal<string?>();
-        var errors = new RecordingObserver<string?>();
+        var errors = new RecordingWitness<string?>();
         errorSource.DefaultIfEmpty(FallbackValue).Subscribe(errors);
         errorSource.OnError(new InvalidOperationException("broken"));
 
@@ -248,7 +248,7 @@ public sealed class RealWorldReactiveScenarioTests
 
     /// <summary>Observer that records values, errors, and completions.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
-    private sealed class RecordingObserver<T> : IObserver<T>
+    private sealed class RecordingWitness<T> : IObserver<T>
     {
         /// <summary>Gets the recorded values.</summary>
         public List<T> Values { get; } = [];

@@ -959,7 +959,7 @@ public class TransformationOperatorTests
 
         var pipeline = source.Prepend(1);
 
-        var rawObserver = new ThrowingOnCompletedObserver<int>(completionException);
+        var rawObserver = new ThrowingOnCompletedWitness<int>(completionException);
         await using var sub = await pipeline.SubscribeAsync(rawObserver, CancellationToken.None);
 
         var exception = await unhandled.WaitForAsync("raw observer completion failed", TimeSpan.FromSeconds(5));
@@ -1114,7 +1114,7 @@ public class TransformationOperatorTests
     /// </summary>
     /// <typeparam name="T">The type of elements received by the observer.</typeparam>
     /// <param name="completionException">The exception to throw when <see cref="OnCompletedAsync"/> is called.</param>
-    private sealed class ThrowingOnCompletedObserver<T>(Exception completionException) : IObserverAsync<T>
+    private sealed class ThrowingOnCompletedWitness<T>(Exception completionException) : IObserverAsync<T>
     {
         /// <inheritdoc/>
         public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) => default;

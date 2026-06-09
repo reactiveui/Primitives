@@ -204,7 +204,7 @@ public static partial class LinqExtensions
                     _hasInner = true;
                 }
 
-                _inner.Disposable = inner.Subscribe(new InnerObserver(this, id));
+                _inner.Disposable = inner.Subscribe(new InnerWitness(this, id));
             }
 
             /// <inheritdoc/>
@@ -324,7 +324,7 @@ public static partial class LinqExtensions
             /// <summary>Observes a single inner observable and routes its notifications through the parent sink.</summary>
             /// <param name="parent">The owning sink.</param>
             /// <param name="id">The generation id of this inner subscription.</param>
-            private sealed class InnerObserver(Sink parent, ulong id) : IObserver<TResult>
+            private sealed class InnerWitness(Sink parent, ulong id) : IObserver<TResult>
             {
                 /// <inheritdoc/>
                 public void OnNext(TResult value) => parent.InnerOnNext(id, value);

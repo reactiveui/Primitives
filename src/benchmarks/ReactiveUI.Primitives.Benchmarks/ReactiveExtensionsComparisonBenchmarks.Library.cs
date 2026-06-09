@@ -131,7 +131,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunContinuationLock</c> result.</returns>
     private static int RunContinuationLock(ExtensionsLibrary library)
     {
-        var observer = new TupleObserver<int>();
+        var observer = new TupleWitness<int>();
         if (library == ExtensionsLibrary.Primitives)
         {
             var continuation = new PrimitivesContinuation();
@@ -151,7 +151,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunContinuationLockValueTask</c> result.</returns>
     private static int RunContinuationLockValueTask(ExtensionsLibrary library)
     {
-        var observer = new TupleObserver<int>();
+        var observer = new TupleWitness<int>();
         if (library == ExtensionsLibrary.Primitives)
         {
             var continuation = new PrimitivesContinuation();
@@ -190,14 +190,14 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         if (library == ExtensionsLibrary.Primitives)
         {
             var clock = new TestClock();
-            var observer = new CountingSignalObserver<Extensions.Stale<int>>();
+            var observer = new CountingSignalWitness<Extensions.Stale<int>>();
             using var subscription = PrimitivesExtensions.DetectStale(Signal.Silent<int>(), Tick, clock).Subscribe(observer);
             clock.AdvanceBy(Tick);
             return observer.Count + observer.CompletionCount;
         }
 
         var scheduler = new HistoricalScheduler();
-        var packageObserver = new CountingSignalObserver<ReactiveUI.Extensions.Stale<int>>();
+        var packageObserver = new CountingSignalWitness<ReactiveUI.Extensions.Stale<int>>();
         using var packageSubscription = PackageExtensions.DetectStale(RxObservable.Never<int>(), Tick, scheduler)
             .Subscribe(packageObserver);
         scheduler.AdvanceBy(Tick);
@@ -213,7 +213,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         using var subscription = (library == ExtensionsLibrary.Primitives
                 ? PrimitivesExtensions.DoOnDispose(ArraySource(library), () => count++)
                 : PackageExtensions.DoOnDispose(ArraySource(library), () => count++))
-            .Subscribe(new IntSignalObserver());
+            .Subscribe(new IntSignalWitness());
         return count;
     }
 
@@ -242,7 +242,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunFastForEach</c> result.</returns>
     private static int RunFastForEach(ExtensionsLibrary library)
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         if (library == ExtensionsLibrary.Primitives)
         {
             PrimitivesObserverExtensions.FastForEach(observer, Values);
@@ -324,14 +324,14 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         if (library == ExtensionsLibrary.Primitives)
         {
             var clock = new TestClock();
-            var observer = new CountingSignalObserver<Extensions.Heartbeat<int>>();
+            var observer = new CountingSignalWitness<Extensions.Heartbeat<int>>();
             using var subscription = PrimitivesExtensions.Heartbeat(Signal.Silent<int>(), Tick, clock).Subscribe(observer);
             clock.AdvanceBy(Tick);
             return observer.Count + observer.CompletionCount;
         }
 
         var scheduler = new HistoricalScheduler();
-        var packageObserver = new CountingSignalObserver<ReactiveUI.Extensions.Heartbeat<int>>();
+        var packageObserver = new CountingSignalWitness<ReactiveUI.Extensions.Heartbeat<int>>();
         using var packageSubscription = PackageExtensions.Heartbeat(RxObservable.Never<int>(), Tick, scheduler)
             .Subscribe(packageObserver);
         scheduler.AdvanceBy(Tick);
@@ -395,7 +395,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunOnNext</c> result.</returns>
     private static int RunOnNext(ExtensionsLibrary library)
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         if (library == ExtensionsLibrary.Primitives)
         {
             PrimitivesExtensions.OnNext(observer, Values);
@@ -413,7 +413,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunPairwise</c> result.</returns>
     private static int RunPairwise(ExtensionsLibrary library)
     {
-        var observer = new PairObserver();
+        var observer = new PairWitness();
         using var subscription = (library == ExtensionsLibrary.Primitives
                 ? PrimitivesExtensions.Pairwise(ArraySource(library))
                 : PackageExtensions.Pairwise(ArraySource(library)))

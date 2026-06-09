@@ -233,7 +233,7 @@ public class SignalTests
     public void SingleObserverSubscriptionReceivesLifecycleAndDetaches()
     {
         var subject = new Signal<int>();
-        var observer = new RecordingObserver();
+        var observer = new RecordingWitness();
 
         var subscription = subject.Subscribe(observer);
         subject.OnNext(1);
@@ -248,7 +248,7 @@ public class SignalTests
         subscription.Dispose();
 
         var faulted = new Signal<int>();
-        var faultObserver = new RecordingObserver();
+        var faultObserver = new RecordingWitness();
         using var faultSubscription = faulted.Subscribe(faultObserver);
         faulted.OnError(new InvalidOperationException());
 
@@ -424,7 +424,7 @@ public class SignalTests
     }
 
     /// <summary>Records integer observer lifecycle calls.</summary>
-    private sealed class RecordingObserver : IObserver<int>
+    private sealed class RecordingWitness : IObserver<int>
     {
         /// <summary>Gets the total of observed values.</summary>
         public int Total { get; private set; }

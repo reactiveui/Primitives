@@ -166,9 +166,9 @@ public partial class InternalInfrastructureCoverageTests
         var trueSignal = Signal.Emit(true);
         var falseSignal = Signal.Emit(false);
         var rxVoidSignal = Signal.EmitRxVoid();
-        trueSignal.Subscribe(new RecordingObserver<bool>());
-        falseSignal.Subscribe(new RecordingObserver<bool>());
-        rxVoidSignal.Subscribe(new RecordingObserver<RxVoid>());
+        trueSignal.Subscribe(new RecordingWitness<bool>());
+        falseSignal.Subscribe(new RecordingWitness<bool>());
+        rxVoidSignal.Subscribe(new RecordingWitness<RxVoid>());
         trueSignal.Subscribe(trueValues.Add, _ => { }, () => inlineCompleted++);
         falseSignal.Subscribe(falseValues.Add, _ => { }, () => inlineCompleted++);
         rxVoidSignal.Subscribe(rxVoidValues.Add, _ => { }, () => inlineCompleted++);
@@ -206,17 +206,17 @@ public partial class InternalInfrastructureCoverageTests
     [Test]
     public void InlineOperatorObserverAndErrorCleanupPathsCoverRemainingBranches()
     {
-        var observerValues = new RecordingObserver<int>();
+        var observerValues = new RecordingWitness<int>();
         Signal.Emit(Three).Prepend(Two).Subscribe(observerValues).Dispose();
         Assert.Equal(ExpectedTwoThree, observerValues.Values);
         Assert.Equal(1, observerValues.Completed);
 
-        var enumerableValues = new RecordingObserver<int>();
+        var enumerableValues = new RecordingWitness<int>();
         Signal.Emit(Three).Prepend((IEnumerable<int>)[One, Two]).Subscribe(enumerableValues).Dispose();
         Assert.Equal(ExpectedOneToThree, enumerableValues.Values);
         Assert.Equal(1, enumerableValues.Completed);
 
-        var prependAppendValues = new RecordingObserver<int>();
+        var prependAppendValues = new RecordingWitness<int>();
         Signal.Emit(Two).Prepend(One).Append(Three).Subscribe(prependAppendValues).Dispose();
         Assert.Equal(ExpectedOneToThree, prependAppendValues.Values);
         Assert.Equal(1, prependAppendValues.Completed);
@@ -226,12 +226,12 @@ public partial class InternalInfrastructureCoverageTests
         Assert.Throws<ArgumentNullException>(() => Signal.Emit(One).Prepend(Two).Append(Three).Subscribe((IObserver<int>)null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Emit(One).Append(Two).Subscribe((IObserver<int>)null!));
 
-        Assert.Throws<InvalidOperationException>(() => Signal.Emit(One).Append(Two).Subscribe(new ThrowingObserver<int>(throwOnNext: true)).Dispose());
-        var appendErrorObserver = new ThrowingObserver<int>(throwOnError: true);
+        Assert.Throws<InvalidOperationException>(() => Signal.Emit(One).Append(Two).Subscribe(new ThrowingWitness<int>(throwOnNext: true)).Dispose());
+        var appendErrorObserver = new ThrowingWitness<int>(throwOnError: true);
         Assert.Throws<InvalidOperationException>(() => Signal.Fail<int>(new InvalidOperationException("append-error")).Append(Two).Subscribe(appendErrorObserver).Dispose());
         Assert.True(appendErrorObserver.SeenError);
 
-        Assert.Throws<InvalidOperationException>(() => Signal.Emit(One).DefaultIfEmpty(Two).Subscribe(new ThrowingObserver<int>(throwOnNext: true)).Dispose());
+        Assert.Throws<InvalidOperationException>(() => Signal.Emit(One).DefaultIfEmpty(Two).Subscribe(new ThrowingWitness<int>(throwOnNext: true)).Dispose());
 
         var delegateErrors = 0;
         Assert.Throws<InvalidOperationException>(() => Signal.Emit(Two).Prepend(One).Append(Three)
@@ -244,29 +244,29 @@ public partial class InternalInfrastructureCoverageTests
     [Test]
     public void AggregateOptimizedSignalsCoverComparerAndExceptionPaths()
     {
-        var distinctValues = new RecordingObserver<int>();
+        var distinctValues = new RecordingWitness<int>();
         Signal.FromEnumerable([One, Two, Three, Four])
             .DistinctBy(value => value % Two, EqualityComparer<int>.Default)
             .Subscribe(distinctValues)
             .Dispose();
         Assert.Equal(ExpectedOneTwo, distinctValues.Values);
 
-        var rangeDistinctCount = new RecordingObserver<int>();
-        var rangeDistinctLongCount = new RecordingObserver<long>();
+        var rangeDistinctCount = new RecordingWitness<int>();
+        var rangeDistinctLongCount = new RecordingWitness<long>();
         Signal.Sequence(One, Four).DistinctBy(value => value % Two, EqualityComparer<int>.Default).Count().Subscribe(rangeDistinctCount).Dispose();
         Signal.Sequence(One, Four).DistinctBy(value => value % Two, EqualityComparer<int>.Default).LongCount().Subscribe(rangeDistinctLongCount).Dispose();
         Assert.Equal(ExpectedSingleTwo, rangeDistinctCount.Values);
         Assert.Equal(ExpectedRangeDistinctLongCount, rangeDistinctLongCount.Values);
 
-        var distinctErrors = new RecordingObserver<int>();
+        var distinctErrors = new RecordingWitness<int>();
         Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One]).DistinctBy<int, int>(_ => throw new InvalidOperationException("distinct-key"))
             .Subscribe(distinctErrors)
             .Dispose());
         Assert.Equal(0, distinctErrors.Values.Count);
 
-        var countErrors = new RecordingObserver<int>();
-        var longCountErrors = new RecordingObserver<long>();
-        var anyErrors = new RecordingObserver<bool>();
+        var countErrors = new RecordingWitness<int>();
+        var longCountErrors = new RecordingWitness<long>();
+        var anyErrors = new RecordingWitness<bool>();
         Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One]).Count(_ => throw new InvalidOperationException("count-predicate")).Subscribe(countErrors).Dispose());
         Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One]).LongCount(_ => throw new InvalidOperationException("long-count-predicate")).Subscribe(longCountErrors).Dispose());
         Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One]).Any(_ => throw new InvalidOperationException("any-predicate")).Subscribe(anyErrors).Dispose());
@@ -274,7 +274,7 @@ public partial class InternalInfrastructureCoverageTests
         Assert.Equal(0, longCountErrors.Values.Count);
         Assert.Equal(0, anyErrors.Values.Count);
 
-        var containsRange = new RecordingObserver<bool>();
+        var containsRange = new RecordingWitness<bool>();
         Signal.Sequence(One, Four).Contains(Three, EqualityComparer<int>.Default).Subscribe(containsRange).Dispose();
         Assert.Equal(ExpectedTrueValues, containsRange.Values);
     }
@@ -283,7 +283,7 @@ public partial class InternalInfrastructureCoverageTests
     [Test]
     public void HigherOrderCoordinatorRaceCombineSwitchPathsCoverLateBranches()
     {
-        var raceErrorWinner = new RecordingObserver<int>();
+        var raceErrorWinner = new RecordingWitness<int>();
         var raceLoser = new Signal<int>();
         var raceErrorOuter = new Signal<IObservable<int>>();
         var raceErrorSubscription = raceErrorOuter.Race().Subscribe(raceErrorWinner);
@@ -293,7 +293,7 @@ public partial class InternalInfrastructureCoverageTests
         raceErrorSubscription.Dispose();
         Assert.Equal("race-error", raceErrorWinner.Errors[0].Message);
 
-        var raceCompletionWinner = new RecordingObserver<int>();
+        var raceCompletionWinner = new RecordingWitness<int>();
         var raceCompletionOuter = new Signal<IObservable<int>>();
         var completedWinner = new Signal<int>();
         var lateWinner = new Signal<int>();
@@ -307,7 +307,7 @@ public partial class InternalInfrastructureCoverageTests
 
         var left = new Signal<int>();
         var right = new Signal<int>();
-        var combined = new RecordingObserver<int>();
+        var combined = new RecordingWitness<int>();
         var combineSubscription = left.SyncLatest(right, (l, r) => l + r).Subscribe(combined);
         left.OnNext(One);
         right.OnNext(Two);
@@ -322,7 +322,7 @@ public partial class InternalInfrastructureCoverageTests
         var switchOuter = new Signal<IObservable<int>>();
         var firstInner = new Signal<int>();
         var secondInner = new Signal<int>();
-        var switched = new RecordingObserver<int>();
+        var switched = new RecordingWitness<int>();
         var switchSubscription = switchOuter.SwitchTo().Subscribe(switched);
         switchOuter.OnNext(firstInner);
         switchOuter.OnNext(secondInner);

@@ -275,7 +275,7 @@ public class FactoryOperatorContractTests
         var rangeLatest = new List<int>();
         var rangeWithLatest = new List<int>();
         var rangeForkJoin = new List<int>();
-        var rangeObserver = new RecordingObserver<int>();
+        var rangeObserver = new RecordingWitness<int>();
 
         var rangeConcatSignal = Signal.Chain(Signal.Sequence(FirstValue, SecondValue), Signal.Sequence(RetrySuccessAttempt, SecondValue));
         Signal.Blend(Signal.FromEnumerable(TakeWhileExpected), Signal.FromEnumerable([RetrySuccessAttempt, FourthValue])).Subscribe(merged.Add);
@@ -693,7 +693,7 @@ public class FactoryOperatorContractTests
 
     /// <summary>Records observer values and terminal signals.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
-    private sealed class RecordingObserver<T> : IObserver<T>
+    private sealed class RecordingWitness<T> : IObserver<T>
     {
         /// <summary>Gets observed values.</summary>
         public List<T> Values { get; } = [];

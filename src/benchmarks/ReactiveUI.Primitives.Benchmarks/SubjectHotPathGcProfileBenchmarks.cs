@@ -33,7 +33,7 @@ public class SubjectHotPathGcProfileBenchmarks
     [Benchmark]
     public int SignalEmit()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subject = new Signal<int>();
         using var subscription = subject.Subscribe(observer);
         for (var i = 0; i < EmitCount; i++)
@@ -49,7 +49,7 @@ public class SubjectHotPathGcProfileBenchmarks
     [Benchmark]
     public int BehaviorEmit()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subject = new BehaviorSignal<int>(0);
         using var subscription = subject.Subscribe(observer);
         for (var i = 0; i < EmitCount; i++)
@@ -65,7 +65,7 @@ public class SubjectHotPathGcProfileBenchmarks
     [Benchmark]
     public int StateEmit()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subject = new StateSignal<int>(0);
         using var subscription = subject.Subscribe(observer);
         for (var i = 0; i < EmitCount; i++)
@@ -81,7 +81,7 @@ public class SubjectHotPathGcProfileBenchmarks
     [Benchmark]
     public int ReplayEmit()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subject = new HistorySignal<int>(16);
         using var subscription = subject.Subscribe(observer);
         for (var i = 0; i < EmitCount; i++)
@@ -97,7 +97,7 @@ public class SubjectHotPathGcProfileBenchmarks
     [Benchmark]
     public int SignalSubscribeDisposeChurn()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subject = new Signal<int>();
         for (var i = 0; i < ChurnCount; i++)
         {
@@ -113,7 +113,7 @@ public class SubjectHotPathGcProfileBenchmarks
     [Benchmark]
     public int SignalFanOutChurn()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subject = new Signal<int>();
         var handles = new IDisposable[FanOut];
         for (var round = 0; round < ChurnCount / FanOut; round++)

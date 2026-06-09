@@ -916,7 +916,7 @@ public partial class CombiningOperatorTests
     public async Task WhenMergeRelayNextIfActiveAsyncAfterDispose_ThenDropped()
     {
         var captured = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var downstream = new CapturingObserver<int>(onNext: captured);
+        var downstream = new CapturingWitness<int>(onNext: captured);
         var subscription = new SignalAsyncExtensions.MergeCoordinator<int>(downstream);
 
         await subscription.DisposeAsync();
@@ -931,7 +931,7 @@ public partial class CombiningOperatorTests
     public async Task WhenMergeRelayErrorIfActiveAsyncAfterDispose_ThenDropped()
     {
         var captured = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var downstream = new CapturingObserver<int>(onError: captured);
+        var downstream = new CapturingWitness<int>(onError: captured);
         var subscription = new SignalAsyncExtensions.MergeCoordinator<int>(downstream);
 
         await subscription.DisposeAsync();
@@ -946,7 +946,7 @@ public partial class CombiningOperatorTests
     public async Task WhenMergeEnumerableOnNextAsyncLockedAfterDispose_ThenDropped()
     {
         var captured = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var downstream = new CapturingObserver<int>(onNext: captured);
+        var downstream = new CapturingWitness<int>(onNext: captured);
 
         // Subscribe to a real Merge to obtain a MergeSequenceCoordinator; then dispose it
         // and call the Locked helper directly to verify the inside-gate guard.
@@ -966,7 +966,7 @@ public partial class CombiningOperatorTests
     public async Task WhenMergeEnumerableOnErrorResumeAsyncLockedAfterDispose_ThenDropped()
     {
         var captured = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var downstream = new CapturingObserver<int>(onError: captured);
+        var downstream = new CapturingWitness<int>(onError: captured);
         IObservableAsync<int>[] sources = [SignalAsync.Never<int>()];
         var sub = await sources.Merge().SubscribeAsync(downstream, CancellationToken.None);
         var enumerableSub = (SignalAsyncExtensions.MergeEnumerableSignal<int>.MergeSequenceCoordinator)sub;
@@ -981,7 +981,7 @@ public partial class CombiningOperatorTests
     /// <c>OnNextAsync</c> or <c>OnErrorResumeAsync</c> via the supplied TCS so the assertion
     /// can verify the post-dispose call did not deliver anything.</summary>
     /// <typeparam name="T">The element type.</typeparam>
-    private sealed class CapturingObserver<T> : IObserverAsync<T>
+    private sealed class CapturingWitness<T> : IObserverAsync<T>
     {
         /// <summary>Captures the first <c>OnNextAsync</c> value, if a TCS was supplied.</summary>
         private readonly TaskCompletionSource<T>? _onNext;
@@ -989,10 +989,10 @@ public partial class CombiningOperatorTests
         /// <summary>Captures the first <c>OnErrorResumeAsync</c> exception, if a TCS was supplied.</summary>
         private readonly TaskCompletionSource<Exception>? _onError;
 
-        /// <summary>Initializes a new instance of the <see cref="CapturingObserver{T}"/> class.</summary>
+        /// <summary>Initializes a new instance of the <see cref="CapturingWitness{T}"/> class.</summary>
         /// <param name="onNext">Optional TCS for capturing the first <c>OnNextAsync</c> value.</param>
         /// <param name="onError">Optional TCS for capturing the first <c>OnErrorResumeAsync</c> exception.</param>
-        public CapturingObserver(
+        public CapturingWitness(
             TaskCompletionSource<T>? onNext = null,
             TaskCompletionSource<Exception>? onError = null)
         {

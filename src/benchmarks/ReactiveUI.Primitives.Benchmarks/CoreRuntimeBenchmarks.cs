@@ -90,7 +90,7 @@ public class CoreRuntimeBenchmarks
     [Benchmark]
     public int R3CurrentThreadSchedule()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.Observable.Return(1).Subscribe(observer);
         return observer.LastValue;
     }
@@ -125,7 +125,7 @@ public class CoreRuntimeBenchmarks
     public int R3SafeWitness()
     {
         var value = 0;
-        var observer = new IntR3ActionObserver(x => value = x);
+        var observer = new IntR3ActionWitness(x => value = x);
         observer.OnNext(ForwardedValue);
         observer.OnCompleted(R3.Result.Success);
         return value;
