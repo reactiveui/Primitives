@@ -51,7 +51,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new TapObserver<T>(observer, _onNext, _onError, _onCompleted);
+            var sink = new TapWitness<T>(observer, _onNext, _onError, _onCompleted);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -76,7 +76,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new IgnoreValuesObserver<T>(observer);
+            var sink = new IgnoreValuesWitness<T>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -101,7 +101,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new SparkObserver<T>(observer);
+            var sink = new SparkWitness<T>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -126,7 +126,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new UnsparkObserver<T>(observer);
+            var sink = new UnsparkWitness<T>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -159,7 +159,46 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new TimeIntervalObserver<T>(observer, _scheduler);
+            var sink = new TimeIntervalWitness<T>(observer, _scheduler);
+            sink.SetSubscription(_source.Subscribe(sink));
+            return sink;
+        }
+    }
+
+    /// <summary>Dedicated signal for <c>Synchronize</c> (gates notifications so downstream sees the serialized grammar).</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class SynchronizeSignal<T> : IObservable<T>
+    {
+        /// <summary>The source observable.</summary>
+        private readonly IObservable<T> _source;
+
+        /// <summary>The shared gate, or <see langword="null"/> to give each subscription its own private gate.</summary>
+        private readonly Lock? _gate;
+
+        /// <summary>Initializes a new instance of the <see cref="SynchronizeSignal{T}"/> class with a per-subscription gate.</summary>
+        /// <param name="source">The source observable.</param>
+        internal SynchronizeSignal(IObservable<T> source) => _source = source;
+
+        /// <summary>Initializes a new instance of the <see cref="SynchronizeSignal{T}"/> class sharing the supplied gate.</summary>
+        /// <param name="source">The source observable.</param>
+        /// <param name="gate">The gate shared across subscriptions and other synchronized sequences.</param>
+        internal SynchronizeSignal(IObservable<T> source, Lock gate)
+        {
+            _source = source;
+            _gate = gate;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            if (observer is null)
+            {
+                throw new ArgumentNullException(nameof(observer));
+            }
+
+            var sink = _gate is null
+                ? new SynchronizeWitness<T>(observer)
+                : new SynchronizeWitness<T>(observer, _gate);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }

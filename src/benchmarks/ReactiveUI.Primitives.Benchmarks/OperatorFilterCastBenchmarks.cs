@@ -29,7 +29,7 @@ public class OperatorFilterCastBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesKeepNotNull()
     {
-        var observer = new CountingSignalObserver<string>();
+        var observer = new CountingSignalWitness<string>();
         using var subscription = Signal.Sequence(1, Count).Map(static x => (string?)x.ToString()).KeepNotNull().Subscribe(observer);
         return observer.Count;
     }
@@ -39,7 +39,7 @@ public class OperatorFilterCastBenchmarks
     [Benchmark]
     public int SystemReactiveKeepNotNull()
     {
-        var observer = new CountingSignalObserver<string>();
+        var observer = new CountingSignalWitness<string>();
         using var subscription = RxObservable.Range(1, Count)
             .Select(static x => (string?)x.ToString())
             .Where(static x => x is not null)
@@ -53,7 +53,7 @@ public class OperatorFilterCastBenchmarks
     [Benchmark]
     public int R3KeepNotNull()
     {
-        var observer = new CountingR3Observer<string>();
+        var observer = new CountingR3Witness<string>();
         var source = R3.ObservableExtensions.Select(R3.Observable.Range(1, Count), static x => (string?)x.ToString());
         var filtered = R3.ObservableExtensions.Where(source, static x => x is not null);
         using var subscription = R3.ObservableExtensions.Select(filtered, static x => x!).Subscribe(observer);
@@ -65,7 +65,7 @@ public class OperatorFilterCastBenchmarks
     [Benchmark]
     public int PrimitivesKeepType()
     {
-        var observer = new CountingSignalObserver<string>();
+        var observer = new CountingSignalWitness<string>();
         using var subscription = Signal.Sequence(1, Count).Map(static _ => (object?)Shared).KeepType<string>().Subscribe(observer);
         return observer.Count;
     }
@@ -75,7 +75,7 @@ public class OperatorFilterCastBenchmarks
     [Benchmark]
     public int SystemReactiveKeepType()
     {
-        var observer = new CountingSignalObserver<string>();
+        var observer = new CountingSignalWitness<string>();
         using var subscription = RxObservable.Select(RxObservable.Range(1, Count), static _ => (object)Shared).OfType<string>().Subscribe(observer);
         return observer.Count;
     }
@@ -85,7 +85,7 @@ public class OperatorFilterCastBenchmarks
     [Benchmark]
     public int R3KeepType()
     {
-        var observer = new CountingR3Observer<string>();
+        var observer = new CountingR3Witness<string>();
         var typed = R3.ObservableExtensions.Select(R3.Observable.Range(1, Count), static _ => (object)Shared);
         using var subscription = R3.ObservableExtensions.OfType<object, string>(typed).Subscribe(observer);
         return observer.Count;
@@ -96,7 +96,7 @@ public class OperatorFilterCastBenchmarks
     [Benchmark]
     public int PrimitivesCastTo()
     {
-        var observer = new CountingSignalObserver<string>();
+        var observer = new CountingSignalWitness<string>();
         using var subscription = Signal.Sequence(1, Count).Map(static _ => (object?)Shared).CastTo<string>().Subscribe(observer);
         return observer.Count;
     }
@@ -106,7 +106,7 @@ public class OperatorFilterCastBenchmarks
     [Benchmark]
     public int SystemReactiveCastTo()
     {
-        var observer = new CountingSignalObserver<string>();
+        var observer = new CountingSignalWitness<string>();
         using var subscription = RxObservable.Select(RxObservable.Range(1, Count), static _ => (object)Shared).Cast<string>().Subscribe(observer);
         return observer.Count;
     }
@@ -116,7 +116,7 @@ public class OperatorFilterCastBenchmarks
     [Benchmark]
     public int R3CastTo()
     {
-        var observer = new CountingR3Observer<string>();
+        var observer = new CountingR3Witness<string>();
         var typed = R3.ObservableExtensions.Select(R3.Observable.Range(1, Count), static _ => (object)Shared);
         using var subscription = R3.ObservableExtensions.Cast<object, string>(typed).Subscribe(observer);
         return observer.Count;

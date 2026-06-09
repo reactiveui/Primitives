@@ -21,12 +21,12 @@ internal sealed class AsSignalObservable<T>(IObservable<T> source) : IObservable
     {
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return source.Subscribe(new AsSignalObserver(observer));
+        return source.Subscribe(new AsSignalWitness(observer));
     }
 
     /// <summary>Forwarding observer that replaces every <see cref="OnNext"/> value with <see cref="RxVoid.Default"/>. Error and completion signals pass through unchanged.</summary>
     /// <param name="downstream">The downstream observer.</param>
-    private sealed class AsSignalObserver(IObserver<RxVoid> downstream) : IObserver<T>
+    private sealed class AsSignalWitness(IObserver<RxVoid> downstream) : IObserver<T>
     {
         /// <inheritdoc/>
         public void OnNext(T value) => downstream.OnNext(RxVoid.Default);

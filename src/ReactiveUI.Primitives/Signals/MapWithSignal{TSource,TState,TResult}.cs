@@ -50,11 +50,11 @@ internal sealed class MapWithSignal<TSource, TState, TResult> : IRequireCurrentT
             throw new ArgumentNullException(nameof(observer));
         }
 
-        return _source.Subscribe(new MapWithObserver(observer, _state, _selector));
+        return _source.Subscribe(new MapWithWitness(observer, _state, _selector));
     }
 
     /// <summary>Applies the stateful selector to each source value.</summary>
-    private sealed class MapWithObserver : IObserver<TSource>
+    private sealed class MapWithWitness : IObserver<TSource>
     {
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<TResult> _observer;
@@ -68,11 +68,11 @@ internal sealed class MapWithSignal<TSource, TState, TResult> : IRequireCurrentT
         /// <summary>Whether a terminal notification has been forwarded.</summary>
         private bool _stopped;
 
-        /// <summary>Initializes a new instance of the <see cref="MapWithObserver"/> class.</summary>
+        /// <summary>Initializes a new instance of the <see cref="MapWithWitness"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="state">The state passed to the selector.</param>
         /// <param name="selector">The transform applied to each source value and the state.</param>
-        public MapWithObserver(IObserver<TResult> observer, TState state, Func<TState, TSource, TResult> selector)
+        public MapWithWitness(IObserver<TResult> observer, TState state, Func<TState, TSource, TResult> selector)
         {
             _observer = observer;
             _state = state;

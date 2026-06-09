@@ -507,7 +507,7 @@ public class TimeBasedOperatorTests
 
     /// <summary>
     /// Verifies that when the source emits an error via <c>OnErrorResumeAsync</c>,
-    /// the <c>TimeoutObserver</c> cancels the timer and forwards the error downstream.
+    /// the <c>TimeoutWitness</c> cancels the timer and forwards the error downstream.
     /// This covers the <c>OnErrorResumeAsyncCore</c> path in the Timeout operator.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -623,7 +623,7 @@ public class TimeBasedOperatorTests
 
     /// <summary>
     /// Verifies that Throttle routes non-cancellation exceptions to the unhandled exception handler.
-    /// Covers the catch(Exception) block in ThrottleObserver.FireAfterDelayAsync.
+    /// Covers the catch(Exception) block in ThrottleWitness.FireAfterDelayAsync.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -726,7 +726,7 @@ public class TimeBasedOperatorTests
     /// during OnNext from a throttled emission using an immediate-fire
     /// <see cref="TimeProvider"/>, the exception is routed to the
     /// <see cref="UnhandledExceptionHandler"/>.
-    /// This deterministically covers lines 162-163 in ThrottleObserver.FireAfterDelayAsync.
+    /// This deterministically covers lines 162-163 in ThrottleWitness.FireAfterDelayAsync.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -901,7 +901,7 @@ public class TimeBasedOperatorTests
     {
         using var unhandled = new UnhandledExceptionCapture();
 
-        var throwing = new TimeoutThrowingObserver<int>(new InvalidOperationException("completion-failed"));
+        var throwing = new TimeoutThrowingWitness<int>(new InvalidOperationException("completion-failed"));
 
         await using var sub = await SignalAsync.Never<int>()
             .Timeout(TimeSpan.FromMilliseconds(1))
@@ -946,7 +946,7 @@ public class TimeBasedOperatorTests
     /// <summary>
     /// A <see cref="TimeProvider"/> that fires the timer callback synchronously during
     /// <see cref="CreateTimer"/>, completing the delay immediately. Used to deterministically
-    /// test the id-mismatch early return and exception routing paths in ThrottleObserver.
+    /// test the id-mismatch early return and exception routing paths in ThrottleWitness.
     /// </summary>
     private sealed class ImmediateFireTimeProvider : TimeProvider
     {
@@ -986,7 +986,7 @@ public class TimeBasedOperatorTests
     /// exercise the catch block in <c>Timeout</c>'s <c>FireTimeoutAsync</c>.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="error">The exception to throw on completion.</param>
-    private sealed class TimeoutThrowingObserver<T>(Exception error) : IObserverAsync<T>
+    private sealed class TimeoutThrowingWitness<T>(Exception error) : IObserverAsync<T>
     {
         /// <inheritdoc/>
         public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) => default;

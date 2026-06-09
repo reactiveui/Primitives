@@ -24,7 +24,7 @@ public class OperatorCleanupBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesOnCleanup()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.Sequence(Start, Count).OnCleanup(static () => { }).Subscribe(observer);
         return observer.Total;
     }
@@ -34,7 +34,7 @@ public class OperatorCleanupBenchmarks
     [Benchmark]
     public int SystemReactiveFinally()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.Range(Start, Count).Finally(static () => { }).Subscribe(observer);
         return observer.Total;
     }
@@ -44,7 +44,7 @@ public class OperatorCleanupBenchmarks
     [Benchmark]
     public int R3DoOnDisposed()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.ObservableExtensions.Do(R3.Observable.Range(Start, Count), onDispose: static () => { }).Subscribe(observer);
         return observer.Total;
     }

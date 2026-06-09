@@ -17,13 +17,13 @@ internal sealed class LogErrorsObservable<T>(IObservable<T> source, Action<Excep
     {
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return source.Subscribe(new LogErrorsObserver(observer, logger));
+        return source.Subscribe(new LogErrorsWitness(observer, logger));
     }
 
     /// <summary>Per-subscription observer that taps errors through the logger.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="logger">Logger invoked on the error path.</param>
-    private sealed class LogErrorsObserver(IObserver<T> downstream, Action<Exception> logger) : IObserver<T>
+    private sealed class LogErrorsWitness(IObserver<T> downstream, Action<Exception> logger) : IObserver<T>
     {
         /// <inheritdoc/>
         public void OnNext(T value) => downstream.OnNext(value);

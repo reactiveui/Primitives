@@ -29,7 +29,7 @@ public static class ObservableSubscriptionExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            var sink = new ValueCaptureObserver<T>();
+            var sink = new ValueCaptureWitness<T>();
             using var subscription = source.Subscribe(sink);
             return sink.Value;
         }
@@ -40,7 +40,7 @@ public static class ObservableSubscriptionExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            var sink = new ErrorCaptureObserver<T>();
+            var sink = new ErrorCaptureWitness<T>();
             using var subscription = source.Subscribe(sink);
             return sink.Error;
         }
@@ -111,7 +111,7 @@ public static class ObservableSubscriptionExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            using var subscription = source.Subscribe(NoopObserver<RxVoid>.Instance);
+            using var subscription = source.Subscribe(NoopWitness<RxVoid>.Instance);
         }
 
         /// <summary>Subscribes to the source and returns any error emitted during the synchronous <see cref="IObservable{T}.Subscribe(IObserver{T})"/> call.</summary>
@@ -120,7 +120,7 @@ public static class ObservableSubscriptionExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            var sink = new ErrorCaptureObserver<RxVoid>();
+            var sink = new ErrorCaptureWitness<RxVoid>();
             using var subscription = source.Subscribe(sink);
             return sink.Error;
         }
@@ -160,7 +160,7 @@ public static class ObservableSubscriptionExtensions
         ArgumentExceptionHelper.ThrowIfNull(source);
 
         using ManualResetEventSlim done = new();
-        var sink = new BlockingValueObserver<T>(done);
+        var sink = new BlockingValueWitness<T>(done);
         using var subscription = ScheduledSubscribe(source, sink, scheduler);
 
         if (!done.Wait(timeout))
@@ -181,7 +181,7 @@ public static class ObservableSubscriptionExtensions
         ArgumentExceptionHelper.ThrowIfNull(source);
 
         using ManualResetEventSlim done = new();
-        var sink = new BlockingTerminalObserver<RxVoid>(done);
+        var sink = new BlockingTerminalWitness<RxVoid>(done);
         using var subscription = ScheduledSubscribe(source, sink, scheduler);
 
         if (!done.Wait(timeout))
@@ -209,7 +209,7 @@ public static class ObservableSubscriptionExtensions
         ArgumentExceptionHelper.ThrowIfNull(source);
 
         using ManualResetEventSlim done = new();
-        var sink = new BlockingTerminalObserver<T>(done);
+        var sink = new BlockingTerminalWitness<T>(done);
         using var subscription = ScheduledSubscribe(source, sink, scheduler);
 
         if (!done.Wait(timeout))
@@ -249,10 +249,10 @@ public static class ObservableSubscriptionExtensions
 
     /// <summary>No-op observer used by <see cref="SubscribeAndComplete"/> to absorb signals without allocating a delegate trio.</summary>
     /// <typeparam name="T">The element type of the source.</typeparam>
-    private sealed class NoopObserver<T> : IObserver<T>
+    private sealed class NoopWitness<T> : IObserver<T>
     {
         /// <summary>Singleton instance to avoid per-call allocation.</summary>
-        public static readonly NoopObserver<T> Instance = new();
+        public static readonly NoopWitness<T> Instance = new();
 
         /// <inheritdoc/>
         public void OnNext(T value)
@@ -272,7 +272,7 @@ public static class ObservableSubscriptionExtensions
 
     /// <summary>Observer that captures the last value seen during synchronous subscribe.</summary>
     /// <typeparam name="T">The element type of the source.</typeparam>
-    private sealed class ValueCaptureObserver<T> : IObserver<T>
+    private sealed class ValueCaptureWitness<T> : IObserver<T>
     {
         /// <summary>Gets the captured value, or <see langword="default"/> if none.</summary>
         public T? Value { get; private set; }
@@ -300,7 +300,7 @@ public static class ObservableSubscriptionExtensions
 
     /// <summary>Observer that captures the first error seen during synchronous subscribe.</summary>
     /// <typeparam name="T">The element type of the source.</typeparam>
-    private sealed class ErrorCaptureObserver<T> : IObserver<T>
+    private sealed class ErrorCaptureWitness<T> : IObserver<T>
     {
         /// <summary>Gets the captured error, or <see langword="null"/> if none.</summary>
         public Exception? Error { get; private set; }
@@ -325,7 +325,7 @@ public static class ObservableSubscriptionExtensions
     /// </summary>
     /// <typeparam name="T">The element type of the source.</typeparam>
     /// <param name="done">The gate signalled on terminal.</param>
-    private sealed class BlockingValueObserver<T>(ManualResetEventSlim done) : IObserver<T>
+    private sealed class BlockingValueWitness<T>(ManualResetEventSlim done) : IObserver<T>
     {
         /// <summary>Gets the most recent value seen.</summary>
         public T? Result { get; private set; }
@@ -343,7 +343,7 @@ public static class ObservableSubscriptionExtensions
     /// <summary>Observer used by the completion / error <c>WaitFor</c> paths: captures any terminal error and signals the gate on terminal.</summary>
     /// <typeparam name="T">The element type of the source.</typeparam>
     /// <param name="done">The gate signalled on terminal.</param>
-    private sealed class BlockingTerminalObserver<T>(ManualResetEventSlim done) : IObserver<T>
+    private sealed class BlockingTerminalWitness<T>(ManualResetEventSlim done) : IObserver<T>
     {
         /// <summary>Gets the captured terminal error, or <see langword="null"/> if completion was normal.</summary>
         public Exception? Error { get; private set; }

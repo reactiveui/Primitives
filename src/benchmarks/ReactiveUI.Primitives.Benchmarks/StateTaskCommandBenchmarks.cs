@@ -24,7 +24,7 @@ public class StateTaskCommandBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesStateSignalUpdates()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var state = new StateSignal<int>(0);
         using var subscription = state.Subscribe(observer);
         for (var i = 0; i < Count; i++)
@@ -40,7 +40,7 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int SystemReactiveStateSignalUpdates()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var state = new System.Reactive.Subjects.BehaviorSubject<int>(0);
         using var subscription = state.Subscribe(observer);
         for (var i = 0; i < Count; i++)
@@ -56,7 +56,7 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int R3StateSignalUpdates()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var state = new R3.BehaviorSubject<int>(0);
         using var subscription = state.Subscribe(observer);
         for (var i = 0; i < Count; i++)
@@ -108,7 +108,7 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int PrimitivesTaskSignalSubscribe()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var signal = Signal.FromTask(static _ => Task.FromResult(Value), Sequencer.Immediate);
         using var subscription = signal.Subscribe(observer);
         return observer.Total;
@@ -119,7 +119,7 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int SystemReactiveTaskSignalSubscribe()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = System.Reactive.Linq.Observable.FromAsync(
                 static () => Task.FromResult(Value),
                 ImmediateScheduler.Instance)
@@ -132,7 +132,7 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int R3TaskSignalSubscribe()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.Observable.ToObservable(Task.FromResult(Value), configureAwait: false)
             .Subscribe(observer);
         return observer.Total;
@@ -169,7 +169,7 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public async Task<int> PrimitivesCommandResultSubscribeAsync()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var command = new CommandSignal<int>(static () => Value);
         using var subscription = command.Results.Subscribe(observer);
         await command.ExecuteAsync().ConfigureAwait(false);
@@ -181,7 +181,7 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int SystemReactiveCommandResultSubscribe()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var results = new System.Reactive.Subjects.Subject<int>();
         using var subscription = results.Subscribe(observer);
         results.OnNext(Value);
@@ -193,7 +193,7 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int R3CommandResultSubscribe()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var results = new R3.Subject<int>();
         using var subscription = results.Subscribe(observer);
         results.OnNext(Value);

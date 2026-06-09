@@ -100,7 +100,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var throttleObserver = new ThrottleObserver(observer, dueTime, timeProvider);
+            var throttleObserver = new ThrottleWitness(observer, dueTime, timeProvider);
             return source.SubscribeAsync(throttleObserver, cancellationToken);
         }
 
@@ -111,7 +111,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="observer">The downstream observer to forward debounced elements to.</param>
         /// <param name="dueTime">The quiet period that must elapse before an element is forwarded.</param>
         /// <param name="timeProvider">The time provider used for scheduling the debounce timer.</param>
-        internal sealed class ThrottleObserver(IObserverAsync<T> observer, TimeSpan dueTime, TimeProvider timeProvider)
+        internal sealed class ThrottleWitness(IObserverAsync<T> observer, TimeSpan dueTime, TimeProvider timeProvider)
             : ObserverAsync<T>
         {
             /// <summary>The synchronization gate protecting shared throttle state.</summary>

@@ -65,7 +65,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new SkipWhileSyncObserver(observer, predicate, cancellationToken);
+            var sink = new SkipWhileSyncWitness(observer, predicate, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -81,7 +81,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="predicate">The skip-while predicate.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class SkipWhileSyncObserver(
+        internal sealed class SkipWhileSyncWitness(
             IObserverAsync<T> downstream,
             Func<T, bool> predicate,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
@@ -131,7 +131,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new SkipWhileAsyncObserver(observer, predicate, cancellationToken);
+            var sink = new SkipWhileAsyncWitness(observer, predicate, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -147,7 +147,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="predicate">The async skip-while predicate.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class SkipWhileAsyncObserver(
+        internal sealed class SkipWhileAsyncWitness(
             IObserverAsync<T> downstream,
             Func<T, CancellationToken, ValueTask<bool>> predicate,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)

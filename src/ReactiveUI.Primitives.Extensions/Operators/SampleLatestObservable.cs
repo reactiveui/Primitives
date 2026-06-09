@@ -23,7 +23,7 @@ internal sealed class SampleLatestObservable<T>(
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         var sink = new SampleLatestSink(observer);
-        var sourceSub = source.Subscribe(sink.SourceObserver);
+        var sourceSub = source.Subscribe(sink.SourceWitness);
         var triggerSub = trigger.Subscribe(sink.TriggerObserver);
         return new DisposableBag(sourceSub, triggerSub, sink);
     }
@@ -45,10 +45,10 @@ internal sealed class SampleLatestObservable<T>(
         private bool _done;
 
         /// <summary>Gets the source observer.</summary>
-        public IObserver<T> SourceObserver => new SourceSampleObserver(this);
+        public IObserver<T> SourceWitness => new SourceSampleWitness(this);
 
         /// <summary>Gets the trigger observer.</summary>
-        public IObserver<object> TriggerObserver => new TriggerSampleObserver(this);
+        public IObserver<object> TriggerObserver => new TriggerSampleWitness(this);
 
         /// <inheritdoc/>
         public void Dispose()
@@ -122,7 +122,7 @@ internal sealed class SampleLatestObservable<T>(
 
         /// <summary>Observer for source values.</summary>
         /// <param name="sink">The owning sink.</param>
-        private sealed class SourceSampleObserver(SampleLatestSink sink) : IObserver<T>
+        private sealed class SourceSampleWitness(SampleLatestSink sink) : IObserver<T>
         {
             /// <inheritdoc/>
             public void OnNext(T value) => sink.OnSourceNext(value);
@@ -136,7 +136,7 @@ internal sealed class SampleLatestObservable<T>(
 
         /// <summary>Observer for trigger values.</summary>
         /// <param name="sink">The owning sink.</param>
-        private sealed class TriggerSampleObserver(SampleLatestSink sink) : IObserver<object>
+        private sealed class TriggerSampleWitness(SampleLatestSink sink) : IObserver<object>
         {
             /// <inheritdoc/>
             public void OnNext(object value) => sink.OnTriggerNext();

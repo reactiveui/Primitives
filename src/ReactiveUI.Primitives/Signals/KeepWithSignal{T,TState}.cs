@@ -49,11 +49,11 @@ internal sealed class KeepWithSignal<T, TState> : IRequireCurrentThread<T>
             throw new ArgumentNullException(nameof(observer));
         }
 
-        return _source.Subscribe(new KeepWithObserver(observer, _state, _predicate));
+        return _source.Subscribe(new KeepWithWitness(observer, _state, _predicate));
     }
 
     /// <summary>Applies the stateful predicate to each source value.</summary>
-    private sealed class KeepWithObserver : IObserver<T>
+    private sealed class KeepWithWitness : IObserver<T>
     {
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer;
@@ -67,11 +67,11 @@ internal sealed class KeepWithSignal<T, TState> : IRequireCurrentThread<T>
         /// <summary>Whether a terminal notification has been forwarded.</summary>
         private bool _stopped;
 
-        /// <summary>Initializes a new instance of the <see cref="KeepWithObserver"/> class.</summary>
+        /// <summary>Initializes a new instance of the <see cref="KeepWithWitness"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="state">The state passed to the predicate.</param>
         /// <param name="predicate">The predicate applied to each source value and the state.</param>
-        public KeepWithObserver(IObserver<T> observer, TState state, Func<TState, T, bool> predicate)
+        public KeepWithWitness(IObserver<T> observer, TState state, Func<TState, T, bool> predicate)
         {
             _observer = observer;
             _state = state;

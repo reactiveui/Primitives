@@ -17,12 +17,12 @@ internal sealed class PairwiseObservable<T>(IObservable<T> source) : IObservable
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        return source.Subscribe(new PairwiseObserver(observer));
+        return source.Subscribe(new PairwiseWitness(observer));
     }
 
     /// <summary>The observer for the pairwise operator.</summary>
     /// <param name="downstream">The downstream observer.</param>
-    private sealed class PairwiseObserver(IObserver<(T Previous, T Current)> downstream) : IObserver<T>
+    private sealed class PairwiseWitness(IObserver<(T Previous, T Current)> downstream) : IObserver<T>
     {
         /// <summary>The gate for state access.</summary>
         private readonly Lock _gate = new();

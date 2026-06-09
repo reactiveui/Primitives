@@ -554,7 +554,7 @@ public class PrimitiveBehaviorCoverageTests
         var sameError = Spark.CreateOnError<int>(error);
         var completed = Spark.CreateOnCompleted<int>();
         var completedAgain = Spark.CreateOnCompleted<int>();
-        var observer = new RecordingResultObserver<int>();
+        var observer = new RecordingResultWitness<int>();
         var observableValues = new List<int>();
         var observableCompleted = 0;
 
@@ -812,7 +812,7 @@ public class PrimitiveBehaviorCoverageTests
 
     /// <summary>Records observer events and result values.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
-    private sealed class RecordingResultObserver<T> : IObserver<T>, IObserver<T, string>
+    private sealed class RecordingResultWitness<T> : IObserver<T>, IObserver<T, string>
     {
         /// <summary>Gets the recorded events.</summary>
         public List<string> Events { get; } = [];

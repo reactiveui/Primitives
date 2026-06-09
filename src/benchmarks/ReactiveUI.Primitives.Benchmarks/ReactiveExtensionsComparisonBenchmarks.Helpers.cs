@@ -131,7 +131,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>DrainArray</c> result.</returns>
     private static int DrainArray(IObservable<int[]> source)
     {
-        var observer = new ArrayObserver();
+        var observer = new ArrayWitness();
         using var subscription = source.Subscribe(observer);
         return observer.Total;
     }
@@ -141,7 +141,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>DrainBool</c> result.</returns>
     private static int DrainBool(IObservable<bool> source)
     {
-        var observer = new BoolSignalObserver();
+        var observer = new BoolSignalWitness();
         using var subscription = source.Subscribe(observer);
         return observer.Total + observer.NextCount;
     }
@@ -151,7 +151,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>DrainInt</c> result.</returns>
     private static int DrainInt(IObservable<int> source)
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = source.Subscribe(observer);
         return observer.Total + observer.NextCount;
     }
@@ -161,7 +161,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>DrainList</c> result.</returns>
     private static int DrainList(IObservable<IList<int>> source)
     {
-        var observer = new ListObserver();
+        var observer = new ListWitness();
         using var subscription = source.Subscribe(observer);
         return observer.Total;
     }
@@ -171,7 +171,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>DrainPackageUnit</c> result.</returns>
     private static int DrainPackageUnit(IObservable<RxUnit> source)
     {
-        var observer = new CountingSignalObserver<RxUnit>();
+        var observer = new CountingSignalWitness<RxUnit>();
         using var subscription = source.Subscribe(observer);
         return observer.Count + observer.CompletionCount;
     }
@@ -181,7 +181,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>DrainPrimitiveUnit</c> result.</returns>
     private static int DrainPrimitiveUnit(IObservable<RxVoid> source)
     {
-        var observer = new CountingSignalObserver<RxVoid>();
+        var observer = new CountingSignalWitness<RxVoid>();
         using var subscription = source.Subscribe(observer);
         return observer.Count + observer.CompletionCount;
     }
@@ -191,7 +191,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>DrainString</c> result.</returns>
     private static int DrainString(IObservable<string?> source)
     {
-        var observer = new NullableStringLengthObserver();
+        var observer = new NullableStringLengthWitness();
         using var subscription = source.Subscribe(observer);
         return observer.TotalLength + observer.ItemCount;
     }
@@ -201,7 +201,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>DrainSyncTuple</c> result.</returns>
     private static int DrainSyncTuple(IObservable<(int Value, IDisposable Sync)> source)
     {
-        var observer = new SyncTupleObserver();
+        var observer = new SyncTupleWitness();
         using var subscription = source.Subscribe(observer);
         return observer.Total;
     }
@@ -263,8 +263,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         public override string ToString() => _name;
     }
 
-    /// <summary>Provides the <c>ArrayObserver</c> benchmark helper type.</summary>
-    private sealed class ArrayObserver : IObserver<int[]>
+    /// <summary>Provides the <c>ArrayWitness</c> benchmark helper type.</summary>
+    private sealed class ArrayWitness : IObserver<int[]>
     {
         /// <summary>Gets the <c>Total</c> benchmark helper value.</summary>
         public int Total { get; private set; }
@@ -298,8 +298,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         public void Touch() => TouchCount++;
     }
 
-    /// <summary>Provides the <c>ListObserver</c> benchmark helper type.</summary>
-    private sealed class ListObserver : IObserver<IList<int>>
+    /// <summary>Provides the <c>ListWitness</c> benchmark helper type.</summary>
+    private sealed class ListWitness : IObserver<IList<int>>
     {
         /// <summary>Gets the <c>Total</c> benchmark helper value.</summary>
         public int Total { get; private set; }
@@ -318,8 +318,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         }
     }
 
-    /// <summary>Provides the <c>NullableStringLengthObserver</c> benchmark helper type.</summary>
-    private sealed class NullableStringLengthObserver : IObserver<string?>
+    /// <summary>Provides the <c>NullableStringLengthWitness</c> benchmark helper type.</summary>
+    private sealed class NullableStringLengthWitness : IObserver<string?>
     {
         /// <summary>Gets the <c>ItemCount</c> benchmark helper value.</summary>
         public int ItemCount { get; private set; }
@@ -345,8 +345,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         }
     }
 
-    /// <summary>Provides the <c>PairObserver</c> benchmark helper type.</summary>
-    private sealed class PairObserver : IObserver<(int Previous, int Current)>
+    /// <summary>Provides the <c>PairWitness</c> benchmark helper type.</summary>
+    private sealed class PairWitness : IObserver<(int Previous, int Current)>
     {
         /// <summary>Gets the <c>Total</c> benchmark helper value.</summary>
         public int Total { get; private set; }
@@ -383,8 +383,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         }
     }
 
-    /// <summary>Provides the <c>R3BoolObserver</c> benchmark helper type.</summary>
-    private sealed class R3BoolObserver : R3.Observer<bool>
+    /// <summary>Provides the <c>R3BoolWitness</c> benchmark helper type.</summary>
+    private sealed class R3BoolWitness : R3.Observer<bool>
     {
         /// <summary>Gets the <c>Total</c> benchmark helper value.</summary>
         public int Total { get; private set; }
@@ -411,9 +411,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         }
     }
 
-    /// <summary>Provides the <c>R3CountingObserver</c> benchmark helper type.</summary>
+    /// <summary>Provides the <c>R3CountingWitness</c> benchmark helper type.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
-    private sealed class R3CountingObserver<T> : R3.Observer<T>
+    private sealed class R3CountingWitness<T> : R3.Observer<T>
     {
         /// <summary>Gets the <c>ItemCount</c> benchmark helper value.</summary>
         public int ItemCount { get; private set; }
@@ -432,8 +432,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         }
     }
 
-    /// <summary>Provides the <c>SyncTupleObserver</c> benchmark helper type.</summary>
-    private sealed class SyncTupleObserver : IObserver<(int Value, IDisposable Sync)>
+    /// <summary>Provides the <c>SyncTupleWitness</c> benchmark helper type.</summary>
+    private sealed class SyncTupleWitness : IObserver<(int Value, IDisposable Sync)>
     {
         /// <summary>Gets the <c>Total</c> benchmark helper value.</summary>
         public int Total { get; private set; }
@@ -456,9 +456,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         }
     }
 
-    /// <summary>Provides the <c>TupleObserver</c> benchmark helper type.</summary>
+    /// <summary>Provides the <c>TupleWitness</c> benchmark helper type.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
-    private sealed class TupleObserver<T> : IObserver<(T Value, IDisposable Sync)>
+    private sealed class TupleWitness<T> : IObserver<(T Value, IDisposable Sync)>
     {
         /// <summary>Gets the <c>ItemCount</c> benchmark helper value.</summary>
         public int ItemCount { get; private set; }

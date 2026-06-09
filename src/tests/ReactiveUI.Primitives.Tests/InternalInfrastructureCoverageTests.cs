@@ -223,8 +223,8 @@ public partial class InternalInfrastructureCoverageTests
         Assert.Throws<InvalidOperationException>(() => _ = asyncSignal.Value);
         Assert.Throws<ArgumentNullException>(() => asyncSignal.OnCompleted(null!));
         Assert.Throws<ArgumentNullException>(() => asyncSignal.OnError(null!));
-        var asyncFirst = new RecordingObserver<int>();
-        var asyncSecond = new RecordingObserver<int>();
+        var asyncFirst = new RecordingWitness<int>();
+        var asyncSecond = new RecordingWitness<int>();
         using var asyncSubscription = asyncSignal.Subscribe(asyncFirst);
         using var asyncSecondSubscription = asyncSignal.Subscribe(asyncSecond);
         asyncSecondSubscription.Dispose();
@@ -234,7 +234,7 @@ public partial class InternalInfrastructureCoverageTests
         asyncSignal.OnCompleted();
         asyncSignal.OnNext(Six);
         actionFaults = completionFaults;
-        var asyncLate = new RecordingObserver<int>();
+        var asyncLate = new RecordingWitness<int>();
         asyncSignal.Subscribe(asyncLate).Dispose();
         Assert.Equal(Five, asyncSignal.Value);
         Assert.Equal(Five, asyncSignal.GetResult());
@@ -244,13 +244,13 @@ public partial class InternalInfrastructureCoverageTests
         Assert.Equal(1, asyncLate.Completed);
 
         var asyncError = new AsyncSignal<int>();
-        var asyncErrorObserver = new RecordingObserver<int>();
+        var asyncErrorObserver = new RecordingWitness<int>();
         asyncError.Subscribe(asyncErrorObserver).Dispose();
         var asyncFault = new InvalidOperationException("async-fault");
         asyncError.OnError(asyncFault);
         asyncError.OnError(new InvalidOperationException("late"));
         Assert.Throws<InvalidOperationException>(() => asyncError.GetResult());
-        var asyncErrorLate = new RecordingObserver<int>();
+        var asyncErrorLate = new RecordingWitness<int>();
         asyncError.Subscribe(asyncErrorLate).Dispose();
         Assert.Same(asyncFault, asyncErrorLate.Errors[0]);
 
@@ -258,7 +258,7 @@ public partial class InternalInfrastructureCoverageTests
         disposedAsync.Dispose();
         disposedAsync.Dispose();
         Assert.Throws<ObjectDisposedException>(() => disposedAsync.OnNext(One));
-        Assert.Throws<ObjectDisposedException>(() => disposedAsync.Subscribe(new RecordingObserver<int>()));
+        Assert.Throws<ObjectDisposedException>(() => disposedAsync.Subscribe(new RecordingWitness<int>()));
     }
 
     /// <summary>Polls a condition until it succeeds or the timeout elapses.</summary>
@@ -434,7 +434,7 @@ public partial class InternalInfrastructureCoverageTests
 
     /// <summary>An observer that can be configured to throw on specific callbacks.</summary>
     /// <typeparam name="T">The type of the observed values.</typeparam>
-    private sealed class ThrowingObserver<T> : IObserver<T>
+    private sealed class ThrowingWitness<T> : IObserver<T>
     {
         /// <summary>A value indicating whether to throw on <see cref="OnNext"/>.</summary>
         private readonly bool _throwOnNext;
@@ -445,11 +445,11 @@ public partial class InternalInfrastructureCoverageTests
         /// <summary>A value indicating whether to throw on <see cref="OnCompleted"/>.</summary>
         private readonly bool _throwOnCompleted;
 
-        /// <summary>Initializes a new instance of the <see cref="ThrowingObserver{T}"/> class.</summary>
+        /// <summary>Initializes a new instance of the <see cref="ThrowingWitness{T}"/> class.</summary>
         /// <param name="throwOnNext">Configures throwing from the value callback.</param>
         /// <param name="throwOnError">Configures throwing from the error callback.</param>
         /// <param name="throwOnCompleted">Configures throwing from the completion callback.</param>
-        public ThrowingObserver(bool throwOnNext = false, bool throwOnError = false, bool throwOnCompleted = false)
+        public ThrowingWitness(bool throwOnNext = false, bool throwOnError = false, bool throwOnCompleted = false)
         {
             _throwOnNext = throwOnNext;
             _throwOnError = throwOnError;
@@ -518,7 +518,7 @@ public partial class InternalInfrastructureCoverageTests
 
     /// <summary>An observer that records all values, errors, and completion counts.</summary>
     /// <typeparam name="T">The type of the observed values.</typeparam>
-    private sealed class RecordingObserver<T> : IObserver<T>
+    private sealed class RecordingWitness<T> : IObserver<T>
     {
         /// <summary>Gets the recorded values.</summary>
         public List<T> Values { get; } = [];

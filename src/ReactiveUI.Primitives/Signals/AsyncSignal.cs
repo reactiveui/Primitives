@@ -300,5 +300,5 @@ public class AsyncSignal<T> : IAwaitSignal<T>
     /// <param name="continuation">The continuation value.</param>
     /// <param name="originalContext">The originalContext value.</param>
     private void SubscribeCompletion(Action continuation, bool originalContext) =>
-        Subscribe(new AwaitObserver<T>(continuation, originalContext));
+        Subscribe(new AwaitWitness<T>(continuation, originalContext));
 }

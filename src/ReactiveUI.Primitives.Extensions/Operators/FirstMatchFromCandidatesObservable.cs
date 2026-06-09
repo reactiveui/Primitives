@@ -306,7 +306,7 @@ internal sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
                         continue;
                     }
 
-                    var probe = new CompletionFlagObserver(this);
+                    var probe = new CompletionFlagWitness(this);
                     var sub = projected.Subscribe(probe);
                     Interlocked.Exchange(ref _currentSubscription, sub);
 
@@ -338,7 +338,7 @@ internal sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
         /// flag is per-iteration state rather than instance state.
         /// </summary>
         /// <param name="inner">The wrapped sink that receives forwarded notifications.</param>
-        private sealed class CompletionFlagObserver(IObserver<TRaw> inner) : IObserver<TRaw>
+        private sealed class CompletionFlagWitness(IObserver<TRaw> inner) : IObserver<TRaw>
         {
             /// <summary>Gets a value indicating whether a terminal notification was observed.</summary>
             public bool Completed { get; private set; }

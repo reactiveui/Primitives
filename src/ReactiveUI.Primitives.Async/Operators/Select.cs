@@ -59,7 +59,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<TDest> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new SelectAsyncObserver(observer, selector, cancellationToken);
+            var sink = new SelectAsyncWitness(observer, selector, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
             // recognises this token without allocating a per-emission linked CTS.
@@ -77,7 +77,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="selector">The async selector.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
-        internal sealed class SelectAsyncObserver(
+        internal sealed class SelectAsyncWitness(
             IObserverAsync<TDest> downstream,
             Func<T, CancellationToken, ValueTask<TDest>> selector,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
@@ -117,7 +117,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<TDest> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new SelectSyncObserver(observer, selector, cancellationToken);
+            var sink = new SelectSyncWitness(observer, selector, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
             // recognises this token without allocating a per-emission linked CTS.
@@ -135,7 +135,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="selector">The sync selector.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
-        internal sealed class SelectSyncObserver(
+        internal sealed class SelectSyncWitness(
             IObserverAsync<TDest> downstream,
             Func<T, TDest> selector,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)

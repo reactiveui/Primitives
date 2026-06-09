@@ -525,7 +525,7 @@ public class ParityHelpersOperatorFusionsTests
         using var unhandled = new UnhandledExceptionCapture();
 
         var signal = Signal.Create<int>();
-        var throwingObserver = new ThrowingAsyncObserver<int>(new InvalidOperationException("downstream-throws"));
+        var throwingObserver = new ThrowingAsyncWitness<int>(new InvalidOperationException("downstream-throws"));
 
         await using var sub = await signal.Values
             .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds))
@@ -548,7 +548,7 @@ public class ParityHelpersOperatorFusionsTests
         using var unhandled = new UnhandledExceptionCapture();
 
         var signal = Signal.Create<int>();
-        var throwingObserver = new ThrowingAsyncObserver<int>(new InvalidOperationException("throttle-downstream-throws"));
+        var throwingObserver = new ThrowingAsyncWitness<int>(new InvalidOperationException("throttle-downstream-throws"));
 
         await using var sub = await signal.Values
             .Throttle(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds))
@@ -601,7 +601,7 @@ public class ParityHelpersOperatorFusionsTests
         using var unhandled = new UnhandledExceptionCapture();
 
         var signal = Signal.Create<int>();
-        var throwingObserver = new ThrowingAsyncObserver<int>(new InvalidOperationException("debounce-downstream-throws"));
+        var throwingObserver = new ThrowingAsyncWitness<int>(new InvalidOperationException("debounce-downstream-throws"));
 
         await using var sub = await signal.Values
             .DebounceUntil(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), static _ => false)
@@ -646,7 +646,7 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenThrottleDistinctTryClaimEmissionSuperseded_ThenReturnsFalse()
     {
         var observer = new SignalAsyncExtensions.ThrottleDistinctSignal<int>.ThrottleDistinctWitness(
-            new NoOpAsyncObserver<int>(),
+            new NoOpAsyncWitness<int>(),
             TimeSpan.FromHours(1),
             TimeProvider.System,
             CancellationToken.None);
@@ -666,7 +666,7 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenThrottleDistinctTryClaimEmissionDuplicate_ThenReturnsFalse()
     {
         var observer = new SignalAsyncExtensions.ThrottleDistinctSignal<int>.ThrottleDistinctWitness(
-            new NoOpAsyncObserver<int>(),
+            new NoOpAsyncWitness<int>(),
             TimeSpan.FromHours(1),
             TimeProvider.System,
             CancellationToken.None);
@@ -693,7 +693,7 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenDebounceUntilIsCurrentEmission_ThenMatchesIdState()
     {
         var observer = new SignalAsyncExtensions.DebounceUntilSignal<int>.DebounceUntilWitness(
-            new NoOpAsyncObserver<int>(),
+            new NoOpAsyncWitness<int>(),
             TimeSpan.FromHours(1),
             static _ => false,
             TimeProvider.System,
@@ -759,7 +759,7 @@ public class ParityHelpersOperatorFusionsTests
     /// upstream operator's <c>catch (Exception e)</c> block under test.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="error">The exception to throw on every emission.</param>
-    private sealed class ThrowingAsyncObserver<T>(Exception error) : IObserverAsync<T>
+    private sealed class ThrowingAsyncWitness<T>(Exception error) : IObserverAsync<T>
     {
         /// <inheritdoc/>
         public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
@@ -778,7 +778,7 @@ public class ParityHelpersOperatorFusionsTests
 
     /// <summary>No-op async observer used as a downstream stand-in for direct unit tests of observer-internal decision methods.</summary>
     /// <typeparam name="T">The element type.</typeparam>
-    private sealed class NoOpAsyncObserver<T> : IObserverAsync<T>
+    private sealed class NoOpAsyncWitness<T> : IObserverAsync<T>
     {
         /// <inheritdoc/>
         public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) => default;

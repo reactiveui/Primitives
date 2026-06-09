@@ -64,7 +64,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new WhereAsyncObserver(observer, predicate, cancellationToken);
+            var sink = new WhereAsyncWitness(observer, predicate, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
             // recognises this token without allocating a per-emission linked CTS.
@@ -82,7 +82,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="predicate">The async predicate.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
-        internal sealed class WhereAsyncObserver(
+        internal sealed class WhereAsyncWitness(
             IObserverAsync<T> downstream,
             Func<T, CancellationToken, ValueTask<bool>> predicate,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
@@ -123,7 +123,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new WhereSyncObserver(observer, predicate, cancellationToken);
+            var sink = new WhereSyncWitness(observer, predicate, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
             // recognises this token without allocating a per-emission linked CTS.
@@ -141,7 +141,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="predicate">The sync predicate.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
-        internal sealed class WhereSyncObserver(
+        internal sealed class WhereSyncWitness(
             IObserverAsync<T> downstream,
             Func<T, bool> predicate,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)

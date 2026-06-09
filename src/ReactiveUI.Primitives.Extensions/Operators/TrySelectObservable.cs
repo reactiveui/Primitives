@@ -25,13 +25,13 @@ internal sealed class TrySelectObservable<TIn, TOut>(
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         InvalidOperationExceptionHelper.ThrowIfNull(selector);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return source.Subscribe(new TrySelectObserver(observer, selector));
+        return source.Subscribe(new TrySelectWitness(observer, selector));
     }
 
     /// <summary>Observer that applies the selector and only forwards non-null results. Exceptions from the selector are routed to <see cref="IObserver{T}.OnError"/>.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="selector">The projection delegate.</param>
-    private sealed class TrySelectObserver(
+    private sealed class TrySelectWitness(
         IObserver<TOut> downstream,
         Func<TIn, TOut?> selector) : IObserver<TIn>
     {

@@ -64,13 +64,13 @@ internal static class ObservableExtensions
             }
 
             var coordinator = new Coordinator(observer);
-            coordinator.Add(_other.Subscribe(new CancelObserver(coordinator)));
+            coordinator.Add(_other.Subscribe(new CancelWitness(coordinator)));
             if (coordinator.IsStopped)
             {
                 return coordinator;
             }
 
-            coordinator.Add(_source.Subscribe(new SourceObserver(coordinator)));
+            coordinator.Add(_source.Subscribe(new SourceWitness(coordinator)));
             return coordinator;
         }
 
@@ -151,14 +151,14 @@ internal static class ObservableExtensions
         }
 
         /// <summary>Observes the source stream and routes its notifications through the coordinator.</summary>
-        private sealed class SourceObserver : IObserver<T>
+        private sealed class SourceWitness : IObserver<T>
         {
             /// <summary>The owning coordinator.</summary>
             private readonly Coordinator _coordinator;
 
-            /// <summary>Initializes a new instance of the <see cref="SourceObserver"/> class.</summary>
+            /// <summary>Initializes a new instance of the <see cref="SourceWitness"/> class.</summary>
             /// <param name="coordinator">The owning coordinator.</param>
-            internal SourceObserver(Coordinator coordinator) => _coordinator = coordinator;
+            internal SourceWitness(Coordinator coordinator) => _coordinator = coordinator;
 
             /// <inheritdoc/>
             public void OnNext(T value) => _coordinator.Next(value);
@@ -171,14 +171,14 @@ internal static class ObservableExtensions
         }
 
         /// <summary>Observes the cancellation stream; its first value (or error) stops the source.</summary>
-        private sealed class CancelObserver : IObserver<TOther>
+        private sealed class CancelWitness : IObserver<TOther>
         {
             /// <summary>The owning coordinator.</summary>
             private readonly Coordinator _coordinator;
 
-            /// <summary>Initializes a new instance of the <see cref="CancelObserver"/> class.</summary>
+            /// <summary>Initializes a new instance of the <see cref="CancelWitness"/> class.</summary>
             /// <param name="coordinator">The owning coordinator.</param>
-            internal CancelObserver(Coordinator coordinator) => _coordinator = coordinator;
+            internal CancelWitness(Coordinator coordinator) => _coordinator = coordinator;
 
             /// <inheritdoc/>
             public void OnNext(TOther value) => _coordinator.Complete();

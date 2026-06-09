@@ -48,7 +48,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            var sink = new AllPredicateObserver<T>(observer, _predicate);
+            var sink = new AllPredicateWitness<T>(observer, _predicate);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -126,7 +126,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            var sink = new ContainsObserver<T>(observer, _value, _comparer);
+            var sink = new ContainsWitness<T>(observer, _value, _comparer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }

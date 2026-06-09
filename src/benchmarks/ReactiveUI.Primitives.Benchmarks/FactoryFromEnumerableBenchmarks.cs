@@ -27,7 +27,7 @@ public class FactoryFromEnumerableBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesFromEnumerableSubscribe()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.FromEnumerable(Values).Subscribe(observer);
         return observer.Total;
     }
@@ -37,7 +37,7 @@ public class FactoryFromEnumerableBenchmarks
     [Benchmark]
     public int SystemReactiveToObservableSubscribe()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.ToObservable(Values).Subscribe(observer);
         return observer.Total;
     }
@@ -47,7 +47,7 @@ public class FactoryFromEnumerableBenchmarks
     [Benchmark]
     public int R3ToObservableSubscribe()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.Observable.ToObservable(Values, CancellationToken.None).Subscribe(observer);
         return observer.Total;
     }

@@ -34,7 +34,7 @@ public class FactoryStateTimerBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesCreateWithState()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.CreateWithState<int, int>(_limit, static (limit, target) =>
         {
             for (var i = 1; i <= limit; i++)
@@ -54,7 +54,7 @@ public class FactoryStateTimerBenchmarks
     public int SystemReactiveCreateClosure()
     {
         var limit = _limit;
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.Create<int>(target =>
         {
             for (var i = 1; i <= limit; i++)
@@ -74,7 +74,7 @@ public class FactoryStateTimerBenchmarks
     public int R3CreateClosure()
     {
         var limit = _limit;
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.Observable.Create<int>(target =>
         {
             for (var i = 1; i <= limit; i++)
@@ -93,7 +93,7 @@ public class FactoryStateTimerBenchmarks
     [Benchmark]
     public int PrimitivesIterate()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.Iterate(1, static s => s <= Count, static s => s + 1, static s => s).Subscribe(observer);
         return observer.Total;
     }
@@ -103,7 +103,7 @@ public class FactoryStateTimerBenchmarks
     [Benchmark]
     public int SystemReactiveGenerate()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.Generate(1, static s => s <= Count, static s => s + 1, static s => s).Subscribe(observer);
         return observer.Total;
     }
@@ -114,7 +114,7 @@ public class FactoryStateTimerBenchmarks
     public int PrimitivesEvery()
     {
         var clock = new TestClock();
-        var observer = new CountingSignalObserver<long>();
+        var observer = new CountingSignalWitness<long>();
         using var subscription = Signal.Every(TimeSpan.FromTicks(1), clock).Subscribe(observer);
         clock.AdvanceBy(TimeSpan.FromTicks(Ticks));
         return observer.Count;
@@ -126,7 +126,7 @@ public class FactoryStateTimerBenchmarks
     public int SystemReactiveInterval()
     {
         var scheduler = new HistoricalScheduler();
-        var observer = new CountingSignalObserver<long>();
+        var observer = new CountingSignalWitness<long>();
         using var subscription = RxObservable.Interval(TimeSpan.FromTicks(1), scheduler).Subscribe(observer);
         scheduler.AdvanceBy(TimeSpan.FromTicks(Ticks));
         return observer.Count;
@@ -138,7 +138,7 @@ public class FactoryStateTimerBenchmarks
     public int R3Interval()
     {
         var timeProvider = new FakeTimeProvider();
-        var observer = new CountingR3Observer<R3.Unit>();
+        var observer = new CountingR3Witness<R3.Unit>();
         using var subscription = R3.Observable.Interval(TimeSpan.FromTicks(1), timeProvider).Subscribe(observer);
         timeProvider.Advance(TimeSpan.FromTicks(Ticks));
         return observer.Count;
@@ -150,7 +150,7 @@ public class FactoryStateTimerBenchmarks
     public int PrimitivesAfter()
     {
         var clock = new TestClock();
-        var observer = new CountingSignalObserver<long>();
+        var observer = new CountingSignalWitness<long>();
         using var subscription = Signal.After(TimeSpan.FromTicks(1), clock).Subscribe(observer);
         clock.AdvanceBy(TimeSpan.FromTicks(1));
         return observer.Count;
@@ -162,7 +162,7 @@ public class FactoryStateTimerBenchmarks
     public int SystemReactiveTimer()
     {
         var scheduler = new HistoricalScheduler();
-        var observer = new CountingSignalObserver<long>();
+        var observer = new CountingSignalWitness<long>();
         using var subscription = RxObservable.Timer(TimeSpan.FromTicks(1), scheduler).Subscribe(observer);
         scheduler.AdvanceBy(TimeSpan.FromTicks(1));
         return observer.Count;
@@ -174,7 +174,7 @@ public class FactoryStateTimerBenchmarks
     public int R3Timer()
     {
         var timeProvider = new FakeTimeProvider();
-        var observer = new CountingR3Observer<R3.Unit>();
+        var observer = new CountingR3Witness<R3.Unit>();
         using var subscription = R3.Observable.Timer(TimeSpan.FromTicks(1), timeProvider).Subscribe(observer);
         timeProvider.Advance(TimeSpan.FromTicks(1));
         return observer.Count;
@@ -186,7 +186,7 @@ public class FactoryStateTimerBenchmarks
     public int PrimitivesFromEventPattern()
     {
         var source = new EventSource();
-        var observer = new CountingSignalObserver<Core.EventPattern<EventArgs>>();
+        var observer = new CountingSignalWitness<Core.EventPattern<EventArgs>>();
         using var subscription = Signal.FromEventPattern(h => source.Tick += h, h => source.Tick -= h).Subscribe(observer);
         for (var i = 0; i < Count; i++)
         {
@@ -202,7 +202,7 @@ public class FactoryStateTimerBenchmarks
     public int SystemReactiveFromEventPattern()
     {
         var source = new EventSource();
-        var observer = new CountingSignalObserver<System.Reactive.EventPattern<object>>();
+        var observer = new CountingSignalWitness<System.Reactive.EventPattern<object>>();
         using var subscription = RxObservable.FromEventPattern(h => source.Tick += h, h => source.Tick -= h).Subscribe(observer);
         for (var i = 0; i < Count; i++)
         {

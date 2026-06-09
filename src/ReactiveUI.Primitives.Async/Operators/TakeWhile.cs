@@ -58,7 +58,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new TakeWhileSyncObserver(observer, predicate, cancellationToken);
+            var sink = new TakeWhileSyncWitness(observer, predicate, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -74,7 +74,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="predicate">The take-while predicate.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class TakeWhileSyncObserver(
+        internal sealed class TakeWhileSyncWitness(
             IObserverAsync<T> downstream,
             Func<T, bool> predicate,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
@@ -122,7 +122,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new TakeWhileAsyncObserver(observer, predicate, cancellationToken);
+            var sink = new TakeWhileAsyncWitness(observer, predicate, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -138,7 +138,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="predicate">The async take-while predicate.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class TakeWhileAsyncObserver(
+        internal sealed class TakeWhileAsyncWitness(
             IObserverAsync<T> downstream,
             Func<T, CancellationToken, ValueTask<bool>> predicate,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)

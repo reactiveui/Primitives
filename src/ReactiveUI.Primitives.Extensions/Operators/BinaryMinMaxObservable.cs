@@ -28,8 +28,8 @@ internal sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable
 
         var sink = new Sink(observer, emitMaximum);
         return new DisposableBag(
-            _left.Subscribe(new IndexedObserver(sink, isLeft: true)),
-            _right.Subscribe(new IndexedObserver(sink, isLeft: false)));
+            _left.Subscribe(new IndexedWitness(sink, isLeft: true)),
+            _right.Subscribe(new IndexedWitness(sink, isLeft: false)));
     }
 
     /// <summary>Holds latest values and terminal state for two sources.</summary>
@@ -169,7 +169,7 @@ internal sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable
     /// <summary>Observer that labels left/right without per-callback closures.</summary>
     /// <param name="sink">The shared sink.</param>
     /// <param name="isLeft"><c>true</c> when observing the left source.</param>
-    private sealed class IndexedObserver(Sink sink, bool isLeft) : IObserver<T>
+    private sealed class IndexedWitness(Sink sink, bool isLeft) : IObserver<T>
     {
         /// <inheritdoc/>
         public void OnNext(T value) => sink.OnNext(isLeft, value);

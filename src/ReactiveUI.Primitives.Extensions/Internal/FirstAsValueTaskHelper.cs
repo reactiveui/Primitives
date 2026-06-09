@@ -15,7 +15,7 @@ namespace ReactiveUI.Primitives.Extensions.Internal;
 internal static class FirstAsValueTaskHelper<T>
 {
     /// <summary>Single-slot pool. <c>null</c> when the previous instance is in flight.</summary>
-    private static PooledFirstObserver? _pooled;
+    private static PooledFirstWitness? _pooled;
 
     /// <summary>Subscribes once and resolves a <see cref="ValueTask{T}"/> with the first value.</summary>
     /// <param name="source">The source observable.</param>
@@ -24,12 +24,12 @@ internal static class FirstAsValueTaskHelper<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
-        var inst = Interlocked.Exchange(ref _pooled, null) ?? new PooledFirstObserver();
+        var inst = Interlocked.Exchange(ref _pooled, null) ?? new PooledFirstWitness();
         return inst.Begin(source);
     }
 
     /// <summary>Pooled combined <see cref="IValueTaskSource{T}"/> + <see cref="IObserver{T}"/>.</summary>
-    private sealed class PooledFirstObserver : IValueTaskSource<T>, IObserver<T>
+    private sealed class PooledFirstWitness : IValueTaskSource<T>, IObserver<T>
     {
         /// <summary>The reset-able backing store for the <see cref="ValueTask{T}"/> machinery.</summary>
         private ManualResetValueTaskSourceCore<T> _core = new() { RunContinuationsAsynchronously = true };

@@ -30,7 +30,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesTapRange()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.Sequence(1, Count).Tap(static _ => { }).Subscribe(observer);
         return observer.Total;
     }
@@ -40,7 +40,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark]
     public int SystemReactiveTapRange()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.Do(RxObservable.Range(1, Count), static _ => { }).Subscribe(observer);
         return observer.Total;
     }
@@ -50,7 +50,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark]
     public int R3TapRange()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.ObservableExtensions.Do(R3.Observable.Range(1, Count), onNext: static _ => { })
             .Subscribe(observer);
         return observer.Total;
@@ -61,7 +61,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark]
     public int PrimitivesIgnoreValuesRange()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.Sequence(1, Count).IgnoreValues().Subscribe(observer);
         return observer.CompletionCount;
     }
@@ -71,7 +71,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark]
     public int SystemReactiveIgnoreValuesRange()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.IgnoreElements(RxObservable.Range(1, Count)).Subscribe(observer);
         return observer.CompletionCount;
     }
@@ -81,7 +81,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark]
     public int R3IgnoreValuesRange()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.ObservableExtensions.IgnoreElements(R3.Observable.Range(1, Count)).Subscribe(observer);
         return observer.CompletionCount;
     }
@@ -91,7 +91,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark]
     public int PrimitivesMaterializeRange()
     {
-        var observer = new CountingSignalObserver<Spark<int>>();
+        var observer = new CountingSignalWitness<Spark<int>>();
         using var subscription = Signal.Sequence(1, Count).Spark().Subscribe(observer);
         return observer.Count;
     }
@@ -101,7 +101,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark]
     public int SystemReactiveMaterializeRange()
     {
-        var observer = new CountingSignalObserver<System.Reactive.Notification<int>>();
+        var observer = new CountingSignalWitness<System.Reactive.Notification<int>>();
         using var subscription = RxObservable.Materialize(RxObservable.Range(1, Count)).Subscribe(observer);
         return observer.Count;
     }
@@ -111,7 +111,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark]
     public int R3MaterializeRange()
     {
-        var observer = new CountingR3Observer<R3.Notification<int>>();
+        var observer = new CountingR3Witness<R3.Notification<int>>();
         using var subscription = R3.ObservableExtensions.Materialize(R3.Observable.Range(1, Count)).Subscribe(observer);
         return observer.Count;
     }
@@ -121,7 +121,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark]
     public int PrimitivesDematerializeRange()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.Sequence(1, Count).Spark().Unspark().Subscribe(observer);
         return observer.Total;
     }
@@ -131,7 +131,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark]
     public int SystemReactiveDematerializeRange()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.Dematerialize(RxObservable.Materialize(RxObservable.Range(1, Count))).Subscribe(observer);
         return observer.Total;
     }
@@ -141,7 +141,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark]
     public int R3DematerializeRange()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.ObservableExtensions
             .Dematerialize(R3.ObservableExtensions.Materialize(R3.Observable.Range(1, Count)))
             .Subscribe(observer);
@@ -153,7 +153,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark]
     public int PrimitivesSubscribeOnImmediate()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.Sequence(1, Count).SubscribeOn(Sequencer.Immediate).Subscribe(observer);
         return observer.Total;
     }
@@ -163,7 +163,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark]
     public int SystemReactiveSubscribeOnImmediate()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.Range(1, Count).SubscribeOn(ImmediateScheduler.Instance).Subscribe(observer);
         return observer.Total;
     }
@@ -173,7 +173,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark]
     public int R3SubscribeOnImmediate()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var context = new ImmediateSynchronizationContext();
         using var subscription = R3.ObservableExtensions
             .SubscribeOn(R3.Observable.Range(1, Count), context)
@@ -186,7 +186,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark]
     public int PrimitivesReattemptRange()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.Sequence(1, Count).Reattempt(RetryCount).Subscribe(observer);
         return observer.Total;
     }
@@ -196,7 +196,7 @@ public class OperatorPassThroughBenchmarks
     [Benchmark]
     public int SystemReactiveReattemptRange()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.Retry(RxObservable.Range(1, Count), RetryCount).Subscribe(observer);
         return observer.Total;
     }

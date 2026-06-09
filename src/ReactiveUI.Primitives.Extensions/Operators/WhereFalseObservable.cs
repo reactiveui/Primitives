@@ -20,12 +20,12 @@ internal sealed class WhereFalseObservable(IObservable<bool> source) : IObservab
     {
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return source.Subscribe(new WhereFalseObserver(observer));
+        return source.Subscribe(new WhereFalseWitness(observer));
     }
 
     /// <summary>Forwarding observer that drops <c>true</c> values and passes <c>false</c> values, terminal error and completion through unchanged.</summary>
     /// <param name="downstream">The downstream observer.</param>
-    private sealed class WhereFalseObserver(IObserver<bool> downstream) : IObserver<bool>
+    private sealed class WhereFalseWitness(IObserver<bool> downstream) : IObserver<bool>
     {
         /// <inheritdoc/>
         public void OnNext(bool value)

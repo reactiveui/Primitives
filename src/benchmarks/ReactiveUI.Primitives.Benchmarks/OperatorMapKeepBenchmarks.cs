@@ -30,7 +30,7 @@ public class OperatorMapKeepBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesRangeMapKeep()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
             .Map(static x => x + 1)
             .Keep(static x => (x & 1) == 0)
@@ -43,7 +43,7 @@ public class OperatorMapKeepBenchmarks
     [Benchmark]
     public int SystemReactiveRangeSelectWhere()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.Range(StartValue, RangeCount)
             .Select(static x => x + 1)
             .Where(static x => (x & 1) == 0)
@@ -56,7 +56,7 @@ public class OperatorMapKeepBenchmarks
     [Benchmark]
     public int R3RangeSelectWhere()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.ObservableExtensions.Where(
                 R3.ObservableExtensions.Select(
                     R3.Observable.Range(StartValue, RangeCount),
@@ -71,8 +71,8 @@ public class OperatorMapKeepBenchmarks
     [Benchmark]
     public int PrimitivesAggregateAnyCount()
     {
-        var count = new IntSignalObserver();
-        var any = new BooleanSignalObserver();
+        var count = new IntSignalWitness();
+        var any = new BooleanSignalWitness();
         using var countSubscription = Signal.Sequence(StartValue, RangeCount)
             .DistinctBy(static x => x / KeyDivisor)
             .Count()
@@ -88,8 +88,8 @@ public class OperatorMapKeepBenchmarks
     [Benchmark]
     public int SystemReactiveAggregateAnyCount()
     {
-        var count = new IntSignalObserver();
-        var any = new BooleanSignalObserver();
+        var count = new IntSignalWitness();
+        var any = new BooleanSignalWitness();
         using var countSubscription = RxObservable.Range(StartValue, RangeCount)
             .Select(static x => x / KeyDivisor)
             .Distinct()

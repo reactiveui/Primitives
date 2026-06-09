@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -15,10 +14,10 @@ public partial class InternalInfrastructureCoverageTests
     public void SubjectsCoverMultipleSubscriberChurnLateTerminalsAndDisposalBranches()
     {
         var subject = new Signal<int>();
-        var first = new RecordingObserver<int>();
-        var second = new RecordingObserver<int>();
-        var third = new RecordingObserver<int>();
-        var fourth = new RecordingObserver<int>();
+        var first = new RecordingWitness<int>();
+        var second = new RecordingWitness<int>();
+        var third = new RecordingWitness<int>();
+        var fourth = new RecordingWitness<int>();
         var actionValues = new List<int>();
         using var action = subject.Subscribe(actionValues.Add);
         using var firstSubscription = subject.Subscribe(first);
@@ -31,7 +30,7 @@ public partial class InternalInfrastructureCoverageTests
         subject.OnCompleted();
         subject.OnCompleted();
         subject.OnNext(Two);
-        var lateCompleted = new RecordingObserver<int>();
+        var lateCompleted = new RecordingWitness<int>();
         subject.Subscribe(lateCompleted).Dispose();
 
         Assert.Equal(ExpectedSingleOne, first.Values);
@@ -43,13 +42,13 @@ public partial class InternalInfrastructureCoverageTests
         Assert.Equal(1, lateCompleted.Completed);
 
         var faulted = new Signal<int>();
-        var faultObserver = new RecordingObserver<int>();
+        var faultObserver = new RecordingWitness<int>();
         var actionFaults = 0;
         using var faultSubscription = faulted.Subscribe(faultObserver);
         var fault = new InvalidOperationException("fault");
         faulted.OnError(fault);
         faulted.OnError(new InvalidOperationException("late"));
-        var lateFault = new RecordingObserver<int>();
+        var lateFault = new RecordingWitness<int>();
         faulted.Subscribe(lateFault).Dispose();
         Assert.Same(fault, lateFault.Errors[0]);
         Assert.Equal(0, actionFaults);
@@ -62,7 +61,7 @@ public partial class InternalInfrastructureCoverageTests
         var disposedSubject = new Signal<int>();
         disposedSubject.Dispose();
         disposedSubject.Dispose();
-        Assert.Throws<ObjectDisposedException>(() => disposedSubject.Subscribe(new RecordingObserver<int>()));
+        Assert.Throws<ObjectDisposedException>(() => disposedSubject.Subscribe(new RecordingWitness<int>()));
         Assert.Throws<ObjectDisposedException>(() => disposedSubject.OnNext(One));
 
         AssertAsyncSignalSubscriberChurnAndTerminals(ref actionFaults);
@@ -75,11 +74,11 @@ public partial class InternalInfrastructureCoverageTests
     public void InternalInfrastructureBranchesCoverObserverChurnAndTerminalEdges()
     {
         Broadcaster<int> broadcaster = default;
-        var first = new RecordingObserver<int>();
-        var second = new RecordingObserver<int>();
-        var third = new RecordingObserver<int>();
-        var fourth = new RecordingObserver<int>();
-        var missing = new RecordingObserver<int>();
+        var first = new RecordingWitness<int>();
+        var second = new RecordingWitness<int>();
+        var third = new RecordingWitness<int>();
+        var fourth = new RecordingWitness<int>();
+        var missing = new RecordingWitness<int>();
         broadcaster.Add(first);
         broadcaster.Add(second);
         broadcaster.Add(third);

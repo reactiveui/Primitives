@@ -53,7 +53,7 @@ public class SubjectSubscriptionBenchmarks
     /// <returns>A lifecycle marker confirming the subscriptions were created and disposed.</returns>
     private static int SubscribeDisposeCountSignal(int subscribers)
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subject = new Signal<int>();
         var disposables = new IDisposable[subscribers];
         for (var i = 0; i < subscribers; i++)
@@ -75,7 +75,7 @@ public class SubjectSubscriptionBenchmarks
     /// <returns>A lifecycle marker confirming the subscriptions were created and disposed.</returns>
     private static int SubscribeDisposeCountSystemSubject(int subscribers)
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subject = new RxSubject();
         var disposables = new IDisposable[subscribers];
         for (var i = 0; i < subscribers; i++)
@@ -101,7 +101,7 @@ public class SubjectSubscriptionBenchmarks
         var disposables = new IDisposable[subscribers];
         for (var i = 0; i < subscribers; i++)
         {
-            disposables[i] = subject.Subscribe(new IntR3ActionObserver());
+            disposables[i] = subject.Subscribe(new IntR3ActionWitness());
         }
 
         var before = disposables.Length;

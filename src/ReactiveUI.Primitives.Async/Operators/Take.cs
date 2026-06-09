@@ -69,7 +69,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new TakeObserver(observer, count, cancellationToken);
+            var sink = new TakeWitness(observer, count, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -85,7 +85,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="budget">The take budget, decremented per emission.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class TakeObserver(
+        internal sealed class TakeWitness(
             IObserverAsync<T> downstream,
             int budget,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)

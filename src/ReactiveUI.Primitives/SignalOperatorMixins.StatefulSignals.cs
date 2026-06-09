@@ -47,7 +47,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            var sink = new TakeObserver<T>(observer, _count);
+            var sink = new TakeWitness<T>(observer, _count);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -80,7 +80,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new SkipObserver<T>(observer, _count);
+            var sink = new SkipWitness<T>(observer, _count);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -113,7 +113,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new DistinctObserver<T>(observer, CreateSeen());
+            var sink = new DistinctWitness<T>(observer, CreateSeen());
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -163,7 +163,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new UniqueObserver<T>(observer, _comparer);
+            var sink = new UniqueWitness<T>(observer, _comparer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -202,7 +202,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new UniqueByObserver<T, TKey>(observer, _keySelector, _comparer);
+            var sink = new UniqueByWitness<T, TKey>(observer, _keySelector, _comparer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -241,7 +241,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new FoldObserver<TSource, TAccumulate>(observer, _seed, _accumulator);
+            var sink = new FoldWitness<TSource, TAccumulate>(observer, _seed, _accumulator);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -280,7 +280,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new ReduceObserver<TSource, TAccumulate>(observer, _seed, _accumulator);
+            var sink = new ReduceWitness<TSource, TAccumulate>(observer, _seed, _accumulator);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -313,7 +313,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new TakeWhileObserver<T>(observer, _predicate);
+            var sink = new TakeWhileWitness<T>(observer, _predicate);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -346,7 +346,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new SkipWhileObserver<T>(observer, _predicate);
+            var sink = new SkipWhileWitness<T>(observer, _predicate);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -372,7 +372,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new KeepNotNullObserver<T>(observer);
+            var sink = new KeepNotNullWitness<T>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -397,7 +397,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new KeepTypeObserver<TResult>(observer);
+            var sink = new KeepTypeWitness<TResult>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
