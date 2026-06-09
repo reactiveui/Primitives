@@ -84,11 +84,27 @@ public class ResultAndInfrastructureTests
         const int ConcurrentValue = 2;
         using var capture = new UnhandledExceptionCapture();
         var observer = new BlockingObserver();
-        var first = Task.Run(async () => await observer.OnNextAsync(1, CancellationToken.None));
+        var first = Task.Factory.StartNew(
+            static async state =>
+            {
+                var blockingObserver = (BlockingObserver)state!;
+                await blockingObserver.OnNextAsync(1, CancellationToken.None);
+            },
+            observer,
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach,
+            TaskScheduler.Default).Unwrap();
 
-        await observer.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        await observer.OnNextAsync(ConcurrentValue, CancellationToken.None);
-        observer.Release.SetResult();
+        try
+        {
+            await observer.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await observer.OnNextAsync(ConcurrentValue, CancellationToken.None);
+        }
+        finally
+        {
+            observer.Release.TrySetResult();
+        }
+
         await first.WaitAsync(TimeSpan.FromSeconds(5));
 
         var reported = await capture.WaitForAsync(
