@@ -75,7 +75,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<TAcc> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new ScanAsyncObserver(observer, seed, accumulator, cancellationToken);
+            var sink = new ScanAsyncWitness(observer, seed, accumulator, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
             // recognises this token without allocating a per-emission linked CTS.
@@ -94,7 +94,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="seed">The initial accumulator value used to prime <see cref="_acc"/>.</param>
         /// <param name="accumulator">The asynchronous accumulator.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
-        internal sealed class ScanAsyncObserver(
+        internal sealed class ScanAsyncWitness(
             IObserverAsync<TAcc> downstream,
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator,
@@ -157,7 +157,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<TAcc> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new ScanSyncObserver(observer, seed, accumulator, cancellationToken);
+            var sink = new ScanSyncWitness(observer, seed, accumulator, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
             // recognises this token without allocating a per-emission linked CTS.
@@ -176,7 +176,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="seed">The initial accumulator value used to prime <see cref="_acc"/>.</param>
         /// <param name="accumulator">The synchronous accumulator.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
-        internal sealed class ScanSyncObserver(
+        internal sealed class ScanSyncWitness(
             IObserverAsync<TAcc> downstream,
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator,

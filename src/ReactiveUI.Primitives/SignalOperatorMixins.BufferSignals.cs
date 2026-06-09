@@ -43,7 +43,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new BufferObserver<T>(observer, _count, _skip);
+            var sink = new BufferWitness<T>(observer, _count, _skip);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }

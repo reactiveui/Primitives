@@ -29,7 +29,7 @@ internal sealed class WaitUntilObservable<T>(
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         var subscription = new OnceDisposable();
-        var sink = new WaitUntilObserver(observer, predicate, subscription);
+        var sink = new WaitUntilWitness(observer, predicate, subscription);
         subscription.Disposable = source.Subscribe(sink);
         return subscription;
     }
@@ -38,7 +38,7 @@ internal sealed class WaitUntilObservable<T>(
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="predicate">The match predicate.</param>
     /// <param name="subscription">The handle controlling the upstream subscription.</param>
-    private sealed class WaitUntilObserver(
+    private sealed class WaitUntilWitness(
         IObserver<T> downstream,
         Func<T, bool> predicate,
         IDisposable subscription) : IObserver<T>

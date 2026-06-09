@@ -57,10 +57,10 @@ internal sealed class RecoverSignal<T, TException> : IRequireCurrentThread<T>
     /// <summary>Builds the sink and subscribes it to the source.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <returns>The sink, which is the subscription.</returns>
-    private RecoverObserver Run(IObserver<T> observer) => new RecoverObserver(observer, _handler).Run(_source);
+    private RecoverWitness Run(IObserver<T> observer) => new RecoverWitness(observer, _handler).Run(_source);
 
     /// <summary>Forwards source values and, on a caught error, switches to the fallback sequence.</summary>
-    private sealed class RecoverObserver : IObserver<T>, IDisposable
+    private sealed class RecoverWitness : IObserver<T>, IDisposable
     {
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer;
@@ -74,10 +74,10 @@ internal sealed class RecoverSignal<T, TException> : IRequireCurrentThread<T>
         /// <summary>The fallback subscription slot, populated after a caught error.</summary>
         private IDisposable? _fallbackSubscription;
 
-        /// <summary>Initializes a new instance of the <see cref="RecoverObserver"/> class.</summary>
+        /// <summary>Initializes a new instance of the <see cref="RecoverWitness"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="handler">The handler that selects the fallback sequence.</param>
-        internal RecoverObserver(IObserver<T> observer, Func<TException, IObservable<T>> handler)
+        internal RecoverWitness(IObserver<T> observer, Func<TException, IObservable<T>> handler)
         {
             _observer = observer;
             _handler = handler;
@@ -148,7 +148,7 @@ internal sealed class RecoverSignal<T, TException> : IRequireCurrentThread<T>
         /// <summary>Subscribes to the source and returns the sink.</summary>
         /// <param name="source">The source observable.</param>
         /// <returns>This sink, which is the subscription.</returns>
-        internal RecoverObserver Run(IObservable<T> source)
+        internal RecoverWitness Run(IObservable<T> source)
         {
             SubscriptionSlots.Assign(ref _sourceSubscription, source.Subscribe(this));
             return this;

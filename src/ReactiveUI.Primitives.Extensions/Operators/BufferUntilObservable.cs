@@ -21,14 +21,14 @@ internal sealed class BufferUntilObservable(
     {
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return source.Subscribe(new BufferUntilObserver(observer, startsWith, endsWith));
+        return source.Subscribe(new BufferUntilWitness(observer, startsWith, endsWith));
     }
 
     /// <summary>Observer that buffers characters until delimiters are matched.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="startsWith">Start char.</param>
     /// <param name="endsWith">End char.</param>
-    private sealed class BufferUntilObserver(
+    private sealed class BufferUntilWitness(
         IObserver<string> downstream,
         char startsWith,
         char endsWith) : IObserver<char>

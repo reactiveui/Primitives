@@ -115,7 +115,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var timeoutObserver = new TimeoutObserver(observer, dueTime, timeProvider);
+            var timeoutObserver = new TimeoutWitness(observer, dueTime, timeProvider);
             var subscription = await source.SubscribeAsync(timeoutObserver, cancellationToken).ConfigureAwait(false);
             timeoutObserver.StartTimer(cancellationToken);
             return subscription;
@@ -128,7 +128,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="observer">The downstream observer to forward elements to.</param>
         /// <param name="dueTime">The maximum allowed inter-element interval.</param>
         /// <param name="timeProvider">The time provider used for scheduling the dueTime.</param>
-        internal sealed class TimeoutObserver(IObserverAsync<T> observer, TimeSpan dueTime, TimeProvider timeProvider)
+        internal sealed class TimeoutWitness(IObserverAsync<T> observer, TimeSpan dueTime, TimeProvider timeProvider)
             : ObserverAsync<T>
         {
             /// <summary>Synchronization gate protecting timer state.</summary>
@@ -154,7 +154,7 @@ public static partial class SignalAsyncExtensions
                 try
                 {
                     _timer = timeProvider.CreateTimer(
-                        static state => ((TimeoutObserver)state!).OnTimerFired(),
+                        static state => ((TimeoutWitness)state!).OnTimerFired(),
                         this,
                         dueTime,
                         System.Threading.Timeout.InfiniteTimeSpan);

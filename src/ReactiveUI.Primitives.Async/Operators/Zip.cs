@@ -78,11 +78,11 @@ public static partial class SignalAsyncExtensions
             state.LinkExternalCancellation(cancellationToken);
 
             var sub1 = await first.SubscribeAsync(
-                new FirstObserver(state),
+                new FirstWitness(state),
                 cancellationToken).ConfigureAwait(false);
 
             var sub2 = await second.SubscribeAsync(
-                new SecondObserver(state),
+                new SecondWitness(state),
                 cancellationToken).ConfigureAwait(false);
 
             return new MultipleDisposableAsync(sub1, sub2, state);
@@ -287,7 +287,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Observer for the first source sequence that delegates to the shared <see cref="ZipState"/>.</summary>
         /// <param name="state">The shared zip state.</param>
-        internal sealed class FirstObserver(ZipState state) : ObserverAsync<T1>
+        internal sealed class FirstWitness(ZipState state) : ObserverAsync<T1>
         {
             /// <summary>Forwards an element from the first source to the zip state for pairing.</summary>
             /// <param name="value">The element from the first source.</param>
@@ -312,7 +312,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Observer for the second source sequence that delegates to the shared <see cref="ZipState"/>.</summary>
         /// <param name="state">The shared zip state.</param>
-        internal sealed class SecondObserver(ZipState state) : ObserverAsync<T2>
+        internal sealed class SecondWitness(ZipState state) : ObserverAsync<T2>
         {
             /// <summary>Forwards an element from the second source to the zip state for pairing.</summary>
             /// <param name="value">The element from the second source.</param>

@@ -19,12 +19,12 @@ internal sealed class NotObservable(IObservable<bool> source) : IObservable<bool
     {
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return source.Subscribe(new NotObserver(observer));
+        return source.Subscribe(new NotWitness(observer));
     }
 
     /// <summary>Forwarding observer that negates every boolean <see cref="OnNext"/>.</summary>
     /// <param name="downstream">The downstream observer.</param>
-    private sealed class NotObserver(IObserver<bool> downstream) : IObserver<bool>
+    private sealed class NotWitness(IObserver<bool> downstream) : IObserver<bool>
     {
         /// <inheritdoc/>
         public void OnNext(bool value) => downstream.OnNext(!value);

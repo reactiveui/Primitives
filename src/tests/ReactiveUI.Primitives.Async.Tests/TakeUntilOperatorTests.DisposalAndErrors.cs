@@ -384,7 +384,7 @@ public partial class TakeUntilOperatorTests
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
 
-    /// <summary>Verifies that TakeUntil(Task) SourceObserver forwards error resume and completion through parent.</summary>
+    /// <summary>Verifies that TakeUntil(Task) SourceWitness forwards error resume and completion through parent.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTaskStopSignalSourceEmitsErrorResume_ThenErrorIsForwarded()

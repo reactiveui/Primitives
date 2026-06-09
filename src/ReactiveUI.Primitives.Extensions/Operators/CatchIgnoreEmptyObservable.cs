@@ -16,12 +16,12 @@ internal sealed class CatchIgnoreEmptyObservable<T>(IObservable<T> source) : IOb
     {
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return source.Subscribe(new CatchIgnoreEmptyObserver(observer));
+        return source.Subscribe(new CatchIgnoreEmptyWitness(observer));
     }
 
     /// <summary>Forwarding observer that swaps <see cref="OnError"/> for terminal completion.</summary>
     /// <param name="downstream">The downstream observer.</param>
-    private sealed class CatchIgnoreEmptyObserver(IObserver<T> downstream) : IObserver<T>
+    private sealed class CatchIgnoreEmptyWitness(IObserver<T> downstream) : IObserver<T>
     {
         /// <inheritdoc/>
         public void OnNext(T value) => downstream.OnNext(value);

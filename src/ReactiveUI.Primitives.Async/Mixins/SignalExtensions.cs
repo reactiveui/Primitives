@@ -29,7 +29,7 @@ public static class SignalExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(@this);
 
-            return new SignalAsyncObserver<T>(@this);
+            return new SignalAsyncWitness<T>(@this);
         }
 
         /// <summary>
@@ -87,7 +87,7 @@ public static class SignalExtensions
     /// <summary>An asynchronous observer that forwards all notifications to the wrapped signal.</summary>
     /// <typeparam name="T">The type of elements processed by the observer.</typeparam>
     /// <param name="signal">The signal to forward notifications to.</param>
-    internal sealed class SignalAsyncObserver<T>(ISignalAsync<T> signal) : ObserverAsync<T>
+    internal sealed class SignalAsyncWitness<T>(ISignalAsync<T> signal) : ObserverAsync<T>
     {
         /// <summary>
         /// Forwards the value to the wrapped signal. The cancellation token is intentionally

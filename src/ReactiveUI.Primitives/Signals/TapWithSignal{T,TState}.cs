@@ -49,11 +49,11 @@ internal sealed class TapWithSignal<T, TState> : IRequireCurrentThread<T>
             throw new ArgumentNullException(nameof(observer));
         }
 
-        return _source.Subscribe(new TapWithObserver(observer, _state, _onNext));
+        return _source.Subscribe(new TapWithWitness(observer, _state, _onNext));
     }
 
     /// <summary>Invokes the stateful side-effect action and forwards each value.</summary>
-    private sealed class TapWithObserver : IObserver<T>
+    private sealed class TapWithWitness : IObserver<T>
     {
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer;
@@ -67,11 +67,11 @@ internal sealed class TapWithSignal<T, TState> : IRequireCurrentThread<T>
         /// <summary>Whether a terminal notification has been forwarded.</summary>
         private bool _stopped;
 
-        /// <summary>Initializes a new instance of the <see cref="TapWithObserver"/> class.</summary>
+        /// <summary>Initializes a new instance of the <see cref="TapWithWitness"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="state">The state passed to the action.</param>
         /// <param name="onNext">The action invoked for each value and the state.</param>
-        public TapWithObserver(IObserver<T> observer, TState state, Action<TState, T> onNext)
+        public TapWithWitness(IObserver<T> observer, TState state, Action<TState, T> onNext)
         {
             _observer = observer;
             _state = state;

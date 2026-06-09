@@ -33,7 +33,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new CollectListObserver<T>(observer);
+            var sink = new CollectListWitness<T>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -58,7 +58,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new CollectArrayObserver<T>(observer);
+            var sink = new CollectArrayWitness<T>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }

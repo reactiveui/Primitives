@@ -61,7 +61,7 @@ public class FirstAsTaskHelperTests
         Assert.Throws<ArgumentNullException>(static () => FirstAsTaskHelper.FirstAsTask<int>(null!));
 
     /// <summary>Exercises the <c>Subscription?.Dispose()</c> null-conditional branch on
-    /// <c>FirstObserver.OnNext</c> — a source that synchronously emits during <c>Subscribe</c>
+    /// <c>FirstWitness.OnNext</c> — a source that synchronously emits during <c>Subscribe</c>
     /// (such as <see cref="Observable.Return{T}(T)"/>) fires <c>OnNext</c> before
     /// <c>FirstAsTask</c> can assign the <c>Subscription</c> property, so the latch-and-cleanup
     /// path sees <c>Subscription == null</c> and the conditional dispose becomes a no-op.</summary>

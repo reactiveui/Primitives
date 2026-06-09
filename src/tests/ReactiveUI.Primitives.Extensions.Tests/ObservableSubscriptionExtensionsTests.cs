@@ -200,7 +200,7 @@ public partial class ObservableSubscriptionExtensionsTests
         await pump;
     }
 
-    /// <summary>Exercises the no-op <c>OnError</c> body of <c>ValueCaptureObserver</c> —
+    /// <summary>Exercises the no-op <c>OnError</c> body of <c>ValueCaptureWitness</c> —
     /// <c>SubscribeGetValue</c> on an erroring source still returns the last captured value
     /// (default) and the error is silently swallowed by the observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -216,7 +216,7 @@ public partial class ObservableSubscriptionExtensionsTests
     }
 
     /// <summary>Exercises the no-op <c>OnNext</c> and <c>OnCompleted</c> bodies of
-    /// <c>ErrorCaptureObserver</c> — <c>SubscribeGetError</c> on a completing source ignores
+    /// <c>ErrorCaptureWitness</c> — <c>SubscribeGetError</c> on a completing source ignores
     /// the value and the completion, returning a null error.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -229,7 +229,7 @@ public partial class ObservableSubscriptionExtensionsTests
         await Assert.That(error).IsNull();
     }
 
-    /// <summary>Exercises the <c>OnError</c> path of <c>BlockingValueObserver</c> —
+    /// <summary>Exercises the <c>OnError</c> path of <c>BlockingValueWitness</c> —
     /// <c>WaitForValue</c> on an erroring source returns the default value once the gate
     /// is signalled by the error.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>

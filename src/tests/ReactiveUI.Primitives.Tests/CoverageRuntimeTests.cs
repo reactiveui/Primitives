@@ -299,7 +299,7 @@ public class CoverageRuntimeTests
     [Test]
     public void FromEnumerableSignalCoversAllSynchronousFastPaths()
     {
-        var arrayObserver = new RecordingObserver<int>();
+        var arrayObserver = new RecordingWitness<int>();
         var arraySignal = new FromEnumerableSignal<int>([One, Two]);
         Assert.False(arraySignal.IsRequiredSubscribeOnCurrentThread());
         arraySignal.Subscribe(arrayObserver).Dispose();
@@ -315,7 +315,7 @@ public class CoverageRuntimeTests
         Assert.Equal(ExpectedThreeFour, listValues);
         Assert.Equal(1, listCompleted);
 
-        var iteratorObserver = new RecordingObserver<int>();
+        var iteratorObserver = new RecordingWitness<int>();
         new FromEnumerableSignal<int>(YieldValues()).Subscribe(iteratorObserver).Dispose();
         Assert.Equal(ExpectedFiveSix, iteratorObserver.Values);
         Assert.Equal(1, iteratorObserver.Completed);
@@ -543,7 +543,7 @@ public class CoverageRuntimeTests
 
     /// <summary>Records observer values and terminal signals.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
-    private sealed class RecordingObserver<T> : IObserver<T>
+    private sealed class RecordingWitness<T> : IObserver<T>
     {
         /// <summary>Gets observed values.</summary>
         public List<T> Values { get; } = [];

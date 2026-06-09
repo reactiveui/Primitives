@@ -51,7 +51,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new TapObserver<T>(observer, _onNext, _onError, _onCompleted);
+            var sink = new TapWitness<T>(observer, _onNext, _onError, _onCompleted);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -76,7 +76,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new IgnoreValuesObserver<T>(observer);
+            var sink = new IgnoreValuesWitness<T>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -101,7 +101,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new SparkObserver<T>(observer);
+            var sink = new SparkWitness<T>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -126,7 +126,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new UnsparkObserver<T>(observer);
+            var sink = new UnsparkWitness<T>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -159,7 +159,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new TimeIntervalObserver<T>(observer, _scheduler);
+            var sink = new TimeIntervalWitness<T>(observer, _scheduler);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }

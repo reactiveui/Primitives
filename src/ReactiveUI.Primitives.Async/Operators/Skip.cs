@@ -49,7 +49,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new SkipObserver(observer, count, cancellationToken);
+            var sink = new SkipWitness(observer, count, cancellationToken);
 
             if (observer is ObserverAsync<T> downstreamBase)
             {
@@ -65,7 +65,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="budget">The skip budget, decremented per dropped value.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class SkipObserver(
+        internal sealed class SkipWitness(
             IObserverAsync<T> downstream,
             int budget,
             CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)

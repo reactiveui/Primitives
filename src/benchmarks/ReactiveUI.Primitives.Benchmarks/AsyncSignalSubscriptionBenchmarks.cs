@@ -24,7 +24,7 @@ public class AsyncSignalSubscriptionBenchmarks
     public async Task<int> PrimitivesReplayLatestSubscribeDisposeAsync()
     {
         var signal = PrimitivesAsyncSignalFactory.CreateReplayLatest<int>();
-        var observers = new CountingObserver[SubscriberCount];
+        var observers = new CountingWitness[SubscriberCount];
         var subscriptions = new IAsyncDisposable[SubscriberCount];
 
         try
@@ -33,7 +33,7 @@ public class AsyncSignalSubscriptionBenchmarks
 
             for (var i = 0; i < SubscriberCount; i++)
             {
-                var observer = new CountingObserver();
+                var observer = new CountingWitness();
                 observers[i] = observer;
                 subscriptions[i] = await signal.SubscribeAsync(observer, CancellationToken.None).ConfigureAwait(false);
             }
@@ -50,7 +50,7 @@ public class AsyncSignalSubscriptionBenchmarks
     /// <summary>Sums the totals recorded by the async observers.</summary>
     /// <param name="observers">The observers to sum.</param>
     /// <returns>The combined observed total.</returns>
-    private static int Sum(CountingObserver[] observers)
+    private static int Sum(CountingWitness[] observers)
     {
         var total = 0;
         for (var i = 0; i < observers.Length; i++)
@@ -76,7 +76,7 @@ public class AsyncSignalSubscriptionBenchmarks
     }
 
     /// <summary>Observer that accumulates replayed async signal values.</summary>
-    private sealed class CountingObserver : Async.ObserverAsync<int>
+    private sealed class CountingWitness : Async.ObserverAsync<int>
     {
         /// <summary>Gets the accumulated value total.</summary>
         public int Total { get; private set; }

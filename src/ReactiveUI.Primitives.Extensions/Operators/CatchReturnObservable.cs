@@ -17,7 +17,7 @@ internal sealed class CatchReturnObservable<T>(IObservable<T> source, T fallback
     {
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return source.Subscribe(new CatchReturnObserver(observer, fallback));
+        return source.Subscribe(new CatchReturnWitness(observer, fallback));
     }
 
     /// <summary>
@@ -27,7 +27,7 @@ internal sealed class CatchReturnObservable<T>(IObservable<T> source, T fallback
     /// </summary>
     /// <param name="downstream">The downstream observer receiving the forwarded signals.</param>
     /// <param name="fallback">The fallback value to emit when the source errors.</param>
-    private sealed class CatchReturnObserver(IObserver<T> downstream, T fallback) : IObserver<T>
+    private sealed class CatchReturnWitness(IObserver<T> downstream, T fallback) : IObserver<T>
     {
         /// <inheritdoc/>
         public void OnNext(T value) => downstream.OnNext(value);

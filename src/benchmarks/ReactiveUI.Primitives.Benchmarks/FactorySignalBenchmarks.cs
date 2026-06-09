@@ -29,7 +29,7 @@ public class FactorySignalBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesEmptySubscribe()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.None<int>().Subscribe(observer);
         return observer.CompletionCount;
     }
@@ -39,7 +39,7 @@ public class FactorySignalBenchmarks
     [Benchmark]
     public int SystemReactiveEmptySubscribe()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.Empty<int>().Subscribe(observer);
         return observer.CompletionCount;
     }
@@ -49,7 +49,7 @@ public class FactorySignalBenchmarks
     [Benchmark]
     public int R3EmptySubscribe()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.Observable.Empty<int>().Subscribe(observer);
         return observer.CompletionCount;
     }
@@ -59,7 +59,7 @@ public class FactorySignalBenchmarks
     [Benchmark]
     public int PrimitivesRangeSubscribe()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.Sequence(RangeStart, RangeCount).Subscribe(observer);
         return observer.Total;
     }
@@ -69,7 +69,7 @@ public class FactorySignalBenchmarks
     [Benchmark]
     public int SystemReactiveRangeSubscribe()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.Range(RangeStart, RangeCount).Subscribe(observer);
         return observer.Total;
     }
@@ -79,7 +79,7 @@ public class FactorySignalBenchmarks
     [Benchmark]
     public int R3RangeSubscribe()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.Observable.Range(RangeStart, RangeCount).Subscribe(observer);
         return observer.Total;
     }
@@ -89,7 +89,7 @@ public class FactorySignalBenchmarks
     [Benchmark]
     public int PrimitivesRepeatSubscribe()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.Loop(ThrowValue, RepeatCount).Subscribe(observer);
         return observer.Total;
     }
@@ -99,7 +99,7 @@ public class FactorySignalBenchmarks
     [Benchmark]
     public int SystemReactiveRepeatSubscribe()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.Repeat(ThrowValue, RepeatCount).Subscribe(observer);
         return observer.Total;
     }
@@ -109,7 +109,7 @@ public class FactorySignalBenchmarks
     [Benchmark]
     public int R3RepeatSubscribe()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.Observable.Repeat(ThrowValue, RepeatCount).Subscribe(observer);
         return observer.Total;
     }
@@ -119,7 +119,7 @@ public class FactorySignalBenchmarks
     [Benchmark]
     public int PrimitivesThrowSubscribe()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.Fail<int>(new InvalidOperationException()).Subscribe(observer);
         return observer.ErrorCount;
     }
@@ -129,7 +129,7 @@ public class FactorySignalBenchmarks
     [Benchmark]
     public int SystemReactiveThrowSubscribe()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.Throw<int>(new InvalidOperationException()).Subscribe(observer);
         return observer.ErrorCount;
     }
@@ -139,7 +139,7 @@ public class FactorySignalBenchmarks
     [Benchmark]
     public int R3ThrowSubscribe()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.Observable.Throw<int>(new InvalidOperationException()).Subscribe(observer);
         return observer.ErrorCount;
     }

@@ -53,7 +53,7 @@ public class SubjectThroughputBenchmarks
     /// <returns>The sum of observed values.</returns>
     private static int EmitThroughSignal(int count)
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subject = new Signal<int>();
         using var subscription = subject.Subscribe(observer);
         for (var i = 0; i < count; i++)
@@ -69,7 +69,7 @@ public class SubjectThroughputBenchmarks
     /// <returns>The sum of observed values.</returns>
     private static int EmitThroughSystemSubject(int count)
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subject = new RxSubject();
         using var subscription = subject.Subscribe(observer);
         for (var i = 0; i < count; i++)
@@ -85,7 +85,7 @@ public class SubjectThroughputBenchmarks
     /// <returns>The sum of observed values.</returns>
     private static int EmitThroughR3Subject(int count)
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subject = new R3.Subject<int>();
         using var subscription = subject.Subscribe(observer);
         for (var i = 0; i < count; i++)

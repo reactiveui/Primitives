@@ -24,7 +24,7 @@ internal sealed class SkipWhileNullObservable<T>(IObservable<T> source) : IObser
     {
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        return source.Subscribe(new SkipWhileNullObserver(observer));
+        return source.Subscribe(new SkipWhileNullWitness(observer));
     }
 
     /// <summary>
@@ -32,7 +32,7 @@ internal sealed class SkipWhileNullObservable<T>(IObservable<T> source) : IObser
     /// non-null value, then becomes a transparent forwarder for the remainder of the sequence.
     /// </summary>
     /// <param name="downstream">The downstream observer.</param>
-    private sealed class SkipWhileNullObserver(IObserver<T> downstream) : IObserver<T>
+    private sealed class SkipWhileNullWitness(IObserver<T> downstream) : IObserver<T>
     {
         /// <summary>Latches to <see langword="true"/> after the first non-null value has been forwarded.</summary>
         private bool _gateOpen;

@@ -32,7 +32,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesConcatRanges()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.Chain(Signal.Sequence(Start, Count), Signal.Sequence(Start, Count)).Subscribe(observer);
         return observer.Total;
     }
@@ -42,7 +42,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int SystemReactiveConcatRanges()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.Concat(RxObservable.Range(Start, Count), RxObservable.Range(Start, Count))
             .Subscribe(observer);
         return observer.Total;
@@ -53,7 +53,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int R3ConcatRanges()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.Observable.Concat(R3.Observable.Range(Start, Count), R3.Observable.Range(Start, Count))
             .Subscribe(observer);
         return observer.Total;
@@ -64,7 +64,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int PrimitivesMergeRanges()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.Blend(Signal.Sequence(Start, Count), Signal.Sequence(Start, Count)).Subscribe(observer);
         return observer.Total;
     }
@@ -74,7 +74,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int SystemReactiveMergeRanges()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.Merge(RxObservable.Range(Start, Count), RxObservable.Range(Start, Count))
             .Subscribe(observer);
         return observer.Total;
@@ -85,7 +85,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int R3MergeRanges()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.Observable.Merge(R3.Observable.Range(Start, Count), R3.Observable.Range(Start, Count))
             .Subscribe(observer);
         return observer.Total;
@@ -96,7 +96,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int PrimitivesRaceRanges()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.Race(Signal.Sequence(Start, Count), Signal.Sequence(AltStart, Count)).Subscribe(observer);
         return observer.Total;
     }
@@ -106,7 +106,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int SystemReactiveRaceRanges()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.Amb(RxObservable.Range(Start, Count), RxObservable.Range(AltStart, Count))
             .Subscribe(observer);
         return observer.Total;
@@ -117,7 +117,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int R3RaceRanges()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.Observable.Race(R3.Observable.Range(Start, Count), R3.Observable.Range(AltStart, Count))
             .Subscribe(observer);
         return observer.Total;
@@ -128,7 +128,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int PrimitivesSwitchRanges()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.FromEnumerable([Signal.Sequence(Start, Count), Signal.Sequence(AltStart, Count)])
             .SwitchTo()
             .Subscribe(observer);
@@ -140,7 +140,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int SystemReactiveSwitchRanges()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.Switch(
                 RxObservable.ToObservable([RxObservable.Range(Start, Count), RxObservable.Range(AltStart, Count)]))
             .Subscribe(observer);
@@ -152,7 +152,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int R3SwitchRanges()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.ObservableExtensions.Switch(
                 R3.Observable.ToObservable(
                     [R3.Observable.Range(Start, Count), R3.Observable.Range(AltStart, Count)],
@@ -166,7 +166,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int PrimitivesCombineLatestRanges()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.SyncLatest(
             Signal.Sequence(Start, Count),
             Signal.Sequence(RightStart, Count),
@@ -179,7 +179,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int SystemReactiveCombineLatestRanges()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.CombineLatest(
             RxObservable.Range(Start, Count),
             RxObservable.Range(RightStart, Count),
@@ -192,7 +192,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int R3CombineLatestRanges()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.Observable.CombineLatest(
             R3.Observable.Range(Start, Count),
             R3.Observable.Range(RightStart, Count),
@@ -205,7 +205,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int PrimitivesWithLatestRanges()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.Sequence(Start, Count)
             .Latch(Signal.Sequence(RightStart, Count), static (left, right) => left + right)
             .Subscribe(observer);
@@ -217,7 +217,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int SystemReactiveWithLatestRanges()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.WithLatestFrom(
             RxObservable.Range(Start, Count),
             RxObservable.Range(RightStart, Count),
@@ -230,7 +230,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int R3WithLatestRanges()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.ObservableExtensions.WithLatestFrom(
             R3.Observable.Range(Start, Count),
             R3.Observable.Range(RightStart, Count),
@@ -243,7 +243,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int PrimitivesForkJoinRanges()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = Signal.ForkJoin(
             Signal.Sequence(Start, Count),
             Signal.Sequence(RightStart, Count),
@@ -256,7 +256,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int SystemReactiveForkJoinRanges()
     {
-        var observer = new IntSignalObserver();
+        var observer = new IntSignalWitness();
         using var subscription = RxObservable.TakeLast(
                 RxObservable.CombineLatest(
                     RxObservable.Range(Start, Count),
@@ -272,7 +272,7 @@ public class OperatorHigherOrderBenchmarks
     [Benchmark]
     public int R3ForkJoinRanges()
     {
-        var observer = new IntR3Observer();
+        var observer = new IntR3Witness();
         using var subscription = R3.ObservableExtensions.TakeLast(
                 R3.Observable.CombineLatest(
                     R3.Observable.Range(Start, Count),

@@ -55,10 +55,10 @@ internal sealed class ResumeSignal<T> : IRequireCurrentThread<T>
     /// <summary>Builds the sink and subscribes it to the source.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <returns>The sink, which is the subscription.</returns>
-    private ResumeObserver Run(IObserver<T> observer) => new ResumeObserver(observer, _fallback).Run(_source);
+    private ResumeWitness Run(IObserver<T> observer) => new ResumeWitness(observer, _fallback).Run(_source);
 
     /// <summary>Forwards source values and, on any error, switches to the fallback sequence.</summary>
-    private sealed class ResumeObserver : IObserver<T>, IDisposable
+    private sealed class ResumeWitness : IObserver<T>, IDisposable
     {
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer;
@@ -72,10 +72,10 @@ internal sealed class ResumeSignal<T> : IRequireCurrentThread<T>
         /// <summary>The fallback subscription slot, populated after an error.</summary>
         private IDisposable? _fallbackSubscription;
 
-        /// <summary>Initializes a new instance of the <see cref="ResumeObserver"/> class.</summary>
+        /// <summary>Initializes a new instance of the <see cref="ResumeWitness"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="fallback">The fallback observable.</param>
-        internal ResumeObserver(IObserver<T> observer, IObservable<T> fallback)
+        internal ResumeWitness(IObserver<T> observer, IObservable<T> fallback)
         {
             _observer = observer;
             _fallback = fallback;
@@ -110,7 +110,7 @@ internal sealed class ResumeSignal<T> : IRequireCurrentThread<T>
         /// <summary>Subscribes to the source and returns the sink.</summary>
         /// <param name="source">The source observable.</param>
         /// <returns>This sink, which is the subscription.</returns>
-        internal ResumeObserver Run(IObservable<T> source)
+        internal ResumeWitness Run(IObservable<T> source)
         {
             SubscriptionSlots.Assign(ref _sourceSubscription, source.Subscribe(this));
             return this;

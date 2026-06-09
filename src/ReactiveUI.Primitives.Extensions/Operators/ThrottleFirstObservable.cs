@@ -24,14 +24,14 @@ internal sealed class ThrottleFirstObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(scheduler);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        return source.Subscribe(new ThrottleFirstObserver(observer, window, scheduler));
+        return source.Subscribe(new ThrottleFirstWitness(observer, window, scheduler));
     }
 
     /// <summary>Observer that implements the throttle first logic.</summary>
     /// <param name="downstream">The observer to forward elements to.</param>
     /// <param name="window">The window duration.</param>
     /// <param name="scheduler">The scheduler to use for timing.</param>
-    private sealed class ThrottleFirstObserver(
+    private sealed class ThrottleFirstWitness(
         IObserver<T> downstream,
         TimeSpan window,
         ISequencer scheduler) : IObserver<T>

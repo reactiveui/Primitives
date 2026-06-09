@@ -62,7 +62,7 @@ public static partial class LinqExtensions
                 throw new ArgumentNullException(nameof(observer));
             }
 
-            var sink = new DistinctByObserver<T, TKey>(observer, _keySelector, _comparer);
+            var sink = new DistinctByWitness<T, TKey>(observer, _keySelector, _comparer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -82,7 +82,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            var sink = new DistinctByCountObserver<T, TKey>(observer, _keySelector, _comparer);
+            var sink = new DistinctByCountWitness<T, TKey>(observer, _keySelector, _comparer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -102,7 +102,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            var sink = new DistinctByLongCountObserver<T, TKey>(observer, _keySelector, _comparer);
+            var sink = new DistinctByLongCountWitness<T, TKey>(observer, _keySelector, _comparer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -160,7 +160,7 @@ public static partial class LinqExtensions
                 return countSource.SubscribeCount(observer);
             }
 
-            var sink = new CountObserver<T>(observer);
+            var sink = new CountWitness<T>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -203,7 +203,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            var sink = new CountPredicateObserver<T>(observer, _predicate);
+            var sink = new CountPredicateWitness<T>(observer, _predicate);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -271,7 +271,7 @@ public static partial class LinqExtensions
                 return countSource.SubscribeLongCount(observer);
             }
 
-            var sink = new LongCountObserver<T>(observer);
+            var sink = new LongCountWitness<T>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -314,7 +314,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            var sink = new LongCountPredicateObserver<T>(observer, _predicate);
+            var sink = new LongCountPredicateWitness<T>(observer, _predicate);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -377,7 +377,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            var sink = new AnyObserver<T>(observer);
+            var sink = new AnyWitness<T>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -420,7 +420,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            var sink = new AnyPredicateObserver<T>(observer, _predicate);
+            var sink = new AnyPredicateWitness<T>(observer, _predicate);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }

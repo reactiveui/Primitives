@@ -179,7 +179,7 @@ public partial class InternalInfrastructureCoverageTests
         var repeatCompleted = 0;
         var repeat = Signal.Loop(Seven, Three);
         Assert.False(((IRequireCurrentThread<int>)repeat).IsRequiredSubscribeOnCurrentThread());
-        repeat.Subscribe(new RecordingObserver<int>()).Dispose();
+        repeat.Subscribe(new RecordingWitness<int>()).Dispose();
         Assert.Throws<ArgumentNullException>(() => repeat.Subscribe((IObserver<int>)null!));
         Assert.Throws<ArgumentNullException>(() => ((IInlineSignal<int>)repeat).Subscribe(null!, _ => { }, () => { }));
         ((IInlineSignal<int>)repeat).Subscribe(repeatValues.Add, ex => throw ex, () => repeatCompleted++);
@@ -237,13 +237,13 @@ public partial class InternalInfrastructureCoverageTests
 
         var cancelDisposed = false;
         Witness.SafeWitness<int> safe = new(
-            new ThrowingObserver<int>(throwOnError: true),
+            new ThrowingWitness<int>(throwOnError: true),
             new ActionDisposable(() => cancelDisposed = true));
         Assert.Throws<InvalidOperationException>(() => safe.OnError(new InvalidOperationException("safe")));
         Assert.True(cancelDisposed);
         safe.OnError(new InvalidOperationException("ignored"));
 
-        var createErrors = new RecordingObserver<int>();
+        var createErrors = new RecordingWitness<int>();
         Signal.CreateWithState<int, int>(
             0,
             static (_, observer) =>
@@ -253,11 +253,11 @@ public partial class InternalInfrastructureCoverageTests
             }).Subscribe(createErrors).Dispose();
         Assert.Equal("create-error", createErrors.Errors[0].Message);
 
-        var deferErrors = new RecordingObserver<int>();
+        var deferErrors = new RecordingWitness<int>();
         Signal.Lazy<int>(() => throw new InvalidOperationException("defer-factory")).Subscribe(deferErrors).Dispose();
         Assert.Equal("defer-factory", deferErrors.Errors[0].Message);
 
-        var immediateThrow = new RecordingObserver<int>();
+        var immediateThrow = new RecordingWitness<int>();
         Signal.Fail<int>(new InvalidOperationException("immediate-throw"), Sequencer.Immediate).Subscribe(immediateThrow).Dispose();
         Assert.Equal("immediate-throw", immediateThrow.Errors[0].Message);
     }

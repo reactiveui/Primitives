@@ -28,12 +28,12 @@ internal sealed class ForEachObservable<T>(
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         var observed = scheduler is null ? source : new ObserveOnObservable<IEnumerable<T>>(source, scheduler);
-        return observed.Subscribe(new ForEachObserver(observer));
+        return observed.Subscribe(new ForEachWitness(observer));
     }
 
     /// <summary>Forwarding observer that fans each batch element out to the downstream.</summary>
     /// <param name="downstream">The downstream observer.</param>
-    private sealed class ForEachObserver(IObserver<T> downstream) : IObserver<IEnumerable<T>>
+    private sealed class ForEachWitness(IObserver<T> downstream) : IObserver<IEnumerable<T>>
     {
         /// <inheritdoc/>
         public void OnNext(IEnumerable<T> value)

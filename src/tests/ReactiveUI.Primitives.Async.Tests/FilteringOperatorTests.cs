@@ -489,7 +489,7 @@ public class FilteringOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>DistinctObserver.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>DistinctWitness.OnErrorResumeAsyncCore</c> forwarding —
     /// upstream resumable errors propagate verbatim to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -517,7 +517,7 @@ public class FilteringOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>DistinctByObserver.OnErrorResumeAsyncCore</c> forwarding.</summary>
+    /// <summary>Exercises the <c>DistinctByWitness.OnErrorResumeAsyncCore</c> forwarding.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDistinctBySourceErrorResume_ThenForwarded()
@@ -598,7 +598,7 @@ public class FilteringOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>WhereSyncObserver.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>WhereSyncWitness.OnErrorResumeAsyncCore</c> forwarding —
     /// the synchronous-predicate overload forwards upstream resumable errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -626,7 +626,7 @@ public class FilteringOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>SkipObserver.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>SkipWitness.OnErrorResumeAsyncCore</c> forwarding —
     /// upstream resumable errors propagate verbatim through the Skip observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -654,7 +654,7 @@ public class FilteringOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>TakeObserver.OnErrorResumeAsyncCore</c> forwarding.</summary>
+    /// <summary>Exercises the <c>TakeWitness.OnErrorResumeAsyncCore</c> forwarding.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeSourceErrorResume_ThenForwarded()
@@ -735,7 +735,7 @@ public class FilteringOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>SelectSyncObserver.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>SelectSyncWitness.OnErrorResumeAsyncCore</c> forwarding —
     /// upstream resumable errors propagate verbatim through the synchronous Select observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -763,7 +763,7 @@ public class FilteringOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>SelectAsyncObserver.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>SelectAsyncWitness.OnErrorResumeAsyncCore</c> forwarding —
     /// the async-selector overload forwards upstream resumable errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -791,7 +791,7 @@ public class FilteringOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>WhereAsyncObserver.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>WhereAsyncWitness.OnErrorResumeAsyncCore</c> forwarding —
     /// the async-predicate overload forwards upstream resumable errors.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
