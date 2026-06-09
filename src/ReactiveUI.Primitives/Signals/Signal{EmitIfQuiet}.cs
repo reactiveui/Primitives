@@ -27,7 +27,7 @@ public static partial class Signal
         private readonly Lock _gate = new();
 
         /// <summary>Tracks the source subscription and scheduled delayed emissions.</summary>
-        private readonly MultipleDisposable _disposables = new();
+        private readonly MultipleDisposable _disposables = [];
 
         /// <summary>The latest observed value.</summary>
         private TSource? _latest;

@@ -112,8 +112,7 @@ public class CoverageRuntimeTests
         var second = new ActionDisposable(() => secondDisposed++);
         var third = new ActionDisposable(() => thirdDisposed++);
         var fourth = new ActionDisposable(() => fourthDisposed++);
-        var group = new MultipleDisposable(first, second, third);
-        group.Add(fourth);
+        MultipleDisposable group = [first, second, third, fourth];
 
         Assert.True(group.Remove(first));
         Assert.True(group.Remove(second));

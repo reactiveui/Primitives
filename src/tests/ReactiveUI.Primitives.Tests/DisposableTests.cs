@@ -96,8 +96,7 @@ public class DisposableTests
     [Test]
     public void MultipleDisposableWithItemsDispose()
     {
-        var disposable = new MultipleDisposable();
-        disposable.Add(EmptyDisposable.Instance);
+        MultipleDisposable disposable = [EmptyDisposable.Instance];
         var disposed = 0;
 
         // create a disposable that will be disposed when the MultipleDisposable is disposed
@@ -114,5 +113,104 @@ public class DisposableTests
         Assert.True(singleDisposable?.IsDisposed);
         Assert.True(singleDisposable2?.IsDisposed);
         Assert.Equal(1, disposed);
+    }
+
+    /// <summary>Verifies <see cref="MultipleDisposable.Count"/> tracks the held disposables and resets on dispose.</summary>
+    [Test]
+    public void MultipleDisposableCountReflectsContents()
+    {
+        var first = new ActionDisposable(() => { });
+        var second = new ActionDisposable(() => { });
+        IDisposable[] items = [first, second];
+        MultipleDisposable disposable = [.. items];
+
+        Assert.Equal(items.Length, disposable.Count);
+
+        disposable.Remove(first);
+        Assert.Equal(items.Length - 1, disposable.Count);
+
+        disposable.Dispose();
+        Assert.Equal(0, disposable.Count);
+    }
+
+    /// <summary>Verifies a collection expression initializes a <see cref="MultipleDisposable"/>.</summary>
+    [Test]
+    public void MultipleDisposableSupportsCollectionInitializer()
+    {
+        var first = new ActionDisposable(() => { });
+        var second = new ActionDisposable(() => { });
+        IDisposable[] items = [first, second];
+        MultipleDisposable disposable = [.. items];
+
+        Assert.Equal(items.Length, disposable.Count);
+        Assert.True(disposable.Contains(first));
+        Assert.True(disposable.Contains(second));
+        Assert.False(disposable.IsReadOnly);
+    }
+
+    /// <summary>Verifies <see cref="MultipleDisposable.Contains"/> reports membership.</summary>
+    [Test]
+    public void MultipleDisposableContainsReportsMembership()
+    {
+        var tracked = new ActionDisposable(() => { });
+        var untracked = new ActionDisposable(() => { });
+        MultipleDisposable disposable = [tracked];
+
+        Assert.True(disposable.Contains(tracked));
+        Assert.False(disposable.Contains(untracked));
+    }
+
+    /// <summary>Verifies <see cref="MultipleDisposable.Clear"/> disposes the contents and stays usable.</summary>
+    [Test]
+    public void MultipleDisposableClearDisposesContentsAndStaysUsable()
+    {
+        var disposedCount = 0;
+        IDisposable[] items =
+        [
+            new ActionDisposable(() => disposedCount++),
+            new ActionDisposable(() => disposedCount++)
+        ];
+        MultipleDisposable disposable = [.. items];
+
+        disposable.Clear();
+
+        Assert.Equal(items.Length, disposedCount);
+        Assert.Equal(0, disposable.Count);
+        Assert.False(disposable.IsDisposed);
+
+        var reused = 0;
+        disposable.Add(new ActionDisposable(() => reused++));
+        Assert.Equal(1, disposable.Count);
+
+        disposable.Dispose();
+        Assert.Equal(1, reused);
+    }
+
+    /// <summary>Verifies enumeration and <see cref="MultipleDisposable.CopyTo"/> expose the held disposables.</summary>
+    [Test]
+    public void MultipleDisposableEnumeratesAndCopies()
+    {
+        var first = new ActionDisposable(() => { });
+        var second = new ActionDisposable(() => { });
+        var disposable = new MultipleDisposable(first, second);
+
+        var enumeratedCount = 0;
+        var sawFirst = false;
+        var sawSecond = false;
+        foreach (var item in disposable)
+        {
+            enumeratedCount++;
+            sawFirst |= ReferenceEquals(item, first);
+            sawSecond |= ReferenceEquals(item, second);
+        }
+
+        Assert.True(sawFirst);
+        Assert.True(sawSecond);
+        Assert.Equal(disposable.Count, enumeratedCount);
+
+        var array = new IDisposable[disposable.Count];
+        disposable.CopyTo(array, 0);
+        Assert.True(Array.IndexOf(array, first) >= 0);
+        Assert.True(Array.IndexOf(array, second) >= 0);
     }
 }

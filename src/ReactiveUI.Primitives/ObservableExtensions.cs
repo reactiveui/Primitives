@@ -84,7 +84,7 @@ internal static class ObservableExtensions
             private readonly Lock _gate = new();
 
             /// <summary>Tracks the source and cancellation subscriptions.</summary>
-            private readonly MultipleDisposable _subscriptions = new();
+            private readonly MultipleDisposable _subscriptions = [];
 
             /// <summary>Indicates whether the sequence has stopped (0 = running, 1 = stopped).</summary>
             private int _stopped;

@@ -27,7 +27,7 @@ public static partial class Signal
         private readonly Lock _gate = new();
 
         /// <summary>Tracks the source subscription and scheduled flushes.</summary>
-        private readonly MultipleDisposable _disposables = new();
+        private readonly MultipleDisposable _disposables = [];
 
         /// <summary>The values collected for the current window.</summary>
         private readonly List<TSource> _values = [];

@@ -2,11 +2,18 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Collections;
+
 namespace ReactiveUI.Primitives.Disposables;
 
 /// <summary>A disposable pocket that contains a set of disposables and disposes them together.</summary>
+/// <remarks>
+/// Implements <see cref="ICollection{T}"/> over <see cref="IDisposable"/> so it can stand in for a
+/// composite disposable: it supports collection initializers, membership queries, and
+/// <c>DisposeWith</c>-style extension methods that accept an <see cref="ICollection{T}"/>.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public class MultipleDisposable : IsDisposed
+public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
 {
     /// <summary>Initial capacity for overflow disposable storage.</summary>
     private const int OverflowInitialCapacity = 2;
@@ -81,6 +88,37 @@ public class MultipleDisposable : IsDisposed
     /// <summary>Gets a value indicating whether the object is disposed.</summary>
     public bool IsDisposed => Volatile.Read(ref _disposed);
 
+    /// <summary>Gets the number of disposables currently held. Returns zero once disposed.</summary>
+    public int Count
+    {
+        get
+        {
+            lock (_gate)
+            {
+                if (_disposed)
+                {
+                    return 0;
+                }
+
+                var count = _overflowCount;
+                if (_slot0 is not null)
+                {
+                    count++;
+                }
+
+                if (_slot1 is not null)
+                {
+                    count++;
+                }
+
+                return count;
+            }
+        }
+    }
+
+    /// <summary>Gets a value indicating whether the collection is read-only. Always <see langword="false"/>.</summary>
+    public bool IsReadOnly => false;
+
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
@@ -146,6 +184,113 @@ public class MultipleDisposable : IsDisposed
         return shouldDispose;
     }
 
+    /// <summary>Removes and disposes every disposable currently held without disposing the group itself.</summary>
+    public void Clear()
+    {
+        IDisposable? slot0;
+        IDisposable? slot1;
+        IDisposable[]? overflow;
+        int overflowCount;
+        lock (_gate)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            slot0 = _slot0;
+            slot1 = _slot1;
+            overflow = _overflow;
+            overflowCount = _overflowCount;
+            _slot0 = null;
+            _slot1 = null;
+            _overflow = null;
+            _overflowCount = 0;
+        }
+
+        slot0?.Dispose();
+        slot1?.Dispose();
+
+        if (overflow is null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < overflowCount; i++)
+        {
+            overflow[i].Dispose();
+        }
+    }
+
+    /// <summary>Determines whether the group currently holds the supplied disposable.</summary>
+    /// <param name="item">Disposable to locate.</param>
+    /// <returns><see langword="true"/> when the disposable is held; otherwise, <see langword="false"/>.</returns>
+    public bool Contains(IDisposable item)
+    {
+        if (item is null)
+        {
+            return false;
+        }
+
+        lock (_gate)
+        {
+            if (_disposed)
+            {
+                return false;
+            }
+
+            if (_slot0 is not null && EqualityComparer<IDisposable>.Default.Equals(_slot0, item))
+            {
+                return true;
+            }
+
+            if (_slot1 is not null && EqualityComparer<IDisposable>.Default.Equals(_slot1, item))
+            {
+                return true;
+            }
+
+            var overflow = _overflow;
+            if (overflow is null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < _overflowCount; i++)
+            {
+                if (EqualityComparer<IDisposable>.Default.Equals(overflow[i], item))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    /// <summary>Copies the disposables currently held into <paramref name="array"/> starting at <paramref name="arrayIndex"/>.</summary>
+    /// <param name="array">Destination array.</param>
+    /// <param name="arrayIndex">Zero-based index in <paramref name="array"/> at which copying begins.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="array"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="arrayIndex"/> is negative.</exception>
+    public void CopyTo(IDisposable[] array, int arrayIndex)
+    {
+        if (array is null)
+        {
+            throw new ArgumentNullException(nameof(array));
+        }
+
+        if (arrayIndex < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(arrayIndex));
+        }
+
+        Snapshot().CopyTo(array, arrayIndex);
+    }
+
+    /// <summary>Returns an enumerator over a snapshot of the disposables currently held.</summary>
+    /// <returns>An enumerator over the held disposables.</returns>
+    public IEnumerator<IDisposable> GetEnumerator() => Snapshot().GetEnumerator();
+
     /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
     public void Dispose()
     {
@@ -196,6 +341,44 @@ public class MultipleDisposable : IsDisposed
         {
             overflow[i].Dispose();
             overflow[i] = null!;
+        }
+    }
+
+    /// <inheritdoc/>
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    /// <summary>Captures the disposables currently held into a list under the gate.</summary>
+    /// <returns>A snapshot list of the held disposables.</returns>
+    private List<IDisposable> Snapshot()
+    {
+        lock (_gate)
+        {
+            var snapshot = new List<IDisposable>();
+            if (_disposed)
+            {
+                return snapshot;
+            }
+
+            if (_slot0 is not null)
+            {
+                snapshot.Add(_slot0);
+            }
+
+            if (_slot1 is not null)
+            {
+                snapshot.Add(_slot1);
+            }
+
+            var overflow = _overflow;
+            if (overflow is not null)
+            {
+                for (var i = 0; i < _overflowCount; i++)
+                {
+                    snapshot.Add(overflow[i]);
+                }
+            }
+
+            return snapshot;
         }
     }
 

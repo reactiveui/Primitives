@@ -1227,3 +1227,9 @@ ReactiveUI.Primitives.AggregateWitness<T, TResult, TAggregator>.SetSubscription(
 ReactiveUI.Primitives.IAggregator<T, TResult, TSelf>
 ReactiveUI.Primitives.IAggregator<T, TResult, TSelf>.Add(T value) -> TSelf
 ReactiveUI.Primitives.IAggregator<T, TResult, TSelf>.Result.get -> TResult
+ReactiveUI.Primitives.Disposables.MultipleDisposable.Clear() -> void
+ReactiveUI.Primitives.Disposables.MultipleDisposable.Contains(System.IDisposable! item) -> bool
+ReactiveUI.Primitives.Disposables.MultipleDisposable.CopyTo(System.IDisposable![]! array, int arrayIndex) -> void
+ReactiveUI.Primitives.Disposables.MultipleDisposable.Count.get -> int
+ReactiveUI.Primitives.Disposables.MultipleDisposable.GetEnumerator() -> System.Collections.Generic.IEnumerator<System.IDisposable!>!
+ReactiveUI.Primitives.Disposables.MultipleDisposable.IsReadOnly.get -> bool
