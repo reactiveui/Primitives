@@ -84,6 +84,26 @@ public class DisposableTests
         await Assert.That(composite.IsDisposed).IsTrue();
     }
 
+    /// <summary>Tests that null entries passed through the params constructor are ignored.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenCompositeDisposableAsyncParamsContainNull_ThenNullsIgnored()
+    {
+        const int ExpectedCount = 1;
+        var disposed = false;
+        var disposable = DisposableAsync.Create(() =>
+        {
+            disposed = true;
+            return default;
+        });
+
+        var composite = new MultipleDisposableAsync(EnumerateWithNulls(disposable));
+
+        await Assert.That(composite.Count).IsEqualTo(ExpectedCount);
+        await composite.DisposeAsync();
+        await Assert.That(disposed).IsTrue();
+    }
+
     /// <summary>Tests CompositeDisposableAsync negative capacity throws.</summary>
     [Test]
     public void WhenCompositeDisposableAsyncNegativeCapacity_ThenThrowsArgumentOutOfRange() =>
@@ -572,14 +592,14 @@ public class DisposableTests
 
     /// <summary>
     /// Verifies that the dispose sentinel DisposeAsync method returns a completed ValueTask.
-    /// Covers the DisposedSlotMarker.DisposeAsync path.
+    /// Covers the shared disposed sentinel DisposeAsync path.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleAssignmentDisposeSentinel_ThenDisposeAsyncReturnsDefault()
     {
         // Access the sentinel and verify it can be disposed
-        IAsyncDisposable sentinel = SingleAssignmentDisposableAsync.DisposedSlotMarker.Instance;
+        var sentinel = DisposableAsyncSlot.DisposedSentinel;
         await sentinel.DisposeAsync();
 
         // After dispose, getting the disposable should return the empty disposable
@@ -883,12 +903,12 @@ public class DisposableTests
         await Assert.That(disposedCount).IsEqualTo(ExpectedDisposedCount);
     }
 
-    /// <summary>Verifies that the DisposedSlotMarker.DisposeAsync returns a completed ValueTask without throwing.</summary>
+    /// <summary>Verifies that the shared disposed sentinel DisposeAsync returns a completed ValueTask without throwing.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSerialDisposedSlotMarkerDisposeAsync_ThenReturnsCompletedValueTask()
     {
-        var sentinel = SingleReplaceableDisposableAsync.DisposedSlotMarker.Instance;
+        var sentinel = DisposableAsyncSlot.DisposedSentinel;
 
         // DisposeAsync should return default (no-op)
         var task = sentinel.DisposeAsync();
@@ -1082,6 +1102,16 @@ public class DisposableTests
 
         await Assert.That(enumerated).IsEqualTo(0);
         await composite.DisposeAsync();
+    }
+
+    /// <summary>Builds a non-collection enumerable containing null entries around a disposable.</summary>
+    /// <param name="disposable">The disposable value to yield between null entries.</param>
+    /// <returns>The enumerable sequence.</returns>
+    private static IEnumerable<IAsyncDisposable> EnumerateWithNulls(IAsyncDisposable disposable)
+    {
+        yield return null!;
+        yield return disposable;
+        yield return null!;
     }
 
     /// <summary>Helper disposable for testing ToDisposableAsync.</summary>

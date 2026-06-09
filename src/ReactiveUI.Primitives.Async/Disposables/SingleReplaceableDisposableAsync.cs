@@ -30,35 +30,8 @@ public class SingleReplaceableDisposableAsync : IAsyncDisposable
     /// <returns>A <see cref="ValueTask"/> that represents the asynchronous dispose operation of the previously tracked resource,
     /// or of <paramref name="value"/> if the object has already been disposed. If there is no resource to dispose, the
     /// returned task is already completed.</returns>
-    public ValueTask SetDisposableAsync(IAsyncDisposable? value)
-    {
-        var field = Volatile.Read(ref _current);
-        while (true)
-        {
-            if (ReferenceEquals(field, DisposedSlotMarker.Instance))
-            {
-                if (value is not null)
-                {
-                    return value.DisposeAsync();
-                }
-
-                return default;
-            }
-
-            var exchangedCurrent = Interlocked.CompareExchange(ref _current, value, field);
-            if (ReferenceEquals(exchangedCurrent, field))
-            {
-                if (exchangedCurrent is not null)
-                {
-                    return exchangedCurrent.DisposeAsync();
-                }
-
-                return default;
-            }
-
-            field = exchangedCurrent;
-        }
-    }
+    public ValueTask SetDisposableAsync(IAsyncDisposable? value) =>
+        DisposableAsyncSlot.SwapAsync(ref _current, value);
 
     /// <summary>Asynchronously releases the resources used by the object.</summary>
     /// <remarks>Subsequent calls to this method after disposal will have no effect. This method is safe to
@@ -67,29 +40,7 @@ public class SingleReplaceableDisposableAsync : IAsyncDisposable
     /// have been released.</returns>
     public ValueTask DisposeAsync()
     {
-        var field = Interlocked.Exchange(ref _current, DisposedSlotMarker.Instance);
-        if (!ReferenceEquals(field, DisposedSlotMarker.Instance) && field is not null)
-        {
-            // Dispose the current resource asynchronously.
-            var disposeTask = field.DisposeAsync();
-
-            // Suppress finalization to follow CA1816 guidance.
-            GC.SuppressFinalize(this);
-            return disposeTask;
-        }
-
-        // Suppress finalization even if there was nothing to dispose.
         GC.SuppressFinalize(this);
-        return default;
-    }
-
-    /// <summary>A sentinel object used to indicate that the <see cref="SingleReplaceableDisposableAsync"/> has been disposed.</summary>
-    internal sealed class DisposedSlotMarker : IAsyncDisposable
-    {
-        /// <summary>Gets the singleton instance of <see cref="DisposedSlotMarker"/>.</summary>
-        public static readonly DisposedSlotMarker Instance = new();
-
-        /// <inheritdoc/>
-        public ValueTask DisposeAsync() => default;
+        return DisposableAsyncSlot.DisposeAsync(ref _current);
     }
 }
