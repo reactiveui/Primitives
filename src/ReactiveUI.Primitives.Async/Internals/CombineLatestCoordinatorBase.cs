@@ -17,10 +17,7 @@ internal abstract class CombineLatestCoordinatorBase<TResult> : IAsyncDisposable
     /// <summary>Initializes a new instance of the <see cref="CombineLatestCoordinatorBase{TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="sourceCount">The number of upstream sources (e.g. 2 for arity-2).</param>
-    protected CombineLatestCoordinatorBase(IObserverAsync<TResult> observer, int sourceCount)
-    {
-        Lifecycle = new(observer, sourceCount);
-    }
+    protected CombineLatestCoordinatorBase(IObserverAsync<TResult> observer, int sourceCount) => Lifecycle = new(observer, sourceCount);
 
     /// <summary>Gets the shared subscription lifecycle (gate / dispose CTS / external link / forwarders).</summary>
     internal CombineLatestLifecycle<TResult> Lifecycle { get; }

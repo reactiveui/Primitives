@@ -1121,6 +1121,13 @@ dotnet_diagnostic.RCS0063.severity = none # Remove unnecessary blank line — co
 file_header_template = Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.\nReactiveUI Association Incorporated licenses this file to you under the MIT license.\nSee the LICENSE file in the project root for full license information.
 stylesharp.summary_single_line_max_length = 120
 
+# Documentation coverage scope (SST1600/SST1601/SST1602/SST1654).
+# Require documentation on every element, including private members.
+stylesharp.document_exposed_elements = true
+stylesharp.document_internal_elements = true
+stylesharp.document_private_elements = true
+stylesharp.document_interfaces = all
+
 # Spacing
 dotnet_diagnostic.SST1000.severity = error # A control-flow keyword is not followed by a space
 dotnet_diagnostic.SST1001.severity = error # A comma is spaced incorrectly

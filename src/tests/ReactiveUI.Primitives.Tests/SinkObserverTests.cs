@@ -403,6 +403,8 @@ public class SinkObserverTests
     /// <summary>A user-defined accumulator that sums observed values, exercising the public <see cref="IAggregator{T,TResult,TSelf}"/> contract.</summary>
     private readonly record struct SumAggregator : IAggregator<int, int, SumAggregator>
     {
+        /// <summary>Initializes a new instance of the <see cref="SumAggregator"/> struct.</summary>
+        /// <param name="result">The current accumulated sum.</param>
         private SumAggregator(int result) => Result = result;
 
         /// <inheritdoc/>

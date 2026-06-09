@@ -47,13 +47,7 @@ public class SingleReplaceableDisposable : IsDisposed
     /// <value>
     ///   <c>true</c> if this instance is disposed; otherwise, <c>false</c>.
     /// </value>
-    public bool IsDisposed
-    {
-        get
-        {
-            return ReferenceEquals(Volatile.Read(ref _disposable), DisposedSentinel);
-        }
-    }
+    public bool IsDisposed => ReferenceEquals(Volatile.Read(ref _disposable), DisposedSentinel);
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]

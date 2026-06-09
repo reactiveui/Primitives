@@ -506,10 +506,8 @@ public partial class InternalInfrastructureCoverageTests
         /// <param name="dueTime">The due time for the scheduled item.</param>
         /// <param name="invoke">The factory invoked when the item runs.</param>
         public ScheduledProbe(int dueTime, Func<IDisposable> invoke)
-            : base(dueTime, Comparer<int>.Default)
-        {
+            : base(dueTime, Comparer<int>.Default) =>
             _invoke = invoke;
-        }
 
         /// <summary>Invokes the supplied factory.</summary>
         /// <returns>The disposable returned by the factory.</returns>

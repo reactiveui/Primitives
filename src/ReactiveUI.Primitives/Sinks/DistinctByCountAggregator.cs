@@ -21,6 +21,10 @@ internal readonly record struct DistinctByCountAggregator<T, TKey> : IAggregator
     {
     }
 
+    /// <summary>Initializes a new instance of the <see cref="DistinctByCountAggregator{T,TKey}"/> struct.</summary>
+    /// <param name="keySelector">The key selector.</param>
+    /// <param name="seen">The set of keys that have already been observed.</param>
+    /// <param name="result">The current accumulated count.</param>
     private DistinctByCountAggregator(Func<T, TKey> keySelector, HashSet<TKey> seen, int result)
     {
         _keySelector = keySelector;

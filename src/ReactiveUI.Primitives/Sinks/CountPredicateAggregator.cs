@@ -17,6 +17,9 @@ internal readonly record struct CountPredicateAggregator<T> : IAggregator<T, int
     {
     }
 
+    /// <summary>Initializes a new instance of the <see cref="CountPredicateAggregator{T}"/> struct.</summary>
+    /// <param name="predicate">The predicate selecting which values to count.</param>
+    /// <param name="result">The current accumulated count.</param>
     private CountPredicateAggregator(Func<T, bool> predicate, int result)
     {
         _predicate = predicate;

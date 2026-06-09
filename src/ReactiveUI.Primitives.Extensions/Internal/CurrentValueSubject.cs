@@ -41,10 +41,7 @@ internal sealed class CurrentValueSubject<T> : IObservable<T>, IObserver<T>, IDi
 
     /// <summary>Initializes a new instance of the <see cref="CurrentValueSubject{T}"/> class with the supplied current value.</summary>
     /// <param name="initialValue">The value replayed to subscribers until <see cref="OnNext"/> overwrites it.</param>
-    public CurrentValueSubject(T initialValue)
-    {
-        _value = initialValue;
-    }
+    public CurrentValueSubject(T initialValue) => _value = initialValue;
 
     /// <summary>Gets the most recently emitted value.</summary>
     public T Value
