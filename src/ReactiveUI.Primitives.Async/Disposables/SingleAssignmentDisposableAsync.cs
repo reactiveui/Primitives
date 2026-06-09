@@ -20,7 +20,7 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
     private IAsyncDisposable? _current;
 
     /// <summary>Gets a value indicating whether the object has been disposed.</summary>
-    public bool IsDisposed => ReferenceEquals(Volatile.Read(ref _current), DisposedSlotMarker.Instance);
+    public bool IsDisposed => DisposableAsyncSlot.IsDisposed(Volatile.Read(ref _current));
 
     /// <summary>Gets the current asynchronous disposable resource, or an empty disposable if the resource has already been disposed.</summary>
     /// <returns>An <see cref="IAsyncDisposable"/> representing the current resource, or <see cref="DisposableAsync.Empty"/> if
@@ -28,7 +28,7 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
     public IAsyncDisposable? GetDisposable()
     {
         var field = Volatile.Read(ref _current);
-        if (ReferenceEquals(field, DisposedSlotMarker.Instance))
+        if (DisposableAsyncSlot.IsDisposed(field))
         {
             return DisposableAsync.Empty;
         }
@@ -55,27 +55,8 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
     /// <param name="value">The <see cref="IAsyncDisposable"/> instance to assign to the field, or null to leave the field unset.</param>
     /// <returns>A <see cref="ValueTask"/> that represents the asynchronous dispose operation if the field was already disposed;
     /// otherwise, a default <see cref="ValueTask"/>.</returns>
-    internal static ValueTask AssignDisposableAsync(ref IAsyncDisposable? field, IAsyncDisposable? value)
-    {
-        var current = Interlocked.CompareExchange(ref field, value, null);
-        if (current is null)
-        {
-            // ok to set.
-            return default;
-        }
-
-        if (ReferenceEquals(current, DisposedSlotMarker.Instance))
-        {
-            if (value is not null)
-            {
-                return value.DisposeAsync();
-            }
-
-            return default;
-        }
-
-        throw CreateAlreadyAssignedException();
-    }
+    internal static ValueTask AssignDisposableAsync(ref IAsyncDisposable? field, IAsyncDisposable? value) =>
+        DisposableAsyncSlot.AssignAsync(ref field, value);
 
     /// <summary>Asynchronously disposes the object referenced by the specified field, if it has not already been disposed.</summary>
     /// <remarks>This method is intended for use in thread-safe disposal patterns to ensure that the
@@ -86,29 +67,11 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
     /// <returns>A <see cref="ValueTask"/> that represents the asynchronous dispose operation. The returned task is completed if
     /// the field was already disposed or null.</returns>
     [DebuggerStepThrough]
-    internal static ValueTask DisposeAsync(ref IAsyncDisposable? field)
-    {
-        var current = Interlocked.Exchange(ref field, DisposedSlotMarker.Instance);
-        if (ReferenceEquals(current, DisposedSlotMarker.Instance) || current is null)
-        {
-            return default;
-        }
-
-        return current.DisposeAsync();
-    }
+    internal static ValueTask DisposeAsync(ref IAsyncDisposable? field) =>
+        DisposableAsyncSlot.DisposeAsync(ref field);
 
     /// <summary>Creates an exception indicating that the disposable has already been assigned.</summary>
     /// <returns>An <see cref="InvalidOperationException"/> with the already-assigned message.</returns>
     internal static InvalidOperationException CreateAlreadyAssignedException() =>
-        new("Disposable is already assigned.");
-
-    /// <summary>A sentinel object used to indicate that the <see cref="SingleAssignmentDisposableAsync"/> has been disposed.</summary>
-    internal sealed class DisposedSlotMarker : IAsyncDisposable
-    {
-        /// <summary>Gets the singleton instance of <see cref="DisposedSlotMarker"/>.</summary>
-        public static readonly DisposedSlotMarker Instance = new();
-
-        /// <inheritdoc/>
-        ValueTask IAsyncDisposable.DisposeAsync() => default;
-    }
+        DisposableAsyncSlot.CreateAlreadyAssignedException();
 }

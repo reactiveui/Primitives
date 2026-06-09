@@ -49,6 +49,20 @@ public partial class CombiningOperatorTests
         await Assert.That(result).IsCollectionEqualTo([ZipPair11, ZipPair13]);
     }
 
+    /// <summary>Verifies the zip shared state double-dispose guard is a no-op on the second call.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenZipStateDisposedTwice_ThenSecondDisposeIsNoop()
+    {
+        var observer = Signal.Create<int>();
+        var state = new SignalAsyncExtensions.ZipSignal<int, int, int>.ZipState(observer, static (a, b) => a + b);
+
+        await state.DisposeAsync();
+        await state.DisposeAsync();
+
+        await Assert.That(state).IsNotNull();
+    }
+
     /// <summary>Tests Zip null arguments throws.</summary>
     [Test]
     public void WhenZipNullArguments_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(() =>

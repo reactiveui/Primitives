@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Async.Internals;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
@@ -100,7 +102,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             Func<T, CancellationToken, ValueTask>? onNext,
             Func<Exception, CancellationToken, ValueTask>? onErrorResume,
-            Func<Result, ValueTask>? onCompleted) : ObserverAsync<T>
+            Func<Result, ValueTask>? onCompleted) : ForwardingWitnessAsync<T>(observer)
         {
             /// <inheritdoc/>
             protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
@@ -110,7 +112,7 @@ public static partial class SignalAsyncExtensions
                     await onNext(value, cancellationToken).ConfigureAwait(false);
                 }
 
-                await observer.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
+                await Downstream.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
             }
 
             /// <inheritdoc/>
@@ -123,7 +125,7 @@ public static partial class SignalAsyncExtensions
                     await onErrorResume(error, cancellationToken).ConfigureAwait(false);
                 }
 
-                await observer.OnErrorResumeAsync(error, cancellationToken).ConfigureAwait(false);
+                await Downstream.OnErrorResumeAsync(error, cancellationToken).ConfigureAwait(false);
             }
 
             /// <inheritdoc/>
@@ -134,7 +136,7 @@ public static partial class SignalAsyncExtensions
                     await onCompleted(result).ConfigureAwait(false);
                 }
 
-                await observer.OnCompletedAsync(result).ConfigureAwait(false);
+                await Downstream.OnCompletedAsync(result).ConfigureAwait(false);
             }
         }
     }
@@ -169,27 +171,27 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             Action<T>? onNext,
             Action<Exception>? onErrorResume,
-            Action<Result>? onCompleted) : ObserverAsync<T>
+            Action<Result>? onCompleted) : ForwardingWitnessAsync<T>(observer)
         {
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 onNext?.Invoke(value);
-                return observer.OnNextAsync(value, cancellationToken);
+                return Downstream.OnNextAsync(value, cancellationToken);
             }
 
             /// <inheritdoc/>
             protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
             {
                 onErrorResume?.Invoke(error);
-                return observer.OnErrorResumeAsync(error, cancellationToken);
+                return Downstream.OnErrorResumeAsync(error, cancellationToken);
             }
 
             /// <inheritdoc/>
             protected override ValueTask OnCompletedAsyncCore(Result result)
             {
                 onCompleted?.Invoke(result);
-                return observer.OnCompletedAsync(result);
+                return Downstream.OnCompletedAsync(result);
             }
         }
     }

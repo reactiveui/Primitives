@@ -55,12 +55,13 @@ public readonly record struct Result
     [ExcludeFromCodeCoverage]
     public void TryThrow()
     {
-        if (!IsFailure)
+        var failure = Exception;
+        if (failure is null)
         {
             return;
         }
 
-        ExceptionDispatchInfo.Capture(Exception).Throw();
+        ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
     /// <summary>Returns a string that represents the result status of the operation.</summary>

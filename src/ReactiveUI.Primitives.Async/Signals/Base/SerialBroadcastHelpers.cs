@@ -19,7 +19,7 @@ internal static class SerialBroadcastHelpers
     /// <summary>
     /// Single-observer fast path delegates directly to the observer's <c>OnNextAsync</c>; the
     /// multi-observer case forwards to <see cref="BroadcastOnNextAsyncMulti{T}"/>, where the async
-    /// state-machine box is only paid when there is more than one subscriber.
+    /// state machine is only used when an observer actually suspends.
     /// </summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="observers">The current observer snapshot.</param>
@@ -40,15 +40,21 @@ internal static class SerialBroadcastHelpers
     /// <param name="value">The value being broadcast.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the notification operation.</param>
     /// <returns>A task that represents the asynchronous notification operation.</returns>
-    public static async ValueTask BroadcastOnNextAsyncMulti<T>(
+    public static ValueTask BroadcastOnNextAsyncMulti<T>(
         ImmutableArray<IObserverAsync<T>> observers,
         T value,
         CancellationToken cancellationToken)
     {
         for (var i = 0; i < observers.Length; i++)
         {
-            await observers[i].OnNextAsync(value, cancellationToken).ConfigureAwait(false);
+            var pending = observers[i].OnNextAsync(value, cancellationToken);
+            if (!pending.IsCompletedSuccessfully)
+            {
+                return AwaitOnNextRemainderAsync(pending, observers, i + 1, value, cancellationToken);
+            }
         }
+
+        return default;
     }
 
     /// <summary>Sequentially forwards <paramref name="error"/> to each observer's resumable error handler.</summary>
@@ -57,15 +63,21 @@ internal static class SerialBroadcastHelpers
     /// <param name="error">The error being broadcast.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the notification operation.</param>
     /// <returns>A task that represents the asynchronous notification operation.</returns>
-    public static async ValueTask BroadcastOnErrorResumeAsync<T>(
+    public static ValueTask BroadcastOnErrorResumeAsync<T>(
         ImmutableArray<IObserverAsync<T>> observers,
         Exception error,
         CancellationToken cancellationToken)
     {
         for (var i = 0; i < observers.Length; i++)
         {
-            await observers[i].OnErrorResumeAsync(error, cancellationToken).ConfigureAwait(false);
+            var pending = observers[i].OnErrorResumeAsync(error, cancellationToken);
+            if (!pending.IsCompletedSuccessfully)
+            {
+                return AwaitOnErrorRemainderAsync(pending, observers, i + 1, error, cancellationToken);
+            }
         }
+
+        return default;
     }
 
     /// <summary>Sequentially forwards <paramref name="result"/> to each observer's completion handler.</summary>
@@ -73,11 +85,81 @@ internal static class SerialBroadcastHelpers
     /// <param name="observers">The current observer snapshot.</param>
     /// <param name="result">The terminal result being broadcast.</param>
     /// <returns>A task that represents the asynchronous notification operation.</returns>
-    public static async ValueTask BroadcastOnCompletedAsync<T>(
+    public static ValueTask BroadcastOnCompletedAsync<T>(
         ImmutableArray<IObserverAsync<T>> observers,
         Result result)
     {
         for (var i = 0; i < observers.Length; i++)
+        {
+            var pending = observers[i].OnCompletedAsync(result);
+            if (!pending.IsCompletedSuccessfully)
+            {
+                return AwaitCompletionRemainderAsync(pending, observers, i + 1, result);
+            }
+        }
+
+        return default;
+    }
+
+    /// <summary>Awaits the first asynchronous OnNext notification, then continues the serial broadcast.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="pending">The first incomplete notification.</param>
+    /// <param name="observers">The current observer snapshot.</param>
+    /// <param name="nextIndex">The next observer index to notify.</param>
+    /// <param name="value">The value being broadcast.</param>
+    /// <param name="cancellationToken">The cancellation token used for notifications.</param>
+    /// <returns>A task representing the asynchronous remainder.</returns>
+    private static async ValueTask AwaitOnNextRemainderAsync<T>(
+        ValueTask pending,
+        ImmutableArray<IObserverAsync<T>> observers,
+        int nextIndex,
+        T value,
+        CancellationToken cancellationToken)
+    {
+        await pending.ConfigureAwait(false);
+        for (var i = nextIndex; i < observers.Length; i++)
+        {
+            await observers[i].OnNextAsync(value, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Awaits the first asynchronous error notification, then continues the serial broadcast.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="pending">The first incomplete notification.</param>
+    /// <param name="observers">The current observer snapshot.</param>
+    /// <param name="nextIndex">The next observer index to notify.</param>
+    /// <param name="error">The error being broadcast.</param>
+    /// <param name="cancellationToken">The cancellation token used for notifications.</param>
+    /// <returns>A task representing the asynchronous remainder.</returns>
+    private static async ValueTask AwaitOnErrorRemainderAsync<T>(
+        ValueTask pending,
+        ImmutableArray<IObserverAsync<T>> observers,
+        int nextIndex,
+        Exception error,
+        CancellationToken cancellationToken)
+    {
+        await pending.ConfigureAwait(false);
+        for (var i = nextIndex; i < observers.Length; i++)
+        {
+            await observers[i].OnErrorResumeAsync(error, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Awaits the first asynchronous completion notification, then continues the serial broadcast.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="pending">The first incomplete notification.</param>
+    /// <param name="observers">The current observer snapshot.</param>
+    /// <param name="nextIndex">The next observer index to notify.</param>
+    /// <param name="result">The terminal result being broadcast.</param>
+    /// <returns>A task representing the asynchronous remainder.</returns>
+    private static async ValueTask AwaitCompletionRemainderAsync<T>(
+        ValueTask pending,
+        ImmutableArray<IObserverAsync<T>> observers,
+        int nextIndex,
+        Result result)
+    {
+        await pending.ConfigureAwait(false);
+        for (var i = nextIndex; i < observers.Length; i++)
         {
             await observers[i].OnCompletedAsync(result).ConfigureAwait(false);
         }

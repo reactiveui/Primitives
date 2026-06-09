@@ -139,6 +139,41 @@ public class ConcurrentSignalBaseTests
         await Assert.That(b.Result).IsEqualTo(Result.Success);
     }
 
+    /// <summary>Verifies that serial error broadcasting resumes remaining observers after an asynchronous first observer.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSerialErrorBroadcastSlowPath_ThenRemainingObserversReceiveError()
+    {
+        var a = new ErrorCapture();
+        var b = new ErrorCapture();
+        var observers = ImmutableArray.Create<IObserverAsync<int>>(
+            new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSlow(a)),
+            new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSync(b)));
+        var error = new InvalidOperationException("serial-error");
+
+        await SerialBroadcastHelpers.BroadcastOnErrorResumeAsync(observers, error, default);
+
+        await Assert.That(a.Error).IsSameReferenceAs(error);
+        await Assert.That(b.Error).IsSameReferenceAs(error);
+    }
+
+    /// <summary>Verifies that serial completion broadcasting resumes remaining observers after an asynchronous first observer.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSerialCompletionBroadcastSlowPath_ThenRemainingObserversReceiveResult()
+    {
+        var a = new ResultCapture();
+        var b = new ResultCapture();
+        var observers = ImmutableArray.Create<IObserverAsync<int>>(
+            new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSlow(a)),
+            new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSync(b)));
+
+        await SerialBroadcastHelpers.BroadcastOnCompletedAsync(observers, Result.Success);
+
+        await Assert.That(a.Result).IsEqualTo(Result.Success);
+        await Assert.That(b.Result).IsEqualTo(Result.Success);
+    }
+
     /// <summary>Creates a synchronously-completing OnNext observer that captures the value.</summary>
     /// <param name="capture">The capture sink.</param>
     /// <returns>An observer whose <c>OnNextAsync</c> completes synchronously.</returns>

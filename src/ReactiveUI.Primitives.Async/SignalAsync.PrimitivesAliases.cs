@@ -301,7 +301,7 @@ public static partial class SignalAsyncExtensions
             Justification = "Deliberate lack of type inference.")]
         public IObservableAsync<TResult> KeepType<TResult>()
             where TResult : class =>
-            SignalAsyncExtensions.OfType<object?, TResult>(source);
+            OfType<object?, TResult>(source);
 
         /// <summary>Casts each value to <typeparamref name="TResult"/>.</summary>
         /// <typeparam name="TResult">The result element type to cast to.</typeparam>
@@ -311,7 +311,7 @@ public static partial class SignalAsyncExtensions
             "S4018:All type parameters should be used in the parameter list to enable type inference",
             Justification = "Deliberate lack of type inference.")]
         public IObservableAsync<TResult> CastTo<TResult>() =>
-            SignalAsyncExtensions.Cast<object?, TResult>(source);
+            Cast<object?, TResult>(source);
     }
 
     /// <summary>Combining operators for a sequence of observable sources.</summary>

@@ -16,6 +16,9 @@ namespace ReactiveUI.Primitives.Async.Disposables;
 [SuppressMessage("Design", "CA1045:Do not pass types by reference", Justification = "Ref-on-field is the entire point — mirrors Interlocked/Volatile.")]
 public static class DisposableAsyncSlot
 {
+    /// <summary>Shared marker used by all async-disposable slot implementations once a slot is closed.</summary>
+    internal static readonly IAsyncDisposable DisposedSentinel = new DisposedAsyncDisposable();
+
     /// <summary>Swaps the slot's current contents with <paramref name="value"/> and asynchronously
     /// disposes the previous occupant. Equivalent to
     /// <see cref="SingleReplaceableDisposableAsync.SetDisposableAsync"/>, but operates on a caller-owned field
@@ -32,7 +35,7 @@ public static class DisposableAsyncSlot
         var current = Volatile.Read(ref slot);
         while (true)
         {
-            if (ReferenceEquals(current, DisposedSlotMarker.Instance))
+            if (ReferenceEquals(current, DisposedSentinel))
             {
                 return value?.DisposeAsync() ?? default;
             }
@@ -64,12 +67,7 @@ public static class DisposableAsyncSlot
             return default;
         }
 
-        if (ReferenceEquals(current, DisposedSlotMarker.Instance))
-        {
-            return value?.DisposeAsync() ?? default;
-        }
-
-        throw new InvalidOperationException("Disposable is already assigned.");
+        return ReferenceEquals(current, DisposedSentinel) ? value?.DisposeAsync() ?? default : throw CreateAlreadyAssignedException();
     }
 
     /// <summary>Asynchronously disposes the slot's current contents and marks the slot as disposed.
@@ -80,29 +78,24 @@ public static class DisposableAsyncSlot
     [DebuggerStepThrough]
     public static ValueTask DisposeAsync(ref IAsyncDisposable? slot)
     {
-        var current = Interlocked.Exchange(ref slot, DisposedSlotMarker.Instance);
-        if (current is null || ReferenceEquals(current, DisposedSlotMarker.Instance))
-        {
-            return default;
-        }
-
-        return current.DisposeAsync();
+        var current = Interlocked.Exchange(ref slot, DisposedSentinel);
+        return current is null || ReferenceEquals(current, DisposedSentinel) ? default : current.DisposeAsync();
     }
 
     /// <summary>Returns <see langword="true"/> if the slot has been disposed via <see cref="DisposeAsync"/>.</summary>
     /// <param name="slot">The slot field to inspect.</param>
     /// <returns><see langword="true"/> if the slot currently holds the disposed sentinel.</returns>
     public static bool IsDisposed(IAsyncDisposable? slot) =>
-        ReferenceEquals(slot, DisposedSlotMarker.Instance);
+        ReferenceEquals(slot, DisposedSentinel);
 
-    /// <summary>Shared sentinel marking a disposed slot. Distinct from the per-class sentinels in
-    /// <see cref="SingleReplaceableDisposableAsync"/> and <see cref="SingleAssignmentDisposableAsync"/> so the
-    /// slot helpers can be used independently of (and alongside) those wrapper classes.</summary>
-    internal sealed class DisposedSlotMarker : IAsyncDisposable
+    /// <summary>Creates an exception indicating that a single-assignment slot already has a value.</summary>
+    /// <returns>The invalid-operation exception to throw from the assignment path.</returns>
+    internal static InvalidOperationException CreateAlreadyAssignedException() =>
+        new("Disposable is already assigned.");
+
+    /// <summary>Singleton no-op disposable used to mark closed async-disposable slots.</summary>
+    private sealed class DisposedAsyncDisposable : IAsyncDisposable
     {
-        /// <summary>Singleton sentinel instance.</summary>
-        public static readonly DisposedSlotMarker Instance = new();
-
         /// <inheritdoc/>
         ValueTask IAsyncDisposable.DisposeAsync() => default;
     }
