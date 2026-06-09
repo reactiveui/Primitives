@@ -8,6 +8,8 @@ namespace ReactiveUI.Primitives;
 /// <typeparam name="T">The observed value type.</typeparam>
 internal readonly record struct CountAggregator<T> : IAggregator<T, int, CountAggregator<T>>
 {
+    /// <summary>Initializes a new instance of the <see cref="CountAggregator{T}"/> struct.</summary>
+    /// <param name="result">The current accumulated count.</param>
     private CountAggregator(int result) => Result = result;
 
     /// <inheritdoc/>

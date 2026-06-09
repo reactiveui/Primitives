@@ -342,10 +342,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
 
     /// <summary>Publishes a fault when the faults surface has been requested.</summary>
     /// <param name="error">The command error.</param>
-    private void PublishFault(Exception error)
-    {
-        Volatile.Read(ref _faults)?.OnNext(error);
-    }
+    private void PublishFault(Exception error) => Volatile.Read(ref _faults)?.OnNext(error);
 
     /// <summary>Executes the ThrowIfDisposed operation.</summary>
     private void ThrowIfDisposed()

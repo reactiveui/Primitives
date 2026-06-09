@@ -40,13 +40,7 @@ public class SingleDisposable : IsDisposed
         : this(action) => Create(disposable);
 
     /// <summary>Gets a value indicating whether this instance is disposed.</summary>
-    public bool IsDisposed
-    {
-        get
-        {
-            return ReferenceEquals(Volatile.Read(ref _disposable), DisposedSentinel);
-        }
-    }
+    public bool IsDisposed => ReferenceEquals(Volatile.Read(ref _disposable), DisposedSentinel);
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]

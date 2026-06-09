@@ -40,6 +40,11 @@ internal static class TaskPolyfillExtensions
         }
     }
 
+    /// <summary>Waits for the task to complete, timeout, or cancellation.</summary>
+    /// <param name="task">The task to observe.</param>
+    /// <param name="timeout">The timeout after which the wait fails, or <see cref="Timeout.InfiniteTimeSpan"/> for no timeout.</param>
+    /// <param name="cancellationToken">A token that cancels the wait.</param>
+    /// <returns>A task that completes when the wait condition is resolved.</returns>
     private static async Task WaitForCompletionAsync(Task task, TimeSpan timeout, CancellationToken cancellationToken)
     {
         if (task.IsCompleted)
