@@ -7,7 +7,7 @@ namespace ReactiveUI.Primitives;
 /// <summary>
 /// Shared terminal-forwarding helpers for single-source sink observers. Each sink computes a
 /// single result and forwards it downstream exactly once, disposing itself afterwards. Centralizing the
-/// <c>try</c>/<c>finally</c> forward-then-dispose dance — and the <c>done</c> latch that guards it — keeps the
+/// forward-then-dispose <c>using</c> scope — and the <c>done</c> latch that guards it — keeps the
 /// individual sinks to their distinguishing accumulation logic and removes the otherwise-identical terminal boilerplate.
 /// </summary>
 internal static class SinkTerminal
@@ -19,13 +19,9 @@ internal static class SinkTerminal
     /// <param name="sink">The sink to dispose once the error has been delivered.</param>
     public static void Fault<TResult>(IObserver<TResult> observer, Exception error, IDisposable sink)
     {
-        try
+        using (sink)
         {
             observer.OnError(error);
-        }
-        finally
-        {
-            sink.Dispose();
         }
     }
 
@@ -53,14 +49,10 @@ internal static class SinkTerminal
     /// <param name="sink">The sink to dispose once completion has been delivered.</param>
     public static void Complete<TResult>(IObserver<TResult> observer, TResult value, IDisposable sink)
     {
-        try
+        using (sink)
         {
             observer.OnNext(value);
             observer.OnCompleted();
-        }
-        finally
-        {
-            sink.Dispose();
         }
     }
 
@@ -87,13 +79,9 @@ internal static class SinkTerminal
     /// <param name="sink">The sink to dispose once completion has been delivered.</param>
     public static void Complete<TResult>(IObserver<TResult> observer, IDisposable sink)
     {
-        try
+        using (sink)
         {
             observer.OnCompleted();
-        }
-        finally
-        {
-            sink.Dispose();
         }
     }
 
