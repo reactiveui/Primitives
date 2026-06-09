@@ -1164,3 +1164,22 @@ virtual ReactiveUI.Primitives.Signals.Signal<T>.Dispose(bool disposing) -> void
 virtual ReactiveUI.Primitives.Signals.Signal<T>.HasObservers.get -> bool
 virtual ReactiveUI.Primitives.Signals.Signal<T>.IsDisposed.get -> bool
 virtual ReactiveUI.Primitives.SingleSourceObserver<T>.Dispose(bool disposing) -> void
+override ReactiveUI.Primitives.Signals.Broadcaster<T>.Equals(object? obj) -> bool
+override ReactiveUI.Primitives.Signals.Broadcaster<T>.GetHashCode() -> int
+ReactiveUI.Primitives.Signals.Broadcaster<T>
+ReactiveUI.Primitives.Signals.Broadcaster<T>.Add(System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Signals.Broadcaster<T>.Broadcaster() -> void
+ReactiveUI.Primitives.Signals.Broadcaster<T>.Clear() -> void
+ReactiveUI.Primitives.Signals.Broadcaster<T>.Completed() -> void
+ReactiveUI.Primitives.Signals.Broadcaster<T>.Equals(ReactiveUI.Primitives.Signals.Broadcaster<T> other) -> bool
+ReactiveUI.Primitives.Signals.Broadcaster<T>.Error(System.Exception! exception) -> void
+ReactiveUI.Primitives.Signals.Broadcaster<T>.HasObservers.get -> bool
+ReactiveUI.Primitives.Signals.Broadcaster<T>.Next(T value) -> void
+ReactiveUI.Primitives.Signals.Broadcaster<T>.Remove(System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Signals.DelegateWitness<T>
+ReactiveUI.Primitives.Signals.DelegateWitness<T>.DelegateWitness(System.Action<T>! onNext, System.Action<System.Exception!>? onError = null, System.Action? onCompleted = null) -> void
+ReactiveUI.Primitives.Signals.DelegateWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Signals.DelegateWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Signals.DelegateWitness<T>.OnNext(T value) -> void
+static ReactiveUI.Primitives.Signals.Broadcaster<T>.operator !=(ReactiveUI.Primitives.Signals.Broadcaster<T> left, ReactiveUI.Primitives.Signals.Broadcaster<T> right) -> bool
+static ReactiveUI.Primitives.Signals.Broadcaster<T>.operator ==(ReactiveUI.Primitives.Signals.Broadcaster<T> left, ReactiveUI.Primitives.Signals.Broadcaster<T> right) -> bool

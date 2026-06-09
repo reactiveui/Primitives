@@ -2,17 +2,29 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-namespace ReactiveUI.Primitives.Core;
+namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>Copy-on-write observer broadcaster optimized for zero-allocation single-subscriber delivery.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-internal struct Broadcaster<T> : IEquatable<Broadcaster<T>>
+public struct Broadcaster<T> : IEquatable<Broadcaster<T>>
 {
     /// <summary>Stores either a single observer, an observer array, or <see langword="null"/>.</summary>
     private object? _observers;
 
     /// <summary>Gets a value indicating whether at least one observer is registered.</summary>
     public bool HasObservers => Volatile.Read(ref _observers) is not null;
+
+    /// <summary>Determines whether two broadcasters reference the same observer set.</summary>
+    /// <param name="left">The left broadcaster.</param>
+    /// <param name="right">The right broadcaster.</param>
+    /// <returns><see langword="true"/> when both reference the same observer set; otherwise, <see langword="false"/>.</returns>
+    public static bool operator ==(Broadcaster<T> left, Broadcaster<T> right) => left.Equals(right);
+
+    /// <summary>Determines whether two broadcasters reference different observer sets.</summary>
+    /// <param name="left">The left broadcaster.</param>
+    /// <param name="right">The right broadcaster.</param>
+    /// <returns><see langword="true"/> when the broadcasters reference different observer sets; otherwise, <see langword="false"/>.</returns>
+    public static bool operator !=(Broadcaster<T> left, Broadcaster<T> right) => !left.Equals(right);
 
     /// <summary>
     /// Adds an observer to the broadcaster. The update is a lock-free compare-and-swap, so the
