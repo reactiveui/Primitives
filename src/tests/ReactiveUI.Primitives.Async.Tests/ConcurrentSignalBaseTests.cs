@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Threading.Tasks.Sources;
 using ReactiveUI.Primitives.Async.Internals;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -174,6 +175,45 @@ public class ConcurrentSignalBaseTests
         await Assert.That(b.Result).IsEqualTo(Result.Success);
     }
 
+    /// <summary>Verifies that serial synchronous fast-path broadcasts consume every completed <see cref="ValueTask"/>.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSerialBroadcastSyncValueTaskSources_ThenConsumesEachCompletedValueTask()
+    {
+        var nextFirst = new CompletedValueTaskSource();
+        var nextSecond = new CompletedValueTaskSource();
+        var nextObservers = ImmutableArray.Create<IObserverAsync<int>>(
+            new ValueTaskSourceObserver(onNext: nextFirst.CreateTask),
+            new ValueTaskSourceObserver(onNext: nextSecond.CreateTask));
+
+        await SerialBroadcastHelpers.BroadcastOnNextAsyncMulti(nextObservers, ForwardedValue, default);
+
+        await Assert.That(nextFirst.GetResultCount).IsEqualTo(1);
+        await Assert.That(nextSecond.GetResultCount).IsEqualTo(1);
+
+        var errorFirst = new CompletedValueTaskSource();
+        var errorSecond = new CompletedValueTaskSource();
+        var errorObservers = ImmutableArray.Create<IObserverAsync<int>>(
+            new ValueTaskSourceObserver(onError: errorFirst.CreateTask),
+            new ValueTaskSourceObserver(onError: errorSecond.CreateTask));
+
+        await SerialBroadcastHelpers.BroadcastOnErrorResumeAsync(errorObservers, new InvalidOperationException("sync-source"), default);
+
+        await Assert.That(errorFirst.GetResultCount).IsEqualTo(1);
+        await Assert.That(errorSecond.GetResultCount).IsEqualTo(1);
+
+        var completedFirst = new CompletedValueTaskSource();
+        var completedSecond = new CompletedValueTaskSource();
+        var completedObservers = ImmutableArray.Create<IObserverAsync<int>>(
+            new ValueTaskSourceObserver(onCompleted: completedFirst.CreateTask),
+            new ValueTaskSourceObserver(onCompleted: completedSecond.CreateTask));
+
+        await SerialBroadcastHelpers.BroadcastOnCompletedAsync(completedObservers, Result.Success);
+
+        await Assert.That(completedFirst.GetResultCount).IsEqualTo(1);
+        await Assert.That(completedSecond.GetResultCount).IsEqualTo(1);
+    }
+
     /// <summary>Creates a synchronously-completing OnNext observer that captures the value.</summary>
     /// <param name="capture">The capture sink.</param>
     /// <returns>An observer whose <c>OnNextAsync</c> completes synchronously.</returns>
@@ -253,5 +293,67 @@ public class ConcurrentSignalBaseTests
     {
         /// <summary>Gets or sets the captured result.</summary>
         public Result? Result { get; set; }
+    }
+
+    /// <summary>Observer that returns caller-supplied <see cref="ValueTask"/> instances for selected notifications.</summary>
+    /// <param name="onNext">The <see cref="IObserverAsync{T}.OnNextAsync"/> value-task factory.</param>
+    /// <param name="onError">The resumable-error source factory.</param>
+    /// <param name="onCompleted">The terminal-completion source factory.</param>
+    private sealed class ValueTaskSourceObserver(
+        Func<ValueTask>? onNext = null,
+        Func<ValueTask>? onError = null,
+        Func<ValueTask>? onCompleted = null) : IObserverAsync<int>
+    {
+        /// <inheritdoc/>
+        public ValueTask DisposeAsync() => default;
+
+        /// <inheritdoc/>
+        public ValueTask OnCompletedAsync(Result result) =>
+            onCompleted?.Invoke() ?? default;
+
+        /// <inheritdoc/>
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            onError?.Invoke() ?? default;
+
+        /// <inheritdoc/>
+        public ValueTask OnNextAsync(int value, CancellationToken cancellationToken) =>
+            onNext?.Invoke() ?? default;
+    }
+
+    /// <summary>Synchronously-completed <see cref="IValueTaskSource"/> that tracks exact <c>GetResult</c> consumption.</summary>
+    private sealed class CompletedValueTaskSource : IValueTaskSource
+    {
+        /// <summary>The number of times <see cref="GetResult"/> has been called.</summary>
+        private int _getResultCount;
+
+        /// <summary>Gets the number of times <see cref="GetResult"/> has been called.</summary>
+        public int GetResultCount => Volatile.Read(ref _getResultCount);
+
+        /// <summary>Creates a <see cref="ValueTask"/> backed by this source.</summary>
+        /// <returns>The synchronously-completed task.</returns>
+        public ValueTask CreateTask() => new(this, 0);
+
+        /// <inheritdoc/>
+        public void GetResult(short token)
+        {
+            if (Interlocked.Increment(ref _getResultCount) == 1)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException("The completed ValueTask source was consumed more than once.");
+        }
+
+        /// <inheritdoc/>
+        public ValueTaskSourceStatus GetStatus(short token) =>
+            ValueTaskSourceStatus.Succeeded;
+
+        /// <inheritdoc/>
+        public void OnCompleted(
+            Action<object?> continuation,
+            object? state,
+            short token,
+            ValueTaskSourceOnCompletedFlags flags) =>
+            throw new InvalidOperationException("Synchronous completions must not register continuations.");
     }
 }

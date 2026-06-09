@@ -3,6 +3,8 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
@@ -52,6 +54,8 @@ internal static class SerialBroadcastHelpers
             {
                 return AwaitOnNextRemainderAsync(pending, observers, i + 1, value, cancellationToken);
             }
+
+            ConsumeCompleted(pending);
         }
 
         return default;
@@ -75,6 +79,8 @@ internal static class SerialBroadcastHelpers
             {
                 return AwaitOnErrorRemainderAsync(pending, observers, i + 1, error, cancellationToken);
             }
+
+            ConsumeCompleted(pending);
         }
 
         return default;
@@ -96,10 +102,24 @@ internal static class SerialBroadcastHelpers
             {
                 return AwaitCompletionRemainderAsync(pending, observers, i + 1, result);
             }
+
+            ConsumeCompleted(pending);
         }
 
         return default;
     }
+
+    /// <summary>Consumes a synchronously completed <see cref="ValueTask"/> without allocating or blocking.</summary>
+    /// <param name="pending">The synchronously completed task.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SuppressMessage(
+        "Performance",
+        "CA1849:Call async methods when in an async method",
+        Justification = "The ValueTask is already completed successfully; GetResult consumes IValueTaskSource-backed results without blocking.")]
+#pragma warning disable S5034 // Callers guard with IsCompletedSuccessfully before consuming the ValueTask.
+    private static void ConsumeCompleted(ValueTask pending) =>
+        pending.GetAwaiter().GetResult();
+#pragma warning restore S5034
 
     /// <summary>Awaits the first asynchronous OnNext notification, then continues the serial broadcast.</summary>
     /// <typeparam name="T">The element type.</typeparam>
