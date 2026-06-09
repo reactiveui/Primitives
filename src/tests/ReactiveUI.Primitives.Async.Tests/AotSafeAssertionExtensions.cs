@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>AOT-safe collection-equality helpers.</summary>
 internal static class AotSafeAssertionExtensions
 {
+    /// <summary>Provides collection-equality assertions for assertion sources.</summary>
     /// <param name="source">The assertion source.</param>
     /// <typeparam name="TCollection">The collection type being asserted.</typeparam>
     /// <typeparam name="TItem">The element type.</typeparam>

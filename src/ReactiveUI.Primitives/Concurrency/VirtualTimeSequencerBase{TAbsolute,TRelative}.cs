@@ -331,10 +331,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
     }
 
     /// <summary>Stops the virtual time scheduler.</summary>
-    public void Stop()
-    {
-        IsEnabled = false;
-    }
+    public void Stop() => IsEnabled = false;
 
     /// <summary>Adds a relative time value to an absolute time value.</summary>
     /// <param name="absolute">Absolute time value.</param>

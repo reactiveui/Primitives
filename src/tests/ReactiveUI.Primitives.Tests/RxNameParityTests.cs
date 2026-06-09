@@ -377,10 +377,11 @@ public class RxNameParityTests
 
     /// <summary>Verifies <c>Sample</c> mirrors <c>Probe</c> when sampled against an identical virtual clock drive.</summary>
     [Test]
-    public void SampleMatchesProbe()
-    {
-        Assert.Equal<int>(RunSampling((s, c) => s.Probe(TimeSpan.FromTicks(Two), c)), RunSampling((s, c) => s.Sample(TimeSpan.FromTicks(Two), c)));
-    }
+    public void SampleMatchesProbe() =>
+        Assert.Equal<int>(
+            RunSampling((s, c) => s.Probe(TimeSpan.FromTicks(Two), c)),
+            RunSampling((s, c) =>
+                s.Sample(TimeSpan.FromTicks(Two), c)));
 
     /// <summary>Verifies the 3-arg <c>SelectMany</c> mirrors the 3-arg <c>FlatMap</c>.</summary>
     [Test]
@@ -416,10 +417,7 @@ public class RxNameParityTests
 
     /// <summary>Verifies <c>Retry</c> mirrors the source when no error occurs (covers the happy path).</summary>
     [Test]
-    public void RetryMirrorsSourceWhenNoError()
-    {
-        Assert.Equal<int>(_oneToThree, Collect(Signal.FromEnumerable(_oneToThree).Retry(Two)));
-    }
+    public void RetryMirrorsSourceWhenNoError() => Assert.Equal<int>(_oneToThree, Collect(Signal.FromEnumerable(_oneToThree).Retry(Two)));
 
     /// <summary>Exercises the default-sequencer (no-scheduler) overloads of the time operators.</summary>
     [Test]

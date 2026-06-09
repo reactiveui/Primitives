@@ -70,13 +70,7 @@ public class BehaviorSignal<T> : ISignal<T>
 
     /// <summary>Gets the string representation of this object for debugger display purposes.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string? DebuggerDisplay
-    {
-        get
-        {
-            return ToString();
-        }
-    }
+    private string? DebuggerDisplay => ToString();
 
     /// <summary>Tries to get the current value or throws an exception.</summary>
     /// <param name="value">The initial value passed to the constructor until <see cref="OnNext"/> is called; after which, the last value passed to <see cref="OnNext"/>.</param>

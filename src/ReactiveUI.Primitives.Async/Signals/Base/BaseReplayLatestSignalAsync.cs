@@ -301,11 +301,9 @@ public abstract class BaseReplayLatestSignalAsync<T>(Optional<T> startValue) : S
         private int _disposed;
 
         /// <inheritdoc/>
-        public ValueTask DisposeAsync()
-        {
-            return Interlocked.Exchange(ref _disposed, 1) != 0
+        public ValueTask DisposeAsync() =>
+            Interlocked.Exchange(ref _disposed, 1) != 0
                 ? default
                 : signal.RemoveObserverAsync(observer);
-        }
     }
 }

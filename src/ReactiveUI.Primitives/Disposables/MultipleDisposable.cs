@@ -79,13 +79,7 @@ public class MultipleDisposable : IsDisposed
     }
 
     /// <summary>Gets a value indicating whether the object is disposed.</summary>
-    public bool IsDisposed
-    {
-        get
-        {
-            return Volatile.Read(ref _disposed);
-        }
-    }
+    public bool IsDisposed => Volatile.Read(ref _disposed);
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]

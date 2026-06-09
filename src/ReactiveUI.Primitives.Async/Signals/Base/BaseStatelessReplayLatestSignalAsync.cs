@@ -282,11 +282,9 @@ public abstract class BaseStatelessReplayLatestSignalAsync<T>(Optional<T> startV
         private int _disposed;
 
         /// <inheritdoc/>
-        public ValueTask DisposeAsync()
-        {
-            return Interlocked.Exchange(ref _disposed, 1) != 0
+        public ValueTask DisposeAsync() =>
+            Interlocked.Exchange(ref _disposed, 1) != 0
                 ? default
                 : signal.RemoveObserverAndResetAsync(observer);
-        }
     }
 }

@@ -11,6 +11,11 @@ namespace ReactiveUI.Primitives;
 /// <summary>Async enumerable collection helpers for the operator surface.</summary>
 public static partial class LinqExtensions
 {
+    /// <summary>Tries to collect values from an async-enumerable-backed signal into an array task.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="source">The observable source to inspect.</param>
+    /// <param name="task">The collection task when the source is async-enumerable-backed.</param>
+    /// <returns><see langword="true"/> when an async enumerable fast path is available; otherwise, <see langword="false"/>.</returns>
     private static bool TryCollectArrayFromAsyncEnumerable<T>(IObservable<T> source, [NotNullWhen(true)] out Task<T[]>? task)
     {
         if (source is IAsyncEnumerableBackedSignal<T> asyncEnumerable)
@@ -23,6 +28,11 @@ public static partial class LinqExtensions
         return false;
     }
 
+    /// <summary>Collects an async enumerable into a densely packed array.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="values">The async enumerable values to collect.</param>
+    /// <param name="cancellationToken">The token used to cancel enumeration.</param>
+    /// <returns>A task that resolves to the collected array.</returns>
     private static async Task<T[]> CollectAsyncEnumerableArrayAsync<T>(IAsyncEnumerable<T> values, CancellationToken cancellationToken)
     {
         const int InitialCapacity = 16;
