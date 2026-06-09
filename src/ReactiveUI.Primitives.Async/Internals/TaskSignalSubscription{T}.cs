@@ -22,15 +22,13 @@ internal abstract class TaskSignalSubscription<T>(IObserverAsync<T> observer) : 
     /// <summary>The cancellation token source used to cancel the subscription's asynchronous operation upon disposal.</summary>
     private readonly CancellationTokenSource _cts = new();
 
-    /// <summary>Managed-thread ID of the thread currently inside <see cref="ExecuteAsync"/>, or
-    /// <c>0</c> when no run is in flight. Replaces an <see cref="AsyncLocal{T}"/>-based
-    /// reentry flag — the AsyncLocal cloned <see cref="ExecutionContext"/>
-    /// on every set, costing ~80 B per execution. Thread-ID detection is exact for the
-    /// synchronous-reentry deadlock case (Dispose called from within the same call stack
-    /// as <see cref="ExecuteAsync"/>); asynchronous reentry after a thread hop may return from Dispose
-    /// slightly before <see cref="ExecuteAsync"/>'s finally fires, but cancellation has already been
-    /// signalled so no observer notifications race the dispose.</summary>
-    private int _runningThreadId;
+    /// <summary>Flows into the job's notification call chain (across any thread hops) so a reentrant
+    /// <see cref="DisposeAsync"/> issued from inside the job — e.g. a downstream operator disposing the
+    /// subscription from within its own <c>OnNextAsync</c> — is recognised and skips the self-join on
+    /// <see cref="_tcs"/> that would otherwise deadlock. A thread-ID marker only catches the synchronous
+    /// same-thread case; once the notification continuation hops threads the ID no longer matches and the
+    /// dispose waits for a job that cannot complete until the dispose returns.</summary>
+    private readonly AsyncLocal<bool> _executing = new();
 
     /// <summary>Indicates whether disposal has already been initiated to prevent double-disposal.</summary>
     private int _disposed;
@@ -55,7 +53,7 @@ internal abstract class TaskSignalSubscription<T>(IObserverAsync<T> observer) : 
         }
 
         await _cts.CancelAsync().ConfigureAwait(false);
-        if (Volatile.Read(ref _runningThreadId) != Environment.CurrentManagedThreadId)
+        if (!_executing.Value)
         {
             await _tcs.Task.ConfigureAwait(false);
         }
@@ -87,7 +85,7 @@ internal abstract class TaskSignalSubscription<T>(IObserverAsync<T> observer) : 
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
     internal async ValueTask ExecuteAsync(CancellationToken cancellationToken)
     {
-        Volatile.Write(ref _runningThreadId, Environment.CurrentManagedThreadId);
+        _executing.Value = true;
         try
         {
             await ExecuteAsyncCore(observer, cancellationToken).ConfigureAwait(false);
@@ -98,7 +96,6 @@ internal abstract class TaskSignalSubscription<T>(IObserverAsync<T> observer) : 
         }
         finally
         {
-            Volatile.Write(ref _runningThreadId, 0);
             _tcs.SetResult(true);
         }
     }
