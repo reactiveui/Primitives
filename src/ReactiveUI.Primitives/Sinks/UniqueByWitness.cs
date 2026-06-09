@@ -7,7 +7,7 @@ namespace ReactiveUI.Primitives;
 /// <summary>Sink that suppresses adjacent values whose projected key matches the previous one.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <typeparam name="TKey">The key type.</typeparam>
-public sealed class UniqueByWitness<T, TKey> : SingleSourceWitness<T>
+public sealed class UniqueByWitness<T, TKey> : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
     private readonly IObserver<T> _observer;
@@ -24,6 +24,9 @@ public sealed class UniqueByWitness<T, TKey> : SingleSourceWitness<T>
     /// <summary>The most recently observed key.</summary>
     private TKey? _last;
 
+    /// <summary>The upstream subscription.</summary>
+    private IDisposable? _subscription;
+
     /// <summary>Initializes a new instance of the <see cref="UniqueByWitness{T, TKey}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="keySelector">The key projection.</param>
@@ -36,7 +39,7 @@ public sealed class UniqueByWitness<T, TKey> : SingleSourceWitness<T>
     }
 
     /// <inheritdoc/>
-    public override void OnNext(T value)
+    public void OnNext(T value)
     {
         var key = _keySelector(value);
         if (_hasLast && _comparer.Equals(_last!, key))
@@ -58,14 +61,15 @@ public sealed class UniqueByWitness<T, TKey> : SingleSourceWitness<T>
     }
 
     /// <inheritdoc/>
-    public override void OnError(Exception error)
-    {
-        SinkTerminal.Fault(_observer, error, this);
-    }
+    public void OnError(Exception error) => SinkTerminal.Fault(_observer, error, this);
 
     /// <inheritdoc/>
-    public override void OnCompleted()
-    {
-        SinkTerminal.Complete(_observer, this);
-    }
+    public void OnCompleted() => SinkTerminal.Complete(_observer, this);
+
+    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <param name="subscription">The upstream subscription.</param>
+    public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
+
+    /// <inheritdoc/>
+    public void Dispose() => SinkSubscription.Dispose(ref _subscription);
 }

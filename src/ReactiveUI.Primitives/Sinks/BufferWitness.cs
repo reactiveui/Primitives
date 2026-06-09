@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives;
 
 /// <summary>Sink that batches source values into fixed-size windows.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-public sealed class BufferWitness<T> : SingleSourceWitness<T>
+public sealed class BufferWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
     private readonly IObserver<IList<T>> _observer;
@@ -23,6 +23,9 @@ public sealed class BufferWitness<T> : SingleSourceWitness<T>
     /// <summary>The window index, which doubles as the array slot while non-negative.</summary>
     private int _index;
 
+    /// <summary>The upstream subscription.</summary>
+    private IDisposable? _subscription;
+
     /// <summary>Initializes a new instance of the <see cref="BufferWitness{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="count">The window size.</param>
@@ -35,7 +38,7 @@ public sealed class BufferWitness<T> : SingleSourceWitness<T>
     }
 
     /// <inheritdoc/>
-    public override void OnNext(T value)
+    public void OnNext(T value)
     {
         var idx = _index;
         var buffer = _buffer;
@@ -67,14 +70,14 @@ public sealed class BufferWitness<T> : SingleSourceWitness<T>
     }
 
     /// <inheritdoc/>
-    public override void OnError(Exception error)
+    public void OnError(Exception error)
     {
         _buffer = null;
         SinkTerminal.Fault(_observer, error, this);
     }
 
     /// <inheritdoc/>
-    public override void OnCompleted()
+    public void OnCompleted()
     {
         var buffer = _buffer;
         var length = _index;
@@ -94,6 +97,13 @@ public sealed class BufferWitness<T> : SingleSourceWitness<T>
             Dispose();
         }
     }
+
+    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <param name="subscription">The upstream subscription.</param>
+    public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
+
+    /// <inheritdoc/>
+    public void Dispose() => SinkSubscription.Dispose(ref _subscription);
 
     /// <summary>Returns the window array, copying to an exact-size array only for a partial trailing window.</summary>
     /// <param name="buffer">The window buffer.</param>

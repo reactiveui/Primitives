@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives;
 
 /// <summary>Delegate-backed observer for fused prepend/append inline subscriptions.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
-public sealed class AppendDelegateWitness<T> : SingleSourceWitness<T>
+public sealed class AppendDelegateWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>The next callback.</summary>
     private readonly Action<T> _onNext;
@@ -19,6 +19,9 @@ public sealed class AppendDelegateWitness<T> : SingleSourceWitness<T>
 
     /// <summary>The appended value.</summary>
     private readonly T _value;
+
+    /// <summary>The upstream subscription.</summary>
+    private IDisposable? _subscription;
 
     /// <summary>Initializes a new instance of the <see cref="AppendDelegateWitness{T}"/> class.</summary>
     /// <param name="onNext">The next callback.</param>
@@ -34,7 +37,7 @@ public sealed class AppendDelegateWitness<T> : SingleSourceWitness<T>
     }
 
     /// <inheritdoc/>
-    public override void OnNext(T value)
+    public void OnNext(T value)
     {
         try
         {
@@ -48,7 +51,7 @@ public sealed class AppendDelegateWitness<T> : SingleSourceWitness<T>
     }
 
     /// <inheritdoc/>
-    public override void OnError(Exception error)
+    public void OnError(Exception error)
     {
         try
         {
@@ -61,7 +64,7 @@ public sealed class AppendDelegateWitness<T> : SingleSourceWitness<T>
     }
 
     /// <inheritdoc/>
-    public override void OnCompleted()
+    public void OnCompleted()
     {
         try
         {
@@ -73,4 +76,11 @@ public sealed class AppendDelegateWitness<T> : SingleSourceWitness<T>
             Dispose();
         }
     }
+
+    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <param name="subscription">The upstream subscription.</param>
+    public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
+
+    /// <inheritdoc/>
+    public void Dispose() => SinkSubscription.Dispose(ref _subscription);
 }

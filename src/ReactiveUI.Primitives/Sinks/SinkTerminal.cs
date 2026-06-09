@@ -5,7 +5,7 @@
 namespace ReactiveUI.Primitives;
 
 /// <summary>
-/// Shared terminal-forwarding helpers for <see cref="SingleSourceWitness{T}"/> sinks. Each sink computes a
+/// Shared terminal-forwarding helpers for single-source sink observers. Each sink computes a
 /// single result and forwards it downstream exactly once, disposing itself afterwards. Centralizing the
 /// <c>try</c>/<c>finally</c> forward-then-dispose dance keeps the individual sinks to their distinguishing
 /// accumulation logic and removes the otherwise-identical terminal boilerplate.

@@ -7,7 +7,7 @@ namespace ReactiveUI.Primitives;
 /// <summary>Sink that emits the final accumulation once the source completes.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TAccumulate">The accumulated value type.</typeparam>
-public sealed class ReduceWitness<TSource, TAccumulate> : SingleSourceWitness<TSource>
+public sealed class ReduceWitness<TSource, TAccumulate> : IObserver<TSource>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
     private readonly IObserver<TAccumulate> _observer;
@@ -17,6 +17,9 @@ public sealed class ReduceWitness<TSource, TAccumulate> : SingleSourceWitness<TS
 
     /// <summary>The current accumulated value.</summary>
     private TAccumulate _current;
+
+    /// <summary>The upstream subscription.</summary>
+    private IDisposable? _subscription;
 
     /// <summary>Initializes a new instance of the <see cref="ReduceWitness{TSource, TAccumulate}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
@@ -30,17 +33,18 @@ public sealed class ReduceWitness<TSource, TAccumulate> : SingleSourceWitness<TS
     }
 
     /// <inheritdoc/>
-    public override void OnNext(TSource value) => _current = _accumulator(_current, value);
+    public void OnNext(TSource value) => _current = _accumulator(_current, value);
 
     /// <inheritdoc/>
-    public override void OnError(Exception error)
-    {
-        SinkTerminal.Fault(_observer, error, this);
-    }
+    public void OnError(Exception error) => SinkTerminal.Fault(_observer, error, this);
 
     /// <inheritdoc/>
-    public override void OnCompleted()
-    {
-        SinkTerminal.Complete(_observer, _current, this);
-    }
+    public void OnCompleted() => SinkTerminal.Complete(_observer, _current, this);
+
+    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <param name="subscription">The upstream subscription.</param>
+    public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
+
+    /// <inheritdoc/>
+    public void Dispose() => SinkSubscription.Dispose(ref _subscription);
 }

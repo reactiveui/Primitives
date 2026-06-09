@@ -8,27 +8,31 @@ namespace ReactiveUI.Primitives;
 
 /// <summary>Sink that materializes notifications into <see cref="Spark{T}"/> values.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-public sealed class SparkWitness<T> : SingleSourceWitness<T>
+public sealed class SparkWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
     private readonly IObserver<Spark<T>> _observer;
+
+    /// <summary>The upstream subscription.</summary>
+    private IDisposable? _subscription;
 
     /// <summary>Initializes a new instance of the <see cref="SparkWitness{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     public SparkWitness(IObserver<Spark<T>> observer) => _observer = observer;
 
     /// <inheritdoc/>
-    public override void OnNext(T value) => _observer.OnNext(Spark.CreateOnNext(value));
+    public void OnNext(T value) => _observer.OnNext(Spark.CreateOnNext(value));
 
     /// <inheritdoc/>
-    public override void OnError(Exception error)
-    {
-        SinkTerminal.Complete(_observer, Spark.CreateOnError<T>(error), this);
-    }
+    public void OnError(Exception error) => SinkTerminal.Complete(_observer, Spark.CreateOnError<T>(error), this);
 
     /// <inheritdoc/>
-    public override void OnCompleted()
-    {
-        SinkTerminal.Complete(_observer, Spark.CreateOnCompleted<T>(), this);
-    }
+    public void OnCompleted() => SinkTerminal.Complete(_observer, Spark.CreateOnCompleted<T>(), this);
+
+    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <param name="subscription">The upstream subscription.</param>
+    public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
+
+    /// <inheritdoc/>
+    public void Dispose() => SinkSubscription.Dispose(ref _subscription);
 }

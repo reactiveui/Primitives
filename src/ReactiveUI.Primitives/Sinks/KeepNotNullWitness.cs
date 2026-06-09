@@ -6,18 +6,21 @@ namespace ReactiveUI.Primitives;
 
 /// <summary>Sink that forwards only non-null values.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-public sealed class KeepNotNullWitness<T> : SingleSourceWitness<T?>
+public sealed class KeepNotNullWitness<T> : IObserver<T?>, IDisposable
     where T : class
 {
     /// <summary>The downstream observer.</summary>
     private readonly IObserver<T> _observer;
+
+    /// <summary>The upstream subscription.</summary>
+    private IDisposable? _subscription;
 
     /// <summary>Initializes a new instance of the <see cref="KeepNotNullWitness{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     public KeepNotNullWitness(IObserver<T> observer) => _observer = observer;
 
     /// <inheritdoc/>
-    public override void OnNext(T? value)
+    public void OnNext(T? value)
     {
         if (value is null)
         {
@@ -36,14 +39,15 @@ public sealed class KeepNotNullWitness<T> : SingleSourceWitness<T?>
     }
 
     /// <inheritdoc/>
-    public override void OnError(Exception error)
-    {
-        SinkTerminal.Fault(_observer, error, this);
-    }
+    public void OnError(Exception error) => SinkTerminal.Fault(_observer, error, this);
 
     /// <inheritdoc/>
-    public override void OnCompleted()
-    {
-        SinkTerminal.Complete(_observer, this);
-    }
+    public void OnCompleted() => SinkTerminal.Complete(_observer, this);
+
+    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <param name="subscription">The upstream subscription.</param>
+    public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
+
+    /// <inheritdoc/>
+    public void Dispose() => SinkSubscription.Dispose(ref _subscription);
 }

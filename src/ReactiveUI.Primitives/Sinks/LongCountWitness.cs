@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives;
 
 /// <summary>Observer for long-counting all values.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
-public sealed class LongCountWitness<T> : SingleSourceWitness<T>
+public sealed class LongCountWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
     private readonly IObserver<long> _observer;
@@ -17,12 +17,15 @@ public sealed class LongCountWitness<T> : SingleSourceWitness<T>
     /// <summary>A value indicating whether the observer has terminated.</summary>
     private bool _done;
 
+    /// <summary>The upstream subscription.</summary>
+    private IDisposable? _subscription;
+
     /// <summary>Initializes a new instance of the <see cref="LongCountWitness{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     public LongCountWitness(IObserver<long> observer) => _observer = observer;
 
     /// <inheritdoc/>
-    public override void OnNext(T value)
+    public void OnNext(T value)
     {
         if (_done)
         {
@@ -33,7 +36,7 @@ public sealed class LongCountWitness<T> : SingleSourceWitness<T>
     }
 
     /// <inheritdoc/>
-    public override void OnError(Exception error)
+    public void OnError(Exception error)
     {
         if (_done)
         {
@@ -45,7 +48,7 @@ public sealed class LongCountWitness<T> : SingleSourceWitness<T>
     }
 
     /// <inheritdoc/>
-    public override void OnCompleted()
+    public void OnCompleted()
     {
         if (_done)
         {
@@ -55,4 +58,11 @@ public sealed class LongCountWitness<T> : SingleSourceWitness<T>
         _done = true;
         SinkTerminal.Complete(_observer, _count, this);
     }
+
+    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <param name="subscription">The upstream subscription.</param>
+    public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
+
+    /// <inheritdoc/>
+    public void Dispose() => SinkSubscription.Dispose(ref _subscription);
 }

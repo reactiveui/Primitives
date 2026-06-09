@@ -9,30 +9,7 @@ abstract ReactiveUI.Primitives.Concurrency.VirtualTimeSequencerBase<TAbsolute, T
 abstract ReactiveUI.Primitives.SingleSourceWitness<T>.OnCompleted() -> void
 abstract ReactiveUI.Primitives.SingleSourceWitness<T>.OnError(System.Exception! error) -> void
 abstract ReactiveUI.Primitives.SingleSourceWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.AllPredicateWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.AllPredicateWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.AnyWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.AnyWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.AnyWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.AnyPredicateWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.AnyPredicateWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.AnyPredicateWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.AppendDelegateWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.AppendDelegateWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.AppendDelegateWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.AppendWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.AppendWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.AppendWitness<T>.OnNext(T value) -> void
 override ReactiveUI.Primitives.BooleanTerminalWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.BufferWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.BufferWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.BufferWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.CollectArrayWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.CollectArrayWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.CollectArrayWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.CollectListWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.CollectListWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.CollectListWitness<T>.OnNext(T value) -> void
 override ReactiveUI.Primitives.Concurrency.ScheduledItem<TAbsolute>.Equals(object? obj) -> bool
 override ReactiveUI.Primitives.Concurrency.ScheduledItem<TAbsolute>.GetHashCode() -> int
 override ReactiveUI.Primitives.Concurrency.VirtualClock.Add(System.DateTimeOffset absolute, System.TimeSpan relative) -> System.DateTimeOffset
@@ -40,8 +17,6 @@ override ReactiveUI.Primitives.Concurrency.VirtualClock.ToDateTimeOffset(System.
 override ReactiveUI.Primitives.Concurrency.VirtualClock.ToRelative(System.TimeSpan timeSpan) -> System.TimeSpan
 override ReactiveUI.Primitives.Concurrency.VirtualTimeSequencer<TAbsolute, TRelative>.GetNext() -> ReactiveUI.Primitives.Concurrency.IScheduledItem<TAbsolute>?
 override ReactiveUI.Primitives.Concurrency.VirtualTimeSequencer<TAbsolute, TRelative>.ScheduleAbsolute<TState>(TState state, TAbsolute dueTime, System.Func<ReactiveUI.Primitives.Concurrency.ISequencer!, TState, System.IDisposable!>! action) -> System.IDisposable!
-override ReactiveUI.Primitives.ContainsWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.ContainsWitness<T>.OnNext(T value) -> void
 override ReactiveUI.Primitives.Core.EventPattern<TEventArgs>.Equals(object? obj) -> bool
 override ReactiveUI.Primitives.Core.EventPattern<TEventArgs>.GetHashCode() -> int
 override ReactiveUI.Primitives.Core.EventPattern<TEventArgs>.ToString() -> string!
@@ -54,48 +29,6 @@ override ReactiveUI.Primitives.Core.Spark<T>.ToString() -> string!
 override ReactiveUI.Primitives.Core.TimeInterval<T>.Equals(object? obj) -> bool
 override ReactiveUI.Primitives.Core.TimeInterval<T>.GetHashCode() -> int
 override ReactiveUI.Primitives.Core.TimeInterval<T>.ToString() -> string!
-override ReactiveUI.Primitives.CountWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.CountWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.CountWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.CountPredicateWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.CountPredicateWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.CountPredicateWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.DefaultIfEmptyWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.DefaultIfEmptyWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.DefaultIfEmptyWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.DistinctByCountWitness<T, TKey>.OnCompleted() -> void
-override ReactiveUI.Primitives.DistinctByCountWitness<T, TKey>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.DistinctByCountWitness<T, TKey>.OnNext(T value) -> void
-override ReactiveUI.Primitives.DistinctByLongCountWitness<T, TKey>.OnCompleted() -> void
-override ReactiveUI.Primitives.DistinctByLongCountWitness<T, TKey>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.DistinctByLongCountWitness<T, TKey>.OnNext(T value) -> void
-override ReactiveUI.Primitives.DistinctByWitness<T, TKey>.OnCompleted() -> void
-override ReactiveUI.Primitives.DistinctByWitness<T, TKey>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.DistinctByWitness<T, TKey>.OnNext(T value) -> void
-override ReactiveUI.Primitives.DistinctWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.DistinctWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.DistinctWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.FoldWitness<TSource, TAccumulate>.OnCompleted() -> void
-override ReactiveUI.Primitives.FoldWitness<TSource, TAccumulate>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.FoldWitness<TSource, TAccumulate>.OnNext(TSource value) -> void
-override ReactiveUI.Primitives.IgnoreValuesWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.IgnoreValuesWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.IgnoreValuesWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.KeepNotNullWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.KeepNotNullWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.KeepNotNullWitness<T>.OnNext(T? value) -> void
-override ReactiveUI.Primitives.KeepTypeWitness<TResult>.OnCompleted() -> void
-override ReactiveUI.Primitives.KeepTypeWitness<TResult>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.KeepTypeWitness<TResult>.OnNext(object? value) -> void
-override ReactiveUI.Primitives.LongCountWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.LongCountWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.LongCountWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.LongCountPredicateWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.LongCountPredicateWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.LongCountPredicateWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.ReduceWitness<TSource, TAccumulate>.OnCompleted() -> void
-override ReactiveUI.Primitives.ReduceWitness<TSource, TAccumulate>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.ReduceWitness<TSource, TAccumulate>.OnNext(TSource value) -> void
 override ReactiveUI.Primitives.RxVoid.Equals(object? obj) -> bool
 override ReactiveUI.Primitives.RxVoid.GetHashCode() -> int
 override ReactiveUI.Primitives.RxVoid.ToString() -> string!
@@ -105,33 +38,6 @@ override ReactiveUI.Primitives.Signals.CommandExecution<TResult>.Awaiter.GetHash
 ~override ReactiveUI.Primitives.Signals.CommandExecution<TResult>.Equals(object obj) -> bool
 override ReactiveUI.Primitives.Signals.CommandExecution<TResult>.GetHashCode() -> int
 ~override ReactiveUI.Primitives.Signals.CommandExecution<TResult>.ToString() -> string
-override ReactiveUI.Primitives.SkipWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.SkipWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.SkipWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.SkipWhileWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.SkipWhileWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.SkipWhileWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.SparkWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.SparkWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.SparkWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.TakeWhileWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.TakeWhileWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.TakeWhileWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.TapWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.TapWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.TapWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.TimeIntervalWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.TimeIntervalWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.TimeIntervalWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.UniqueByWitness<T, TKey>.OnCompleted() -> void
-override ReactiveUI.Primitives.UniqueByWitness<T, TKey>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.UniqueByWitness<T, TKey>.OnNext(T value) -> void
-override ReactiveUI.Primitives.UniqueWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.UniqueWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.UniqueWitness<T>.OnNext(T value) -> void
-override ReactiveUI.Primitives.UnsparkWitness<T>.OnCompleted() -> void
-override ReactiveUI.Primitives.UnsparkWitness<T>.OnError(System.Exception! error) -> void
-override ReactiveUI.Primitives.UnsparkWitness<T>.OnNext(ReactiveUI.Primitives.Core.Spark<T> spark) -> void
 ReactiveUI.Primitives.AllPredicateWitness<T>
 ReactiveUI.Primitives.AllPredicateWitness<T>.AllPredicateWitness(System.IObserver<bool>! observer, System.Func<T, bool>! predicate) -> void
 ReactiveUI.Primitives.AnyWitness<T>
@@ -1181,3 +1087,163 @@ ReactiveUI.Primitives.Signals.DelegateWitness<T>.OnError(System.Exception! error
 ReactiveUI.Primitives.Signals.DelegateWitness<T>.OnNext(T value) -> void
 static ReactiveUI.Primitives.Signals.Broadcaster<T>.operator !=(ReactiveUI.Primitives.Signals.Broadcaster<T> left, ReactiveUI.Primitives.Signals.Broadcaster<T> right) -> bool
 static ReactiveUI.Primitives.Signals.Broadcaster<T>.operator ==(ReactiveUI.Primitives.Signals.Broadcaster<T> left, ReactiveUI.Primitives.Signals.Broadcaster<T> right) -> bool
+ReactiveUI.Primitives.AllPredicateWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.AllPredicateWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.AllPredicateWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.AllPredicateWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.AllPredicateWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.AnyPredicateWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.AnyPredicateWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.AnyPredicateWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.AnyPredicateWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.AnyPredicateWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.AnyWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.AnyWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.AnyWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.AnyWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.AnyWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.AppendDelegateWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.AppendDelegateWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.AppendDelegateWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.AppendDelegateWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.AppendDelegateWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.AppendWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.AppendWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.AppendWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.AppendWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.AppendWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.BufferWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.BufferWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.BufferWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.BufferWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.BufferWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.CollectArrayWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.CollectArrayWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.CollectArrayWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.CollectArrayWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.CollectArrayWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.CollectListWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.CollectListWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.CollectListWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.CollectListWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.CollectListWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.ContainsWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.ContainsWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.ContainsWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.ContainsWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.ContainsWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.CountPredicateWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.CountPredicateWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.CountPredicateWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.CountPredicateWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.CountPredicateWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.CountWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.CountWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.CountWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.CountWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.CountWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.DefaultIfEmptyWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.DefaultIfEmptyWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.DefaultIfEmptyWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.DefaultIfEmptyWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.DefaultIfEmptyWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.DistinctByCountWitness<T, TKey>.Dispose() -> void
+ReactiveUI.Primitives.DistinctByCountWitness<T, TKey>.OnCompleted() -> void
+ReactiveUI.Primitives.DistinctByCountWitness<T, TKey>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.DistinctByCountWitness<T, TKey>.OnNext(T value) -> void
+ReactiveUI.Primitives.DistinctByCountWitness<T, TKey>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.DistinctByLongCountWitness<T, TKey>.Dispose() -> void
+ReactiveUI.Primitives.DistinctByLongCountWitness<T, TKey>.OnCompleted() -> void
+ReactiveUI.Primitives.DistinctByLongCountWitness<T, TKey>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.DistinctByLongCountWitness<T, TKey>.OnNext(T value) -> void
+ReactiveUI.Primitives.DistinctByLongCountWitness<T, TKey>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.DistinctByWitness<T, TKey>.Dispose() -> void
+ReactiveUI.Primitives.DistinctByWitness<T, TKey>.OnCompleted() -> void
+ReactiveUI.Primitives.DistinctByWitness<T, TKey>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.DistinctByWitness<T, TKey>.OnNext(T value) -> void
+ReactiveUI.Primitives.DistinctByWitness<T, TKey>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.DistinctWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.DistinctWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.DistinctWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.DistinctWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.DistinctWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.FoldWitness<TSource, TAccumulate>.Dispose() -> void
+ReactiveUI.Primitives.FoldWitness<TSource, TAccumulate>.OnCompleted() -> void
+ReactiveUI.Primitives.FoldWitness<TSource, TAccumulate>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.FoldWitness<TSource, TAccumulate>.OnNext(TSource value) -> void
+ReactiveUI.Primitives.FoldWitness<TSource, TAccumulate>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.IgnoreValuesWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.IgnoreValuesWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.IgnoreValuesWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.IgnoreValuesWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.IgnoreValuesWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.KeepNotNullWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.KeepNotNullWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.KeepNotNullWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.KeepNotNullWitness<T>.OnNext(T? value) -> void
+ReactiveUI.Primitives.KeepNotNullWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.KeepTypeWitness<TResult>.Dispose() -> void
+ReactiveUI.Primitives.KeepTypeWitness<TResult>.OnCompleted() -> void
+ReactiveUI.Primitives.KeepTypeWitness<TResult>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.KeepTypeWitness<TResult>.OnNext(object? value) -> void
+ReactiveUI.Primitives.KeepTypeWitness<TResult>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.LongCountPredicateWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.LongCountPredicateWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.LongCountPredicateWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.LongCountPredicateWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.LongCountPredicateWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.LongCountWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.LongCountWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.LongCountWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.LongCountWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.LongCountWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.ReduceWitness<TSource, TAccumulate>.Dispose() -> void
+ReactiveUI.Primitives.ReduceWitness<TSource, TAccumulate>.OnCompleted() -> void
+ReactiveUI.Primitives.ReduceWitness<TSource, TAccumulate>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.ReduceWitness<TSource, TAccumulate>.OnNext(TSource value) -> void
+ReactiveUI.Primitives.ReduceWitness<TSource, TAccumulate>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.SkipWhileWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.SkipWhileWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.SkipWhileWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.SkipWhileWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.SkipWhileWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.SkipWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.SkipWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.SkipWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.SkipWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.SkipWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.SparkWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.SparkWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.SparkWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.SparkWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.SparkWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.TakeWhileWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.TakeWhileWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.TakeWhileWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.TakeWhileWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.TakeWhileWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.TapWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.TapWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.TapWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.TapWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.TapWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.TimeIntervalWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.TimeIntervalWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.TimeIntervalWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.TimeIntervalWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.TimeIntervalWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.UniqueByWitness<T, TKey>.Dispose() -> void
+ReactiveUI.Primitives.UniqueByWitness<T, TKey>.OnCompleted() -> void
+ReactiveUI.Primitives.UniqueByWitness<T, TKey>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.UniqueByWitness<T, TKey>.OnNext(T value) -> void
+ReactiveUI.Primitives.UniqueByWitness<T, TKey>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.UniqueWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.UniqueWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.UniqueWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.UniqueWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.UniqueWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.UnsparkWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.UnsparkWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.UnsparkWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.UnsparkWitness<T>.OnNext(ReactiveUI.Primitives.Core.Spark<T> spark) -> void
+ReactiveUI.Primitives.UnsparkWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
