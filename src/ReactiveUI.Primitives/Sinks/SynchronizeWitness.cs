@@ -17,14 +17,26 @@ public sealed class SynchronizeWitness<T> : IObserver<T>, IDisposable
     private readonly IObserver<T> _observer;
 
     /// <summary>The gate that serializes every forwarded notification.</summary>
-    private readonly Lock _gate = new();
+    private readonly Lock _gate;
 
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
 
-    /// <summary>Initializes a new instance of the <see cref="SynchronizeWitness{T}"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="SynchronizeWitness{T}"/> class with a private gate.</summary>
     /// <param name="observer">The downstream observer.</param>
-    public SynchronizeWitness(IObserver<T> observer) => _observer = observer;
+    public SynchronizeWitness(IObserver<T> observer)
+        : this(observer, new Lock())
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="SynchronizeWitness{T}"/> class sharing the supplied gate.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="gate">The gate shared with other synchronized observers.</param>
+    public SynchronizeWitness(IObserver<T> observer, Lock gate)
+    {
+        _observer = observer;
+        _gate = gate;
+    }
 
     /// <inheritdoc/>
     public void OnNext(T value)

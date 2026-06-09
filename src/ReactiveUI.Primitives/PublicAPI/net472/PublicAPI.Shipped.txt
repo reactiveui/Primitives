@@ -1256,3 +1256,6 @@ ReactiveUI.Primitives.SynchronizeWitness<T>.OnNext(T value) -> void
 ReactiveUI.Primitives.SynchronizeWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
 ReactiveUI.Primitives.SynchronizeWitness<T>.SynchronizeWitness(System.IObserver<T>! observer) -> void
 static ReactiveUI.Primitives.LinqExtensions.Synchronize<T>(this System.IObservable<T>! source) -> System.IObservable<T>!
+ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Synchronize(object! gate) -> System.IObservable<T>!
+ReactiveUI.Primitives.SynchronizeWitness<T>.SynchronizeWitness(System.IObserver<T>! observer, object! gate) -> void
+static ReactiveUI.Primitives.LinqExtensions.Synchronize<T>(this System.IObservable<T>! source, object! gate) -> System.IObservable<T>!

@@ -57,6 +57,40 @@ public class SynchronizeTests
     public void SynchronizeOnNullSourceThrows() =>
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Synchronize());
 
+    /// <summary>The shared-gate operator validates its gate argument.</summary>
+    [Test]
+    public void SynchronizeOnNullGateThrows() =>
+        Assert.Throws<ArgumentNullException>(() => new ImmediateSource<int>(1).Synchronize(null!));
+
+    /// <summary>Two witnesses sharing one gate are serialized relative to each other, never overlapping on the shared downstream.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Test]
+    public async Task SharedGateSerializesAcrossTwoWitnesses()
+    {
+        var probe = new ConcurrencyProbe();
+        var gate = new Lock();
+        var first = new SynchronizeWitness<int>(probe, gate);
+        var second = new SynchronizeWitness<int>(probe, gate);
+
+        var tasks = new Task[Threads];
+        for (var t = 0; t < Threads; t++)
+        {
+            var sink = t % Second == 0 ? first : second;
+            tasks[t] = Task.Run(() =>
+            {
+                for (var i = 0; i < PerThread; i++)
+                {
+                    sink.OnNext(i);
+                }
+            });
+        }
+
+        await Task.WhenAll(tasks);
+
+        Assert.False(probe.OverlapDetected);
+        Assert.Equal(Threads * PerThread, probe.Count);
+    }
+
     /// <summary>Concurrent <c>OnNext</c> calls are serialized: the downstream is never entered re-entrantly and sees every value.</summary>
     /// <returns>A task that completes when the assertions have run.</returns>
     [Test]
