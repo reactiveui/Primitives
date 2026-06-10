@@ -5,7 +5,7 @@
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>Direct unit tests for the internal types inside
-/// <c>CombineLatestEnumerableSignal{TSource,TResult}</c> that the public API path doesn't
+/// <c>SyncLatestEnumerableSignal{TSource,TResult}</c> that the public API path doesn't
 /// fully exercise — specifically the contractual <see cref="IAsyncDisposable.DisposeAsync"/>
 /// stub on <c>IndexedWitness</c>.</summary>
 public class CombineLatestEnumerableInternalsTests
@@ -19,11 +19,11 @@ public class CombineLatestEnumerableInternalsTests
     {
         var sources = new[] { SignalAsync.Return(1) };
         var downstream = new NoOpWitness();
-        var subscription = new SignalAsyncExtensions.CombineLatestEnumerableSignal<int, int>.EnumerableCombineLatestCoordinator(
+        var subscription = new SignalAsyncExtensions.SyncLatestEnumerableSignal<int, int>.EnumerableSyncLatestCoordinator(
             sources,
             downstream,
             static s => s[0]);
-        var indexed = new SignalAsyncExtensions.CombineLatestEnumerableSignal<int, int>.IndexedWitness(subscription, 0);
+        var indexed = new SignalAsyncExtensions.SyncLatestEnumerableSignal<int, int>.IndexedWitness(subscription, 0);
 
         await indexed.DisposeAsync();
 

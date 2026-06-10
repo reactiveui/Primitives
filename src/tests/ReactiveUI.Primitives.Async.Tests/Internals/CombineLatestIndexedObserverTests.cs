@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async.Tests.Internals;
 
-/// <summary>Tests for <see cref="CombineLatestIndexedWitness{TSource, TResult}"/>, the shared per-source observer that backs every per-arity CombineLatest subscription.</summary>
+/// <summary>Tests for <see cref="SyncLatestIndexedWitness{TSource, TResult}"/>, the shared per-source observer that backs every per-arity CombineLatest subscription.</summary>
 public class CombineLatestIndexedObserverTests
 {
     /// <summary>The bitmask bit used by this test's single virtual source.</summary>
@@ -24,7 +24,7 @@ public class CombineLatestIndexedObserverTests
         var captured = new CaptureObserverAsync<int>();
         var parent = new TestSubscription(captured);
         int? stored = null;
-        var observer = new CombineLatestIndexedWitness<int, int>(parent, SourceBit, v => stored = v);
+        var observer = new SyncLatestIndexedWitness<int, int>(parent, SourceBit, v => stored = v);
 
         await observer.OnNextAsync(Sentinel, CancellationToken.None);
 
@@ -41,7 +41,7 @@ public class CombineLatestIndexedObserverTests
     {
         var captured = new CaptureObserverAsync<int>();
         var parent = new TestSubscription(captured);
-        var observer = new CombineLatestIndexedWitness<int, int>(parent, SourceBit, static _ => { });
+        var observer = new SyncLatestIndexedWitness<int, int>(parent, SourceBit, static _ => { });
         var expected = new InvalidOperationException("forward");
 
         await observer.OnErrorResumeAsync(expected, CancellationToken.None);
@@ -60,7 +60,7 @@ public class CombineLatestIndexedObserverTests
     {
         var captured = new CaptureObserverAsync<int>();
         var parent = new TestSubscription(captured);
-        var observer = new CombineLatestIndexedWitness<int, int>(parent, SourceBit, static _ => { });
+        var observer = new SyncLatestIndexedWitness<int, int>(parent, SourceBit, static _ => { });
 
         await observer.OnCompletedAsync(Result.Success);
 
@@ -75,7 +75,7 @@ public class CombineLatestIndexedObserverTests
     /// <summary>Minimal concrete subclass exposing the base's EmitLatestAsync invocation count.</summary>
     /// <param name="observer">The downstream observer.</param>
     private sealed class TestSubscription(IObserverAsync<int> observer)
-        : CombineLatestCoordinatorBase<int>(observer, sourceCount: 1)
+        : SyncLatestCoordinatorBase<int>(observer, sourceCount: 1)
     {
         /// <summary>Gets the number of times <see cref="EmitLatestAsync"/> has been invoked.</summary>
         public int EmitLatestCount { get; private set; }

@@ -80,12 +80,15 @@ public static partial class SignalAsyncExtensions
         : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
     {
         /// <inheritdoc/>
-        protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+        protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
-            if (predicate is null || predicate(value))
+            _ = cancellationToken;
+            if (predicate is not null && !predicate(value))
             {
-                await SetResultAndDisposeAsync(true).ConfigureAwait(false);
+                return default;
             }
+
+            return SetResultAndDisposeAsync(true);
         }
 
         /// <inheritdoc/>
@@ -108,12 +111,15 @@ public static partial class SignalAsyncExtensions
         private readonly Func<T, bool> _predicate = predicate;
 
         /// <inheritdoc/>
-        protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+        protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
-            if (!_predicate(value))
+            _ = cancellationToken;
+            if (_predicate(value))
             {
-                await SetResultAndDisposeAsync(false).ConfigureAwait(false);
+                return default;
             }
+
+            return SetResultAndDisposeAsync(false);
         }
 
         /// <inheritdoc/>
