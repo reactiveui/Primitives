@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Buffers;
-using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async.Disposables;
 

@@ -5,7 +5,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Internals;
-using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 
@@ -75,7 +74,7 @@ public static partial class SignalAsyncExtensions
     {
         /// <summary>The source sequences.</summary>
         private readonly IObservableAsync<TSource>[] _sources =
-            (sources as IObservableAsync<TSource>[]) ?? [.. ArgumentExceptionHelper.Check(sources)];
+            (sources as IObservableAsync<TSource>[]) ?? [.. sources ?? throw new ArgumentNullException(nameof(sources))];
 
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
@@ -141,10 +140,10 @@ public static partial class SignalAsyncExtensions
                 "Usage",
                 "CA2213:Disposable fields should be disposed",
                 Justification = "The observer is disposed by the caller or downstream.")]
-            private readonly IObserverAsync<TResult> _observer = ArgumentExceptionHelper.Check(observer);
+            private readonly IObserverAsync<TResult> _observer = observer ?? throw new ArgumentNullException(nameof(observer));
 
             /// <summary>Source list.</summary>
-            private readonly IObservableAsync<TSource>[] _sources = ArgumentExceptionHelper.Check(sources);
+            private readonly IObservableAsync<TSource>[] _sources = sources ?? throw new ArgumentNullException(nameof(sources));
 
             /// <summary>Latest values from each source.</summary>
             private readonly Optional<TSource>[] _values = new Optional<TSource>[sources.Length];

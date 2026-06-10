@@ -4,7 +4,6 @@
 
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
-using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 

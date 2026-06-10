@@ -4,7 +4,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 using ReactiveUI.Primitives.Async.Signals;
-using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 

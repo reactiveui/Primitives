@@ -5,7 +5,6 @@
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
-using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 

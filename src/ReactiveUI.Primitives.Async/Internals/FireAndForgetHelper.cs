@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
-using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async.Internals;
 

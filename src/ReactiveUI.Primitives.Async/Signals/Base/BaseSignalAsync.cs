@@ -4,7 +4,6 @@
 
 using System.Collections.Immutable;
 using ReactiveUI.Primitives.Async.Disposables;
-using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 

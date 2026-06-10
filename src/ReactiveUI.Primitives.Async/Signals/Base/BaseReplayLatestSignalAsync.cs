@@ -6,7 +6,6 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Internals;
-using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
