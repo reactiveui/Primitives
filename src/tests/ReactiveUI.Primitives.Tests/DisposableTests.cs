@@ -158,6 +158,10 @@ public class DisposableTests
 
         Assert.True(disposable.Contains(tracked));
         Assert.False(disposable.Contains(untracked));
+        Assert.False(disposable.Contains(null!));
+
+        // Removing an absent item while there is no overflow store returns false.
+        Assert.False(disposable.Remove(untracked));
     }
 
     /// <summary>Verifies <see cref="MultipleDisposable.Clear"/> disposes the contents and stays usable.</summary>
@@ -229,15 +233,31 @@ public class DisposableTests
         MultipleDisposable disposable = [.. items];
 
         Assert.Equal(items.Length, disposable.Count);
-        foreach (var item in items)
+
+        // Enumerate and copy while the group spills into the overflow store.
+        var seen = 0;
+        foreach (var unused in disposable)
         {
-            Assert.True(disposable.Contains(item));
+            seen++;
         }
 
+        Assert.Equal(items.Length, seen);
+
+        var array = new IDisposable[disposable.Count];
+        disposable.CopyTo(array, 0);
+        Assert.Equal(items.Length, array.Length);
+
+        var missing = new ActionDisposable(() => { });
+        Assert.True(disposable.Contains(items[0]));
+        Assert.True(disposable.Contains(items[items.Length - 1]));
+        Assert.False(disposable.Contains(missing));
+
         Assert.True(disposable.Remove(items[items.Length - 1]));
+        Assert.False(disposable.Remove(missing));
         Assert.Equal(items.Length - 1, disposable.Count);
 
-        disposable.Dispose();
+        // Clear disposes the remaining items, including the overflow store.
+        disposable.Clear();
         Assert.Equal(items.Length, disposedCount);
     }
 
@@ -276,6 +296,14 @@ public class DisposableTests
 
         Assert.Equal(0, disposable.Count);
         Assert.False(disposable.Contains(new ActionDisposable(() => { })));
+
+        var enumeratedAfterDispose = 0;
+        foreach (var unused in disposable)
+        {
+            enumeratedAfterDispose++;
+        }
+
+        Assert.Equal(0, enumeratedAfterDispose);
 
         var lateDisposed = 0;
         disposable.Add(new ActionDisposable(() => lateDisposed++));
