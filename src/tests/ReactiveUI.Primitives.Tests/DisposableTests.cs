@@ -213,4 +213,77 @@ public class DisposableTests
         Assert.True(Array.IndexOf(array, first) >= 0);
         Assert.True(Array.IndexOf(array, second) >= 0);
     }
+
+    /// <summary>Exercises the overflow path (more than the two inline slots) across count, contains, remove and dispose.</summary>
+    [Test]
+    public void MultipleDisposableHandlesOverflow()
+    {
+        var disposedCount = 0;
+        IDisposable[] items =
+        [
+            new ActionDisposable(() => disposedCount++),
+            new ActionDisposable(() => disposedCount++),
+            new ActionDisposable(() => disposedCount++),
+            new ActionDisposable(() => disposedCount++)
+        ];
+        MultipleDisposable disposable = [.. items];
+
+        Assert.Equal(items.Length, disposable.Count);
+        foreach (var item in items)
+        {
+            Assert.True(disposable.Contains(item));
+        }
+
+        Assert.True(disposable.Remove(items[items.Length - 1]));
+        Assert.Equal(items.Length - 1, disposable.Count);
+
+        disposable.Dispose();
+        Assert.Equal(items.Length, disposedCount);
+    }
+
+    /// <summary>Verifies <see cref="MultipleDisposable.CopyTo"/> validates its arguments.</summary>
+    [Test]
+    public void MultipleDisposableCopyToValidatesArguments()
+    {
+        var disposable = new MultipleDisposable();
+        Assert.Throws<ArgumentNullException>(() => disposable.CopyTo(null!, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => disposable.CopyTo([], -1));
+    }
+
+    /// <summary>Verifies the non-generic enumerator exposes the held disposables.</summary>
+    [Test]
+    public void MultipleDisposableNonGenericEnumeration()
+    {
+        var first = new ActionDisposable(() => { });
+        var second = new ActionDisposable(() => { });
+        MultipleDisposable disposable = [first, second];
+
+        var count = 0;
+        foreach (var unused in (System.Collections.IEnumerable)disposable)
+        {
+            count++;
+        }
+
+        Assert.Equal(disposable.Count, count);
+    }
+
+    /// <summary>Verifies behaviour once the group is disposed: queries are empty and further adds dispose immediately.</summary>
+    [Test]
+    public void MultipleDisposableAfterDisposeIsEmptyAndDisposesNewItems()
+    {
+        var disposable = new MultipleDisposable();
+        disposable.Dispose();
+
+        Assert.Equal(0, disposable.Count);
+        Assert.False(disposable.Contains(new ActionDisposable(() => { })));
+
+        var lateDisposed = 0;
+        disposable.Add(new ActionDisposable(() => lateDisposed++));
+        Assert.Equal(1, lateDisposed);
+
+        // Clear and a redundant Dispose are no-ops on an already-disposed group.
+        disposable.Clear();
+        disposable.Dispose();
+        Assert.True(disposable.IsDisposed);
+    }
 }
