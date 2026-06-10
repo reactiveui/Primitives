@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.Internal;
-
 namespace ReactiveUI.Primitives.Async.Disposables;
 
 /// <summary>Provides factory methods for creating and working with implementations of <see cref="IAsyncDisposable"/>.</summary>

@@ -5,7 +5,6 @@
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Internals;
 using ReactiveUI.Primitives.Async.Signals;
-using ReactiveUI.Primitives.Internal;
 using AsyncSignalFactory = ReactiveUI.Primitives.Async.Signals.Signal;
 
 namespace ReactiveUI.Primitives.Async;

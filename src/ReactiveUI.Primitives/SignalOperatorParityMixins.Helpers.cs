@@ -705,7 +705,7 @@ public static partial class LinqExtensions
         private readonly Lock _gate = new();
 
         /// <summary>Active subscription and timer resources.</summary>
-        private readonly MultipleDisposable _subscriptions = new();
+        private readonly MultipleDisposable _subscriptions = [];
 
         /// <summary>The active timer slot.</summary>
         private readonly SingleReplaceableDisposable _timer = new();

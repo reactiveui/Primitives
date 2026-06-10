@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using ReactiveUI.Primitives.Async.Internals;
-using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 

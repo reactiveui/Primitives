@@ -4,7 +4,6 @@
 
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
-using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
@@ -31,8 +30,6 @@ public static class Concurrent
         T value,
         CancellationToken cancellationToken)
     {
-        ArgumentExceptionHelper.ThrowIfNull(observers);
-
         var count = observers.Length;
         if (count == 0)
         {
@@ -84,8 +81,6 @@ public static class Concurrent
         Exception error,
         CancellationToken cancellationToken)
     {
-        ArgumentExceptionHelper.ThrowIfNull(observers);
-
         var count = observers.Length;
         if (count == 0)
         {
@@ -134,8 +129,6 @@ public static class Concurrent
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ValueTask ForwardOnCompletedConcurrently<T>(ImmutableArray<IObserverAsync<T>> observers, Result result)
     {
-        ArgumentExceptionHelper.ThrowIfNull(observers);
-
         var count = observers.Length;
         if (count == 0)
         {

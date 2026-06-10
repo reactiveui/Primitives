@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Blazor.Components;
 public abstract class ReactiveComponentBase : ComponentBase, IDisposable
 {
     /// <summary>Tracks subscriptions owned by the component.</summary>
-    private readonly MultipleDisposable _subscriptions = new();
+    private readonly MultipleDisposable _subscriptions = [];
 
     /// <summary>Value indicating whether the component has been disposed.</summary>
     private bool _disposed;

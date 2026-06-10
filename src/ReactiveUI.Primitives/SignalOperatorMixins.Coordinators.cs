@@ -231,7 +231,7 @@ public static partial class LinqExtensions
         private readonly Queue<IObservable<T>> _queue = new();
 
         /// <summary>Active subscriptions.</summary>
-        private readonly MultipleDisposable _pocket = new();
+        private readonly MultipleDisposable _pocket = [];
 
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer;
@@ -378,7 +378,7 @@ public static partial class LinqExtensions
         private readonly Lock _gate = new();
 
         /// <summary>Active subscriptions.</summary>
-        private readonly MultipleDisposable _pocket = new();
+        private readonly MultipleDisposable _pocket = [];
 
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer;
@@ -801,7 +801,7 @@ public static partial class LinqExtensions
         private readonly IObserver<T> _observer;
 
         /// <summary>The active subscriptions.</summary>
-        private readonly MultipleDisposable _subscriptions = new();
+        private readonly MultipleDisposable _subscriptions = [];
 
         /// <summary>The winning source index.</summary>
         private int _winner = -1;
@@ -1173,7 +1173,7 @@ public static partial class LinqExtensions
         private readonly IObserver<T> _observer;
 
         /// <summary>The active subscriptions.</summary>
-        private readonly MultipleDisposable _subscriptions = new();
+        private readonly MultipleDisposable _subscriptions = [];
 
         /// <summary>The active inner subscription.</summary>
         private readonly SingleReplaceableDisposable _innerSlot = new();

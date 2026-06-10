@@ -91,7 +91,7 @@ public static partial class LinqExtensions
         private readonly Lock _gate = new();
 
         /// <summary>The per-source subscriptions, torn down on dispose.</summary>
-        private readonly MultipleDisposable _pocket = new();
+        private readonly MultipleDisposable _pocket = [];
 
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _downstream;

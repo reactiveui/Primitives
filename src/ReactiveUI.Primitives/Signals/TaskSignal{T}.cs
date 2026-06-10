@@ -16,7 +16,7 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
 
     /// <summary>Executes the new operation.</summary>
     /// <returns>The result.</returns>
-    private readonly MultipleDisposable? _cleanUp = new();
+    private readonly MultipleDisposable? _cleanUp = [];
 
     /// <summary>Initializes a new instance of the <see cref="TaskSignal{T}" /> class.</summary>
     /// <param name="observableFactory">The observable factory.</param>

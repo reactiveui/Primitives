@@ -237,7 +237,7 @@ public static partial class LinqExtensions
         private readonly IObserver<T> _observer;
 
         /// <summary>Active subscriptions across retries.</summary>
-        private readonly MultipleDisposable _pocket = new();
+        private readonly MultipleDisposable _pocket = [];
 
         /// <summary>The number of retries attempted so far.</summary>
         private int _attempts;
