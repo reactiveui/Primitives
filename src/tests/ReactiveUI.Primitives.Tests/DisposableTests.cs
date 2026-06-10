@@ -236,7 +236,7 @@ public class DisposableTests
 
         // Enumerate and copy while the group spills into the overflow store.
         var seen = 0;
-        foreach (var unused in disposable)
+        foreach (var _ in disposable)
         {
             seen++;
         }
@@ -279,7 +279,7 @@ public class DisposableTests
         MultipleDisposable disposable = [first, second];
 
         var count = 0;
-        foreach (var unused in (System.Collections.IEnumerable)disposable)
+        foreach (var _ in (System.Collections.IEnumerable)disposable)
         {
             count++;
         }
@@ -298,7 +298,7 @@ public class DisposableTests
         Assert.False(disposable.Contains(new ActionDisposable(() => { })));
 
         var enumeratedAfterDispose = 0;
-        foreach (var unused in disposable)
+        foreach (var _ in disposable)
         {
             enumeratedAfterDispose++;
         }
