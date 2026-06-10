@@ -15,7 +15,7 @@ public static partial class SignalAsyncExtensions
 {
     /// <summary>
     /// Fuses the previous <c>Create&lt;(T, T)&gt;</c> + closure-based <c>Pairwise</c> implementation
-    /// into a single <see cref="ObserverAsync{T}"/> layer; per-subscription state is held in fields
+    /// into a single <see cref="WitnessAsync{T}"/> layer; per-subscription state is held in fields
     /// instead of a captured closure, eliminating the per-emission async-lambda state-machine box.
     /// </summary>
     /// <typeparam name="T">The element type.</typeparam>
@@ -29,7 +29,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new PairwiseWitness(observer, cancellationToken);
 
-            if (observer is ObserverAsync<(T Previous, T Current)> downstreamBase)
+            if (observer is WitnessAsync<(T Previous, T Current)> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -44,7 +44,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
         internal sealed class PairwiseWitness(
             IObserverAsync<(T Previous, T Current)> downstream,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>The previously-seen value; valid only when <see cref="_hasPrevious"/> is set.</summary>
             private T? _previous;
@@ -80,7 +80,7 @@ public static partial class SignalAsyncExtensions
     /// <summary>
     /// Combined skip-then-cast observable that fuses the previous
     /// <c>SkipWhile(value is null).Select(value!)</c> composition into a single
-    /// <see cref="ObserverAsync{T}"/> layer. Once a non-null value has been seen the gate latches
+    /// <see cref="WitnessAsync{T}"/> layer. Once a non-null value has been seen the gate latches
     /// off and the operator becomes a transparent null-stripping forwarder.
     /// </summary>
     /// <typeparam name="T">The non-nullable element type seen downstream.</typeparam>
@@ -95,7 +95,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new SkipWhileNullWitness(observer, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -110,7 +110,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
         internal sealed class SkipWhileNullWitness(
             IObserverAsync<T> downstream,
-            CancellationToken subscribeToken) : ObserverAsync<T?>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T?>(subscribeToken)
         {
             /// <summary>Latches to <see langword="true"/> once a non-null value has been forwarded.</summary>
             private bool _gateOpen;
@@ -143,7 +143,7 @@ public static partial class SignalAsyncExtensions
 
     /// <summary>
     /// Combined filter-and-cast observable that fuses the previous <c>Where(value is not null).Select(value!)</c>
-    /// composition into a single <see cref="ObserverAsync{T}"/> layer. Halves the per-emission observer-chain
+    /// composition into a single <see cref="WitnessAsync{T}"/> layer. Halves the per-emission observer-chain
     /// cost (one TryEnter / Exit, one set of chain-aware-cancellation wiring) for what is fundamentally a
     /// null-stripping projection over a single source.
     /// </summary>
@@ -161,7 +161,7 @@ public static partial class SignalAsyncExtensions
 
             // Wire sink's dispose token into the downstream's link chain so its hot path recognises
             // this token without allocating a per-emission linked CTS.
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -176,7 +176,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
         internal sealed class WhereIsNotNullWitness(
             IObserverAsync<T> downstream,
-            CancellationToken subscribeToken) : ObserverAsync<T?>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T?>(subscribeToken)
         {
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(T? value, CancellationToken cancellationToken)
@@ -202,7 +202,7 @@ public static partial class SignalAsyncExtensions
     /// <summary>
     /// Combined seed-and-distinct observable that fuses the previous
     /// <c>StartWith(seed).DistinctUntilChanged()</c> composition into a single
-    /// <see cref="ObserverAsync{T}"/> layer. The seed is emitted on subscribe and tracked as the
+    /// <see cref="WitnessAsync{T}"/> layer. The seed is emitted on subscribe and tracked as the
     /// initial "last value"; source emissions that compare equal under
     /// <see cref="EqualityComparer{T}"/> are swallowed.
     /// </summary>
@@ -218,7 +218,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new LatestOrDefaultWitness(observer, defaultValue, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -237,7 +237,7 @@ public static partial class SignalAsyncExtensions
         internal sealed class LatestOrDefaultWitness(
             IObserverAsync<T> downstream,
             T seed,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>Equality comparer used for the distinct check; matches DistinctUntilChanged's default.</summary>
             private static readonly EqualityComparer<T> Comparer = EqualityComparer<T>.Default;
@@ -269,7 +269,7 @@ public static partial class SignalAsyncExtensions
 
     /// <summary>
     /// Combined filter-and-take-one observable that fuses the previous
-    /// <c>Where(predicate).Take(1)</c> composition into a single <see cref="ObserverAsync{T}"/>
+    /// <c>Where(predicate).Take(1)</c> composition into a single <see cref="WitnessAsync{T}"/>
     /// layer. The first emission matching the predicate is forwarded, completion is signalled
     /// downstream, and the source subscription is disposed via the base observer's
     /// dispose-cascade.
@@ -286,7 +286,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new WaitUntilWitness(observer, predicate, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -303,7 +303,7 @@ public static partial class SignalAsyncExtensions
         internal sealed class WaitUntilWitness(
             IObserverAsync<T> downstream,
             Func<T, bool> predicate,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>Latches to <see langword="true"/> after the first matching emission has been forwarded.</summary>
             private bool _matched;
@@ -346,7 +346,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new AsSignalWitness(observer, cancellationToken);
 
-            if (observer is ObserverAsync<RxVoid> downstreamBase)
+            if (observer is WitnessAsync<RxVoid> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -361,7 +361,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
         internal sealed class AsSignalWitness(
             IObserverAsync<RxVoid> downstream,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
@@ -388,7 +388,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new NotWitness(observer, cancellationToken);
 
-            if (observer is ObserverAsync<bool> downstreamBase)
+            if (observer is WitnessAsync<bool> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -403,7 +403,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
         internal sealed class NotWitness(
             IObserverAsync<bool> downstream,
-            CancellationToken subscribeToken) : ObserverAsync<bool>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<bool>(subscribeToken)
         {
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(bool value, CancellationToken cancellationToken) =>
@@ -430,7 +430,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new WhereTrueWitness(observer, cancellationToken);
 
-            if (observer is ObserverAsync<bool> downstreamBase)
+            if (observer is WitnessAsync<bool> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -445,7 +445,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
         internal sealed class WhereTrueWitness(
             IObserverAsync<bool> downstream,
-            CancellationToken subscribeToken) : ObserverAsync<bool>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<bool>(subscribeToken)
         {
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(bool value, CancellationToken cancellationToken) =>
@@ -472,7 +472,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new WhereFalseWitness(observer, cancellationToken);
 
-            if (observer is ObserverAsync<bool> downstreamBase)
+            if (observer is WitnessAsync<bool> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -487,7 +487,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
         internal sealed class WhereFalseWitness(
             IObserverAsync<bool> downstream,
-            CancellationToken subscribeToken) : ObserverAsync<bool>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<bool>(subscribeToken)
         {
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(bool value, CancellationToken cancellationToken) =>

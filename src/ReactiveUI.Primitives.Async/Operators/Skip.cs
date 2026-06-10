@@ -49,7 +49,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new SkipWitness(observer, count, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -66,7 +66,7 @@ public static partial class SignalAsyncExtensions
         internal sealed class SkipWitness(
             IObserverAsync<T> downstream,
             int budget,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>Remaining skip budget; counts down to zero, at which point every subsequent value is forwarded.</summary>
             private int _remaining = budget;

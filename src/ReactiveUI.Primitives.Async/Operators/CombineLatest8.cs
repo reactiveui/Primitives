@@ -20,14 +20,47 @@ public static partial class SignalAsyncExtensions
     extension<T1>(IObservableAsync<T1> src1)
     {
         /// <summary>
-        /// Combines the latest values from eight asynchronous observable sources into a single
+        /// Combines the latest values from 8 asynchronous observable sources into a single
         /// sequence, projecting them through <paramref name="selector"/> whenever any source emits.
         /// </summary>
-        /// <remarks>
-        /// The returned sequence does not produce a value until every source has emitted at least
-        /// once. After that, each new value from any source produces a fresh projection using the
-        /// most recent value from each. Completion / failure of any source propagates downstream.
-        /// </remarks>
+        /// <typeparam name="T2">The element type of source 2.</typeparam>
+        /// <typeparam name="T3">The element type of source 3.</typeparam>
+        /// <typeparam name="T4">The element type of source 4.</typeparam>
+        /// <typeparam name="T5">The element type of source 5.</typeparam>
+        /// <typeparam name="T6">The element type of source 6.</typeparam>
+        /// <typeparam name="T7">The element type of source 7.</typeparam>
+        /// <typeparam name="T8">The element type of source 8.</typeparam>
+        /// <typeparam name="TResult">The projected element type.</typeparam>
+        /// <param name="src2">Source observable 2 whose latest value is combined.</param>
+        /// <param name="src3">Source observable 3 whose latest value is combined.</param>
+        /// <param name="src4">Source observable 4 whose latest value is combined.</param>
+        /// <param name="src5">Source observable 5 whose latest value is combined.</param>
+        /// <param name="src6">Source observable 6 whose latest value is combined.</param>
+        /// <param name="src7">Source observable 7 whose latest value is combined.</param>
+        /// <param name="src8">Source observable 8 whose latest value is combined.</param>
+        /// <param name="selector">Projects the latest value of every source into a result.</param>
+        /// <returns>An observable sequence of projected results.</returns>
+        [SuppressMessage(
+            "Major Code Smell",
+            "S107:Methods should not have too many parameters",
+            Justification = "Has more than 7 parameters - just expected for arity-N CombineLatest operator surface.")]
+        public IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, TResult>(
+            IObservableAsync<T2> src2,
+            IObservableAsync<T3> src3,
+            IObservableAsync<T4> src4,
+            IObservableAsync<T5> src5,
+            IObservableAsync<T6> src6,
+            IObservableAsync<T7> src7,
+            IObservableAsync<T8> src8,
+            Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> selector) =>
+            new CombineLatest8SignalAsync<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(
+                new(src1, src2, src3, src4, src5, src6, src7, src8),
+                selector);
+
+        /// <summary>
+        /// Combines the latest values from 8 asynchronous observable sources into a single
+        /// sequence, projecting them through <paramref name="selector"/> whenever any source emits.
+        /// </summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -58,9 +91,7 @@ public static partial class SignalAsyncExtensions
             IObservableAsync<T7> src7,
             IObservableAsync<T8> src8,
             Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> selector) =>
-            new CombineLatest8SignalAsync<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(
-                new(src1, src2, src3, src4, src5, src6, src7, src8),
-                selector);
+            src1.SyncLatest(src2, src3, src4, src5, src6, src7, src8, selector);
     }
 
     /// <summary>Async observable that combines the latest values from eight source sequences using a selector.</summary>

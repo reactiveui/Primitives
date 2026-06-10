@@ -30,8 +30,25 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that emits items from the source sequence, or from the handler-provided sequence if
         /// an exception is encountered.</returns>
         /// <exception cref="ArgumentNullException">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
+        public IObservableAsync<T> Recover(Func<Exception, IObservableAsync<T>> handler)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+            ArgumentExceptionHelper.ThrowIfNull(handler);
+
+            return new CatchSignal<T>(source, handler, null);
+        }
+
+        /// <summary>
+        /// Creates a new observable sequence that continues with a handler-provided sequence when an exception occurs
+        /// in the source sequence.
+        /// </summary>
+        /// <param name="handler">A function that receives the exception thrown by the source sequence and returns an alternative observable
+        /// sequence to continue with.</param>
+        /// <returns>An observable sequence that emits items from the source sequence, or from the handler-provided sequence if
+        /// an exception is encountered.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
         public IObservableAsync<T> Catch(Func<Exception, IObservableAsync<T>> handler)
-            => source.Catch(handler, null);
+            => source.Recover(handler);
 
         /// <summary>
         /// Creates a new observable sequence that continues with a handler-provided sequence when an exception occurs
@@ -57,6 +74,18 @@ public static partial class SignalAsyncExtensions
 
             return new CatchSignal<T>(source, handler, onErrorResume);
         }
+
+        /// <summary>Recovers from a terminal failure with a replacement sequence.</summary>
+        /// <param name="handler">The handler that produces a replacement sequence from the error.</param>
+        /// <returns>An observable sequence that recovers from failures.</returns>
+        public IObservableAsync<T> Rescue(Func<Exception, IObservableAsync<T>> handler) =>
+            source.Recover(handler);
+
+        /// <summary>Resumes with a fallback sequence after a terminal failure.</summary>
+        /// <param name="fallback">The fallback sequence used after a failure.</param>
+        /// <returns>An observable sequence that resumes with the fallback on failure.</returns>
+        public IObservableAsync<T> Resume(IObservableAsync<T> fallback) =>
+            source.Recover(_ => fallback);
 
         /// <summary>
         /// Continues the observable sequence with an alternative sequence provided by the specified handler when an
@@ -101,7 +130,7 @@ public static partial class SignalAsyncExtensions
 
             // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
             // recognises this token without allocating a per-emission linked CTS.
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -123,7 +152,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> downstream,
             Func<Exception, IObservableAsync<T>> handler,
             Func<Exception, CancellationToken, ValueTask>? onErrorResume,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>Holds the handler-produced subscription so it disposes with the sink. Single-assignment
             /// because the handler is subscribed at most once (on a failed source completion).</summary>

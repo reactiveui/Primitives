@@ -5,7 +5,7 @@
 namespace ReactiveUI.Primitives.Async.Internals;
 
 /// <summary>
-/// Per-source <see cref="ObserverAsync{T}"/> used by every <c>CombineLatestN</c> subscription. The
+/// Per-source <see cref="WitnessAsync{T}"/> used by every <c>CombineLatestN</c> subscription. The
 /// per-arity class previously declared N hand-rolled <c>OnNextN</c> / <c>OnCompletedN</c> method
 /// pairs whose bodies differed only in which <c>Optional&lt;TN&gt;</c> field they wrote and which
 /// completion bit they passed to the lifecycle. Pre-building N of these witnesses at subscription
@@ -22,7 +22,7 @@ namespace ReactiveUI.Primitives.Async.Internals;
 internal sealed class CombineLatestIndexedWitness<TSource, TResult>(
     CombineLatestCoordinatorBase<TResult> parent,
     int sourceBit,
-    Action<TSource> recordValue) : ObserverAsync<TSource>
+    Action<TSource> recordValue) : WitnessAsync<TSource>
 {
     /// <inheritdoc/>
     protected override async ValueTask OnNextAsyncCore(TSource value, CancellationToken cancellationToken)

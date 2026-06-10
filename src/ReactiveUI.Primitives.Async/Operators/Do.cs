@@ -12,64 +12,77 @@ namespace ReactiveUI.Primitives.Async;
 /// intended to be used as part of a fluent query or processing pipeline for asynchronous observables.</remarks>
 public static partial class SignalAsyncExtensions
 {
-    /// <summary>Side-effect operators that invoke callbacks for each notification of an observable source sequence.</summary>
+    /// <summary>Side-effect (Tap/Do) operators that invoke callbacks for each notification of an observable source sequence.</summary>
     /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     extension<T>(IObservableAsync<T> @this)
     {
+        /// <summary>Invokes asynchronous side effects while preserving the source values.</summary>
+        /// <param name="onNext">The asynchronous action invoked for each value.</param>
+        /// <param name="onErrorResume">The asynchronous action invoked on a resumable error.</param>
+        /// <param name="onCompleted">The asynchronous action invoked on completion.</param>
+        /// <returns>An observable sequence identical to the source.</returns>
+        public IObservableAsync<T> Tap(
+            Func<T, CancellationToken, ValueTask>? onNext,
+            Func<Exception, CancellationToken, ValueTask>? onErrorResume,
+            Func<Result, ValueTask>? onCompleted) =>
+            new TapAsyncSignal<T>(@this, onNext, onErrorResume, onCompleted);
+
+        /// <summary>Invokes an action for each value while preserving the source values.</summary>
+        /// <param name="onNext">The action invoked for each value.</param>
+        /// <returns>An observable sequence identical to the source.</returns>
+        public IObservableAsync<T> Tap(Action<T> onNext) =>
+            new TapSyncSignal<T>(@this, onNext, null, null);
+
+        /// <summary>Invokes side effects while preserving the source values.</summary>
+        /// <param name="onNext">The action invoked for each value.</param>
+        /// <param name="onError">The action invoked on an error.</param>
+        /// <param name="onCompleted">The action invoked on completion.</param>
+        /// <returns>An observable sequence identical to the source.</returns>
+        public IObservableAsync<T> Tap(
+            Action<T> onNext,
+            Action<Exception> onError,
+            Action onCompleted) =>
+            new TapSyncSignal<T>(@this, onNext, onError, _ => onCompleted());
+
         /// <summary>
         /// Invokes the specified asynchronous actions for each element, error, or completion notification in the
         /// observable sequence without modifying the sequence.
         /// </summary>
-        /// <remarks>Use this method to perform side effects such as logging, resource cleanup, or
-        /// notification in response to elements, errors, or completion events in the sequence. The callbacks are
-        /// invoked asynchronously and do not alter the elements or flow of the sequence.</remarks>
-        /// <param name="onNext">An asynchronous callback to invoke for each element in the sequence. Receives the element and a cancellation
-        /// token. If null, no action is taken on elements.</param>
-        /// <param name="onErrorResume">An optional asynchronous callback to invoke if an error occurs in the sequence. Receives the exception and a
-        /// cancellation token. If null, errors are not handled by this observer.</param>
-        /// <param name="onCompleted">An optional asynchronous callback to invoke when the sequence completes. Receives the result of the
-        /// sequence. If null, no action is taken on completion.</param>
-        /// <returns>An observable sequence that is identical to the source sequence but invokes the specified callbacks for side
-        /// effects.</returns>
+        /// <param name="onNext">An asynchronous callback to invoke for each element in the sequence.</param>
+        /// <param name="onErrorResume">An optional asynchronous callback to invoke if an error occurs in the sequence.</param>
+        /// <param name="onCompleted">An optional asynchronous callback to invoke when the sequence completes.</param>
+        /// <returns>An observable sequence that is identical to the source sequence but invokes the specified callbacks.</returns>
         public IObservableAsync<T> Do(
             Func<T, CancellationToken, ValueTask>? onNext,
             Func<Exception, CancellationToken, ValueTask>? onErrorResume,
             Func<Result, ValueTask>? onCompleted) =>
-            new DoAsyncSignal<T>(@this, onNext, onErrorResume, onCompleted);
+            @this.Tap(onNext, onErrorResume, onCompleted);
 
         /// <summary>Invokes the specified asynchronous action for each element in the observable sequence without modifying the sequence.</summary>
-        /// <param name="onNext">An asynchronous callback to invoke for each element in the sequence. Receives the element and a cancellation
-        /// token. If null, no action is taken on elements.</param>
-        /// <returns>An observable sequence that is identical to the source sequence but invokes the specified callback for side
-        /// effects.</returns>
+        /// <param name="onNext">An asynchronous callback to invoke for each element in the sequence.</param>
+        /// <returns>An observable sequence that is identical to the source sequence but invokes the specified callback.</returns>
         public IObservableAsync<T> Do(Func<T, CancellationToken, ValueTask>? onNext) =>
-            new DoAsyncSignal<T>(@this, onNext, null, null);
+            new TapAsyncSignal<T>(@this, onNext, null, null);
 
         /// <summary>
         /// Invokes the specified actions in response to notifications from the observable sequence without modifying
         /// the sequence itself.
         /// </summary>
-        /// <remarks>Use this method to perform side effects such as logging, monitoring, or debugging in
-        /// response to sequence events without altering the sequence's behavior. The returned observable passes through
-        /// all elements and notifications unchanged.</remarks>
-        /// <param name="onNext">An action to invoke for each element in the sequence as it is emitted. If null, no action is taken on
-        /// element emission.</param>
-        /// <param name="onErrorResume">An action to invoke if an error occurs in the sequence. Receives the exception that caused the error. If
-        /// null, no action is taken on error.</param>
-        /// <param name="onCompleted">An action to invoke when the sequence completes, receiving the final result. If null, no action is taken on
-        /// completion.</param>
-        /// <returns>An observable sequence that is identical to the source sequence but invokes the specified actions for each
-        /// notification.</returns>
+        /// <param name="onNext">An action to invoke for each element in the sequence as it is emitted.</param>
+        /// <param name="onErrorResume">An action to invoke if an error occurs in the sequence.</param>
+        /// <param name="onCompleted">An action to invoke when the sequence completes, receiving the final result.</param>
+        /// <returns>An observable sequence that is identical to the source sequence but invokes the specified actions.</returns>
         public IObservableAsync<T> Do(
             Action<T>? onNext,
             Action<Exception>? onErrorResume,
-            Action<Result>? onCompleted) => new DoSyncSignal<T>(@this, onNext, onErrorResume, onCompleted);
+            Action<Result>? onCompleted) =>
+            new TapSyncSignal<T>(@this, onNext, onErrorResume, onCompleted);
 
         /// <summary>Returns an observable sequence that is identical to the source sequence and performs no side effects.</summary>
         /// <returns>An observable sequence that is identical to the source sequence.</returns>
         public IObservableAsync<T> Do() =>
-            new DoSyncSignal<T>(@this, null, null, null);
+            new TapSyncSignal<T>(@this, null, null, null);
     }
 
     /// <summary>An observable that invokes asynchronous side-effect callbacks for each notification.</summary>
@@ -78,7 +91,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="onNext">An asynchronous callback to invoke for each element, or null to take no action on elements.</param>
     /// <param name="onErrorResume">An asynchronous callback to invoke on error, or null to take no action on errors.</param>
     /// <param name="onCompleted">An asynchronous callback to invoke on completion, or null to take no action on completion.</param>
-    internal sealed class DoAsyncSignal<T>(
+    internal sealed class TapAsyncSignal<T>(
         IObservableAsync<T> source,
         Func<T, CancellationToken, ValueTask>? onNext,
         Func<Exception, CancellationToken, ValueTask>? onErrorResume,
@@ -147,7 +160,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="onNext">An action to invoke for each element, or null to take no action on elements.</param>
     /// <param name="onErrorResume">An action to invoke on error, or null to take no action on errors.</param>
     /// <param name="onCompleted">An action to invoke on completion, or null to take no action on completion.</param>
-    internal sealed class DoSyncSignal<T>(
+    internal sealed class TapSyncSignal<T>(
         IObservableAsync<T> source,
         Action<T>? onNext,
         Action<Exception>? onErrorResume,

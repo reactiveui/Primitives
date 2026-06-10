@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Async;
 /// models.</remarks>
 public static partial class SignalAsyncExtensions
 {
-    /// <summary>Merge operators for an observable source sequence of inner observable sequences.</summary>
+    /// <summary>Blend/Merge operators for an observable source sequence of inner observable sequences.</summary>
     /// <param name="this">The source asynchronous observable sequence whose elements are themselves observable sequences to be merged.
     /// Cannot be null.</param>
     /// <typeparam name="T">The type of the elements emitted by the inner observable sequences.</typeparam>
@@ -30,25 +30,28 @@ public static partial class SignalAsyncExtensions
         /// available. The merged sequence completes when the source sequence and all inner sequences have completed. If any
         /// inner sequence signals an error, the merged sequence will propagate that error and terminate.</remarks>
         /// <returns>An asynchronous observable sequence that emits items from all inner observable sequences as they are produced.</returns>
-        public IObservableAsync<T> Merge() =>
+        public IObservableAsync<T> Blend() =>
             new MergeSignalSourcesSignal<T>(@this);
+
+        /// <summary>
+        /// Merges multiple asynchronous observable sequences into a single observable sequence that emits items from all
+        /// inner sequences as they arrive.
+        /// </summary>
+        /// <returns>An asynchronous observable sequence that emits items from all inner observable sequences as they are produced.</returns>
+        public IObservableAsync<T> Merge() =>
+            @this.Blend();
 
         /// <summary>
         /// Merges the emissions of multiple asynchronous observable sequences into a single observable sequence, limiting
         /// the number of concurrent subscriptions.
         /// </summary>
-        /// <remarks>If the number of active inner subscriptions reaches the specified maximum, additional inner
-        /// sequences are queued and subscribed to as others complete. The resulting sequence completes when all inner
-        /// sequences have completed. If the source or any inner observable sequence signals an error, the resulting
-        /// sequence will propagate that error and terminate.</remarks>
-        /// <param name="maxConcurrent">The maximum number of inner observable sequences to subscribe to concurrently. Must be greater than zero.</param>
-        /// <returns>An observable sequence that emits the items from the merged inner observable sequences, with at most the
-        /// specified number of concurrent subscriptions.</returns>
+        /// <param name="maxConcurrent">The maximum number of inner observable sequences to subscribe to concurrently.</param>
+        /// <returns>An observable sequence that emits the items from the merged inner observable sequences.</returns>
         public IObservableAsync<T> Merge(int maxConcurrent) =>
             new MergeSignalSourcesSignalWithMaxConcurrency<T>(@this, maxConcurrent);
     }
 
-    /// <summary>Merge operators for an enumerable collection of observable source sequences.</summary>
+    /// <summary>Blend/Merge operators for an enumerable collection of observable source sequences.</summary>
     /// <param name="this">A collection of asynchronous observable sequences to be merged.</param>
     /// <typeparam name="T">The type of the elements produced by the observable sequences.</typeparam>
     extension<T>(IEnumerable<IObservableAsync<T>> @this)
@@ -62,11 +65,19 @@ public static partial class SignalAsyncExtensions
         /// source sequences have completed. If any source sequence signals an error, the merged sequence will propagate
         /// that error and terminate.</remarks>
         /// <returns>An observable sequence that emits items from all input sequences as they are produced.</returns>
-        public IObservableAsync<T> Merge() =>
+        public IObservableAsync<T> Blend() =>
             new MergeEnumerableSignal<T>(@this);
+
+        /// <summary>
+        /// Combines multiple asynchronous observable sequences into a single observable sequence that emits items from all
+        /// source sequences as they arrive.
+        /// </summary>
+        /// <returns>An observable sequence that emits items from all input sequences as they are produced.</returns>
+        public IObservableAsync<T> Merge() =>
+            @this.Blend();
     }
 
-    /// <summary>Merge operators that combine an observable source sequence with another sequence.</summary>
+    /// <summary>Blend/Merge operators that combine an observable source sequence with another sequence.</summary>
     /// <param name="this">The first asynchronous observable sequence to merge.</param>
     /// <typeparam name="T">The type of the elements in the observable sequences.</typeparam>
     extension<T>(IObservableAsync<T> @this)
@@ -77,8 +88,14 @@ public static partial class SignalAsyncExtensions
         /// error, the merged sequence will propagate that error and terminate.</remarks>
         /// <param name="other">The second asynchronous observable sequence to merge with the first.</param>
         /// <returns>An SignalAsync{T} that emits the elements from both input sequences as they arrive.</returns>
-        public IObservableAsync<T> Merge(IObservableAsync<T> other) =>
+        public IObservableAsync<T> Blend(IObservableAsync<T> other) =>
             new MergeEnumerableSignal<T>([@this, other]);
+
+        /// <summary>Combines the elements of two asynchronous observable sequences into a single sequence by merging their emissions.</summary>
+        /// <param name="other">The second asynchronous observable sequence to merge with the first.</param>
+        /// <returns>An observable that emits the elements from both input sequences as they arrive.</returns>
+        public IObservableAsync<T> Merge(IObservableAsync<T> other) =>
+            @this.Blend(other);
     }
 
     /// <summary>Async observable that merges items from an observable of observables into a single stream.</summary>
@@ -336,7 +353,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Witness that forwards items from an inner observable to the parent merge subscription.</summary>
         /// <param name="parent">The parent merge coordinator that receives forwarded notifications.</param>
-        internal class MergeBranchWitness(MergeCoordinator<T> parent) : ObserverAsync<T>
+        internal class MergeBranchWitness(MergeCoordinator<T> parent) : WitnessAsync<T>
         {
             /// <summary>Subscribes this witness to an inner observable sequence.</summary>
             /// <param name="inner">The inner observable to subscribe to.</param>
@@ -437,7 +454,7 @@ public static partial class SignalAsyncExtensions
         {
             /// <summary>Tracks whether the semaphore slot has already been released for this witness.</summary>
             /// <remarks>
-            /// <see cref="ObserverAsync{T}.DisposeAsync"/> can be invoked more than once for the same witness
+            /// <see cref="WitnessAsync{T}.DisposeAsync"/> can be invoked more than once for the same witness
             /// (auto-dispose after <c>OnCompletedAsync</c>, then again from <c>CompositeDisposableAsync.Remove</c>
             /// and from the parent's <c>FinishAsync</c> path). Without this guard, <see cref="SemaphoreSlim.Release()"/>
             /// would be called multiple times per witness, exceeding <c>maxCount</c> and throwing
@@ -741,7 +758,7 @@ public static partial class SignalAsyncExtensions
 
             /// <summary>Witness that forwards items from an inner source to the parent enumerable merge subscription.</summary>
             /// <param name="parent">The parent enumerable merge coordinator that receives forwarded notifications.</param>
-            internal sealed class MergeBranchWitness(MergeSequenceCoordinator parent) : ObserverAsync<T>
+            internal sealed class MergeBranchWitness(MergeSequenceCoordinator parent) : WitnessAsync<T>
             {
                 /// <inheritdoc/>
                 protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)

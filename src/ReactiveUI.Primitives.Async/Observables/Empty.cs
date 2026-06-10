@@ -25,7 +25,16 @@ public static partial class SignalAsync
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
         Justification = "Public factory API — caller specifies T explicitly: SignalAsync.Empty<int>().")]
-    public static IObservableAsync<T> Empty<T>() => EmptySignalAsync<T>.Instance;
+    public static IObservableAsync<T> None<T>() => EmptySignalAsync<T>.Instance;
+
+    /// <summary>Creates an observable sequence that completes immediately without emitting any items.</summary>
+    /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
+    /// <returns>An observable sequence of type <typeparamref name="T"/> that completes immediately without producing any values.</returns>
+    [SuppressMessage(
+        "Major Code Smell",
+        "S4018:Generic methods should provide type parameters",
+        Justification = "Public factory API — caller specifies T explicitly: SignalAsync.Empty<int>().")]
+    public static IObservableAsync<T> Empty<T>() => None<T>();
 
     /// <summary>
     /// Dedicated singleton observable that signals immediate successful completion on subscribe. Replaces the

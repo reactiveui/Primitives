@@ -50,7 +50,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>A witness that forwards values and completion, but converts resumable errors into failure completions.</summary>
         /// <param name="observer">The downstream observer to forward notifications to.</param>
-        internal sealed class OnErrorResumeAsFailureWitness(IObserverAsync<T> observer) : ObserverAsync<T>
+        internal sealed class OnErrorResumeAsFailureWitness(IObserverAsync<T> observer) : WitnessAsync<T>
         {
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>

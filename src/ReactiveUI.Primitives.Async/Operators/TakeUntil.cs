@@ -266,7 +266,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="parent">The parent observable that owns this subscription.</param>
         /// <param name="observer">The downstream observer to forward items to.</param>
         internal sealed class PredicateStopCoordinator(PredicateStopSignal<T> parent, IObserverAsync<T> observer)
-            : ObserverAsync<T>
+            : WitnessAsync<T>
         {
             /// <summary>The inner subscription handle.</summary>
             private IAsyncDisposable? _subscription;
@@ -731,7 +731,7 @@ public static partial class SignalAsyncExtensions
 
             /// <summary>Observer for the signal observable that triggers completion of the source subscription.</summary>
             /// <param name="parent">The parent coordinator that owns this witness.</param>
-            internal sealed class StopSignalWitness(AsyncStopCoordinator parent) : ObserverAsync<TOther>
+            internal sealed class StopSignalWitness(AsyncStopCoordinator parent) : WitnessAsync<TOther>
             {
                 /// <inheritdoc/>
                 protected override async ValueTask OnNextAsyncCore(TOther value, CancellationToken cancellationToken)
@@ -798,7 +798,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="observer">The downstream observer.</param>
         internal sealed class AsyncPredicateStopCoordinator(
             AsyncPredicateStopSignal<T> parent,
-            IObserverAsync<T> observer) : ObserverAsync<T>
+            IObserverAsync<T> observer) : WitnessAsync<T>
         {
             /// <summary>The inner subscription handle.</summary>
             private IAsyncDisposable? _subscription;

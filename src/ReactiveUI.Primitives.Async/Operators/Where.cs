@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Async;
 /// functions for filtering sequences.</remarks>
 public static partial class SignalAsyncExtensions
 {
-    /// <summary>Filtering operators for an observable source sequence.</summary>
+    /// <summary>Filtering (Keep/Where) operators for an observable source sequence.</summary>
     /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     extension<T>(IObservableAsync<T> @this)
@@ -29,8 +29,8 @@ public static partial class SignalAsyncExtensions
         /// langword="false"/>.</param>
         /// <returns>An observable sequence that emits only those elements for which the predicate returns <see
         /// langword="true"/>.</returns>
-        public IObservableAsync<T> Where(Func<T, CancellationToken, ValueTask<bool>> predicate) =>
-            new WhereAsyncSignal<T>(@this, predicate);
+        public IObservableAsync<T> Keep(Func<T, CancellationToken, ValueTask<bool>> predicate) =>
+            new KeepAsyncSignal<T>(@this, predicate);
 
         /// <summary>
         /// Creates a new observable sequence that contains only the elements from the current sequence that satisfy the
@@ -43,19 +43,54 @@ public static partial class SignalAsyncExtensions
         /// function returns <see langword="true"/>.</param>
         /// <returns>An observable sequence that contains elements from the current sequence that satisfy the specified
         /// predicate.</returns>
+        public IObservableAsync<T> Keep(Func<T, bool> predicate) =>
+            new KeepSyncSignal<T>(@this, predicate);
+
+        /// <summary>Keeps values that satisfy a stateful predicate.</summary>
+        /// <typeparam name="TState">The caller-supplied state type.</typeparam>
+        /// <param name="state">The caller-supplied state passed to the predicate.</param>
+        /// <param name="predicate">The predicate that values and the state must satisfy.</param>
+        /// <returns>An observable sequence of values that satisfy the predicate.</returns>
+        public IObservableAsync<T> KeepWith<TState>(
+            TState state,
+            Func<TState, T, bool> predicate)
+        {
+            if (predicate is null)
+            {
+                throw new ArgumentNullException(nameof(predicate));
+            }
+
+            return @this.Keep(value => predicate(state, value));
+        }
+
+        /// <summary>
+        /// Creates a new observable sequence that contains only the elements from the source sequence that satisfy the
+        /// specified asynchronous predicate.
+        /// </summary>
+        /// <param name="predicate">A function that evaluates each element and cancellation token.</param>
+        /// <returns>An observable sequence that emits only those elements for which the predicate returns <see langword="true"/>.</returns>
+        public IObservableAsync<T> Where(Func<T, CancellationToken, ValueTask<bool>> predicate) =>
+            @this.Keep(predicate);
+
+        /// <summary>
+        /// Creates a new observable sequence that contains only the elements from the current sequence that satisfy the
+        /// specified predicate.
+        /// </summary>
+        /// <param name="predicate">A function to test each element for a condition.</param>
+        /// <returns>An observable sequence that contains elements from the current sequence that satisfy the predicate.</returns>
         public IObservableAsync<T> Where(Func<T, bool> predicate) =>
-            new WhereSyncSignal<T>(@this, predicate);
+            @this.Keep(predicate);
     }
 
     /// <summary>
-    /// Async-predicate variant of <see cref="Where{T}(IObservableAsync{T}, Func{T,CancellationToken,ValueTask{bool}})"/>.
+    /// Async-predicate variant of <see cref="Keep{T}(IObservableAsync{T}, Func{T,CancellationToken,ValueTask{bool}})"/>.
     /// Allocates one observable wrapper and one sealed observer per subscription — no per-emission closure or
     /// state-machine box from the previous <c>Create&lt;T&gt;((observer, token) =&gt; ...)</c> pattern.
     /// </summary>
     /// <typeparam name="T">The element type of the source sequence.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="predicate">The asynchronous predicate.</param>
-    internal sealed class WhereAsyncSignal<T>(
+    internal sealed class KeepAsyncSignal<T>(
         IObservableAsync<T> source,
         Func<T, CancellationToken, ValueTask<bool>> predicate) : SignalAsync<T>
     {
@@ -64,11 +99,11 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new WhereAsyncWitness(observer, predicate, cancellationToken);
+            var sink = new KeepAsyncWitness(observer, predicate, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
             // recognises this token without allocating a per-emission linked CTS.
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -82,10 +117,10 @@ public static partial class SignalAsyncExtensions
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="predicate">The async predicate.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
-        internal sealed class WhereAsyncWitness(
+        internal sealed class KeepAsyncWitness(
             IObserverAsync<T> downstream,
             Func<T, CancellationToken, ValueTask<bool>> predicate,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <inheritdoc/>
             protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
@@ -107,14 +142,14 @@ public static partial class SignalAsyncExtensions
     }
 
     /// <summary>
-    /// Synchronous-predicate variant of <see cref="Where{T}(IObservableAsync{T}, Func{T,bool})"/>. Same allocation
-    /// profile as <see cref="WhereAsyncSignal{T}"/> but the per-emission <c>OnNextAsyncCore</c> is sync-completed
+    /// Synchronous-predicate variant of <see cref="Keep{T}(IObservableAsync{T}, Func{T,bool})"/>. Same allocation
+    /// profile as <see cref="KeepAsyncSignal{T}"/> but the per-emission <c>OnNextAsyncCore</c> is sync-completed
     /// when the predicate rejects, avoiding any state-machine box on rejection.
     /// </summary>
     /// <typeparam name="T">The element type of the source sequence.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="predicate">The synchronous predicate.</param>
-    internal sealed class WhereSyncSignal<T>(
+    internal sealed class KeepSyncSignal<T>(
         IObservableAsync<T> source,
         Func<T, bool> predicate) : SignalAsync<T>
     {
@@ -123,11 +158,11 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new WhereSyncWitness(observer, predicate, cancellationToken);
+            var sink = new KeepSyncWitness(observer, predicate, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
             // recognises this token without allocating a per-emission linked CTS.
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -141,10 +176,10 @@ public static partial class SignalAsyncExtensions
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="predicate">The sync predicate.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
-        internal sealed class WhereSyncWitness(
+        internal sealed class KeepSyncWitness(
             IObserverAsync<T> downstream,
             Func<T, bool> predicate,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)

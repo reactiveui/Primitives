@@ -22,8 +22,18 @@ public static partial class SignalAsyncExtensions
         /// <param name="delayInterval">The time span by which to delay each element notification. Must be non-negative.</param>
         /// <returns>An observable sequence with element notifications time-shifted by the specified duration.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="delayInterval"/> is negative.</exception>
-        public IObservableAsync<T> Delay(TimeSpan delayInterval)
+        public IObservableAsync<T> Shift(TimeSpan delayInterval)
             => @this.Delay(delayInterval, (TimeProvider?)null);
+
+        /// <summary>
+        /// Time-shifts the observable sequence by the specified time span. Each element notification
+        /// is delayed by the specified duration.
+        /// </summary>
+        /// <param name="delayInterval">The time span by which to delay each element notification. Must be non-negative.</param>
+        /// <returns>An observable sequence with element notifications time-shifted by the specified duration.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="delayInterval"/> is negative.</exception>
+        public IObservableAsync<T> Delay(TimeSpan delayInterval)
+            => @this.Shift(delayInterval);
 
         /// <summary>
         /// Time-shifts the observable sequence by the specified time span. Each element notification
@@ -81,7 +91,7 @@ public static partial class SignalAsyncExtensions
             TimeSpan delayInterval,
             TimeProvider timeProvider,
             CancellationToken subscribeToken)
-            : ObserverAsync<T>(subscribeToken)
+            : WitnessAsync<T>(subscribeToken)
         {
             /// <inheritdoc/>
             protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)

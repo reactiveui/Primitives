@@ -27,7 +27,7 @@ public static partial class SignalAsyncExtensions
         /// affected.</remarks>
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not equal to their
         /// immediate predecessor.</returns>
-        public IObservableAsync<T> DistinctUntilChanged() => @this.DistinctUntilChanged(EqualityComparer<T>.Default);
+        public IObservableAsync<T> Unique() => @this.Unique(EqualityComparer<T>.Default);
 
         /// <summary>
         /// Returns an observable sequence that emits elements from the source sequence only when the current element is
@@ -40,12 +40,12 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that contains only distinct consecutive elements from the source sequence, as
         /// determined by the specified equality comparer.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="equalityComparer"/> is <see langword="null"/>.</exception>
-        public IObservableAsync<T> DistinctUntilChanged(IEqualityComparer<T> equalityComparer)
+        public IObservableAsync<T> Unique(IEqualityComparer<T> equalityComparer)
         {
             ArgumentExceptionHelper.ThrowIfNull(@this);
             ArgumentExceptionHelper.ThrowIfNull(equalityComparer);
 
-            return new DistinctUntilChangedSignal<T>(@this, equalityComparer);
+            return new UniqueSignal<T>(@this, equalityComparer);
         }
 
         /// <summary>
@@ -59,8 +59,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="keySelector">A function that extracts the comparison key from each element in the source sequence.</param>
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
         /// duplicates according to the specified key.</returns>
-        public IObservableAsync<T> DistinctUntilChangedBy<TKey>(Func<T, TKey> keySelector) =>
-            @this.DistinctUntilChangedBy(keySelector, EqualityComparer<TKey>.Default);
+        public IObservableAsync<T> UniqueBy<TKey>(Func<T, TKey> keySelector) =>
+            @this.UniqueBy(keySelector, EqualityComparer<TKey>.Default);
 
         /// <summary>
         /// Returns an observable sequence that emits elements from the source sequence, suppressing consecutive
@@ -75,7 +75,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
         /// duplicates according to the specified key and comparer.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="keySelector"/> or <paramref name="equalityComparer"/> is null.</exception>
-        public IObservableAsync<T> DistinctUntilChangedBy<TKey>(
+        public IObservableAsync<T> UniqueBy<TKey>(
             Func<T, TKey> keySelector,
             IEqualityComparer<TKey> equalityComparer)
         {
@@ -83,8 +83,53 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(keySelector);
             ArgumentExceptionHelper.ThrowIfNull(equalityComparer);
 
-            return new DistinctUntilChangedBySignal<T, TKey>(@this, keySelector, equalityComparer);
+            return new UniqueBySignal<T, TKey>(@this, keySelector, equalityComparer);
         }
+
+        /// <summary>
+        /// Returns an observable sequence that emits only distinct consecutive elements, suppressing duplicates that
+        /// are equal to the previous element.
+        /// </summary>
+        /// <returns>An observable sequence that contains only the elements from the source sequence that are not equal to their
+        /// immediate predecessor.</returns>
+        public IObservableAsync<T> DistinctUntilChanged() => @this.Unique();
+
+        /// <summary>
+        /// Returns an observable sequence that emits elements from the source sequence only when the current element is
+        /// not equal to the previous element, as determined by the specified equality comparer.
+        /// </summary>
+        /// <param name="equalityComparer">An equality comparer used to determine whether consecutive elements are considered equal.</param>
+        /// <returns>An observable sequence that contains only distinct consecutive elements from the source sequence, as
+        /// determined by the specified equality comparer.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="equalityComparer"/> is <see langword="null"/>.</exception>
+        public IObservableAsync<T> DistinctUntilChanged(IEqualityComparer<T> equalityComparer) =>
+            @this.Unique(equalityComparer);
+
+        /// <summary>
+        /// Returns an observable sequence that emits elements from the source sequence, suppressing consecutive
+        /// duplicates as determined by a key selector function.
+        /// </summary>
+        /// <typeparam name="TKey">The type of the key used to determine whether consecutive elements are considered duplicates.</typeparam>
+        /// <param name="keySelector">A function that extracts the comparison key from each element in the source sequence.</param>
+        /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
+        /// duplicates according to the specified key.</returns>
+        public IObservableAsync<T> DistinctUntilChangedBy<TKey>(Func<T, TKey> keySelector) =>
+            @this.UniqueBy(keySelector);
+
+        /// <summary>
+        /// Returns an observable sequence that emits elements from the source sequence, suppressing consecutive
+        /// duplicates as determined by a key selector and equality comparer.
+        /// </summary>
+        /// <typeparam name="TKey">The type of the key used to determine whether consecutive elements are considered duplicates.</typeparam>
+        /// <param name="keySelector">A function that extracts the comparison key from each element in the source sequence.</param>
+        /// <param name="equalityComparer">An equality comparer used to compare keys for equality.</param>
+        /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
+        /// duplicates according to the specified key and comparer.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="keySelector"/> or <paramref name="equalityComparer"/> is null.</exception>
+        public IObservableAsync<T> DistinctUntilChangedBy<TKey>(
+            Func<T, TKey> keySelector,
+            IEqualityComparer<TKey> equalityComparer) =>
+            @this.UniqueBy(keySelector, equalityComparer);
     }
 
     /// <summary>
@@ -94,16 +139,16 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="comparer">The equality comparer used to detect duplicates.</param>
-    internal sealed class DistinctUntilChangedSignal<T>(IObservableAsync<T> source, IEqualityComparer<T> comparer) : SignalAsync<T>
+    internal sealed class UniqueSignal<T>(IObservableAsync<T> source, IEqualityComparer<T> comparer) : SignalAsync<T>
     {
         /// <inheritdoc/>
         protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new DistinctUntilChangedWitness(observer, comparer, cancellationToken);
+            var sink = new UniqueWitness(observer, comparer, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -117,10 +162,10 @@ public static partial class SignalAsyncExtensions
         /// <param name="downstream">The downstream witness.</param>
         /// <param name="comparer">The equality comparer.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class DistinctUntilChangedWitness(
+        internal sealed class UniqueWitness(
             IObserverAsync<T> downstream,
             IEqualityComparer<T> comparer,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>The previously-forwarded value; valid only when <see cref="_hasPrevious"/> is set.</summary>
             private T? _previous;
@@ -160,7 +205,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The upstream observable.</param>
     /// <param name="keySelector">The key selector.</param>
     /// <param name="comparer">The key equality comparer.</param>
-    internal sealed class DistinctUntilChangedBySignal<T, TKey>(
+    internal sealed class UniqueBySignal<T, TKey>(
         IObservableAsync<T> source,
         Func<T, TKey> keySelector,
         IEqualityComparer<TKey> comparer) : SignalAsync<T>
@@ -170,9 +215,9 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new DistinctUntilChangedByWitness(observer, keySelector, comparer, cancellationToken);
+            var sink = new UniqueByWitness(observer, keySelector, comparer, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -187,11 +232,11 @@ public static partial class SignalAsyncExtensions
         /// <param name="keySelector">The key selector.</param>
         /// <param name="comparer">The key equality comparer.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class DistinctUntilChangedByWitness(
+        internal sealed class UniqueByWitness(
             IObserverAsync<T> downstream,
             Func<T, TKey> keySelector,
             IEqualityComparer<TKey> comparer,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>The previously-forwarded key; valid only when <see cref="_hasPrevious"/> is set.</summary>
             private TKey? _previousKey;

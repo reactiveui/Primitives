@@ -58,7 +58,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new TakeWhileSyncWitness(observer, predicate, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -75,7 +75,7 @@ public static partial class SignalAsyncExtensions
         internal sealed class TakeWhileSyncWitness(
             IObserverAsync<T> downstream,
             Func<T, bool> predicate,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>Latches to <see langword="true"/> once the predicate has returned <see langword="false"/>.</summary>
             private bool _terminated;
@@ -122,7 +122,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new TakeWhileAsyncWitness(observer, predicate, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -139,7 +139,7 @@ public static partial class SignalAsyncExtensions
         internal sealed class TakeWhileAsyncWitness(
             IObserverAsync<T> downstream,
             Func<T, CancellationToken, ValueTask<bool>> predicate,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>Latches to <see langword="true"/> once the predicate has returned <see langword="false"/>.</summary>
             private bool _terminated;

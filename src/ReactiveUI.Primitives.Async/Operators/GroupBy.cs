@@ -113,7 +113,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="observer">The downstream observer to receive grouped observables.</param>
         internal sealed class GroupingCoordinator(
             GroupByAsyncSignal<TKey, TValue> parent,
-            IObserverAsync<GroupedAsyncSignal<TKey, TValue>> observer) : ObserverAsync<TValue>
+            IObserverAsync<GroupedAsyncSignal<TKey, TValue>> observer) : WitnessAsync<TValue>
         {
             /// <summary>The composite disposable that tracks all group subscription disposables.</summary>
             private readonly MultipleDisposableAsync _disposables = new();
@@ -201,7 +201,7 @@ public static partial class SignalAsyncExtensions
                     // CancellationTokenSource.CreateLinkedTokenSource allocations to zero.
                     var wrap = new RelayWitnessAsync<TValue>(observer);
                     wrap.LinkUpstreamCancellation(parent.InternalDisposedToken);
-                    if (observer is ObserverAsync<TValue> downstream)
+                    if (observer is WitnessAsync<TValue> downstream)
                     {
                         downstream.LinkUpstreamCancellation(wrap.InternalDisposedToken);
                     }

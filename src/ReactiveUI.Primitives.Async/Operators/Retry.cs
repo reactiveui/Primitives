@@ -19,7 +19,7 @@ public static partial class SignalAsyncExtensions
         /// <summary>Repeats the source observable sequence indefinitely until it completes successfully, re-subscribing on each error.</summary>
         /// <returns>An observable sequence that mirrors the source and re-subscribes on error until
         /// a successful completion occurs.</returns>
-        public IObservableAsync<T> Retry() => @this.Retry(int.MaxValue);
+        public IObservableAsync<T> Retry() => @this.Reattempt(int.MaxValue);
 
         /// <summary>Repeats the source observable sequence on error up to the specified number of times.</summary>
         /// <param name="retryCount">The maximum number of times to re-subscribe to the source on error.
@@ -27,7 +27,15 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that mirrors the source, re-subscribing on error up to the
         /// specified number of times. If all retries are exhausted, the last error is propagated.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="retryCount"/> is negative.</exception>
-        public IObservableAsync<T> Retry(int retryCount)
+        public IObservableAsync<T> Retry(int retryCount) => @this.Reattempt(retryCount);
+
+        /// <summary>Repeats the source observable sequence on error up to the specified number of times.</summary>
+        /// <param name="retryCount">The maximum number of times to re-subscribe to the source on error.
+        /// Must be greater than or equal to zero. A value of 0 means no retries (original sequence only).</param>
+        /// <returns>An observable sequence that mirrors the source, re-subscribing on error up to the
+        /// specified number of times. If all retries are exhausted, the last error is propagated.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="retryCount"/> is negative.</exception>
+        public IObservableAsync<T> Reattempt(int retryCount)
         {
 #if NET8_0_OR_GREATER
             ArgumentOutOfRangeException.ThrowIfNegative(retryCount);

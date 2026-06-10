@@ -65,7 +65,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new SkipWhileSyncWitness(observer, predicate, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -82,7 +82,7 @@ public static partial class SignalAsyncExtensions
         internal sealed class SkipWhileSyncWitness(
             IObserverAsync<T> downstream,
             Func<T, bool> predicate,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>Latches to <see langword="false"/> once the predicate fails — every subsequent value forwards.</summary>
             private bool _skipping = true;
@@ -131,7 +131,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new SkipWhileAsyncWitness(observer, predicate, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -148,7 +148,7 @@ public static partial class SignalAsyncExtensions
         internal sealed class SkipWhileAsyncWitness(
             IObserverAsync<T> downstream,
             Func<T, CancellationToken, ValueTask<bool>> predicate,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>Latches to <see langword="false"/> after the predicate first returns <see langword="false"/>.</summary>
             private bool _skipping = true;

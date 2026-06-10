@@ -222,7 +222,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
 
         /// <summary>A witness for the outer observable sequence that delegates to the parent <see cref="ConcatCoordinator"/>.</summary>
         /// <param name="subscription">The parent concat subscription.</param>
-        internal sealed class ConcatOuterWitness(ConcatCoordinator subscription) : ObserverAsync<IObservableAsync<T>>
+        internal sealed class ConcatOuterWitness(ConcatCoordinator subscription) : WitnessAsync<IObservableAsync<T>>
         {
             /// <summary>Forwards a new inner observable to the parent subscription for buffering and sequential subscription.</summary>
             /// <param name="value">The new inner observable.</param>
@@ -260,7 +260,7 @@ internal sealed class ConcatSignalSourcesSignal<T>(IObservableAsync<IObservableA
 
         /// <summary>A witness for the currently active inner observable sequence that delegates to the parent <see cref="ConcatCoordinator"/>.</summary>
         /// <param name="subscription">The parent concat subscription.</param>
-        internal sealed class ConcatInnerWitness(ConcatCoordinator subscription) : ObserverAsync<T>
+        internal sealed class ConcatInnerWitness(ConcatCoordinator subscription) : WitnessAsync<T>
         {
             /// <summary>Forwards an element from the inner sequence to the downstream observer.</summary>
             /// <param name="value">The element to forward.</param>

@@ -21,9 +21,9 @@ public class ResultAndInfrastructureTests
         const string CustomMessage = "custom concurrent observer call";
         var inner = new InvalidOperationException("inner concurrent observer call");
 
-        var defaultException = new ConcurrentObserverCallsException();
-        var messageException = new ConcurrentObserverCallsException(CustomMessage);
-        var nestedException = new ConcurrentObserverCallsException(CustomMessage, inner);
+        var defaultException = new ConcurrentWitnessCallsException();
+        var messageException = new ConcurrentWitnessCallsException(CustomMessage);
+        var nestedException = new ConcurrentWitnessCallsException(CustomMessage, inner);
 
         await Assert.That(defaultException.Message.Contains("Concurrent calls", StringComparison.Ordinal)).IsTrue();
         await Assert.That(messageException.Message).IsEqualTo(CustomMessage);
@@ -108,7 +108,7 @@ public class ResultAndInfrastructureTests
         await first.WaitAsync(TimeSpan.FromSeconds(5));
 
         var reported = await capture.WaitForAsync(
-            static exception => exception is ConcurrentObserverCallsException,
+            static exception => exception is ConcurrentWitnessCallsException,
             TimeSpan.FromSeconds(5));
         await Assert.That(reported).IsNotNull();
     }
@@ -405,7 +405,7 @@ public class ResultAndInfrastructureTests
     }
 
     /// <summary>Observer that throws cancellation synchronously from OnNext.</summary>
-    private sealed class CancelOnNextObserver : ObserverAsync<int>
+    private sealed class CancelOnNextObserver : WitnessAsync<int>
     {
         /// <summary>Gets a value indicating whether the cancellation path ran.</summary>
         public bool Cancelled { get; private set; }
@@ -425,7 +425,7 @@ public class ResultAndInfrastructureTests
     }
 
     /// <summary>Observer that blocks OnNext until explicitly released.</summary>
-    private sealed class BlockingObserver : ObserverAsync<int>
+    private sealed class BlockingObserver : WitnessAsync<int>
     {
         /// <summary>Gets the signal set after the first OnNext call has entered.</summary>
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);

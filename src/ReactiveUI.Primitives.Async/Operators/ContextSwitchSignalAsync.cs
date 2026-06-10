@@ -28,7 +28,7 @@ internal sealed class ContextSwitchSignalAsync<T>(
     /// <param name="asyncContext">The async context to switch onto.</param>
     /// <param name="forceYielding">Whether to force yielding even if already on the target context.</param>
     internal sealed class ContextSwitchWitness(IObserverAsync<T> observer, AsyncContext asyncContext, bool forceYielding)
-        : ObserverAsync<T>
+        : WitnessAsync<T>
     {
         /// <summary>Slow path: switch to the target context then forward the value.
         /// Exposed as <see langword="internal"/> so tests can invoke the slow-path body

@@ -7,7 +7,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
 public static partial class SignalAsyncExtensions
 {
-    /// <summary>Switch operators for an observable source sequence of inner observable sequences.</summary>
+    /// <summary>SwitchTo/Switch operators for an observable source sequence of inner observable sequences.</summary>
     /// <param name="this">The source observable sequence of observable sequences.</param>
     /// <typeparam name="T">The type of the elements in the inner observable sequences.</typeparam>
     extension<T>(IObservableAsync<IObservableAsync<T>> @this)
@@ -21,6 +21,13 @@ public static partial class SignalAsyncExtensions
         /// observable are emitted to subscribers.</remarks>
         /// <returns>An observable sequence that emits items from the most recently emitted inner observable sequence. When a new
         /// inner sequence is emitted, the previous one is unsubscribed.</returns>
-        public IObservableAsync<T> Switch() => new SwitchSignal<T>(@this);
+        public IObservableAsync<T> SwitchTo() => new SwitchSignal<T>(@this);
+
+        /// <summary>
+        /// Transforms an observable sequence of observable sequences into a single observable sequence that emits
+        /// values from the most recent inner observable sequence.
+        /// </summary>
+        /// <returns>An observable sequence that emits items from the most recently emitted inner observable sequence.</returns>
+        public IObservableAsync<T> Switch() => @this.SwitchTo();
     }
 }

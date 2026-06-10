@@ -21,6 +21,18 @@ public sealed class AsyncBridgeGeneratorContractTests
     /// <summary>The generated R3 async bridge type name.</summary>
     private const string R3AsyncBridgeName = "R3AsyncBridge";
 
+    /// <summary>The platform assemblies needed by the in-memory generator smoke compilation.</summary>
+    private static readonly string[] PlatformReferenceNames =
+    [
+        "System.Collections.dll",
+        "System.Linq.dll",
+        "System.Private.CoreLib.dll",
+        "System.Runtime.dll",
+        "System.Runtime.Extensions.dll",
+        "System.Threading.dll",
+        "System.Threading.Tasks.dll",
+    ];
+
     /// <summary>Verifies bridge generators emit async adapter extensions when async primitives are referenced.</summary>
     [Test]
     [RequiresAssemblyFiles]
@@ -197,22 +209,7 @@ public static class CoreOnlySmoke
         bool includeAsyncReference)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview);
-        var references = AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!
-            .ToString()!
-            .Split(Path.PathSeparator)
-            .Where(path =>
-                !Path.GetFileName(path).StartsWith("System.Reactive", StringComparison.OrdinalIgnoreCase) &&
-                !Path.GetFileName(path).StartsWith("R3", StringComparison.OrdinalIgnoreCase) &&
-                !Path.GetFileName(path).StartsWith("ReactiveUI.Primitives.Async", StringComparison.OrdinalIgnoreCase))
-            .Select(path => MetadataReference.CreateFromFile(path))
-            .Cast<MetadataReference>()
-            .ToList();
-
-        references.Add(MetadataReference.CreateFromFile(typeof(Signal).Assembly.Location));
-        if (includeAsyncReference)
-        {
-            references.Add(MetadataReference.CreateFromFile(typeof(IObservableAsync<>).Assembly.Location));
-        }
+        var references = CreateReferences(includeAsyncReference);
 
         var compilation = CSharpCompilation.Create(
             "AsyncBridgeGeneratorSmoke",
@@ -237,5 +234,39 @@ public static class CoreOnlySmoke
             .ToArray();
 
         return (diagnostics, generatedSources);
+    }
+
+    /// <summary>Creates the bounded metadata reference set required by the generator smoke compilation.</summary>
+    /// <param name="includeAsyncReference">Whether to include the async primitives assembly reference.</param>
+    /// <returns>The metadata references for the in-memory Roslyn compilation.</returns>
+    [RequiresAssemblyFiles("Calls System.Reflection.Assembly.Location")]
+    private static List<MetadataReference> CreateReferences(bool includeAsyncReference)
+    {
+        var platformAssemblies = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!.ToString()!.Split(Path.PathSeparator))
+        {
+            var name = Path.GetFileName(path);
+            if (!string.IsNullOrEmpty(name))
+            {
+                platformAssemblies.TryAdd(name, path);
+            }
+        }
+
+        var references = new List<MetadataReference>(PlatformReferenceNames.Length + 2);
+        foreach (var name in PlatformReferenceNames)
+        {
+            if (platformAssemblies.TryGetValue(name, out var path))
+            {
+                references.Add(MetadataReference.CreateFromFile(path));
+            }
+        }
+
+        references.Add(MetadataReference.CreateFromFile(typeof(Signal).Assembly.Location));
+        if (includeAsyncReference)
+        {
+            references.Add(MetadataReference.CreateFromFile(typeof(IObservableAsync<>).Assembly.Location));
+        }
+
+        return references;
     }
 }

@@ -178,7 +178,7 @@ public class AsyncExtensionsComparisonBenchmarks
     }
 
     /// <summary>Observer that accumulates primitive async signal values.</summary>
-    private sealed class PrimitivesCountingWitness : Async.ObserverAsync<int>
+    private sealed class PrimitivesCountingWitness : Async.WitnessAsync<int>
     {
         /// <summary>Gets the accumulated value total.</summary>
         public int Total { get; private set; }

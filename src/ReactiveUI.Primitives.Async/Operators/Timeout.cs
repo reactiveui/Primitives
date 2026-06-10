@@ -23,8 +23,19 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that mirrors the source but completes with a
         /// <see cref="TimeoutException"/> if any inter-element interval exceeds the specified dueTime.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative or zero.</exception>
-        public IObservableAsync<T> Timeout(TimeSpan dueTime)
+        public IObservableAsync<T> Expire(TimeSpan dueTime)
             => @this.Timeout(dueTime, (TimeProvider?)null);
+
+        /// <summary>
+        /// Applies a dueTime policy to the observable sequence. If the next element is not received within
+        /// the specified time span, the sequence completes with a <see cref="TimeoutException"/>.
+        /// </summary>
+        /// <param name="dueTime">The maximum time span allowed between consecutive elements. Must be positive.</param>
+        /// <returns>An observable sequence that mirrors the source but completes with a
+        /// <see cref="TimeoutException"/> if any inter-element interval exceeds the specified dueTime.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative or zero.</exception>
+        public IObservableAsync<T> Timeout(TimeSpan dueTime)
+            => @this.Expire(dueTime);
 
         /// <summary>
         /// Applies a dueTime policy to the observable sequence. If the next element is not received within
@@ -127,7 +138,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="dueTime">The maximum allowed inter-element interval.</param>
         /// <param name="timeProvider">The time provider used for scheduling the dueTime.</param>
         internal sealed class TimeoutWitness(IObserverAsync<T> observer, TimeSpan dueTime, TimeProvider timeProvider)
-            : ObserverAsync<T>
+            : WitnessAsync<T>
         {
             /// <summary>Synchronization gate protecting timer state.</summary>
             private readonly Lock _gate = new();

@@ -39,6 +39,26 @@ public static partial class SignalAsyncExtensions
         }
     }
 
+    /// <summary>Type-filtering operators for an untyped observable source sequence.</summary>
+    /// <param name="source">The source sequence.</param>
+    extension(IObservableAsync<object?> source)
+    {
+        /// <summary>Keeps values assignable to <typeparamref name="TResult"/>.</summary>
+        /// <typeparam name="TResult">The result element type to keep.</typeparam>
+        /// <returns>An observable sequence of values assignable to <typeparamref name="TResult"/>.</returns>
+        [SuppressMessage(
+            "Minor Code Smell",
+            "S4018:All type parameters should be used in the parameter list to enable type inference",
+            Justification = "Deliberate lack of type inference.")]
+        public IObservableAsync<TResult> KeepType<TResult>()
+            where TResult : class
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new OfTypeSignal<object?, TResult>(source);
+        }
+    }
+
     /// <summary>Single-observer-layer <c>OfType</c>; non-matching elements are silently dropped.</summary>
     /// <typeparam name="T">The upstream element type.</typeparam>
     /// <typeparam name="TResult">The target reference type.</typeparam>
@@ -53,7 +73,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new OfTypeWitness(observer, cancellationToken);
 
-            if (observer is ObserverAsync<TResult> downstreamBase)
+            if (observer is WitnessAsync<TResult> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -68,7 +88,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
         internal sealed class OfTypeWitness(
             IObserverAsync<TResult> downstream,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>

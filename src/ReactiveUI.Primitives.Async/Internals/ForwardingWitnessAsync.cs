@@ -7,7 +7,7 @@ namespace ReactiveUI.Primitives.Async.Internals;
 /// <summary>Base observer that forwards every notification to a downstream observer.</summary>
 /// <typeparam name="T">The observed element type.</typeparam>
 /// <param name="downstream">The observer that receives forwarded notifications.</param>
-internal abstract class ForwardingWitnessAsync<T>(IObserverAsync<T> downstream) : ObserverAsync<T>
+internal abstract class ForwardingWitnessAsync<T>(IObserverAsync<T> downstream) : WitnessAsync<T>
 {
     /// <summary>Gets the downstream observer.</summary>
     protected IObserverAsync<T> Downstream { get; } = downstream;

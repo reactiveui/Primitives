@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Async;
 /// each source is paired together. The resulting sequence completes when either source completes.</remarks>
 public static partial class SignalAsyncExtensions
 {
-    /// <summary>Zip operators for a first observable source sequence.</summary>
+    /// <summary>Pair/Zip operators for a first observable source sequence.</summary>
     /// <param name="first">The first observable sequence.</param>
     /// <typeparam name="T1">The type of elements in the first source sequence.</typeparam>
     extension<T1>(IObservableAsync<T1> first)
@@ -25,7 +25,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence whose elements are the result of pair-wise combining the source
         /// elements using the result selector.</returns>
         /// <exception cref="ArgumentNullException">Thrown if any argument is null.</exception>
-        public IObservableAsync<TResult> Zip<T2, TResult>(
+        public IObservableAsync<TResult> Pair<T2, TResult>(
             IObservableAsync<T2> second,
             Func<T1, T2, TResult> resultSelector)
         {
@@ -36,14 +36,24 @@ public static partial class SignalAsyncExtensions
             return new ZipSignal<T1, T2, TResult>(first, second, resultSelector);
         }
 
+        /// <summary>Combines two observable sequences element-by-element using the specified result selector.</summary>
+        /// <typeparam name="T2">The type of elements in the second source sequence.</typeparam>
+        /// <typeparam name="TResult">The type of elements in the result sequence.</typeparam>
+        /// <param name="second">The second observable sequence.</param>
+        /// <param name="resultSelector">A function to apply to each pair of elements.</param>
+        /// <returns>An observable sequence whose elements are the pair-wise combination of source elements.</returns>
+        public IObservableAsync<TResult> Zip<T2, TResult>(
+            IObservableAsync<T2> second,
+            Func<T1, T2, TResult> resultSelector) =>
+            first.Pair(second, resultSelector);
+
         /// <summary>Combines two observable sequences element-by-element into pairs.</summary>
         /// <typeparam name="T2">The type of elements in the second source sequence.</typeparam>
-        /// <param name="second">The second observable sequence. Cannot be null.</param>
+        /// <param name="second">The second observable sequence.</param>
         /// <returns>An observable sequence of tuples pairing elements from each source.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if any argument is null.</exception>
         public IObservableAsync<(T1 First, T2 Second)> Zip<T2>(
             IObservableAsync<T2> second) =>
-            first.Zip(second, static (a, b) => (a, b));
+            first.Pair(second, static (a, b) => (a, b));
     }
 
     /// <summary>
@@ -286,7 +296,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Observer for the first source sequence that delegates to the shared <see cref="ZipState"/>.</summary>
         /// <param name="state">The shared zip state.</param>
-        internal sealed class FirstWitness(ZipState state) : ObserverAsync<T1>
+        internal sealed class FirstWitness(ZipState state) : WitnessAsync<T1>
         {
             /// <summary>Forwards an element from the first source to the zip state for pairing.</summary>
             /// <param name="value">The element from the first source.</param>
@@ -311,7 +321,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Observer for the second source sequence that delegates to the shared <see cref="ZipState"/>.</summary>
         /// <param name="state">The shared zip state.</param>
-        internal sealed class SecondWitness(ZipState state) : ObserverAsync<T2>
+        internal sealed class SecondWitness(ZipState state) : WitnessAsync<T2>
         {
             /// <summary>Forwards an element from the second source to the zip state for pairing.</summary>
             /// <param name="value">The element from the second source.</param>

@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Async.Internals;
 internal sealed class CallbackWitnessAsync<T>(
     Func<T, CancellationToken, ValueTask> onNextAsync,
     Func<Exception, CancellationToken, ValueTask>? onErrorResumeAsync = null,
-    Func<Result, ValueTask>? onCompletedAsync = null) : ObserverAsync<T>
+    Func<Result, ValueTask>? onCompletedAsync = null) : WitnessAsync<T>
 {
     /// <inheritdoc/>
     protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>

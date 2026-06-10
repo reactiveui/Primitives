@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Async;
 /// Instances are not thread-safe for concurrent notification handling; notifications are processed sequentially, and
 /// reentrant calls are detected and reported as unhandled exceptions.</remarks>
 /// <typeparam name="T">The type of the elements received by the observer.</typeparam>
-public abstract class ObserverAsync<T> : IObserverAsync<T>, IReentrantAsyncDisposable
+public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDisposable
 {
     /// <summary>Lazily-created CTS that signals disposal to in-flight operations. Stays
     /// <see langword="null"/> until someone requests <see cref="InternalDisposedToken"/>,
@@ -59,18 +59,18 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>, IReentrantAsyncDispo
     /// </summary>
     private CancellationToken _externalLinkedToken;
 
-    /// <summary>Initializes a new instance of the <see cref="ObserverAsync{T}"/> class.</summary>
-    protected ObserverAsync()
+    /// <summary>Initializes a new instance of the <see cref="WitnessAsync{T}"/> class.</summary>
+    protected WitnessAsync()
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverAsync{T}"/> class and links an external cancellation
+    /// Initializes a new instance of the <see cref="WitnessAsync{T}"/> class and links an external cancellation
     /// token into its dispose chain. Equivalent to calling the parameterless constructor followed by
     /// <see cref="LinkExternalCancellation(CancellationToken)"/>.
     /// </summary>
     /// <param name="externalLink">The external token whose cancellation should trigger this observer's disposal.</param>
-    protected ObserverAsync(CancellationToken externalLink) => LinkExternalCancellation(externalLink);
+    protected WitnessAsync(CancellationToken externalLink) => LinkExternalCancellation(externalLink);
 
     /// <summary>Gets a value indicating whether this observer has been disposed.</summary>
     internal bool HasDisposed => Volatile.Read(ref _disposed) != 0;
@@ -251,7 +251,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>, IReentrantAsyncDispo
             // are legal — only cross-thread overlap fires the exception.
             if (oldCount > 0 && oldThreadId != currentThreadId)
             {
-                UnhandledExceptionHandler.ReportUnhandledException(new ConcurrentObserverCallsException());
+                UnhandledExceptionHandler.ReportUnhandledException(new ConcurrentWitnessCallsException());
                 scope = default;
                 return false;
             }
@@ -375,7 +375,7 @@ public abstract class ObserverAsync<T> : IObserverAsync<T>, IReentrantAsyncDispo
         _externalLinkRegistration = external.UnsafeRegister(
             static state =>
             {
-                var self = (ObserverAsync<T>)state!;
+                var self = (WitnessAsync<T>)state!;
                 Volatile.Write(ref self._disposed, 1);
                 Volatile.Read(ref self._disposeCts)?.Cancel();
             },

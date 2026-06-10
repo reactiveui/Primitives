@@ -115,7 +115,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="parent">The parent ref-count observable.</param>
         /// <param name="observer">The downstream witness to forward notifications to.</param>
         internal sealed class RefCountWitness(RefCountSignal<T> parent, IObserverAsync<T> observer)
-            : ObserverAsync<T>
+            : WitnessAsync<T>
         {
             /// <summary>Forwards an element to the downstream witness.</summary>
             /// <param name="value">The element to forward.</param>

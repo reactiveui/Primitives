@@ -23,7 +23,15 @@ public static partial class SignalAsyncExtensions
         /// </summary>
         /// <param name="value">The value to prepend to the beginning of the sequence.</param>
         /// <returns>An observable sequence with the specified value prepended to the original sequence.</returns>
-        public IObservableAsync<T> Prepend(T value) => @this.Prepend([value]);
+        public IObservableAsync<T> Lead(T value) => @this.Prepend([value]);
+
+        /// <summary>
+        /// Returns a new observable sequence that begins with the specified value, followed by the elements of the
+        /// current sequence.
+        /// </summary>
+        /// <param name="value">The value to prepend to the beginning of the sequence.</param>
+        /// <returns>An observable sequence with the specified value prepended to the original sequence.</returns>
+        public IObservableAsync<T> Prepend(T value) => @this.Lead(value);
 
         /// <summary>Returns a new observable sequence that emits the specified values before the emissions from the current sequence.</summary>
         /// <remarks>The values in the provided collection are emitted in order before any items from the
