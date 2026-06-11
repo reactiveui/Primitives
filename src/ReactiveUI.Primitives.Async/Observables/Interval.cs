@@ -48,7 +48,7 @@ public static partial class SignalAsync
                             x => ((TaskCompletionSource<bool>)x!).TrySetResult(true),
                             tcs,
                             period,
-                            System.Threading.Timeout.InfiniteTimeSpan);
+                            Timeout.InfiniteTimeSpan);
 
 #if NET8_0_OR_GREATER
                         await using var ct =
