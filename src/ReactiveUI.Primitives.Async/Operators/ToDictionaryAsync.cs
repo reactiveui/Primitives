@@ -27,19 +27,12 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary mapping keys to
         /// elements from the sequence.</returns>
         /// <exception cref="ArgumentNullException">Thrown if the keySelector parameter is null.</exception>
-        public async ValueTask<Dictionary<TKey, T>> ToDictionaryAsync<TKey>(
+        public ValueTask<Dictionary<TKey, T>> ToDictionaryAsync<TKey>(
             Func<T, TKey> keySelector,
             IEqualityComparer<TKey>? comparer,
             CancellationToken cancellationToken)
-            where TKey : notnull
-        {
-            ArgumentExceptionHelper.ThrowIfNull(keySelector);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var observer = new ToDictionaryTaskWitness<T, TKey, T>(keySelector, x => x, comparer, cancellationToken);
-            await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-            return await observer.AwaitResultAsync().ConfigureAwait(false);
-        }
+            where TKey : notnull =>
+            ToDictionaryCore(@this, keySelector, DictionaryIdentity<T>.Instance, comparer, cancellationToken);
 
         /// <summary>
         /// Asynchronously creates a dictionary from the elements of the sequence, using the specified key selector
@@ -70,26 +63,13 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary mapping keys to
         /// values as defined by the selector functions.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="keySelector"/> or <paramref name="elementSelector"/> is null.</exception>
-        public async ValueTask<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(
+        public ValueTask<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(
             Func<T, TKey> keySelector,
             Func<T, TValue> elementSelector,
             IEqualityComparer<TKey>? comparer,
             CancellationToken cancellationToken)
-            where TKey : notnull
-        {
-            ArgumentExceptionHelper.ThrowIfNull(keySelector);
-            ArgumentExceptionHelper.ThrowIfNull(elementSelector);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var observer =
-                new ToDictionaryTaskWitness<T, TKey, TValue>(
-                    keySelector,
-                    elementSelector,
-                    comparer,
-                    cancellationToken);
-            await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
-            return await observer.AwaitResultAsync().ConfigureAwait(false);
-        }
+            where TKey : notnull =>
+            ToDictionaryCore(@this, keySelector, elementSelector, comparer, cancellationToken);
 
         /// <summary>
         /// Asynchronously creates a dictionary from the elements of the sequence using the specified key and element
@@ -109,6 +89,45 @@ public static partial class SignalAsyncExtensions
             @this.ToDictionaryAsync(keySelector, elementSelector, null, CancellationToken.None);
     }
 
+    /// <summary>Runs dictionary materialization through the shared subscription path.</summary>
+    /// <typeparam name="TSource">The type of source values.</typeparam>
+    /// <typeparam name="TKey">The type of dictionary keys.</typeparam>
+    /// <typeparam name="TValue">The type of dictionary values.</typeparam>
+    /// <param name="source">The source observable sequence.</param>
+    /// <param name="keySelector">The function that selects a key from each source value.</param>
+    /// <param name="elementSelector">The function that selects a dictionary value from each source value.</param>
+    /// <param name="comparer">The optional key comparer.</param>
+    /// <param name="cancellationToken">The cancellation token for the operation.</param>
+    /// <returns>A dictionary built from the source sequence.</returns>
+    private static async ValueTask<Dictionary<TKey, TValue>> ToDictionaryCore<TSource, TKey, TValue>(
+        IObservableAsync<TSource> source,
+        Func<TSource, TKey> keySelector,
+        Func<TSource, TValue> elementSelector,
+        IEqualityComparer<TKey>? comparer,
+        CancellationToken cancellationToken)
+        where TKey : notnull
+    {
+        ArgumentExceptionHelper.ThrowIfNull(keySelector);
+        ArgumentExceptionHelper.ThrowIfNull(elementSelector);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var sink = new ToDictionaryTaskWitness<TSource, TKey, TValue>(
+            keySelector,
+            elementSelector,
+            comparer,
+            cancellationToken);
+        await using var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
+        return await sink.AwaitResultAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>Caches identity selectors by source type for dictionary materialization.</summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    private static class DictionaryIdentity<T>
+    {
+        /// <summary>The cached identity selector.</summary>
+        internal static readonly Func<T, T> Instance = static value => value;
+    }
+
     /// <summary>Witness that builds a dictionary from the elements of a sequence using key and element selectors.</summary>
     /// <typeparam name="TSource">The type of elements in the source sequence.</typeparam>
     /// <typeparam name="TKey">The type of the dictionary keys.</typeparam>
@@ -117,7 +136,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="elementSelector">A function to extract a value from each element.</param>
     /// <param name="comparer">An optional equality comparer for keys.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class ToDictionaryTaskWitness<TSource, TKey, TValue>(
+    private sealed class ToDictionaryTaskWitness<TSource, TKey, TValue>(
         Func<TSource, TKey> keySelector,
         Func<TSource, TValue> elementSelector,
         IEqualityComparer<TKey>? comparer,

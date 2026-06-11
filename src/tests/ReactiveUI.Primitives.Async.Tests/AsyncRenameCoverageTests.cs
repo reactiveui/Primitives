@@ -110,7 +110,7 @@ public sealed class AsyncRenameCoverageTests
         PrimitiveAssert.Same(expected, reported!);
     }
 
-    /// <summary>Verifies renamed <see cref="ObserverAsync{T}"/> disposal members track and dispose an assigned source subscription.</summary>
+    /// <summary>Verifies renamed <see cref="WitnessAsync{T}"/> disposal members track and dispose an assigned source subscription.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task ObserverAsyncRenamedDisposalMembersTrackAssignedSubscription()
@@ -143,7 +143,7 @@ public sealed class AsyncRenameCoverageTests
         PrimitiveAssert.Same(expected, reported!);
     }
 
-    /// <summary>Verifies renamed <see cref="ObserverAsync{T}.RouteObserverErrorAsync"/> routes canceled and thrown handlers through the unhandled exception hook.</summary>
+    /// <summary>Verifies renamed <see cref="WitnessAsync{T}.RouteObserverErrorAsync"/> routes canceled and thrown handlers through the unhandled exception hook.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task RouteObserverErrorAsyncReportsCanceledAndThrownHandlerPaths()
@@ -196,7 +196,7 @@ public sealed class AsyncRenameCoverageTests
     /// <param name="onCompleted">Optional completion handler used by <see cref="OnCompletedAsyncCore"/>.</param>
     private sealed class RenameCoverageWitness(
         Func<Exception, CancellationToken, ValueTask>? onError = null,
-        Func<Result, ValueTask>? onCompleted = null) : ObserverAsync<int>
+        Func<Result, ValueTask>? onCompleted = null) : WitnessAsync<int>
     {
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result) =>

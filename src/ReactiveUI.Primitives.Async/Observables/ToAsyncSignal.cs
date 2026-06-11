@@ -16,6 +16,21 @@ namespace ReactiveUI.Primitives.Async;
 /// extensions are useful for bridging between different asynchronous programming models.</remarks>
 public static partial class SignalAsyncExtensions
 {
+    /// <summary>Observable-conversion operators for an asynchronous observable source.</summary>
+    /// <param name="this">The source sequence.</param>
+    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
+    extension<T>(IObservableAsync<T> @this)
+    {
+        /// <summary>Returns an async observable as an async signal.</summary>
+        /// <returns>An observable sequence validated.</returns>
+        [SuppressMessage(
+            "Roslynator",
+            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
+            Justification = "This is an existing method")]
+        public IObservableAsync<T> ToAsyncSignal() =>
+            @this ?? throw new ArgumentNullException(nameof(@this));
+    }
+
     /// <summary>Observable-conversion operators for a task that produces a single value.</summary>
     /// <param name="this">The task to convert to an asynchronous observable sequence. Cannot be null.</param>
     /// <typeparam name="T">The type of the value produced by the task and emitted by the observable sequence.</typeparam>

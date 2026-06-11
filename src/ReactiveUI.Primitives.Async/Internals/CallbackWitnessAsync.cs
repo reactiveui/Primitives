@@ -12,38 +12,49 @@ namespace ReactiveUI.Primitives.Async.Internals;
 internal sealed class CallbackWitnessAsync<T>(
     Func<T, CancellationToken, ValueTask> onNextAsync,
     Func<Exception, CancellationToken, ValueTask>? onErrorResumeAsync = null,
-    Func<Result, ValueTask>? onCompletedAsync = null) : ObserverAsync<T>
+    Func<Result, ValueTask>? onCompletedAsync = null) : WitnessAsync<T>
 {
+    private readonly Func<Exception, CancellationToken, ValueTask> _onErrorResumeAsync =
+        onErrorResumeAsync ?? ReportUnhandledError;
+
+    private readonly Func<Result, ValueTask> _onCompletedAsync =
+        onCompletedAsync ?? ReportUnhandledCompletion;
+
     /// <inheritdoc/>
     protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
         onNextAsync(value, cancellationToken);
 
     /// <inheritdoc/>
-    protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
-    {
-        if (onErrorResumeAsync is null)
-        {
-            UnhandledExceptionHandler.ReportUnhandledException(error);
-            return default;
-        }
-
-        return onErrorResumeAsync.Invoke(error, cancellationToken);
-    }
+    protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+        _onErrorResumeAsync(error, cancellationToken);
 
     /// <inheritdoc/>
-    protected override ValueTask OnCompletedAsyncCore(Result result)
-    {
-        if (onCompletedAsync is null)
-        {
-            var exception = result.Exception;
-            if (exception is not null)
-            {
-                UnhandledExceptionHandler.ReportUnhandledException(exception);
-            }
+    protected override ValueTask OnCompletedAsyncCore(Result result) =>
+        _onCompletedAsync(result);
 
+    /// <summary>Reports an unhandled resumable error when no error callback was supplied.</summary>
+    /// <param name="error">The unhandled exception.</param>
+    /// <param name="cancellationToken">The cancellation token supplied by the source.</param>
+    /// <returns>A completed value task.</returns>
+    private static ValueTask ReportUnhandledError(Exception error, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        UnhandledExceptionHandler.ReportUnhandledException(error);
+        return default;
+    }
+
+    /// <summary>Reports a terminal failure when no completion callback was supplied.</summary>
+    /// <param name="result">The terminal result.</param>
+    /// <returns>A completed value task.</returns>
+    private static ValueTask ReportUnhandledCompletion(Result result)
+    {
+        var exception = result.Exception;
+        if (exception is null)
+        {
             return default;
         }
 
-        return onCompletedAsync.Invoke(result);
+        UnhandledExceptionHandler.ReportUnhandledException(exception);
+        return default;
     }
 }

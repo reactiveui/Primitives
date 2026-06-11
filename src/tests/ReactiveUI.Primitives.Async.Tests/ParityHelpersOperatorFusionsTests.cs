@@ -753,7 +753,7 @@ public class ParityHelpersOperatorFusionsTests
     }
 
     /// <summary>Bare-bones downstream async observer that throws a given exception inside
-    /// <c>OnNextAsync</c>. Bypassing the <see cref="ObserverAsync{T}"/> base class is intentional
+    /// <c>OnNextAsync</c>. Bypassing the <see cref="WitnessAsync{T}"/> base class is intentional
     /// — the base class would otherwise swallow synchronous throws and route them through
     /// <see cref="UnhandledExceptionHandler"/>, never letting the exception propagate up to the
     /// upstream operator's <c>catch (Exception e)</c> block under test.</summary>

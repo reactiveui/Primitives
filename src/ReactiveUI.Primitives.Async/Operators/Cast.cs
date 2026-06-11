@@ -37,6 +37,25 @@ public static partial class SignalAsyncExtensions
         }
     }
 
+    /// <summary>Type-casting operators for an untyped observable source sequence.</summary>
+    /// <param name="source">The source sequence.</param>
+    extension(IObservableAsync<object?> source)
+    {
+        /// <summary>Casts each value to <typeparamref name="TResult"/>.</summary>
+        /// <typeparam name="TResult">The result element type to cast to.</typeparam>
+        /// <returns>An observable sequence of values cast to <typeparamref name="TResult"/>.</returns>
+        [SuppressMessage(
+            "Minor Code Smell",
+            "S4018:All type parameters should be used in the parameter list to enable type inference",
+            Justification = "Deliberate lack of type inference.")]
+        public IObservableAsync<TResult> CastTo<TResult>()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new CastSignal<object?, TResult>(source);
+        }
+    }
+
     /// <summary>Single-observer-layer <c>Cast</c>; failed casts terminate the sequence with failure.</summary>
     /// <typeparam name="T">The upstream element type.</typeparam>
     /// <typeparam name="TResult">The target element type.</typeparam>
@@ -50,7 +69,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new CastWitness(observer, cancellationToken);
 
-            if (observer is ObserverAsync<TResult> downstreamBase)
+            if (observer is WitnessAsync<TResult> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -65,7 +84,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
         internal sealed class CastWitness(
             IObserverAsync<TResult> downstream,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)

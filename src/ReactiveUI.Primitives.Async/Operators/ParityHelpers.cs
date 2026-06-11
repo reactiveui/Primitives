@@ -543,5 +543,9 @@ public static partial class SignalAsyncExtensions
 
             return new WhereIsNotNullSignal<T>(source);
         }
+
+        /// <summary>Keeps non-null reference values.</summary>
+        /// <returns>An observable sequence of non-null values.</returns>
+        public IObservableAsync<T> KeepNotNull() => source.WhereIsNotNull();
     }
 }

@@ -19,7 +19,17 @@ public static partial class SignalAsync
     /// <typeparam name="T">The type of the value to be emitted by the observable sequence.</typeparam>
     /// <param name="value">The value to be emitted by the observable sequence.</param>
     /// <returns>An observable sequence that emits the specified value and then signals completion.</returns>
-    public static IObservableAsync<T> Return<T>(T value) => new ReturnSignalAsync<T>(value);
+    public static IObservableAsync<T> Emit<T>(T value) => new ReturnSignalAsync<T>(value);
+
+    /// <summary>Emits a single <see cref="RxVoid"/> value.</summary>
+    /// <returns>An observable sequence that emits a single <see cref="RxVoid"/> value.</returns>
+    public static IObservableAsync<RxVoid> EmitRxVoid() => Emit(RxVoid.Default);
+
+    /// <summary>Creates an observable sequence that emits a single value and then completes.</summary>
+    /// <typeparam name="T">The type of the value to be emitted by the observable sequence.</typeparam>
+    /// <param name="value">The value to be emitted by the observable sequence.</param>
+    /// <returns>An observable sequence that emits the specified value and then signals completion.</returns>
+    public static IObservableAsync<T> Return<T>(T value) => Emit(value);
 
     /// <summary>
     /// Single-value observable that captures the emitted value as a field and routes through a typed

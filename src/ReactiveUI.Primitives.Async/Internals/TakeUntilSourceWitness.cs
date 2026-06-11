@@ -5,14 +5,14 @@
 namespace ReactiveUI.Primitives.Async.Internals;
 
 /// <summary>
-/// Shared <see cref="ObserverAsync{T}"/> implementation that forwards every source notification
+/// Shared <see cref="WitnessAsync{T}"/> implementation that forwards every source notification
 /// straight into a <see cref="TakeUntilLifecycle{T}"/> instance. Used by every per-trigger
 /// TakeUntil Subscription so the per-operator inner-class shells (which previously held identical
 /// three-method forwarders) collapse into a single shared type.
 /// </summary>
 /// <typeparam name="T">The downstream element type.</typeparam>
 /// <param name="lifecycle">The shared lifecycle owning the gate and forwarding logic.</param>
-internal sealed class TakeUntilSourceWitness<T>(TakeUntilLifecycle<T> lifecycle) : ObserverAsync<T>
+internal sealed class TakeUntilSourceWitness<T>(TakeUntilLifecycle<T> lifecycle) : WitnessAsync<T>
 {
     /// <inheritdoc/>
     protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)

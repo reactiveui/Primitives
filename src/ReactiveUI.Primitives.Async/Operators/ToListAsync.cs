@@ -20,8 +20,14 @@ public static partial class SignalAsyncExtensions
         /// <summary>Asynchronously collects all elements from the source sequence into a list.</summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains a list of all elements in the
         /// source sequence, in the order they were received.</returns>
-        public ValueTask<List<T>> ToListAsync()
+        public ValueTask<List<T>> CollectListAsync()
             => @this.ToListAsync(CancellationToken.None);
+
+        /// <summary>Asynchronously collects all elements from the source sequence into a list.</summary>
+        /// <returns>A task that represents the asynchronous operation. The task result contains a list of all elements in the
+        /// source sequence, in the order they were received.</returns>
+        public ValueTask<List<T>> ToListAsync()
+            => @this.CollectListAsync();
 
         /// <summary>Asynchronously collects all elements from the source sequence into a list.</summary>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
@@ -33,6 +39,14 @@ public static partial class SignalAsyncExtensions
             var observer = new ToListTaskWitness<T>(cancellationToken);
             await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
+        }
+
+        /// <summary>Collects all values into an array.</summary>
+        /// <returns>A task that completes with the collected array of values.</returns>
+        public async ValueTask<T[]> CollectArrayAsync()
+        {
+            var values = await @this.CollectListAsync().ConfigureAwait(false);
+            return [.. values];
         }
     }
 

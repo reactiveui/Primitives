@@ -36,7 +36,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new ScanWithInitialWitness(observer, initial, accumulator, cancellationToken);
 
-            if (observer is ObserverAsync<TAccumulate> downstreamBase)
+            if (observer is WitnessAsync<TAccumulate> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -57,7 +57,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<TAccumulate> downstream,
             TAccumulate seed,
             Func<TAccumulate, TSource, TAccumulate> accumulator,
-            CancellationToken subscribeToken) : ObserverAsync<TSource>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<TSource>(subscribeToken)
         {
             /// <summary>Running accumulator state; seeded with the initial value.</summary>
             private TAccumulate _accumulator = seed;
@@ -97,7 +97,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new ScanWithInitialAsyncWitness(observer, initial, accumulator, cancellationToken);
 
-            if (observer is ObserverAsync<TAccumulate> downstreamBase)
+            if (observer is WitnessAsync<TAccumulate> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -118,7 +118,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<TAccumulate> downstream,
             TAccumulate seed,
             Func<TAccumulate, TSource, CancellationToken, ValueTask<TAccumulate>> accumulator,
-            CancellationToken subscribeToken) : ObserverAsync<TSource>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<TSource>(subscribeToken)
         {
             /// <summary>Running accumulator state; seeded with the initial value.</summary>
             private TAccumulate _accumulator = seed;
@@ -178,7 +178,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new ThrottleDistinctWitness(observer, dueTime, timeProvider, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -197,7 +197,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> downstream,
             TimeSpan dueTime,
             TimeProvider timeProvider,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>Equality comparer used for both distinct layers.</summary>
             private static readonly EqualityComparer<T> Comparer = EqualityComparer<T>.Default;
@@ -351,7 +351,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new DropIfBusyWitness(observer, asyncAction, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -368,7 +368,7 @@ public static partial class SignalAsyncExtensions
         internal sealed class DropIfBusyWitness(
             IObserverAsync<T> downstream,
             Func<T, CancellationToken, ValueTask> asyncAction,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>0 when idle, 1 while an emission is being processed.</summary>
             private int _isBusy;
@@ -740,7 +740,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new DebounceUntilWitness(observer, debounce, condition, timeProvider, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -761,7 +761,7 @@ public static partial class SignalAsyncExtensions
             TimeSpan debounce,
             Func<T, bool> condition,
             TimeProvider timeProvider,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>Synchronization gate protecting the id counter.</summary>
             private readonly Lock _gate = new();
@@ -889,7 +889,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new ForEachEnumerableWitness(observer, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -904,7 +904,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
         internal sealed class ForEachEnumerableWitness(
             IObserverAsync<T> downstream,
-            CancellationToken subscribeToken) : ObserverAsync<IEnumerable<T>>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<IEnumerable<T>>(subscribeToken)
         {
             /// <inheritdoc/>
             protected override async ValueTask OnNextAsyncCore(IEnumerable<T> values, CancellationToken cancellationToken)

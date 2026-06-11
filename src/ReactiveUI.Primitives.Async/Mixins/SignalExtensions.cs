@@ -86,12 +86,12 @@ public static class SignalExtensions
     /// <summary>An asynchronous observer that forwards all notifications to the wrapped signal.</summary>
     /// <typeparam name="T">The type of elements processed by the observer.</typeparam>
     /// <param name="signal">The signal to forward notifications to.</param>
-    internal sealed class SignalAsyncWitness<T>(ISignalAsync<T> signal) : ObserverAsync<T>
+    internal sealed class SignalAsyncWitness<T>(ISignalAsync<T> signal) : WitnessAsync<T>
     {
         /// <summary>
         /// Forwards the value to the wrapped signal. The cancellation token is intentionally
         /// replaced with <see cref="CancellationToken.None"/> rather than passing our own dispose
-        /// token through: subscribers downstream of the signal are <see cref="ObserverAsync{T}"/>
+        /// token through: subscribers downstream of the signal are <see cref="WitnessAsync{T}"/>
         /// wraps whose <c>TryEnter</c> short-circuits on <see cref="CancellationToken.None"/> via
         /// its fast path, avoiding a per-emission linked-CTS allocation on every observer. The
         /// upstream-disposal cascade is unaffected — by the time this observer is disposed (on

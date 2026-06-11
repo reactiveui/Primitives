@@ -76,7 +76,7 @@ public class AsyncSignalSubscriptionBenchmarks
     }
 
     /// <summary>Observer that accumulates replayed async signal values.</summary>
-    private sealed class CountingWitness : Async.ObserverAsync<int>
+    private sealed class CountingWitness : Async.WitnessAsync<int>
     {
         /// <summary>Gets the accumulated value total.</summary>
         public int Total { get; private set; }

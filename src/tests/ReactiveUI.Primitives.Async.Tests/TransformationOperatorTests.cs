@@ -943,7 +943,7 @@ public class TransformationOperatorTests
     /// from the completion handler is routed to the <see cref="UnhandledExceptionHandler"/>.
     /// This exercises the inner catch block (lines 73-74) that guards against completion handler failures
     /// by using a raw <see cref="IObserverAsync{T}"/> implementation that bypasses the
-    /// <see cref="ObserverAsync{T}"/> base class exception swallowing.
+    /// <see cref="WitnessAsync{T}"/> base class exception swallowing.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -1108,7 +1108,7 @@ public class TransformationOperatorTests
 
     /// <summary>
     /// A raw <see cref="IObserverAsync{T}"/> implementation that throws a specified exception
-    /// from <see cref="OnCompletedAsync"/>. Unlike <see cref="ObserverAsync{T}"/>, this
+    /// from <see cref="OnCompletedAsync"/>. Unlike <see cref="WitnessAsync{T}"/>, this
     /// implementation does not catch exceptions internally, allowing callers to observe
     /// the thrown exception directly.
     /// </summary>

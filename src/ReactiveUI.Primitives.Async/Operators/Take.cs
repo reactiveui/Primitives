@@ -70,7 +70,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new TakeWitness(observer, count, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -87,7 +87,7 @@ public static partial class SignalAsyncExtensions
         internal sealed class TakeWitness(
             IObserverAsync<T> downstream,
             int budget,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>Remaining take budget; decremented per forwarded value.</summary>
             private int _remaining = budget;

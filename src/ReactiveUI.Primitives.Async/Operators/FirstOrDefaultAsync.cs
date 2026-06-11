@@ -104,12 +104,15 @@ public static partial class SignalAsyncExtensions
         CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, T>(cancellationToken)
     {
         /// <inheritdoc/>
-        protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+        protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
-            if (predicate is null || predicate(value))
+            _ = cancellationToken;
+            if (predicate is not null && !predicate(value))
             {
-                await SetResultAndDisposeAsync(value).ConfigureAwait(false);
+                return default;
             }
+
+            return SetResultAndDisposeAsync(value);
         }
 
         /// <inheritdoc/>

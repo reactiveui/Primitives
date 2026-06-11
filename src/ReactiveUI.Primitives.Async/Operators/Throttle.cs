@@ -112,7 +112,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="dueTime">The quiet period that must elapse before an element is forwarded.</param>
         /// <param name="timeProvider">The time provider used for scheduling the debounce timer.</param>
         internal sealed class ThrottleWitness(IObserverAsync<T> observer, TimeSpan dueTime, TimeProvider timeProvider)
-            : ObserverAsync<T>
+            : WitnessAsync<T>
         {
             /// <summary>The synchronization gate protecting shared throttle state.</summary>
             private readonly Lock _gate = new();

@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>Tests for <see cref="ObserverAsync{T}"/> disposal behavior.</summary>
+/// <summary>Tests for <see cref="WitnessAsync{T}"/> disposal behavior.</summary>
 public sealed class ObserverAsyncDisposeTests
 {
     /// <summary>The value emitted by the hopping source.</summary>
@@ -45,7 +45,7 @@ public sealed class ObserverAsyncDisposeTests
     }
 
     /// <summary>Observer whose OnNext hops threads then disposes itself via the reentrant path.</summary>
-    private sealed class SelfDisposingObserver : ObserverAsync<int>
+    private sealed class SelfDisposingObserver : WitnessAsync<int>
     {
         /// <inheritdoc/>
         protected override async ValueTask OnNextAsyncCore(int value, CancellationToken cancellationToken)

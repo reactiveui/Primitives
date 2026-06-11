@@ -95,7 +95,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new DistinctWitness(observer, comparer, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -112,7 +112,7 @@ public static partial class SignalAsyncExtensions
         internal sealed class DistinctWitness(
             IObserverAsync<T> downstream,
             IEqualityComparer<T> comparer,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>Set of previously-forwarded values; <see cref="HashSet{T}.Add"/> returns <see langword="false"/> for duplicates.</summary>
             private readonly HashSet<T> _seen = new(comparer);
@@ -149,7 +149,7 @@ public static partial class SignalAsyncExtensions
         {
             var sink = new DistinctByWitness(observer, keySelector, comparer, cancellationToken);
 
-            if (observer is ObserverAsync<T> downstreamBase)
+            if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -168,7 +168,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> downstream,
             Func<T, TKey> keySelector,
             IEqualityComparer<TKey> comparer,
-            CancellationToken subscribeToken) : ObserverAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <summary>Set of previously-seen keys.</summary>
             private readonly HashSet<TKey> _seen = new(comparer);

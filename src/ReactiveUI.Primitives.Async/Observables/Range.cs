@@ -18,7 +18,7 @@ public static partial class SignalAsync
     /// <param name="count">The number of sequential integers to emit. Must be non-negative.</param>
     /// <returns>An observable sequence that emits integers from <paramref name="start"/> to <paramref name="start"/> + <paramref
     /// name="count"/> - 1, in order.</returns>
-    public static IObservableAsync<int> Range(int start, int count) => CreateAsBackgroundJob<int>(
+    public static IObservableAsync<int> Sequence(int start, int count) => CreateAsBackgroundJob<int>(
         async (observer, cancellationToken) =>
         {
             for (var i = 0; i < count; i++)
@@ -36,4 +36,11 @@ public static partial class SignalAsync
             await observer.OnCompletedAsync(Result.Success).ConfigureAwait(false);
         },
         true);
+
+    /// <summary>Creates an observable sequence that emits a range of consecutive integer values, starting from the specified value.</summary>
+    /// <param name="start">The value of the first integer in the sequence.</param>
+    /// <param name="count">The number of sequential integers to emit. Must be non-negative.</param>
+    /// <returns>An observable sequence that emits integers from <paramref name="start"/> to <paramref name="start"/> + <paramref
+    /// name="count"/> - 1, in order.</returns>
+    public static IObservableAsync<int> Range(int start, int count) => Sequence(start, count);
 }

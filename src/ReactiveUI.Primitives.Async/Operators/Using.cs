@@ -14,13 +14,8 @@ public static partial class SignalAsync
     /// Creates an observable sequence that manages the lifetime of an asynchronous resource, ensuring the resource is
     /// disposed when the sequence terminates.
     /// </summary>
-    /// <remarks>The resource is created for each subscription and is disposed asynchronously when the
-    /// observable sequence terminates, either by completion or error. If the observable factory throws an exception,
-    /// the resource is disposed before the exception is propagated. This method is useful for managing resources that
-    /// must be disposed when no longer needed, such as streams or database connections, in conjunction with
-    /// asynchronous observable sequences.</remarks>
-    /// <typeparam name="T">The type of the elements produced by the observable sequence.</typeparam>
     /// <typeparam name="TResource">The type of the asynchronous resource that implements <see cref="IAsyncDisposable"/>.</typeparam>
+    /// <typeparam name="T">The type of the elements produced by the observable sequence.</typeparam>
     /// <param name="resourceFactory">A function that asynchronously creates the resource to be used by the observable sequence. The function receives
     /// a <see cref="CancellationToken"/> and returns a <see cref="ValueTask{TResource}"/> representing the asynchronous
     /// creation of the resource.</param>
@@ -28,7 +23,7 @@ public static partial class SignalAsync
     /// signal sequence that uses the resource.</param>
     /// <returns>An <see cref="SignalAsync{T}"/> that uses the specified resource and ensures the resource is disposed
     /// asynchronously when the sequence completes or an error occurs.</returns>
-    public static IObservableAsync<T> Using<T, TResource>(
+    public static IObservableAsync<T> Use<TResource, T>(
         Func<CancellationToken, ValueTask<TResource>> resourceFactory,
         Func<TResource, IObservableAsync<T>> signalFactory)
         where TResource : IAsyncDisposable => Defer(async token =>
@@ -46,4 +41,26 @@ public static partial class SignalAsync
             throw;
         }
     });
+
+    /// <summary>
+    /// Creates an observable sequence that manages the lifetime of an asynchronous resource, ensuring the resource is
+    /// disposed when the sequence terminates.
+    /// </summary>
+    /// <typeparam name="T">The type of the elements produced by the observable sequence.</typeparam>
+    /// <typeparam name="TResource">The type of the asynchronous resource that implements <see cref="IAsyncDisposable"/>.</typeparam>
+    /// <param name="resourceFactory">A function that asynchronously creates the resource to be used by the observable sequence.</param>
+    /// <param name="signalFactory">A function that, given the created resource, returns an <see cref="SignalAsync{T}"/> representing the
+    /// signal sequence that uses the resource.</param>
+    /// <returns>An <see cref="SignalAsync{T}"/> that uses the specified resource and ensures the resource is disposed
+    /// asynchronously when the sequence completes or an error occurs.</returns>
+    /// <remarks>The resource is created for each subscription and is disposed asynchronously when the
+    /// observable sequence terminates, either by completion or error. If the observable factory throws an exception,
+    /// the resource is disposed before the exception is propagated. This method is useful for managing resources that
+    /// must be disposed when no longer needed, such as streams or database connections, in conjunction with
+    /// asynchronous observable sequences.</remarks>
+    public static IObservableAsync<T> Using<T, TResource>(
+        Func<CancellationToken, ValueTask<TResource>> resourceFactory,
+        Func<TResource, IObservableAsync<T>> signalFactory)
+        where TResource : IAsyncDisposable =>
+        Use(resourceFactory, signalFactory);
 }

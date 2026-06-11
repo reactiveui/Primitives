@@ -69,6 +69,84 @@ public class AsyncExtensionsComparisonBenchmarks
                 ExtensionsAsyncObservable.Range(0, Count))
             .ConfigureAwait(false);
 
+    /// <summary>Checks for the final value in a primitive async sequence.</summary>
+    /// <returns>One when the value is found.</returns>
+    [Benchmark]
+    public async Task<int> PrimitivesSequenceContainsAsync() =>
+        await PrimitivesAsyncSignal.Sequence(0, Count)
+            .ContainsAsync(Count - 1)
+            .ConfigureAwait(false)
+            ? 1
+            : 0;
+
+    /// <summary>Checks for the final value in a ReactiveUI.Extensions async range.</summary>
+    /// <returns>One when the value is found.</returns>
+    [Benchmark]
+    public async Task<int> ExtensionsRangeContainsAsync() =>
+        await ExtensionsAsyncObservable.ContainsAsync(
+                ExtensionsAsyncObservable.Range(0, Count),
+                Count - 1)
+            .ConfigureAwait(false)
+            ? 1
+            : 0;
+
+    /// <summary>Checks whether a primitive async sequence contains any value.</summary>
+    /// <returns>One when the sequence contains a value.</returns>
+    [Benchmark]
+    public async Task<int> PrimitivesSequenceAnyAsync() =>
+        await PrimitivesAsyncSignal.Sequence(0, Count)
+            .AnyAsync()
+            .ConfigureAwait(false)
+            ? 1
+            : 0;
+
+    /// <summary>Checks whether a ReactiveUI.Extensions async range contains any value.</summary>
+    /// <returns>One when the sequence contains a value.</returns>
+    [Benchmark]
+    public async Task<int> ExtensionsRangeAnyAsync() =>
+        await ExtensionsAsyncObservable.AnyAsync(ExtensionsAsyncObservable.Range(0, Count))
+            .ConfigureAwait(false)
+            ? 1
+            : 0;
+
+    /// <summary>Reads the first value from a primitive async sequence.</summary>
+    /// <returns>The first value.</returns>
+    [Benchmark]
+    public async Task<int> PrimitivesSequenceFirstAsync() =>
+        await PrimitivesAsyncSignal.Sequence(0, Count)
+            .FirstAsync()
+            .ConfigureAwait(false);
+
+    /// <summary>Reads the first value from a ReactiveUI.Extensions async range.</summary>
+    /// <returns>The first value.</returns>
+    [Benchmark]
+    public async Task<int> ExtensionsRangeFirstAsync() =>
+        await ExtensionsAsyncObservable.FirstAsync(ExtensionsAsyncObservable.Range(0, Count))
+            .ConfigureAwait(false);
+
+    /// <summary>Materializes a primitive async sequence into a dictionary.</summary>
+    /// <returns>The dictionary entry count.</returns>
+    [Benchmark]
+    public async Task<int> PrimitivesSequenceToDictionaryAsync()
+    {
+        var values = await PrimitivesAsyncSignal.Sequence(0, Count)
+            .ToDictionaryAsync(static value => value)
+            .ConfigureAwait(false);
+        return values.Count;
+    }
+
+    /// <summary>Materializes a ReactiveUI.Extensions async range into a dictionary.</summary>
+    /// <returns>The dictionary entry count.</returns>
+    [Benchmark]
+    public async Task<int> ExtensionsRangeToDictionaryAsync()
+    {
+        var values = await ExtensionsAsyncObservable.ToDictionaryAsync(
+                ExtensionsAsyncObservable.Range(0, Count),
+                static value => value)
+            .ConfigureAwait(false);
+        return values.Count;
+    }
+
     /// <summary>Broadcasts primitive async signal values to multiple subscribers.</summary>
     /// <returns>The total value sum observed by all subscribers.</returns>
     [Benchmark]
@@ -178,7 +256,7 @@ public class AsyncExtensionsComparisonBenchmarks
     }
 
     /// <summary>Observer that accumulates primitive async signal values.</summary>
-    private sealed class PrimitivesCountingWitness : Async.ObserverAsync<int>
+    private sealed class PrimitivesCountingWitness : Async.WitnessAsync<int>
     {
         /// <summary>Gets the accumulated value total.</summary>
         public int Total { get; private set; }
