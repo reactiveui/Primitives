@@ -4,7 +4,7 @@
 
 using ReactiveUI.Primitives.Disposables;
 
-namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
+namespace ReactiveUI.Disposables.Tests;
 
 /// <summary>Coverage for <see cref="DisposableBag"/> — inline-slot fill, overflow growth,
 /// add-after-dispose immediate disposal, three-arg constructor, and dispose-order guarantees.</summary>

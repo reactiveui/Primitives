@@ -4,7 +4,7 @@
 
 using ReactiveUI.Primitives.Disposables;
 
-namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
+namespace ReactiveUI.Disposables.Tests;
 
 /// <summary>Tests for the internal disposable holders (<see cref="SwapDisposable"/>, <see cref="MutableDisposable"/>, <see cref="OnceDisposable"/>) that back the sync-side sinks.</summary>
 public class InternalDisposablesTests
