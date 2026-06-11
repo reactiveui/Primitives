@@ -4,7 +4,7 @@
 
 using ReactiveUI.Primitives.Disposables;
 
-namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
+namespace ReactiveUI.Disposables.Tests;
 
 /// <summary>Tests for <see cref="ActionDisposable"/> — verifies the dispose action runs exactly once regardless of how many times <c>Dispose</c> is called.</summary>
 public class ActionDisposableTests

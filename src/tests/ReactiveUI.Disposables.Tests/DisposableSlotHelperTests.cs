@@ -4,7 +4,7 @@
 
 using ReactiveUI.Primitives.Disposables;
 
-namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
+namespace ReactiveUI.Disposables.Tests;
 
 /// <summary>Direct RxVoid tests for <see cref="DisposableSlotHelper"/>. Covers every reachable
 /// branch — the already-disposed pre-check, the steady-state assign, the swap-disposes-previous

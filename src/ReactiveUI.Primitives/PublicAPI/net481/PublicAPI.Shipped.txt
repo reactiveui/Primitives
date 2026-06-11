@@ -245,91 +245,6 @@ ReactiveUI.Primitives.Core.TimeInterval<T>.Value.get -> T
 ReactiveUI.Primitives.Core.Witness
 ReactiveUI.Primitives.DefaultIfEmptyWitness<T>
 ReactiveUI.Primitives.DefaultIfEmptyWitness<T>.DefaultIfEmptyWitness(System.IObserver<T>! observer, T defaultValue) -> void
-ReactiveUI.Primitives.Disposables.ActionDisposable
-ReactiveUI.Primitives.Disposables.ActionDisposable.ActionDisposable(System.Action! action) -> void
-ReactiveUI.Primitives.Disposables.ActionDisposable.Dispose() -> void
-ReactiveUI.Primitives.Disposables.ActionDisposable.IsDisposed.get -> bool
-ReactiveUI.Primitives.Disposables.AssignmentSlot
-ReactiveUI.Primitives.Disposables.AssignmentSlot.AssignmentSlot(System.Action? action) -> void
-ReactiveUI.Primitives.Disposables.AssignmentSlot.AssignmentSlot(System.IDisposable! disposable, System.Action? action) -> void
-ReactiveUI.Primitives.Disposables.AssignmentSlot.AssignmentSlot(System.IDisposable! disposable) -> void
-ReactiveUI.Primitives.Disposables.AssignmentSlot.AssignmentSlot() -> void
-ReactiveUI.Primitives.Disposables.BooleanDisposable
-ReactiveUI.Primitives.Disposables.BooleanDisposable.BooleanDisposable() -> void
-ReactiveUI.Primitives.Disposables.BooleanDisposable.Dispose() -> void
-ReactiveUI.Primitives.Disposables.BooleanDisposable.IsDisposed.get -> bool
-ReactiveUI.Primitives.Disposables.CancellationDisposable
-ReactiveUI.Primitives.Disposables.CancellationDisposable.CancellationDisposable(System.Threading.CancellationTokenSource! cts) -> void
-ReactiveUI.Primitives.Disposables.CancellationDisposable.CancellationDisposable() -> void
-ReactiveUI.Primitives.Disposables.CancellationDisposable.Dispose() -> void
-ReactiveUI.Primitives.Disposables.CancellationDisposable.IsDisposed.get -> bool
-ReactiveUI.Primitives.Disposables.CancellationDisposable.Token.get -> System.Threading.CancellationToken
-ReactiveUI.Primitives.Disposables.DisposableBag
-ReactiveUI.Primitives.Disposables.DisposableBag.Add(System.IDisposable! disposable) -> void
-ReactiveUI.Primitives.Disposables.DisposableBag.DisposableBag(System.IDisposable! first, System.IDisposable! second, System.IDisposable! third) -> void
-ReactiveUI.Primitives.Disposables.DisposableBag.DisposableBag(System.IDisposable! first, System.IDisposable! second) -> void
-ReactiveUI.Primitives.Disposables.DisposableBag.DisposableBag() -> void
-ReactiveUI.Primitives.Disposables.DisposableBag.Dispose() -> void
-ReactiveUI.Primitives.Disposables.DisposableBag.IsDisposed.get -> bool
-ReactiveUI.Primitives.Disposables.EmptyDisposable
-ReactiveUI.Primitives.Disposables.EmptyDisposable.Dispose() -> void
-ReactiveUI.Primitives.Disposables.IsDisposed
-ReactiveUI.Primitives.Disposables.IsDisposed.IsDisposed.get -> bool
-ReactiveUI.Primitives.Disposables.MultipleDisposable
-ReactiveUI.Primitives.Disposables.MultipleDisposable.Add(System.IDisposable! disposable) -> void
-ReactiveUI.Primitives.Disposables.MultipleDisposable.Dispose() -> void
-ReactiveUI.Primitives.Disposables.MultipleDisposable.IsDisposed.get -> bool
-ReactiveUI.Primitives.Disposables.MultipleDisposable.MultipleDisposable(params System.IDisposable![]! disposables) -> void
-ReactiveUI.Primitives.Disposables.MultipleDisposable.MultipleDisposable(System.IDisposable! first, System.IDisposable! second, System.IDisposable! third) -> void
-ReactiveUI.Primitives.Disposables.MultipleDisposable.MultipleDisposable(System.IDisposable! first, System.IDisposable! second) -> void
-ReactiveUI.Primitives.Disposables.MultipleDisposable.MultipleDisposable() -> void
-ReactiveUI.Primitives.Disposables.MultipleDisposable.Remove(System.IDisposable? item) -> bool
-ReactiveUI.Primitives.Disposables.MutableDisposable
-ReactiveUI.Primitives.Disposables.MutableDisposable.Disposable.get -> System.IDisposable?
-ReactiveUI.Primitives.Disposables.MutableDisposable.Disposable.set -> void
-ReactiveUI.Primitives.Disposables.MutableDisposable.Dispose() -> void
-ReactiveUI.Primitives.Disposables.MutableDisposable.IsDisposed.get -> bool
-ReactiveUI.Primitives.Disposables.MutableDisposable.MutableDisposable() -> void
-ReactiveUI.Primitives.Disposables.OnceDisposable
-ReactiveUI.Primitives.Disposables.OnceDisposable.Disposable.get -> System.IDisposable?
-ReactiveUI.Primitives.Disposables.OnceDisposable.Disposable.set -> void
-ReactiveUI.Primitives.Disposables.OnceDisposable.Dispose() -> void
-ReactiveUI.Primitives.Disposables.OnceDisposable.IsAssigned.get -> bool
-ReactiveUI.Primitives.Disposables.OnceDisposable.IsDisposed.get -> bool
-ReactiveUI.Primitives.Disposables.OnceDisposable.OnceDisposable() -> void
-ReactiveUI.Primitives.Disposables.Pocket
-ReactiveUI.Primitives.Disposables.Pocket.Pocket(params System.IDisposable![]! disposables) -> void
-ReactiveUI.Primitives.Disposables.Pocket.Pocket(System.IDisposable! first, System.IDisposable! second, System.IDisposable! third) -> void
-ReactiveUI.Primitives.Disposables.Pocket.Pocket(System.IDisposable! first, System.IDisposable! second) -> void
-ReactiveUI.Primitives.Disposables.Pocket.Pocket() -> void
-ReactiveUI.Primitives.Disposables.Scope
-ReactiveUI.Primitives.Disposables.SingleDisposable
-ReactiveUI.Primitives.Disposables.SingleDisposable.Create(System.IDisposable! disposable) -> void
-ReactiveUI.Primitives.Disposables.SingleDisposable.Dispose() -> void
-ReactiveUI.Primitives.Disposables.SingleDisposable.IsDisposed.get -> bool
-ReactiveUI.Primitives.Disposables.SingleDisposable.SingleDisposable(System.Action? action) -> void
-ReactiveUI.Primitives.Disposables.SingleDisposable.SingleDisposable(System.IDisposable! disposable, System.Action? action) -> void
-ReactiveUI.Primitives.Disposables.SingleDisposable.SingleDisposable(System.IDisposable! disposable) -> void
-ReactiveUI.Primitives.Disposables.SingleDisposable.SingleDisposable() -> void
-ReactiveUI.Primitives.Disposables.SingleReplaceableDisposable
-ReactiveUI.Primitives.Disposables.SingleReplaceableDisposable.Create(System.IDisposable! disposable) -> void
-ReactiveUI.Primitives.Disposables.SingleReplaceableDisposable.Dispose() -> void
-ReactiveUI.Primitives.Disposables.SingleReplaceableDisposable.IsDisposed.get -> bool
-ReactiveUI.Primitives.Disposables.SingleReplaceableDisposable.SingleReplaceableDisposable(System.Action? action) -> void
-ReactiveUI.Primitives.Disposables.SingleReplaceableDisposable.SingleReplaceableDisposable(System.IDisposable! disposable, System.Action? action) -> void
-ReactiveUI.Primitives.Disposables.SingleReplaceableDisposable.SingleReplaceableDisposable(System.IDisposable! disposable) -> void
-ReactiveUI.Primitives.Disposables.SingleReplaceableDisposable.SingleReplaceableDisposable() -> void
-ReactiveUI.Primitives.Disposables.Slot
-ReactiveUI.Primitives.Disposables.Slot.Slot(System.Action? action) -> void
-ReactiveUI.Primitives.Disposables.Slot.Slot(System.IDisposable! disposable, System.Action? action) -> void
-ReactiveUI.Primitives.Disposables.Slot.Slot(System.IDisposable! disposable) -> void
-ReactiveUI.Primitives.Disposables.Slot.Slot() -> void
-ReactiveUI.Primitives.Disposables.SwapDisposable
-ReactiveUI.Primitives.Disposables.SwapDisposable.Disposable.get -> System.IDisposable?
-ReactiveUI.Primitives.Disposables.SwapDisposable.Disposable.set -> void
-ReactiveUI.Primitives.Disposables.SwapDisposable.Dispose() -> void
-ReactiveUI.Primitives.Disposables.SwapDisposable.IsDisposed.get -> bool
-ReactiveUI.Primitives.Disposables.SwapDisposable.SwapDisposable() -> void
 ReactiveUI.Primitives.DisposedMarker
 ReactiveUI.Primitives.DisposedMarker.DisposedMarker() -> void
 ReactiveUI.Primitives.DisposedMarker.Dispose() -> void
@@ -776,13 +691,6 @@ static ReactiveUI.Primitives.Core.Witness.Create<T>(System.Action<T>! onNext, Sy
 static ReactiveUI.Primitives.Core.Witness.Create<T>(System.Action<T>! onNext) -> System.IObserver<T>!
 static ReactiveUI.Primitives.Core.Witness.Safe<T>(System.IObserver<T>! observer, System.IDisposable! cancel) -> System.IObserver<T>!
 static ReactiveUI.Primitives.Core.Witness.Safe<T>(System.IObserver<T>! observer) -> System.IObserver<T>!
-static ReactiveUI.Primitives.Disposables.EmptyDisposable.Instance.get -> ReactiveUI.Primitives.Disposables.EmptyDisposable!
-static ReactiveUI.Primitives.Disposables.MultipleDisposable.Create(params System.IDisposable![]! disposables) -> System.IDisposable!
-static ReactiveUI.Primitives.Disposables.Scope.Combine(params System.IDisposable![]! disposables) -> System.IDisposable!
-static ReactiveUI.Primitives.Disposables.Scope.Combine(System.IDisposable! first, System.IDisposable! second) -> System.IDisposable!
-static ReactiveUI.Primitives.Disposables.Scope.Create(System.Action! dispose) -> System.IDisposable!
-static ReactiveUI.Primitives.Disposables.Scope.Create<TState>(TState state, System.Action<TState>! dispose) -> System.IDisposable!
-static ReactiveUI.Primitives.Disposables.Scope.Empty.get -> System.IDisposable!
 static ReactiveUI.Primitives.LinqExtensions.Aggregate<T, TAccumulate>(this System.IObservable<T>! source, TAccumulate seed, System.Func<TAccumulate, T, TAccumulate>! accumulator) -> System.IObservable<TAccumulate>!
 static ReactiveUI.Primitives.LinqExtensions.All<T>(this System.IObservable<T>! source, System.Func<T, bool>! predicate) -> System.IObservable<bool>!
 static ReactiveUI.Primitives.LinqExtensions.Amb<T>(this System.IObservable<System.IObservable<T>!>! sources) -> System.IObservable<T>!
@@ -1046,9 +954,6 @@ static readonly ReactiveUI.Primitives.Concurrency.ThreadPoolSequencer.Instance -
 virtual ReactiveUI.Primitives.Concurrency.DispatchSequencerBase.ScheduleDelayed(ReactiveUI.Primitives.Concurrency.IWorkItem! item, long dueTimestamp) -> void
 virtual ReactiveUI.Primitives.Concurrency.ScheduledItem<TAbsolute>.Dispose(bool disposing) -> void
 virtual ReactiveUI.Primitives.Concurrency.VirtualTimeSequencerBase<TAbsolute, TRelative>.GetService(System.Type! serviceType) -> object?
-virtual ReactiveUI.Primitives.Disposables.MultipleDisposable.Dispose(bool disposing) -> void
-virtual ReactiveUI.Primitives.Disposables.SingleDisposable.Dispose(bool disposing) -> void
-virtual ReactiveUI.Primitives.Disposables.SingleReplaceableDisposable.Dispose(bool disposing) -> void
 virtual ReactiveUI.Primitives.Signals.AsyncSignal<T>.Dispose(bool disposing) -> void
 virtual ReactiveUI.Primitives.Signals.BehaviorSignal<T>.Dispose(bool disposing) -> void
 virtual ReactiveUI.Primitives.Signals.ReplaySignal<T>.Dispose(bool disposing) -> void
@@ -1227,9 +1132,3 @@ ReactiveUI.Primitives.AggregateWitness<T, TResult, TAggregator>.SetSubscription(
 ReactiveUI.Primitives.IAggregator<T, TResult, TSelf>
 ReactiveUI.Primitives.IAggregator<T, TResult, TSelf>.Add(T value) -> TSelf
 ReactiveUI.Primitives.IAggregator<T, TResult, TSelf>.Result.get -> TResult
-ReactiveUI.Primitives.Disposables.MultipleDisposable.Clear() -> void
-ReactiveUI.Primitives.Disposables.MultipleDisposable.Contains(System.IDisposable! item) -> bool
-ReactiveUI.Primitives.Disposables.MultipleDisposable.CopyTo(System.IDisposable![]! array, int arrayIndex) -> void
-ReactiveUI.Primitives.Disposables.MultipleDisposable.Count.get -> int
-ReactiveUI.Primitives.Disposables.MultipleDisposable.GetEnumerator() -> System.Collections.Generic.IEnumerator<System.IDisposable!>!
-ReactiveUI.Primitives.Disposables.MultipleDisposable.IsReadOnly.get -> bool
