@@ -154,6 +154,24 @@ public class TransformationOperatorTests
         Assert.Throws<ArgumentNullException>(() =>
             SignalAsync.Return(1).Scan(0, (Func<int, int, int>)null!));
 
+    /// <summary>Tests Tap and Do null callback overloads return the original source.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenTapAndDoCallbacksAreNull_ThenReturnSource()
+    {
+        var source = SignalAsync.Return(1);
+
+        await Assert.That(source.Tap(
+            (Func<int, CancellationToken, ValueTask>?)null,
+            null,
+            null)).IsSameReferenceAs(source);
+        await Assert.That(source.Tap((Action<int>)null!)).IsSameReferenceAs(source);
+        await Assert.That(source.Do(
+            (Action<int>?)null,
+            null,
+            null)).IsSameReferenceAs(source);
+    }
+
     /// <summary>Exercises the sync-action <c>Do&lt;T&gt;(Action&lt;T&gt;, Action&lt;Exception&gt;, Action&lt;Result&gt;)</c>
     /// overload's non-null-callback branches in <c>SyncSideEffectObserver</c>'s OnNext / OnErrorResume / OnCompleted.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -197,6 +215,68 @@ public class TransformationOperatorTests
         await Assert.That(nextValues).IsCollectionEqualTo([ExpectedFirst, ExpectedSecond]);
         await Assert.That(errors).Count().IsEqualTo(1);
         await Assert.That(completions).Count().IsEqualTo(1);
+    }
+
+    /// <summary>Tests Do with only a completion callback still forwards resumable errors.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDoSyncWithOnlyCompletionCallbackAndSourceEmitsErrorResume_ThenForwardsError()
+    {
+        var caughtErrors = new List<Exception>();
+        var completions = new List<Result>();
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var source = SignalAsync.Create<int>(async (observer, ct) =>
+        {
+            await observer.OnErrorResumeAsync(new InvalidOperationException("sync completion-only"), ct);
+            await observer.OnCompletedAsync(Result.Success);
+            return DisposableAsync.Empty;
+        });
+
+        await using var sub = await source
+            .Do(
+                (Action<int>?)null,
+                null,
+                result => completions.Add(result))
+            .SubscribeAsync(
+                static (_, _) => default,
+                (ex, _) =>
+                {
+                    caughtErrors.Add(ex);
+                    return default;
+                },
+                _ =>
+                {
+                    done.TrySetResult();
+                    return default;
+                });
+
+        await done.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        await Assert.That(caughtErrors).Count().IsEqualTo(1);
+        await Assert.That(completions).Count().IsEqualTo(1);
+    }
+
+    /// <summary>Tests Tap with only an asynchronous completion callback invokes it.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenTapAsyncWithOnlyCompletionCallback_ThenInvokesCallback()
+    {
+        Result? completion = null;
+
+        await SignalAsync.Return(1)
+            .Tap(
+                (Func<int, CancellationToken, ValueTask>?)null,
+                null,
+                result =>
+                {
+                    completion = result;
+                    return default;
+                })
+            .WaitCompletionAsync();
+
+        await Assert.That(completion).IsNotNull();
+        await Assert.That(completion!.Value.IsSuccess).IsTrue();
     }
 
     /// <summary>Exercises the no-arg <c>Do&lt;T&gt;()</c> overload's null-callback branches on
