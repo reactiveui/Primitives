@@ -4,7 +4,7 @@
 
 using ReactiveUI.Primitives.Disposables;
 
-namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
+namespace ReactiveUI.Disposables.Tests;
 
 /// <summary>Tests for <see cref="MutableDisposable"/> — verifies that reassigning the inner does
 /// NOT dispose the previous, that assigning after disposal immediately disposes the incoming

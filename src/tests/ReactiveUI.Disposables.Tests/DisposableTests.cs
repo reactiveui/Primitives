@@ -4,25 +4,26 @@
 
 using ReactiveUI.Primitives.Disposables;
 
-namespace ReactiveUI.Primitives.Tests;
+namespace ReactiveUI.Disposables.Tests;
 
 /// <summary>DisposableTests.</summary>
 public class DisposableTests
 {
     /// <summary>Called when [dispose once].</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public void OnlyDisposeOnce()
+    public async Task OnlyDisposeOnce()
     {
         var disposed = 0;
         var disposable = new ActionDisposable(() => disposed++);
 
         disposable.Dispose();
 
-        Assert.Equal(1, disposed);
+        await Assert.That(disposed).IsEqualTo(1);
 
         disposable.Dispose();
 
-        Assert.Equal(1, disposed);
+        await Assert.That(disposed).IsEqualTo(1);
     }
 
     /// <summary>Empties the disposable.</summary>
@@ -36,137 +37,144 @@ public class DisposableTests
     }
 
     /// <summary>Verifies cancellation disposable state transitions with the default owned token source.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public void CancellationDisposableDefaultConstructorCancelsOwnedToken()
+    public async Task CancellationDisposableDefaultConstructorCancelsOwnedToken()
     {
         var disposable = new CancellationDisposable();
 
-        Assert.False(disposable.Token.IsCancellationRequested);
-        Assert.False(disposable.IsDisposed);
+        await Assert.That(disposable.Token.IsCancellationRequested).IsFalse();
+        await Assert.That(disposable.IsDisposed).IsFalse();
 
         disposable.Dispose();
 
-        Assert.True(disposable.Token.IsCancellationRequested);
-        Assert.True(disposable.IsDisposed);
+        await Assert.That(disposable.Token.IsCancellationRequested).IsTrue();
+        await Assert.That(disposable.IsDisposed).IsTrue();
 
         disposable.Dispose();
 
-        Assert.True(disposable.Token.IsCancellationRequested);
-        Assert.True(disposable.IsDisposed);
+        await Assert.That(disposable.Token.IsCancellationRequested).IsTrue();
+        await Assert.That(disposable.IsDisposed).IsTrue();
     }
 
     /// <summary>Singles the disposable dispose.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public void SingleDisposableDispose()
+    public async Task SingleDisposableDispose()
     {
         var disposable = new SingleDisposable(EmptyDisposable.Instance);
         disposable.Dispose();
-        Assert.True(disposable.IsDisposed);
+        await Assert.That(disposable.IsDisposed).IsTrue();
     }
 
     /// <summary>Singles the disposable dispose with action.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public void SingleDisposableDisposeWithAction()
+    public async Task SingleDisposableDisposeWithAction()
     {
         var disposed = 0;
         var disposable = new SingleDisposable(EmptyDisposable.Instance, () => disposed++);
         disposable.Dispose();
-        Assert.True(disposable.IsDisposed);
-        Assert.Equal(1, disposed);
+        await Assert.That(disposable.IsDisposed).IsTrue();
+        await Assert.That(disposed).IsEqualTo(1);
 
         disposable.Dispose();
-        Assert.True(disposable.IsDisposed);
-        Assert.Equal(1, disposed);
+        await Assert.That(disposable.IsDisposed).IsTrue();
+        await Assert.That(disposed).IsEqualTo(1);
 
         disposable.Dispose();
-        Assert.True(disposable.IsDisposed);
-        Assert.Equal(1, disposed);
+        await Assert.That(disposable.IsDisposed).IsTrue();
+        await Assert.That(disposed).IsEqualTo(1);
     }
 
     /// <summary>Multiples the disposable dispose.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public void MultipleDisposableDispose()
+    public async Task MultipleDisposableDispose()
     {
         var disposable = new MultipleDisposable();
         disposable.Dispose();
-        Assert.True(disposable.IsDisposed);
+        await Assert.That(disposable.IsDisposed).IsTrue();
     }
 
     /// <summary>Multiples the disposable with items dispose.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public void MultipleDisposableWithItemsDispose()
+    public async Task MultipleDisposableWithItemsDispose()
     {
         MultipleDisposable disposable = [EmptyDisposable.Instance];
         var disposed = 0;
 
-        // create a disposable that will be disposed when the MultipleDisposable is disposed
-        var singleDisposable = EmptyDisposable.Instance.DisposeWith(() => disposed++);
+        // A child disposable whose action runs when the group is disposed.
+        var singleDisposable = new SingleDisposable(EmptyDisposable.Instance, () => disposed++);
+        disposable.Add(singleDisposable);
 
-        // add the disposable to the MultipleDisposable
-        singleDisposable?.DisposeWith(disposable);
-
-        var singleDisposable2 = EmptyDisposable.Instance.DisposeWith();
-        singleDisposable2?.DisposeWith(disposable);
+        var singleDisposable2 = new SingleDisposable(EmptyDisposable.Instance);
+        disposable.Add(singleDisposable2);
 
         disposable.Dispose();
-        Assert.True(disposable.IsDisposed);
-        Assert.True(singleDisposable?.IsDisposed);
-        Assert.True(singleDisposable2?.IsDisposed);
-        Assert.Equal(1, disposed);
+        await Assert.That(disposable.IsDisposed).IsTrue();
+        await Assert.That(singleDisposable.IsDisposed).IsTrue();
+        await Assert.That(singleDisposable2.IsDisposed).IsTrue();
+        await Assert.That(disposed).IsEqualTo(1);
     }
 
     /// <summary>Verifies <see cref="MultipleDisposable.Count"/> tracks the held disposables and resets on dispose.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public void MultipleDisposableCountReflectsContents()
+    public async Task MultipleDisposableCountReflectsContents()
     {
         var first = new ActionDisposable(() => { });
         var second = new ActionDisposable(() => { });
         IDisposable[] items = [first, second];
         MultipleDisposable disposable = [.. items];
 
-        Assert.Equal(items.Length, disposable.Count);
+        await Assert.That(disposable.Count).IsEqualTo(items.Length);
 
         disposable.Remove(first);
-        Assert.Equal(items.Length - 1, disposable.Count);
+        await Assert.That(disposable.Count).IsEqualTo(items.Length - 1);
 
         disposable.Dispose();
-        Assert.Equal(0, disposable.Count);
+        await Assert.That(disposable.Count).IsEqualTo(0);
     }
 
     /// <summary>Verifies a collection expression initializes a <see cref="MultipleDisposable"/>.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public void MultipleDisposableSupportsCollectionInitializer()
+    public async Task MultipleDisposableSupportsCollectionInitializer()
     {
         var first = new ActionDisposable(() => { });
         var second = new ActionDisposable(() => { });
         IDisposable[] items = [first, second];
         MultipleDisposable disposable = [.. items];
 
-        Assert.Equal(items.Length, disposable.Count);
-        Assert.True(disposable.Contains(first));
-        Assert.True(disposable.Contains(second));
-        Assert.False(disposable.IsReadOnly);
+        await Assert.That(disposable.Count).IsEqualTo(items.Length);
+        await Assert.That(disposable.Contains(first)).IsTrue();
+        await Assert.That(disposable.Contains(second)).IsTrue();
+        await Assert.That(disposable.IsReadOnly).IsFalse();
     }
 
     /// <summary>Verifies <see cref="MultipleDisposable.Contains"/> reports membership.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public void MultipleDisposableContainsReportsMembership()
+    public async Task MultipleDisposableContainsReportsMembership()
     {
         var tracked = new ActionDisposable(() => { });
         var untracked = new ActionDisposable(() => { });
         MultipleDisposable disposable = [tracked];
 
-        Assert.True(disposable.Contains(tracked));
-        Assert.False(disposable.Contains(untracked));
-        Assert.False(disposable.Contains(null!));
+        await Assert.That(disposable.Contains(tracked)).IsTrue();
+        await Assert.That(disposable.Contains(untracked)).IsFalse();
+        await Assert.That(disposable.Contains(null!)).IsFalse();
 
         // Removing an absent item while there is no overflow store returns false.
-        Assert.False(disposable.Remove(untracked));
+        await Assert.That(disposable.Remove(untracked)).IsFalse();
     }
 
     /// <summary>Verifies <see cref="MultipleDisposable.Clear"/> disposes the contents and stays usable.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public void MultipleDisposableClearDisposesContentsAndStaysUsable()
+    public async Task MultipleDisposableClearDisposesContentsAndStaysUsable()
     {
         var disposedCount = 0;
         IDisposable[] items =
@@ -178,21 +186,22 @@ public class DisposableTests
 
         disposable.Clear();
 
-        Assert.Equal(items.Length, disposedCount);
-        Assert.Equal(0, disposable.Count);
-        Assert.False(disposable.IsDisposed);
+        await Assert.That(disposedCount).IsEqualTo(items.Length);
+        await Assert.That(disposable.Count).IsEqualTo(0);
+        await Assert.That(disposable.IsDisposed).IsFalse();
 
         var reused = 0;
         disposable.Add(new ActionDisposable(() => reused++));
-        Assert.Equal(1, disposable.Count);
+        await Assert.That(disposable.Count).IsEqualTo(1);
 
         disposable.Dispose();
-        Assert.Equal(1, reused);
+        await Assert.That(reused).IsEqualTo(1);
     }
 
     /// <summary>Verifies enumeration and <see cref="MultipleDisposable.CopyTo"/> expose the held disposables.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public void MultipleDisposableEnumeratesAndCopies()
+    public async Task MultipleDisposableEnumeratesAndCopies()
     {
         var first = new ActionDisposable(() => { });
         var second = new ActionDisposable(() => { });
@@ -208,19 +217,20 @@ public class DisposableTests
             sawSecond |= ReferenceEquals(item, second);
         }
 
-        Assert.True(sawFirst);
-        Assert.True(sawSecond);
-        Assert.Equal(disposable.Count, enumeratedCount);
+        await Assert.That(sawFirst).IsTrue();
+        await Assert.That(sawSecond).IsTrue();
+        await Assert.That(enumeratedCount).IsEqualTo(disposable.Count);
 
         var array = new IDisposable[disposable.Count];
         disposable.CopyTo(array, 0);
-        Assert.True(Array.IndexOf(array, first) >= 0);
-        Assert.True(Array.IndexOf(array, second) >= 0);
+        await Assert.That(Array.IndexOf(array, first)).IsGreaterThanOrEqualTo(0);
+        await Assert.That(Array.IndexOf(array, second)).IsGreaterThanOrEqualTo(0);
     }
 
     /// <summary>Exercises the overflow path (more than the two inline slots) across count, contains, remove and dispose.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public void MultipleDisposableHandlesOverflow()
+    public async Task MultipleDisposableHandlesOverflow()
     {
         var disposedCount = 0;
         IDisposable[] items =
@@ -232,7 +242,7 @@ public class DisposableTests
         ];
         MultipleDisposable disposable = [.. items];
 
-        Assert.Equal(items.Length, disposable.Count);
+        await Assert.That(disposable.Count).IsEqualTo(items.Length);
 
         // Enumerate and copy while the group spills into the overflow store.
         var seen = 0;
@@ -241,24 +251,24 @@ public class DisposableTests
             seen++;
         }
 
-        Assert.Equal(items.Length, seen);
+        await Assert.That(seen).IsEqualTo(items.Length);
 
         var array = new IDisposable[disposable.Count];
         disposable.CopyTo(array, 0);
-        Assert.Equal(items.Length, array.Length);
+        await Assert.That(array.Length).IsEqualTo(items.Length);
 
         var missing = new ActionDisposable(() => { });
-        Assert.True(disposable.Contains(items[0]));
-        Assert.True(disposable.Contains(items[items.Length - 1]));
-        Assert.False(disposable.Contains(missing));
+        await Assert.That(disposable.Contains(items[0])).IsTrue();
+        await Assert.That(disposable.Contains(items[items.Length - 1])).IsTrue();
+        await Assert.That(disposable.Contains(missing)).IsFalse();
 
-        Assert.True(disposable.Remove(items[items.Length - 1]));
-        Assert.False(disposable.Remove(missing));
-        Assert.Equal(items.Length - 1, disposable.Count);
+        await Assert.That(disposable.Remove(items[items.Length - 1])).IsTrue();
+        await Assert.That(disposable.Remove(missing)).IsFalse();
+        await Assert.That(disposable.Count).IsEqualTo(items.Length - 1);
 
         // Clear disposes the remaining items, including the overflow store.
         disposable.Clear();
-        Assert.Equal(items.Length, disposedCount);
+        await Assert.That(disposedCount).IsEqualTo(items.Length);
     }
 
     /// <summary>Verifies <see cref="MultipleDisposable.CopyTo"/> validates its arguments.</summary>
@@ -271,8 +281,9 @@ public class DisposableTests
     }
 
     /// <summary>Verifies the non-generic enumerator exposes the held disposables.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public void MultipleDisposableNonGenericEnumeration()
+    public async Task MultipleDisposableNonGenericEnumeration()
     {
         var first = new ActionDisposable(() => { });
         var second = new ActionDisposable(() => { });
@@ -284,18 +295,19 @@ public class DisposableTests
             count++;
         }
 
-        Assert.Equal(disposable.Count, count);
+        await Assert.That(count).IsEqualTo(disposable.Count);
     }
 
     /// <summary>Verifies behaviour once the group is disposed: queries are empty and further adds dispose immediately.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public void MultipleDisposableAfterDisposeIsEmptyAndDisposesNewItems()
+    public async Task MultipleDisposableAfterDisposeIsEmptyAndDisposesNewItems()
     {
         var disposable = new MultipleDisposable();
         disposable.Dispose();
 
-        Assert.Equal(0, disposable.Count);
-        Assert.False(disposable.Contains(new ActionDisposable(() => { })));
+        await Assert.That(disposable.Count).IsEqualTo(0);
+        await Assert.That(disposable.Contains(new ActionDisposable(() => { }))).IsFalse();
 
         var enumeratedAfterDispose = 0;
         foreach (var _ in disposable)
@@ -303,15 +315,15 @@ public class DisposableTests
             enumeratedAfterDispose++;
         }
 
-        Assert.Equal(0, enumeratedAfterDispose);
+        await Assert.That(enumeratedAfterDispose).IsEqualTo(0);
 
         var lateDisposed = 0;
         disposable.Add(new ActionDisposable(() => lateDisposed++));
-        Assert.Equal(1, lateDisposed);
+        await Assert.That(lateDisposed).IsEqualTo(1);
 
         // Clear and a redundant Dispose are no-ops on an already-disposed group.
         disposable.Clear();
         disposable.Dispose();
-        Assert.True(disposable.IsDisposed);
+        await Assert.That(disposable.IsDisposed).IsTrue();
     }
 }

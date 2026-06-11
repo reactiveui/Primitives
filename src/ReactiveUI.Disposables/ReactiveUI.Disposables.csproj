@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ReactiveUI.Disposables.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Extensions.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Async.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -4,7 +4,7 @@
 
 using ReactiveUI.Primitives.Disposables;
 
-namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
+namespace ReactiveUI.Disposables.Tests;
 
 /// <summary>Tests for <see cref="SwapDisposable"/> — verifies replacement disposes the previous
 /// inner, assigning after disposal immediately disposes the incoming value, and <c>Dispose</c>
