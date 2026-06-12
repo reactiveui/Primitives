@@ -24,7 +24,7 @@ public sealed class AnonymousSignal<T> : IObservable<T>
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
+    private string DebuggerDisplay => $"AnonymousSignal<{typeof(T).Name}>";
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
