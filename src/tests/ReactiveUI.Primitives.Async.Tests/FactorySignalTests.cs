@@ -327,6 +327,12 @@ public class FactorySignalTests
         await Assert.That(result).IsCollectionEqualTo([1, ExpectedSecond, ExpectedThird]);
     }
 
+    /// <summary>Tests async observable ToAsyncSignal null source validation.</summary>
+    [Test]
+    public void WhenObservableToAsyncSignalWithNullSource_ThenThrowsArgumentNull() =>
+        Assert.Throws<ArgumentNullException>(() =>
+            ((IObservableAsync<int>)null!).ToAsyncSignal());
+
     /// <summary>Tests IAsyncEnumerable to SignalAsync.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]

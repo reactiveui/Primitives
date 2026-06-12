@@ -40,6 +40,9 @@ public class FilteringOperatorTests
     private static readonly string[] SequenceAaAbBaBb = ["aa", "ab", "ba", "bb"];
 
     /// <summary>Hoisted source array used by tests (was inline literal).</summary>
+    private static readonly string[] SequenceAaAbBbBcAa = ["aa", "Ab", "bb", "Bc", "aa"];
+
+    /// <summary>Hoisted source array used by tests (was inline literal).</summary>
     private static readonly string[] SequenceAbcAbADefDe = ["abc", "ab", "a", "def", "de"];
 
     /// <summary>Tests sync Where filters elements.</summary>
@@ -352,6 +355,20 @@ public class FilteringOperatorTests
         var result = await source.DistinctUntilChangedBy(s => s[0]).ToListAsync();
 
         await Assert.That(result).IsCollectionEqualTo(["aa", "ba"]);
+    }
+
+    /// <summary>Tests DistinctUntilChangedBy with comparer distinguishes keys using the supplied comparer.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDistinctUntilChangedByWithComparer_ThenUsesComparer()
+    {
+        var source = SequenceAaAbBbBcAa.ToAsyncSignal();
+
+        var result = await source
+            .DistinctUntilChangedBy(static value => value[..1], StringComparer.OrdinalIgnoreCase)
+            .ToListAsync();
+
+        await Assert.That(result).IsCollectionEqualTo(["aa", "bb", "aa"]);
     }
 
     /// <summary>Verifies that sync-predicate <c>SkipWhile</c> forwards a non-terminal upstream error through its <c>OnErrorResume</c> path.</summary>
