@@ -8,7 +8,6 @@ namespace ReactiveUI.Primitives;
 
 /// <summary>Observable backed by a subscription delegate.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class AnonymousSignal<T> : IObservable<T>
 {
     /// <summary>Subscription delegate.</summary>
@@ -21,10 +20,6 @@ public sealed class AnonymousSignal<T> : IObservable<T>
     {
         _subscribe = subscribe ?? throw new ArgumentNullException(nameof(subscribe));
     }
-
-    /// <summary>Gets the debugger display text.</summary>
-    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => $"AnonymousSignal<{typeof(T).Name}>";
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
