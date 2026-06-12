@@ -63,6 +63,7 @@ public class ReplaySignal<T> : ISignal<T>
     /// window.
     /// </exception>
     /// <exception cref="ArgumentNullException">scheduler.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
     public ReplaySignal(int bufferSize, TimeSpan window, ISequencer scheduler)
     {
         if (bufferSize < 0)
@@ -188,13 +189,10 @@ public class ReplaySignal<T> : ISignal<T>
 
     /// <summary>Called when [error].</summary>
     /// <param name="exception">The exception.</param>
-    /// <exception cref="ArgumentNullException">exception.</exception>
+    /// <exception cref="ArgumentExceptionHelper">exception.</exception>
     public void OnError(Exception exception)
     {
-        if (exception is null)
-        {
-            throw new ArgumentNullException(nameof(exception));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(exception);
 
         lock (_observerLock)
         {
@@ -247,13 +245,10 @@ public class ReplaySignal<T> : ISignal<T>
     /// <summary>Subscribes the specified observer.</summary>
     /// <param name="observer">The observer.</param>
     /// <returns>A Disposable.</returns>
-    /// <exception cref="ArgumentNullException">observer.</exception>
+    /// <exception cref="ArgumentExceptionHelper">observer.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         Exception? ex;
         var subscription = default(ObserverHandler);

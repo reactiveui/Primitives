@@ -112,18 +112,18 @@ internal static class R3AsyncObservableBridge
             global::System.Threading.CancellationToken cancellationToken) =>
             observer.OnErrorResumeAsync(error, cancellationToken);
 
-        public global::System.Threading.Tasks.ValueTask OnCompletedAsync(global::ReactiveUI.Primitives.Async.Result result) =>
+        public global::System.Threading.Tasks.ValueTask OnCompletedAsync(global::ReactiveUI.Primitives.Result result) =>
             observer.OnCompletedAsync(ToR3AsyncResult(result));
 
         public global::System.Threading.Tasks.ValueTask DisposeAsync() => observer.DisposeAsync();
     }
 
-    private static global::ReactiveUI.Primitives.Async.Result ToPrimitivesResult(global::R3Async.Result result) =>
+    private static global::ReactiveUI.Primitives.Result ToPrimitivesResult(global::R3Async.Result result) =>
         result.IsFailure
-            ? global::ReactiveUI.Primitives.Async.Result.Failure(GetResultException(result.Exception))
-            : global::ReactiveUI.Primitives.Async.Result.Success;
+            ? global::ReactiveUI.Primitives.Result.Failure(GetResultException(result.Exception))
+            : global::ReactiveUI.Primitives.Result.Success;
 
-    private static global::R3Async.Result ToR3AsyncResult(global::ReactiveUI.Primitives.Async.Result result) =>
+    private static global::R3Async.Result ToR3AsyncResult(global::ReactiveUI.Primitives.Result result) =>
         result.IsFailure
             ? global::R3Async.Result.Failure(GetResultException(result.Exception))
             : global::R3Async.Result.Success;

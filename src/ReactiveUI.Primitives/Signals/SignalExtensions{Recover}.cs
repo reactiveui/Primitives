@@ -22,19 +22,13 @@ public static partial class SignalExtensions
         /// <returns>
         /// An observable sequence containing the source sequence's elements, followed by the handler sequence's elements when an exception occurs.
         /// </returns>
-        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="handler"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="handler"/> is null.</exception>
         public IObservable<TSource> Recover<TException>(Func<TException, IObservable<TSource>> handler)
             where TException : Exception
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (handler is null)
-            {
-                throw new ArgumentNullException(nameof(handler));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(handler);
 
             return new RecoverSignal<TSource, TException>(source, handler);
         }
@@ -53,13 +47,10 @@ public static partial class SignalExtensions
     {
         /// <summary>Continues an observable sequence that is terminated by an exception with the next observable sequence.</summary>
         /// <returns>An observable sequence containing elements from consecutive source sequences until a source sequence terminates successfully.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="sources"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="sources"/> is null.</exception>
         public IObservable<TSource> Recover()
         {
-            if (sources is null)
-            {
-                throw new ArgumentNullException(nameof(sources));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(sources);
 
             return new CatchSignal<TSource>(sources);
         }

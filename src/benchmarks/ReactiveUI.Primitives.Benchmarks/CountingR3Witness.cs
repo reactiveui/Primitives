@@ -29,7 +29,7 @@ internal sealed class CountingR3Witness<T> : Observer<T>
 
     /// <summary>Called when sequence completed.</summary>
     /// <param name="result">The completion result.</param>
-    protected override void OnCompletedCore(Result result)
+    protected override void OnCompletedCore(R3.Result result)
     {
         if (result.IsFailure)
         {

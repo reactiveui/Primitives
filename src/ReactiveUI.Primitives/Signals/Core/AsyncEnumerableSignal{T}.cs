@@ -28,10 +28,7 @@ internal sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         var cts = CancellationToken.CanBeCanceled
             ? CancellationTokenSource.CreateLinkedTokenSource(CancellationToken)

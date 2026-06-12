@@ -35,10 +35,7 @@ internal sealed class EverySignal : IRequireCurrentThread<long>
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<long> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         var coordinator = new EveryCoordinator(observer, _scheduler, _period);
         if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)

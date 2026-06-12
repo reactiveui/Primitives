@@ -18,6 +18,7 @@ internal abstract class WitnessBase<TSource, TResult> : IDisposable, IObserver<T
     /// <summary>Initializes a new instance of the <see cref="WitnessBase{TSource,TResult}"/> class.</summary>
     /// <param name="observer">The observer value.</param>
     /// <param name="cancel">The cancel value.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
     private protected WitnessBase(IObserver<TResult> observer, IDisposable cancel)
     {
         _cancel = cancel ?? throw new ArgumentNullException(nameof(cancel));

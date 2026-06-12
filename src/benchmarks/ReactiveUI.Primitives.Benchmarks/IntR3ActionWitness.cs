@@ -28,7 +28,7 @@ internal sealed class IntR3ActionWitness : Observer<int>
 
     /// <summary>Receives the completion result.</summary>
     /// <param name="result">Completion metadata.</param>
-    protected override void OnCompletedCore(Result result)
+    protected override void OnCompletedCore(R3.Result result)
     {
     }
 }

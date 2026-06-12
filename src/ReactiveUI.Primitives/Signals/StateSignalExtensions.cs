@@ -21,15 +21,9 @@ public static class StateSignalExtensions
             TResult initialValue,
             Func<TSource, TResult> selector)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (selector is null)
-            {
-                throw new ArgumentNullException(nameof(selector));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(selector);
 
             return new(
                 Signal.CreateSafe<TResult>(

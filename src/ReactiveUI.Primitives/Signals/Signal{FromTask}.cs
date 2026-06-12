@@ -251,6 +251,7 @@ public static partial class Signal
         /// <param name="execution">Task factory.</param>
         /// <param name="shouldEmit">Result filter.</param>
         /// <param name="cancellationTokenSource">Optional cancellation source.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
         public ImmediateTaskSignal(
             Func<CancellationTokenSource, Task<TResult>> execution,
             Func<TResult, bool> shouldEmit,
@@ -279,10 +280,7 @@ public static partial class Signal
         /// <inheritdoc/>
         public void GetOperationCanceled(IObserver<Exception> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             SourceCore.Token.Register(
                 static state => ((IObserver<Exception>)state!).OnNext(new OperationCanceledException()),
@@ -297,10 +295,7 @@ public static partial class Signal
             Justification = "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             ThrowIfDisposed();
             var token = SourceCore.Token;

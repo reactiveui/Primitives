@@ -13,6 +13,7 @@ public readonly struct EventPattern<TEventArgs> : IEquatable<EventPattern<TEvent
     /// <summary>Initializes a new instance of the <see cref="EventPattern{TEventArgs}"/> struct.</summary>
     /// <param name="sender">The event sender.</param>
     /// <param name="eventArgs">The event arguments.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
     public EventPattern(object? sender, TEventArgs eventArgs)
     {
         Sender = sender;

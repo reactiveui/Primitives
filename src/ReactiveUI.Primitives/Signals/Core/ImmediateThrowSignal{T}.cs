@@ -27,10 +27,7 @@ internal sealed class ImmediateThrowSignal<T> : IRequireCurrentThread<T>, IInlin
     /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         observer.OnError(_error);
         return EmptyDisposable.Instance;

@@ -34,10 +34,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             observer.OnNext(_value);
             return _source.Subscribe(observer);
@@ -81,10 +78,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             foreach (var value in _values)
             {
@@ -133,10 +127,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             observer.OnNext(_prependValue);
             var sink = new AppendWitness<T>(observer, _appendValue);
@@ -176,10 +167,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var sink = new AppendWitness<T>(observer, _value);
             sink.SetSubscription(_source.Subscribe(sink));
@@ -209,10 +197,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var sink = new DefaultIfEmptyWitness<T>(observer, _defaultValue);
             sink.SetSubscription(_source.Subscribe(sink));
@@ -242,10 +227,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<Moment<T>> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             Emit(observer);
             observer.OnCompleted();
@@ -255,10 +237,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(Action<Moment<T>> onNext, Action<Exception> onError, Action onCompleted)
         {
-            if (onNext is null)
-            {
-                throw new ArgumentNullException(nameof(onNext));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(onNext);
 
             Emit(onNext);
             onCompleted();
@@ -330,10 +309,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TimeInterval<T>> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             Emit(observer);
             observer.OnCompleted();
@@ -343,10 +319,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(Action<TimeInterval<T>> onNext, Action<Exception> onError, Action onCompleted)
         {
-            if (onNext is null)
-            {
-                throw new ArgumentNullException(nameof(onNext));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(onNext);
 
             Emit(onNext);
             onCompleted();
@@ -432,10 +405,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             return _sequencer.Schedule(
                 (Observer: observer, Range: _range),
@@ -446,15 +416,9 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
         {
-            if (onNext is null)
-            {
-                throw new ArgumentNullException(nameof(onNext));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(onNext);
 
-            if (onCompleted is null)
-            {
-                throw new ArgumentNullException(nameof(onCompleted));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(onCompleted);
 
             return _sequencer.Schedule(
                 (OnNext: onNext, OnCompleted: onCompleted, Range: _range),
@@ -493,10 +457,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var coordinator = new ProbeCoordinator<T>(_source, _period, _sequencer, observer);
             if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
@@ -922,10 +883,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             return new ForkJoinCoordinator<TLeft, TRight, TResult>(observer, _selector).Run(_left, _right);
         }
@@ -958,10 +916,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             observer.OnNext(_selector(_left.Start + _left.Count - 1, _right.Start + _right.Count - 1));
             observer.OnCompleted();

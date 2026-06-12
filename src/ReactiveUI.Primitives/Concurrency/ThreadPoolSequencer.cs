@@ -45,13 +45,10 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
 
     /// <summary>Schedules a work item to be executed through the thread pool.</summary>
     /// <param name="item">Work item to execute.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item)
     {
-        if (item is null)
-        {
-            throw new ArgumentNullException(nameof(item));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(item);
 
         ThreadPool.UnsafeQueueUserWorkItem(ImmediateCallback, item);
     }
@@ -59,13 +56,10 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     /// <summary>Schedules a work item to be executed through the thread pool at a monotonic timestamp.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item, long dueTimestamp)
     {
-        if (item is null)
-        {
-            throw new ArgumentNullException(nameof(item));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(item);
 
         if (dueTimestamp <= Timestamp)
         {

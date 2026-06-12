@@ -370,10 +370,10 @@ internal static class SystemReactiveAsyncBridge
             public void OnNext(T value) => RunSynchronously(observer.OnNextAsync(value, cancellationToken));
 
             public void OnError(global::System.Exception error) =>
-                RunSynchronously(observer.OnCompletedAsync(global::ReactiveUI.Primitives.Async.Result.Failure(error)));
+                RunSynchronously(observer.OnCompletedAsync(global::ReactiveUI.Primitives.Result.Failure(error)));
 
             public void OnCompleted() =>
-                RunSynchronously(observer.OnCompletedAsync(global::ReactiveUI.Primitives.Async.Result.Success));
+                RunSynchronously(observer.OnCompletedAsync(global::ReactiveUI.Primitives.Result.Success));
         }
     }
 
@@ -429,7 +429,7 @@ internal static class SystemReactiveAsyncBridge
                 return default;
             }
 
-            public global::System.Threading.Tasks.ValueTask OnCompletedAsync(global::ReactiveUI.Primitives.Async.Result result)
+            public global::System.Threading.Tasks.ValueTask OnCompletedAsync(global::ReactiveUI.Primitives.Result result)
             {
                 if (result.IsFailure)
                 {

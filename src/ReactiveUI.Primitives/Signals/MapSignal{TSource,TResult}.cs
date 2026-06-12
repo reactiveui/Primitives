@@ -36,10 +36,7 @@ public sealed class MapSignal<TSource, TResult> : IRequireCurrentThread<TResult>
     /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<TResult> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         return _source.Subscribe(new MapWitness(observer, _selector));
     }

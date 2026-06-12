@@ -27,13 +27,10 @@ public static class SubscribeExtensions
         /// This method can be used to evaluate the Signals sequence for its side-effects only.
         /// </summary>
         /// <returns><see cref="IDisposable"/> object used to unsubscribe from the Signals sequence.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <c>null</c>.</exception>
         public IDisposable Subscribe()
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             return source.Subscribe(OnNextNoOpCache<T>.Instance, nop);
         }
@@ -43,15 +40,9 @@ public static class SubscribeExtensions
         /// <returns>A IDisposable.</returns>
         public IDisposable Subscribe(Action<T> onNext)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (onNext is null)
-            {
-                throw new ArgumentNullException(nameof(onNext));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(onNext);
 
             if (source is Signals.Signal<T> signal)
             {
@@ -72,10 +63,7 @@ public static class SubscribeExtensions
         /// <returns>A IDisposable.</returns>
         public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError)
         {
-            if (onError is null)
-            {
-                throw new ArgumentNullException(nameof(onError));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(onError);
 
             return source.Subscribe(onNext, onError, nop);
         }
@@ -86,10 +74,7 @@ public static class SubscribeExtensions
         /// <returns>A IDisposable.</returns>
         public IDisposable Subscribe(Action<T> onNext, Action onCompleted)
         {
-            if (onCompleted is null)
-            {
-                throw new ArgumentNullException(nameof(onCompleted));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(onCompleted);
 
             return source.Subscribe(onNext, rethrow, onCompleted);
         }
@@ -101,25 +86,13 @@ public static class SubscribeExtensions
         /// <returns>A IDisposable.</returns>
         public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (onNext is null)
-            {
-                throw new ArgumentNullException(nameof(onNext));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(onNext);
 
-            if (onError is null)
-            {
-                throw new ArgumentNullException(nameof(onError));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(onError);
 
-            if (onCompleted is null)
-            {
-                throw new ArgumentNullException(nameof(onCompleted));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(onCompleted);
 
             if (source is IInlineSignal<T> inline)
             {

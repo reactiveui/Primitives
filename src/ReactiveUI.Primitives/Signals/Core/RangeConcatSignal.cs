@@ -23,10 +23,7 @@ internal sealed class RangeConcatSignal : IRequireCurrentThread<int>, IInlineSig
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<int> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         for (var rangeIndex = 0; rangeIndex < _ranges.Length; rangeIndex++)
         {
@@ -44,15 +41,9 @@ internal sealed class RangeConcatSignal : IRequireCurrentThread<int>, IInlineSig
     /// <inheritdoc/>
     public IDisposable Subscribe(Action<int> onNext, Action<Exception> onError, Action onCompleted)
     {
-        if (onNext is null)
-        {
-            throw new ArgumentNullException(nameof(onNext));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(onNext);
 
-        if (onCompleted is null)
-        {
-            throw new ArgumentNullException(nameof(onCompleted));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(onCompleted);
 
         for (var rangeIndex = 0; rangeIndex < _ranges.Length; rangeIndex++)
         {

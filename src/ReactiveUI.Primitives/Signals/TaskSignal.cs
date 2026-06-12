@@ -15,7 +15,7 @@ public static class TaskSignal
     /// <returns>
     /// An AsyncObservable.
     /// </returns>
-    /// <exception cref="ArgumentNullException">observableFactory.</exception>
+    /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
     public static ITaskSignal<TResult> Create<TResult>(Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory) =>
         Instance(observableFactory, null, null);
 
@@ -26,7 +26,7 @@ public static class TaskSignal
     /// <returns>
     /// An AsyncObservable.
     /// </returns>
-    /// <exception cref="ArgumentNullException">observableFactory.</exception>
+    /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
     public static ITaskSignal<TResult> Create<TResult>(Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory, ISequencer? scheduler) =>
         Instance(observableFactory, scheduler, null);
 
@@ -38,7 +38,7 @@ public static class TaskSignal
     /// <returns>
     /// An AsyncObservable.
     /// </returns>
-    /// <exception cref="ArgumentNullException">observableFactory.</exception>
+    /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
     public static ITaskSignal<TResult> Create<TResult>(
         Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory,
         ISequencer? scheduler,
@@ -53,10 +53,7 @@ public static class TaskSignal
     /// <returns>The result.</returns>
     private static TaskSignal<TResult> Instance<TResult>(Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory, ISequencer? scheduler, CancellationTokenSource? cancellationTokenSource)
     {
-        if (observableFactory is null)
-        {
-            throw new ArgumentNullException(nameof(observableFactory));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observableFactory);
 
         return new(observableFactory, scheduler, cancellationTokenSource);
     }

@@ -39,10 +39,7 @@ public class StateSignal<T> : BehaviorSignal<T>
     /// <returns>A read-only state view.</returns>
     public ProjectedReadOnlyState<T, TResult> ToReadOnlyState<TResult>(Func<T, TResult> selector)
     {
-        if (selector is null)
-        {
-            throw new ArgumentNullException(nameof(selector));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(selector);
 
         return ProjectedReadOnlyState<T, TResult>.Create(this, selector);
     }

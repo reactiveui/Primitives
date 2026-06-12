@@ -32,10 +32,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             return new FlatMapCoordinator<TSource, TResult>(_source, _selector, observer).Run();
         }
@@ -73,10 +70,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             return new FlatMapResultCoordinator<TSource, TCollection, TResult>(
                 _source,
@@ -537,10 +531,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             return _source.Subscribe(new ResultWitness(_sourceValue, _selector, observer));
         }

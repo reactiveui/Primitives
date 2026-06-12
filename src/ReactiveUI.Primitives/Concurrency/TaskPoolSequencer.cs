@@ -16,6 +16,7 @@ public sealed class TaskPoolSequencer : ISequencer
 
     /// <summary>Initializes a new instance of the <see cref="TaskPoolSequencer"/> class.</summary>
     /// <param name="taskFactory">The task factory.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper.")]
     public TaskPoolSequencer(TaskFactory taskFactory) => _taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
 
     /// <summary>Gets the instance.</summary>
@@ -42,13 +43,10 @@ public sealed class TaskPoolSequencer : ISequencer
 
     /// <summary>Schedules a work item to be executed through the task factory.</summary>
     /// <param name="item">Work item to execute.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item)
     {
-        if (item is null)
-        {
-            throw new ArgumentNullException(nameof(item));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(item);
 
         _taskFactory.StartNew(
             static state => ((DispatchState)state!).Run(),
@@ -61,13 +59,10 @@ public sealed class TaskPoolSequencer : ISequencer
     /// <summary>Schedules a work item to be executed through the task factory at a monotonic timestamp.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item, long dueTimestamp)
     {
-        if (item is null)
-        {
-            throw new ArgumentNullException(nameof(item));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(item);
 
         if (dueTimestamp <= Timestamp)
         {

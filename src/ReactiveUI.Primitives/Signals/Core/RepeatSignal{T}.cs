@@ -35,10 +35,7 @@ internal sealed class RepeatSignal<T> : IRequireCurrentThread<T>, IInlineSignal<
     /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         for (var i = 0; i < _count; i++)
         {
@@ -56,10 +53,7 @@ internal sealed class RepeatSignal<T> : IRequireCurrentThread<T>, IInlineSignal<
     /// <returns>The result.</returns>
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
-        if (onNext is null)
-        {
-            throw new ArgumentNullException(nameof(onNext));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(onNext);
 
         for (var i = 0; i < _count; i++)
         {

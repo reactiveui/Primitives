@@ -32,12 +32,10 @@ public static partial class LinqExtensions
     /// <param name="sources">The sources to merge.</param>
     /// <param name="comparer">The equality comparer used to suppress duplicates, or <see langword="null"/> for the default.</param>
     /// <returns>An observable of the distinct merged values.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
     public static IObservable<T> BlendUnique<T>(IObservable<T>[] sources, IEqualityComparer<T>? comparer)
     {
-        if (sources is null)
-        {
-            throw new ArgumentNullException(nameof(sources));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(sources);
 
         for (var i = 0; i < sources.Length; i++)
         {
@@ -72,10 +70,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var sink = new BlendUniqueSink<T>(observer, _comparer);
             sink.Run(_sources);

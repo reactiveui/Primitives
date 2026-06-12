@@ -1,8 +1,8 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-namespace ReactiveUI.Primitives.Async;
+namespace ReactiveUI.Primitives;
 
 /// <summary>Represents an optional value that may or may not be present.</summary>
 /// <remarks>Use this struct to indicate the presence or absence of a value without resorting to null references.
@@ -26,10 +26,18 @@ public readonly record struct Optional<T>
     /// <param name="value">The value to be contained in the <see cref="Optional{T}"/>  instance.</param>
     public Optional(T value) => (_value, HasValue) = (value, true);
 
+    /// <summary>Initializes a new instance of the <see cref="Optional{T}"/> struct.</summary>
+    /// <param name="value">The value.</param>
+    /// <param name="hasValue">A value indicating whether a value is present.</param>
+    private Optional(T value, bool hasValue) => (_value, HasValue) = (value, hasValue);
+
     /// <summary>Gets an empty instance of the <see cref="Optional{T}"/> type that contains no value.</summary>
     /// <remarks>Use this property to represent the absence of a value in a type-safe manner. The returned
     /// instance has no value set and IsPresent is false.</remarks>
     public static Optional<T> Empty => new();
+
+    /// <summary>Gets an empty optional value.</summary>
+    public static Optional<T> None => default;
 
     /// <summary>Gets a value indicating whether the current instance has a valid value assigned.</summary>
     public bool HasValue { get; }
@@ -41,4 +49,9 @@ public readonly record struct Optional<T>
     public T? Value => HasValue
         ? _value
         : throw new InvalidOperationException("Impossible retrieve a value for an empty optional");
+
+    /// <summary>Creates an optional value containing a value.</summary>
+    /// <param name="value">The contained value.</param>
+    /// <returns>The optional value.</returns>
+    public static Optional<T> Some(T value) => new(value, hasValue: true);
 }

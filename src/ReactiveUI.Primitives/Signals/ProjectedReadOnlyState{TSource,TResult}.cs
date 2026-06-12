@@ -70,15 +70,9 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     /// <returns>The fully-initialized projected read-only state.</returns>
     public static ProjectedReadOnlyState<TSource, TResult> Create(StateSignal<TSource> source, Func<TSource, TResult> selector)
     {
-        if (source is null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(source);
 
-        if (selector is null)
-        {
-            throw new ArgumentNullException(nameof(selector));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(selector);
 
         var state = new ProjectedReadOnlyState<TSource, TResult>(selector);
         state._subscription = source.Subscribe(state);
@@ -113,10 +107,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     /// <inheritdoc/>
     public void OnError(Exception error)
     {
-        if (error is null)
-        {
-            throw new ArgumentNullException(nameof(error));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(error);
 
         lock (_gate)
         {
@@ -161,10 +152,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TResult> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         Exception? error;
         TResult? value;
