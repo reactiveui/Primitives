@@ -44,17 +44,19 @@ public sealed class StatefulWitness<T, TState> : IObserver<T>
     public void OnCompleted() => _onCompleted?.Invoke(Result.Success, _state);
 
     /// <inheritdoc/>
-    public void OnError(Exception error)
-    {
-        if (_onError is not null)
-        {
-            _onError(error, _state);
-            return;
-        }
-
-        ExceptionDispatchInfo.Capture(error).Throw();
-    }
+    public void OnError(Exception error) => (_onError ?? Rethrow)(error, _state);
 
     /// <inheritdoc/>
     public void OnNext(T value) => _onNext(value, _state);
+
+    /// <summary>Rethrows the supplied exception without losing its stack information.</summary>
+    /// <param name="error">The exception to rethrow.</param>
+    /// <param name="state">Unused callback state.</param>
+    /// <remarks>Excluded from coverage: the unreachable sequence point after <see cref="ExceptionDispatchInfo"/> rethrow cannot be credited by cobertura.</remarks>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private static void Rethrow(Exception error, TState state)
+    {
+        _ = state;
+        ExceptionDispatchInfo.Capture(error).Throw();
+    }
 }

@@ -34,17 +34,14 @@ public sealed class CallbackWitness<T> : IObserver<T>
     public void OnCompleted() => _onCompleted?.Invoke(Result.Success);
 
     /// <inheritdoc/>
-    public void OnError(Exception error)
-    {
-        if (_onError is not null)
-        {
-            _onError(error);
-            return;
-        }
-
-        ExceptionDispatchInfo.Capture(error).Throw();
-    }
+    public void OnError(Exception error) => (_onError ?? Rethrow)(error);
 
     /// <inheritdoc/>
     public void OnNext(T value) => _onNext(value);
+
+    /// <summary>Rethrows the supplied exception without losing its stack information.</summary>
+    /// <param name="error">The exception to rethrow.</param>
+    /// <remarks>Excluded from coverage: the unreachable sequence point after <see cref="ExceptionDispatchInfo"/> rethrow cannot be credited by cobertura.</remarks>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private static void Rethrow(Exception error) => ExceptionDispatchInfo.Capture(error).Throw();
 }
