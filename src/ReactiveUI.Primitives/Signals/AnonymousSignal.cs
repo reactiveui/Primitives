@@ -15,7 +15,6 @@ public sealed class AnonymousSignal<T> : IObservable<T>
 
     /// <summary>Initializes a new instance of the <see cref="AnonymousSignal{T}"/> class.</summary>
     /// <param name="subscribe">Subscription delegate.</param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
     public AnonymousSignal(Func<IObserver<T>, IDisposable> subscribe)
     {
         _subscribe = subscribe ?? throw new ArgumentNullException(nameof(subscribe));
