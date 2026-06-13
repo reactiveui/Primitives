@@ -45,58 +45,59 @@ public class ConcurencyTests
         await Assert.That(delta.Duration() < ClockTolerance).IsTrue();
     }
 
-    /// <summary>Verifies that immediate work is scheduled on a different thread.</summary>
+    /// <summary>Verifies that immediate work is scheduled asynchronously.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TaskPoolScheduleAction()
     {
-        var id = Environment.CurrentManagedThreadId;
         var nt = TaskPoolSequencer.Instance;
-        using ManualResetEventSlim completed = new();
-        var observedThreadId = id;
-        using var scheduled = nt.Schedule(() =>
-        {
-            observedThreadId = Environment.CurrentManagedThreadId;
-            completed.Set();
-        });
-        await Assert.That(completed.Wait(ScheduleTimeout)).IsTrue();
-        await Assert.That(observedThreadId).IsNotEqualTo(id);
+        var schedulingThreadId = Environment.CurrentManagedThreadId;
+        var scheduling = 1;
+        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var scheduled = nt.Schedule(() => completed.TrySetResult(
+            Environment.CurrentManagedThreadId == schedulingThreadId &&
+            Volatile.Read(ref scheduling) != 0));
+        Volatile.Write(ref scheduling, 0);
+        var ranInline = await completed.Task.WaitAsync(ScheduleTimeout);
+        await Assert.That(ranInline).IsFalse();
     }
 
-    /// <summary>Verifies that work due immediately is scheduled on a different thread.</summary>
+    /// <summary>Verifies that work due immediately is scheduled asynchronously.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TaskPoolScheduleActionDueNow()
     {
-        var id = Environment.CurrentManagedThreadId;
         var nt = TaskPoolSequencer.Instance;
-        using ManualResetEventSlim completed = new();
-        var observedThreadId = id;
-        using var scheduled = nt.Schedule(TimeSpan.Zero, () =>
-        {
-            observedThreadId = Environment.CurrentManagedThreadId;
-            completed.Set();
-        });
-        await Assert.That(completed.Wait(ScheduleTimeout)).IsTrue();
-        await Assert.That(observedThreadId).IsNotEqualTo(id);
+        var schedulingThreadId = Environment.CurrentManagedThreadId;
+        var scheduling = 1;
+        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var scheduled = nt.Schedule(
+            TimeSpan.Zero,
+            () => completed.TrySetResult(
+                Environment.CurrentManagedThreadId == schedulingThreadId &&
+                Volatile.Read(ref scheduling) != 0));
+        Volatile.Write(ref scheduling, 0);
+        var ranInline = await completed.Task.WaitAsync(ScheduleTimeout);
+        await Assert.That(ranInline).IsFalse();
     }
 
-    /// <summary>Verifies that delayed work is scheduled on a different thread.</summary>
+    /// <summary>Verifies that delayed work is scheduled asynchronously.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TaskPoolScheduleActionDue()
     {
-        var id = Environment.CurrentManagedThreadId;
         var nt = TaskPoolSequencer.Instance;
-        using ManualResetEventSlim completed = new();
-        var observedThreadId = id;
-        using var scheduled = nt.Schedule(ShortDueTime, () =>
-        {
-            observedThreadId = Environment.CurrentManagedThreadId;
-            completed.Set();
-        });
-        await Assert.That(completed.Wait(ScheduleTimeout)).IsTrue();
-        await Assert.That(observedThreadId).IsNotEqualTo(id);
+        var schedulingThreadId = Environment.CurrentManagedThreadId;
+        var scheduling = 1;
+        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var scheduled = nt.Schedule(
+            ShortDueTime,
+            () => completed.TrySetResult(
+                Environment.CurrentManagedThreadId == schedulingThreadId &&
+                Volatile.Read(ref scheduling) != 0));
+        Volatile.Write(ref scheduling, 0);
+        var ranInline = await completed.Task.WaitAsync(ScheduleTimeout);
+        await Assert.That(ranInline).IsFalse();
     }
 
     /// <summary>Verifies that canceled delayed work does not run.</summary>
@@ -106,14 +107,16 @@ public class ConcurencyTests
     {
         var nt = TaskPoolSequencer.Instance;
         var runCount = 0;
-        using ManualResetEventSlim completed = new();
+        var completed = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var scheduled = nt.Schedule(CancelDueTime, () =>
         {
             Volatile.Write(ref runCount, 1);
-            completed.Set();
+            completed.TrySetResult(1);
         });
         scheduled.Dispose();
-        await Assert.That(completed.Wait(CancelObservationWindow)).IsFalse();
+        var delay = Task.Delay(CancelObservationWindow);
+        var observed = await Task.WhenAny(completed.Task, delay);
+        await Assert.That(observed).IsSameReferenceAs(delay);
         await Assert.That(Volatile.Read(ref runCount)).IsEqualTo(0);
     }
 

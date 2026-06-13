@@ -183,7 +183,7 @@ public class ReplaySignal<T> : ISignal<T>
 
     /// <summary>Called when [error].</summary>
     /// <param name="error">The exception.</param>
-    /// <exception cref="ArgumentExceptionHelper">error.</exception>
+    /// <exception cref="ArgumentNullException">error.</exception>
     public void OnError(Exception error)
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
@@ -239,7 +239,7 @@ public class ReplaySignal<T> : ISignal<T>
     /// <summary>Subscribes the specified observer.</summary>
     /// <param name="observer">The observer.</param>
     /// <returns>A Disposable.</returns>
-    /// <exception cref="ArgumentExceptionHelper">observer.</exception>
+    /// <exception cref="ArgumentNullException">observer.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
