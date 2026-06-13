@@ -23,7 +23,7 @@ internal sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> so
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)
     {
-        var subscription = new SwitchToCoordinator(observer);
+        SwitchToCoordinator subscription = new(observer);
         subscription.LinkExternalCancellation(cancellationToken);
         return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
             subscription,
@@ -228,7 +228,7 @@ internal sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> so
                     }
                 }
 
-                var innerObserver = new SwitchToInnerWitness(this);
+                SwitchToInnerWitness innerObserver = new(this);
                 var innerSubscription = await inner.SubscribeAsync(innerObserver, _disposeCancellationToken).ConfigureAwait(false);
                 var shouldDispose = false;
                 lock (_gate)

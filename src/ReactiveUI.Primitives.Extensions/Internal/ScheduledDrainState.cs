@@ -32,10 +32,10 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
     /// <summary>Upstream subscription handle, recorded via <see cref="Attach"/> for teardown on dispose.</summary>
     private IDisposable? _sourceSubscription;
 
-    /// <summary><see langword="true"/> while a drain pass is in flight on the scheduler.</summary>
+    /// <summary>Set to <see langword="true"/> while a drain pass is in flight on the scheduler.</summary>
     private bool _draining;
 
-    /// <summary><see langword="true"/> once a terminal notification has been delivered or the sink disposed.</summary>
+    /// <summary>Set to <see langword="true"/> once a terminal notification has been delivered or the sink disposed.</summary>
     private bool _done;
 
     /// <summary>Gets a value indicating whether the sink has reached a terminal state. Read inside
@@ -44,14 +44,14 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
 
     /// <summary>Enqueues an OnNext notification and schedules a drain pass if one isn't already running.</summary>
     /// <param name="value">The value to forward downstream.</param>
-    public void EnqueueNext(T value) => Enqueue(new Notification(DrainNotificationKind.Next, value, null));
+    public void EnqueueNext(T value) => Enqueue(new(DrainNotificationKind.Next, value, null));
 
     /// <summary>Enqueues an OnError notification and schedules a drain pass if one isn't already running.</summary>
     /// <param name="error">The error to forward downstream.</param>
-    public void EnqueueError(Exception error) => Enqueue(new Notification(DrainNotificationKind.Error, default!, error));
+    public void EnqueueError(Exception error) => Enqueue(new(DrainNotificationKind.Error, default!, error));
 
     /// <summary>Enqueues an OnCompleted notification and schedules a drain pass if one isn't already running.</summary>
-    public void EnqueueCompleted() => Enqueue(new Notification(DrainNotificationKind.Completed, default!, null));
+    public void EnqueueCompleted() => Enqueue(new(DrainNotificationKind.Completed, default!, null));
 
     /// <summary>Records the upstream subscription, or disposes it immediately if the sink is already done.</summary>
     /// <param name="subscription">The upstream subscription handle.</param>

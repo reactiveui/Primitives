@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -28,9 +29,9 @@ public class SynchronizeTests
     [Test]
     public async Task ForwardsEachNotificationToTheDownstreamObserver()
     {
-        var recorder = new Recorder<int>();
-        var sink = new SynchronizeWitness<int>(recorder);
-        var error = new InvalidOperationException("boom");
+        Recorder<int> recorder = new();
+        SynchronizeWitness<int> sink = new(recorder);
+        InvalidOperationException error = new("boom");
         sink.OnNext(1);
         sink.OnNext(Second);
         sink.OnError(error);
@@ -45,15 +46,13 @@ public class SynchronizeTests
     [Test]
     public async Task SynchronizeOperatorForwardsTheSourceSequence()
     {
-        var received = new List<int>();
+        List<int> received = [];
         var completed = false;
         new ImmediateSource<int>(1, Second, Third)
             .Synchronize()
             .Subscribe(new DelegateWitness<int>(
                 received.Add,
-                static _ =>
-                {
-                },
+                static _ => { },
                 () => completed = true));
         await Assert.That(received.SequenceEqual([1, Second, Third])).IsTrue();
         await Assert.That(completed).IsTrue();
@@ -61,21 +60,23 @@ public class SynchronizeTests
 
     /// <summary>The operator validates its source argument.</summary>
     [Test]
-    public void SynchronizeOnNullSourceThrows() => Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Synchronize());
+    public void SynchronizeOnNullSourceThrows() =>
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Synchronize());
 
     /// <summary>The shared-gate operator validates its gate argument.</summary>
     [Test]
-    public void SynchronizeOnNullGateThrows() => Assert.Throws<ArgumentNullException>(() => new ImmediateSource<int>(1).Synchronize(null!));
+    public void SynchronizeOnNullGateThrows() =>
+        Assert.Throws<ArgumentNullException>(() => new ImmediateSource<int>(1).Synchronize(null!));
 
     /// <summary>Two witnesses sharing one gate are serialized relative to each other, never overlapping on the shared downstream.</summary>
     /// <returns>A task that completes when the assertions have run.</returns>
     [Test]
     public async Task SharedGateSerializesAcrossTwoWitnesses()
     {
-        var probe = new ConcurrencyProbe();
-        var gate = new Lock();
-        var first = new SynchronizeWitness<int>(probe, gate);
-        var second = new SynchronizeWitness<int>(probe, gate);
+        ConcurrencyProbe probe = new();
+        Lock gate = new();
+        SynchronizeWitness<int> first = new(probe, gate);
+        SynchronizeWitness<int> second = new(probe, gate);
         var tasks = new Task[Threads];
         for (var t = 0; t < Threads; t++)
         {
@@ -99,8 +100,8 @@ public class SynchronizeTests
     [Test]
     public async Task SerializesConcurrentOnNextSoTheDownstreamNeverOverlaps()
     {
-        var probe = new ConcurrencyProbe();
-        var sink = new SynchronizeWitness<int>(probe);
+        ConcurrencyProbe probe = new();
+        SynchronizeWitness<int> sink = new(probe);
         var tasks = new Task[Threads];
         for (var t = 0; t < Threads; t++)
         {

@@ -14,7 +14,7 @@
 
   <!-- The dispatcher tests need WinUI types; include them only on the WinUI TFM (see the Choose). -->
   <ItemGroup>
-    <Compile Remove="DispatcherQueueSequencerTests.cs" />
+    <Compile Remove="DispatcherQueueSequencerTests.cs"/>
   </ItemGroup>
 
   <Choose>
@@ -27,9 +27,9 @@
         <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
       </PropertyGroup>
       <ItemGroup>
-        <ProjectReference Include="..\..\ReactiveUI.Primitives.WinUI\ReactiveUI.Primitives.WinUI.csproj" />
-        <Compile Include="DispatcherQueueSequencerTests.cs" />
-        <Compile Remove="CrossPlatformPlaceholderTests.cs" />
+        <ProjectReference Include="..\..\ReactiveUI.Primitives.WinUI\ReactiveUI.Primitives.WinUI.csproj"/>
+        <Compile Include="DispatcherQueueSequencerTests.cs"/>
+        <Compile Remove="CrossPlatformPlaceholderTests.cs"/>
       </ItemGroup>
     </When>
   </Choose>

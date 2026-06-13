@@ -44,7 +44,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            var sink = new TakeWitness<T>(observer, _count);
+            TakeWitness<T> sink = new(observer, _count);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -74,7 +74,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new SkipWitness<T>(observer, _count);
+            SkipWitness<T> sink = new(observer, _count);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -104,7 +104,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new DistinctWitness<T>(observer, CreateSeen());
+            DistinctWitness<T> sink = new(observer, CreateSeen());
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -117,9 +117,9 @@ public static partial class LinqExtensions
             var capacity = _source is Signals.Core.RangeSignal range ? range.Count : 0;
             return capacity switch
             {
-                > 0 => new HashSet<T>(capacity, _comparer),
+                > 0 => new(capacity, _comparer),
                 _ when _comparer is null => [],
-                _ => new HashSet<T>(_comparer),
+                _ => new(_comparer),
             };
 #else
             return new(_comparer);
@@ -151,7 +151,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new UniqueWitness<T>(observer, _comparer);
+            UniqueWitness<T> sink = new(observer, _comparer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -187,7 +187,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new UniqueByWitness<T, TKey>(observer, _keySelector, _comparer);
+            UniqueByWitness<T, TKey> sink = new(observer, _keySelector, _comparer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -223,7 +223,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new FoldWitness<TSource, TAccumulate>(observer, _seed, _accumulator);
+            FoldWitness<TSource, TAccumulate> sink = new(observer, _seed, _accumulator);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -259,7 +259,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new ReduceWitness<TSource, TAccumulate>(observer, _seed, _accumulator);
+            ReduceWitness<TSource, TAccumulate> sink = new(observer, _seed, _accumulator);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -289,7 +289,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new TakeWhileWitness<T>(observer, _predicate);
+            TakeWhileWitness<T> sink = new(observer, _predicate);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -319,7 +319,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new SkipWhileWitness<T>(observer, _predicate);
+            SkipWhileWitness<T> sink = new(observer, _predicate);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -342,7 +342,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new KeepNotNullWitness<T>(observer);
+            KeepNotNullWitness<T> sink = new(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -364,7 +364,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new KeepTypeWitness<TResult>(observer);
+            KeepTypeWitness<TResult> sink = new(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }

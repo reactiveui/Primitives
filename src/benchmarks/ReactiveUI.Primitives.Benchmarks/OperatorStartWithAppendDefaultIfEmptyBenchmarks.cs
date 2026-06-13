@@ -18,7 +18,7 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesStartWithAppendDefaultIfEmpty()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.None<int>()
             .DefaultIfEmpty(2)
             .Prepend(1)
@@ -32,7 +32,7 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
     [Benchmark]
     public int PrimitivesDefaultIfEmptyEmpty()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.None<int>()
             .DefaultIfEmpty(2)
             .Subscribe(observer);
@@ -44,7 +44,7 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
     [Benchmark]
     public int SystemReactiveStartWithAppendDefaultIfEmpty()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Empty<int>()
             .DefaultIfEmpty(2)
             .StartWith(1)
@@ -58,7 +58,7 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
     [Benchmark]
     public int SystemReactiveDefaultIfEmptyEmpty()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.DefaultIfEmpty(RxObservable.Empty<int>(), 2)
             .Subscribe(observer);
         return observer.Total;
@@ -69,7 +69,7 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
     [Benchmark]
     public int R3PrependAppendDefaultIfEmpty()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.Append(
                 R3.ObservableExtensions.Prepend(
                     R3.ObservableExtensions.DefaultIfEmpty(
@@ -86,7 +86,7 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
     [Benchmark]
     public int R3DefaultIfEmptyEmpty()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.DefaultIfEmpty(R3.Observable.Empty<int>(), 2)
             .Subscribe(observer);
         return observer.Total;

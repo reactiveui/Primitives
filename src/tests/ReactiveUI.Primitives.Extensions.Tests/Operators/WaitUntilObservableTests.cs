@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
 /// <summary>Tests for <c>WaitUntilObservable</c> — covers the after-terminal guards
@@ -14,8 +15,8 @@ public class WaitUntilObservableTests
     public async Task WhenOnNextAfterCompleted_ThenDropped()
     {
         const int Match = 1;
-        var source = new SyncDirectSource<int>();
-        var values = new List<int>();
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
         var completedCount = 0;
         using var sub = source.WaitUntil(static x => x == Match).Subscribe(values.Add, () => completedCount++);
         source.Observer.OnNext(Match);
@@ -31,13 +32,11 @@ public class WaitUntilObservableTests
     public async Task WhenOnErrorAfterCompleted_ThenDropped()
     {
         const int Match = 1;
-        var source = new SyncDirectSource<int>();
+        SyncDirectSource<int> source = new();
         Exception? caught = null;
         var completedCount = 0;
         using var sub = source.WaitUntil(static x => x == Match).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex,
             () => completedCount++);
         source.Observer.OnNext(Match);
@@ -51,14 +50,12 @@ public class WaitUntilObservableTests
     [Test]
     public async Task WhenOnCompletedAfterError_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
+        SyncDirectSource<int> source = new();
         Exception? caught = null;
         var completedCount = 0;
-        var expected = new InvalidOperationException("first");
+        InvalidOperationException expected = new("first");
         using var sub = source.WaitUntil(static _ => false).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex,
             () => completedCount++);
         source.Observer.OnError(expected);

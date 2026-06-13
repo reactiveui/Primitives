@@ -21,6 +21,81 @@ public static class ReactiveExtensions
     /// <summary>Default backoff factor for <see cref="RetryWithBackoff{T}(IObservable{T}, int, TimeSpan)"/>: each retry doubles the previous delay.</summary>
     private const double DefaultBackoffFactor = 2.0;
 
+    /// <summary>Boolean reduction operators for a set of boolean observable sources.</summary>
+    /// <param name="sources">The sources.</param>
+    extension(IEnumerable<IObservable<bool>> sources)
+    {
+        /// <summary>Latest values of each sequence are all false.</summary>
+        /// <returns>A sequence that emits true when all latest booleans are false.</returns>
+        public IObservable<bool> CombineLatestValuesAreAllFalse() =>
+            new BooleanReduceObservable(sources, target: false);
+
+        /// <summary>Latest values of each sequence are all true.</summary>
+        /// <returns>A sequence that emits true when all latest booleans are true.</returns>
+        public IObservable<bool> CombineLatestValuesAreAllTrue() =>
+            new BooleanReduceObservable(sources, target: true);
+    }
+
+    /// <summary>Emission operators for an enumerable source.</summary>
+    /// <param name="source">Source enumerable.</param>
+    /// <typeparam name="T">Element type.</typeparam>
+    extension<T>(IEnumerable<T> source)
+    {
+        /// <summary>Emits each element of an IEnumerable.</summary>
+        /// <returns>Observable of elements.</returns>
+        public IObservable<T> FromArray() =>
+            source.FromArray(null);
+
+        /// <summary>Emits each element of an IEnumerable.</summary>
+        /// <param name="scheduler">Scheduler (optional).</param>
+        /// <returns>Observable of elements.</returns>
+        public IObservable<T> FromArray(ISequencer? scheduler) =>
+            new FromArrayObservable<T>(source, scheduler);
+    }
+
+    /// <summary>Concurrency-limiting operators for a set of tasks.</summary>
+    /// <param name="taskFunctions">Tasks to execute.</param>
+    /// <typeparam name="T">The result type.</typeparam>
+    extension<T>(IEnumerable<Task<T>> taskFunctions)
+    {
+        /// <summary>Executes with limited concurrency.</summary>
+        /// <param name="maxConcurrency">Maximum concurrency.</param>
+        /// <returns>A sequence of task results.</returns>
+        public IObservable<T> WithLimitedConcurrency(int maxConcurrency)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(taskFunctions);
+
+            return new ConcurrencyLimiter<T>(taskFunctions, maxConcurrency).Observable;
+        }
+    }
+
+    /// <summary>Flattening operators for an observable source of enumerables.</summary>
+    /// <param name="source">Source of enumerables.</param>
+    /// <typeparam name="T">Element type.</typeparam>
+    extension<T>(IObservable<IEnumerable<T>> source)
+    {
+        /// <summary>Flattens a sequence of enumerables into individual values.</summary>
+        /// <returns>A flattened observable.</returns>
+        public IObservable<T> ForEach() =>
+            source.ForEach(null);
+
+        /// <summary>Flattens a sequence of enumerables into individual values.</summary>
+        /// <param name="scheduler">Scheduler (optional).</param>
+        /// <returns>A flattened observable.</returns>
+        public IObservable<T> ForEach(ISequencer? scheduler) =>
+            new ForEachObservable<T>(source, scheduler);
+    }
+
+    /// <summary>Error-recovery operators for an observable source of <see cref="RxVoid"/>.</summary>
+    /// <param name="source">The source observable.</param>
+    extension(IObservable<RxVoid> source)
+    {
+        /// <summary>Convenience overload: <c>source.CatchReturnUnit()</c> is shorthand for <c>source.CatchReturn(RxVoid.Default)</c>.</summary>
+        /// <returns>An observable that never produces an error terminal — errors are replaced with a single <see cref="RxVoid.Default"/>.</returns>
+        public IObservable<RxVoid> CatchReturnUnit() =>
+            new CatchReturnObservable<RxVoid>(source, RxVoid.Default);
+    }
+
     /// <summary>General-purpose operators for an observable source sequence.</summary>
     /// <param name="source">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
@@ -261,7 +336,7 @@ public static class ReactiveExtensions
 
             return new RetryWithBackoffObservable<T>(
                 source,
-                new RetryBackoffPolicy(
+                new(
                     MaxRetries: retryCount,
                     InitialDelay: delay,
                     BackoffFactor: 1.0,
@@ -314,7 +389,7 @@ public static class ReactiveExtensions
         /// <param name="onNext">Action to invoke for each element in the observable sequence.</param>
         /// <param name="onCompleted">Action to invoke upon graceful termination of the observable sequence.</param>
         /// <returns><see cref="IDisposable"/> object used to unsubscribe from the observable sequence.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="onNext"/> or <paramref name="onCompleted"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="onNext"/> or <paramref name="onCompleted"/> is <c>null</c>.</exception>
         public IDisposable SubscribeSynchronous(Func<T, ValueTask> onNext, Action onCompleted) =>
             new SubscribeAsyncObservable<T>(source, onNext, onCompleted: onCompleted);
 
@@ -431,7 +506,7 @@ public static class ReactiveExtensions
             ISequencer? scheduler) =>
             new RetryWithBackoffObservable<T>(
                 source,
-                new RetryBackoffPolicy(
+                new(
                     MaxRetries: maxRetries,
                     InitialDelay: initialDelay,
                     BackoffFactor: backoffFactor,
@@ -459,7 +534,7 @@ public static class ReactiveExtensions
         public IObservable<T> RetryWithFixedDelay(int retryCount, TimeSpan delay)
             => new RetryWithBackoffObservable<T>(
                 source,
-                new RetryBackoffPolicy(
+                new(
                     MaxRetries: retryCount,
                     InitialDelay: delay,
                     BackoffFactor: 1.0,
@@ -612,7 +687,7 @@ public static class ReactiveExtensions
         /// <returns>Tuple of (trueSequence, falseSequence).</returns>
         public (IObservable<T> True, IObservable<T> False) Partition(Func<T, bool> predicate)
         {
-            var partition = new PartitionObservable<T>(source, predicate);
+            PartitionObservable<T> partition = new(source, predicate);
             return (partition.True, partition.False);
         }
 
@@ -783,23 +858,6 @@ public static class ReactiveExtensions
             new CatchIgnoreEmptyObservable<TSource?>(source);
     }
 
-    /// <summary>Flattening operators for an observable source of enumerables.</summary>
-    /// <param name="source">Source of enumerables.</param>
-    /// <typeparam name="T">Element type.</typeparam>
-    extension<T>(IObservable<IEnumerable<T>> source)
-    {
-        /// <summary>Flattens a sequence of enumerables into individual values.</summary>
-        /// <returns>A flattened observable.</returns>
-        public IObservable<T> ForEach() =>
-            source.ForEach(null);
-
-        /// <summary>Flattens a sequence of enumerables into individual values.</summary>
-        /// <param name="scheduler">Scheduler (optional).</param>
-        /// <returns>A flattened observable.</returns>
-        public IObservable<T> ForEach(ISequencer? scheduler) =>
-            new ForEachObservable<T>(source, scheduler);
-    }
-
     /// <summary>Array-oriented operators for an observable source of arrays.</summary>
     /// <param name="source">Source array sequence.</param>
     /// <typeparam name="T">Array element type.</typeparam>
@@ -808,18 +866,6 @@ public static class ReactiveExtensions
         /// <summary>Randomly shuffles arrays emitted by the source.</summary>
         /// <returns>Sequence of shuffled arrays (in-place).</returns>
         public IObservable<T[]> Shuffle() => new ShuffleObservable<T>(source);
-    }
-
-    /// <summary>Character buffering operators for an observable source of characters.</summary>
-    /// <param name="this">The source observable of characters.</param>
-    extension(IObservable<char> @this)
-    {
-        /// <summary>Buffers until Start char and End char are found.</summary>
-        /// <param name="startsWith">The starting delimiter.</param>
-        /// <param name="endsWith">The ending delimiter.</param>
-        /// <returns>A sequence of buffered strings including the start and end delimiters.</returns>
-        public IObservable<string> BufferUntil(char startsWith, char endsWith) =>
-            new BufferUntilObservable(@this, startsWith, endsWith);
     }
 
     /// <summary>Boolean operators for an observable source of booleans.</summary>
@@ -839,6 +885,18 @@ public static class ReactiveExtensions
         public IObservable<bool> WhereFalse() => new WhereFalseObservable(source);
     }
 
+    /// <summary>Character buffering operators for an observable source of characters.</summary>
+    /// <param name="this">The source observable of characters.</param>
+    extension(IObservable<char> @this)
+    {
+        /// <summary>Buffers until Start char and End char are found.</summary>
+        /// <param name="startsWith">The starting delimiter.</param>
+        /// <param name="endsWith">The ending delimiter.</param>
+        /// <returns>A sequence of buffered strings including the start and end delimiters.</returns>
+        public IObservable<string> BufferUntil(char startsWith, char endsWith) =>
+            new BufferUntilObservable(@this, startsWith, endsWith);
+    }
+
     /// <summary>Regex filtering operators for an observable source of strings.</summary>
     /// <param name="source">Source sequence.</param>
     extension(IObservable<string> source)
@@ -856,64 +914,6 @@ public static class ReactiveExtensions
             new FilterRegexObservable(source, regex);
     }
 
-    /// <summary>Error-recovery operators for an observable source of <see cref="RxVoid"/>.</summary>
-    /// <param name="source">The source observable.</param>
-    extension(IObservable<RxVoid> source)
-    {
-        /// <summary>Convenience overload: <c>source.CatchReturnUnit()</c> is shorthand for <c>source.CatchReturn(RxVoid.Default)</c>.</summary>
-        /// <returns>An observable that never produces an error terminal — errors are replaced with a single <see cref="RxVoid.Default"/>.</returns>
-        public IObservable<RxVoid> CatchReturnUnit() =>
-            new CatchReturnObservable<RxVoid>(source, RxVoid.Default);
-    }
-
-    /// <summary>Boolean reduction operators for a set of boolean observable sources.</summary>
-    /// <param name="sources">The sources.</param>
-    extension(IEnumerable<IObservable<bool>> sources)
-    {
-        /// <summary>Latest values of each sequence are all false.</summary>
-        /// <returns>A sequence that emits true when all latest booleans are false.</returns>
-        public IObservable<bool> CombineLatestValuesAreAllFalse() =>
-            new BooleanReduceObservable(sources, target: false);
-
-        /// <summary>Latest values of each sequence are all true.</summary>
-        /// <returns>A sequence that emits true when all latest booleans are true.</returns>
-        public IObservable<bool> CombineLatestValuesAreAllTrue() =>
-            new BooleanReduceObservable(sources, target: true);
-    }
-
-    /// <summary>Concurrency-limiting operators for a set of tasks.</summary>
-    /// <param name="taskFunctions">Tasks to execute.</param>
-    /// <typeparam name="T">The result type.</typeparam>
-    extension<T>(IEnumerable<Task<T>> taskFunctions)
-    {
-        /// <summary>Executes with limited concurrency.</summary>
-        /// <param name="maxConcurrency">Maximum concurrency.</param>
-        /// <returns>A sequence of task results.</returns>
-        public IObservable<T> WithLimitedConcurrency(int maxConcurrency)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(taskFunctions);
-
-            return new ConcurrencyLimiter<T>(taskFunctions, maxConcurrency).Observable;
-        }
-    }
-
-    /// <summary>Emission operators for an enumerable source.</summary>
-    /// <param name="source">Source enumerable.</param>
-    /// <typeparam name="T">Element type.</typeparam>
-    extension<T>(IEnumerable<T> source)
-    {
-        /// <summary>Emits each element of an IEnumerable.</summary>
-        /// <returns>Observable of elements.</returns>
-        public IObservable<T> FromArray() =>
-            source.FromArray(null);
-
-        /// <summary>Emits each element of an IEnumerable.</summary>
-        /// <param name="scheduler">Scheduler (optional).</param>
-        /// <returns>Observable of elements.</returns>
-        public IObservable<T> FromArray(ISequencer? scheduler) =>
-            new FromArrayObservable<T>(source, scheduler);
-    }
-
     /// <summary>Observer push operators for an observer sink.</summary>
     /// <param name="observer">Observer to push to.</param>
     /// <typeparam name="T">Type of value.</typeparam>
@@ -928,6 +928,53 @@ public static class ReactiveExtensions
 
             observer.FastForEach(events);
         }
+    }
+
+    /// <summary>Sequential-run operators for an ordered list of one-shot signals.</summary>
+    /// <param name="sources">The observables to run in order.</param>
+    extension(IReadOnlyList<IObservable<RxVoid>> sources)
+    {
+        /// <summary>
+        /// Runs a list of one-shot <see cref="IObservable{RxVoid}"/> sequentially and emits
+        /// a single <see cref="RxVoid.Default"/> when all have completed. Replaces
+        /// <c>.Concat().LastOrDefaultAsync()</c> with a single operator that avoids stack
+        /// overflow on inline-completing sources.
+        /// </summary>
+        /// <returns>A one-shot observable that completes after all sources.</returns>
+        public IObservable<RxVoid> RunAll() =>
+            new RunAllObservable(sources);
+    }
+
+    /// <summary>Candidate-walking operators for an ordered list of candidate keys.</summary>
+    /// <param name="candidates">The ordered list of candidate keys to walk.</param>
+    /// <typeparam name="TKey">The candidate key type.</typeparam>
+    extension<TKey>(IReadOnlyList<TKey> candidates)
+    {
+        /// <summary>
+        /// Walks a list of candidate keys sequentially, projects each into a one-shot
+        /// observable, transforms the raw value, and emits the first transformed value
+        /// that satisfies <paramref name="predicate"/>. Errors from individual projections
+        /// are swallowed (the candidate is skipped). If no candidate matches, emits
+        /// <paramref name="fallback"/>.
+        /// </summary>
+        /// <typeparam name="TRaw">The raw element type emitted by the projection.</typeparam>
+        /// <typeparam name="TResult">The transformed result type.</typeparam>
+        /// <param name="project">Projects a key into a one-shot observable of raw values.</param>
+        /// <param name="transform">Transform applied to each raw value to produce the result.</param>
+        /// <param name="predicate">Returns <see langword="true"/> for a matching transformed value.</param>
+        /// <param name="fallback">Value emitted when no candidate matches.</param>
+        /// <returns>An observable emitting the first matching transformed value, or <paramref name="fallback"/>.</returns>
+        public IObservable<TResult> FirstMatchFromCandidates<TRaw, TResult>(
+            Func<TKey, IObservable<TRaw>> project,
+            Func<TRaw, TResult> transform,
+            Func<TResult, bool> predicate,
+            TResult fallback) =>
+            new FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
+                candidates,
+                project,
+                transform,
+                predicate,
+                fallback);
     }
 
     /// <summary>Safe scheduling operators for an optional scheduler.</summary>
@@ -1081,53 +1128,6 @@ public static class ReactiveExtensions
             new ScheduledValueObservable<T>(value, scheduler, dueTime, null, function, null);
     }
 
-    /// <summary>Sequential-run operators for an ordered list of one-shot signals.</summary>
-    /// <param name="sources">The observables to run in order.</param>
-    extension(IReadOnlyList<IObservable<RxVoid>> sources)
-    {
-        /// <summary>
-        /// Runs a list of one-shot <see cref="IObservable{RxVoid}"/> sequentially and emits
-        /// a single <see cref="RxVoid.Default"/> when all have completed. Replaces
-        /// <c>.Concat().LastOrDefaultAsync()</c> with a single operator that avoids stack
-        /// overflow on inline-completing sources.
-        /// </summary>
-        /// <returns>A one-shot observable that completes after all sources.</returns>
-        public IObservable<RxVoid> RunAll() =>
-            new RunAllObservable(sources);
-    }
-
-    /// <summary>Candidate-walking operators for an ordered list of candidate keys.</summary>
-    /// <param name="candidates">The ordered list of candidate keys to walk.</param>
-    /// <typeparam name="TKey">The candidate key type.</typeparam>
-    extension<TKey>(IReadOnlyList<TKey> candidates)
-    {
-        /// <summary>
-        /// Walks a list of candidate keys sequentially, projects each into a one-shot
-        /// observable, transforms the raw value, and emits the first transformed value
-        /// that satisfies <paramref name="predicate"/>. Errors from individual projections
-        /// are swallowed (the candidate is skipped). If no candidate matches, emits
-        /// <paramref name="fallback"/>.
-        /// </summary>
-        /// <typeparam name="TRaw">The raw element type emitted by the projection.</typeparam>
-        /// <typeparam name="TResult">The transformed result type.</typeparam>
-        /// <param name="project">Projects a key into a one-shot observable of raw values.</param>
-        /// <param name="transform">Transform applied to each raw value to produce the result.</param>
-        /// <param name="predicate">Returns <see langword="true"/> for a matching transformed value.</param>
-        /// <param name="fallback">Value emitted when no candidate matches.</param>
-        /// <returns>An observable emitting the first matching transformed value, or <paramref name="fallback"/>.</returns>
-        public IObservable<TResult> FirstMatchFromCandidates<TRaw, TResult>(
-            Func<TKey, IObservable<TRaw>> project,
-            Func<TRaw, TResult> transform,
-            Func<TResult, bool> predicate,
-            TResult fallback) =>
-            new FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
-                candidates,
-                project,
-                transform,
-                predicate,
-                fallback);
-    }
-
     /// <summary>Synchronized timer all instances of this with the same TimeSpan use the same timer.</summary>
     /// <param name="timeSpan">The time span.</param>
     /// <returns>An observable sequence producing the shared DateTime ticks.</returns>
@@ -1177,7 +1177,7 @@ public static class ReactiveExtensions
     /// <returns>A tuple of IObservable and IObserver.</returns>
     public static (IObservable<T> Observable, IObserver<T> Observer) ToReadOnlyBehavior<T>(T initialValue)
     {
-        var subject = new CurrentValueSubject<T>(initialValue);
+        CurrentValueSubject<T> subject = new(initialValue);
         return (subject.AsObservable(), subject);
     }
 }

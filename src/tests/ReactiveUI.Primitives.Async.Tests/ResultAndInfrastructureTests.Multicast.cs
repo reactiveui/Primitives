@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Threading.Channels;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Internals;
@@ -18,10 +19,10 @@ public class ResultAndInfrastructureTests
     public async Task WhenConcurrentObserverCallsExceptionConstructed_ThenStateIsPreserved()
     {
         const string CustomMessage = "custom concurrent observer call";
-        var inner = new InvalidOperationException("inner concurrent observer call");
-        var defaultException = new ConcurrentWitnessCallsException();
-        var messageException = new ConcurrentWitnessCallsException(CustomMessage);
-        var nestedException = new ConcurrentWitnessCallsException(CustomMessage, inner);
+        InvalidOperationException inner = new("inner concurrent observer call");
+        ConcurrentWitnessCallsException defaultException = new();
+        ConcurrentWitnessCallsException messageException = new(CustomMessage);
+        ConcurrentWitnessCallsException nestedException = new(CustomMessage, inner);
         await Assert.That(defaultException.Message.Contains("Concurrent calls", StringComparison.Ordinal)).IsTrue();
         await Assert.That(messageException.Message).IsEqualTo(CustomMessage);
         await Assert.That(nestedException.Message).IsEqualTo(CustomMessage);
@@ -33,7 +34,7 @@ public class ResultAndInfrastructureTests
     [Test]
     public async Task WhenResultFormatted_ThenStatusStringIsReturned()
     {
-        var error = new InvalidOperationException("result-format-failure");
+        InvalidOperationException error = new("result-format-failure");
         await Assert.That(Result.Success.ToString()).IsEqualTo("Success");
         await Assert.That(new Result(error).ToString()).IsEqualTo("Failure{result-format-failure}");
     }
@@ -64,7 +65,7 @@ public class ResultAndInfrastructureTests
     [Test]
     public async Task WhenObserverOnNextThrowsOperationCanceledSynchronously_ThenCallCompletes()
     {
-        var observer = new CancelOnNextObserver();
+        CancelOnNextObserver observer = new();
         await observer.OnNextAsync(1, CancellationToken.None);
         await Assert.That(observer.Cancelled).IsTrue();
     }
@@ -75,14 +76,14 @@ public class ResultAndInfrastructureTests
     public async Task WhenObserverCalledConcurrentlyFromDifferentThread_ThenUnhandledExceptionReported()
     {
         const int ConcurrentValue = 2;
-        using var capture = new UnhandledExceptionCapture();
-        var observer = new BlockingObserver();
+        using UnhandledExceptionCapture capture = new();
+        BlockingObserver observer = new();
         var first = Task.Factory.StartNew(
             static async state =>
-        {
-            var blockingObserver = (BlockingObserver)state!;
-            await blockingObserver.OnNextAsync(1, CancellationToken.None);
-        },
+            {
+                var blockingObserver = (BlockingObserver)state!;
+                await blockingObserver.OnNextAsync(1, CancellationToken.None);
+            },
             observer,
             CancellationToken.None,
             TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach,
@@ -98,7 +99,9 @@ public class ResultAndInfrastructureTests
         }
 
         await first.WaitAsync(TimeSpan.FromSeconds(5));
-        var reported = await capture.WaitForAsync(static exception => exception is ConcurrentWitnessCallsException, TimeSpan.FromSeconds(5));
+        var reported = await capture.WaitForAsync(
+            static exception => exception is ConcurrentWitnessCallsException,
+            TimeSpan.FromSeconds(5));
         await Assert.That(reported).IsNotNull();
     }
 
@@ -113,7 +116,11 @@ public class ResultAndInfrastructureTests
             disposed = true;
             return default;
         });
-        await Assert.That(async () => await SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(subscription, static () => throw new InvalidOperationException("subscribe failure"))).ThrowsExactly<InvalidOperationException>();
+        await Assert
+            .That(async () => await SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
+                subscription,
+                static () => throw new InvalidOperationException("subscribe failure")))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(disposed).IsTrue();
     }
 
@@ -122,7 +129,7 @@ public class ResultAndInfrastructureTests
     [Test]
     public async Task WhenTryCancelAsyncSourceDisposed_ThenReturnsFalse()
     {
-        var source = new CancellationTokenSource();
+        CancellationTokenSource source = new();
         source.Dispose();
         var cancelled = await ConcurrencyRaceHelpers.TryCancelAsync(source);
         await Assert.That(cancelled).IsFalse();
@@ -133,7 +140,7 @@ public class ResultAndInfrastructureTests
     [Test]
     public async Task WhenEmptySignalConvertedToAsyncEnumerable_ThenEnumerationCompletes()
     {
-        var items = new List<int>();
+        List<int> items = [];
         await foreach (var item in SignalAsync.Empty<int>().ToAsyncEnumerable(Channel.CreateUnbounded<int>))
         {
             items.Add(item);
@@ -174,10 +181,10 @@ public class ResultAndInfrastructureTests
         var connectable = source.Multicast(signal);
         await using var sub = await connectable.SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             null);
         var conn = await connectable.ConnectAsync(CancellationToken.None);
         await conn.DisposeAsync();
@@ -283,7 +290,7 @@ public class ResultAndInfrastructureTests
     {
         var signal = Signal.Create<int>();
         List<int> items = [];
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         const int FirstValue = 10;
         const int SecondValue = 20;
         var source = SignalAsync.Create<int>(async (observer, ct) =>
@@ -296,16 +303,16 @@ public class ResultAndInfrastructureTests
         var connectable = source.Multicast(signal);
         await using var sub = await connectable.SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             null,
             _ =>
-        {
-            completed.TrySetResult();
-            return default;
-        });
+            {
+                completed.TrySetResult();
+                return default;
+            });
         await using var conn = await connectable.ConnectAsync(CancellationToken.None);
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(items).IsCollectionEqualTo([FirstValue, SecondValue]);
@@ -346,15 +353,15 @@ public class ResultAndInfrastructureTests
         List<int> items = [];
         await using var sub = await refCounted.SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             (ex, _) =>
-        {
-            captured = ex;
-            return default;
-        });
+            {
+                captured = ex;
+                return default;
+            });
         await AsyncTestHelpers.WaitForConditionAsync(() => captured is not null, TimeSpan.FromSeconds(5));
         await Assert.That(items).Contains(1);
         await Assert.That(captured).IsNotNull();
@@ -375,7 +382,8 @@ public class ResultAndInfrastructureTests
         }
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) => default;
+        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            default;
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result) => default;
@@ -398,7 +406,8 @@ public class ResultAndInfrastructureTests
         }
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) => default;
+        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            default;
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result) => default;

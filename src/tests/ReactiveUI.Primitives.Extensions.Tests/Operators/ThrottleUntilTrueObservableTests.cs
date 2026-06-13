@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -31,9 +32,10 @@ public class ThrottleUntilTrueObservableTests
     public async Task WhenThrottleUntilTruePredicateTrue_ThenEmitsImmediately()
     {
         const int MatchingValue = 1;
-        var subject = new Subject<int>();
-        var emitted = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = subject.ThrottleUntilTrue(ThrottleWindow, static x => x == MatchingValue).Subscribe(v => emitted.TrySetResult(v));
+        Subject<int> subject = new();
+        TaskCompletionSource<int> emitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var sub = subject.ThrottleUntilTrue(ThrottleWindow, static x => x == MatchingValue)
+            .Subscribe(v => emitted.TrySetResult(v));
         subject.OnNext(MatchingValue);
         var got = await emitted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(got).IsEqualTo(MatchingValue);
@@ -45,9 +47,10 @@ public class ThrottleUntilTrueObservableTests
     public async Task WhenThrottleUntilTruePredicateFalse_ThenEmitsAfterDelay()
     {
         const int NonMatchingValue = 99;
-        var subject = new Subject<int>();
-        var emitted = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = subject.ThrottleUntilTrue(ThrottleWindow, static _ => false).Subscribe(v => emitted.TrySetResult(v));
+        Subject<int> subject = new();
+        TaskCompletionSource<int> emitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var sub = subject.ThrottleUntilTrue(ThrottleWindow, static _ => false)
+            .Subscribe(v => emitted.TrySetResult(v));
         subject.OnNext(NonMatchingValue);
         var got = await emitted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(got).IsEqualTo(NonMatchingValue);
@@ -60,9 +63,10 @@ public class ThrottleUntilTrueObservableTests
     {
         const int Earlier = 1;
         const int Later = 2;
-        var subject = new Subject<int>();
-        var emitted = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = subject.ThrottleUntilTrue(ThrottleWindow, static _ => false).Subscribe(v => emitted.TrySetResult(v));
+        Subject<int> subject = new();
+        TaskCompletionSource<int> emitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var sub = subject.ThrottleUntilTrue(ThrottleWindow, static _ => false)
+            .Subscribe(v => emitted.TrySetResult(v));
         subject.OnNext(Earlier);
         subject.OnNext(Later);
         var got = await emitted.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -74,13 +78,11 @@ public class ThrottleUntilTrueObservableTests
     [Test]
     public async Task WhenThrottleUntilTrueSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = subject.ThrottleUntilTrue(ThrottleWindow, static _ => true).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -92,12 +94,10 @@ public class ThrottleUntilTrueObservableTests
     public async Task WhenThrottleUntilTrueSourceCompletes_ThenForwardsCompletion()
     {
         const int IgnoredAfterCompletion = 9;
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var completed = false;
         using var sub = subject.ThrottleUntilTrue(ThrottleWindow, static _ => true).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completed = true);
         subject.OnCompleted();
         subject.OnNext(IgnoredAfterCompletion);
@@ -110,9 +110,11 @@ public class ThrottleUntilTrueObservableTests
     public async Task WhenThrottleUntilTrueDisposedBeforeFire_ThenNoEmission()
     {
         const int NonMatchingValue = 1;
-        var subject = new Subject<int>();
-        var results = new List<int>();
-        var sub = subject.ThrottleUntilTrue(TimeSpan.FromMilliseconds(LongThrottleWindowMilliseconds), static _ => false).Subscribe(results.Add);
+        Subject<int> subject = new();
+        List<int> results = [];
+        var sub = subject
+            .ThrottleUntilTrue(TimeSpan.FromMilliseconds(LongThrottleWindowMilliseconds), static _ => false)
+            .Subscribe(results.Add);
         subject.OnNext(NonMatchingValue);
         sub.Dispose();
 
@@ -127,11 +129,12 @@ public class ThrottleUntilTrueObservableTests
     [Test]
     public async Task WhenEventsAfterCompleted_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
-        var values = new List<int>();
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
         Exception? caught = null;
         var completedCount = 0;
-        using var sub = source.ThrottleUntilTrue(ThrottleWindow, static _ => true).Subscribe(values.Add, ex => caught = ex, () => completedCount++);
+        using var sub = source.ThrottleUntilTrue(ThrottleWindow, static _ => true)
+            .Subscribe(values.Add, ex => caught = ex, () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));

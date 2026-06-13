@@ -3,6 +3,8 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
+using System.Text.RegularExpressions;
+using R3;
 using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -72,7 +74,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>SystemReactivePairwise</c> result.</returns>
     private static int SystemReactivePairwise()
     {
-        var observer = new PairWitness();
+        PairWitness observer = new();
         using var subscription = RxObservable.Select(
                 RxObservable.Where(
                     RxObservable.Buffer(RxObservable.Range(0, Count), 2, 1),
@@ -151,7 +153,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>R3AsSignal</c> result.</returns>
     private static int R3AsSignal()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.Select(R3.Observable.Range(0, Count), static _ => 1).Subscribe(observer);
         return observer.Total;
     }
@@ -160,7 +162,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>R3CatchAndReturn</c> result.</returns>
     private static int R3CatchAndReturn()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.Catch<int, Exception>(
                 R3.Observable.Throw<int>(Boom),
                 static _ => R3.Observable.Return(Fallback))
@@ -172,7 +174,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>R3CatchIgnore</c> result.</returns>
     private static int R3CatchIgnore()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.Catch<int, Exception>(
                 R3.Observable.Throw<int>(Boom),
                 static _ => R3.Observable.Empty<int>())
@@ -184,7 +186,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>R3FromArray</c> result.</returns>
     private static int R3FromArray()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.Observable.ToObservable(Values, CancellationToken.None).Subscribe(observer);
         return observer.Total;
     }
@@ -193,7 +195,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>R3Not</c> result.</returns>
     private static int R3Not()
     {
-        var observer = new R3BoolWitness();
+        R3BoolWitness observer = new();
         using var subscription = R3.ObservableExtensions.Select(
                 R3.Observable.ToObservable(BooleanValues, CancellationToken.None),
                 static value => !value)
@@ -205,7 +207,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>R3Return</c> result.</returns>
     private static int R3Return()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.Observable.Return(Value).Subscribe(observer);
         return observer.Total;
     }
@@ -214,7 +216,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>R3SelectConstant</c> result.</returns>
     private static int R3SelectConstant()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.Select(R3.Observable.Range(0, Count), static _ => Value).Subscribe(observer);
         return observer.Total;
     }
@@ -223,7 +225,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>R3WhereFalse</c> result.</returns>
     private static int R3WhereFalse()
     {
-        var observer = new R3BoolWitness();
+        R3BoolWitness observer = new();
         using var subscription = R3.ObservableExtensions.Where(
                 R3.Observable.ToObservable(BooleanValues, CancellationToken.None),
                 static value => !value)
@@ -235,7 +237,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>R3WhereIsNotNull</c> result.</returns>
     private static int R3WhereIsNotNull()
     {
-        var observer = new R3CountingWitness<string>();
+        R3CountingWitness<string> observer = new();
         var source = R3.Observable.ToObservable(NullableStrings, CancellationToken.None);
         var filtered = R3.ObservableExtensions.Where(source, static value => value is not null);
         using var subscription = R3.ObservableExtensions.Select(filtered, static value => value!).Subscribe(observer);
@@ -246,7 +248,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>R3WhereSelect</c> result.</returns>
     private static int R3WhereSelect()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.Select(
                 R3.ObservableExtensions.Where(R3.Observable.Range(0, Count), static value => (value & 1) == 0),
                 static value => value * ResultMultiplier)
@@ -258,7 +260,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>R3WhereTrue</c> result.</returns>
     private static int R3WhereTrue()
     {
-        var observer = new R3BoolWitness();
+        R3BoolWitness observer = new();
         using var subscription = R3.ObservableExtensions.Where(
                 R3.Observable.ToObservable(BooleanValues, CancellationToken.None),
                 static value => value)

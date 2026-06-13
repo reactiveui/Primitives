@@ -28,10 +28,10 @@ public sealed class MauiDispatcherSequencerTests
     [Test]
     public async Task ToSequencerValidatesAndAdaptsDispatcher()
     {
-        IDispatcher nullDispatcher = null!;
-        await Assert.That(() => nullDispatcher.ToSequencer()).ThrowsExactly<ArgumentNullException>();
+        const IDispatcher nullDispatcher = null!;
+        await Assert.That(() => nullDispatcher!.ToSequencer()).ThrowsExactly<ArgumentNullException>();
 
-        var dispatcher = new FakeDispatcher();
+        FakeDispatcher dispatcher = new();
         var sequencer = dispatcher.ToSequencer();
 
         await Assert.That(sequencer).IsNotNull();
@@ -42,8 +42,8 @@ public sealed class MauiDispatcherSequencerTests
     [Test]
     public async Task ImmediateScheduleDispatchesAndExecutes()
     {
-        var dispatcher = new FakeDispatcher();
-        var sequencer = new MauiDispatcherSequencer(dispatcher);
+        FakeDispatcher dispatcher = new();
+        MauiDispatcherSequencer sequencer = new(dispatcher);
         var executed = false;
 
         sequencer.Schedule(new DelegateWorkItem(() => executed = true));
@@ -61,8 +61,8 @@ public sealed class MauiDispatcherSequencerTests
     [Test]
     public async Task DelayedScheduleUsesDispatchDelayed()
     {
-        var dispatcher = new FakeDispatcher();
-        var sequencer = new MauiDispatcherSequencer(dispatcher);
+        FakeDispatcher dispatcher = new();
+        MauiDispatcherSequencer sequencer = new(dispatcher);
         var executed = false;
 
         var due = sequencer.Timestamp + Stopwatch.Frequency; // ~1 second into the future.
@@ -78,8 +78,8 @@ public sealed class MauiDispatcherSequencerTests
     [Test]
     public async Task PastDueTimestampUsesImmediatePath()
     {
-        var dispatcher = new FakeDispatcher();
-        var sequencer = new MauiDispatcherSequencer(dispatcher);
+        FakeDispatcher dispatcher = new();
+        MauiDispatcherSequencer sequencer = new(dispatcher);
         var executed = false;
 
         var due = sequencer.Timestamp - Stopwatch.Frequency; // already elapsed.
@@ -95,9 +95,9 @@ public sealed class MauiDispatcherSequencerTests
     [Test]
     public async Task ImmediateBurstExecutesInOrder()
     {
-        var dispatcher = new FakeDispatcher();
-        var sequencer = new MauiDispatcherSequencer(dispatcher);
-        var values = new List<int>();
+        FakeDispatcher dispatcher = new();
+        MauiDispatcherSequencer sequencer = new(dispatcher);
+        List<int> values = [];
 
         foreach (var value in ExpectedBurst)
         {

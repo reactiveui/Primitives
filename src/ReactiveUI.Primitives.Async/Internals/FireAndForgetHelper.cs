@@ -32,9 +32,10 @@ public static class FireAndForgetHelper
         {
             await action().ConfigureAwait(false);
         }
-        catch
+        catch (Exception e)
         {
-            // Intentionally swallowed - fire-and-forget context has no caller to propagate to
+            // Fire-and-forget has no caller to propagate to; surface the failure to the global handler.
+            UnhandledExceptionHandler.ReportUnhandledException(e);
         }
     }
 }

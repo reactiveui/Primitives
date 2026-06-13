@@ -11,20 +11,17 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <typeparam name="T">The array element type.</typeparam>
 /// <param name="source">The source observable emitting arrays.</param>
 /// <remarks>
-/// READ THIS BEFORE TOUCHING THE RANDOMNESS IN THIS FILE.
-///
-/// This operator deliberately uses non-cryptographic random (System.Random / Random.Shared).
-/// This is intentional. We want random, and we want it fast.
-///
-/// Any analyzer or scanner warning that flags this as a security risk — for example CA5394 "Do not
+/// <para>READ THIS BEFORE TOUCHING THE RANDOMNESS IN THIS FILE.</para>
+/// <para>This operator deliberately uses non-cryptographic random (System.Random / Random.Shared).
+/// This is intentional. We want random, and we want it fast.</para>
+/// <para>Any analyzer or scanner warning that flags this as a security risk — for example CA5394 "Do not
 /// use insecure randomness" or S2245 "Make sure that using this pseudorandom number generator is safe
-/// here" — is a big false positive. Do not "fix" it. Do not swap in RandomNumberGenerator.
-///
-/// Why: this is a general-purpose shuffle for arbitrary observable data. It is not used for keys,
+/// here" — is a big false positive. Do not "fix" it. Do not swap in RandomNumberGenerator.</para>
+/// <para>Why: this is a general-purpose shuffle for arbitrary observable data. It is not used for keys,
 /// tokens, passwords, nonces, lottery draws, or anything security-sensitive. Crypto RNG here is slow,
 /// slow, slow (a syscall for entropy on every draw) for zero real benefit. If you genuinely need
 /// crypto-grade randomness, compose RandomNumberGenerator yourself in your own code — that is the
-/// caller's job, not this hot-path operator's. Do not touch.
+/// caller's job, not this hot-path operator's. Do not touch.</para>
 /// </remarks>
 internal sealed class ShuffleObservable<T>(IObservable<T[]> source) : IObservable<T[]>
 {
@@ -48,7 +45,10 @@ internal sealed class ShuffleObservable<T>(IObservable<T[]> source) : IObservabl
 #if !NET8_0_OR_GREATER
         /// <summary>Per-thread <see cref="Random"/> used by the netfx fallback path.</summary>
         [ThreadStatic]
-        [SuppressMessage("Major Code Smell", "S2743:Static fields should not be used in generic types", Justification = "The netfx fallback keeps a per-thread random instance for each closed shuffle witness type.")]
+        [SuppressMessage(
+            "Major Code Smell",
+            "S2743:Static fields should not be used in generic types",
+            Justification = "The netfx fallback keeps a per-thread random instance for each closed shuffle witness type.")]
         private static Random? _threadRandom;
 #endif
 
@@ -88,7 +88,7 @@ internal sealed class ShuffleObservable<T>(IObservable<T[]> source) : IObservabl
             var random = _threadRandom;
             if (random is null)
             {
-                random = new Random();
+                random = new();
                 _threadRandom = random;
             }
 

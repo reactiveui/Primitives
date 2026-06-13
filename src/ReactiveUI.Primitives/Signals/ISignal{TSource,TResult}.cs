@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>ISubject.</summary>
+/// <summary>A signal that observes one type and emits another.</summary>
 /// <typeparam name="TSource">The type of the source.</typeparam>
 /// <typeparam name="TResult">The type of the result.</typeparam>
 public interface ISignal<in TSource, out TResult> : IObserver<TSource>, IObservable<TResult>, IsDisposed

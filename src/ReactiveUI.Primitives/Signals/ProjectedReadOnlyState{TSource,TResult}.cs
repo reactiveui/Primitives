@@ -74,7 +74,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
 
         ArgumentExceptionHelper.ThrowIfNull(selector);
 
-        var state = new ProjectedReadOnlyState<TSource, TResult>(selector);
+        ProjectedReadOnlyState<TSource, TResult> state = new(selector);
         state._subscription = source.Subscribe(state);
         state._lastError.Rethrow();
         if (!state._hasValue)

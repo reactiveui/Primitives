@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Extensions.Internal;
 using ReactiveUI.Primitives.Extensions.Operators;
 
@@ -23,8 +24,8 @@ public partial class CurrentValueSubjectTests
     [Test]
     public async Task WhenNewSubscriber_ThenReceivesInitialValueImmediately()
     {
-        using var subject = new CurrentValueSubject<int>(InitialValue);
-        var results = new List<int>();
+        using CurrentValueSubject<int> subject = new(InitialValue);
+        List<int> results = [];
         using var sub = subject.Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo([InitialValue]);
         await Assert.That(subject.Value).IsEqualTo(InitialValue);
@@ -35,8 +36,8 @@ public partial class CurrentValueSubjectTests
     [Test]
     public async Task WhenOnNextSingleObserver_ThenValueAndBroadcastUpdate()
     {
-        using var subject = new CurrentValueSubject<int>(InitialValue);
-        var results = new List<int>();
+        using CurrentValueSubject<int> subject = new(InitialValue);
+        List<int> results = [];
         using var sub = subject.Subscribe(results.Add);
         subject.OnNext(SecondValue);
         await Assert.That(results).IsCollectionEqualTo([InitialValue, SecondValue]);
@@ -48,9 +49,9 @@ public partial class CurrentValueSubjectTests
     [Test]
     public async Task WhenTwoObservers_ThenBothReceiveReplayAndOnNext()
     {
-        using var subject = new CurrentValueSubject<int>(InitialValue);
-        var first = new List<int>();
-        var second = new List<int>();
+        using CurrentValueSubject<int> subject = new(InitialValue);
+        List<int> first = [];
+        List<int> second = [];
         using var sub1 = subject.Subscribe(first.Add);
         using var sub2 = subject.Subscribe(second.Add);
         subject.OnNext(SecondValue);
@@ -63,10 +64,10 @@ public partial class CurrentValueSubjectTests
     [Test]
     public async Task WhenLateSubscriber_ThenReceivesOnlyLatest()
     {
-        using var subject = new CurrentValueSubject<int>(InitialValue);
+        using CurrentValueSubject<int> subject = new(InitialValue);
         subject.OnNext(SecondValue);
         subject.OnNext(ThirdValue);
-        var results = new List<int>();
+        List<int> results = [];
         using var sub = subject.Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo([ThirdValue]);
     }
@@ -76,8 +77,8 @@ public partial class CurrentValueSubjectTests
     [Test]
     public async Task WhenSubscriptionDisposed_ThenNoFurtherDeliveries()
     {
-        using var subject = new CurrentValueSubject<int>(InitialValue);
-        var results = new List<int>();
+        using CurrentValueSubject<int> subject = new(InitialValue);
+        List<int> results = [];
         var sub = subject.Subscribe(results.Add);
         sub.Dispose();
         subject.OnNext(SecondValue);
@@ -89,14 +90,12 @@ public partial class CurrentValueSubjectTests
     [Test]
     public async Task WhenOnCompleted_ThenObserversReceiveCompletion()
     {
-        using var subject = new CurrentValueSubject<int>(InitialValue);
+        using CurrentValueSubject<int> subject = new(InitialValue);
         var completedFirst = false;
         var completedLate = false;
-        var lateValues = new List<int>();
+        List<int> lateValues = [];
         using var subFirst = subject.Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completedFirst = true);
         subject.OnCompleted();
         using var subLate = subject.Subscribe(lateValues.Add, () => completedLate = true);
@@ -112,20 +111,16 @@ public partial class CurrentValueSubjectTests
     [Test]
     public async Task WhenOnError_ThenObserversReceiveError()
     {
-        var expected = new InvalidOperationException("boom");
-        using var subject = new CurrentValueSubject<int>(InitialValue);
+        InvalidOperationException expected = new("boom");
+        using CurrentValueSubject<int> subject = new(InitialValue);
         Exception? firstError = null;
         Exception? lateError = null;
         using var subFirst = subject.Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => firstError = ex);
         subject.OnError(expected);
         using var subLate = subject.Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => lateError = ex);
         await Assert.That(firstError).IsEqualTo(expected);
         await Assert.That(lateError).IsEqualTo(expected);
@@ -136,8 +131,8 @@ public partial class CurrentValueSubjectTests
     [Test]
     public async Task WhenDisposedThenOnNext_ThenIgnored()
     {
-        var subject = new CurrentValueSubject<int>(InitialValue);
-        var results = new List<int>();
+        CurrentValueSubject<int> subject = new(InitialValue);
+        List<int> results = [];
         using var sub = subject.Subscribe(results.Add);
         subject.Dispose();
         subject.OnNext(SecondValue);
@@ -149,13 +144,11 @@ public partial class CurrentValueSubjectTests
     [Test]
     public async Task WhenSubscribeAfterDispose_ThenObjectDisposedExceptionDelivered()
     {
-        var subject = new CurrentValueSubject<int>(InitialValue);
+        CurrentValueSubject<int> subject = new(InitialValue);
         subject.Dispose();
         Exception? error = null;
         using var sub = subject.Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => error = ex);
         await Assert.That(error).IsTypeOf<ObjectDisposedException>();
     }
@@ -165,9 +158,9 @@ public partial class CurrentValueSubjectTests
     [Test]
     public async Task WhenAsObservable_ThenDeliversValuesButHidesObserverApi()
     {
-        using var subject = new CurrentValueSubject<int>(InitialValue);
+        using CurrentValueSubject<int> subject = new(InitialValue);
         var view = subject.AsObservable();
-        var results = new List<int>();
+        List<int> results = [];
         using var sub = view.Subscribe(results.Add);
         subject.OnNext(SecondValue);
         await Assert.That(results).IsCollectionEqualTo([InitialValue, SecondValue]);
@@ -179,8 +172,8 @@ public partial class CurrentValueSubjectTests
     [Test]
     public async Task WhenSingleValueObservableSubscribed_ThenEmitsOnceAndCompletes()
     {
-        var observable = new SingleValueObservable<int>(SecondValue);
-        var results = new List<int>();
+        SingleValueObservable<int> observable = new(SecondValue);
+        List<int> results = [];
         var completed = false;
         using var sub = observable.Subscribe(results.Add, () => completed = true);
         await Assert.That(results).IsCollectionEqualTo([SecondValue]);

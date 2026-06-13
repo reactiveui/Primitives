@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
 
@@ -51,7 +52,7 @@ public class ConcurencyTests
     {
         var id = Environment.CurrentManagedThreadId;
         var nt = TaskPoolSequencer.Instance;
-        using var completed = new ManualResetEventSlim();
+        using ManualResetEventSlim completed = new();
         var observedThreadId = id;
         using var scheduled = nt.Schedule(() =>
         {
@@ -69,7 +70,7 @@ public class ConcurencyTests
     {
         var id = Environment.CurrentManagedThreadId;
         var nt = TaskPoolSequencer.Instance;
-        using var completed = new ManualResetEventSlim();
+        using ManualResetEventSlim completed = new();
         var observedThreadId = id;
         using var scheduled = nt.Schedule(TimeSpan.Zero, () =>
         {
@@ -87,7 +88,7 @@ public class ConcurencyTests
     {
         var id = Environment.CurrentManagedThreadId;
         var nt = TaskPoolSequencer.Instance;
-        using var completed = new ManualResetEventSlim();
+        using ManualResetEventSlim completed = new();
         var observedThreadId = id;
         using var scheduled = nt.Schedule(ShortDueTime, () =>
         {
@@ -105,7 +106,7 @@ public class ConcurencyTests
     {
         var nt = TaskPoolSequencer.Instance;
         var runCount = 0;
-        using var completed = new ManualResetEventSlim();
+        using ManualResetEventSlim completed = new();
         using var scheduled = nt.Schedule(CancelDueTime, () =>
         {
             Volatile.Write(ref runCount, 1);
@@ -122,9 +123,7 @@ public class ConcurencyTests
     public async Task TaskPoolDelayLargerThanIntMaxValue()
     {
         var dueTime = TimeSpan.FromMilliseconds((double)int.MaxValue + 1);
-        using var scheduled = TaskPoolSequencer.Instance.Schedule(dueTime, () =>
-        {
-        });
+        using var scheduled = TaskPoolSequencer.Instance.Schedule(dueTime, () => { });
         await Assert.That(scheduled).IsNotNull();
     }
 }

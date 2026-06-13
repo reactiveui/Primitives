@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>ImmediateSequencer.</summary>
+/// <summary>A sequencer that executes work immediately on the calling thread.</summary>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class ImmediateSequencer : ISequencer
@@ -35,7 +35,7 @@ public sealed class ImmediateSequencer : ISequencer
     /// <summary>Schedules an action to run immediately.</summary>
     /// <param name="action">Action to execute.</param>
     /// <returns>An empty disposable because the action has already run.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="action"/> is <see langword="null"/>.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Performance",
         "CA1822:Mark members as static",
@@ -54,7 +54,7 @@ public sealed class ImmediateSequencer : ISequencer
 
     /// <summary>Schedules the specified work item.</summary>
     /// <param name="item">Work item to execute.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item)
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
@@ -70,7 +70,7 @@ public sealed class ImmediateSequencer : ISequencer
     /// <summary>Schedules the specified work item.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item, long dueTimestamp)
     {
         ArgumentExceptionHelper.ThrowIfNull(item);

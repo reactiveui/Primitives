@@ -5,6 +5,7 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using BenchmarkDotNet.Attributes;
+using R3;
 using ReactiveUI.Primitives.Signals;
 using RxObservable = System.Reactive.Linq.Observable;
 
@@ -28,7 +29,7 @@ public class ConnectableMulticastBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesMulticastConnect()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         var connectable = Signal.Sequence(Start, Count).Multicast(new Signal<int>());
         using var subscription = connectable.Subscribe(observer);
         using var connection = connectable.Connect();
@@ -40,8 +41,8 @@ public class ConnectableMulticastBenchmarks
     [Benchmark]
     public int SystemReactiveMulticastConnect()
     {
-        var observer = new IntSignalWitness();
-        var connectable = RxObservable.Range(Start, Count).Multicast(new Subject<int>());
+        IntSignalWitness observer = new();
+        var connectable = RxObservable.Range(Start, Count).Multicast<int, int>(new System.Reactive.Subjects.Subject<int>());
         using var subscription = connectable.Subscribe(observer);
         using var connection = connectable.Connect();
         return observer.Total;
@@ -52,7 +53,7 @@ public class ConnectableMulticastBenchmarks
     [Benchmark]
     public int R3MulticastConnect()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         var connectable = R3.ObservableExtensions.Multicast(R3.Observable.Range(Start, Count), new R3.Subject<int>());
         using var subscription = connectable.Subscribe(observer);
         using var connection = connectable.Connect();

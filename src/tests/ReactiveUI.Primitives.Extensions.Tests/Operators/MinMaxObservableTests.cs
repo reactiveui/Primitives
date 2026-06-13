@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Extensions.Operators;
 
@@ -28,9 +29,9 @@ public class MinMaxObservableTests
     [Test]
     public async Task WhenGetMaxTwoSources_ThenEmitsMaxAcrossUpdates()
     {
-        var a = new Subject<int>();
-        var b = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> a = new();
+        Subject<int> b = new();
+        List<int> results = [];
         using var sub = a.GetMax(b).Subscribe(results.Add);
         a.OnNext(LowValue);
         b.OnNext(MidValue);
@@ -44,9 +45,9 @@ public class MinMaxObservableTests
     [Test]
     public async Task WhenGetMinTwoSources_ThenEmitsMinAcrossUpdates()
     {
-        var a = new Subject<int>();
-        var b = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> a = new();
+        Subject<int> b = new();
+        List<int> results = [];
         using var sub = a.GetMin(b).Subscribe(results.Add);
         a.OnNext(HighValue);
         b.OnNext(MidValue);
@@ -59,9 +60,9 @@ public class MinMaxObservableTests
     [Test]
     public async Task WhenGetMaxPartialSources_ThenSuppressesEmission()
     {
-        var a = new Subject<int>();
-        var b = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> a = new();
+        Subject<int> b = new();
+        List<int> results = [];
         using var sub = a.GetMax(b).Subscribe(results.Add);
         a.OnNext(LowValue);
         await Assert.That(results).IsEmpty();
@@ -72,14 +73,12 @@ public class MinMaxObservableTests
     [Test]
     public async Task WhenGetMaxSourceErrors_ThenForwardsError()
     {
-        var a = new Subject<int>();
-        var b = new Subject<int>();
+        Subject<int> a = new();
+        Subject<int> b = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = a.GetMax(b).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         a.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -90,8 +89,8 @@ public class MinMaxObservableTests
     [Test]
     public async Task WhenGetMaxSingleSource_ThenEmitsSourceValues()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         using var sub = subject.GetMax().Subscribe(results.Add);
         subject.OnNext(LowValue);
         subject.OnNext(MidValue);
@@ -104,8 +103,8 @@ public class MinMaxObservableTests
     [Test]
     public async Task WhenGetMinSingleSource_ThenEmitsSourceValues()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         using var sub = subject.GetMin().Subscribe(results.Add);
         subject.OnNext(HighValue);
         subject.OnNext(MidValue);
@@ -118,7 +117,7 @@ public class MinMaxObservableTests
     [Test]
     public async Task WhenMinMaxObservableNoSources_ThenCompletesImmediately()
     {
-        var observable = new MinMaxObservable<int>([], emitMaximum: true);
+        MinMaxObservable<int> observable = new([], true);
         var completed = false;
         var emitted = 0;
         using var sub = observable.Subscribe(_ => emitted++, () => completed = true);
@@ -130,7 +129,7 @@ public class MinMaxObservableTests
     [Test]
     public void WhenMinMaxObservableNullObserver_ThenSubscribeThrows()
     {
-        var observable = new MinMaxObservable<int>([new Subject<int>()], emitMaximum: false);
+        MinMaxObservable<int> observable = new([new Subject<int>()], false);
         Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
     }
 
@@ -139,13 +138,11 @@ public class MinMaxObservableTests
     [Test]
     public async Task WhenAllSourcesComplete_ThenForwardsCompletion()
     {
-        var a = new Subject<int>();
-        var b = new Subject<int>();
+        Subject<int> a = new();
+        Subject<int> b = new();
         var completed = false;
         using var sub = a.GetMax(b).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completed = true);
         a.OnNext(LowValue);
         b.OnNext(MidValue);
@@ -160,11 +157,11 @@ public class MinMaxObservableTests
     [Test]
     public async Task WhenOnNextAfterTerminated_ThenDropped()
     {
-        var a = new SyncDirectSource<int>();
-        var b = new SyncDirectSource<int>();
-        var results = new List<int>();
+        SyncDirectSource<int> a = new();
+        SyncDirectSource<int> b = new();
+        List<int> results = [];
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = a.GetMax(b).Subscribe(results.Add, ex => caught = ex);
         a.Observer.OnError(expected);
         b.Observer.OnNext(HighValue);
@@ -177,13 +174,13 @@ public class MinMaxObservableTests
     [Test]
     public async Task WhenManySourceMinMaxTerminates_ThenLateSignalsAreDropped()
     {
-        var a = new SyncDirectSource<int>();
-        var b = new SyncDirectSource<int>();
-        var c = new SyncDirectSource<int>();
-        var results = new List<int>();
+        SyncDirectSource<int> a = new();
+        SyncDirectSource<int> b = new();
+        SyncDirectSource<int> c = new();
+        List<int> results = [];
         var completions = 0;
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = a.GetMax(b, c).Subscribe(results.Add, ex => caught = ex, () => completions++);
         a.Observer.OnError(expected);
         b.Observer.OnNext(HighValue);
@@ -198,20 +195,18 @@ public class MinMaxObservableTests
     [Test]
     public async Task WhenBinarySourceErrorsAfterError_ThenDropped()
     {
-        var a = new SyncDirectSource<int>();
-        var b = new SyncDirectSource<int>();
+        SyncDirectSource<int> a = new();
+        SyncDirectSource<int> b = new();
         var receivedErrors = 0;
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = a.GetMax(b).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex =>
-        {
-            receivedErrors++;
-            caught = ex;
-        });
+            {
+                receivedErrors++;
+                caught = ex;
+            });
         a.Observer.OnError(expected);
         b.Observer.OnError(new InvalidOperationException("late error"));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -223,13 +218,11 @@ public class MinMaxObservableTests
     [Test]
     public async Task WhenBinaryLeftCompletesEmpty_ThenCompletesAndDropsLaterCompletion()
     {
-        var a = new SyncDirectSource<int>();
-        var b = new SyncDirectSource<int>();
+        SyncDirectSource<int> a = new();
+        SyncDirectSource<int> b = new();
         var completions = 0;
         using var sub = a.GetMax(b).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completions++);
         a.Observer.OnCompleted();
         b.Observer.OnCompleted();
@@ -241,13 +234,11 @@ public class MinMaxObservableTests
     [Test]
     public async Task WhenBinaryRightCompletesEmpty_ThenCompletesAndDropsLaterCompletion()
     {
-        var a = new SyncDirectSource<int>();
-        var b = new SyncDirectSource<int>();
+        SyncDirectSource<int> a = new();
+        SyncDirectSource<int> b = new();
         var completions = 0;
         using var sub = a.GetMin(b).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completions++);
         b.Observer.OnCompleted();
         a.Observer.OnCompleted();
@@ -259,13 +250,11 @@ public class MinMaxObservableTests
     [Test]
     public async Task WhenBinaryLeftCompletesTwiceBeforeRight_ThenDuplicateIgnored()
     {
-        var a = new SyncDirectSource<int>();
-        var b = new SyncDirectSource<int>();
+        SyncDirectSource<int> a = new();
+        SyncDirectSource<int> b = new();
         var completions = 0;
         using var sub = a.GetMax(b).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completions++);
         a.Observer.OnNext(LowValue);
         b.Observer.OnNext(MidValue);
@@ -281,13 +270,11 @@ public class MinMaxObservableTests
     [Test]
     public async Task WhenBinaryRightCompletesTwiceBeforeLeft_ThenDuplicateIgnored()
     {
-        var a = new SyncDirectSource<int>();
-        var b = new SyncDirectSource<int>();
+        SyncDirectSource<int> a = new();
+        SyncDirectSource<int> b = new();
         var completions = 0;
         using var sub = a.GetMin(b).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completions++);
         a.Observer.OnNext(MidValue);
         b.Observer.OnNext(HighValue);

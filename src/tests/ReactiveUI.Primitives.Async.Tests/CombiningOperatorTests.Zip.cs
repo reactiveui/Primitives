@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -48,7 +49,7 @@ public partial class CombiningOperatorTests
     public async Task WhenZipStateDisposedTwice_ThenSecondDisposeIsNoop()
     {
         var observer = Signal.Create<int>();
-        var state = new SignalAsyncExtensions.ZipSignal<int, int, int>.ZipState(observer, static (a, b) => a + b);
+        SignalAsyncExtensions.ZipSignal<int, int, int>.ZipState state = new(observer, static (a, b) => a + b);
         await state.DisposeAsync();
         await state.DisposeAsync();
         await Assert.That(state).IsNotNull();
@@ -56,7 +57,9 @@ public partial class CombiningOperatorTests
 
     /// <summary>Tests Zip null arguments throws.</summary>
     [Test]
-    public void WhenZipNullArguments_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(() => ((SignalAsync<int>)null!).Zip(SignalAsync.Return(1), (a, b) => a + b));
+    public void WhenZipNullArguments_ThenThrowsArgumentNull() =>
+        Assert.Throws<ArgumentNullException>(() =>
+            ((SignalAsync<int>)null!).Zip(SignalAsync.Return(1), (a, b) => a + b));
 
     /// <summary>Verifies that zip propagates a failure when the first source errors.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -66,11 +69,14 @@ public partial class CombiningOperatorTests
         var first = SignalAsync.Throw<int>(new InvalidOperationException(FirstFailMessage));
         var second = SignalAsync.Return("a");
         Result? completionResult = null;
-        await using var sub = await first.Zip(second, (a, b) => $"{a}{b}").SubscribeAsync((_, _) => default, null, result =>
-        {
-            completionResult = result;
-            return default;
-        });
+        await using var sub = await first.Zip(second, (a, b) => $"{a}{b}").SubscribeAsync(
+            (_, _) => default,
+            null,
+            result =>
+            {
+                completionResult = result;
+                return default;
+            });
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
@@ -83,11 +89,14 @@ public partial class CombiningOperatorTests
         var first = SignalAsync.Return(1);
         var second = SignalAsync.Throw<string>(new InvalidOperationException("second fail"));
         Result? completionResult = null;
-        await using var sub = await first.Zip(second, (a, b) => $"{a}{b}").SubscribeAsync((_, _) => default, null, result =>
-        {
-            completionResult = result;
-            return default;
-        });
+        await using var sub = await first.Zip(second, (a, b) => $"{a}{b}").SubscribeAsync(
+            (_, _) => default,
+            null,
+            result =>
+            {
+                completionResult = result;
+                return default;
+            });
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
@@ -103,19 +112,19 @@ public partial class CombiningOperatorTests
         var first = SignalAsync.Range(1, 10);
         var second = SignalAsync.Range(100, 3);
         Result? completionResult = null;
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await first.Zip(second, (a, b) => a + b).SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             null,
             result =>
-        {
-            completionResult = result;
-            return default;
-        });
+            {
+                completionResult = result;
+                return default;
+            });
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
         await Assert.That(items).IsCollectionEqualTo([RangeOffset101, RangeOffset103, RangeOffset105]);
@@ -132,19 +141,19 @@ public partial class CombiningOperatorTests
         var first = SignalAsync.Range(1, 2);
         var second = SignalAsync.Range(100, 10);
         Result? completionResult = null;
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await first.Zip(second, (a, b) => a + b).SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             null,
             result =>
-        {
-            completionResult = result;
-            return default;
-        });
+            {
+                completionResult = result;
+                return default;
+            });
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
         await Assert.That(items).IsCollectionEqualTo([RangeOffset101, RangeOffset103]);
@@ -158,11 +167,13 @@ public partial class CombiningOperatorTests
         var first = Signal.Create<int>();
         var second = Signal.Create<string>();
         Exception? received = null;
-        await using var sub = await first.Values.Zip(second.Values, (a, b) => $"{a}-{b}").SubscribeAsync((_, _) => default, (ex, _) =>
-        {
-            received = ex;
-            return default;
-        });
+        await using var sub = await first.Values.Zip(second.Values, (a, b) => $"{a}-{b}").SubscribeAsync(
+            (_, _) => default,
+            (ex, _) =>
+            {
+                received = ex;
+                return default;
+            });
         await first.OnErrorResumeAsync(new InvalidOperationException("first error"), CancellationToken.None);
         await AsyncTestHelpers.WaitForConditionAsync(() => received is not null, TimeSpan.FromSeconds(5));
         await Assert.That(received).IsNotNull();
@@ -177,11 +188,13 @@ public partial class CombiningOperatorTests
         var first = Signal.Create<int>();
         var second = Signal.Create<string>();
         Exception? received = null;
-        await using var sub = await first.Values.Zip(second.Values, (a, b) => $"{a}-{b}").SubscribeAsync((_, _) => default, (ex, _) =>
-        {
-            received = ex;
-            return default;
-        });
+        await using var sub = await first.Values.Zip(second.Values, (a, b) => $"{a}-{b}").SubscribeAsync(
+            (_, _) => default,
+            (ex, _) =>
+            {
+                received = ex;
+                return default;
+            });
         await second.OnErrorResumeAsync(new InvalidOperationException("second error"), CancellationToken.None);
         await AsyncTestHelpers.WaitForConditionAsync(() => received is not null, TimeSpan.FromSeconds(5));
         await Assert.That(received).IsNotNull();
@@ -195,20 +208,20 @@ public partial class CombiningOperatorTests
     {
         var first = Signal.Create<int>();
         var second = Signal.Create<string>();
-        var items = new List<string>();
+        List<string> items = [];
         Result? completionResult = null;
         await using var sub = await first.Values.Zip(second.Values, (a, b) => $"{a}-{b}").SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             null,
             result =>
-        {
-            completionResult = result;
-            return default;
-        });
+            {
+                completionResult = result;
+                return default;
+            });
 
         // Complete first with failure, setting done=true
         await first.OnCompletedAsync(Result.Failure(new InvalidOperationException("fail")));
@@ -227,13 +240,13 @@ public partial class CombiningOperatorTests
     {
         var first = Signal.Create<int>();
         var second = Signal.Create<string>();
-        var items = new List<string>();
+        List<string> items = [];
         await using var sub = await first.Values.Zip(second.Values, (a, b) => $"{a}-{b}").SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             null);
 
         // Second emits first, queuing in _queue2
@@ -256,11 +269,14 @@ public partial class CombiningOperatorTests
         var first = Signal.Create<int>();
         var second = Signal.Create<string>();
         var completionCount = 0;
-        await using var sub = await first.Values.Zip(second.Values, (a, b) => $"{a}-{b}").SubscribeAsync((_, _) => default, null, _ =>
-        {
-            Interlocked.Increment(ref completionCount);
-            return default;
-        });
+        await using var sub = await first.Values.Zip(second.Values, (a, b) => $"{a}-{b}").SubscribeAsync(
+            (_, _) => default,
+            null,
+            _ =>
+            {
+                Interlocked.Increment(ref completionCount);
+                return default;
+            });
         await first.OnCompletedAsync(Result.Success);
         await second.OnCompletedAsync(Result.Success);
         await AsyncTestHelpers.WaitForConditionAsync(() => completionCount >= 1, TimeSpan.FromSeconds(5));
@@ -289,11 +305,13 @@ public partial class CombiningOperatorTests
 
     /// <summary>Tests that Zip throws on null second argument.</summary>
     [Test]
-    public void WhenZipNullSecond_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(() => SignalAsync.Return(1).Zip((IObservableAsync<string>)null!, (a, _) => a));
+    public void WhenZipNullSecond_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(() =>
+        SignalAsync.Return(1).Zip((IObservableAsync<string>)null!, (a, _) => a));
 
     /// <summary>Tests that Zip throws on null resultSelector.</summary>
     [Test]
-    public void WhenZipNullResultSelector_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(() => SignalAsync.Return(1).Zip(SignalAsync.Return(SampleValue2), (Func<int, int, int>)null!));
+    public void WhenZipNullResultSelector_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(() =>
+        SignalAsync.Return(1).Zip<int, int, int>(SignalAsync.Return(SampleValue2), null!));
 
     /// <summary>Tests that Zip error from first source completes with failure.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -303,11 +321,14 @@ public partial class CombiningOperatorTests
         var first = Signal.Create<int>();
         var second = Signal.Create<int>();
         Result? completionResult = null;
-        await using var sub = await first.Values.Zip(second.Values, (a, b) => a + b).SubscribeAsync((_, _) => default, null, result =>
-        {
-            completionResult = result;
-            return default;
-        });
+        await using var sub = await first.Values.Zip(second.Values, (a, b) => a + b).SubscribeAsync(
+            (_, _) => default,
+            null,
+            result =>
+            {
+                completionResult = result;
+                return default;
+            });
         await first.OnCompletedAsync(Result.Failure(new InvalidOperationException(FirstFailMessage)));
         await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, TimeSpan.FromSeconds(5));
         await Assert.That(completionResult).IsNotNull();
@@ -362,20 +383,20 @@ public partial class CombiningOperatorTests
     {
         var source1 = Signal.Create<int>();
         var source2 = Signal.Create<string>();
-        var items = new List<string>();
+        List<string> items = [];
         Result? completionResult = null;
         await using var sub = await source1.Values.Zip(source2.Values, (a, b) => $"{a}-{b}").SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             null,
             result =>
-        {
-            completionResult = result;
-            return default;
-        });
+            {
+                completionResult = result;
+                return default;
+            });
 
         // Complete source1 with failure (sets _done = true)
         await source1.OnCompletedAsync(Result.Failure(new InvalidOperationException("done")));
@@ -393,20 +414,20 @@ public partial class CombiningOperatorTests
     {
         var source1 = Signal.Create<int>();
         var source2 = Signal.Create<string>();
-        var items = new List<string>();
+        List<string> items = [];
         Result? completionResult = null;
         await using var sub = await source1.Values.Zip(source2.Values, (a, b) => $"{a}-{b}").SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             null,
             result =>
-        {
-            completionResult = result;
-            return default;
-        });
+            {
+                completionResult = result;
+                return default;
+            });
 
         // Complete source2 with failure (sets _done = true)
         await source2.OnCompletedAsync(Result.Failure(new InvalidOperationException("done")));
@@ -422,15 +443,15 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenZipOnCompleted1AfterDone_ThenReturnsEarly()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<string>();
-        var items = new List<string>();
+        DirectSource<int> src1 = new();
+        DirectSource<string> src2 = new();
+        List<string> items = [];
         await using var sub = await src1.Zip(src2, (a, b) => $"{a}-{b}").SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             null,
             result => default);
 
@@ -457,9 +478,10 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenZipSubscribedWithAlreadyCancelledToken_ThenSubscriptionDisposes()
     {
-        using var cts = new CancellationTokenSource();
+        using CancellationTokenSource cts = new();
         await cts.CancelAsync();
-        await using var sub = await SignalAsync.Range(1, 2).Zip(SignalAsync.Range(10, 2), static (a, b) => a + b).SubscribeAsync(static (_, _) => default, cts.Token);
+        await using var sub = await SignalAsync.Range(1, 2).Zip(SignalAsync.Range(10, 2), static (a, b) => a + b)
+            .SubscribeAsync(static (_, _) => default, cts.Token);
         await Assert.That(sub).IsNotNull();
     }
 
@@ -470,10 +492,11 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenZipExternalTokenCancelledAfterSubscribe_ThenRegistrationFires()
     {
-        using var cts = new CancellationTokenSource();
+        using CancellationTokenSource cts = new();
         var left = Signal.Create<int>();
         var right = Signal.Create<int>();
-        await using var sub = await left.Values.Zip(right.Values, static (a, b) => a + b).SubscribeAsync(static (_, _) => default, cts.Token);
+        await using var sub = await left.Values.Zip(right.Values, static (a, b) => a + b)
+            .SubscribeAsync(static (_, _) => default, cts.Token);
         await cts.CancelAsync();
         await Assert.That(sub).IsNotNull();
     }

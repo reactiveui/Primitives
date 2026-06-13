@@ -68,7 +68,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new TakeWitness(observer, count, cancellationToken);
+            TakeWitness sink = new(observer, count, cancellationToken);
 
             if (observer is WitnessAsync<T> downstreamBase)
             {

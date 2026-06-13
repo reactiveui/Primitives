@@ -20,7 +20,7 @@ public static partial class SignalAsync
     /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
     /// <param name="error">The exception to be propagated to observers as an error notification. Cannot be null.</param>
     /// <returns>An observable sequence of type <typeparamref name="T"/> that signals the specified exception upon subscription.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="error"/> is null.</exception>
+    /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="error"/> is null.</exception>
     [SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
@@ -36,7 +36,7 @@ public static partial class SignalAsync
     /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
     /// <param name="error">The exception to be propagated to observers as an error notification. Cannot be null.</param>
     /// <returns>An observable sequence of type <typeparamref name="T"/> that signals the specified exception upon subscription.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="error"/> is null.</exception>
+    /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="error"/> is null.</exception>
     [SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",

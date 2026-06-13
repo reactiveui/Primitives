@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Linq;
 using ReactiveUI.Primitives.Concurrency;
 
@@ -32,7 +33,8 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForValueWithSchedulerAndTimeout_ThenReturnsEmittedValue()
     {
-        var result = Observable.Return(SchedulerSentinelValue).WaitForValue(ImmediateSequencer.Instance, SchedulerWaitTimeout);
+        var result = Observable.Return(SchedulerSentinelValue)
+            .WaitForValue(ImmediateSequencer.Instance, SchedulerWaitTimeout);
         await Assert.That(result).IsEqualTo(SchedulerSentinelValue);
     }
 
@@ -41,7 +43,8 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForValueWithSchedulerTimesOut_ThenTimeoutException()
     {
-        Action call = () => Observable.Never<int>().WaitForValue(ImmediateSequencer.Instance, TimeSpan.FromMilliseconds(50));
+        Action call = () =>
+            Observable.Never<int>().WaitForValue(ImmediateSequencer.Instance, TimeSpan.FromMilliseconds(50));
         var ex = Assert.Throws<TimeoutException>(call);
         await Assert.That(ex).IsNotNull();
     }
@@ -82,7 +85,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForErrorWithSchedulerAndTimeout_ThenCapturesError()
     {
-        var expected = new InvalidOperationException("scheduler-captured");
+        InvalidOperationException expected = new("scheduler-captured");
         var error = Observable.Throw<int>(expected).WaitForError(ImmediateSequencer.Instance, SchedulerWaitTimeout);
         await Assert.That(error).IsEqualTo(expected);
     }

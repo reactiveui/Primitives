@@ -69,7 +69,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="equalityComparer">An equality comparer to compare keys for equality. Cannot be null.</param>
         /// <returns>An observable sequence that contains only the first occurrence of each distinct key as determined by the
         /// specified key selector and equality comparer.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="keySelector"/> or <paramref name="equalityComparer"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> or <paramref name="equalityComparer"/> is null.</exception>
         public IObservableAsync<T> DistinctBy<TKey>(
             Func<T, TKey> keySelector,
             IEqualityComparer<TKey> equalityComparer)
@@ -93,7 +93,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new DistinctWitness(observer, comparer, cancellationToken);
+            DistinctWitness sink = new(observer, comparer, cancellationToken);
 
             if (observer is WitnessAsync<T> downstreamBase)
             {
@@ -147,7 +147,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new DistinctByWitness(observer, keySelector, comparer, cancellationToken);
+            DistinctByWitness sink = new(observer, keySelector, comparer, cancellationToken);
 
             if (observer is WitnessAsync<T> downstreamBase)
             {

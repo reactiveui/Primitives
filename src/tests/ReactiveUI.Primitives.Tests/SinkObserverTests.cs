@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 
@@ -56,7 +57,7 @@ public class SinkObserverTests
     [Test]
     public async Task SkipForwardsAfterCount()
     {
-        var r = new Recorder<int>();
+        Recorder<int> r = new();
         Feed(new SkipWitness<int>(r, Two), Source);
         await Assert.That(r.Values.SequenceEqual(ExpectedThreeFour)).IsTrue();
     }
@@ -66,7 +67,7 @@ public class SinkObserverTests
     [Test]
     public async Task DistinctForwardsFirstOccurrenceOnly()
     {
-        var r = new Recorder<int>();
+        Recorder<int> r = new();
         Feed(new DistinctWitness<int>(r, []), Duplicates);
         await Assert.That(r.Values.SequenceEqual(SourceTriple)).IsTrue();
     }
@@ -76,7 +77,7 @@ public class SinkObserverTests
     [Test]
     public async Task UniqueSuppressesAdjacentDuplicates()
     {
-        var r = new Recorder<int>();
+        Recorder<int> r = new();
         Feed(new UniqueWitness<int>(r, EqualityComparer<int>.Default), Adjacent);
         await Assert.That(r.Values.SequenceEqual(ExpectedUnique)).IsTrue();
     }
@@ -86,7 +87,7 @@ public class SinkObserverTests
     [Test]
     public async Task FoldEmitsRunningAccumulation()
     {
-        var r = new Recorder<int>();
+        Recorder<int> r = new();
         Feed(new FoldWitness<int, int>(r, 0, static (a, b) => a + b), SourceTriple);
         await Assert.That(r.Values.SequenceEqual(ExpectedFold)).IsTrue();
     }
@@ -96,8 +97,8 @@ public class SinkObserverTests
     [Test]
     public async Task ReduceEmitsFinalOnCompletion()
     {
-        var r = new Recorder<int>();
-        var sink = new ReduceWitness<int, int>(r, 0, static (a, b) => a + b);
+        Recorder<int> r = new();
+        ReduceWitness<int, int> sink = new(r, 0, static (a, b) => a + b);
         Feed(sink, SourceTriple);
         sink.OnCompleted();
         await Assert.That(r.Values[0]).IsEqualTo(Six);
@@ -109,8 +110,8 @@ public class SinkObserverTests
     [Test]
     public async Task KeepNotNullDropsNulls()
     {
-        var r = new Recorder<string>();
-        var sink = new KeepNotNullWitness<string>(r);
+        Recorder<string> r = new();
+        KeepNotNullWitness<string> sink = new(r);
         sink.OnNext("a");
         sink.OnNext(null);
         sink.OnNext("b");
@@ -122,8 +123,8 @@ public class SinkObserverTests
     [Test]
     public async Task KeepTypeForwardsAssignableValues()
     {
-        var r = new Recorder<string>();
-        var sink = new KeepTypeWitness<string>(r);
+        Recorder<string> r = new();
+        KeepTypeWitness<string> sink = new(r);
         sink.OnNext("a");
         sink.OnNext(1);
         sink.OnNext("b");
@@ -135,18 +136,14 @@ public class SinkObserverTests
     [Test]
     public async Task TapRunsSideEffectAndForwards()
     {
-        var r = new Recorder<int>();
-        var tapped = new List<int>();
+        Recorder<int> r = new();
+        List<int> tapped = [];
         Feed(
             new TapWitness<int>(
                 r,
                 tapped.Add,
-                static _ =>
-                {
-                },
-                static () =>
-                {
-                }),
+                static _ => { },
+                static () => { }),
             SourceTriple);
         await Assert.That(tapped.SequenceEqual(SourceTriple)).IsTrue();
         await Assert.That(r.Values.SequenceEqual(SourceTriple)).IsTrue();
@@ -157,8 +154,8 @@ public class SinkObserverTests
     [Test]
     public async Task IgnoreValuesDropsValues()
     {
-        var r = new Recorder<int>();
-        var sink = new IgnoreValuesWitness<int>(r);
+        Recorder<int> r = new();
+        IgnoreValuesWitness<int> sink = new(r);
         Feed(sink, SourceTriple);
         sink.OnCompleted();
         await Assert.That(r.Values.Count).IsEqualTo(0);
@@ -170,7 +167,7 @@ public class SinkObserverTests
     [Test]
     public async Task SparkMaterializesValues()
     {
-        var r = new Recorder<Spark<int>>();
+        Recorder<Spark<int>> r = new();
         new SparkWitness<int>(r).OnNext(Five);
         await Assert.That(r.Values[0].HasValue).IsTrue();
         await Assert.That(r.Values[0].Value).IsEqualTo(Five);
@@ -181,7 +178,7 @@ public class SinkObserverTests
     [Test]
     public async Task UnsparkUnwrapsValues()
     {
-        var r = new Recorder<int>();
+        Recorder<int> r = new();
         new UnsparkWitness<int>(r).OnNext(Spark.CreateOnNext(Five));
         await Assert.That(r.Values[0]).IsEqualTo(Five);
     }
@@ -191,7 +188,7 @@ public class SinkObserverTests
     [Test]
     public async Task TimeIntervalAnnotatesValues()
     {
-        var r = new Recorder<TimeInterval<int>>();
+        Recorder<TimeInterval<int>> r = new();
         new TimeIntervalWitness<int>(r, Sequencer.Immediate).OnNext(Five);
         await Assert.That(r.Values[0].Value).IsEqualTo(Five);
     }
@@ -201,7 +198,7 @@ public class SinkObserverTests
     [Test]
     public async Task BufferEmitsWindows()
     {
-        var r = new Recorder<IList<int>>();
+        Recorder<IList<int>> r = new();
         Feed(new BufferWitness<int>(r, Two, 0), Source);
         await Assert.That(r.Values.Count).IsEqualTo(Two);
         await Assert.That(r.Values[0].SequenceEqual(ExpectedOneTwo)).IsTrue();
@@ -213,8 +210,8 @@ public class SinkObserverTests
     [Test]
     public async Task CollectListEmitsOnCompletion()
     {
-        var r = new Recorder<IList<int>>();
-        var sink = new CollectListWitness<int>(r);
+        Recorder<IList<int>> r = new();
+        CollectListWitness<int> sink = new(r);
         Feed(sink, SourceTriple);
         sink.OnCompleted();
         await Assert.That(r.Values[0].SequenceEqual(SourceTriple)).IsTrue();
@@ -225,8 +222,8 @@ public class SinkObserverTests
     [Test]
     public async Task CollectArrayEmitsOnCompletion()
     {
-        var r = new Recorder<int[]>();
-        var sink = new CollectArrayWitness<int>(r);
+        Recorder<int[]> r = new();
+        CollectArrayWitness<int> sink = new(r);
         Feed(sink, SourceTriple);
         sink.OnCompleted();
         await Assert.That(r.Values[0].SequenceEqual(SourceTriple)).IsTrue();
@@ -237,7 +234,7 @@ public class SinkObserverTests
     [Test]
     public async Task AnyEmitsTrueOnValue()
     {
-        var r = new Recorder<bool>();
+        Recorder<bool> r = new();
         new AnyWitness<int>(r).OnNext(1);
         await Assert.That(r.Values[0]).IsTrue();
     }
@@ -247,7 +244,7 @@ public class SinkObserverTests
     [Test]
     public async Task AnyPredicateEmitsTrueOnMatch()
     {
-        var r = new Recorder<bool>();
+        Recorder<bool> r = new();
         Feed(new AnyPredicateWitness<int>(r, static x => x > Two), SourceTriple);
         await Assert.That(r.Values[0]).IsTrue();
     }
@@ -257,8 +254,8 @@ public class SinkObserverTests
     [Test]
     public async Task CountEmitsCount()
     {
-        var r = new Recorder<int>();
-        var sink = new AggregateWitness<int, int, CountAggregator<int>>(r, default);
+        Recorder<int> r = new();
+        AggregateWitness<int, int, CountAggregator<int>> sink = new(r, default);
         Feed(sink, SourceTriple);
         sink.OnCompleted();
         await Assert.That(r.Values[0]).IsEqualTo(Three);
@@ -269,8 +266,8 @@ public class SinkObserverTests
     [Test]
     public async Task CountPredicateCountsMatches()
     {
-        var r = new Recorder<int>();
-        var sink = new AggregateWitness<int, int, CountPredicateAggregator<int>>(r, new CountPredicateAggregator<int>(static x => x > 1));
+        Recorder<int> r = new();
+        AggregateWitness<int, int, CountPredicateAggregator<int>> sink = new(r, new(static x => x > 1));
         Feed(sink, SourceTriple);
         sink.OnCompleted();
         await Assert.That(r.Values[0]).IsEqualTo(Two);
@@ -281,8 +278,8 @@ public class SinkObserverTests
     [Test]
     public async Task LongCountEmitsCount()
     {
-        var r = new Recorder<long>();
-        var sink = new AggregateWitness<int, long, LongCountAggregator<int>>(r, default);
+        Recorder<long> r = new();
+        AggregateWitness<int, long, LongCountAggregator<int>> sink = new(r, default);
         Feed(sink, SourceTriple);
         sink.OnCompleted();
         await Assert.That(r.Values[0]).IsEqualTo((long)Three);
@@ -293,8 +290,8 @@ public class SinkObserverTests
     [Test]
     public async Task LongCountPredicateCountsMatches()
     {
-        var r = new Recorder<long>();
-        var sink = new AggregateWitness<int, long, LongCountPredicateAggregator<int>>(r, new LongCountPredicateAggregator<int>(static x => x > 1));
+        Recorder<long> r = new();
+        AggregateWitness<int, long, LongCountPredicateAggregator<int>> sink = new(r, new(static x => x > 1));
         Feed(sink, SourceTriple);
         sink.OnCompleted();
         await Assert.That(r.Values[0]).IsEqualTo((long)Two);
@@ -305,7 +302,7 @@ public class SinkObserverTests
     [Test]
     public async Task DistinctByForwardsFirstPerKey()
     {
-        var r = new Recorder<int>();
+        Recorder<int> r = new();
         Feed(new DistinctByWitness<int, int>(r, static x => x % Two, null), Source);
         await Assert.That(r.Values.SequenceEqual(ExpectedOneTwo)).IsTrue();
     }
@@ -315,8 +312,10 @@ public class SinkObserverTests
     [Test]
     public async Task DistinctByCountCountsKeys()
     {
-        var r = new Recorder<int>();
-        var sink = new AggregateWitness<int, int, DistinctByCountAggregator<int, int>>(r, new DistinctByCountAggregator<int, int>(static x => x % Two, null));
+        Recorder<int> r = new();
+        AggregateWitness<int, int, DistinctByCountAggregator<int, int>> sink = new(
+            r,
+            new(static x => x % Two, null));
         Feed(sink, Source);
         sink.OnCompleted();
         await Assert.That(r.Values[0]).IsEqualTo(Two);
@@ -327,8 +326,10 @@ public class SinkObserverTests
     [Test]
     public async Task DistinctByLongCountCountsKeys()
     {
-        var r = new Recorder<long>();
-        var sink = new AggregateWitness<int, long, DistinctByLongCountAggregator<int, int>>(r, new DistinctByLongCountAggregator<int, int>(static x => x % Two, null));
+        Recorder<long> r = new();
+        AggregateWitness<int, long, DistinctByLongCountAggregator<int, int>> sink = new(
+            r,
+            new(static x => x % Two, null));
         Feed(sink, Source);
         sink.OnCompleted();
         await Assert.That(r.Values[0]).IsEqualTo((long)Two);
@@ -339,8 +340,8 @@ public class SinkObserverTests
     [Test]
     public async Task CustomAggregatorIsDrivenByAggregateWitness()
     {
-        var r = new Recorder<int>();
-        var sink = new AggregateWitness<int, int, SumAggregator>(r, default);
+        Recorder<int> r = new();
+        AggregateWitness<int, int, SumAggregator> sink = new(r, default);
         Feed(sink, SourceTriple);
         sink.OnCompleted();
         await Assert.That(r.Values[0]).IsEqualTo(Six);
@@ -351,7 +352,7 @@ public class SinkObserverTests
     [Test]
     public async Task UniqueBySuppressesAdjacentByKey()
     {
-        var r = new Recorder<int>();
+        Recorder<int> r = new();
         Feed(new UniqueByWitness<int, int>(r, static x => x % Two, EqualityComparer<int>.Default), Adjacent);
         await Assert.That(r.Values.SequenceEqual(ExpectedUnique)).IsTrue();
     }
@@ -361,7 +362,7 @@ public class SinkObserverTests
     [Test]
     public async Task SkipWhileDropsLeadingMatches()
     {
-        var r = new Recorder<int>();
+        Recorder<int> r = new();
         Feed(new SkipWhileWitness<int>(r, static x => x < Three), Source);
         await Assert.That(r.Values.SequenceEqual(ExpectedThreeFour)).IsTrue();
     }
@@ -371,7 +372,7 @@ public class SinkObserverTests
     [Test]
     public async Task TakeWhileForwardsLeadingMatches()
     {
-        var r = new Recorder<int>();
+        Recorder<int> r = new();
         Feed(new TakeWhileWitness<int>(r, static x => x < Three), Source);
         await Assert.That(r.Values.SequenceEqual(ExpectedOneTwo)).IsTrue();
         await Assert.That(r.Completed).IsTrue();
@@ -382,8 +383,8 @@ public class SinkObserverTests
     [Test]
     public async Task AppendAddsValueOnCompletion()
     {
-        var r = new Recorder<int>();
-        var sink = new AppendWitness<int>(r, Ten);
+        Recorder<int> r = new();
+        AppendWitness<int> sink = new(r, Ten);
         Feed(sink, ExpectedOneTwo);
         sink.OnCompleted();
         await Assert.That(r.Values[^1]).IsEqualTo(Ten);
@@ -394,7 +395,7 @@ public class SinkObserverTests
     [Test]
     public async Task DefaultIfEmptyEmitsDefaultWhenEmpty()
     {
-        var r = new Recorder<int>();
+        Recorder<int> r = new();
         new DefaultIfEmptyWitness<int>(r, Ten).OnCompleted();
         await Assert.That(r.Values[0]).IsEqualTo(Ten);
     }
@@ -404,7 +405,7 @@ public class SinkObserverTests
     [Test]
     public async Task AllPredicateEmitsFalseOnNonMatch()
     {
-        var r = new Recorder<bool>();
+        Recorder<bool> r = new();
         Feed(new AllPredicateWitness<int>(r, static x => x < Three), Source);
         await Assert.That(r.Values[0]).IsFalse();
     }
@@ -414,7 +415,7 @@ public class SinkObserverTests
     [Test]
     public async Task ContainsEmitsTrueWhenFound()
     {
-        var r = new Recorder<bool>();
+        Recorder<bool> r = new();
         Feed(new ContainsWitness<int>(r, Two, EqualityComparer<int>.Default), SourceTriple);
         await Assert.That(r.Values[0]).IsTrue();
     }
@@ -424,7 +425,7 @@ public class SinkObserverTests
     [Test]
     public async Task TakeForwardsRequestedCount()
     {
-        var r = new Recorder<int>();
+        Recorder<int> r = new();
         Feed(new TakeWitness<int>(r, Two), SourceTriple);
         await Assert.That(r.Values.SequenceEqual(ExpectedOneTwo)).IsTrue();
         await Assert.That(r.Completed).IsTrue();

@@ -20,7 +20,7 @@ public partial class CombineLatestOperatorTests
         var s3 = Signal.Create<int>();
         var s4 = Signal.Create<int>();
 
-        var results = new List<int>();
+        List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(s2.Values, s3.Values, s4.Values, (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
@@ -53,7 +53,7 @@ public partial class CombineLatestOperatorTests
         const int ExpectedSum = 150;
         var signals = Enumerable.Range(0, FiveSources).Select(_ => Signal.Create<int>()).ToList();
 
-        var results = new List<int>();
+        List<int> results = [];
         await using var sub = await signals[0].Values
             .CombineLatest(
                 signals[1].Values,
@@ -90,7 +90,7 @@ public partial class CombineLatestOperatorTests
         const int ExpectedSum = 21;
         var signals = Enumerable.Range(0, SixSources).Select(_ => Signal.Create<int>()).ToList();
 
-        var results = new List<int>();
+        List<int> results = [];
         await using var sub = await signals[0].Values
             .CombineLatest(
                 signals[1].Values,
@@ -128,7 +128,7 @@ public partial class CombineLatestOperatorTests
         const int ExpectedSum = 7;
         var signals = Enumerable.Range(0, SevenSources).Select(_ => Signal.Create<int>()).ToList();
 
-        var results = new List<int>();
+        List<int> results = [];
         await using var sub = await signals[0].Values
             .CombineLatest(
                 signals[1].Values,
@@ -162,13 +162,17 @@ public partial class CombineLatestOperatorTests
     /// <summary>Tests CombineLatest with 8 sources.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage("Major Code Smell", "S107", Justification = "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
+    [SuppressMessage(
+        "Major Code Smell",
+        "S107",
+        Justification =
+            "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
     public async Task WhenCombineLatestEightSources_ThenCombinesAll()
     {
         const int ExpectedSum = 8;
         var signals = Enumerable.Range(0, EightSources).Select(_ => Signal.Create<int>()).ToList();
 
-        var results = new List<int>();
+        List<int> results = [];
         await using var sub = await signals[0].Values
             .CombineLatest(
                 signals[1].Values,

@@ -25,7 +25,7 @@ internal sealed class HeartbeatObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(scheduler);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new HeartbeatSink(observer, heartbeatPeriod, scheduler);
+        HeartbeatSink sink = new(observer, heartbeatPeriod, scheduler);
         sink.AttachSourceSubscription(source.Subscribe(sink));
         sink.Initialize();
         return sink;
@@ -81,7 +81,7 @@ internal sealed class HeartbeatObservable<T>(
                     return;
                 }
 
-                downstream.OnNext(new Heartbeat<T>(value));
+                downstream.OnNext(new(value));
                 ScheduleHeartbeats();
             }
         }
@@ -146,7 +146,7 @@ internal sealed class HeartbeatObservable<T>(
                 _timerSubscription.Disposable = scheduler.SchedulePeriodic(
                     downstream,
                     heartbeatPeriod,
-                    static d => d.OnNext(new Heartbeat<T>()));
+                    static d => d.OnNext(new()));
             }
         }
     }

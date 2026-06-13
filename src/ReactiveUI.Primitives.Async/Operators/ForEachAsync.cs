@@ -50,7 +50,7 @@ public static partial class SignalAsyncExtensions
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            var observer = new ForEachAsyncTaskWitness<T>(onNextAsync, cancellationToken);
+            ForEachAsyncTaskWitness<T> observer = new(onNextAsync, cancellationToken);
             await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             await observer.AwaitResultAsync().ConfigureAwait(false);
         }
@@ -59,7 +59,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="onNext">The action to invoke for each element in the sequence. Cannot be null.</param>
         /// <returns>A task that represents the asynchronous iteration operation. The task completes when the sequence has been
         /// fully processed or the operation is canceled.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="onNext"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="onNext"/> is null.</exception>
         public ValueTask ForEachAsync(Action<T> onNext)
             => @this.ForEachAsync(onNext, CancellationToken.None);
 
@@ -68,13 +68,13 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the iteration.</param>
         /// <returns>A task that represents the asynchronous iteration operation. The task completes when the sequence has been
         /// fully processed or the operation is canceled.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="onNext"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="onNext"/> is null.</exception>
         public async ValueTask ForEachAsync(Action<T> onNext, CancellationToken cancellationToken)
         {
             ArgumentExceptionHelper.ThrowIfNull(onNext);
             cancellationToken.ThrowIfCancellationRequested();
 
-            var observer = new ForEachSyncTaskWitness<T>(onNext, cancellationToken);
+            ForEachSyncTaskWitness<T> observer = new(onNext, cancellationToken);
             await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             await observer.AwaitResultAsync().ConfigureAwait(false);
         }

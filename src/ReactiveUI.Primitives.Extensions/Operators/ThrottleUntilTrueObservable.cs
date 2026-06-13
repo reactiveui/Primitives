@@ -32,7 +32,7 @@ internal sealed class ThrottleUntilTrueObservable<T>(
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new ThrottleUntilTrueSink(observer, _throttle, _predicate, Sequencer.Default);
+        ThrottleUntilTrueSink sink = new(observer, _throttle, _predicate, Sequencer.Default);
         var subscription = _source.Subscribe(sink);
         return new DisposableBag(subscription, sink);
     }

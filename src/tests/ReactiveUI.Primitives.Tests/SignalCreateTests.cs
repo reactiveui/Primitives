@@ -1,18 +1,29 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-#pragma warning disable S103 // Coverage tests intentionally group branch-heavy scenarios.
 
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>SignalsCreateTests.</summary>
+/// <summary>Tests for the signal creation factories.</summary>
 public class SignalCreateTests
 {
     /// <summary>Value emitted by create-signal tests.</summary>
     private const int CreatedValue = 42;
+
+    /// <summary>The first expected value.</summary>
+    private const int First = 1;
+
+    /// <summary>The third expected value.</summary>
+    private const int Third = 3;
+
+    /// <summary>The fourth expected value.</summary>
+    private const int Fourth = 4;
+
+    /// <summary>Expected values for create-with-state tests.</summary>
+    private static readonly int[] CreateWithStateExpected = [Third];
 
     /// <summary>Creates the argument checking.</summary>
     [Test]
@@ -32,7 +43,7 @@ public class SignalCreateTests
             o.OnNext(CreatedValue);
             return new ActionDisposable(null!);
         });
-        var lst = new List<int>();
+        List<int> lst = [];
         var d = xs.Subscribe(lst.Add);
         d.Dispose();
         await Assert.That(lst.SequenceEqual([CreatedValue])).IsTrue();
@@ -40,38 +51,29 @@ public class SignalCreateTests
 
     /// <summary>Creates the exception.</summary>
     [Test]
-    public void Create_Exception() => Assert.Throws<InvalidOperationException>(() => Signal.Create(new Func<IObserver<int>, IDisposable>(_ => throw new InvalidOperationException())).Subscribe());
+    public void Create_Exception() => Assert.Throws<InvalidOperationException>(() => Signal.Create(
+            new Func<IObserver<int>, IDisposable>(_ => throw new InvalidOperationException()))
+        .Subscribe());
 
     /// <summary>Creates the observer throws.</summary>
     [Test]
     public void Create_ObserverThrows()
     {
         Assert.Throws<InvalidOperationException>(() => Signal.Create<int>(o =>
-{
-    o.OnNext(1);
-    return EmptyDisposable.Instance;
-}).Subscribe(x => throw new InvalidOperationException()));
+        {
+            o.OnNext(1);
+            return EmptyDisposable.Instance;
+        }).Subscribe(x => throw new InvalidOperationException()));
         Assert.Throws<InvalidOperationException>(() => Signal.Create<int>(o =>
-{
-    o.OnError(new InvalidOperationException("source"));
-    return EmptyDisposable.Instance;
-}).Subscribe(
-            x =>
-{
-},
-            ex => throw new InvalidOperationException()));
+        {
+            o.OnError(new InvalidOperationException("source"));
+            return EmptyDisposable.Instance;
+        }).Subscribe(x => { }, ex => throw new InvalidOperationException()));
         Assert.Throws<InvalidOperationException>(() => Signal.Create<int>(o =>
-{
-    o.OnCompleted();
-    return EmptyDisposable.Instance;
-}).Subscribe(
-            x =>
-{
-},
-            ex =>
-{
-},
-            () => throw new InvalidOperationException()));
+        {
+            o.OnCompleted();
+            return EmptyDisposable.Instance;
+        }).Subscribe(x => { }, ex => { }, () => throw new InvalidOperationException()));
     }
 
     /// <summary>Creates the with disposable argument checking.</summary>
@@ -81,10 +83,10 @@ public class SignalCreateTests
         Assert.Throws<ArgumentNullException>(() => Signal.Create(default(Func<IObserver<int>, IDisposable>)!));
         Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(_ => DummyDisposable.Instance).Subscribe(null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(o =>
-{
-    o.OnError(null!);
-    return DummyDisposable.Instance;
-}).Subscribe(null!));
+        {
+            o.OnError(null!);
+            return DummyDisposable.Instance;
+        }).Subscribe(null!));
     }
 
     /// <summary>Creates the with disposable null coalescing action.</summary>
@@ -97,7 +99,7 @@ public class SignalCreateTests
             o.OnNext(CreatedValue);
             return null!;
         });
-        var lst = new List<int>();
+        List<int> lst = [];
         var d = xs.Subscribe(lst.Add);
         d.Dispose();
         await Assert.That(lst.SequenceEqual([CreatedValue])).IsTrue();
@@ -105,14 +107,16 @@ public class SignalCreateTests
 
     /// <summary>Creates the with disposable exception.</summary>
     [Test]
-    public void CreateWithDisposable_Exception() => Assert.Throws<InvalidOperationException>(() => Signal.Create(new Func<IObserver<int>, IDisposable>(_ => throw new InvalidOperationException())).Subscribe());
+    public void CreateWithDisposable_Exception() => Assert.Throws<InvalidOperationException>(() => Signal.Create(
+            new Func<IObserver<int>, IDisposable>(_ => throw new InvalidOperationException()))
+        .Subscribe());
 
     /// <summary>Anonymous signals validate the subscribe delegate.</summary>
     [Test]
     public void AnonymousSignal_ArgumentChecking()
     {
         Assert.Throws<ArgumentNullException>(() => _ = new AnonymousSignal<int>(null!));
-        var signal = new AnonymousSignal<int>(_ => EmptyDisposable.Instance);
+        AnonymousSignal<int> signal = new(_ => EmptyDisposable.Instance);
         Assert.Throws<ArgumentNullException>(() => signal.Subscribe(null!));
     }
 
@@ -123,15 +127,15 @@ public class SignalCreateTests
     {
         var disposed = false;
         IObserver<int>? seenObserver = null;
-        var expectedDisposable = new ActionDisposable(() => disposed = true);
-        var signal = new AnonymousSignal<int>(observer =>
+        ActionDisposable expectedDisposable = new(() => disposed = true);
+        AnonymousSignal<int> signal = new(observer =>
         {
             seenObserver = observer;
             observer.OnNext(CreatedValue);
             observer.OnCompleted();
             return expectedDisposable;
         });
-        var observer = new Recorder<int>();
+        Recorder<int> observer = new();
         var disposable = signal.Subscribe(observer);
         disposable.Dispose();
         await Assert.That(ReferenceEquals(observer, seenObserver)).IsTrue();
@@ -146,13 +150,46 @@ public class SignalCreateTests
     [Test]
     public async Task AnonymousSignal_ReturnsEmptyDisposableForNullDelegateResult()
     {
-        var signal = new AnonymousSignal<int>(_ => null!);
+        AnonymousSignal<int> signal = new(_ => null!);
         var disposable = signal.Subscribe(new Recorder<int>());
         await Assert.That(disposable).IsSameReferenceAs(EmptyDisposable.Instance);
     }
 
+    /// <summary>Covers create-with-state overloads and null validation.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CreateWithStateFactoriesInvokeStatefulSubscribeCallbacks()
+    {
+        List<int> values = [];
+        var completed = 0;
+        var disposed = 0;
+        Signal.CreateWithState<int, int>(
+            Third,
+            static (state, observer) =>
+            {
+                observer.OnNext(state);
+                observer.OnCompleted();
+                return new ActionDisposable(() => { });
+            },
+            false).Subscribe(values.Add, ex => throw ex, () => completed++);
+        var subscription = Signal.CreateWithState<int, int>(Fourth, (state, observer) =>
+        {
+            observer.OnNext(state);
+            return new ActionDisposable(() => disposed++);
+        }).Subscribe(_ => { });
+        subscription.Dispose();
+        await Assert.That(values.SequenceEqual(CreateWithStateExpected)).IsTrue();
+        await Assert.That(completed).IsEqualTo(1);
+        await Assert.That(disposed).IsEqualTo(1);
+        Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(null!, true));
+        Assert.Throws<ArgumentNullException>(() => Signal.CreateSafe<int>(null!, true));
+        Assert.Throws<ArgumentNullException>(() => Signal.CreateWithState<int, int>(First, null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.CreateWithState<int, int>(First, null!, true));
+        Assert.Throws<ArgumentNullException>(() => Signal.Lazy<int>(null!));
+    }
+
     /// <summary>Records observer notifications.</summary>
-    /// <typeparam name = "T">The observed value type.</typeparam>
+    /// <typeparam name="T">The observed value type.</typeparam>
     private sealed class Recorder<T> : IObserver<T>
     {
         /// <summary>Gets observed values.</summary>

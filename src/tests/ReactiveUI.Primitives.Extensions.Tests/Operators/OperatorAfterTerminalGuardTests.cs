@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -36,8 +37,8 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenRetryForeverEventsAfterDispose_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
-        var values = new List<int>();
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
         var completed = false;
         var sub = source.OnErrorRetry().Subscribe(values.Add, () => completed = true);
         source.Observer.OnCompleted();
@@ -59,12 +60,10 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenRetryWithDelaySourceErrorAfterDispose_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
+        SyncDirectSource<int> source = new();
         Exception? caught = null;
         var sub = source.RetryForeverWithDelay(TimeSpan.FromMilliseconds(SettleDelayMilliseconds)).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         sub.Dispose();
         source.Observer.OnError(new InvalidOperationException("after-dispose"));
@@ -84,15 +83,13 @@ public class OperatorAfterTerminalGuardTests
     {
         const int LongDelayMs = 250;
         var subscribeCount = 0;
-        IObservable<int> source = Observable.Create<int>(o =>
+        var source = Observable.Create<int>(o =>
         {
             subscribeCount++;
             o.OnError(new InvalidOperationException("retry-after-dispose"));
             return EmptyDisposable.Instance;
         });
-        var sub = source.RetryForeverWithDelay(TimeSpan.FromMilliseconds(LongDelayMs)).Subscribe(static _ =>
-        {
-        });
+        var sub = source.RetryForeverWithDelay(TimeSpan.FromMilliseconds(LongDelayMs)).Subscribe(static _ => { });
 
         // First subscribe ran; source errored synchronously and a retry has been scheduled.
         sub.Dispose();
@@ -110,21 +107,17 @@ public class OperatorAfterTerminalGuardTests
     {
         const int LongDelayMs = 250;
         var subscribeCount = 0;
-        IObservable<int> source = Observable.Create<int>(o =>
+        var source = Observable.Create<int>(o =>
         {
             subscribeCount++;
             o.OnError(new InvalidOperationException("retry-after-dispose"));
             return EmptyDisposable.Instance;
         });
         var sub = source.OnErrorRetry(
-            (Exception _) =>
-        {
-        },
+            (Exception _) => { },
             10,
             TimeSpan.FromMilliseconds(LongDelayMs),
-            TaskPoolSequencer.Default).Subscribe(static _ =>
-        {
-        });
+            TaskPoolSequencer.Default).Subscribe(static _ => { });
         sub.Dispose();
         await Task.Delay(LongDelayMs + LongDelayMs);
         await Assert.That(subscribeCount).IsEqualTo(1);
@@ -135,8 +128,8 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenTakeUntilInclusiveEventsAfterTerminated_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
-        var values = new List<int>();
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
         var completedCount = 0;
         using var sub = source.TakeUntil(static x => x > 0).Subscribe(values.Add, () => completedCount++);
 
@@ -154,9 +147,9 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenSwitchIfEmptyEventsAfterTerminated_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
-        var fallback = new Subject<int>();
-        var values = new List<int>();
+        SyncDirectSource<int> source = new();
+        Subject<int> fallback = new();
+        List<int> values = [];
         var completedCount = 0;
         using var sub = source.SwitchIfEmpty(fallback).Subscribe(values.Add, () => completedCount++);
         source.Observer.OnNext(1);
@@ -173,11 +166,12 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenThrottleOnSchedulerEventsAfterCompleted_ThenDropped()
     {
-        var scheduler = new VirtualClock();
-        var source = new SyncDirectSource<int>();
-        var values = new List<int>();
+        VirtualClock scheduler = new();
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
         var completedCount = 0;
-        using var sub = source.ThrottleOnScheduler(TimeSpan.FromTicks(TickWindow), scheduler).Subscribe(values.Add, () => completedCount++);
+        using var sub = source.ThrottleOnScheduler(TimeSpan.FromTicks(TickWindow), scheduler)
+            .Subscribe(values.Add, () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));
@@ -193,11 +187,12 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenDetectStaleEventsAfterCompleted_ThenDropped()
     {
-        var scheduler = new VirtualClock();
-        var source = new SyncDirectSource<int>();
-        var values = new List<Stale<int>>();
+        VirtualClock scheduler = new();
+        SyncDirectSource<int> source = new();
+        List<Stale<int>> values = [];
         var completedCount = 0;
-        using var sub = source.DetectStale(TimeSpan.FromTicks(TickWindow), scheduler).Subscribe(values.Add, () => completedCount++);
+        using var sub = source.DetectStale(TimeSpan.FromTicks(TickWindow), scheduler)
+            .Subscribe(values.Add, () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnNext(1);
         scheduler.AdvanceBy(TickWindow * SettleMultiplier);
@@ -210,8 +205,8 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenDropIfBusyEventsAfterCompleted_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
-        var values = new List<int>();
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
         var completedCount = 0;
         using var sub = source.DropIfBusy(static _ => default).Subscribe(values.Add, () => completedCount++);
         source.Observer.OnCompleted();
@@ -233,10 +228,11 @@ public class OperatorAfterTerminalGuardTests
         // returned (so the SingleAssignmentDisposable can capture the subscription), then run
         // the inner iterations synchronously enough that the OnNext-side dispose hits before
         // the second Iterate evaluates the predicate.
-        var scheduler = new VirtualClock();
+        VirtualClock scheduler = new();
         var actionCalls = 0;
-        var sub = new SingleAssignmentDisposable();
-        sub.Disposable = ReactiveExtensions.While(() => true, () => actionCalls++, scheduler).Subscribe(_ => sub.Dispose());
+        SingleAssignmentDisposable sub = new();
+        sub.Disposable = ReactiveExtensions.While(() => true, () => actionCalls++, scheduler)
+            .Subscribe(_ => sub.Dispose());
         scheduler.AdvanceBy(1);
         await Assert.That(actionCalls).IsEqualTo(1);
     }
@@ -249,11 +245,12 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenThrottleDistinctSourceCompletesBeforeEmitWindow_ThenScheduledEmitDropped()
     {
-        var scheduler = new VirtualClock();
-        var source = new SyncDirectSource<int>();
-        var values = new List<int>();
+        VirtualClock scheduler = new();
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
         var completedCount = 0;
-        using var sub = source.ThrottleDistinct(TimeSpan.FromTicks(TickWindow), scheduler).Subscribe(values.Add, () => completedCount++);
+        using var sub = source.ThrottleDistinct(TimeSpan.FromTicks(TickWindow), scheduler)
+            .Subscribe(values.Add, () => completedCount++);
         source.Observer.OnNext(1);
         source.Observer.OnCompleted();
         scheduler.AdvanceBy(TickWindow * SettleMultiplier);
@@ -269,14 +266,12 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenSampleLatestTriggerErrorsAfterSourceErrored_ThenDroppedByDoneGuard()
     {
-        var source = new Subject<int>();
-        var trigger = new Subject<object>();
+        Subject<int> source = new();
+        Subject<object> trigger = new();
         Exception? caught = null;
-        var sourceError = new InvalidOperationException("source");
+        InvalidOperationException sourceError = new("source");
         using var sub = source.SampleLatest(trigger).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         source.OnError(sourceError);
         trigger.OnError(new InvalidOperationException("trigger"));
@@ -288,14 +283,14 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenSampleLatestSampledAfterCompleted_ThenNoOp()
     {
-        var source = new SyncDirectSource<int>();
-        var sampler = new Subject<object>();
-        var values = new List<int>();
+        SyncDirectSource<int> source = new();
+        Subject<object> sampler = new();
+        List<int> values = [];
         var completedCount = 0;
         using var sub = source.SampleLatest(sampler).Subscribe(values.Add, () => completedCount++);
         source.Observer.OnNext(1);
         source.Observer.OnCompleted();
-        sampler.OnNext(new object ());
+        sampler.OnNext(new());
         await Assert.That(completedCount).IsEqualTo(1);
     }
 
@@ -304,13 +299,11 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenHeartbeatEventsAfterCompleted_ThenDropped()
     {
-        var scheduler = new VirtualClock();
-        var source = new SyncDirectSource<int>();
+        VirtualClock scheduler = new();
+        SyncDirectSource<int> source = new();
         var completedCount = 0;
         using var sub = source.Heartbeat(TimeSpan.FromTicks(TickWindow), scheduler).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnNext(1);
@@ -326,12 +319,10 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenHeartbeatSourceCompletesDuringSubscribe_ThenInitializeShortCircuits()
     {
-        var scheduler = new VirtualClock();
+        VirtualClock scheduler = new();
         var completedCount = 0;
         using var sub = Observable.Empty<int>().Heartbeat(TimeSpan.FromTicks(TickWindow), scheduler).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completedCount++);
         scheduler.AdvanceBy(TickWindow * SettleMultiplier);
         await Assert.That(completedCount).IsEqualTo(1);
@@ -344,11 +335,12 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenDebounceUntilEventsAfterCompleted_ThenDropped()
     {
-        var scheduler = new VirtualClock();
-        var source = new SyncDirectSource<int>();
-        var values = new List<int>();
+        VirtualClock scheduler = new();
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
         var completedCount = 0;
-        using var sub = source.DebounceUntil(TimeSpan.FromTicks(TickWindow), static _ => true, scheduler).Subscribe(values.Add, () => completedCount++);
+        using var sub = source.DebounceUntil(TimeSpan.FromTicks(TickWindow), static _ => true, scheduler)
+            .Subscribe(values.Add, () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));
@@ -362,11 +354,12 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenBufferUntilIdleEventsAfterCompleted_ThenDropped()
     {
-        var scheduler = new VirtualClock();
-        var source = new SyncDirectSource<int>();
-        var batches = new List<IList<int>>();
+        VirtualClock scheduler = new();
+        SyncDirectSource<int> source = new();
+        List<IList<int>> batches = [];
         var completedCount = 0;
-        using var sub = source.BufferUntilIdle(TimeSpan.FromTicks(TickWindow), scheduler).Subscribe(batches.Add, () => completedCount++);
+        using var sub = source.BufferUntilIdle(TimeSpan.FromTicks(TickWindow), scheduler)
+            .Subscribe(batches.Add, () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));
@@ -379,13 +372,14 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenObserveOnIfConditionEventsAfterCompleted_ThenDropped()
     {
-        var source = new Subject<int>();
-        var condition = new SyncDirectSource<bool>();
+        Subject<int> source = new();
+        SyncDirectSource<bool> condition = new();
         var trueScheduler = Sequencer.Immediate;
         var falseScheduler = Sequencer.Immediate;
-        var values = new List<int>();
+        List<int> values = [];
         var completedCount = 0;
-        using var sub = source.ObserveOnIf(condition, trueScheduler, falseScheduler).Subscribe(values.Add, () => completedCount++);
+        using var sub = source.ObserveOnIf(condition, trueScheduler, falseScheduler)
+            .Subscribe(values.Add, () => completedCount++);
 
         // Drive the condition observer terminal, then push more events to hit the after-terminal guard.
         condition.Observer.OnCompleted();
@@ -404,12 +398,10 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenRetryWithBackoffSourceErrorAfterDispose_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
+        SyncDirectSource<int> source = new();
         Exception? caught = null;
-        var sub = source.RetryWithBackoff(maxRetries: 1, TimeSpan.FromMilliseconds(SettleDelayMilliseconds)).Subscribe(
-            static _ =>
-        {
-        },
+        var sub = source.RetryWithBackoff(1, TimeSpan.FromMilliseconds(SettleDelayMilliseconds)).Subscribe(
+            static _ => { },
             ex => caught = ex);
         sub.Dispose();
         source.Observer.OnError(new InvalidOperationException("after-dispose"));
@@ -425,18 +417,16 @@ public class OperatorAfterTerminalGuardTests
         var condition = true;
         var sub = ReactiveExtensions.While(
             () =>
-        {
-            if (!condition)
             {
-                return false;
-            }
+                if (!condition)
+                {
+                    return false;
+                }
 
-            condition = false;
-            return true;
-        },
-            () => Interlocked.Increment(ref ran)).Subscribe(static _ =>
-        {
-        });
+                condition = false;
+                return true;
+            },
+            () => Interlocked.Increment(ref ran)).Subscribe(static _ => { });
         sub.Dispose();
         sub.Dispose();
         await Assert.That(ran).IsEqualTo(1);
@@ -448,14 +438,12 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenScheduledSourceActionThrows_ThenForwardsError()
     {
-        var scheduler = new VirtualClock();
-        var source = new Subject<int>();
-        var expected = new InvalidOperationException("action-failed");
+        VirtualClock scheduler = new();
+        Subject<int> source = new();
+        InvalidOperationException expected = new("action-failed");
         Exception? caught = null;
         using var sub = source.Schedule(TimeSpan.FromTicks(TickWindow), scheduler, _ => throw expected).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         source.OnNext(1);
         scheduler.AdvanceBy(TickWindow * SettleMultiplier);
@@ -468,8 +456,8 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenSubscribeSynchronousOmitsErrorAndCompletedCallbacks_ThenNullPathsTaken()
     {
-        var subject = new Subject<int>();
-        var processed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Subject<int> subject = new();
+        TaskCompletionSource processed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = subject.SubscribeSynchronous(_ =>
         {
             processed.TrySetResult();
@@ -480,7 +468,7 @@ public class OperatorAfterTerminalGuardTests
 
         // Subject silently terminates without invoking the optional callbacks.
         subject.OnError(new InvalidOperationException("ignored"));
-        var second = new Subject<int>();
+        Subject<int> second = new();
         using var sub2 = second.SubscribeSynchronous(static _ => default);
         second.OnCompleted();
     }

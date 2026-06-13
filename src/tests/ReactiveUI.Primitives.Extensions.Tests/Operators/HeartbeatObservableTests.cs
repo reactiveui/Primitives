@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Concurrency;
 
@@ -26,10 +27,11 @@ public class HeartbeatObservableTests
     public async Task WhenHeartbeatSourceQuiet_ThenEmitsHeartbeats()
     {
         const int ModestAdvanceTicks = 350;
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         var heartbeats = 0;
-        using var sub = subject.Heartbeat(TimeSpan.FromTicks(HeartbeatTicks), scheduler).Subscribe(hb => heartbeats += hb.IsHeartbeat ? 1 : 0);
+        using var sub = subject.Heartbeat(TimeSpan.FromTicks(HeartbeatTicks), scheduler)
+            .Subscribe(hb => heartbeats += hb.IsHeartbeat ? 1 : 0);
         scheduler.AdvanceBy(ModestAdvanceTicks);
         await Assert.That(heartbeats).IsGreaterThanOrEqualTo(1);
     }
@@ -39,12 +41,13 @@ public class HeartbeatObservableTests
     [Test]
     public async Task WhenHeartbeatSourceErrors_ThenForwardsErrorAndStopsTimer()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         Exception? caught = null;
         var postErrorHeartbeats = 0;
-        var expected = new InvalidOperationException(SourceErrorMessage);
-        using var sub = subject.Heartbeat(TimeSpan.FromTicks(HeartbeatTicks), scheduler).Subscribe(hb => postErrorHeartbeats += hb.IsHeartbeat && caught is not null ? 1 : 0, ex => caught = ex);
+        InvalidOperationException expected = new(SourceErrorMessage);
+        using var sub = subject.Heartbeat(TimeSpan.FromTicks(HeartbeatTicks), scheduler)
+            .Subscribe(hb => postErrorHeartbeats += hb.IsHeartbeat && caught is not null ? 1 : 0, ex => caught = ex);
         subject.OnError(expected);
         scheduler.AdvanceBy(LargeAdvanceTicks);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -56,11 +59,12 @@ public class HeartbeatObservableTests
     [Test]
     public async Task WhenHeartbeatSourceCompletes_ThenForwardsCompletionAndStopsTimer()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         var completed = false;
         var postCompletionHeartbeats = 0;
-        using var sub = subject.Heartbeat(TimeSpan.FromTicks(HeartbeatTicks), scheduler).Subscribe(hb => postCompletionHeartbeats += hb.IsHeartbeat && completed ? 1 : 0, () => completed = true);
+        using var sub = subject.Heartbeat(TimeSpan.FromTicks(HeartbeatTicks), scheduler)
+            .Subscribe(hb => postCompletionHeartbeats += hb.IsHeartbeat && completed ? 1 : 0, () => completed = true);
         subject.OnCompleted();
         scheduler.AdvanceBy(LargeAdvanceTicks);
         await Assert.That(completed).IsTrue();
@@ -73,9 +77,9 @@ public class HeartbeatObservableTests
     public async Task WhenHeartbeatSourceEmits_ThenForwardsValueUpdate()
     {
         const int Value = 42;
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var updates = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> updates = [];
         using var sub = subject.Heartbeat(TimeSpan.FromTicks(HeartbeatTicks), scheduler).Subscribe(hb =>
         {
             if (hb.IsHeartbeat)
@@ -95,21 +99,21 @@ public class HeartbeatObservableTests
     [Test]
     public async Task WhenEventsAfterCompleted_ThenDropped()
     {
-        var scheduler = new VirtualClock();
-        var source = new SyncDirectSource<int>();
-        var values = new List<int>();
+        VirtualClock scheduler = new();
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
         Exception? caught = null;
         var completedCount = 0;
         using var sub = source.Heartbeat(TimeSpan.FromTicks(HeartbeatTicks), scheduler).Subscribe(
             hb =>
-        {
-            if (hb.IsHeartbeat)
             {
-                return;
-            }
+                if (hb.IsHeartbeat)
+                {
+                    return;
+                }
 
-            values.Add(hb.Update);
-        },
+                values.Add(hb.Update);
+            },
             ex => caught = ex,
             () => completedCount++);
         source.Observer.OnCompleted();

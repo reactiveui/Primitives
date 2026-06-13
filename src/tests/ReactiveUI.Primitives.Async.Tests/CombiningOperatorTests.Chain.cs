@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -35,11 +36,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenConcatObservableOfObservables_ThenConcatenatesSequentially()
     {
-        var sources = new[]
-        {
-            SignalAsync.Range(1, 2),
-            SignalAsync.Range(3, 2)
-        }.ToAsyncSignal();
+        var sources = new[] { SignalAsync.Range(1, 2), SignalAsync.Range(3, 2) }.ToAsyncSignal();
         var result = await sources.Concat().ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
     }
@@ -74,7 +71,9 @@ public partial class CombiningOperatorTests
             completionResult = result;
             return default;
         });
-        await outer.OnNextAsync(SignalAsync.Throw<int>(new InvalidOperationException(InnerFailMessage)), CancellationToken.None);
+        await outer.OnNextAsync(
+            SignalAsync.Throw<int>(new InvalidOperationException(InnerFailMessage)),
+            CancellationToken.None);
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
         await outer.DisposeAsync();
@@ -90,19 +89,19 @@ public partial class CombiningOperatorTests
     {
         var outer = Signal.Create<IObservableAsync<int>>();
         Result? completionResult = null;
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await outer.Values.Concat().SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             null,
             result =>
-        {
-            completionResult = result;
-            return default;
-        });
+            {
+                completionResult = result;
+                return default;
+            });
 
         // Emit an inner that completes, then complete outer when buffer is empty
         await outer.OnNextAsync(SignalAsync.Return(Sentinel42), CancellationToken.None);
@@ -118,21 +117,25 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenConcatEnumerableOneSourceErrors_ThenFailurePropagates()
     {
-        IObservableAsync<int>[] sources = [SignalAsync.Return(1), SignalAsync.Throw<int>(new InvalidOperationException(InnerFailMessage)), SignalAsync.Return(3)];
+        IObservableAsync<int>[] sources =
+        [
+            SignalAsync.Return(1), SignalAsync.Throw<int>(new InvalidOperationException(InnerFailMessage)),
+            SignalAsync.Return(3)
+        ];
         Result? completionResult = null;
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await sources.Concat().SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             null,
             result =>
-        {
-            completionResult = result;
-            return default;
-        });
+            {
+                completionResult = result;
+                return default;
+            });
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
         await Assert.That(items).Contains(1);
@@ -249,19 +252,19 @@ public partial class CombiningOperatorTests
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-        var errors = new List<Exception>();
-        var items = new List<int>();
+        List<Exception> errors = [];
+        List<int> items = [];
         await using var sub = await outerSource.Concat().SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             (ex, _) =>
-        {
-            errors.Add(ex);
-            return default;
-        });
+            {
+                errors.Add(ex);
+                return default;
+            });
         await Assert.That(errors).Count().IsEqualTo(1);
         await Assert.That(errors[0].Message).IsEqualTo(OuterWarningMessage);
     }
@@ -282,19 +285,19 @@ public partial class CombiningOperatorTests
             return DisposableAsync.Empty;
         });
         var outer = Signal.Create<IObservableAsync<int>>();
-        var errors = new List<Exception>();
-        var items = new List<int>();
+        List<Exception> errors = [];
+        List<int> items = [];
         await using var sub = await outer.Values.Concat().SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             (ex, _) =>
-        {
-            errors.Add(ex);
-            return default;
-        });
+            {
+                errors.Add(ex);
+                return default;
+            });
         await outer.OnNextAsync(innerWithError, CancellationToken.None);
         await Assert.That(errors).Count().IsEqualTo(1);
         await Assert.That(errors[0].Message).IsEqualTo(InnerWarningMessage);
@@ -311,20 +314,20 @@ public partial class CombiningOperatorTests
     public async Task WhenConcatObservablesMultipleBufferedInners_ThenSubscribesSequentially()
     {
         var outer = Signal.Create<IObservableAsync<int>>();
-        var items = new List<int>();
+        List<int> items = [];
         Result? completionResult = null;
         await using var sub = await outer.Values.Concat().SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             null,
             result =>
-        {
-            completionResult = result;
-            return default;
-        });
+            {
+                completionResult = result;
+                return default;
+            });
 
         // Emit a long-lived inner and two more while it's still active
         var innerSignal = Signal.Create<int>();
@@ -388,19 +391,19 @@ public partial class CombiningOperatorTests
             return DisposableAsync.Empty;
         });
         IObservableAsync<int>[] sources = [innerWithError];
-        var errors = new List<Exception>();
-        var items = new List<int>();
+        List<Exception> errors = [];
+        List<int> items = [];
         await using var sub = await sources.Concat().SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             (ex, _) =>
-        {
-            errors.Add(ex);
-            return default;
-        });
+            {
+                errors.Add(ex);
+                return default;
+            });
         await Assert.That(errors).Count().IsEqualTo(1);
         await Assert.That(errors[0].Message).IsEqualTo(InnerWarningMessage);
         await Assert.That(items).Contains(Sentinel42);
@@ -444,19 +447,19 @@ public partial class CombiningOperatorTests
         }
 
         Result? completionResult = null;
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await ThrowingEnumerable().Concat().SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             null,
             result =>
-        {
-            completionResult = result;
-            return default;
-        });
+            {
+                completionResult = result;
+                return default;
+            });
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
         await Assert.That(items).Contains(1);
@@ -469,7 +472,8 @@ public partial class CombiningOperatorTests
     {
         var first = SignalAsync.Return(1);
         var second = SignalAsync.Throw<int>(new InvalidOperationException("concat-error"));
-        await Assert.That(async () => await first.Concat(second).ToListAsync()).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(async () => await first.Concat(second).ToListAsync())
+            .ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Tests Concat observable of observables with observable source.</summary>
@@ -477,11 +481,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenConcatObservableOfObservables_ThenConcatenatesInOrder()
     {
-        var source = new[]
-        {
-            SignalAsync.Range(1, 2),
-            SignalAsync.Range(3, 2)
-        }.ToAsyncSignal();
+        var source = new[] { SignalAsync.Range(1, 2), SignalAsync.Range(3, 2) }.ToAsyncSignal();
         var result = await source.Concat().ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
     }
@@ -493,7 +493,8 @@ public partial class CombiningOperatorTests
     {
         var first = SignalAsync.Throw<int>(new InvalidOperationException(FirstFailMessage));
         var second = SignalAsync.Return(2);
-        await Assert.That(async () => await first.Concat(second).ToListAsync()).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(async () => await first.Concat(second).ToListAsync())
+            .ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Tests that Concat of empty sequences returns empty.</summary>
@@ -528,7 +529,8 @@ public partial class CombiningOperatorTests
             yield return SignalAsync.Create<int>((_, _) => throw new InvalidOperationException(SubscribeBoomMessage));
         }
 
-        await Assert.That(async () => await Sources().Concat().ToListAsync()).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(async () => await Sources().Concat().ToListAsync())
+            .ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>
@@ -541,7 +543,7 @@ public partial class CombiningOperatorTests
     {
         Exception? unhandled = null;
         UnhandledExceptionHandler.Register(ex => unhandled = ex);
-        var error = new InvalidOperationException("late failure");
+        InvalidOperationException error = new("late failure");
 
         // Call the extracted helper directly to test the double-dispose path
         ChainEnumerableSignal<int>.ChainSequenceCoordinator.HandleAlreadyDisposed(Result.Failure(error));
@@ -597,7 +599,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenConcatEnumerableSubscribeThrows_ThenDisposesAndRethrows()
     {
-        var throwingSource = SignalAsync.Create<int>((_, _) => ValueTask.FromException<IAsyncDisposable>(new InvalidOperationException("subscribe-failure")));
+        var throwingSource = SignalAsync.Create<int>((_, _) =>
+            ValueTask.FromException<IAsyncDisposable>(new InvalidOperationException("subscribe-failure")));
         IObservableAsync<int>[] sources = [throwingSource];
         await Assert.That(async () => await sources.Concat().ToListAsync()).ThrowsExactly<InvalidOperationException>();
     }
@@ -612,7 +615,7 @@ public partial class CombiningOperatorTests
     {
         Exception? unhandled = null;
         UnhandledExceptionHandler.Register(ex => unhandled = ex);
-        var error = new InvalidOperationException("late failure");
+        InvalidOperationException error = new("late failure");
         ChainSignalSourcesSignal<int>.ChainCoordinator.HandleAlreadyDisposed(Result.Failure(error));
         await Assert.That(unhandled).IsSameReferenceAs(error);
     }
@@ -637,7 +640,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenConcatObservablesInnerFails_ThenErrorPropagated()
     {
-        var error = new InvalidOperationException("obs-concat-fail");
+        InvalidOperationException error = new("obs-concat-fail");
         var outer = SignalAsync.Return(SignalAsync.Throw<int>(error));
         await Assert.That(async () => await outer.Concat().FirstAsync()).ThrowsExactly<InvalidOperationException>();
     }
@@ -647,7 +650,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenConcatEnumerableInnerFails_ThenErrorPropagated()
     {
-        var error = new InvalidOperationException("concat-fail");
+        InvalidOperationException error = new("concat-fail");
         IObservableAsync<int>[] sources = [SignalAsync.Return(1), SignalAsync.Throw<int>(error)];
         await Assert.That(async () => await sources.Concat().LastAsync()).ThrowsExactly<InvalidOperationException>();
     }
@@ -661,7 +664,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenConcatEnumerableMoveNextAndDisposeBothThrow_ThenSubscribeAsyncCoreDisposesAndRethrows()
     {
-        var sources = new MoveNextAndDisposeThrowingEnumerable<int>();
+        MoveNextAndDisposeThrowingEnumerable<int> sources = new();
         InvalidOperationException? exception = null;
 
         try

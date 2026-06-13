@@ -36,7 +36,7 @@ public static partial class SignalAsyncExtensions
         public async ValueTask<List<T>> ToListAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var observer = new ToListTaskWitness<T>(cancellationToken);
+            ToListTaskWitness<T> observer = new(cancellationToken);
             await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }

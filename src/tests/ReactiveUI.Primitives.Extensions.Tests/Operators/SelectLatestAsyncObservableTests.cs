@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -31,13 +32,11 @@ public class SelectLatestAsyncObservableTests
     public async Task WhenSelectLatestAsyncSelectorThrows_ThenForwardsError()
     {
         const int TriggerValue = 1;
-        var subject = new Subject<int>();
-        var faulted = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var expected = new InvalidOperationException(SelectorErrorMessage);
+        Subject<int> subject = new();
+        TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        InvalidOperationException expected = new(SelectorErrorMessage);
         using var sub = subject.SelectLatestAsync(_ => Task.FromException<int>(expected)).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => faulted.TrySetResult(ex));
         subject.OnNext(TriggerValue);
         var caught = await faulted.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -49,13 +48,11 @@ public class SelectLatestAsyncObservableTests
     [Test]
     public async Task WhenSelectLatestAsyncSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = subject.SelectLatestAsync(static x => Task.FromResult(x)).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -67,9 +64,9 @@ public class SelectLatestAsyncObservableTests
     public async Task WhenSelectLatestAsyncDisposedMidFlight_ThenSuppressesEmissionAndCompletion()
     {
         const int TriggerValue = 1;
-        var subject = new Subject<int>();
-        var gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var results = new List<int>();
+        Subject<int> subject = new();
+        TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> results = [];
         var completed = false;
         var sub = subject.SelectLatestAsync(async x =>
         {
@@ -94,10 +91,10 @@ public class SelectLatestAsyncObservableTests
     {
         const int Slow = 1;
         const int Fast = 2;
-        var subject = new Subject<int>();
-        var slowGate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var results = new List<int>();
-        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Subject<int> subject = new();
+        TaskCompletionSource<bool> slowGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> results = [];
+        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = subject.SelectLatestAsync(async x =>
         {
             if (x == Slow)
@@ -129,12 +126,10 @@ public class SelectLatestAsyncObservableTests
     [Test]
     public async Task WhenSelectLatestAsyncSourceCompletesWithNoValues_ThenForwardsCompletion()
     {
-        var subject = new Subject<int>();
-        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Subject<int> subject = new();
+        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = subject.SelectLatestAsync(static x => Task.FromResult(x)).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completed.TrySetResult(true));
         subject.OnCompleted();
         var done = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -147,11 +142,12 @@ public class SelectLatestAsyncObservableTests
     [Test]
     public async Task WhenEventsAfterCompleted_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
-        var values = new List<int>();
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
         Exception? caught = null;
         var completedCount = 0;
-        using var sub = source.SelectLatestAsync(static x => Task.FromResult(x)).Subscribe(values.Add, ex => caught = ex, () => completedCount++);
+        using var sub = source.SelectLatestAsync(static x => Task.FromResult(x))
+            .Subscribe(values.Add, ex => caught = ex, () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));

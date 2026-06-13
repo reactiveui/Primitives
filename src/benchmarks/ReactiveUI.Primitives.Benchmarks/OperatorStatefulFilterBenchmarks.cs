@@ -38,7 +38,7 @@ public class OperatorStatefulFilterBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesSkip()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
             .Skip(SkipCount)
             .Subscribe(observer);
@@ -50,7 +50,7 @@ public class OperatorStatefulFilterBenchmarks
     [Benchmark]
     public int SystemReactiveSkip()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Range(StartValue, RangeCount)
             .Skip(SkipCount)
             .Subscribe(observer);
@@ -62,7 +62,7 @@ public class OperatorStatefulFilterBenchmarks
     [Benchmark]
     public int PrimitivesUnique()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
             .Unique()
             .Subscribe(observer);
@@ -74,7 +74,7 @@ public class OperatorStatefulFilterBenchmarks
     [Benchmark]
     public int SystemReactiveDistinctUntilChanged()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Range(StartValue, RangeCount)
             .DistinctUntilChanged()
             .Subscribe(observer);
@@ -86,7 +86,7 @@ public class OperatorStatefulFilterBenchmarks
     [Benchmark]
     public int PrimitivesFold()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
             .Fold(0, static (acc, x) => acc + x)
             .Subscribe(observer);
@@ -98,7 +98,7 @@ public class OperatorStatefulFilterBenchmarks
     [Benchmark]
     public int SystemReactiveScan()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Range(StartValue, RangeCount)
             .Scan(0, static (acc, x) => acc + x)
             .Subscribe(observer);
@@ -110,7 +110,7 @@ public class OperatorStatefulFilterBenchmarks
     [Benchmark]
     public int PrimitivesReduce()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
             .Reduce(0, static (acc, x) => acc + x)
             .Subscribe(observer);
@@ -122,7 +122,7 @@ public class OperatorStatefulFilterBenchmarks
     [Benchmark]
     public int SystemReactiveAggregate()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Range(StartValue, RangeCount)
             .Aggregate(0, static (acc, x) => acc + x)
             .Subscribe(observer);
@@ -134,7 +134,7 @@ public class OperatorStatefulFilterBenchmarks
     [Benchmark]
     public int PrimitivesTakeWhile()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
             .TakeWhile(static x => x < TakeWhileLimit)
             .Subscribe(observer);
@@ -146,7 +146,7 @@ public class OperatorStatefulFilterBenchmarks
     [Benchmark]
     public int SystemReactiveTakeWhile()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Range(StartValue, RangeCount)
             .TakeWhile(static x => x < TakeWhileLimit)
             .Subscribe(observer);
@@ -158,7 +158,7 @@ public class OperatorStatefulFilterBenchmarks
     [Benchmark]
     public int PrimitivesSkipWhile()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
             .SkipWhile(static x => x < SkipCount)
             .Subscribe(observer);
@@ -170,7 +170,7 @@ public class OperatorStatefulFilterBenchmarks
     [Benchmark]
     public int SystemReactiveSkipWhile()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Range(StartValue, RangeCount)
             .SkipWhile(static x => x < SkipCount)
             .Subscribe(observer);
@@ -182,7 +182,7 @@ public class OperatorStatefulFilterBenchmarks
     [Benchmark]
     public int PrimitivesUniqueBy()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
             .UniqueBy(static x => x / KeyDivisor)
             .Subscribe(observer);
@@ -194,7 +194,7 @@ public class OperatorStatefulFilterBenchmarks
     [Benchmark]
     public int SystemReactiveDistinctUntilChangedKey()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Range(StartValue, RangeCount)
             .DistinctUntilChanged(static x => x / KeyDivisor)
             .Subscribe(observer);

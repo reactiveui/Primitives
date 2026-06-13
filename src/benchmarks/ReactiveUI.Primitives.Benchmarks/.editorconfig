@@ -5,3 +5,8 @@
 # wrong library. RCS1196 (call extension method as instance method) is therefore disabled here.
 [*.cs]
 dotnet_diagnostic.RCS1196.severity = none
+
+# BenchmarkDotNet instantiates benchmark classes, so they must remain instance classes and cannot be
+# marked static — even when a partial declaration happens to hold only static members (the instance
+# [Benchmark] methods live in sibling partial files).
+dotnet_diagnostic.SST1432.severity = none

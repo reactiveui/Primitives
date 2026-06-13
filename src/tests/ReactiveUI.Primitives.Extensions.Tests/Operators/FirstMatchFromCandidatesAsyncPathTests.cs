@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Disposables;
@@ -33,9 +34,14 @@ public class FirstMatchFromCandidatesAsyncPathTests
     [Test]
     public async Task WhenCandidatesEmpty_ThenEmitsFallbackAndCompletes()
     {
-        var results = new List<string>();
+        List<string> results = [];
         var completed = false;
-        using var sub = Array.Empty<string>().FirstMatchFromCandidates(static _ => Observable.Empty<string>(), static raw => raw, static value => value.Length > 0, Fallback).Subscribe(results.Add, () => completed = true);
+        using var sub = Array.Empty<string>()
+            .FirstMatchFromCandidates(
+            static _ => Observable.Empty<string>(),
+            static raw => raw,
+            static value => value.Length > 0,
+            Fallback).Subscribe(results.Add, () => completed = true);
         await Assert.That(results).IsCollectionEqualTo([Fallback]);
         await Assert.That(completed).IsTrue();
     }
@@ -47,10 +53,15 @@ public class FirstMatchFromCandidatesAsyncPathTests
     public async Task WhenAsyncProjectionMatches_ThenEmitsMatch()
     {
         string[] keys = ["miss", HitKey];
-        var emissionGate = new Subject<string>();
-        var results = new List<string>();
-        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = ((IReadOnlyList<string>)keys).FirstMatchFromCandidates(key => key == HitKey ? emissionGate : Observable.Empty<string>(), static raw => raw, static value => value == HitKey, Fallback).Subscribe(results.Add, () => completed.TrySetResult(true));
+        Subject<string> emissionGate = new();
+        List<string> results = [];
+        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var sub = ((IReadOnlyList<string>)keys)
+            .FirstMatchFromCandidates(
+            key => key == HitKey ? emissionGate : Observable.Empty<string>(),
+            static raw => raw,
+            static value => value == HitKey,
+            Fallback).Subscribe(results.Add, () => completed.TrySetResult(true));
         emissionGate.OnNext(HitKey);
         emissionGate.OnCompleted();
         var done = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -65,10 +76,15 @@ public class FirstMatchFromCandidatesAsyncPathTests
     public async Task WhenAsyncProjectionNeverMatches_ThenFallback()
     {
         string[] keys = ["only"];
-        var subject = new Subject<string>();
-        var results = new List<string>();
-        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = ((IReadOnlyList<string>)keys).FirstMatchFromCandidates(_ => subject, static raw => raw, static value => value == "match-impossible", Fallback).Subscribe(results.Add, () => completed.TrySetResult(true));
+        Subject<string> subject = new();
+        List<string> results = [];
+        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var sub = ((IReadOnlyList<string>)keys)
+            .FirstMatchFromCandidates(
+            _ => subject,
+            static raw => raw,
+            static value => value == "match-impossible",
+            Fallback).Subscribe(results.Add, () => completed.TrySetResult(true));
         subject.OnNext("nope");
         subject.OnCompleted();
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -82,11 +98,16 @@ public class FirstMatchFromCandidatesAsyncPathTests
     public async Task WhenAsyncProjectionErrors_ThenSkipsToNextCandidate()
     {
         string[] keys = ["bad", "good"];
-        var badSubject = new Subject<string>();
-        var goodSubject = new Subject<string>();
-        var results = new List<string>();
-        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = ((IReadOnlyList<string>)keys).FirstMatchFromCandidates(key => key == "bad" ? badSubject : goodSubject, static raw => raw, static value => value == "good", Fallback).Subscribe(results.Add, () => completed.TrySetResult(true));
+        Subject<string> badSubject = new();
+        Subject<string> goodSubject = new();
+        List<string> results = [];
+        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var sub = ((IReadOnlyList<string>)keys)
+            .FirstMatchFromCandidates(
+            key => key == "bad" ? badSubject : goodSubject,
+            static raw => raw,
+            static value => value == "good",
+            Fallback).Subscribe(results.Add, () => completed.TrySetResult(true));
         badSubject.OnError(new InvalidOperationException("bad failed"));
         goodSubject.OnNext("good");
         goodSubject.OnCompleted();
@@ -100,10 +121,12 @@ public class FirstMatchFromCandidatesAsyncPathTests
     public async Task WhenDisposedDuringAsyncWalk_ThenStops()
     {
         string[] keys = ["k1", "k2"];
-        var firstSubject = new Subject<string>();
-        var results = new List<string>();
+        Subject<string> firstSubject = new();
+        List<string> results = [];
         var completed = false;
-        var sub = ((IReadOnlyList<string>)keys).FirstMatchFromCandidates(_ => firstSubject, static raw => raw, static _ => true, Fallback).Subscribe(results.Add, () => completed = true);
+        var sub = ((IReadOnlyList<string>)keys)
+            .FirstMatchFromCandidates(_ => firstSubject, static raw => raw, static _ => true, Fallback)
+            .Subscribe(results.Add, () => completed = true);
         sub.Dispose();
 
         // Second dispose hits the Interlocked.Exchange null-loser branch in AsyncSink.Dispose
@@ -123,9 +146,13 @@ public class FirstMatchFromCandidatesAsyncPathTests
     public async Task WhenSyncTransformThrows_ThenContinuesToNextCandidate()
     {
         string[] keys = ["throw", HitKey];
-        var results = new List<string>();
+        List<string> results = [];
         var completed = false;
-        using var sub = ((IReadOnlyList<string>)keys).FirstMatchFromCandidates(static key => Observable.Return(key), static raw => raw == "throw" ? throw new InvalidOperationException("transform-throws") : raw, static value => value == HitKey, Fallback).Subscribe(results.Add, () => completed = true);
+        using var sub = ((IReadOnlyList<string>)keys).FirstMatchFromCandidates(
+            static key => Observable.Return(key),
+            static raw => raw == "throw" ? throw new InvalidOperationException("transform-throws") : raw,
+            static value => value == HitKey,
+            Fallback).Subscribe(results.Add, () => completed = true);
         await Assert.That(results).IsCollectionEqualTo([HitKey]);
         await Assert.That(completed).IsTrue();
     }
@@ -139,9 +166,16 @@ public class FirstMatchFromCandidatesAsyncPathTests
     public async Task WhenAsyncCandidateProjectionSyncErrors_ThenLoopingGuardSkipsToNextCandidate()
     {
         string[] keys = [SyncErrorKey, HitKey];
-        var results = new List<string>();
+        List<string> results = [];
         var completed = false;
-        using var sub = ((IReadOnlyList<string>)keys).FirstMatchFromCandidates(key => key == SyncErrorKey ? new SyncErroringObservable<string>(new InvalidOperationException(SyncErrorKey)) : Observable.Return(key), static raw => raw, static value => value == HitKey, Fallback).Subscribe(results.Add, () => completed = true);
+        using var sub = ((IReadOnlyList<string>)keys)
+            .FirstMatchFromCandidates(
+            key => key == SyncErrorKey
+                    ? new SyncErroringObservable<string>(new InvalidOperationException(SyncErrorKey))
+                    : Observable.Return(key),
+            static raw => raw,
+            static value => value == HitKey,
+            Fallback).Subscribe(results.Add, () => completed = true);
         await Assert.That(results).IsCollectionEqualTo([HitKey]);
         await Assert.That(completed).IsTrue();
     }
@@ -155,9 +189,14 @@ public class FirstMatchFromCandidatesAsyncPathTests
     public async Task WhenAsyncCandidateProjectionSyncCompletes_ThenLoopingGuardSkipsToNextCandidate()
     {
         string[] keys = [SyncCompleteKey, HitKey];
-        var results = new List<string>();
+        List<string> results = [];
         var completed = false;
-        using var sub = ((IReadOnlyList<string>)keys).FirstMatchFromCandidates(key => key == SyncCompleteKey ? new SyncCompletingObservable<string>() : Observable.Return(key), static raw => raw, static value => value == HitKey, Fallback).Subscribe(results.Add, () => completed = true);
+        using var sub = ((IReadOnlyList<string>)keys)
+            .FirstMatchFromCandidates(
+            key => key == SyncCompleteKey ? new SyncCompletingObservable<string>() : Observable.Return(key),
+            static raw => raw,
+            static value => value == HitKey,
+            Fallback).Subscribe(results.Add, () => completed = true);
         await Assert.That(results).IsCollectionEqualTo([HitKey]);
         await Assert.That(completed).IsTrue();
     }
@@ -169,10 +208,12 @@ public class FirstMatchFromCandidatesAsyncPathTests
     public async Task WhenAsyncCandidateEmitsAfterMatch_ThenDroppedByDoneGuard()
     {
         string[] keys = [HitKey];
-        var subject = new Subject<string>();
-        var results = new List<string>();
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = ((IReadOnlyList<string>)keys).FirstMatchFromCandidates(_ => subject, static raw => raw, static value => value == HitKey, Fallback).Subscribe(results.Add, () => completed.TrySetResult());
+        Subject<string> subject = new();
+        List<string> results = [];
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var sub = ((IReadOnlyList<string>)keys)
+            .FirstMatchFromCandidates(_ => subject, static raw => raw, static value => value == HitKey, Fallback)
+            .Subscribe(results.Add, () => completed.TrySetResult());
         subject.OnNext(HitKey);
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
         subject.OnNext("ignored-late");
@@ -193,16 +234,16 @@ public class FirstMatchFromCandidatesAsyncPathTests
         // errors during AsyncSink.TryNext's loop iteration, hitting AsyncSink.OnError with
         // _looping == true.
         string[] keys = [AsyncKey, SyncErrorKey, HitKey];
-        var asyncSubject = new Subject<string>();
-        var results = new List<string>();
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Subject<string> asyncSubject = new();
+        List<string> results = [];
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = ((IReadOnlyList<string>)keys).FirstMatchFromCandidates(
             key => key switch
-        {
-            AsyncKey => asyncSubject,
-            SyncErrorKey => new SyncErroringObservable<string>(new InvalidOperationException("sync")),
-            _ => Observable.Return(key),
-        },
+            {
+                AsyncKey => asyncSubject,
+                SyncErrorKey => new SyncErroringObservable<string>(new InvalidOperationException("sync")),
+                _ => Observable.Return(key)
+            },
             static raw => raw,
             static value => value == HitKey,
             Fallback).Subscribe(results.Add, () => completed.TrySetResult());
@@ -224,16 +265,16 @@ public class FirstMatchFromCandidatesAsyncPathTests
     public async Task WhenAsyncSinkWalkHitsSyncCompletingCandidate_ThenLoopingGuardSkipsAhead()
     {
         string[] keys = [AsyncKey, SyncCompleteKey, HitKey];
-        var asyncSubject = new Subject<string>();
-        var results = new List<string>();
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Subject<string> asyncSubject = new();
+        List<string> results = [];
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = ((IReadOnlyList<string>)keys).FirstMatchFromCandidates(
             key => key switch
-        {
-            AsyncKey => asyncSubject,
-            SyncCompleteKey => new SyncCompletingObservable<string>(),
-            _ => Observable.Return(key),
-        },
+            {
+                AsyncKey => asyncSubject,
+                SyncCompleteKey => new SyncCompletingObservable<string>(),
+                _ => Observable.Return(key)
+            },
             static raw => raw,
             static value => value == HitKey,
             Fallback).Subscribe(results.Add, () => completed.TrySetResult());

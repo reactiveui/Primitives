@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -31,14 +32,13 @@ public class SelectAsyncConcurrentObservableTests
     public async Task WhenSelectAsyncConcurrentSelectorThrows_ThenForwardsError()
     {
         const int TriggerValue = 1;
-        var subject = new Subject<int>();
-        var faulted = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var expected = new InvalidOperationException(SelectorErrorMessage);
-        using var sub = subject.SelectAsyncConcurrent(_ => Task.FromException<int>(expected), maxConcurrency: MaxConcurrencyTwo).Subscribe(
-            static _ =>
-        {
-        },
-            ex => faulted.TrySetResult(ex));
+        Subject<int> subject = new();
+        TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        InvalidOperationException expected = new(SelectorErrorMessage);
+        using var sub = subject.SelectAsyncConcurrent(_ => Task.FromException<int>(expected), MaxConcurrencyTwo)
+            .Subscribe(
+                static _ => { },
+                ex => faulted.TrySetResult(ex));
         subject.OnNext(TriggerValue);
         var caught = await faulted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -49,13 +49,11 @@ public class SelectAsyncConcurrentObservableTests
     [Test]
     public async Task WhenSelectAsyncConcurrentSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
-        using var sub = subject.SelectAsyncConcurrent(static x => Task.FromResult(x), maxConcurrency: MaxConcurrencyTwo).Subscribe(
-            static _ =>
-        {
-        },
+        InvalidOperationException expected = new(SourceErrorMessage);
+        using var sub = subject.SelectAsyncConcurrent(static x => Task.FromResult(x), MaxConcurrencyTwo).Subscribe(
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -67,17 +65,17 @@ public class SelectAsyncConcurrentObservableTests
     public async Task WhenSelectAsyncConcurrentDisposedMidFlight_ThenSuppressesEmissionAndCompletion()
     {
         const int TriggerValue = 1;
-        var subject = new Subject<int>();
-        var gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var results = new List<int>();
+        Subject<int> subject = new();
+        TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> results = [];
         var completed = false;
         var sub = subject.SelectAsyncConcurrent(
             async x =>
-        {
-            await gate.Task.ConfigureAwait(false);
-            return x;
-        },
-            maxConcurrency: MaxConcurrencyTwo).Subscribe(results.Add, () => completed = true);
+            {
+                await gate.Task.ConfigureAwait(false);
+                return x;
+            },
+            MaxConcurrencyTwo).Subscribe(results.Add, () => completed = true);
         subject.OnNext(TriggerValue);
         subject.OnCompleted();
         sub.Dispose();
@@ -94,17 +92,17 @@ public class SelectAsyncConcurrentObservableTests
     {
         const int First = 1;
         const int Second = 2;
-        var subject = new Subject<int>();
-        var gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var results = new List<int>();
-        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Subject<int> subject = new();
+        TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> results = [];
+        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = subject.SelectAsyncConcurrent(
             async x =>
-        {
-            await gate.Task.ConfigureAwait(false);
-            return x;
-        },
-            maxConcurrency: MaxConcurrencyFour).Subscribe(results.Add, () => completed.TrySetResult(true));
+            {
+                await gate.Task.ConfigureAwait(false);
+                return x;
+            },
+            MaxConcurrencyFour).Subscribe(results.Add, () => completed.TrySetResult(true));
         subject.OnNext(First);
         subject.OnNext(Second);
         subject.OnCompleted();
@@ -118,7 +116,7 @@ public class SelectAsyncConcurrentObservableTests
 
         // Downstream OnNext from this operator is serialized inside the sink's lock, so the
         // list is safely populated by the time completion fires. Order is concurrent so sort.
-        int[] sorted = [..results];
+        int[] sorted = [.. results];
         Array.Sort(sorted);
         await Assert.That(sorted).IsCollectionEqualTo([First, Second]);
     }
@@ -129,11 +127,12 @@ public class SelectAsyncConcurrentObservableTests
     [Test]
     public async Task WhenEventsAfterCompleted_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
-        var values = new List<int>();
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
         Exception? caught = null;
         var completedCount = 0;
-        using var sub = source.SelectAsyncConcurrent(static x => Task.FromResult(x), maxConcurrency: 1).Subscribe(values.Add, ex => caught = ex, () => completedCount++);
+        using var sub = source.SelectAsyncConcurrent(static x => Task.FromResult(x), 1)
+            .Subscribe(values.Add, ex => caught = ex, () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));

@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Disposables;
 
-/// <summary>Scope.</summary>
+/// <summary>Provides factory helpers for creating disposables.</summary>
 public static class Scope
 {
     /// <summary>Gets the disposable that does nothing when disposed.</summary>

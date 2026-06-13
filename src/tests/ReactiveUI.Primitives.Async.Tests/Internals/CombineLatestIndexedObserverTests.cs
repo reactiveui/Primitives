@@ -21,10 +21,10 @@ public class CombineLatestIndexedObserverTests
     [Test]
     public async Task WhenOnNextAsync_ThenRecordsValueAndCallsEmitLatestAsync()
     {
-        var captured = new CaptureObserverAsync<int>();
-        var parent = new TestSubscription(captured);
+        CaptureObserverAsync<int> captured = new();
+        TestSubscription parent = new(captured);
         int? stored = null;
-        var observer = new SyncLatestIndexedWitness<int, int>(parent, SourceBit, v => stored = v);
+        SyncLatestIndexedWitness<int, int> observer = new(parent, SourceBit, v => stored = v);
 
         await observer.OnNextAsync(Sentinel, CancellationToken.None);
 
@@ -39,10 +39,10 @@ public class CombineLatestIndexedObserverTests
     [Test]
     public async Task WhenOnErrorResumeAsync_ThenLifecycleForwardsError()
     {
-        var captured = new CaptureObserverAsync<int>();
-        var parent = new TestSubscription(captured);
-        var observer = new SyncLatestIndexedWitness<int, int>(parent, SourceBit, static _ => { });
-        var expected = new InvalidOperationException("forward");
+        CaptureObserverAsync<int> captured = new();
+        TestSubscription parent = new(captured);
+        SyncLatestIndexedWitness<int, int> observer = new(parent, SourceBit, static _ => { });
+        InvalidOperationException expected = new("forward");
 
         await observer.OnErrorResumeAsync(expected, CancellationToken.None);
 
@@ -58,9 +58,9 @@ public class CombineLatestIndexedObserverTests
     [Test]
     public async Task WhenOnCompletedAsync_ThenLifecycleForwardsCompletion()
     {
-        var captured = new CaptureObserverAsync<int>();
-        var parent = new TestSubscription(captured);
-        var observer = new SyncLatestIndexedWitness<int, int>(parent, SourceBit, static _ => { });
+        CaptureObserverAsync<int> captured = new();
+        TestSubscription parent = new(captured);
+        SyncLatestIndexedWitness<int, int> observer = new(parent, SourceBit, static _ => { });
 
         await observer.OnCompletedAsync(Result.Success);
 
@@ -75,7 +75,7 @@ public class CombineLatestIndexedObserverTests
     /// <summary>Minimal concrete subclass exposing the base's EmitLatestAsync invocation count.</summary>
     /// <param name="observer">The downstream observer.</param>
     private sealed class TestSubscription(IObserverAsync<int> observer)
-        : SyncLatestCoordinatorBase<int>(observer, sourceCount: 1)
+        : SyncLatestCoordinatorBase<int>(observer, 1)
     {
         /// <summary>Gets the number of times <see cref="EmitLatestAsync"/> has been invoked.</summary>
         public int EmitLatestCount { get; private set; }

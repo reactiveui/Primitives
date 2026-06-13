@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -16,18 +17,23 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenAggregateAsyncCancellationTokenOverloads_ThenComputeFinalValues()
     {
-        using var cancellation = new CancellationTokenSource();
+        using CancellationTokenSource cancellation = new();
         var asyncResult = await SignalAsync.Range(1, 3).AggregateAsync(
             0,
             async (accumulator, value, token) =>
-        {
-            await Task.Yield();
-            token.ThrowIfCancellationRequested();
-            return accumulator + value;
-        },
+            {
+                await Task.Yield();
+                token.ThrowIfCancellationRequested();
+                return accumulator + value;
+            },
             cancellation.Token);
-        var syncResult = await SignalAsync.Range(1, 3).AggregateAsync(0, static (accumulator, value) => accumulator + value, cancellation.Token);
-        var selectedResult = await SignalAsync.Range(1, 3).AggregateAsync(0, static (accumulator, value) => accumulator + value, static accumulator => $"Sum={accumulator}", cancellation.Token);
+        var syncResult = await SignalAsync.Range(1, 3)
+            .AggregateAsync(0, static (accumulator, value) => accumulator + value, cancellation.Token);
+        var selectedResult = await SignalAsync.Range(1, 3).AggregateAsync(
+            0,
+            static (accumulator, value) => accumulator + value,
+            static accumulator => $"Sum={accumulator}",
+            cancellation.Token);
         await Assert.That(asyncResult).IsEqualTo(ReduceCoverageExpectedSum);
         await Assert.That(syncResult).IsEqualTo(ReduceCoverageExpectedSum);
         await Assert.That(selectedResult).IsEqualTo("Sum=6");
@@ -38,7 +44,7 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenReduceAsyncAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
-        var expectedError = new InvalidOperationException("async reduce resume error");
+        InvalidOperationException expectedError = new("async reduce resume error");
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
@@ -58,12 +64,14 @@ public partial class TerminalOperatorTests
     [Test]
     public async Task WhenReduceAsyncAsyncSourceFails_ThenThrows()
     {
-        var expectedError = new InvalidOperationException("async reduce failed");
-        var ex = await Assert.That(async () => await SignalAsync.Throw<int>(expectedError).ReduceAsync(0, async (accumulator, value, _) =>
-        {
-            await Task.Yield();
-            return accumulator + value;
-        })).ThrowsExactly<InvalidOperationException>();
+        InvalidOperationException expectedError = new("async reduce failed");
+        var ex = await Assert.That(async () => await SignalAsync.Throw<int>(expectedError).ReduceAsync(
+            0,
+            async (accumulator, value, _) =>
+            {
+                await Task.Yield();
+                return accumulator + value;
+            })).ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex).IsSameReferenceAs(expectedError);
     }
 }

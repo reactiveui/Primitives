@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Extensions.Operators;
@@ -39,14 +40,12 @@ public class ConflateObservableTests
     [Test]
     public async Task WhenConflateSourceErrors_ThenForwardsError()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = subject.Conflate(TimeSpan.FromTicks(UpdatePeriodTicks), scheduler).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         scheduler.AdvanceBy(UpdatePeriodTicks * SettleMultiplier);
@@ -59,9 +58,9 @@ public class ConflateObservableTests
     [Test]
     public async Task WhenConflateNewerValueDuringThrottle_ThenReplacesPending()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         using var sub = subject.Conflate(TimeSpan.FromTicks(UpdatePeriodTicks), scheduler).Subscribe(results.Add);
         subject.OnNext(First);
         scheduler.AdvanceBy(HalfWindowTicks);
@@ -81,13 +80,11 @@ public class ConflateObservableTests
     [Test]
     public async Task WhenConflateCompletesBeforeFirstEmission_ThenCompletes()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         var completed = false;
         using var sub = subject.Conflate(TimeSpan.FromTicks(UpdatePeriodTicks), scheduler).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completed = true);
         subject.OnCompleted();
         scheduler.AdvanceBy(UpdatePeriodTicks);
@@ -99,9 +96,9 @@ public class ConflateObservableTests
     [Test]
     public async Task WhenConflateDisposedBeforeScheduledEmission_ThenSuppressed()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         var sub = subject.Conflate(TimeSpan.FromTicks(UpdatePeriodTicks), scheduler).Subscribe(results.Add);
         subject.OnNext(First);
         scheduler.AdvanceBy(HalfWindowTicks);
@@ -120,11 +117,12 @@ public class ConflateObservableTests
     [Test]
     public async Task WhenOnNextAfterCompleted_ThenDropped()
     {
-        var scheduler = new VirtualClock();
-        var source = new SyncDirectSource<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        SyncDirectSource<int> source = new();
+        List<int> results = [];
         var completed = false;
-        using var sub = source.Conflate(TimeSpan.FromTicks(UpdatePeriodTicks), scheduler).Subscribe(results.Add, () => completed = true);
+        using var sub = source.Conflate(TimeSpan.FromTicks(UpdatePeriodTicks), scheduler)
+            .Subscribe(results.Add, () => completed = true);
         source.Observer.OnCompleted();
         scheduler.AdvanceBy(SettleMultiplier * UpdatePeriodTicks);
         source.Observer.OnNext(1);
@@ -138,14 +136,12 @@ public class ConflateObservableTests
     [Test]
     public async Task WhenOnErrorAfterCompleted_ThenDropped()
     {
-        var scheduler = new VirtualClock();
-        var source = new SyncDirectSource<int>();
+        VirtualClock scheduler = new();
+        SyncDirectSource<int> source = new();
         Exception? caught = null;
         var completed = false;
         using var sub = source.Conflate(TimeSpan.FromTicks(UpdatePeriodTicks), scheduler).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex,
             () => completed = true);
         source.Observer.OnCompleted();
@@ -161,15 +157,13 @@ public class ConflateObservableTests
     [Test]
     public async Task WhenOnCompletedAfterError_ThenDropped()
     {
-        var scheduler = new VirtualClock();
-        var source = new SyncDirectSource<int>();
+        VirtualClock scheduler = new();
+        SyncDirectSource<int> source = new();
         Exception? caught = null;
         var completed = false;
-        var expected = new InvalidOperationException("first");
+        InvalidOperationException expected = new("first");
         using var sub = source.Conflate(TimeSpan.FromTicks(UpdatePeriodTicks), scheduler).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex,
             () => completed = true);
         source.Observer.OnError(expected);
@@ -188,9 +182,12 @@ public class ConflateObservableTests
     [Test]
     public async Task WhenSinkEnqueuedAfterDispose_ThenSilentlyDropped()
     {
-        var downstream = new RecordingWitness<int>();
-        var scheduler = new VirtualClock();
-        var sink = new ConflateObservable<int>.ConflateSink(downstream, TimeSpan.FromTicks(UpdatePeriodTicks), scheduler);
+        RecordingWitness<int> downstream = new();
+        VirtualClock scheduler = new();
+        ConflateObservable<int>.ConflateSink sink = new(
+            downstream,
+            TimeSpan.FromTicks(UpdatePeriodTicks),
+            scheduler);
         sink.Dispose();
         sink.OnNext(1);
         sink.OnError(new InvalidOperationException("late"));
@@ -208,10 +205,13 @@ public class ConflateObservableTests
     [Test]
     public async Task WhenSinkEventsAfterTerminated_ThenDropped()
     {
-        var downstream = new RecordingWitness<int>();
-        var scheduler = new VirtualClock();
-        var sink = new ConflateObservable<int>.ConflateSink(downstream, TimeSpan.FromTicks(UpdatePeriodTicks), scheduler);
-        var expected = new InvalidOperationException("first");
+        RecordingWitness<int> downstream = new();
+        VirtualClock scheduler = new();
+        ConflateObservable<int>.ConflateSink sink = new(
+            downstream,
+            TimeSpan.FromTicks(UpdatePeriodTicks),
+            scheduler);
+        InvalidOperationException expected = new("first");
         sink.OnError(expected);
         scheduler.AdvanceBy(UpdatePeriodTicks);
         sink.OnNext(1);

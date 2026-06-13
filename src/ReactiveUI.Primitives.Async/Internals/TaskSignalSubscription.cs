@@ -16,7 +16,7 @@ internal static class TaskSignalSubscription
         Func<IObserverAsync<T>, CancellationToken, ValueTask> executeAsyncCore,
         IObserverAsync<T> observer)
     {
-        var ret = new AnonymousTaskSignalSubscription<T>(executeAsyncCore, observer);
+        AnonymousTaskSignalSubscription<T> ret = new(executeAsyncCore, observer);
         ret.Start();
         return ret;
     }

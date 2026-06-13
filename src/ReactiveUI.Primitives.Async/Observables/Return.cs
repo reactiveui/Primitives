@@ -45,7 +45,7 @@ public static partial class SignalAsync
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new ReturnSubscription(observer, value);
+            ReturnSubscription subscription = new(observer, value);
             subscription.Start();
             return new(subscription);
         }

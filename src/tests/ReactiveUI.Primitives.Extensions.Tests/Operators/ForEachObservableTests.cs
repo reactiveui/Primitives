@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Extensions.Operators;
@@ -34,8 +35,8 @@ public class ForEachObservableTests
     [Test]
     public async Task WhenForEachReceivesNullBatch_ThenIgnoresNullAndProcessesNext()
     {
-        var subject = new Subject<IEnumerable<int>>();
-        var results = new List<int>();
+        Subject<IEnumerable<int>> subject = new();
+        List<int> results = [];
         using var sub = subject.ForEach().Subscribe(results.Add);
         subject.OnNext(null!);
         subject.OnNext([ValueOne, ValueTwo]);
@@ -50,8 +51,8 @@ public class ForEachObservableTests
     {
         IEnumerable<int>[] batches = [[ScheduledTen, ScheduledTwenty], [ScheduledThirty]];
         var source = batches.ToObservable();
-        var done = new TaskCompletionSource<List<int>>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var results = new List<int>();
+        TaskCompletionSource<List<int>> done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> results = [];
         using var sub = source.ForEach(Sequencer.Default).Subscribe(results.Add, () => done.TrySetResult(results));
         var output = await done.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(output).IsCollectionEqualTo([ScheduledTen, ScheduledTwenty, ScheduledThirty]);
@@ -62,14 +63,12 @@ public class ForEachObservableTests
     [Test]
     public async Task WhenForEachSourceErrors_ThenErrorForwarded()
     {
-        var subject = new Subject<IEnumerable<int>>();
+        Subject<IEnumerable<int>> subject = new();
         Exception? caught = null;
         using var sub = subject.ForEach().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
-        var expected = new InvalidOperationException("boom");
+        InvalidOperationException expected = new("boom");
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
@@ -78,7 +77,7 @@ public class ForEachObservableTests
     [Test]
     public void WhenForEachObserverNull_ThenSubscribeThrows()
     {
-        var observable = new ForEachObservable<int>(new Subject<IEnumerable<int>>(), null);
+        ForEachObservable<int> observable = new(new Subject<IEnumerable<int>>(), null);
         Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
     }
 }

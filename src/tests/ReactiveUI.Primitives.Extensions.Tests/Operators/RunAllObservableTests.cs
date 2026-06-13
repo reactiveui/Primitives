@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Disposables;
@@ -33,7 +34,7 @@ public class RunAllObservableTests
     public async Task WhenRunAllSyncSources_ThenWalksAllAndCompletes()
     {
         const int SourceCount = 5;
-        var runOrder = new List<int>();
+        List<int> runOrder = [];
         var sources = new IObservable<RxVoid>[SourceCount];
         for (var i = 0; i < SourceCount; i++)
         {
@@ -47,7 +48,8 @@ public class RunAllObservableTests
 
         var emitted = 0;
         var completed = false;
-        using var sub = ((IReadOnlyList<IObservable<RxVoid>>)sources).RunAll().Subscribe(_ => emitted++, () => completed = true);
+        using var sub = ((IReadOnlyList<IObservable<RxVoid>>)sources).RunAll()
+            .Subscribe(_ => emitted++, () => completed = true);
         await Assert.That(runOrder).IsCollectionEqualTo(BuildIndexSequence(SourceCount));
         await Assert.That(emitted).IsEqualTo(1);
         await Assert.That(completed).IsTrue();
@@ -58,14 +60,12 @@ public class RunAllObservableTests
     [Test]
     public async Task WhenRunAllAsyncSources_ThenWalksSequentially()
     {
-        var subjectA = new Subject<RxVoid>();
-        var subjectB = new Subject<RxVoid>();
+        Subject<RxVoid> subjectA = new();
+        Subject<RxVoid> subjectB = new();
         IObservable<RxVoid>[] sources = [subjectA, subjectB];
-        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = ((IReadOnlyList<IObservable<RxVoid>>)sources).RunAll().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completed.TrySetResult(true));
         await Assert.That(subjectA.HasObservers).IsTrue();
         await Assert.That(subjectB.HasObservers).IsFalse();
@@ -81,15 +81,13 @@ public class RunAllObservableTests
     [Test]
     public async Task WhenRunAllSourceErrors_ThenForwardsAndStops()
     {
-        var subjectA = new Subject<RxVoid>();
-        var subjectB = new Subject<RxVoid>();
+        Subject<RxVoid> subjectA = new();
+        Subject<RxVoid> subjectB = new();
         IObservable<RxVoid>[] sources = [subjectA, subjectB];
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = ((IReadOnlyList<IObservable<RxVoid>>)sources).RunAll().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subjectA.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -101,14 +99,12 @@ public class RunAllObservableTests
     [Test]
     public async Task WhenRunAllDisposedMidWalk_ThenStops()
     {
-        var subjectA = new Subject<RxVoid>();
-        var subjectB = new Subject<RxVoid>();
+        Subject<RxVoid> subjectA = new();
+        Subject<RxVoid> subjectB = new();
         IObservable<RxVoid>[] sources = [subjectA, subjectB];
         var completed = false;
         var sub = ((IReadOnlyList<IObservable<RxVoid>>)sources).RunAll().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completed = true);
         sub.Dispose();
 
@@ -128,12 +124,13 @@ public class RunAllObservableTests
     [Test]
     public async Task WhenEventsAfterCompleted_ThenDropped()
     {
-        var first = new SyncDirectSource<RxVoid>();
+        SyncDirectSource<RxVoid> first = new();
         IObservable<RxVoid>[] sources = [first];
-        var values = new List<RxVoid>();
+        List<RxVoid> values = [];
         Exception? caught = null;
         var completedCount = 0;
-        using var sub = ((IReadOnlyList<IObservable<RxVoid>>)sources).RunAll().Subscribe(values.Add, ex => caught = ex, () => completedCount++);
+        using var sub = ((IReadOnlyList<IObservable<RxVoid>>)sources).RunAll()
+            .Subscribe(values.Add, ex => caught = ex, () => completedCount++);
         first.Observer.OnNext(RxVoid.Default);
         first.Observer.OnCompleted();
         first.Observer.OnNext(RxVoid.Default);
@@ -152,11 +149,13 @@ public class RunAllObservableTests
     [Test]
     public async Task WhenRunAllSourceSyncErrors_ThenPostLoopDoneGuardSuppressesFinalEmit()
     {
-        IObservable<RxVoid>[] sources = [new SyncErroringObservable<RxVoid>(new InvalidOperationException(SourceErrorMessage)),];
+        IObservable<RxVoid>[] sources =
+            [new SyncErroringObservable<RxVoid>(new InvalidOperationException(SourceErrorMessage))];
         Exception? caught = null;
         var emitted = 0;
         var completed = false;
-        using var sub = ((IReadOnlyList<IObservable<RxVoid>>)sources).RunAll().Subscribe(_ => emitted++, ex => caught = ex, () => completed = true);
+        using var sub = ((IReadOnlyList<IObservable<RxVoid>>)sources).RunAll()
+            .Subscribe(_ => emitted++, ex => caught = ex, () => completed = true);
         await Assert.That(caught).IsNotNull();
         await Assert.That(caught!.Message).IsEqualTo(SourceErrorMessage);
         await Assert.That(emitted).IsEqualTo(0);

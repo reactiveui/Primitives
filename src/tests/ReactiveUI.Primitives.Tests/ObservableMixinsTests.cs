@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -22,11 +23,12 @@ public class ObservableMixinsTests
     [Test]
     public async Task WhenOtherEmits_ThenCompletesAndStopsForwardingSource()
     {
-        using var source = new Subject<int>();
-        using var other = new Subject<string>();
-        var values = new List<int>();
+        using Subject<int> source = new();
+        using Subject<string> other = new();
+        List<int> values = [];
         var completed = false;
-        using var subscription = source.TakeUntil(other).Subscribe(values.Add, ThrowUnexpectedError, () => completed = true);
+        using var subscription =
+            source.TakeUntil(other).Subscribe(values.Add, ThrowUnexpectedError, () => completed = true);
         source.OnNext(FirstValue);
         other.OnNext(StopValue);
         source.OnNext(SecondValue);
@@ -39,11 +41,12 @@ public class ObservableMixinsTests
     [Test]
     public async Task WhenOtherCompletesWithoutValue_ThenSourceContinues()
     {
-        using var source = new Subject<int>();
-        using var other = new Subject<string>();
-        var values = new List<int>();
+        using Subject<int> source = new();
+        using Subject<string> other = new();
+        List<int> values = [];
         var completed = false;
-        using var subscription = source.TakeUntil(other).Subscribe(values.Add, ThrowUnexpectedError, () => completed = true);
+        using var subscription =
+            source.TakeUntil(other).Subscribe(values.Add, ThrowUnexpectedError, () => completed = true);
         source.OnNext(FirstValue);
         other.OnCompleted();
         source.OnNext(SecondValue);
@@ -57,13 +60,14 @@ public class ObservableMixinsTests
     [Test]
     public async Task WhenOtherErrors_ThenErrorIsForwardedAndSourceStops()
     {
-        using var source = new Subject<int>();
-        using var other = new Subject<string>();
-        var expected = new InvalidOperationException("expected");
-        var values = new List<int>();
+        using Subject<int> source = new();
+        using Subject<string> other = new();
+        InvalidOperationException expected = new("expected");
+        List<int> values = [];
         Exception? observed = null;
         var completed = false;
-        using var subscription = source.TakeUntil(other).Subscribe(values.Add, exception => observed = exception, () => completed = true);
+        using var subscription = source.TakeUntil(other)
+            .Subscribe(values.Add, exception => observed = exception, () => completed = true);
         source.OnNext(FirstValue);
         other.OnError(expected);
         source.OnNext(SecondValue);
@@ -74,5 +78,6 @@ public class ObservableMixinsTests
 
     /// <summary>Throws when an unexpected error arrives.</summary>
     /// <param name = "exception">The unexpected exception.</param>
-    private static void ThrowUnexpectedError(Exception exception) => throw new InvalidOperationException("Unexpected error.", exception);
+    private static void ThrowUnexpectedError(Exception exception) =>
+        throw new InvalidOperationException("Unexpected error.", exception);
 }

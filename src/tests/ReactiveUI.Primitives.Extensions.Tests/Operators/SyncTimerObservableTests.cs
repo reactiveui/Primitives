@@ -19,7 +19,7 @@ public class SyncTimerObservableTests
     [Test]
     public async Task WhenMiddleObserverDisposed_ThenOthersStillReceiveTicks()
     {
-        var scheduler = new VirtualClock();
+        VirtualClock scheduler = new();
         var firstTicks = 0;
         var secondTicks = 0;
         var thirdTicks = 0;
@@ -46,7 +46,7 @@ public class SyncTimerObservableTests
     [Test]
     public async Task WhenSubscriptionDisposedTwice_ThenIdempotent()
     {
-        var scheduler = new VirtualClock();
+        VirtualClock scheduler = new();
         var ticks = 0;
         var period = TimeSpan.FromTicks(100);
 

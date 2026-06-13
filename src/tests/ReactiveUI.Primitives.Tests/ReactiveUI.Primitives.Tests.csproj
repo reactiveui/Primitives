@@ -13,38 +13,38 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
-    <PackageReference Include="System.Reactive" />
-    <PackageReference Include="Microsoft.Reactive.Testing" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all"/>
+    <PackageReference Include="System.Reactive"/>
+    <PackageReference Include="Microsoft.Reactive.Testing"/>
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Shared\AsyncTestHelpers.cs" Link="AsyncTestHelpers.cs" />
+    <Compile Include="..\Shared\AsyncTestHelpers.cs" Link="AsyncTestHelpers.cs"/>
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="System" />
-    <Using Include="System.Collections.Generic" />
-    <Using Include="System.ComponentModel" />
-    <Using Include="System.Diagnostics.CodeAnalysis" />
-    <Using Include="System.Linq" />
-    <Using Include="System.Linq.Expressions" />
-    <Using Include="System.Threading" />
-    <Using Include="System.Threading.Tasks" />
-    <Using Include="TUnit.Core.Executors" />
-    <Using Include="TUnit.Core.Interfaces" />
+    <Using Include="System"/>
+    <Using Include="System.Collections.Generic"/>
+    <Using Include="System.ComponentModel"/>
+    <Using Include="System.Diagnostics.CodeAnalysis"/>
+    <Using Include="System.Linq"/>
+    <Using Include="System.Linq.Expressions"/>
+    <Using Include="System.Threading"/>
+    <Using Include="System.Threading.Tasks"/>
+    <Using Include="TUnit.Core.Executors"/>
+    <Using Include="TUnit.Core.Interfaces"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj" />
-    <ProjectReference Include="..\..\ReactiveUI.Primitives.Async\ReactiveUI.Primitives.Async.csproj" />
-    <ProjectReference Include="..\..\ReactiveUI.Primitives.R3Bridge.Generator\ReactiveUI.Primitives.R3Bridge.Generator.csproj" />
-    <ProjectReference Include="..\..\ReactiveUI.Primitives.SystemReactiveBridge.Generator\ReactiveUI.Primitives.SystemReactiveBridge.Generator.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj"/>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Async\ReactiveUI.Primitives.Async.csproj"/>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.R3Bridge.Generator\ReactiveUI.Primitives.R3Bridge.Generator.csproj"/>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.SystemReactiveBridge.Generator\ReactiveUI.Primitives.SystemReactiveBridge.Generator.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
-    <Analyzer Include="..\..\ReactiveUI.Primitives.R3Bridge.Generator\bin\$(Configuration)\netstandard2.0\ReactiveUI.Primitives.R3Bridge.Generator.dll" />
-    <Analyzer Include="..\..\ReactiveUI.Primitives.SystemReactiveBridge.Generator\bin\$(Configuration)\netstandard2.0\ReactiveUI.Primitives.SystemReactiveBridge.Generator.dll" />
+    <Analyzer Include="..\..\ReactiveUI.Primitives.R3Bridge.Generator\bin\$(Configuration)\netstandard2.0\ReactiveUI.Primitives.R3Bridge.Generator.dll"/>
+    <Analyzer Include="..\..\ReactiveUI.Primitives.SystemReactiveBridge.Generator\bin\$(Configuration)\netstandard2.0\ReactiveUI.Primitives.SystemReactiveBridge.Generator.dll"/>
   </ItemGroup>
 
 </Project>

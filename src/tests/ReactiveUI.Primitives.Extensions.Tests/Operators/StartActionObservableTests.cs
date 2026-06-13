@@ -23,7 +23,7 @@ public class StartActionObservableTests
         var completed = false;
         var emitted = 0;
 
-        using var sub = ReactiveExtensions.Start(() => ran = true, scheduler: null)
+        using var sub = ReactiveExtensions.Start(() => ran = true, null)
             .Subscribe(_ => emitted++, () => completed = true);
 
         await Assert.That(ran).IsTrue();
@@ -36,7 +36,7 @@ public class StartActionObservableTests
     [Test]
     public async Task WhenStartActionWithScheduler_ThenRunsViaScheduler()
     {
-        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var ran = false;
 
         using var sub = ReactiveExtensions.Start(() => ran = true, TaskPoolSequencer.Default)
@@ -52,9 +52,9 @@ public class StartActionObservableTests
     public async Task WhenStartActionThrowsInline_ThenForwardsError()
     {
         Exception? caught = null;
-        var expected = new InvalidOperationException(ActionFailedMessage);
+        InvalidOperationException expected = new(ActionFailedMessage);
 
-        using var sub = ReactiveExtensions.Start(() => throw expected, scheduler: null)
+        using var sub = ReactiveExtensions.Start(() => throw expected, null)
             .Subscribe(static _ => { }, ex => caught = ex);
 
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -65,8 +65,8 @@ public class StartActionObservableTests
     [Test]
     public async Task WhenStartActionThrowsScheduled_ThenForwardsError()
     {
-        var faulted = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var expected = new InvalidOperationException(ActionFailedMessage);
+        TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        InvalidOperationException expected = new(ActionFailedMessage);
 
         using var sub = ReactiveExtensions.Start(() => throw expected, TaskPoolSequencer.Default)
             .Subscribe(static _ => { }, ex => faulted.TrySetResult(ex));

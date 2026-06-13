@@ -19,7 +19,7 @@ public sealed class ObserverAsyncDisposeTests
     [Test]
     public async Task WhenDisposedReentrantlyFromOwnNotificationAfterThreadHop_ThenDoesNotDeadlock()
     {
-        var observer = new SelfDisposingObserver();
+        SelfDisposingObserver observer = new();
 
         await observer.OnNextAsync(1, CancellationToken.None).AsTask().WaitAsync(TimeSpan.FromSeconds(5));
 
@@ -55,7 +55,8 @@ public sealed class ObserverAsyncDisposeTests
         }
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) => default;
+        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            default;
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result) => default;

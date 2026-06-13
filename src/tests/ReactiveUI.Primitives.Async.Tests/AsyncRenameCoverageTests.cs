@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Collections.Concurrent;
 using ReactiveUI.Primitives.Async.Internals;
 using ReactiveUI.Primitives.Concurrency;
@@ -15,10 +16,10 @@ public sealed class AsyncRenameCoverageTests
     [Test]
     public async Task AsyncContextRenamedMembersExposeDefaultAndSequencerSchedulerPaths()
     {
-        var sequencer = new QueuedSequencer();
+        QueuedSequencer sequencer = new();
         var sequencerContext = AsyncContext.From(sequencer);
-        var scheduler = new AsyncContext.SequencerTaskScheduler(sequencer);
-        var syncSequencer = new SynchronizationSequencer();
+        AsyncContext.SequencerTaskScheduler scheduler = new(sequencer);
+        SynchronizationSequencer syncSequencer = new();
         var syncSequencerContext = AsyncContext.From((ISequencer)syncSequencer);
         var sameInSequencer = false;
         var ran = false;
@@ -32,10 +33,10 @@ public sealed class AsyncRenameCoverageTests
         await Assert.That(scheduler.GetScheduledTasksForTesting()).IsNull();
         var task = Task.Factory.StartNew(
             () =>
-        {
-            sameInSequencer = sequencerContext.IsSameAsCurrentAsyncContext();
-            ran = true;
-        },
+            {
+                sameInSequencer = sequencerContext.IsSameAsCurrentAsyncContext();
+                ran = true;
+            },
             CancellationToken.None,
             TaskCreationOptions.DenyChildAttach,
             scheduler);
@@ -46,10 +47,8 @@ public sealed class AsyncRenameCoverageTests
         await Assert.That(sameInSequencer).IsTrue();
         await Assert.That(
             scheduler.TryExecuteTaskInlineForTesting(
-                new Task(() =>
-                {
-                }),
-                taskWasPreviouslyQueued: false)).IsFalse();
+                new(() => { }),
+                false)).IsFalse();
     }
 
     /// <summary>Verifies current-context capture and explicit awaiter scheduling branches.</summary>
@@ -58,7 +57,7 @@ public sealed class AsyncRenameCoverageTests
     public async Task AsyncContextCurrentAndSwitcherBranchesCoverCustomSchedulersAndCancellation()
     {
         var previous = SynchronizationContext.Current;
-        var currentContext = new SynchronizationContext();
+        SynchronizationContext currentContext = new();
         try
         {
             SynchronizationContext.SetSynchronizationContext(currentContext);
@@ -71,13 +70,14 @@ public sealed class AsyncRenameCoverageTests
         }
 
         var cancellationCallbacks = 0;
-        using var cancellation = new CancellationTokenSource();
+        using CancellationTokenSource cancellation = new();
         await cancellation.CancelAsync().ConfigureAwait(false);
-        var canceledAwaitable = AsyncContext.Default.SwitchContextAsync(forceYielding: true, cancellation.Token);
+        var canceledAwaitable = AsyncContext.Default.SwitchContextAsync(true, cancellation.Token);
         canceledAwaitable.OnCompleted(() => cancellationCallbacks++);
         await Assert.That(cancellationCallbacks).IsEqualTo(1);
-        var scheduled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var schedulerAwaitable = AsyncContext.From(NewThreadTaskScheduler.Instance).SwitchContextAsync(forceYielding: true, CancellationToken.None);
+        TaskCompletionSource scheduled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var schedulerAwaitable = AsyncContext.From(NewThreadTaskScheduler.Instance)
+            .SwitchContextAsync(true, CancellationToken.None);
         schedulerAwaitable.OnCompleted(scheduled.SetResult);
         await scheduled.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
     }
@@ -87,10 +87,11 @@ public sealed class AsyncRenameCoverageTests
     [Test]
     public async Task TaskSignalSubscriptionCompleteWithFailureReportsThrownCompletion()
     {
-        using var unhandled = new UnhandledExceptionCapture();
-        var expected = new InvalidOperationException("task-signal-completion");
-        var observer = new ThrowingCompletionWitness(expected);
-        await TaskSignalSubscription<int>.CompleteWithFailureAsync(observer, new InvalidOperationException("source")).ConfigureAwait(false);
+        using UnhandledExceptionCapture unhandled = new();
+        InvalidOperationException expected = new("task-signal-completion");
+        ThrowingCompletionWitness observer = new(expected);
+        await TaskSignalSubscription<int>.CompleteWithFailureAsync(observer, new InvalidOperationException("source"))
+            .ConfigureAwait(false);
         var reported = await unhandled.WaitForAsync(expected.Message, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
         await Assert.That(reported).IsSameReferenceAs(expected);
     }
@@ -101,9 +102,10 @@ public sealed class AsyncRenameCoverageTests
     public async Task ObserverAsyncRenamedDisposalMembersTrackAssignedSubscription()
     {
         var disposed = 0;
-        var observer = new RenameCoverageWitness();
+        RenameCoverageWitness observer = new();
         await Assert.That(observer.HasDisposed).IsFalse();
-        await observer.AssignSourceSubscriptionAsync(new CallbackAsyncDisposable(() => disposed++)).ConfigureAwait(false);
+        await observer.AssignSourceSubscriptionAsync(new CallbackAsyncDisposable(() => disposed++))
+            .ConfigureAwait(false);
         await observer.DisposeAsync().ConfigureAwait(false);
         await Assert.That(observer.HasDisposed).IsTrue();
         await Assert.That(disposed).IsEqualTo(1);
@@ -114,9 +116,9 @@ public sealed class AsyncRenameCoverageTests
     [Test]
     public async Task ObserverAsyncDisposeReportsAssignedSubscriptionFailure()
     {
-        using var unhandled = new UnhandledExceptionCapture();
-        var expected = new InvalidOperationException("assigned-dispose");
-        var observer = new RenameCoverageWitness();
+        using UnhandledExceptionCapture unhandled = new();
+        InvalidOperationException expected = new("assigned-dispose");
+        RenameCoverageWitness observer = new();
         await observer.AssignSourceSubscriptionAsync(new ThrowingAsyncDisposable(expected)).ConfigureAwait(false);
         await observer.DisposeAsync().ConfigureAwait(false);
         var reported = await unhandled.WaitForAsync(expected.Message, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
@@ -128,23 +130,28 @@ public sealed class AsyncRenameCoverageTests
     [Test]
     public async Task RouteObserverErrorAsyncReportsCanceledAndThrownHandlerPaths()
     {
-        using var unhandled = new UnhandledExceptionCapture();
-        var canceledObserver = new RenameCoverageWitness();
-        var canceledError = new InvalidOperationException("route-canceled");
-        using var cancellation = new CancellationTokenSource();
+        using UnhandledExceptionCapture unhandled = new();
+        RenameCoverageWitness canceledObserver = new();
+        InvalidOperationException canceledError = new("route-canceled");
+        using CancellationTokenSource cancellation = new();
         await cancellation.CancelAsync().ConfigureAwait(false);
         await canceledObserver.RouteObserverErrorAsync(canceledError, cancellation.Token).ConfigureAwait(false);
-        var canceledReported = await unhandled.WaitForAsync(canceledError.Message, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        var canceledReported = await unhandled.WaitForAsync(canceledError.Message, TimeSpan.FromSeconds(5))
+            .ConfigureAwait(false);
         await Assert.That(canceledReported).IsSameReferenceAs(canceledError);
-        var operationCanceledError = new InvalidOperationException("route-operation-canceled");
-        var operationCanceledObserver = new RenameCoverageWitness((_, _) => throw new OperationCanceledException());
-        await operationCanceledObserver.RouteObserverErrorAsync(operationCanceledError, CancellationToken.None).ConfigureAwait(false);
-        var operationCanceledReported = await unhandled.WaitForAsync(operationCanceledError.Message, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        InvalidOperationException operationCanceledError = new("route-operation-canceled");
+        RenameCoverageWitness operationCanceledObserver = new((_, _) => throw new OperationCanceledException());
+        await operationCanceledObserver.RouteObserverErrorAsync(operationCanceledError, CancellationToken.None)
+            .ConfigureAwait(false);
+        var operationCanceledReported = await unhandled
+            .WaitForAsync(operationCanceledError.Message, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
         await Assert.That(operationCanceledReported).IsSameReferenceAs(operationCanceledError);
-        var handlerError = new InvalidOperationException("route-handler");
-        var throwingObserver = new RenameCoverageWitness((_, _) => throw handlerError);
-        await throwingObserver.RouteObserverErrorAsync(new InvalidOperationException("source"), CancellationToken.None).ConfigureAwait(false);
-        var handlerReported = await unhandled.WaitForAsync(handlerError.Message, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        InvalidOperationException handlerError = new("route-handler");
+        RenameCoverageWitness throwingObserver = new((_, _) => throw handlerError);
+        await throwingObserver.RouteObserverErrorAsync(new InvalidOperationException("source"), CancellationToken.None)
+            .ConfigureAwait(false);
+        var handlerReported = await unhandled.WaitForAsync(handlerError.Message, TimeSpan.FromSeconds(5))
+            .ConfigureAwait(false);
         await Assert.That(handlerReported).IsSameReferenceAs(handlerError);
     }
 
@@ -153,9 +160,9 @@ public sealed class AsyncRenameCoverageTests
     [Test]
     public async Task ObserverAsyncCompletionSlowPathReportsThrownCompletion()
     {
-        using var unhandled = new UnhandledExceptionCapture();
-        var expected = new InvalidOperationException("completion-slow");
-        var observer = new RenameCoverageWitness(onCompleted: _ => new ValueTask(Task.FromException(expected)));
+        using UnhandledExceptionCapture unhandled = new();
+        InvalidOperationException expected = new("completion-slow");
+        RenameCoverageWitness observer = new(onCompleted: _ => new(Task.FromException(expected)));
         await observer.OnCompletedAsync(Result.Success).ConfigureAwait(false);
         var reported = await unhandled.WaitForAsync(expected.Message, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
         await Assert.That(reported).IsSameReferenceAs(expected);
@@ -164,13 +171,16 @@ public sealed class AsyncRenameCoverageTests
     /// <summary>Test observer exposing the renamed internal observer members.</summary>
     /// <param name = "onError">Optional error handler used by <see cref = "OnErrorResumeAsyncCore"/>.</param>
     /// <param name = "onCompleted">Optional completion handler used by <see cref = "OnCompletedAsyncCore"/>.</param>
-    private sealed class RenameCoverageWitness(Func<Exception, CancellationToken, ValueTask>? onError = null, Func<Result, ValueTask>? onCompleted = null) : WitnessAsync<int>
+    private sealed class RenameCoverageWitness(
+        Func<Exception, CancellationToken, ValueTask>? onError = null,
+        Func<Result, ValueTask>? onCompleted = null) : WitnessAsync<int>
     {
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result) => onCompleted?.Invoke(result) ?? default;
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) => onError?.Invoke(error, cancellationToken) ?? default;
+        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            onError?.Invoke(error, cancellationToken) ?? default;
 
         /// <inheritdoc/>
         protected override ValueTask OnNextAsyncCore(int value, CancellationToken cancellationToken) => default;

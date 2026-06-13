@@ -95,9 +95,9 @@ public static partial class SignalAsyncExtensions
                 // incr refCount before Subscribe(completed source decrement refCxount in Subscribe)
                 ++_refCount;
                 var needConnect = _refCount == 1;
-                var coObserver = new RefCountWitness(this, observer);
-                var subcription = await source.SubscribeAsync(coObserver, cancellationToken).ConfigureAwait(false);
-                if (needConnect && !coObserver.HasDisposed)
+                RefCountWitness refCountWitness = new(this, observer);
+                var subcription = await source.SubscribeAsync(refCountWitness, cancellationToken).ConfigureAwait(false);
+                if (needConnect && !refCountWitness.HasDisposed)
                 {
                     SingleAssignmentDisposableAsync connection = new();
                     _connection = connection;

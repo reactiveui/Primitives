@@ -42,7 +42,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
         Comparer = comparer ?? throw new ArgumentNullException(nameof(comparer));
     }
 
-    /// <summary>Gets or sets the scheduler's absolute time clock value.</summary>
+    /// <summary>Gets the scheduler's absolute time clock value.</summary>
     public TAbsolute Clock
     {
         get;
@@ -67,7 +67,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
 
     /// <summary>Advances the scheduler's clock by the specified relative time, running all work scheduled for that timespan.</summary>
     /// <param name="time">Relative time to advance the scheduler's clock by.</param>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="time"/> is negative.</exception>
+    /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="time"/> is negative.</exception>
     /// <exception cref="InvalidOperationException">
     /// The scheduler is already running. VirtualTimeSequencer doesn't support running nested
     /// work dispatch loops. To simulate time slippage while running work on the scheduler,
@@ -100,7 +100,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
 
     /// <summary>Advances the scheduler's clock to the specified time, running all work till that point.</summary>
     /// <param name="time">Absolute time to advance the scheduler's clock to.</param>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="time"/> is in the past.</exception>
+    /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="time"/> is in the past.</exception>
     /// <exception cref="InvalidOperationException">
     /// The scheduler is already running. VirtualTimeSequencer doesn't support running nested
     /// work dispatch loops. To simulate time slippage while running work on the scheduler,
@@ -163,7 +163,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
     /// <param name="state">State passed to the action to be executed.</param>
     /// <param name="action">Action to be executed.</param>
     /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="action"/> is <c>null</c>.</exception>
     public IDisposable Schedule<TState>(TState state, Func<ISequencer, TState, IDisposable> action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
@@ -177,7 +177,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
     /// <param name="dueTime">Relative time after which to execute the action.</param>
     /// <param name="action">Action to be executed.</param>
     /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="action"/> is <c>null</c>.</exception>
     public IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<ISequencer, TState, IDisposable> action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
@@ -191,7 +191,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
     /// <param name="dueTime">Absolute time at which to execute the action.</param>
     /// <param name="action">Action to be executed.</param>
     /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="action"/> is <c>null</c>.</exception>
     public IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
@@ -201,7 +201,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
 
     /// <summary>Schedules a work item to be executed at the current virtual clock.</summary>
     /// <param name="item">Work item to execute.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item)
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
@@ -220,7 +220,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
     /// <summary>Schedules a work item to be executed at a sequencer timestamp.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <param name="dueTimestamp">Absolute sequencer timestamp.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item, long dueTimestamp)
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
@@ -262,7 +262,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
 
     /// <summary>Advances the scheduler's clock by the specified relative time.</summary>
     /// <param name="time">Relative time to advance the scheduler's clock by.</param>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="time"/> is negative.</exception>
+    /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="time"/> is negative.</exception>
     public void Sleep(TRelative time)
     {
         var dt = Add(Clock, time);

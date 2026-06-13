@@ -168,6 +168,18 @@ Treat Android dependency installation as an environment/setup operation, not nor
 
 ---
 
+## Test Naming And Organization
+
+These rules are authoritative for everything under `src/tests/`.
+
+- **Name test classes/files after the production type under test.** A test class is `<ProductionClass>Tests` (e.g. `SparkTests`, `WitnessTests`, `SequencerTests`, `ReplaySignalTests`). Where a cohesive family has no single umbrella type, name it after the namespace's representative type (e.g. `DisposableTests` for the `Disposables` family).
+- **No invented, purpose-describing names.** Do not name test files after the *reason* they exist. Banned tokens in test file/class names unless they are literally part of a production type's name: `Coverage`, `EdgeCase`, `Edge`, `Contract`, `Runtime`, `Scenario`, `RealWorld`, `Patch`, `Infrastructure`, `Expansion`, `Internal`. ("Edge" is allowed only if the originating production class itself contains it.)
+- **Group each test with the class it exercises.** When a test sits in a "coverage"-style grab-bag file, move it into the `<ProductionClass>Tests` file for the type it actually tests. Split a multi-subject test method by subject only when the split is clean; otherwise home the whole method under its dominant production type.
+- **Split large test files into partial classes.** If a `<ProductionClass>Tests` file exceeds **1000 lines**, split it into partial-class files that group members with similar names together, suffixing by group: `FooTests.cs`, `FooTests.Aggregates.cs`, `FooTests.FlatMap.cs`, etc. All parts keep the same `partial class` name.
+- **No `#pragma warning disable`** (see also the zero-pragma policy): fix the root cause. Long lines (S103), long methods (S138), and long files (S104) are fixed by wrapping/splitting, not suppressing. If a suppression is genuinely unavoidable, use a scoped `[SuppressMessage]` attribute, never a pragma.
+
+---
+
 ## Agent Compatibility
 
 If another agent entrypoint file exists, it should defer to this file.

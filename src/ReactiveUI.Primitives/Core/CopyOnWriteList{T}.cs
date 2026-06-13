@@ -6,17 +6,17 @@ namespace ReactiveUI.Primitives.Core;
 
 /// <summary>Immutable array-backed list optimized for copy-on-write observer storage.</summary>
 /// <typeparam name="T">The item type.</typeparam>
-internal sealed class ImmutableList<T>
+internal sealed class CopyOnWriteList<T>
 {
     /// <summary>Gets the shared empty list.</summary>
-    public static readonly ImmutableList<T> Empty = new();
+    public static readonly CopyOnWriteList<T> Empty = new();
 
-    /// <summary>Initializes a new instance of the <see cref="ImmutableList{T}"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="CopyOnWriteList{T}"/> class.</summary>
     /// <param name="data">Items owned by the immutable list.</param>
-    public ImmutableList(T[] data) => Items = data;
+    public CopyOnWriteList(T[] data) => Items = data;
 
-    /// <summary>Initializes a new instance of the <see cref="ImmutableList{T}"/> class.</summary>
-    private ImmutableList() => Items = [];
+    /// <summary>Initializes a new instance of the <see cref="CopyOnWriteList{T}"/> class.</summary>
+    private CopyOnWriteList() => Items = [];
 
     /// <summary>Gets the immutable list items.</summary>
     public T[] Items { get; }
@@ -24,7 +24,7 @@ internal sealed class ImmutableList<T>
     /// <summary>Returns a new list with the value appended.</summary>
     /// <param name="value">Value to append.</param>
     /// <returns>A new immutable list containing the added value.</returns>
-    public ImmutableList<T> Add(T value)
+    public CopyOnWriteList<T> Add(T value)
     {
         var newData = new T[Items.Length + 1];
         Array.Copy(Items, newData, Items.Length);
@@ -35,7 +35,7 @@ internal sealed class ImmutableList<T>
     /// <summary>Returns a new list with the first matching value removed.</summary>
     /// <param name="value">Value to remove.</param>
     /// <returns>A new immutable list without the value, or the current list when the value is absent.</returns>
-    public ImmutableList<T> Remove(T value)
+    public CopyOnWriteList<T> Remove(T value)
     {
         var i = IndexOf(value);
         if (i < 0)

@@ -18,7 +18,7 @@ internal static class FirstAsTaskHelper
     public static Task<T> FirstAsTask<T>(IObservable<T> source)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
-        var observer = new FirstWitness<T>();
+        FirstWitness<T> observer = new();
         observer.Subscription = source.Subscribe(observer);
         return observer.Task;
     }

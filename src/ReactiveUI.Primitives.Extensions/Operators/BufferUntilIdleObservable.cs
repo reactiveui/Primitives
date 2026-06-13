@@ -28,7 +28,7 @@ internal sealed class BufferUntilIdleObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(scheduler);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new BufferUntilIdleSink(observer, idleTime, scheduler);
+        BufferUntilIdleSink sink = new(observer, idleTime, scheduler);
         var subscription = source.Subscribe(sink);
         return new DisposableBag(subscription, sink);
     }

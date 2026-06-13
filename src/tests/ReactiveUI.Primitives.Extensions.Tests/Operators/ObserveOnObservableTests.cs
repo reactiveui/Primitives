@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Disposables;
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Concurrency;
@@ -24,8 +25,8 @@ public class ObserveOnObservableTests
     [Test]
     public async Task WhenImmediateScheduler_ThenForwardsDirectly()
     {
-        var source = new Subject<int>();
-        var values = new List<int>();
+        Subject<int> source = new();
+        List<int> values = [];
         var completed = false;
         using var sub = source.ObserveOnSafe(Sequencer.Immediate).Subscribe(values.Add, () => completed = true);
         source.OnNext(1);
@@ -40,9 +41,9 @@ public class ObserveOnObservableTests
     [Test]
     public async Task WhenValuesMarshalled_ThenForwardedInOrderOnDrain()
     {
-        var scheduler = new VirtualClock();
-        var source = new Subject<int>();
-        var values = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> source = new();
+        List<int> values = [];
         using var sub = source.ObserveOnSafe(scheduler).Subscribe(values.Add);
         source.OnNext(1);
         source.OnNext(SecondValue);
@@ -58,14 +59,12 @@ public class ObserveOnObservableTests
     [Test]
     public async Task WhenSourceErrors_ThenForwardsError()
     {
-        var scheduler = new VirtualClock();
-        var source = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> source = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = source.ObserveOnSafe(scheduler).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         source.OnError(expected);
         scheduler.AdvanceBy(1);
@@ -77,13 +76,11 @@ public class ObserveOnObservableTests
     [Test]
     public async Task WhenSourceCompletes_ThenForwardsCompletion()
     {
-        var scheduler = new VirtualClock();
-        var source = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> source = new();
         var completed = false;
         using var sub = source.ObserveOnSafe(scheduler).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completed = true);
         source.OnCompleted();
         scheduler.AdvanceBy(1);
@@ -95,9 +92,9 @@ public class ObserveOnObservableTests
     [Test]
     public async Task WhenDisposedBeforeDrain_ThenTearsDownAndDropsQueued()
     {
-        var scheduler = new VirtualClock();
-        var source = new Subject<int>();
-        var values = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> source = new();
+        List<int> values = [];
         var sub = source.ObserveOnSafe(scheduler).Subscribe(values.Add);
         source.OnNext(1);
         await Assert.That(source.HasObservers).IsTrue();
@@ -114,13 +111,11 @@ public class ObserveOnObservableTests
     [Test]
     public async Task WhenSourceTerminatesDuringSubscribe_ThenLateAttachDisposesSubscription()
     {
-        var expected = new InvalidOperationException(SourceErrorMessage);
-        var source = new SyncErroringObservable<int>(expected);
+        InvalidOperationException expected = new(SourceErrorMessage);
+        SyncErroringObservable<int> source = new(expected);
         Exception? caught = null;
         using var sub = source.ObserveOnSafe(new InlineScheduler()).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(source.Subscription.IsDisposed).IsTrue();

@@ -1,11 +1,12 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Disposables.Tests;
 
-/// <summary>DisposableTests.</summary>
+/// <summary>Tests for the disposables family of types.</summary>
 public class DisposableTests
 {
     /// <summary>Called when [dispose once].</summary>
@@ -14,7 +15,7 @@ public class DisposableTests
     public async Task OnlyDisposeOnce()
     {
         var disposed = 0;
-        var disposable = new ActionDisposable(() => disposed++);
+        ActionDisposable disposable = new(() => disposed++);
         disposable.Dispose();
         await Assert.That(disposed).IsEqualTo(1);
         disposable.Dispose();
@@ -36,7 +37,7 @@ public class DisposableTests
     [Test]
     public async Task CancellationDisposableDefaultConstructorCancelsOwnedToken()
     {
-        var disposable = new CancellationDisposable();
+        CancellationDisposable disposable = new();
         await Assert.That(disposable.Token.IsCancellationRequested).IsFalse();
         await Assert.That(disposable.IsDisposed).IsFalse();
         disposable.Dispose();
@@ -52,7 +53,7 @@ public class DisposableTests
     [Test]
     public async Task SingleDisposableDispose()
     {
-        var disposable = new SingleDisposable(EmptyDisposable.Instance);
+        SingleDisposable disposable = new(EmptyDisposable.Instance);
         disposable.Dispose();
         await Assert.That(disposable.IsDisposed).IsTrue();
     }
@@ -63,7 +64,7 @@ public class DisposableTests
     public async Task SingleDisposableDisposeWithAction()
     {
         var disposed = 0;
-        var disposable = new SingleDisposable(EmptyDisposable.Instance, () => disposed++);
+        SingleDisposable disposable = new(EmptyDisposable.Instance, () => disposed++);
         disposable.Dispose();
         await Assert.That(disposable.IsDisposed).IsTrue();
         await Assert.That(disposed).IsEqualTo(1);
@@ -80,7 +81,7 @@ public class DisposableTests
     [Test]
     public async Task MultipleDisposableDispose()
     {
-        var disposable = new MultipleDisposable();
+        MultipleDisposable disposable = [];
         disposable.Dispose();
         await Assert.That(disposable.IsDisposed).IsTrue();
     }
@@ -94,9 +95,9 @@ public class DisposableTests
         var disposed = 0;
 
         // A child disposable whose action runs when the group is disposed.
-        var singleDisposable = new SingleDisposable(EmptyDisposable.Instance, () => disposed++);
+        SingleDisposable singleDisposable = new(EmptyDisposable.Instance, () => disposed++);
         disposable.Add(singleDisposable);
-        var singleDisposable2 = new SingleDisposable(EmptyDisposable.Instance);
+        SingleDisposable singleDisposable2 = new(EmptyDisposable.Instance);
         disposable.Add(singleDisposable2);
         disposable.Dispose();
         await Assert.That(disposable.IsDisposed).IsTrue();
@@ -110,14 +111,10 @@ public class DisposableTests
     [Test]
     public async Task MultipleDisposableCountReflectsContents()
     {
-        var first = new ActionDisposable(() =>
-        {
-        });
-        var second = new ActionDisposable(() =>
-        {
-        });
+        ActionDisposable first = new(() => { });
+        ActionDisposable second = new(() => { });
         IDisposable[] items = [first, second];
-        MultipleDisposable disposable = [..items];
+        MultipleDisposable disposable = [.. items];
         await Assert.That(disposable.Count).IsEqualTo(items.Length);
         disposable.Remove(first);
         await Assert.That(disposable.Count).IsEqualTo(items.Length - 1);
@@ -130,14 +127,10 @@ public class DisposableTests
     [Test]
     public async Task MultipleDisposableSupportsCollectionInitializer()
     {
-        var first = new ActionDisposable(() =>
-        {
-        });
-        var second = new ActionDisposable(() =>
-        {
-        });
+        ActionDisposable first = new(() => { });
+        ActionDisposable second = new(() => { });
         IDisposable[] items = [first, second];
-        MultipleDisposable disposable = [..items];
+        MultipleDisposable disposable = [.. items];
         await Assert.That(disposable.Count).IsEqualTo(items.Length);
         await Assert.That(disposable.Contains(first)).IsTrue();
         await Assert.That(disposable.Contains(second)).IsTrue();
@@ -149,12 +142,8 @@ public class DisposableTests
     [Test]
     public async Task MultipleDisposableContainsReportsMembership()
     {
-        var tracked = new ActionDisposable(() =>
-        {
-        });
-        var untracked = new ActionDisposable(() =>
-        {
-        });
+        ActionDisposable tracked = new(() => { });
+        ActionDisposable untracked = new(() => { });
         MultipleDisposable disposable = [tracked];
         await Assert.That(disposable.Contains(tracked)).IsTrue();
         await Assert.That(disposable.Contains(untracked)).IsFalse();
@@ -170,8 +159,9 @@ public class DisposableTests
     public async Task MultipleDisposableClearDisposesContentsAndStaysUsable()
     {
         var disposedCount = 0;
-        IDisposable[] items = [new ActionDisposable(() => disposedCount++), new ActionDisposable(() => disposedCount++)];
-        MultipleDisposable disposable = [..items];
+        IDisposable[] items =
+            [new ActionDisposable(() => disposedCount++), new ActionDisposable(() => disposedCount++)];
+        MultipleDisposable disposable = [.. items];
         disposable.Clear();
         await Assert.That(disposedCount).IsEqualTo(items.Length);
         await Assert.That(disposable.Count).IsEqualTo(0);
@@ -188,13 +178,9 @@ public class DisposableTests
     [Test]
     public async Task MultipleDisposableEnumeratesAndCopies()
     {
-        var first = new ActionDisposable(() =>
-        {
-        });
-        var second = new ActionDisposable(() =>
-        {
-        });
-        var disposable = new MultipleDisposable(first, second);
+        ActionDisposable first = new(() => { });
+        ActionDisposable second = new(() => { });
+        MultipleDisposable disposable = new(first, second);
         var enumeratedCount = 0;
         var sawFirst = false;
         var sawSecond = false;
@@ -220,8 +206,14 @@ public class DisposableTests
     public async Task MultipleDisposableHandlesOverflow()
     {
         var disposedCount = 0;
-        IDisposable[] items = [new ActionDisposable(() => disposedCount++), new ActionDisposable(() => disposedCount++), new ActionDisposable(() => disposedCount++), new ActionDisposable(() => disposedCount++)];
-        MultipleDisposable disposable = [..items];
+        IDisposable[] items =
+        [
+            new ActionDisposable(() => disposedCount++),
+            new ActionDisposable(() => disposedCount++),
+            new ActionDisposable(() => disposedCount++),
+            new ActionDisposable(() => disposedCount++)
+        ];
+        MultipleDisposable disposable = [.. items];
         await Assert.That(disposable.Count).IsEqualTo(items.Length);
 
         // Enumerate and copy while the group spills into the overflow store.
@@ -235,9 +227,7 @@ public class DisposableTests
         var array = new IDisposable[disposable.Count];
         disposable.CopyTo(array, 0);
         await Assert.That(array.Length).IsEqualTo(items.Length);
-        var missing = new ActionDisposable(() =>
-        {
-        });
+        ActionDisposable missing = new(() => { });
         await Assert.That(disposable.Contains(items[0])).IsTrue();
         await Assert.That(disposable.Contains(items[items.Length - 1])).IsTrue();
         await Assert.That(disposable.Contains(missing)).IsFalse();
@@ -255,7 +245,7 @@ public class DisposableTests
     [Test]
     public async Task MultipleDisposableCopyToValidatesArguments()
     {
-        var disposable = new MultipleDisposable();
+        MultipleDisposable disposable = [];
         await Assert.That(() => disposable.CopyTo(null!, 0)).ThrowsExactly<ArgumentNullException>();
         await Assert.That(() => disposable.CopyTo([], -1)).ThrowsExactly<ArgumentOutOfRangeException>();
     }
@@ -265,12 +255,8 @@ public class DisposableTests
     [Test]
     public async Task MultipleDisposableNonGenericEnumeration()
     {
-        var first = new ActionDisposable(() =>
-        {
-        });
-        var second = new ActionDisposable(() =>
-        {
-        });
+        ActionDisposable first = new(() => { });
+        ActionDisposable second = new(() => { });
         MultipleDisposable disposable = [first, second];
         var count = 0;
         foreach (var _ in (System.Collections.IEnumerable)disposable)
@@ -286,12 +272,10 @@ public class DisposableTests
     [Test]
     public async Task MultipleDisposableAfterDisposeIsEmptyAndDisposesNewItems()
     {
-        var disposable = new MultipleDisposable();
+        MultipleDisposable disposable = [];
         disposable.Dispose();
         await Assert.That(disposable.Count).IsEqualTo(0);
-        await Assert.That(disposable.Contains(new ActionDisposable(() =>
-        {
-        }))).IsFalse();
+        await Assert.That(disposable.Contains(new ActionDisposable(() => { }))).IsFalse();
         var enumeratedAfterDispose = 0;
         foreach (var _ in disposable)
         {

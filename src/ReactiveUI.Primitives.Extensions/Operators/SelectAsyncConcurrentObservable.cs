@@ -25,7 +25,7 @@ internal sealed class SelectAsyncConcurrentObservable<TSource, TResult>(
         InvalidOperationExceptionHelper.ThrowIfNull(selector);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new SelectAsyncConcurrentSink(observer, selector, maxConcurrency);
+        SelectAsyncConcurrentSink sink = new(observer, selector, maxConcurrency);
         var sub = source.Subscribe(sink);
         return new DisposableBag(sub, sink);
     }

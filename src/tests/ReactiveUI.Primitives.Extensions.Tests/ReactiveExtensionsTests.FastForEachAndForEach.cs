@@ -16,7 +16,7 @@ public partial class ReactiveExtensionsTests
     public async Task ForEach_FlattensEnumerables()
     {
         var source = Observable.Return(ExpectedSequence123);
-        var results = new List<int>();
+        List<int> results = [];
         using var sub = source.ForEach().Subscribe(results.Add);
 
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2, SampleValue3]);
@@ -27,8 +27,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenFastForEachWithList_ThenEmitsAllItems()
     {
-        var source = Observable.Return(new List<int> { 1, 2, 3 } as IEnumerable<int>);
-        var results = new List<int>();
+        List<int> items = [1, 2, 3];
+        var source = Observable.Return<IEnumerable<int>>(items);
+        List<int> results = [];
         using var sub = source.ForEach().Subscribe(results.Add);
 
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2, SampleValue3]);
@@ -39,8 +40,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenFastForEachWithArray_ThenEmitsAllItems()
     {
-        var arr = new[] { 1, 2, 3 };
-        var results = new List<int>();
+        int[] arr = [1, 2, 3];
+        List<int> results = [];
         using var sub = arr.FromArray().Subscribe(results.Add);
 
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2, SampleValue3]);
@@ -52,7 +53,7 @@ public partial class ReactiveExtensionsTests
     public async Task WhenFastForEachWithEnumerable_ThenEmitsAllItems()
     {
         var source = Observable.Return(Enumerate());
-        var results = new List<int>();
+        List<int> results = [];
         using var sub = source.ForEach().Subscribe(results.Add);
 
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2, SampleValue3]);
@@ -71,8 +72,8 @@ public partial class ReactiveExtensionsTests
     public async Task WhenFastForEachWithIList_ThenEmitsAllItems()
     {
         IList<int> ilist = new ArraySegment<int>([10, 20, 30]);
-        var source = Observable.Return((IEnumerable<int>)ilist);
-        var results = new List<int>();
+        var source = Observable.Return<IEnumerable<int>>(ilist);
+        List<int> results = [];
         using var sub = source.ForEach().Subscribe(results.Add);
 
         await Assert.That(results).IsCollectionEqualTo([SampleValue10, SampleValue20, SampleValue30]);
@@ -83,9 +84,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenFastForEachWithArrayViaForEach_ThenEmitsAllItems()
     {
-        var arr = new[] { 10, 20, 30 };
-        var source = Observable.Return(arr as IEnumerable<int>);
-        var results = new List<int>();
+        int[] arr = [10, 20, 30];
+        var source = Observable.Return<IEnumerable<int>>(arr);
+        List<int> results = [];
         using var sub = source.ForEach().Subscribe(results.Add);
 
         await Assert.That(results).IsCollectionEqualTo([SampleValue10, SampleValue20, SampleValue30]);
@@ -98,7 +99,7 @@ public partial class ReactiveExtensionsTests
     {
         // Given
         List<int> source = [1, 2, 3];
-        var received = new List<int>();
+        List<int> received = [];
         var observer = Observer.Create<int>(received.Add);
 
         // When
@@ -114,8 +115,8 @@ public partial class ReactiveExtensionsTests
     public async Task WhenFastForEach_GivenArray_ThenAllItemsEmitted()
     {
         // Given
-        var source = new[] { 10, 20, 30 };
-        var received = new List<int>();
+        int[] source = [10, 20, 30];
+        List<int> received = [];
         var observer = Observer.Create<int>(received.Add);
 
         // When
@@ -137,7 +138,7 @@ public partial class ReactiveExtensionsTests
             yield return SettleDelayMilliseconds;
         }
 
-        var received = new List<int>();
+        List<int> received = [];
         var observer = Observer.Create<int>(received.Add);
 
         // When
@@ -155,8 +156,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenFastForEachWithArrayAsIEnumerable_ThenHandledByArrayBranch()
     {
-        var arr = new[] { 5, 10, 15 };
-        var received = new List<int>();
+        int[] arr = [5, 10, 15];
+        List<int> received = [];
         var observer = Observer.Create<int>(received.Add);
 
         observer.FastForEach(arr);
@@ -173,8 +174,8 @@ public partial class ReactiveExtensionsTests
     public async Task WhenFastForEach_GivenSingleElementArray_ThenEmitsSingleItem()
     {
         // Given
-        var source = new[] { 99 };
-        var received = new List<int>();
+        int[] source = [99];
+        List<int> received = [];
         var observer = Observer.Create<int>(received.Add);
 
         // When
@@ -189,8 +190,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenFastForEach_GivenReadOnlyListOnly_ThenAllItemsEmitted()
     {
-        var source = new ReadOnlyListOnly<int>([SampleValue5, SampleValue10, SampleValue15]);
-        var received = new List<int>();
+        ReadOnlyListOnly<int> source = new([SampleValue5, SampleValue10, SampleValue15]);
+        List<int> received = [];
         var observer = Observer.Create<int>(received.Add);
 
         observer.FastForEach(source);

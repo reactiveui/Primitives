@@ -20,7 +20,7 @@ internal sealed class LatestOrDefaultObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new LatestOrDefaultSink(observer, defaultValue);
+        LatestOrDefaultSink sink = new(observer, defaultValue);
         sink.Initialize();
         return source.Subscribe(sink);
     }

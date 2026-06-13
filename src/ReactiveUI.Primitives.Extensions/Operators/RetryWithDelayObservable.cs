@@ -25,7 +25,7 @@ internal sealed class RetryWithDelayObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(delaySelector);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new RetryWithDelaySink(observer, source, retryCount, delaySelector, Sequencer.Default);
+        RetryWithDelaySink sink = new(observer, source, retryCount, delaySelector, Sequencer.Default);
         sink.Run();
         return sink;
     }

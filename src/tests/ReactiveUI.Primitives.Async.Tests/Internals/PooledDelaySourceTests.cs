@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async.Tests.Internals;
@@ -16,7 +17,7 @@ public class PooledDelaySourceTests
     [Test]
     public async Task WhenPreCancelledToken_ThenFailsWithOperationCanceled()
     {
-        using var cts = new CancellationTokenSource();
+        using CancellationTokenSource cts = new();
         await cts.CancelAsync();
         var source = PooledDelaySource.Rent();
         var task = source.BeginAsync(ShortDelay, new NonSystemTimeProvider(), cts.Token);
@@ -43,7 +44,7 @@ public class PooledDelaySourceTests
     [Test]
     public async Task WhenTokenCancelledMidFlight_ThenFailsWithOperationCanceled()
     {
-        using var cts = new CancellationTokenSource();
+        using CancellationTokenSource cts = new();
         var source = PooledDelaySource.Rent();
         var task = source.BeginAsync(TimeSpan.FromSeconds(10), new NonSystemTimeProvider(), cts.Token);
         await cts.CancelAsync();
@@ -55,6 +56,7 @@ public class PooledDelaySourceTests
     private sealed class NonSystemTimeProvider : TimeProvider
     {
         /// <inheritdoc/>
-        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) => System.CreateTimer(callback, state, dueTime, period);
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) =>
+            System.CreateTimer(callback, state, dueTime, period);
     }
 }

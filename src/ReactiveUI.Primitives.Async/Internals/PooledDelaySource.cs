@@ -49,14 +49,14 @@ internal sealed class PooledDelaySource : IValueTaskSource
     /// <summary>Backing source. Continuations run asynchronously so awaiters never re-enter the timer / cancel path.</summary>
     private ManualResetValueTaskSourceCore<bool> _core = new() { RunContinuationsAsynchronously = true };
 
-    /// <summary><see cref="StateOpen"/> until the timer or cancellation claims completion; then <see cref="StateClaimed"/>.</summary>
+    /// <summary>Tracks completion: <see cref="StateOpen"/> until the timer or cancellation claims completion; then <see cref="StateClaimed"/>.</summary>
     private int _completed;
 
     /// <summary>The active timer, or <see langword="null"/> when the source isn't currently in use.</summary>
     private ITimer? _timer;
 
     /// <summary>The cancellation registration, or <c>default</c> when not registered.</summary>
-    private CancellationTokenRegistration _ctReg;
+    private CancellationTokenRegistration _cancellationRegistration;
 
     /// <summary>Initializes a new instance of the <see cref="PooledDelaySource"/> class.</summary>
     private PooledDelaySource()
@@ -112,7 +112,7 @@ internal sealed class PooledDelaySource : IValueTaskSource
 
         if (cancellationToken.CanBeCanceled)
         {
-            _ctReg = cancellationToken.UnsafeRegister(
+            _cancellationRegistration = cancellationToken.UnsafeRegister(
                 static (state, ct) => ((PooledDelaySource)state!).OnCancelled(ct),
                 this);
         }
@@ -177,8 +177,8 @@ internal sealed class PooledDelaySource : IValueTaskSource
         Justification = "Thread-static slot is intentional — each thread caches its own instance.")]
     private void ReturnToPool()
     {
-        _ctReg.Dispose();
-        _ctReg = default;
+        _cancellationRegistration.Dispose();
+        _cancellationRegistration = default;
         _timer?.Dispose();
         _timer = null;
         _completed = StateOpen;

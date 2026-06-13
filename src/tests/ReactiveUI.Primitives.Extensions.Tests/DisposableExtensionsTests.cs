@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
 using ReactiveUI.Primitives.Disposables;
@@ -16,9 +17,7 @@ public class DisposableExtensionsTests
     public async Task GivenNull_WhenDisposeWith_ThenExceptionThrown()
     {
         // Given
-        var sut = new ActionDisposable(() =>
-        {
-        });
+        ActionDisposable sut = new(() => { });
 
         // When
         var result = Assert.Throws<ArgumentNullException>(() => sut.DisposeWith((CompositeDisposable)null!));
@@ -33,8 +32,8 @@ public class DisposableExtensionsTests
     public async Task GivenDisposable_WhenDisposeWith_ThenDisposed()
     {
         // Given
-        var sut = new CompositeDisposable();
-        var compositeDisposable = new CompositeDisposable();
+        CompositeDisposable sut = [];
+        CompositeDisposable compositeDisposable = [];
         sut.DisposeWith(compositeDisposable);
 
         // When
@@ -50,8 +49,8 @@ public class DisposableExtensionsTests
     public async Task GivenDisposable_WhenDisposeWith_ThenReturnsDisposable()
     {
         // Given, When
-        var sut = new CompositeDisposable();
-        var compositeDisposable = new CompositeDisposable();
+        CompositeDisposable sut = [];
+        CompositeDisposable compositeDisposable = [];
         var result = sut.DisposeWith(compositeDisposable);
 
         // Then

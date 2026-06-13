@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -25,9 +26,9 @@ public class SampleLatestObservableTests
     [Test]
     public async Task WhenSampleLatestTriggerBeforeAnyValue_ThenNoEmission()
     {
-        var source = new Subject<int>();
-        var trigger = new Subject<object>();
-        var results = new List<int>();
+        Subject<int> source = new();
+        Subject<object> trigger = new();
+        List<int> results = [];
         using var sub = source.SampleLatest(trigger).Subscribe(results.Add);
         trigger.OnNext(TriggerToken);
         await Assert.That(results).IsEmpty();
@@ -40,9 +41,9 @@ public class SampleLatestObservableTests
     {
         const int First = 1;
         const int Second = 2;
-        var source = new Subject<int>();
-        var trigger = new Subject<object>();
-        var results = new List<int>();
+        Subject<int> source = new();
+        Subject<object> trigger = new();
+        List<int> results = [];
         using var sub = source.SampleLatest(trigger).Subscribe(results.Add);
         source.OnNext(First);
         source.OnNext(Second);
@@ -56,14 +57,12 @@ public class SampleLatestObservableTests
     [Test]
     public async Task WhenSampleLatestSourceErrors_ThenForwardsError()
     {
-        var source = new Subject<int>();
-        var trigger = new Subject<object>();
+        Subject<int> source = new();
+        Subject<object> trigger = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = source.SampleLatest(trigger).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         source.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -74,14 +73,12 @@ public class SampleLatestObservableTests
     [Test]
     public async Task WhenSampleLatestTriggerErrors_ThenForwardsError()
     {
-        var source = new Subject<int>();
-        var trigger = new Subject<object>();
+        Subject<int> source = new();
+        Subject<object> trigger = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(TriggerErrorMessage);
+        InvalidOperationException expected = new(TriggerErrorMessage);
         using var sub = source.SampleLatest(trigger).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         trigger.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -92,13 +89,11 @@ public class SampleLatestObservableTests
     [Test]
     public async Task WhenSampleLatestSourceCompletes_ThenForwardsCompletion()
     {
-        var source = new Subject<int>();
-        var trigger = new Subject<object>();
+        Subject<int> source = new();
+        Subject<object> trigger = new();
         var completed = false;
         using var sub = source.SampleLatest(trigger).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completed = true);
         source.OnCompleted();
         await Assert.That(completed).IsTrue();
@@ -110,9 +105,9 @@ public class SampleLatestObservableTests
     public async Task WhenSampleLatestTriggerCompletes_ThenDownstreamRemainsOpen()
     {
         const int Value = 7;
-        var source = new Subject<int>();
-        var trigger = new Subject<object>();
-        var results = new List<int>();
+        Subject<int> source = new();
+        Subject<object> trigger = new();
+        List<int> results = [];
         var completed = false;
         using var sub = source.SampleLatest(trigger).Subscribe(results.Add, () => completed = true);
         source.OnNext(Value);
@@ -130,15 +125,15 @@ public class SampleLatestObservableTests
     [Test]
     public async Task WhenSourceEventsAfterTerminated_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
-        var trigger = new SyncDirectSource<object>();
-        var values = new List<int>();
+        SyncDirectSource<int> source = new();
+        SyncDirectSource<object> trigger = new();
+        List<int> values = [];
         Exception? caught = null;
         var completedCount = 0;
         using var sub = source.SampleLatest(trigger).Subscribe(values.Add, ex => caught = ex, () => completedCount++);
 
         // Terminate via trigger error first.
-        var expected = new InvalidOperationException("trigger");
+        InvalidOperationException expected = new("trigger");
         trigger.Observer.OnError(expected);
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));

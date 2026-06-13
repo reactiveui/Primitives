@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>Signals.</summary>
+/// <summary>Provides static factory and operator methods for signals.</summary>
 public static partial class Signal
 {
     /// <summary>Stores state for the signal implementation.</summary>
@@ -201,7 +201,7 @@ public static partial class Signal
     {
         try
         {
-            var (result, isCanceled) = await cancellableTask.ConfigureAwait(false);
+            (var result, var isCanceled) = await cancellableTask.ConfigureAwait(false);
             if (!isCanceled && !token.IsCancellationRequested && shouldEmit(result))
             {
                 observer.OnNext(result);
@@ -338,7 +338,7 @@ public static partial class Signal
                 return EmptyDisposable.Instance;
             }
 
-            var subscription = new ImmediateTaskSubscription(SourceCore);
+            ImmediateTaskSubscription subscription = new(SourceCore);
             _ = ObserveTask(
                 task.WhenCancelled(token),
                 _shouldEmit,

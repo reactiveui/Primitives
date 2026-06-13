@@ -59,7 +59,7 @@ internal sealed class SelectManyThenObservable<TSource, TMid, TResult>(
         {
             _downstream = downstream;
             _first = first;
-            _midObserver = new MidWitness(downstream, second);
+            _midObserver = new(downstream, second);
         }
 
         /// <inheritdoc/>

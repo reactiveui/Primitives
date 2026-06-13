@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -14,7 +15,8 @@ public partial class CombiningOperatorTests
     public async Task WhenGroupBySourceThrowsDuringSubscription_ThenDisposesAndRethrows()
     {
         var failing = SignalAsync.Create<int>((_, _) => throw new InvalidOperationException("subscribe fail"));
-        await Assert.That(async () => await failing.GroupBy(x => x % SampleValue2).ToListAsync()).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(async () => await failing.GroupBy(x => x % SampleValue2).ToListAsync())
+            .ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Tests that GroupBy group observable subscriptions are tracked by the parent disposable.</summary>
@@ -23,31 +25,31 @@ public partial class CombiningOperatorTests
     public async Task WhenGroupByGroupObservableSubscribed_ThenSubscriptionIsTracked()
     {
         var signal = Signal.Create<int>();
-        var evenItems = new List<int>();
-        var oddItems = new List<int>();
-        var innerSubs = new List<IAsyncDisposable>();
+        List<int> evenItems = [];
+        List<int> oddItems = [];
+        List<IAsyncDisposable> innerSubs = [];
         await using var sub = await signal.Values.GroupBy(x => x % 2).SubscribeAsync(
             async (group, ct) =>
-        {
-            var inner = await group.SubscribeAsync(
-                (x, _) =>
             {
-                if (group.Key == 0)
-                {
-                    evenItems.Add(x);
-                }
-                else
-                {
-                    oddItems.Add(x);
-                }
+                var inner = await group.SubscribeAsync(
+                    (x, _) =>
+                    {
+                        if (group.Key == 0)
+                        {
+                            evenItems.Add(x);
+                        }
+                        else
+                        {
+                            oddItems.Add(x);
+                        }
 
-                return default;
+                        return default;
+                    },
+                    null,
+                    null,
+                    ct);
+                innerSubs.Add(inner);
             },
-                null,
-                null,
-                ct);
-            innerSubs.Add(inner);
-        },
             null);
         await signal.OnNextAsync(1, CancellationToken.None);
         await signal.OnNextAsync(SampleValue2, CancellationToken.None);

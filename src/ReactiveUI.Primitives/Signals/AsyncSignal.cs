@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>AsyncSignal.</summary>
+/// <summary>A signal that exposes its next value as an awaitable operation.</summary>
 /// <typeparam name="T">The Type.</typeparam>
 /// <seealso cref="ISignal&lt;T&gt;" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
@@ -106,7 +106,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
 
     /// <summary>Specifies a callback action that will be invoked when the subject completes.</summary>
     /// <param name="continuation">Callback action that will be invoked when the subject completes.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="continuation"/> is null.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="continuation"/> is null.</exception>
     public void OnCompleted(Action continuation)
     {
         ArgumentExceptionHelper.ThrowIfNull(continuation);
@@ -116,7 +116,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
 
     /// <summary>Called when [error].</summary>
     /// <param name="error">The error.</param>
-    /// <exception cref="ArgumentNullException">error.</exception>
+    /// <exception cref="ArgumentExceptionHelper">error.</exception>
     public void OnError(Exception error)
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
@@ -159,7 +159,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
     /// <summary>Subscribes the specified observer.</summary>
     /// <param name="observer">The observer.</param>
     /// <returns>A Disposable.</returns>
-    /// <exception cref="ArgumentNullException">observer.</exception>
+    /// <exception cref="ArgumentExceptionHelper">observer.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
@@ -227,7 +227,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
     {
         if (!IsCompleted)
         {
-            var completionEvent = new ManualResetEvent(false);
+            ManualResetEvent completionEvent = new(false);
             SubscribeCompletion(() => completionEvent.Set(), false);
             completionEvent.WaitOne();
         }

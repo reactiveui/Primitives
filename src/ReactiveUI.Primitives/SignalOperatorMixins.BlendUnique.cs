@@ -72,7 +72,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new BlendUniqueSink<T>(observer, _comparer);
+            BlendUniqueSink<T> sink = new(observer, _comparer);
             sink.Run(_sources);
             return sink;
         }

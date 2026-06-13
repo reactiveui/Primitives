@@ -31,7 +31,7 @@ internal abstract class SignalsBase<T> : IRequireCurrentThread<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var subscription = new SingleDisposable();
+        SingleDisposable subscription = new();
 
         if (IsCurrentThreadSubscriptionRequired && CurrentThreadSequencer.IsScheduleRequired)
         {

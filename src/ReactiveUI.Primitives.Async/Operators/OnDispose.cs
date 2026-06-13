@@ -57,7 +57,7 @@ public static partial class SignalAsyncExtensions
         /// <inheritdoc/>
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken)
         {
-            var sink = new OnDisposeWitness<T>(observer, disposeAction);
+            OnDisposeWitness<T> sink = new(observer, disposeAction);
             return source.SubscribeAsync(sink, cancellationToken);
         }
     }
@@ -71,7 +71,7 @@ public static partial class SignalAsyncExtensions
         /// <inheritdoc/>
         protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken)
         {
-            var sink = new OnDisposeWitnessSync<T>(observer, disposeAction);
+            OnDisposeWitnessSync<T> sink = new(observer, disposeAction);
             return source.SubscribeAsync(sink, cancellationToken);
         }
     }

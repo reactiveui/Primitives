@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>TaskSignal.</summary>
+/// <summary>Provides factory methods for creating task-backed signals.</summary>
 public static class TaskSignal
 {
     /// <summary>Creates the specified source.</summary>
@@ -15,7 +15,7 @@ public static class TaskSignal
     /// <returns>
     /// An AsyncObservable.
     /// </returns>
-    /// <exception cref="ArgumentNullException">observableFactory.</exception>
+    /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
     public static ITaskSignal<TResult> Create<TResult>(Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory) =>
         Instance(observableFactory, null, null);
 
@@ -26,7 +26,7 @@ public static class TaskSignal
     /// <returns>
     /// An AsyncObservable.
     /// </returns>
-    /// <exception cref="ArgumentNullException">observableFactory.</exception>
+    /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
     public static ITaskSignal<TResult> Create<TResult>(Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory, ISequencer? scheduler) =>
         Instance(observableFactory, scheduler, null);
 
@@ -38,7 +38,7 @@ public static class TaskSignal
     /// <returns>
     /// An AsyncObservable.
     /// </returns>
-    /// <exception cref="ArgumentNullException">observableFactory.</exception>
+    /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
     public static ITaskSignal<TResult> Create<TResult>(
         Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory,
         ISequencer? scheduler,

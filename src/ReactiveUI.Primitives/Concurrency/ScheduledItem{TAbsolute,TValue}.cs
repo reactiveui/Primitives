@@ -41,7 +41,7 @@ public sealed class ScheduledItem<TAbsolute, TValue> : ScheduledItem<TAbsolute>
     /// <param name="state">State to pass to the scheduled action.</param>
     /// <param name="action">Scheduled action.</param>
     /// <param name="dueTime">Time at which to run the scheduled action.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
     public ScheduledItem(ISequencer scheduler, TValue state, Func<ISequencer, TValue, IDisposable> action, TAbsolute dueTime)
         : this(scheduler, state, action, dueTime, Comparer<TAbsolute>.Default)
     {

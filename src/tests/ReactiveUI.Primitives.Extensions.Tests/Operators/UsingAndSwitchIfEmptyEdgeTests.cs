@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Concurrency;
@@ -19,8 +20,8 @@ public class UsingAndSwitchIfEmptyEdgeTests
     [Test]
     public async Task WhenUsingActionNull_ThenEmitsUnitAndDisposesResource()
     {
-        var resource = new TrackedDisposable();
-        var results = new List<RxVoid>();
+        TrackedDisposable resource = new();
+        List<RxVoid> results = [];
         var completed = false;
         using var sub = resource.Using(null).Subscribe(results.Add, () => completed = true);
         await Assert.That(results).Count().IsEqualTo(1);
@@ -33,13 +34,11 @@ public class UsingAndSwitchIfEmptyEdgeTests
     [Test]
     public async Task WhenUsingActionThrows_ThenForwardsErrorAndDisposes()
     {
-        var resource = new TrackedDisposable();
+        TrackedDisposable resource = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException("action failed");
+        InvalidOperationException expected = new("action failed");
         using var sub = resource.Using(_ => throw expected).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
@@ -50,13 +49,11 @@ public class UsingAndSwitchIfEmptyEdgeTests
     [Test]
     public async Task WhenUsingActionWithScheduler_ThenRunsOnScheduler()
     {
-        var resource = new TrackedDisposable();
+        TrackedDisposable resource = new();
         var ran = false;
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = resource.Using(_ => ran = true, Sequencer.Default).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completed.TrySetResult());
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(ran).IsTrue();
@@ -78,8 +75,8 @@ public class UsingAndSwitchIfEmptyEdgeTests
     public async Task WhenUsingFunc_ThenEmitsFunctionResultAndDisposes()
     {
         const int Expected = 42;
-        var resource = new TrackedDisposable();
-        var results = new List<int>();
+        TrackedDisposable resource = new();
+        List<int> results = [];
         using var sub = resource.Using(_ => Expected).Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo([Expected]);
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
@@ -90,13 +87,11 @@ public class UsingAndSwitchIfEmptyEdgeTests
     [Test]
     public async Task WhenUsingFuncThrows_ThenForwardsErrorAndDisposes()
     {
-        var resource = new TrackedDisposable();
+        TrackedDisposable resource = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException("func failed");
+        InvalidOperationException expected = new("func failed");
         using var sub = resource.Using<TrackedDisposable, int>(_ => throw expected).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
@@ -107,7 +102,7 @@ public class UsingAndSwitchIfEmptyEdgeTests
     [Test]
     public async Task WhenSwitchIfEmptySourceErrors_ThenForwardsErrorAndIgnoresFallback()
     {
-        var source = new Subject<int>();
+        Subject<int> source = new();
         var fallbackSubscribed = false;
         var fallback = Observable.Defer(() =>
         {
@@ -115,11 +110,9 @@ public class UsingAndSwitchIfEmptyEdgeTests
             return Observable.Return(FallbackSentinel);
         });
         Exception? caught = null;
-        var expected = new InvalidOperationException("source error");
+        InvalidOperationException expected = new("source error");
         using var sub = source.SwitchIfEmpty(fallback).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         source.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -133,14 +126,14 @@ public class UsingAndSwitchIfEmptyEdgeTests
     public async Task WhenSwitchIfEmptySourceEmits_ThenCompletesWithoutFallback()
     {
         const int Value = 5;
-        var source = new Subject<int>();
+        Subject<int> source = new();
         var fallbackSubscribed = false;
         var fallback = Observable.Defer(() =>
         {
             fallbackSubscribed = true;
             return Observable.Return(FallbackSentinel);
         });
-        var results = new List<int>();
+        List<int> results = [];
         var completed = false;
         using var sub = source.SwitchIfEmpty(fallback).Subscribe(results.Add, () => completed = true);
         source.OnNext(Value);
@@ -155,9 +148,9 @@ public class UsingAndSwitchIfEmptyEdgeTests
     [Test]
     public async Task WhenSwitchIfEmptyDisposed_ThenNoFurtherEmissions()
     {
-        var source = new Subject<int>();
-        var fallback = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> source = new();
+        Subject<int> fallback = new();
+        List<int> results = [];
         var sub = source.SwitchIfEmpty(fallback).Subscribe(results.Add);
         sub.Dispose();
         source.OnCompleted();

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
+using R3;
 using ReactiveUI.Primitives.Signals;
 using RxSubject = System.Reactive.Subjects.Subject<int>;
 
@@ -59,7 +60,7 @@ public class SubjectMulticastBenchmarks
     /// <returns>The sum observed by the first observer.</returns>
     private static int EmitThroughSignal(int observerCount)
     {
-        using var subject = new Signal<int>();
+        using Signal<int> subject = new();
         var observers = new IntSignalWitness[observerCount];
         var subscriptions = new IDisposable[observerCount];
         for (var i = 0; i < observerCount; i++)
@@ -86,7 +87,7 @@ public class SubjectMulticastBenchmarks
     /// <returns>The sum observed by the first observer.</returns>
     private static int EmitThroughSystemSubject(int observerCount)
     {
-        using var subject = new RxSubject();
+        using RxSubject subject = new();
         var observers = new IntSignalWitness[observerCount];
         var subscriptions = new IDisposable[observerCount];
         for (var i = 0; i < observerCount; i++)
@@ -113,7 +114,7 @@ public class SubjectMulticastBenchmarks
     /// <returns>The sum observed by the first observer.</returns>
     private static int EmitThroughR3Subject(int observerCount)
     {
-        using var subject = new R3.Subject<int>();
+        using Subject<int> subject = new();
         var observers = new IntR3Witness[observerCount];
         var subscriptions = new IDisposable[observerCount];
         for (var i = 0; i < observerCount; i++)

@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Concurrency;
 
@@ -14,8 +15,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task BufferUntil_WithStartAndEndChars_BuffersCorrectly()
     {
-        using var subject = new Subject<char>();
-        var results = new List<string>();
+        using Subject<char> subject = new();
+        List<string> results = [];
         using var sub = subject.BufferUntil('<', '>').Subscribe(results.Add);
         subject.OnNext('a');
         subject.OnNext('<');
@@ -46,13 +47,11 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenBufferUntilSourceErrors_ThenForwardsError()
     {
-        using var subject = new Subject<char>();
+        using Subject<char> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException("buffer-until-error");
+        InvalidOperationException expected = new("buffer-until-error");
         using var sub = subject.BufferUntil('<', '>').Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnNext('a');
         subject.OnError(expected);
@@ -64,8 +63,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task BufferUntil_WhenSourceCompletesWithPartialBuffer_EmitsRemainingContent()
     {
-        using var subject = new Subject<char>();
-        var results = new List<string>();
+        using Subject<char> subject = new();
+        List<string> results = [];
         var completed = false;
         using var sub = subject.BufferUntil('<', '>').Subscribe(results.Add, () => completed = true);
         subject.OnNext('x');
@@ -86,9 +85,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Conflate_WithMinimumPeriod_DelaysUpdates()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         using var sub = subject.Conflate(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
@@ -106,11 +105,12 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Conflate_WithPendingDelayedUpdate_CompletesAfterFlush()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
-        using var sub = subject.Conflate(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add, () => completed = true);
+        using var sub = subject.Conflate(TimeSpan.FromTicks(100), scheduler)
+            .Subscribe(results.Add, () => completed = true);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnCompleted();
@@ -128,9 +128,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task BufferUntilIdle_BuffersUntilIdle()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<IList<int>>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<IList<int>> results = [];
         subject.BufferUntilIdle(TimeSpan.FromMilliseconds(100), scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
@@ -146,9 +146,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenBufferUntilIdleWithSchedulerSourceErrors_ThenFlushesAndForwardsError()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<IList<int>>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<IList<int>> results = [];
         Exception? observedError = null;
         subject.BufferUntilIdle(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add, ex => observedError = ex);
         subject.OnNext(1);
@@ -167,9 +167,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenBufferUntilIdleWithSchedulerSourceCompletes_ThenFlushesAndCompletes()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<IList<int>>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<IList<int>> results = [];
         var completed = false;
         subject.BufferUntilIdle(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add, () => completed = true);
         subject.OnNext(1);
@@ -188,8 +188,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenBufferUntilIdleCalledWithoutScheduler_ThenBuffersUntilIdle()
     {
-        var subject = new Subject<int>();
-        var results = new List<IList<int>>();
+        Subject<int> subject = new();
+        List<IList<int>> results = [];
         subject.BufferUntilIdle(TimeSpan.FromMilliseconds(100)).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
@@ -203,9 +203,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenBufferUntilInactive_ThenBuffersAndFlushesOnInactivity()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<IList<int>>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<IList<int>> results = [];
         subject.BufferUntilInactive(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
@@ -221,11 +221,12 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenBufferUntilInactiveSourceErrors_ThenFlushesAndForwardsError()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<IList<int>>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<IList<int>> results = [];
         Exception? observedError = null;
-        subject.BufferUntilInactive(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add, ex => observedError = ex);
+        subject.BufferUntilInactive(TimeSpan.FromTicks(100), scheduler)
+            .Subscribe(results.Add, ex => observedError = ex);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnError(new InvalidOperationException("test"));
@@ -242,9 +243,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenBufferUntilInactiveSourceCompletes_ThenFlushesAndCompletes()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<IList<int>>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<IList<int>> results = [];
         var completed = false;
         subject.BufferUntilInactive(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add, () => completed = true);
         subject.OnNext(1);
@@ -263,15 +264,13 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenConflateNonThrottledPath_ThenEmitsImmediately()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
         subject.Conflate(TimeSpan.FromTicks(100), scheduler).Subscribe(
             results.Add,
-            _ =>
-        {
-        },
+            _ => { },
             () => completed = true);
 
         // Emit first value - goes through non-throttled path (line 353)

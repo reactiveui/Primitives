@@ -21,7 +21,7 @@ public static partial class SignalAsync
     /// <param name="factory">A function that asynchronously produces a value of type <typeparamref name="T"/> when invoked with a <see
     /// cref="CancellationToken"/>. Cannot be null.</param>
     /// <returns>An <see cref="SignalAsync{T}"/> that emits the value returned by the factory function and then completes.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="factory"/> is null.</exception>
+    /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="factory"/> is null.</exception>
     [SuppressMessage(
         "Roslynator",
         "RCS1047:Non-asynchronous method name should not end with \'Async\'",
@@ -51,7 +51,7 @@ public static partial class SignalAsync
     /// to cancel the operation.</param>
     /// <returns>An observable sequence that emits a single value of <see cref="RxVoid"/> when the factory function completes,
     /// followed by a completion notification.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="factory"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="factory"/> is <see langword="null"/>.</exception>
     [SuppressMessage(
         "Roslynator",
         "RCS1047:Non-asynchronous method name should not end with \'Async\'",

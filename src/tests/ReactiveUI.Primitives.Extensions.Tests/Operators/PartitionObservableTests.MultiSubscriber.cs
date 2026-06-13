@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -15,11 +16,11 @@ public partial class PartitionObservableTests
     [Test]
     public async Task WhenThreeObserversSameSide_ThenAllReceive()
     {
-        var subject = new Subject<int>();
-        var(evens, _) = subject.Partition(static x => x % Two == 0);
-        var a = new List<int>();
-        var b = new List<int>();
-        var c = new List<int>();
+        Subject<int> subject = new();
+        (var evens, _) = subject.Partition(static x => x % Two == 0);
+        List<int> a = [];
+        List<int> b = [];
+        List<int> c = [];
         using var subA = evens.Subscribe(a.Add);
         using var subB = evens.Subscribe(b.Add);
         using var subC = evens.Subscribe(c.Add);
@@ -35,11 +36,11 @@ public partial class PartitionObservableTests
     [Test]
     public async Task WhenMiddleOfThreeDisposed_ThenOthersStillReceive()
     {
-        var subject = new Subject<int>();
-        var(evens, _) = subject.Partition(static x => x % Two == 0);
-        var a = new List<int>();
-        var b = new List<int>();
-        var c = new List<int>();
+        Subject<int> subject = new();
+        (var evens, _) = subject.Partition(static x => x % Two == 0);
+        List<int> a = [];
+        List<int> b = [];
+        List<int> c = [];
         using var subA = evens.Subscribe(a.Add);
         var subB = evens.Subscribe(b.Add);
         using var subC = evens.Subscribe(c.Add);
@@ -56,9 +57,9 @@ public partial class PartitionObservableTests
     [Test]
     public async Task WhenSubscriptionDisposedTwice_ThenIdempotent()
     {
-        var subject = new Subject<int>();
-        var(evens, _) = subject.Partition(static x => x % Two == 0);
-        var values = new List<int>();
+        Subject<int> subject = new();
+        (var evens, _) = subject.Partition(static x => x % Two == 0);
+        List<int> values = [];
         var sub = evens.Subscribe(values.Add);
         sub.Dispose();
         sub.Dispose();
@@ -71,11 +72,9 @@ public partial class PartitionObservableTests
     [Test]
     public async Task WhenSourceCompletesAfterAllDropped_ThenSafe()
     {
-        var subject = new Subject<int>();
-        var(evens, _) = subject.Partition(static x => x % Two == 0);
-        var sub = evens.Subscribe(static _ =>
-        {
-        });
+        Subject<int> subject = new();
+        (var evens, _) = subject.Partition(static x => x % Two == 0);
+        var sub = evens.Subscribe(static _ => { });
         sub.Dispose();
 
         // Source completion arriving after every observer has dropped must not throw.

@@ -121,18 +121,18 @@
     <TrackPublicApi Condition="$(MSBuildProjectName.EndsWith('.Generator'))">false</TrackPublicApi>
   </PropertyGroup>
   <ItemGroup Condition="'$(TrackPublicApi)' == 'true'">
-    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
-    <AdditionalFiles Include="$(MSBuildProjectDirectory)\PublicAPI\$(TargetFramework)\PublicAPI.Shipped.txt" />
-    <AdditionalFiles Include="$(MSBuildProjectDirectory)\PublicAPI\$(TargetFramework)\PublicAPI.Unshipped.txt" />
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all"/>
+    <AdditionalFiles Include="$(MSBuildProjectDirectory)\PublicAPI\$(TargetFramework)\PublicAPI.Shipped.txt"/>
+    <AdditionalFiles Include="$(MSBuildProjectDirectory)\PublicAPI\$(TargetFramework)\PublicAPI.Unshipped.txt"/>
   </ItemGroup>
 
   <!-- Alias Lock to the dedicated System.Threading.Lock on .NET 9+ (faster EnterScope fast path),
      and to a plain object elsewhere (the lock statement falls back to Monitor). -->
   <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">
-    <Using Include="System.Threading.Lock" Alias="Lock" />
+    <Using Include="System.Threading.Lock" Alias="Lock"/>
   </ItemGroup>
   <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">
-    <Using Include="System.Object" Alias="Lock" />
+    <Using Include="System.Object" Alias="Lock"/>
   </ItemGroup>
 
   <!-- Ban LINQ-to-objects (System.Linq) in shipping code so allocation-heavy LINQ cannot creep

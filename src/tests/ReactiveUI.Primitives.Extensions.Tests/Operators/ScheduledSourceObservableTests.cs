@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Concurrency;
 
@@ -27,13 +28,12 @@ public class ScheduledSourceObservableTests
     [Test]
     public async Task WhenSourceErrors_ThenSilentlySwallowed()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var results = new List<int>();
-        using var sub = ((IObservable<int>)subject).Schedule(TimeSpan.FromTicks(WindowTicks), scheduler).Subscribe(results.Add, ex => caught = ex, () =>
-        {
-        });
+        List<int> results = [];
+        using var sub = ((IObservable<int>)subject).Schedule(TimeSpan.FromTicks(WindowTicks), scheduler)
+            .Subscribe(results.Add, ex => caught = ex, () => { });
         subject.OnError(new InvalidOperationException("dropped"));
         await Assert.That(caught).IsNull();
         await Assert.That(results).IsEmpty();
@@ -45,11 +45,12 @@ public class ScheduledSourceObservableTests
     [Test]
     public async Task WhenSourceCompletes_ThenSilentlySwallowed()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         var completed = false;
-        var results = new List<int>();
-        using var sub = ((IObservable<int>)subject).Schedule(TimeSpan.FromTicks(WindowTicks), scheduler).Subscribe(results.Add, () => completed = true);
+        List<int> results = [];
+        using var sub = ((IObservable<int>)subject).Schedule(TimeSpan.FromTicks(WindowTicks), scheduler)
+            .Subscribe(results.Add, () => completed = true);
         subject.OnCompleted();
         await Assert.That(completed).IsFalse();
         await Assert.That(results).IsEmpty();
@@ -62,16 +63,15 @@ public class ScheduledSourceObservableTests
     [Test]
     public async Task WhenScheduledActionThrows_ThenForwardsErrorToDownstream()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException("action-threw");
+        InvalidOperationException expected = new("action-threw");
         Action<int> throwing = _ => throw expected;
-        using var sub = ((IObservable<int>)subject).Schedule(TimeSpan.FromTicks(WindowTicks), scheduler, throwing).Subscribe(
-            static _ =>
-        {
-        },
-            ex => caught = ex);
+        using var sub = ((IObservable<int>)subject).Schedule(TimeSpan.FromTicks(WindowTicks), scheduler, throwing)
+            .Subscribe(
+                static _ => { },
+                ex => caught = ex);
         subject.OnNext(Sentinel);
         scheduler.AdvanceBy(AdvancePastWindowTicks);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -84,16 +84,15 @@ public class ScheduledSourceObservableTests
     [Test]
     public async Task WhenScheduledTransformThrows_ThenForwardsErrorToDownstream()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException("transform-threw");
+        InvalidOperationException expected = new("transform-threw");
         Func<int, int> throwing = _ => throw expected;
-        using var sub = ((IObservable<int>)subject).Schedule(TimeSpan.FromTicks(WindowTicks), scheduler, throwing).Subscribe(
-            static _ =>
-        {
-        },
-            ex => caught = ex);
+        using var sub = ((IObservable<int>)subject).Schedule(TimeSpan.FromTicks(WindowTicks), scheduler, throwing)
+            .Subscribe(
+                static _ => { },
+                ex => caught = ex);
         subject.OnNext(Sentinel);
         scheduler.AdvanceBy(AdvancePastWindowTicks);
         await Assert.That(caught).IsSameReferenceAs(expected);

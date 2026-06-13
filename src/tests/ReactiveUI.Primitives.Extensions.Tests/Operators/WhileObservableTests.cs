@@ -49,7 +49,7 @@ public class WhileObservableTests
     public async Task WhenWhileWithScheduler_ThenRunsUntilPredicateFalse()
     {
         var remaining = IterationCount;
-        var completed = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<int> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var emitted = 0;
 
         using var sub = ReactiveExtensions.While(() => remaining > 0, () => remaining--, TaskPoolSequencer.Default)
@@ -65,7 +65,7 @@ public class WhileObservableTests
     public async Task WhenWhilePredicateThrows_ThenForwardsError()
     {
         Exception? caught = null;
-        var expected = new InvalidOperationException(PredicateFailedMessage);
+        InvalidOperationException expected = new(PredicateFailedMessage);
 
         using var sub = ReactiveExtensions.While(() => throw expected, static () => { })
             .Subscribe(static _ => { }, ex => caught = ex);
@@ -79,7 +79,7 @@ public class WhileObservableTests
     public async Task WhenWhileActionThrows_ThenForwardsError()
     {
         Exception? caught = null;
-        var expected = new InvalidOperationException(ActionFailedMessage);
+        InvalidOperationException expected = new(ActionFailedMessage);
 
         using var sub = ReactiveExtensions.While(static () => true, () => throw expected)
             .Subscribe(static _ => { }, ex => caught = ex);
@@ -93,7 +93,7 @@ public class WhileObservableTests
     public async Task WhenWhileScheduledThenDisposed_ThenIterationStops()
     {
         var ran = 0;
-        var gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var sub = ReactiveExtensions.While(
                 static () => true,

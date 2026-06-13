@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>BehaviourSignal.</summary>
+/// <summary>A signal that replays its most recent value to new subscribers.</summary>
 /// <typeparam name="T">The Type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class BehaviorSignal<T> : ISignal<T>
@@ -120,7 +120,7 @@ public class BehaviorSignal<T> : ISignal<T>
 
     /// <summary>Notifies all subscribed observers about the exception.</summary>
     /// <param name="error">The exception to send to all observers.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="error"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="error"/> is <c>null</c>.</exception>
     public void OnError(Exception error)
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
@@ -161,7 +161,7 @@ public class BehaviorSignal<T> : ISignal<T>
     /// <summary>Subscribes an observer to the subject.</summary>
     /// <param name="observer">Observer to subscribe to the subject.</param>
     /// <returns>Disposable object that can be used to unsubscribe the observer from the subject.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="observer"/> is <c>null</c>.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);

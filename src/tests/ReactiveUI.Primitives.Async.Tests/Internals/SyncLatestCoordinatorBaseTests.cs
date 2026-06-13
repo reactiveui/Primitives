@@ -15,8 +15,8 @@ public class SyncLatestCoordinatorBaseTests
     public async Task WhenConstructed_ThenLifecycleSlotsSized()
     {
         const int SourceCount = 3;
-        var captured = new CaptureObserverAsync<int>();
-        var subscription = new TestSubscription(captured, SourceCount);
+        CaptureObserverAsync<int> captured = new();
+        TestSubscription subscription = new(captured, SourceCount);
 
         await Assert.That(subscription.Lifecycle.Subscriptions).Count().IsEqualTo(SourceCount);
         await Assert.That(subscription.Lifecycle.HasDisposed).IsFalse();
@@ -31,8 +31,8 @@ public class SyncLatestCoordinatorBaseTests
         const int FirstIndex = 0;
         const int SecondIndex = 1;
         const int ThirdIndex = 2;
-        var captured = new CaptureObserverAsync<int>();
-        var subscription = new TestSubscription(captured, SourceCount);
+        CaptureObserverAsync<int> captured = new();
+        TestSubscription subscription = new(captured, SourceCount);
 
         await subscription.SubscribeSourcesAsync(CancellationToken.None);
 
@@ -49,9 +49,9 @@ public class SyncLatestCoordinatorBaseTests
     [Test]
     public async Task WhenOnErrorResume_ThenForwardsViaLifecycle()
     {
-        var captured = new CaptureObserverAsync<int>();
-        var subscription = new TestSubscription(captured, sourceCount: 1);
-        var expected = new InvalidOperationException("forward");
+        CaptureObserverAsync<int> captured = new();
+        TestSubscription subscription = new(captured, 1);
+        InvalidOperationException expected = new("forward");
 
         await subscription.RelaySourceErrorAsync(expected, CancellationToken.None);
 
@@ -66,8 +66,8 @@ public class SyncLatestCoordinatorBaseTests
     [Test]
     public async Task WhenDisposeAsync_ThenLifecycleDisposed()
     {
-        var captured = new CaptureObserverAsync<int>();
-        var subscription = new TestSubscription(captured, sourceCount: 2);
+        CaptureObserverAsync<int> captured = new();
+        TestSubscription subscription = new(captured, 2);
 
         await subscription.DisposeAsync();
         await subscription.DisposeAsync(); // idempotent
@@ -81,8 +81,8 @@ public class SyncLatestCoordinatorBaseTests
     [Test]
     public async Task WhenLinkExternalCancellationNonCancellable_ThenNoOp()
     {
-        var captured = new CaptureObserverAsync<int>();
-        var subscription = new TestSubscription(captured, sourceCount: 1);
+        CaptureObserverAsync<int> captured = new();
+        TestSubscription subscription = new(captured, 1);
 
         // CancellationToken.None — can't be cancelled, helper should bail out early.
         subscription.Lifecycle.LinkExternalCancellation(CancellationToken.None);
@@ -97,9 +97,9 @@ public class SyncLatestCoordinatorBaseTests
     [Test]
     public async Task WhenLinkExternalCancellationAlreadyCancelled_ThenDisposeTokenFires()
     {
-        var captured = new CaptureObserverAsync<int>();
-        var subscription = new TestSubscription(captured, sourceCount: 1);
-        using var cts = new CancellationTokenSource();
+        CaptureObserverAsync<int> captured = new();
+        TestSubscription subscription = new(captured, 1);
+        using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
         subscription.Lifecycle.LinkExternalCancellation(cts.Token);
@@ -114,9 +114,9 @@ public class SyncLatestCoordinatorBaseTests
     [Test]
     public async Task WhenLinkExternalCancellationCancellable_ThenLaterCancelPropagates()
     {
-        var captured = new CaptureObserverAsync<int>();
-        var subscription = new TestSubscription(captured, sourceCount: 1);
-        using var cts = new CancellationTokenSource();
+        CaptureObserverAsync<int> captured = new();
+        TestSubscription subscription = new(captured, 1);
+        using CancellationTokenSource cts = new();
 
         subscription.Lifecycle.LinkExternalCancellation(cts.Token);
         await Assert.That(subscription.Lifecycle.DisposeToken.IsCancellationRequested).IsFalse();
@@ -132,8 +132,8 @@ public class SyncLatestCoordinatorBaseTests
     [Test]
     public async Task WhenLockOnValuesLock_ThenNoThrow()
     {
-        var captured = new CaptureObserverAsync<int>();
-        var subscription = new TestSubscription(captured, sourceCount: 1);
+        CaptureObserverAsync<int> captured = new();
+        TestSubscription subscription = new(captured, 1);
         var entered = false;
 
         subscription.LockAndDo(() => entered = true);

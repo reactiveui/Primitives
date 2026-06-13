@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>Signal.</summary>
+/// <summary>Provides static factory and operator methods for signals.</summary>
 public static partial class Signal
 {
     /// <summary>Executes the RunAsync operation.</summary>
@@ -14,7 +14,7 @@ public static partial class Signal
     /// <returns>The result.</returns>
     internal static IAwaitSignal<TSource> RunAsync<TSource>(IObservable<TSource> source, CancellationToken cancellationToken)
     {
-        var s = new FinalSignal<TSource>();
+        FinalSignal<TSource> s = new();
 
         if (cancellationToken.IsCancellationRequested)
         {

@@ -2,7 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using BenchmarkDotNet.Attributes;
+using R3;
 using ReactiveUI.Primitives.Signals;
 
 using RxObservable = System.Reactive.Linq.Observable;
@@ -24,7 +26,7 @@ public class ConnectableShareBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesPublishLiveConnect()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         var connectable = Signal.Sequence(Start, Count).ShareLive();
         using var subscription = connectable.Subscribe(observer);
         using var connection = connectable.Connect();
@@ -36,7 +38,7 @@ public class ConnectableShareBenchmarks
     [Benchmark]
     public int SystemReactivePublishLiveConnect()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         var connectable = RxObservable.Publish(RxObservable.Range(Start, Count));
         using var subscription = connectable.Subscribe(observer);
         using var connection = connectable.Connect();
@@ -48,7 +50,7 @@ public class ConnectableShareBenchmarks
     [Benchmark]
     public int R3PublishLiveConnect()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         var connectable = R3.ObservableExtensions.Publish(R3.Observable.Range(Start, Count));
         using var subscription = connectable.Subscribe(observer);
         using var connection = connectable.Connect();
@@ -60,7 +62,7 @@ public class ConnectableShareBenchmarks
     [Benchmark]
     public int PrimitivesShareLiveSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(Start, Count).ShareLatest().Subscribe(observer);
         return observer.Total;
     }
@@ -70,7 +72,7 @@ public class ConnectableShareBenchmarks
     [Benchmark]
     public int SystemReactiveShareLiveSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.RefCount(RxObservable.Publish(RxObservable.Range(Start, Count)))
             .Subscribe(observer);
         return observer.Total;
@@ -81,7 +83,7 @@ public class ConnectableShareBenchmarks
     [Benchmark]
     public int R3ShareLiveSubscribe()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.Share(R3.Observable.Range(Start, Count)).Subscribe(observer);
         return observer.Total;
     }
@@ -91,7 +93,7 @@ public class ConnectableShareBenchmarks
     [Benchmark]
     public int PrimitivesReplayLiveLateSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         var connectable = Signal.Sequence(Start, Count).ReplayLive(Count);
         using var connection = connectable.Connect();
         using var subscription = connectable.Subscribe(observer);
@@ -103,7 +105,7 @@ public class ConnectableShareBenchmarks
     [Benchmark]
     public int SystemReactiveReplayLiveLateSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         var connectable = RxObservable.Replay(RxObservable.Range(Start, Count), Count);
         using var connection = connectable.Connect();
         using var subscription = connectable.Subscribe(observer);
@@ -115,7 +117,7 @@ public class ConnectableShareBenchmarks
     [Benchmark]
     public int R3ReplayLiveLateSubscribe()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         var connectable = R3.ObservableExtensions.Replay(R3.Observable.Range(Start, Count), Count);
         using var connection = connectable.Connect();
         using var subscription = connectable.Subscribe(observer);
@@ -127,7 +129,7 @@ public class ConnectableShareBenchmarks
     [Benchmark]
     public int PrimitivesRefCountSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(Start, Count).ShareLive().AutoShare().Subscribe(observer);
         return observer.Total;
     }
@@ -137,7 +139,7 @@ public class ConnectableShareBenchmarks
     [Benchmark]
     public int R3RefCountSubscribe()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.RefCount(
                 R3.ObservableExtensions.Publish(R3.Observable.Range(Start, Count)))
             .Subscribe(observer);
@@ -149,7 +151,7 @@ public class ConnectableShareBenchmarks
     [Benchmark]
     public int PrimitivesAutoConnectSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(Start, Count).ShareLive().AutoConnect().Subscribe(observer);
         return observer.Total;
     }
@@ -159,7 +161,7 @@ public class ConnectableShareBenchmarks
     [Benchmark]
     public int SystemReactiveAutoConnectSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.AutoConnect(RxObservable.Publish(RxObservable.Range(Start, Count)))
             .Subscribe(observer);
         return observer.Total;

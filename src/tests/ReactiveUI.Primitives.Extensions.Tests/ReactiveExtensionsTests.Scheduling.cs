@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -18,9 +19,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task DetectStale_WhenInactive_MarksAsStale()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<Stale<int>>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<Stale<int>> results = [];
         using var sub = subject.DetectStale(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         scheduler.AdvanceBy(SchedulerHalfWindowTicks);
@@ -42,9 +43,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Heartbeat_WhenInactive_InjectsHeartbeats()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<Heartbeat<int>>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<Heartbeat<int>> results = [];
         using var sub = subject.Heartbeat(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         scheduler.AdvanceBy(SchedulerAdvancePastWindowTicks);
@@ -80,7 +81,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ObserveOnSafe_WithScheduler_ObservesOnScheduler()
     {
-        var scheduler = new VirtualClock();
+        VirtualClock scheduler = new();
         var source = Observable.Return(1);
         int? result = null;
         using var sub = source.ObserveOnSafe(scheduler).Subscribe(x => result = x);
@@ -105,7 +106,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Start_WithFunctionAndNullScheduler_ReturnsComputedValue()
     {
-        var result = await ReactiveExtensions.Start(() => 21 * 2, scheduler: null).ToTask();
+        var result = await ReactiveExtensions.Start(() => 21 * 2, null).ToTask();
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
@@ -129,7 +130,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Heartbeat_WithUpdate_IsNotHeartbeat()
     {
-        var heartbeat = new Heartbeat<int>(42);
+        Heartbeat<int> heartbeat = new(42);
         using (Assert.Multiple())
         {
             await Assert.That(heartbeat.IsHeartbeat).IsFalse();
@@ -142,7 +143,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Heartbeat_WithoutUpdate_IsHeartbeat()
     {
-        var heartbeat = new Heartbeat<int>();
+        Heartbeat<int> heartbeat = new();
         await Assert.That(heartbeat.IsHeartbeat).IsTrue();
     }
 
@@ -151,7 +152,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Schedule_WithValueTimeSpanAndFunction_DelaysAndTransforms()
     {
-        var scheduler = new VirtualClock();
+        VirtualClock scheduler = new();
         int? result = null;
         using var sub = 10.Schedule(TimeSpan.FromTicks(100), scheduler, x => x * 2).Subscribe(x => result = x);
         await Assert.That(result).IsNull();
@@ -164,9 +165,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Schedule_WithObservableTimeSpanAndFunction_DelaysAndTransforms()
     {
-        var scheduler = new VirtualClock();
+        VirtualClock scheduler = new();
         var source = Observable.Return(10);
-        var results = new List<int>();
+        List<int> results = [];
         using var sub = source.Schedule(TimeSpan.FromTicks(100), scheduler, x => x * 2).Subscribe(results.Add);
         await Assert.That(results).IsEmpty();
         scheduler.AdvanceBy(SchedulerAdvancePastWindowTicks);
@@ -179,9 +180,9 @@ public partial class ReactiveExtensionsTests
     public async Task SyncTimer_ProducesSharedTicks()
     {
         var timeSpan = TimeSpan.FromMilliseconds(100);
-        var scheduler = new VirtualClock();
-        var results1 = new List<DateTime>();
-        var results2 = new List<DateTime>();
+        VirtualClock scheduler = new();
+        List<DateTime> results1 = [];
+        List<DateTime> results2 = [];
         using var sub1 = ReactiveExtensions.SyncTimer(timeSpan, scheduler).Take(2).Subscribe(results1.Add);
         using var sub2 = ReactiveExtensions.SyncTimer(timeSpan, scheduler).Take(2).Subscribe(results2.Add);
         scheduler.AdvanceBy(timeSpan.Ticks * SampleValue2);
@@ -199,9 +200,7 @@ public partial class ReactiveExtensionsTests
     public async Task Using_WithAction_ExecutesActionImmediately()
     {
         var executed = false;
-        using var disposable = new ActionDisposable(() =>
-        {
-        });
+        using ActionDisposable disposable = new(() => { });
         disposable.Using(d => executed = true, Sequencer.Immediate).Subscribe();
         await Assert.That(executed).IsTrue();
     }
@@ -212,10 +211,8 @@ public partial class ReactiveExtensionsTests
     public async Task Using_WithActionAndNullScheduler_ExecutesActionImmediately()
     {
         var executed = false;
-        using var disposable = new ActionDisposable(() =>
-        {
-        });
-        await disposable.Using(d => executed = true, scheduler: null).ToTask();
+        using ActionDisposable disposable = new(() => { });
+        await disposable.Using(d => executed = true, null).ToTask();
         await Assert.That(executed).IsTrue();
     }
 
@@ -224,9 +221,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Using_WithFunction_TransformsValue()
     {
-        using var disposable = new ActionDisposable(() =>
-        {
-        });
+        using ActionDisposable disposable = new(() => { });
         var result = 0;
         disposable.Using(d => SampleValue42, Sequencer.Immediate).Subscribe(r => result = r);
         await Assert.That(result).IsEqualTo(SampleValue42);
@@ -248,11 +243,11 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Schedule_WithObservableDateTimeOffsetAndAction_DelaysAndExecutesAction()
     {
-        var scheduler = new VirtualClock();
+        VirtualClock scheduler = new();
         var dueTime = scheduler.Now.AddTicks(100);
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var executed = false;
-        var results = new List<int>();
+        List<int> results = [];
         using var sub = subject.Schedule(dueTime, scheduler, value => executed = value == 42).Subscribe(results.Add);
         subject.OnNext(SampleValue42);
         using (Assert.Multiple())
@@ -275,7 +270,7 @@ public partial class ReactiveExtensionsTests
     public async Task Schedule_WithObservableTimeSpanAndAction_ExecutesAction()
     {
         var executed = false;
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         subject.Schedule(TimeSpan.FromMilliseconds(10), Sequencer.Immediate, v => executed = true).Subscribe();
         subject.OnNext(SampleValue42);
         await Assert.That(executed).IsTrue();
@@ -288,7 +283,10 @@ public partial class ReactiveExtensionsTests
     {
         var executed = false;
         const int Value = 42;
-        Value.Schedule(TimeProvider.System.GetLocalNow().AddMilliseconds(SampleValue10), Sequencer.Immediate, v => executed = true).Subscribe();
+        Value.Schedule(
+            TimeProvider.System.GetLocalNow().AddMilliseconds(SampleValue10),
+            Sequencer.Immediate,
+            v => executed = true).Subscribe();
         await Assert.That(executed).IsTrue();
     }
 
@@ -298,8 +296,11 @@ public partial class ReactiveExtensionsTests
     public async Task Schedule_WithObservableDateTimeOffsetAndAction_ExecutesAction()
     {
         var executed = false;
-        var subject = new Subject<int>();
-        subject.Schedule(TimeProvider.System.GetLocalNow().AddMilliseconds(SampleValue10), Sequencer.Immediate, v => executed = true).Subscribe();
+        Subject<int> subject = new();
+        subject.Schedule(
+            TimeProvider.System.GetLocalNow().AddMilliseconds(SampleValue10),
+            Sequencer.Immediate,
+            v => executed = true).Subscribe();
         subject.OnNext(SampleValue42);
         await Assert.That(executed).IsTrue();
     }
@@ -320,7 +321,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Schedule_WithObservableAndFunction_TransformsValue()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var result = 0;
         subject.Schedule(Sequencer.Immediate, v => v * SampleValue2).Subscribe(r => result = r);
         subject.OnNext(SampleValue42);
@@ -334,7 +335,8 @@ public partial class ReactiveExtensionsTests
     {
         const int Value = 42;
         var result = 0;
-        Value.Schedule(TimeSpan.FromMilliseconds(10), Sequencer.Immediate, v => v * SampleValue2).Subscribe(r => result = r);
+        Value.Schedule(TimeSpan.FromMilliseconds(10), Sequencer.Immediate, v => v * SampleValue2)
+            .Subscribe(r => result = r);
         await Assert.That(result).IsEqualTo(SampleValue84);
     }
 
@@ -343,9 +345,10 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Schedule_WithObservableTimeSpanAndFunction_TransformsValue()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var result = 0;
-        subject.Schedule(TimeSpan.FromMilliseconds(10), Sequencer.Immediate, v => v * SampleValue2).Subscribe(r => result = r);
+        subject.Schedule(TimeSpan.FromMilliseconds(10), Sequencer.Immediate, v => v * SampleValue2)
+            .Subscribe(r => result = r);
         subject.OnNext(SampleValue42);
         await Assert.That(result).IsEqualTo(SampleValue84);
     }
@@ -355,9 +358,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ObserveOnIf_WithBoolConditionTrue_ObservesOnScheduler()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         subject.ObserveOnIf(true, scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         await Assert.That(results).IsEmpty();
@@ -370,9 +373,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ObserveOnIf_WithBoolConditionFalse_DoesNotObserveOnScheduler()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         subject.ObserveOnIf(false, scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         await Assert.That(results).IsCollectionEqualTo([1]);
@@ -383,10 +386,10 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ObserveOnIf_WithBoolConditionTrue_ObservesOnTrueScheduler()
     {
-        var trueScheduler = new VirtualClock();
-        var falseScheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock trueScheduler = new();
+        VirtualClock falseScheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         subject.ObserveOnIf(true, trueScheduler, falseScheduler).Subscribe(results.Add);
         subject.OnNext(1);
         await Assert.That(results).IsEmpty();
@@ -399,10 +402,10 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ObserveOnIf_WithBoolConditionFalse_ObservesOnFalseScheduler()
     {
-        var trueScheduler = new VirtualClock();
-        var falseScheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock trueScheduler = new();
+        VirtualClock falseScheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         subject.ObserveOnIf(false, trueScheduler, falseScheduler).Subscribe(results.Add);
         subject.OnNext(1);
         await Assert.That(results).IsEmpty();
@@ -415,11 +418,11 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ObserveOnIf_WithReactiveCondition_ObservesOnMatchingScheduler()
     {
-        var trueScheduler = new VirtualClock();
-        var falseScheduler = new VirtualClock();
-        var source = new Subject<int>();
-        var condition = new BehaviorSubject<bool>(false);
-        var results = new List<int>();
+        VirtualClock trueScheduler = new();
+        VirtualClock falseScheduler = new();
+        Subject<int> source = new();
+        BehaviorSubject<bool> condition = new(false);
+        List<int> results = [];
         using var sub = source.ObserveOnIf(condition, trueScheduler, falseScheduler).Subscribe(results.Add);
         source.OnNext(1);
         await Assert.That(results).IsEmpty();
@@ -437,10 +440,10 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ObserveOnIf_WithReactiveConditionAndSingleScheduler_ObservesOnlyWhenEnabled()
     {
-        var scheduler = new VirtualClock();
-        var source = new Subject<int>();
-        var condition = new BehaviorSubject<bool>(false);
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> source = new();
+        BehaviorSubject<bool> condition = new(false);
+        List<int> results = [];
         using var sub = source.ObserveOnIf(condition, scheduler).Subscribe(results.Add);
         source.OnNext(1);
         await Assert.That(results).IsCollectionEqualTo([1]);
@@ -456,7 +459,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenSyncTimerCalledWithoutScheduler_ThenProducesTicks()
     {
-        var results = new List<DateTime>();
+        List<DateTime> results = [];
         using var sub = ReactiveExtensions.SyncTimer(TimeSpan.FromMilliseconds(50)).Take(2).Subscribe(results.Add);
         await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, TimeSpan.FromSeconds(5));
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
@@ -468,11 +471,9 @@ public partial class ReactiveExtensionsTests
     public async Task WhenStartActionWithNullScheduler_ThenExecutesAction()
     {
         var executed = false;
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = ReactiveExtensions.Start(() => executed = true, scheduler: null).Subscribe(
-            _ =>
-        {
-        },
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var sub = ReactiveExtensions.Start(() => executed = true, null).Subscribe(
+            _ => { },
             completed.SetResult);
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(30));
         await Assert.That(executed).IsTrue();
@@ -483,7 +484,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenStartFuncWithNullScheduler_ThenReturnsResult()
     {
-        var result = await ReactiveExtensions.Start(() => 42, scheduler: null).ToTask();
+        var result = await ReactiveExtensions.Start(() => 42, null).ToTask();
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
@@ -508,9 +509,7 @@ public partial class ReactiveExtensionsTests
     public async Task WhenUsingWithActionAndNoScheduler_ThenExecutesAndDisposes()
     {
         var actionExecuted = false;
-        using var disposable = new ActionDisposable(() =>
-        {
-        });
+        using ActionDisposable disposable = new(() => { });
         await disposable.Using(d => actionExecuted = true).ToTask();
         await Assert.That(actionExecuted).IsTrue();
     }
@@ -520,7 +519,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenScheduleValueWithTimeSpan_ThenEmitsAfterDelay()
     {
-        var scheduler = new VirtualClock();
+        VirtualClock scheduler = new();
         int? result = null;
         using var sub = 42.Schedule(TimeSpan.FromTicks(100), scheduler).Subscribe(x => result = x);
         await Assert.That(result).IsNull();
@@ -533,9 +532,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenScheduleObservableWithTimeSpan_ThenDelaysValues()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         using var sub = ((IObservable<int>)subject).Schedule(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add);
         subject.OnNext(SampleValue10);
         await Assert.That(results).IsEmpty();
@@ -548,7 +547,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenScheduleValueWithDateTimeOffset_ThenEmitsAtDueTime()
     {
-        var scheduler = new VirtualClock();
+        VirtualClock scheduler = new();
         int? result = null;
         var dueTime = scheduler.Now.AddTicks(100);
         using var sub = 42.Schedule(dueTime, scheduler).Subscribe(x => result = x);
@@ -562,9 +561,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenScheduleObservableWithDateTimeOffset_ThenDelaysValues()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         var dueTime = scheduler.Now.AddTicks(100);
         using var sub = ((IObservable<int>)subject).Schedule(dueTime, scheduler).Subscribe(results.Add);
         subject.OnNext(SampleValue10);
@@ -578,10 +577,11 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenScheduleValueWithTimeSpanAndAction_ThenExecutesActionAndEmits()
     {
-        var scheduler = new VirtualClock();
+        VirtualClock scheduler = new();
         var actionExecuted = false;
         int? result = null;
-        using var sub = 42.Schedule(TimeSpan.FromTicks(100), scheduler, v => actionExecuted = v == 42).Subscribe(x => result = x);
+        using var sub = 42.Schedule(TimeSpan.FromTicks(100), scheduler, v => actionExecuted = v == 42)
+            .Subscribe(x => result = x);
         await Assert.That(actionExecuted).IsFalse();
         scheduler.AdvanceBy(SchedulerAdvancePastWindowTicks);
         using (Assert.Multiple())
@@ -596,7 +596,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenUsingWithFunc_ThenReturnsFunctionResult()
     {
-        var disposable = new CompositeDisposable();
+        CompositeDisposable disposable = [];
         var result = await disposable.Using(d => 42).FirstAsync();
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
@@ -607,11 +607,11 @@ public partial class ReactiveExtensionsTests
     public async Task WhenWhileWithScheduler_ThenExecutesActionOnScheduler()
     {
         var executedOnScheduler = false;
-        var scheduler = new VirtualClock();
+        VirtualClock scheduler = new();
 
         // Test that the scheduler parameter is passed through to Observable.Start
         var obs = ReactiveExtensions.While(() => !executedOnScheduler, () => executedOnScheduler = true, scheduler);
-        var results = new List<RxVoid>();
+        List<RxVoid> results = [];
         using var sub = obs.Subscribe(results.Add);
 
         // Nothing should execute until the scheduler advances
@@ -626,10 +626,10 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenScheduleWithActionAndTimeSpan_ThenExecutesActionAndEmits()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
-        var actionValues = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
+        List<int> actionValues = [];
         subject.Schedule(TimeSpan.FromTicks(50), scheduler, actionValues.Add).Subscribe(results.Add);
         subject.OnNext(SampleValue10);
         scheduler.AdvanceBy(SchedulerHalfWindowTicks + 1);
@@ -642,9 +642,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenHeartbeatSourceEmits_ThenTimerSubscriptionDisposed()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<Heartbeat<int>>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<Heartbeat<int>> results = [];
         using var sub = subject.Heartbeat(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add);
 
         // Emit value, which disposes the current timer
@@ -665,12 +665,10 @@ public partial class ReactiveExtensionsTests
     public async Task WhenUsingWithActionAndNullScheduler_ThenDisposesObject()
     {
         var executed = false;
-        await using var stream = new MemoryStream();
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using MemoryStream stream = new();
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = stream.Using<MemoryStream>(_ => executed = true, null).Subscribe(
-            _ =>
-        {
-        },
+            _ => { },
             completed.SetResult);
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(executed).IsTrue();

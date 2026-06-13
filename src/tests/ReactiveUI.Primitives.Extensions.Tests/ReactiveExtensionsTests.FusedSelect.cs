@@ -22,7 +22,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenWhereSelect_ThenEmitsOnlyMatchingProjectedValues()
     {
-        var results = new List<string>();
+        List<string> results = [];
 
         using var subscription = new[] { 1, SampleValue2, SampleValue3, SampleValue4 }
             .ToObservable()
@@ -37,7 +37,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenWhereSelectSourceErrors_ThenErrorForwarded()
     {
-        var expected = new InvalidOperationException("boom");
+        InvalidOperationException expected = new("boom");
         Exception? caught = null;
 
         using var subscription = Observable.Throw<int>(expected)
@@ -52,14 +52,15 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenSelectConstant_ThenEmitsConstantForEachElement()
     {
-        var results = new List<string>();
+        List<string> results = [];
 
         using var subscription = new[] { 1, SampleValue2, SampleValue3 }
             .ToObservable()
             .SelectConstant(SelectConstantSentinel)
             .Subscribe(results.Add);
 
-        await Assert.That(results).IsCollectionEqualTo([SelectConstantSentinel, SelectConstantSentinel, SelectConstantSentinel]);
+        await Assert.That(results)
+            .IsCollectionEqualTo([SelectConstantSentinel, SelectConstantSentinel, SelectConstantSentinel]);
     }
 
     /// <summary>Verifies that TrySelect drops null projected values and emits only the non-null results.</summary>
@@ -67,7 +68,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenTrySelect_ThenDropsNullProjections()
     {
-        var results = new List<string>();
+        List<string> results = [];
 
         using var subscription = new[] { 1, SampleValue2, SampleValue3, SampleValue4 }
             .ToObservable()
@@ -83,7 +84,7 @@ public partial class ReactiveExtensionsTests
     public async Task WhenSelectManyThen_ThenChainsTwoProjections()
     {
         const int ExpectedChained = 11;
-        var results = new List<int>();
+        List<int> results = [];
 
         // Single source emission keeps the test deterministic — the operator's downstream
         // completes once the inner-inner observable completes, so a multi-emission source
@@ -102,14 +103,14 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenRunAll_ThenEmitsSingleUnitAfterAllComplete()
     {
-        var results = new List<RxVoid>();
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<RxVoid> results = [];
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         IReadOnlyList<IObservable<RxVoid>> sources =
         [
             Observable.Return(RxVoid.Default),
             Observable.Return(RxVoid.Default),
-            Observable.Return(RxVoid.Default),
+            Observable.Return(RxVoid.Default)
         ];
 
         using var subscription = sources.RunAll().Subscribe(
@@ -128,7 +129,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenRunAllEmpty_ThenEmitsUnitAndCompletes()
     {
-        var results = new List<RxVoid>();
+        List<RxVoid> results = [];
         var completed = false;
 
         using var subscription = Array.Empty<IObservable<RxVoid>>().RunAll().Subscribe(
@@ -144,14 +145,14 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenFirstMatchFromCandidates_ThenEmitsFirstSatisfyingValue()
     {
-        var keys = new[] { "a", "b", "c" };
-        var results = new List<string>();
+        string[] keys = ["a", "b", "c"];
+        List<string> results = [];
 
         using var subscription = keys.FirstMatchFromCandidates(
-            static key => Observable.Return(key + "-raw"),
-            static raw => raw.ToUpperInvariant(),
-            static transformed => transformed.StartsWith('B'),
-            CandidateFallback)
+                static key => Observable.Return(key + "-raw"),
+                static raw => raw.ToUpperInvariant(),
+                static transformed => transformed.StartsWith('B'),
+                CandidateFallback)
             .Subscribe(results.Add);
 
         await Assert.That(results).IsCollectionEqualTo(["B-RAW"]);
@@ -162,14 +163,14 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenFirstMatchFromCandidatesNoMatch_ThenEmitsFallback()
     {
-        var keys = new[] { "a", "b", "c" };
-        var results = new List<string>();
+        string[] keys = ["a", "b", "c"];
+        List<string> results = [];
 
         using var subscription = keys.FirstMatchFromCandidates(
-            static key => Observable.Return(key + "-raw"),
-            static raw => raw.ToUpperInvariant(),
-            static _ => false,
-            CandidateFallback)
+                static key => Observable.Return(key + "-raw"),
+                static raw => raw.ToUpperInvariant(),
+                static _ => false,
+                CandidateFallback)
             .Subscribe(results.Add);
 
         await Assert.That(results).IsCollectionEqualTo([CandidateFallback]);
@@ -180,16 +181,16 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenFirstMatchFromCandidatesProjectionErrors_ThenSkipsAndContinues()
     {
-        var keys = new[] { "fail", "match" };
-        var results = new List<string>();
+        string[] keys = ["fail", "match"];
+        List<string> results = [];
 
         using var subscription = keys.FirstMatchFromCandidates(
-            static key => key == "fail"
-                ? Observable.Throw<string>(new InvalidOperationException("ignored"))
-                : Observable.Return(key + "-raw"),
-            static raw => raw.ToUpperInvariant(),
-            static transformed => transformed.StartsWith('M'),
-            CandidateFallback)
+                static key => key == "fail"
+                    ? Observable.Throw<string>(new InvalidOperationException("ignored"))
+                    : Observable.Return(key + "-raw"),
+                static raw => raw.ToUpperInvariant(),
+                static transformed => transformed.StartsWith('M'),
+                CandidateFallback)
             .Subscribe(results.Add);
 
         await Assert.That(results).IsCollectionEqualTo(["MATCH-RAW"]);

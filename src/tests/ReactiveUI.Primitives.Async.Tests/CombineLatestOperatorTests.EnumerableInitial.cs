@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Async.Signals;
 using AsyncObs = ReactiveUI.Primitives.Async.SignalAsync;
 
@@ -16,7 +17,8 @@ public partial class CombineLatestOperatorTests
     {
         var failing = AsyncObs.Create<int>((_, _) => throw new InvalidOperationException("subscribe fail"));
         IObservableAsync<int>[] sources = [AsyncObs.Return(1), failing];
-        await Assert.That(async () => await sources.CombineLatest().ToListAsync()).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(async () => await sources.CombineLatest().ToListAsync())
+            .ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Tests CombineLatestEnumerable OnErrorResumeAsync is forwarded when disposed is not set.</summary>
@@ -34,7 +36,9 @@ public partial class CombineLatestOperatorTests
             return default;
         });
         await s1.OnErrorResumeAsync(new InvalidOperationException("resume"), CancellationToken.None);
-        await AsyncTestHelpers.WaitForConditionAsync(() => received is not null, TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await AsyncTestHelpers.WaitForConditionAsync(
+            () => received is not null,
+            TimeSpan.FromSeconds(WaitTimeoutSeconds));
         await Assert.That(received).IsNotNull();
         await Assert.That(received!.Message).IsEqualTo("resume");
     }
@@ -77,7 +81,9 @@ public partial class CombineLatestOperatorTests
 
         // s1 completes without emitting - should trigger completion since !_values[0].HasValue
         await s1.OnCompletedAsync(Result.Success);
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult is not null, TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await AsyncTestHelpers.WaitForConditionAsync(
+            () => completionResult is not null,
+            TimeSpan.FromSeconds(WaitTimeoutSeconds));
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
     }

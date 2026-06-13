@@ -18,6 +18,72 @@ namespace ReactiveUI.Primitives.Async;
     Justification = "C# 14 extension methods")]
 public static partial class SignalAsyncExtensions
 {
+    /// <summary>Aggregation parity helper operators for a sequence of boolean observable source sequences.</summary>
+    /// <param name="sources">The boolean source sequences.</param>
+    extension(IEnumerable<IObservableAsync<bool>> sources)
+    {
+        /// <summary>Emits <see langword="true"/> when the latest value from every source sequence is <see langword="false"/>.</summary>
+        /// <returns>A sequence of aggregate boolean states.</returns>
+        public IObservableAsync<bool> CombineLatestValuesAreAllFalse()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(sources);
+
+            var materializedSources = (sources as IObservableAsync<bool>[]) ?? [.. sources];
+            return materializedSources.Length == 0
+                ? SignalAsync.Return(true)
+                : materializedSources.CombineLatest(static values =>
+                {
+                    for (var i = 0; i < values.Count; i++)
+                    {
+                        if (values[i])
+                        {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                });
+        }
+
+        /// <summary>Emits <see langword="true"/> when the latest value from every source sequence is <see langword="true"/>.</summary>
+        /// <returns>A sequence of aggregate boolean states.</returns>
+        public IObservableAsync<bool> CombineLatestValuesAreAllTrue()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(sources);
+
+            var materializedSources = (sources as IObservableAsync<bool>[]) ?? [.. sources];
+            return materializedSources.Length == 0
+                ? SignalAsync.Return(true)
+                : materializedSources.CombineLatest(static values =>
+                {
+                    for (var i = 0; i < values.Count; i++)
+                    {
+                        if (!values[i])
+                        {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                });
+        }
+    }
+
+    /// <summary>Flattening parity helper operators for an observable source sequence of enumerables.</summary>
+    /// <param name="source">The source sequence of enumerables.</param>
+    /// <typeparam name="T">The flattened element type.</typeparam>
+    extension<T>(IObservableAsync<IEnumerable<T>> source)
+    {
+        /// <summary>Flattens each enumerable element emitted by the source into individual values.</summary>
+        /// <returns>A flattened observable sequence.</returns>
+        public IObservableAsync<T> ForEach()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new ForEachEnumerableSignal<T>(source);
+        }
+    }
+
     /// <summary>Async-native parity helper operators for an observable source sequence.</summary>
     /// <param name="source">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
@@ -262,7 +328,7 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-            var coordinator = new PartitionCoordinator<T>(source, predicate);
+            PartitionCoordinator<T> coordinator = new(source, predicate);
             return (coordinator.TrueBranch, coordinator.FalseBranch);
         }
 
@@ -422,70 +488,33 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>Aggregation parity helper operators for a sequence of boolean observable source sequences.</summary>
-    /// <param name="sources">The boolean source sequences.</param>
-    extension(IEnumerable<IObservableAsync<bool>> sources)
+    /// <summary>Null-filtering parity helper operators for a nullable reference-type observable source sequence.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <typeparam name="T">The reference type element.</typeparam>
+    extension<T>(IObservableAsync<T?> source)
+        where T : class
     {
-        /// <summary>Emits <see langword="true"/> when the latest value from every source sequence is <see langword="false"/>.</summary>
-        /// <returns>A sequence of aggregate boolean states.</returns>
-        public IObservableAsync<bool> CombineLatestValuesAreAllFalse()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(sources);
-
-            var materializedSources = (sources as IObservableAsync<bool>[]) ?? [.. sources];
-            return materializedSources.Length == 0
-                ? SignalAsync.Return(true)
-                : materializedSources.CombineLatest(static values =>
-                {
-                    for (var i = 0; i < values.Count; i++)
-                    {
-                        if (values[i])
-                        {
-                            return false;
-                        }
-                    }
-
-                    return true;
-                });
-        }
-
-        /// <summary>Emits <see langword="true"/> when the latest value from every source sequence is <see langword="true"/>.</summary>
-        /// <returns>A sequence of aggregate boolean states.</returns>
-        public IObservableAsync<bool> CombineLatestValuesAreAllTrue()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(sources);
-
-            var materializedSources = (sources as IObservableAsync<bool>[]) ?? [.. sources];
-            return materializedSources.Length == 0
-                ? SignalAsync.Return(true)
-                : materializedSources.CombineLatest(static values =>
-                {
-                    for (var i = 0; i < values.Count; i++)
-                    {
-                        if (!values[i])
-                        {
-                            return false;
-                        }
-                    }
-
-                    return true;
-                });
-        }
-    }
-
-    /// <summary>Flattening parity helper operators for an observable source sequence of enumerables.</summary>
-    /// <param name="source">The source sequence of enumerables.</param>
-    /// <typeparam name="T">The flattened element type.</typeparam>
-    extension<T>(IObservableAsync<IEnumerable<T>> source)
-    {
-        /// <summary>Flattens each enumerable element emitted by the source into individual values.</summary>
-        /// <returns>A flattened observable sequence.</returns>
-        public IObservableAsync<T> ForEach()
+        /// <summary>Skips <see langword="null"/> values until the first non-null value appears.</summary>
+        /// <returns>A sequence that starts with the first non-null value.</returns>
+        public IObservableAsync<T> SkipWhileNull()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return new ForEachEnumerableSignal<T>(source);
+            return new SkipWhileNullSignal<T>(source);
         }
+
+        /// <summary>Filters the source sequence to non-null values and narrows the result type accordingly.</summary>
+        /// <returns>A non-nullable observable sequence.</returns>
+        public IObservableAsync<T> WhereIsNotNull()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new WhereIsNotNullSignal<T>(source);
+        }
+
+        /// <summary>Keeps non-null reference values.</summary>
+        /// <returns>An observable sequence of non-null values.</returns>
+        public IObservableAsync<T> KeepNotNull() => source.WhereIsNotNull();
     }
 
     /// <summary>Boolean parity helper operators for a boolean observable source sequence.</summary>
@@ -518,34 +547,5 @@ public static partial class SignalAsyncExtensions
 
             return new WhereTrueSignal(source);
         }
-    }
-
-    /// <summary>Null-filtering parity helper operators for a nullable reference-type observable source sequence.</summary>
-    /// <param name="source">The source sequence.</param>
-    /// <typeparam name="T">The reference type element.</typeparam>
-    extension<T>(IObservableAsync<T?> source)
-        where T : class
-    {
-        /// <summary>Skips <see langword="null"/> values until the first non-null value appears.</summary>
-        /// <returns>A sequence that starts with the first non-null value.</returns>
-        public IObservableAsync<T> SkipWhileNull()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new SkipWhileNullSignal<T>(source);
-        }
-
-        /// <summary>Filters the source sequence to non-null values and narrows the result type accordingly.</summary>
-        /// <returns>A non-nullable observable sequence.</returns>
-        public IObservableAsync<T> WhereIsNotNull()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new WhereIsNotNullSignal<T>(source);
-        }
-
-        /// <summary>Keeps non-null reference values.</summary>
-        /// <returns>An observable sequence of non-null values.</returns>
-        public IObservableAsync<T> KeepNotNull() => source.WhereIsNotNull();
     }
 }

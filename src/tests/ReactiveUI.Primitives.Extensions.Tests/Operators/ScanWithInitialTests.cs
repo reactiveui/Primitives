@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -13,7 +14,6 @@ public partial class ScanWithInitialTests
     /// <summary>Synchronization gate used by tests.</summary>
     private readonly Lock _gate = new();
 #else
-
     /// <summary>Synchronization gate used by tests.</summary>
     private readonly object _gate = new();
 #endif
@@ -24,11 +24,11 @@ public partial class ScanWithInitialTests
     public async Task Subscribe_EmitsInitialValueImmediately()
     {
         // Arrange
-        var source = new Subject<int>();
+        Subject<int> source = new();
         const int Initial = 10;
         var accumulator = (int acc, int x) => acc + x;
-        var observable = new ScanWithInitialObservable<int, int>(source, Initial, accumulator);
-        var results = new List<int>();
+        ScanWithInitialObservable<int, int> observable = new(source, Initial, accumulator);
+        List<int> results = [];
 
         // Act
         using (observable.Subscribe(results.Add))
@@ -45,11 +45,11 @@ public partial class ScanWithInitialTests
     public async Task OnNext_AccumulatesValues()
     {
         // Arrange
-        var source = new Subject<int>();
+        Subject<int> source = new();
         const int Initial = 0;
         var accumulator = (int acc, int x) => acc + x;
-        var observable = new ScanWithInitialObservable<int, int>(source, Initial, accumulator);
-        var results = new List<int>();
+        ScanWithInitialObservable<int, int> observable = new(source, Initial, accumulator);
+        List<int> results = [];
 
         // Act
         using (observable.Subscribe(results.Add))
@@ -73,19 +73,17 @@ public partial class ScanWithInitialTests
     public async Task AccumulatorError_PropagatesError()
     {
         // Arrange
-        var source = new Subject<int>();
+        Subject<int> source = new();
         const int Initial = 0;
         Exception exception = new InvalidOperationException("Accumulator failed");
         Func<int, int, int> accumulator = (_, _) => throw exception;
-        var observable = new ScanWithInitialObservable<int, int>(source, Initial, accumulator);
-        var errors = new List<Exception>();
+        ScanWithInitialObservable<int, int> observable = new(source, Initial, accumulator);
+        List<Exception> errors = [];
 
         // Act
         using (observable.Subscribe(
-            _ =>
-        {
-        },
-            errors.Add))
+                   _ => { },
+                   errors.Add))
         {
             source.OnNext(1);
         }
@@ -97,34 +95,35 @@ public partial class ScanWithInitialTests
     /// <summary>Tests that <see cref = "ScanWithInitialObservable{TSource, TAccumulate}"/> is thread-safe.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage("Blocker Code Smell", "S4462:Calls to \"async\" methods should not be blocking", Justification = "Test is synchronous.")]
+    [SuppressMessage(
+        "Blocker Code Smell",
+        "S4462:Calls to \"async\" methods should not be blocking",
+        Justification = "Test is synchronous.")]
     public async Task Observable_IsThreadSafe()
     {
         // Arrange
-        var source = new Subject<int>();
+        Subject<int> source = new();
         const int Initial = 0;
         var accumulator = (int acc, int x) =>
         {
             Thread.Sleep(1); // Force potential race condition
             return acc + x;
         };
-        var observable = new ScanWithInitialObservable<int, int>(source, Initial, accumulator);
-        var results = new List<int>();
+        ScanWithInitialObservable<int, int> observable = new(source, Initial, accumulator);
+        List<int> results = [];
         var completedCount = 0;
 
         // Act
         using (observable.Subscribe(
-            x =>
-        {
-            lock (_gate)
-            {
-                results.Add(x);
-            }
-        },
-            _ =>
-        {
-        },
-            () => Interlocked.Increment(ref completedCount)))
+                   x =>
+                   {
+                       lock (_gate)
+                       {
+                           results.Add(x);
+                       }
+                   },
+                   _ => { },
+                   () => Interlocked.Increment(ref completedCount)))
         {
             var t1 = Task.Run(() =>
             {

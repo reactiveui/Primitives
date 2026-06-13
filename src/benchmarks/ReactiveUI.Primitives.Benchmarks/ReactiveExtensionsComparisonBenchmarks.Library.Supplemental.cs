@@ -29,16 +29,16 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunPartition</c> result.</returns>
     private static int RunPartition(ExtensionsLibrary library)
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         if (library == ExtensionsLibrary.Primitives)
         {
-            var (even, odd) = PrimitivesExtensions.Partition(ArraySource(library), static value => (value & 1) == 0);
+            (var even, var odd) = PrimitivesExtensions.Partition(ArraySource(library), static value => (value & 1) == 0);
             using var evenSubscription = even.Subscribe(observer);
             using var oddSubscription = odd.Subscribe(observer);
         }
         else
         {
-            var (even, odd) = PackageExtensions.Partition(ArraySource(library), static value => (value & 1) == 0);
+            (var even, var odd) = PackageExtensions.Partition(ArraySource(library), static value => (value & 1) == 0);
             using var evenSubscription = even.Subscribe(observer);
             using var oddSubscription = odd.Subscribe(observer);
         }
@@ -308,15 +308,15 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     {
         if (library == ExtensionsLibrary.Primitives)
         {
-            var clock = new TestClock();
-            var observer = new CountingSignalWitness<DateTime>();
+            TestClock clock = new();
+            CountingSignalWitness<DateTime> observer = new();
             using var subscription = PrimitivesExtensions.SyncTimer(Tick, clock).Subscribe(observer);
             clock.AdvanceBy(Tick);
             return observer.Count + observer.CompletionCount;
         }
 
-        var scheduler = new HistoricalScheduler();
-        var packageObserver = new CountingSignalWitness<DateTime>();
+        HistoricalScheduler scheduler = new();
+        CountingSignalWitness<DateTime> packageObserver = new();
         using var packageSubscription = PackageExtensions.SyncTimer(Tick, scheduler).Subscribe(packageObserver);
         scheduler.AdvanceBy(Tick);
         return packageObserver.Count + packageObserver.CompletionCount;
@@ -399,8 +399,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunToPropertyObservable</c> result.</returns>
     private static int RunToPropertyObservable(ExtensionsLibrary library)
     {
-        var source = new PropertySource();
-        var observer = new IntSignalWitness();
+        PropertySource source = new();
+        IntSignalWitness observer = new();
         using var subscription = (library == ExtensionsLibrary.Primitives
                 ? PrimitivesExtensions.ToPropertyObservable(source, static item => item.CurrentValue)
                 : PackageExtensions.ToPropertyObservable(source, static item => item.CurrentValue))
@@ -414,16 +414,16 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunToReadOnlyBehavior</c> result.</returns>
     private static int RunToReadOnlyBehavior(ExtensionsLibrary library)
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         if (library == ExtensionsLibrary.Primitives)
         {
-            var (observable, sink) = PrimitivesExtensions.ToReadOnlyBehavior(Value);
+            (var observable, var sink) = PrimitivesExtensions.ToReadOnlyBehavior(Value);
             using var subscription = observable.Subscribe(observer);
             sink.OnNext(Value + 1);
         }
         else
         {
-            var (observable, sink) = PackageExtensions.ToReadOnlyBehavior(Value);
+            (var observable, var sink) = PackageExtensions.ToReadOnlyBehavior(Value);
             using var subscription = observable.Subscribe(observer);
             sink.OnNext(Value + 1);
         }
@@ -436,8 +436,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunTrySelect</c> result.</returns>
     private static int RunTrySelect(ExtensionsLibrary library) =>
         DrainString(library == ExtensionsLibrary.Primitives
-            ? PrimitivesExtensions.TrySelect<int, string>(ArraySource(library), static value => value % EvenDivisor == 0 ? value.ToString(CultureInfo.InvariantCulture) : null)
-            : PackageExtensions.TrySelect<int, string>(ArraySource(library), static value => value % EvenDivisor == 0 ? value.ToString(CultureInfo.InvariantCulture) : null));
+            ? PrimitivesExtensions.TrySelect(ArraySource(library), static value => value % EvenDivisor == 0 ? value.ToString(CultureInfo.InvariantCulture) : null)
+            : PackageExtensions.TrySelect(ArraySource(library), static value => value % EvenDivisor == 0 ? value.ToString(CultureInfo.InvariantCulture) : null));
 
     /// <summary>Executes the <c>RunUsing</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>

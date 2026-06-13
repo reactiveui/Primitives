@@ -45,7 +45,7 @@ public static class Witness
     /// <param name="onError">Callback invoked for terminal errors.</param>
     /// <param name="onCompleted">Callback invoked for completion.</param>
     /// <returns>An observer backed by the supplied callbacks.</returns>
-    /// <exception cref="ArgumentNullException">Any callback is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper">Any callback is <see langword="null"/>.</exception>
     public static IObserver<T> Create<T>(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
         ArgumentExceptionHelper.ThrowIfNull(onNext);
@@ -69,7 +69,7 @@ public static class Witness
     /// <param name="observer">Observer to protect.</param>
     /// <param name="cancel">Cancellation resource disposed on terminal signals or callback exceptions.</param>
     /// <returns>A safe observer wrapper.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="observer"/> or <paramref name="cancel"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="observer"/> or <paramref name="cancel"/> is <see langword="null"/>.</exception>
     public static IObserver<T> Safe<T>(IObserver<T> observer, IDisposable cancel)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);

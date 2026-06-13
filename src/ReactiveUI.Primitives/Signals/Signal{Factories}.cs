@@ -184,7 +184,7 @@ public static partial class Signal
     /// <param name="addHandler">The action that attaches the generated event handler.</param>
     /// <param name="removeHandler">The action that detaches the generated event handler.</param>
     /// <returns>A signal that emits event patterns for each raised event.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="addHandler"/> or <paramref name="removeHandler"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="addHandler"/> or <paramref name="removeHandler"/> is <see langword="null"/>.</exception>
     /// <exception cref="NotSupportedException"><typeparamref name="TEventHandler"/> is not a supported event delegate type.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
@@ -206,13 +206,13 @@ public static partial class Signal
             if (typeof(TEventHandler) == typeof(PropertyChangedEventHandler))
             {
                 PropertyChangedEventHandler typed = (sender, args) =>
-                    observer.OnNext(new EventPattern<TEventArgs>(sender, (TEventArgs)(EventArgs)args));
+                    observer.OnNext(new(sender, (TEventArgs)(EventArgs)args));
                 handler = (TEventHandler)(object)typed;
             }
             else if (typeof(TEventHandler) == typeof(EventHandler<TEventArgs>))
             {
                 EventHandler<TEventArgs> typed = (sender, args) =>
-                    observer.OnNext(new EventPattern<TEventArgs>(sender, args));
+                    observer.OnNext(new(sender, args));
                 handler = (TEventHandler)(object)typed;
             }
             else
@@ -489,7 +489,7 @@ public static partial class Signal
         return CreateSafe<long>(
             observer =>
             {
-                var pocket = new MultipleDisposable();
+                MultipleDisposable pocket = [];
                 var current = 0L;
                 pocket.Add(
                     scheduler.Schedule(

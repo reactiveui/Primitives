@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Extensions.Internal;
 
@@ -32,26 +33,24 @@ public class IndexedSubscribeHelperTests
     [Test]
     public async Task WhenSourcesEmit_ThenOnNextReceivesPerSourceIndex()
     {
-        using var s0 = new Subject<int>();
-        using var s1 = new Subject<int>();
-        using var s2 = new Subject<int>();
-        var captured = new List<(int Index, int Value)>();
+        using Subject<int> s0 = new();
+        using Subject<int> s1 = new();
+        using Subject<int> s2 = new();
+        List<(int Index, int Value)> captured = [];
         using var sub = IndexedSubscribeHelper.SubscribeIndexed(
             [s0, s1, s2],
             (i, v) => captured.Add((i, v)),
-            static _ =>
-        {
-        },
-            static _ =>
-        {
-        });
+            static _ => { },
+            static _ => { });
         s1.OnNext(Source1Value);
         s0.OnNext(Source0Value);
         s2.OnNext(Source2Value);
         const int FirstIndex = 0;
         const int SecondIndex = 1;
         const int ThirdIndex = 2;
-        await Assert.That(captured).IsCollectionEqualTo([(SecondIndex, Source1Value), (FirstIndex, Source0Value), (ThirdIndex, Source2Value)]);
+        await Assert.That(captured).IsCollectionEqualTo([
+            (SecondIndex, Source1Value), (FirstIndex, Source0Value), (ThirdIndex, Source2Value)
+        ]);
     }
 
     /// <summary>Verifies that the helper forwards any source's error through the shared OnError hook.</summary>
@@ -59,19 +58,15 @@ public class IndexedSubscribeHelperTests
     [Test]
     public async Task WhenAnySourceErrors_ThenOnErrorForwarded()
     {
-        using var s0 = new Subject<int>();
-        using var s1 = new Subject<int>();
+        using Subject<int> s0 = new();
+        using Subject<int> s1 = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException("source error");
+        InvalidOperationException expected = new("source error");
         using var sub = IndexedSubscribeHelper.SubscribeIndexed(
             [s0, s1],
-            static (_, _) =>
-        {
-        },
+            static (_, _) => { },
             ex => caught = ex,
-            static _ =>
-        {
-        });
+            static _ => { });
         s1.OnError(expected);
         await Assert.That(caught).IsEqualTo(expected);
     }
@@ -81,17 +76,13 @@ public class IndexedSubscribeHelperTests
     [Test]
     public async Task WhenSourcesComplete_ThenOnCompletedReceivesPerSourceIndex()
     {
-        using var s0 = new Subject<int>();
-        using var s1 = new Subject<int>();
-        var completed = new List<int>();
+        using Subject<int> s0 = new();
+        using Subject<int> s1 = new();
+        List<int> completed = [];
         using var sub = IndexedSubscribeHelper.SubscribeIndexed(
             [s0, s1],
-            static (_, _) =>
-        {
-        },
-            static _ =>
-        {
-        },
+            static (_, _) => { },
+            static _ => { },
             completed.Add);
         const int FirstIndex = 0;
         const int SecondIndex = 1;
@@ -105,18 +96,14 @@ public class IndexedSubscribeHelperTests
     [Test]
     public async Task WhenDisposed_ThenNoFurtherDeliveries()
     {
-        using var s0 = new Subject<int>();
-        using var s1 = new Subject<int>();
-        var captured = new List<(int Index, int Value)>();
+        using Subject<int> s0 = new();
+        using Subject<int> s1 = new();
+        List<(int Index, int Value)> captured = [];
         var sub = IndexedSubscribeHelper.SubscribeIndexed(
             [s0, s1],
             (i, v) => captured.Add((i, v)),
-            static _ =>
-        {
-        },
-            static _ =>
-        {
-        });
+            static _ => { },
+            static _ => { });
         s0.OnNext(DisposeValue1);
         sub.Dispose();
         s0.OnNext(DisposeValue2);
@@ -132,15 +119,9 @@ public class IndexedSubscribeHelperTests
         const IReadOnlyList<IObservable<int>> NullSources = null!;
         var ex = Assert.Throws<ArgumentNullException>(() => IndexedSubscribeHelper.SubscribeIndexed(
             NullSources,
-            static (_, _) =>
-{
-},
-            static _ =>
-{
-},
-            static _ =>
-{
-}));
+            static (_, _) => { },
+            static _ => { },
+            static _ => { }));
         await Assert.That(ex).IsNotNull();
     }
 }

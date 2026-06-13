@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Disposables.Tests;
@@ -13,9 +14,9 @@ public class InternalDisposablesTests
     [Test]
     public async Task WhenSwapDisposableReplaced_ThenPreviousDisposed()
     {
-        var holder = new SwapDisposable();
-        var first = new CountingDisposable();
-        var second = new CountingDisposable();
+        SwapDisposable holder = new();
+        CountingDisposable first = new();
+        CountingDisposable second = new();
         holder.Disposable = first;
         await Assert.That(holder.Disposable).IsSameReferenceAs(first);
         holder.Disposable = second;
@@ -30,9 +31,9 @@ public class InternalDisposablesTests
     [Test]
     public async Task WhenSwapDisposableAfterDispose_ThenAssignmentDisposesValue()
     {
-        var holder = new SwapDisposable();
+        SwapDisposable holder = new();
         holder.Dispose();
-        var late = new CountingDisposable();
+        CountingDisposable late = new();
         holder.Disposable = late;
         await Assert.That(late.DisposeCount).IsEqualTo(1);
     }
@@ -42,11 +43,8 @@ public class InternalDisposablesTests
     [Test]
     public async Task WhenSwapDisposableDisposedTwice_ThenNoOp()
     {
-        var inner = new CountingDisposable();
-        var holder = new SwapDisposable
-        {
-            Disposable = inner
-        };
+        CountingDisposable inner = new();
+        SwapDisposable holder = new() { Disposable = inner };
         holder.Dispose();
         holder.Dispose();
         await Assert.That(inner.DisposeCount).IsEqualTo(1);
@@ -57,9 +55,9 @@ public class InternalDisposablesTests
     [Test]
     public async Task WhenMutableDisposableReplaced_ThenPreviousNotDisposed()
     {
-        var holder = new MutableDisposable();
-        var first = new CountingDisposable();
-        var second = new CountingDisposable();
+        MutableDisposable holder = new();
+        CountingDisposable first = new();
+        CountingDisposable second = new();
         holder.Disposable = first;
         holder.Disposable = second;
         await Assert.That(first.DisposeCount).IsEqualTo(0);
@@ -72,9 +70,9 @@ public class InternalDisposablesTests
     [Test]
     public async Task WhenMutableDisposableAfterDispose_ThenAssignmentDisposesValue()
     {
-        var holder = new MutableDisposable();
+        MutableDisposable holder = new();
         holder.Dispose();
-        var late = new CountingDisposable();
+        CountingDisposable late = new();
         holder.Disposable = late;
         await Assert.That(late.DisposeCount).IsEqualTo(1);
     }
@@ -84,11 +82,8 @@ public class InternalDisposablesTests
     [Test]
     public async Task WhenMutableDisposableDisposedTwice_ThenNoOp()
     {
-        var inner = new CountingDisposable();
-        var holder = new MutableDisposable
-        {
-            Disposable = inner
-        };
+        CountingDisposable inner = new();
+        MutableDisposable holder = new() { Disposable = inner };
         holder.Dispose();
         holder.Dispose();
         await Assert.That(inner.DisposeCount).IsEqualTo(1);
@@ -99,8 +94,8 @@ public class InternalDisposablesTests
     [Test]
     public async Task WhenOnceDisposableAssignedOnce_ThenIsAssignedTrueAndDisposed()
     {
-        var holder = new OnceDisposable();
-        var inner = new CountingDisposable();
+        OnceDisposable holder = new();
+        CountingDisposable inner = new();
         await Assert.That(holder.IsAssigned).IsFalse();
         await Assert.That(holder.IsDisposed).IsFalse();
         holder.Disposable = inner;
@@ -116,10 +111,7 @@ public class InternalDisposablesTests
     [Test]
     public async Task WhenOnceDisposableAssignedTwice_ThenThrows()
     {
-        var holder = new OnceDisposable
-        {
-            Disposable = new CountingDisposable()
-        };
+        OnceDisposable holder = new() { Disposable = new CountingDisposable() };
         var ex = Assert.Throws<InvalidOperationException>(() => holder.Disposable = new CountingDisposable());
         await Assert.That(ex).IsNotNull();
     }
@@ -129,9 +121,9 @@ public class InternalDisposablesTests
     [Test]
     public async Task WhenOnceDisposableAfterDispose_ThenAssignmentDisposesValueAndGetterReportsNull()
     {
-        var holder = new OnceDisposable();
+        OnceDisposable holder = new();
         holder.Dispose();
-        var late = new CountingDisposable();
+        CountingDisposable late = new();
         holder.Disposable = late;
         await Assert.That(late.DisposeCount).IsEqualTo(1);
         await Assert.That(holder.Disposable).IsNull();
@@ -142,7 +134,7 @@ public class InternalDisposablesTests
     [Test]
     public async Task WhenOnceDisposableDisposedUnassigned_ThenNoOp()
     {
-        var holder = new OnceDisposable();
+        OnceDisposable holder = new();
         holder.Dispose();
         await Assert.That(holder.Disposable).IsNull();
     }

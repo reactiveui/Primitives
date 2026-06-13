@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -18,9 +19,10 @@ public class BooleanReduceObservableTests
     [Test]
     public async Task WhenCombineLatestValuesAreAllTrueWithEmptySources_ThenEmitsTrueAndCompletes()
     {
-        var results = new List<bool>();
+        List<bool> results = [];
         var completed = false;
-        using var sub = Array.Empty<IObservable<bool>>().CombineLatestValuesAreAllTrue().Subscribe(results.Add, () => completed = true);
+        using var sub = Array.Empty<IObservable<bool>>().CombineLatestValuesAreAllTrue()
+            .Subscribe(results.Add, () => completed = true);
         await Assert.That(results).IsCollectionEqualTo([true]);
         await Assert.That(completed).IsTrue();
     }
@@ -30,14 +32,10 @@ public class BooleanReduceObservableTests
     [Test]
     public async Task WhenAllTruePartialSources_ThenSuppressesEmission()
     {
-        var a = new Subject<bool>();
-        var b = new Subject<bool>();
-        var results = new List<bool>();
-        using var sub = new IObservable<bool>[]
-        {
-            a,
-            b
-        }.CombineLatestValuesAreAllTrue().Subscribe(results.Add);
+        Subject<bool> a = new();
+        Subject<bool> b = new();
+        List<bool> results = [];
+        using var sub = new IObservable<bool>[] { a, b }.CombineLatestValuesAreAllTrue().Subscribe(results.Add);
         a.OnNext(true);
         await Assert.That(results).IsEmpty();
     }
@@ -47,14 +45,10 @@ public class BooleanReduceObservableTests
     [Test]
     public async Task WhenAllTrueTransitions_ThenEmitsExpectedSequence()
     {
-        var a = new Subject<bool>();
-        var b = new Subject<bool>();
-        var results = new List<bool>();
-        using var sub = new IObservable<bool>[]
-        {
-            a,
-            b
-        }.CombineLatestValuesAreAllTrue().Subscribe(results.Add);
+        Subject<bool> a = new();
+        Subject<bool> b = new();
+        List<bool> results = [];
+        using var sub = new IObservable<bool>[] { a, b }.CombineLatestValuesAreAllTrue().Subscribe(results.Add);
         a.OnNext(true);
         b.OnNext(false);
         b.OnNext(true);
@@ -67,14 +61,10 @@ public class BooleanReduceObservableTests
     [Test]
     public async Task WhenAllFalseTransitions_ThenEmitsExpectedSequence()
     {
-        var a = new Subject<bool>();
-        var b = new Subject<bool>();
-        var results = new List<bool>();
-        using var sub = new IObservable<bool>[]
-        {
-            a,
-            b
-        }.CombineLatestValuesAreAllFalse().Subscribe(results.Add);
+        Subject<bool> a = new();
+        Subject<bool> b = new();
+        List<bool> results = [];
+        using var sub = new IObservable<bool>[] { a, b }.CombineLatestValuesAreAllFalse().Subscribe(results.Add);
         a.OnNext(false);
         b.OnNext(false);
         b.OnNext(true);
@@ -86,18 +76,12 @@ public class BooleanReduceObservableTests
     [Test]
     public async Task WhenAllTrueSourceErrors_ThenForwardsError()
     {
-        var a = new Subject<bool>();
-        var b = new Subject<bool>();
+        Subject<bool> a = new();
+        Subject<bool> b = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
-        using var sub = new IObservable<bool>[]
-        {
-            a,
-            b
-        }.CombineLatestValuesAreAllTrue().Subscribe(
-            static _ =>
-        {
-        },
+        InvalidOperationException expected = new(SourceErrorMessage);
+        using var sub = new IObservable<bool>[] { a, b }.CombineLatestValuesAreAllTrue().Subscribe(
+            static _ => { },
             ex => caught = ex);
         a.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -108,10 +92,10 @@ public class BooleanReduceObservableTests
     [Test]
     public async Task WhenSourcesAreCollectionOnly_ThenMaterializedByCopyTo()
     {
-        using var a = new BehaviorSubject<bool>(true);
-        using var b = new BehaviorSubject<bool>(true);
-        var sources = new CollectionOnlySources([a.AsObservable(), b.AsObservable()]);
-        var results = new List<bool>();
+        using BehaviorSubject<bool> a = new(true);
+        using BehaviorSubject<bool> b = new(true);
+        CollectionOnlySources sources = new([a.AsObservable(), b.AsObservable()]);
+        List<bool> results = [];
         using var sub = sources.CombineLatestValuesAreAllTrue().Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo([true]);
     }
@@ -121,13 +105,14 @@ public class BooleanReduceObservableTests
     [Test]
     public async Task WhenNonCollectionSourcesExactlyFillBuffer_ThenUsesBufferDirectly()
     {
-        using var a = new BehaviorSubject<bool>(true);
-        using var b = new BehaviorSubject<bool>(true);
-        using var c = new BehaviorSubject<bool>(true);
-        using var d = new BehaviorSubject<bool>(true);
-        var results = new List<bool>();
+        using BehaviorSubject<bool> a = new(true);
+        using BehaviorSubject<bool> b = new(true);
+        using BehaviorSubject<bool> c = new(true);
+        using BehaviorSubject<bool> d = new(true);
+        List<bool> results = [];
         using var sub = Enumerate(a, b, c, d).CombineLatestValuesAreAllTrue().Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo([true]);
+
         static IEnumerable<IObservable<bool>> Enumerate(params BehaviorSubject<bool>[] subjects)
         {
             for (var i = 0; i < subjects.Length; i++)
@@ -142,14 +127,15 @@ public class BooleanReduceObservableTests
     [Test]
     public async Task WhenNonCollectionSourcesExceedInitialBuffer_ThenGrowsBuffer()
     {
-        using var a = new BehaviorSubject<bool>(true);
-        using var b = new BehaviorSubject<bool>(true);
-        using var c = new BehaviorSubject<bool>(true);
-        using var d = new BehaviorSubject<bool>(true);
-        using var e = new BehaviorSubject<bool>(true);
-        var results = new List<bool>();
+        using BehaviorSubject<bool> a = new(true);
+        using BehaviorSubject<bool> b = new(true);
+        using BehaviorSubject<bool> c = new(true);
+        using BehaviorSubject<bool> d = new(true);
+        using BehaviorSubject<bool> e = new(true);
+        List<bool> results = [];
         using var sub = Enumerate(a, b, c, d, e).CombineLatestValuesAreAllTrue().Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo([true]);
+
         static IEnumerable<IObservable<bool>> Enumerate(params BehaviorSubject<bool>[] subjects)
         {
             for (var i = 0; i < subjects.Length; i++)
@@ -164,14 +150,12 @@ public class BooleanReduceObservableTests
     [Test]
     public async Task WhenAllSourcesComplete_ThenForwardsCompletion()
     {
-        var a = new Subject<bool>();
-        var b = new Subject<bool>();
+        Subject<bool> a = new();
+        Subject<bool> b = new();
         var completed = false;
         IObservable<bool>[] sources = [a, b];
         using var sub = sources.CombineLatestValuesAreAllTrue().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completed = true);
         a.OnNext(true);
         b.OnNext(true);
@@ -186,11 +170,11 @@ public class BooleanReduceObservableTests
     [Test]
     public async Task WhenOnNextAfterTerminated_ThenDropped()
     {
-        var a = new SyncDirectSource<bool>();
-        var b = new SyncDirectSource<bool>();
-        var results = new List<bool>();
+        SyncDirectSource<bool> a = new();
+        SyncDirectSource<bool> b = new();
+        List<bool> results = [];
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         IObservable<bool>[] sources = [a, b];
         using var sub = sources.CombineLatestValuesAreAllTrue().Subscribe(results.Add, ex => caught = ex);
         a.Observer.OnError(expected);
@@ -219,13 +203,15 @@ public class BooleanReduceObservableTests
         public bool Contains(IObservable<bool> item) => Array.IndexOf(items, item) >= 0;
 
         /// <inheritdoc/>
-        public void CopyTo(IObservable<bool>[] array, int arrayIndex) => Array.Copy(items, 0, array, arrayIndex, items.Length);
+        public void CopyTo(IObservable<bool>[] array, int arrayIndex) =>
+            Array.Copy(items, 0, array, arrayIndex, items.Length);
 
         /// <inheritdoc/>
         public bool Remove(IObservable<bool> item) => throw new NotSupportedException();
 
         /// <inheritdoc/>
-        public IEnumerator<IObservable<bool>> GetEnumerator() => ((IEnumerable<IObservable<bool>>)items).GetEnumerator();
+        public IEnumerator<IObservable<bool>> GetEnumerator() =>
+            ((IEnumerable<IObservable<bool>>)items).GetEnumerator();
 
         /// <inheritdoc/>
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();

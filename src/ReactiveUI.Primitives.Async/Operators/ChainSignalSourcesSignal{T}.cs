@@ -24,7 +24,7 @@ internal sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAs
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)
     {
-        var subscription = new ChainCoordinator(observer);
+        ChainCoordinator subscription = new(observer);
         return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
             subscription,
             () => subscription.SubscribeAsync(source, cancellationToken));

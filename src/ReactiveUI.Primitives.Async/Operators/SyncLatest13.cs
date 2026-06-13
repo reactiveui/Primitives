@@ -150,7 +150,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<TResult> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new SyncLatestCoordinator(observer, sources, selector);
+            SyncLatestCoordinator subscription = new(observer, sources, selector);
             subscription.Lifecycle.LinkExternalCancellation(cancellationToken);
             return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
                 subscription,

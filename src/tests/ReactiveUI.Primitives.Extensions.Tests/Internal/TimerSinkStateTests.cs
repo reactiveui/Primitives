@@ -15,9 +15,9 @@ public class TimerSinkStateTests
     [Test]
     public async Task WhenHandleErrorLocked_ThenForwardsAndMarksDone()
     {
-        var observer = new RecordingWitness<int>();
-        var state = new TimerSinkState<int>(observer);
-        var expected = new InvalidOperationException("timer-error");
+        RecordingWitness<int> observer = new();
+        TimerSinkState<int> state = new(observer);
+        InvalidOperationException expected = new("timer-error");
 
         state.HandleErrorLocked(expected);
 
@@ -31,8 +31,8 @@ public class TimerSinkStateTests
     [Test]
     public async Task WhenHandleCompletedLocked_ThenForwardsAndMarksDone()
     {
-        var observer = new RecordingWitness<int>();
-        var state = new TimerSinkState<int>(observer);
+        RecordingWitness<int> observer = new();
+        TimerSinkState<int> state = new(observer);
 
         state.HandleCompletedLocked();
 
@@ -46,8 +46,8 @@ public class TimerSinkStateTests
     [Test]
     public async Task WhenHandleCompletedLockedAfterError_ThenNoOp()
     {
-        var observer = new RecordingWitness<int>();
-        var state = new TimerSinkState<int>(observer);
+        RecordingWitness<int> observer = new();
+        TimerSinkState<int> state = new(observer);
 
         state.HandleErrorLocked(new InvalidOperationException("first"));
         state.HandleCompletedLocked();
@@ -62,8 +62,8 @@ public class TimerSinkStateTests
     [Test]
     public async Task WhenHandleErrorLockedAfterCompleted_ThenNoOp()
     {
-        var observer = new RecordingWitness<int>();
-        var state = new TimerSinkState<int>(observer);
+        RecordingWitness<int> observer = new();
+        TimerSinkState<int> state = new(observer);
 
         state.HandleCompletedLocked();
         state.HandleErrorLocked(new InvalidOperationException("second"));
@@ -77,8 +77,8 @@ public class TimerSinkStateTests
     [Test]
     public async Task WhenHandleDisposeLocked_ThenMarksDoneWithoutForwarding()
     {
-        var observer = new RecordingWitness<int>();
-        var state = new TimerSinkState<int>(observer);
+        RecordingWitness<int> observer = new();
+        TimerSinkState<int> state = new(observer);
 
         state.HandleDisposeLocked();
 

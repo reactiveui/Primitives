@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Async.Tests;
 using ReactiveUI.Primitives.Concurrency;
@@ -15,9 +16,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task DebounceImmediate_EmitsFirstImmediately()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         using var sub = subject.DebounceImmediate(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
@@ -31,8 +32,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ThrottleFirst_EmitsFirstImmediately_IgnoresSubsequentWithinWindow()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
 
         // Throttle window of 100 ms
         subject.ThrottleFirst(TimeSpan.FromMilliseconds(100)).Subscribe(results.Add);
@@ -51,10 +52,10 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task DropIfBusy_DropsWhenBusy()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
-        var release = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var processed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Subject<int> subject = new();
+        List<int> results = [];
+        TaskCompletionSource<object> release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource processed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         subject.DropIfBusy(async x =>
         {
             await release.Task;
@@ -64,7 +65,7 @@ public partial class ReactiveExtensionsTests
         subject.OnNext(1); // Should process
         subject.OnNext(SampleValue2); // Should drop
         subject.OnNext(SampleValue3); // Should drop
-        release.SetResult(new object ()); // Complete the async action
+        release.SetResult(new()); // Complete the async action
         await processed.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(results).IsCollectionEqualTo([1]);
     }
@@ -74,9 +75,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ThrottleDistinct_ThrottlesDistinct()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         subject.ThrottleDistinct(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(1); // Duplicate, ignored
@@ -91,9 +92,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task DebounceUntil_EmitsImmediatelyWhenConditionTrue_DelaysWhenFalse()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         subject.DebounceUntil(TimeSpan.FromTicks(100), x => x % SampleValue2 == 0, scheduler).Subscribe(results.Add);
         subject.OnNext(1); // Odd, should be delayed
         scheduler.AdvanceBy(SchedulerHalfWindowTicks); // Advance less than debounce period
@@ -107,9 +108,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenThrottleOnScheduler_ThenThrottlesOnScheduler()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         subject.ThrottleOnScheduler(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
@@ -122,9 +123,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenThrottleDistinctWithScheduler_ThenThrottlesAndDeduplicates()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         subject.ThrottleDistinct(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(1); // Duplicate, suppressed by DistinctUntilChanged
@@ -138,9 +139,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenDebounceImmediateSourceErrors_ThenFlushesAndForwardsError()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         Exception? observedError = null;
         subject.DebounceImmediate(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add, ex => observedError = ex);
         subject.OnNext(1); // Emitted immediately (first)
@@ -158,9 +159,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenDebounceImmediateSourceCompletes_ThenFlushesAndCompletes()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
         subject.DebounceImmediate(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add, () => completed = true);
         subject.OnNext(1); // Emitted immediately (first)
@@ -178,9 +179,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenDebounceUntilWithScheduler_ThenUsesSchedulerForDelay()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         subject.DebounceUntil(TimeSpan.FromTicks(100), x => x % SampleValue2 == 0, scheduler).Subscribe(results.Add);
         subject.OnNext(SampleValue2); // Even, emits immediately
         subject.OnNext(1); // Odd, delayed
@@ -193,9 +194,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenThrottleUntilTruePredicateFalse_ThenAppliesThrottle()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
-        var throttledArrived = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Subject<int> subject = new();
+        List<int> results = [];
+        TaskCompletionSource<int> throttledArrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = subject.ThrottleUntilTrue(TimeSpan.FromMilliseconds(100), x => x > 5).Subscribe(value =>
         {
             results.Add(value);
@@ -217,8 +218,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenThrottleDistinctWithoutScheduler_ThenThrottlesAndDeduplicates()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         using var sub = subject.ThrottleDistinct(TimeSpan.FromMilliseconds(200)).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(1);
@@ -232,9 +233,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenDebounceUntilWithScheduler_ThenUsesScheduler()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         subject.DebounceUntil(TimeSpan.FromTicks(100), x => x % SampleValue2 == 0, scheduler).Subscribe(results.Add);
         subject.OnNext(SampleValue2); // condition true -> immediate
         subject.OnNext(SampleValue3); // condition false -> delayed
@@ -248,8 +249,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenDebounceImmediateNullScheduler_ThenUsesDefault()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         using var sub = subject.DebounceImmediate(TimeSpan.FromMilliseconds(200)).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
@@ -263,9 +264,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenDebounceUntilWithoutScheduler_ThenEmitsImmediatelyWhenConditionTrue()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
-        var received = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Subject<int> subject = new();
+        List<int> results = [];
+        TaskCompletionSource received = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = subject.DebounceUntil(TimeSpan.FromMilliseconds(500), x => x % 2 == 0).Subscribe(v =>
         {
             results.Add(v);
@@ -283,14 +284,13 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenDebounceUntilSourceCompletes_ThenForwardsCompletion()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         var completed = false;
-        using var sub = subject.DebounceUntil(TimeSpan.FromTicks(SchedulerWindowTicks), static _ => true, scheduler).Subscribe(
-            static _ =>
-        {
-        },
-            () => completed = true);
+        using var sub = subject.DebounceUntil(TimeSpan.FromTicks(SchedulerWindowTicks), static _ => true, scheduler)
+            .Subscribe(
+                static _ => { },
+                () => completed = true);
         subject.OnCompleted();
         await Assert.That(completed).IsTrue();
     }
@@ -300,15 +300,14 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenDebounceUntilSourceErrors_ThenForwardsError()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException("source-failed");
-        using var sub = subject.DebounceUntil(TimeSpan.FromTicks(SchedulerWindowTicks), static _ => true, scheduler).Subscribe(
-            static _ =>
-        {
-        },
-            ex => caught = ex);
+        InvalidOperationException expected = new("source-failed");
+        using var sub = subject.DebounceUntil(TimeSpan.FromTicks(SchedulerWindowTicks), static _ => true, scheduler)
+            .Subscribe(
+                static _ => { },
+                ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }

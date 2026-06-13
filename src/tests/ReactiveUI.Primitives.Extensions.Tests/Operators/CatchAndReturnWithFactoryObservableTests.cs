@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -28,11 +29,13 @@ public class CatchAndReturnWithFactoryObservableTests
     [Test]
     public async Task WhenCatchAndReturnMatchingException_ThenEmitsFactoryFallbackAndCompletes()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
-        var expected = new InvalidOperationException(SourceErrorMessage);
-        using var sub = subject.CatchAndReturn<int, InvalidOperationException>(ex => FallbackBaseValue + ex.Message.Length).Subscribe(results.Add, () => completed = true);
+        InvalidOperationException expected = new(SourceErrorMessage);
+        using var sub = subject
+            .CatchAndReturn<int, InvalidOperationException>(ex => FallbackBaseValue + ex.Message.Length)
+            .Subscribe(results.Add, () => completed = true);
         subject.OnError(expected);
         await Assert.That(results).IsCollectionEqualTo([FallbackBaseValue + SourceErrorMessage.Length]);
         await Assert.That(completed).IsTrue();
@@ -43,13 +46,11 @@ public class CatchAndReturnWithFactoryObservableTests
     [Test]
     public async Task WhenCatchAndReturnNonMatchingException_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new ArgumentException(MismatchedErrorMessage);
+        ArgumentException expected = new(MismatchedErrorMessage);
         using var sub = subject.CatchAndReturn<int, InvalidOperationException>(static _ => FallbackBaseValue).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -60,14 +61,12 @@ public class CatchAndReturnWithFactoryObservableTests
     [Test]
     public async Task WhenCatchAndReturnFactoryThrows_ThenForwardsFactoryError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var sourceError = new InvalidOperationException(SourceErrorMessage);
-        var factoryError = new InvalidOperationException(FactoryFailedMessage);
+        InvalidOperationException sourceError = new(SourceErrorMessage);
+        InvalidOperationException factoryError = new(FactoryFailedMessage);
         using var sub = subject.CatchAndReturn<int, InvalidOperationException>(_ => throw factoryError).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(sourceError);
         await Assert.That(caught).IsSameReferenceAs(factoryError);
@@ -80,10 +79,11 @@ public class CatchAndReturnWithFactoryObservableTests
     {
         const int First = 1;
         const int Second = 2;
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
-        using var sub = subject.CatchAndReturn<int, InvalidOperationException>(static _ => FallbackBaseValue).Subscribe(results.Add, () => completed = true);
+        using var sub = subject.CatchAndReturn<int, InvalidOperationException>(static _ => FallbackBaseValue)
+            .Subscribe(results.Add, () => completed = true);
         subject.OnNext(First);
         subject.OnNext(Second);
         subject.OnCompleted();

@@ -3,9 +3,9 @@
 // See the LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
-
+using ReactiveUI.Extensions.Async.Subjects;
 using ReactiveUI.Primitives.Async;
-
+using ReactiveUI.Primitives.Async.Signals;
 using ExtensionsAsyncObservable = ReactiveUI.Extensions.Async.ObservableAsync;
 using ExtensionsAsyncSubject = ReactiveUI.Extensions.Async.Subjects.SubjectAsync;
 using PrimitivesAsyncSignal = ReactiveUI.Primitives.Async.SignalAsync;
@@ -160,7 +160,7 @@ public class AsyncExtensionsComparisonBenchmarks
         {
             for (var i = 0; i < SubscriberCount; i++)
             {
-                var observer = new PrimitivesCountingWitness();
+                PrimitivesCountingWitness observer = new();
                 observers[i] = observer;
                 subscriptions[i] = await signal.SubscribeAsync(observer, CancellationToken.None)
                     .ConfigureAwait(false);
@@ -193,7 +193,7 @@ public class AsyncExtensionsComparisonBenchmarks
         {
             for (var i = 0; i < SubscriberCount; i++)
             {
-                var observer = new ExtensionsCountingWitness();
+                ExtensionsCountingWitness observer = new();
                 observers[i] = observer;
                 subscriptions[i] = await subject.SubscribeAsync(observer, CancellationToken.None)
                     .ConfigureAwait(false);
@@ -256,7 +256,7 @@ public class AsyncExtensionsComparisonBenchmarks
     }
 
     /// <summary>Observer that accumulates primitive async signal values.</summary>
-    private sealed class PrimitivesCountingWitness : Async.WitnessAsync<int>
+    private sealed class PrimitivesCountingWitness : WitnessAsync<int>
     {
         /// <summary>Gets the accumulated value total.</summary>
         public int Total { get; private set; }

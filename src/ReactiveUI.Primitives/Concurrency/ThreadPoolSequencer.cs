@@ -9,7 +9,7 @@ using Timer = System.Threading.Timer;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>ThreadPoolSequencer.</summary>
+/// <summary>A sequencer that schedules work on the thread pool.</summary>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class ThreadPoolSequencer : ISequencer, IDisposable
@@ -45,7 +45,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
 
     /// <summary>Schedules a work item to be executed through the thread pool.</summary>
     /// <param name="item">Work item to execute.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item)
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
@@ -56,7 +56,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     /// <summary>Schedules a work item to be executed through the thread pool at a monotonic timestamp.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item, long dueTimestamp)
     {
         ArgumentExceptionHelper.ThrowIfNull(item);

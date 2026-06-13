@@ -16,10 +16,10 @@ public sealed class TaskSignalSubscriptionTests
     public async Task WhenDisposedReentrantlyAfterThreadHop_ThenDoesNotDeadlock()
     {
         TaskSignalSubscription<int>? subscription = null;
-        var subscriptionReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var disposed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource subscriptionReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource disposed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var observer = new ReentrantDisposingObserver(async () =>
+        ReentrantDisposingObserver observer = new(async () =>
         {
             await subscriptionReady.Task.ConfigureAwait(false);
             await Task.Yield();
@@ -27,7 +27,7 @@ public sealed class TaskSignalSubscriptionTests
             disposed.SetResult();
         });
 
-        subscription = TaskSignalSubscription.StartNew<int>(
+        subscription = TaskSignalSubscription.StartNew(
             static async (obs, ct) => await obs.OnNextAsync(1, ct).ConfigureAwait(false),
             observer);
         subscriptionReady.SetResult();

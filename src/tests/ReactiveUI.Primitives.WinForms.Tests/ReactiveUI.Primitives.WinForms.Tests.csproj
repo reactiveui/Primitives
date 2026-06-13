@@ -13,7 +13,7 @@
 
   <!-- The dispatcher tests need WinForms types; include them only on the windows TFM (see the Choose). -->
   <ItemGroup>
-    <Compile Remove="ControlSequencerTests.cs" />
+    <Compile Remove="ControlSequencerTests.cs"/>
   </ItemGroup>
 
   <Choose>
@@ -23,9 +23,9 @@
         <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
       </PropertyGroup>
       <ItemGroup>
-        <ProjectReference Include="..\..\ReactiveUI.Primitives.WinForms\ReactiveUI.Primitives.WinForms.csproj" />
-        <Compile Include="ControlSequencerTests.cs" />
-        <Compile Remove="CrossPlatformPlaceholderTests.cs" />
+        <ProjectReference Include="..\..\ReactiveUI.Primitives.WinForms\ReactiveUI.Primitives.WinForms.csproj"/>
+        <Compile Include="ControlSequencerTests.cs"/>
+        <Compile Remove="CrossPlatformPlaceholderTests.cs"/>
       </ItemGroup>
     </When>
   </Choose>

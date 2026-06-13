@@ -28,7 +28,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesCreateSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Create<int>(target =>
         {
             target.OnNext(Value);
@@ -43,7 +43,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int SystemReactiveCreateSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Create<int>(target =>
         {
             target.OnNext(Value);
@@ -58,7 +58,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int R3CreateSubscribe()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.Observable.Create<int>(static target =>
         {
             target.OnNext(Value);
@@ -73,7 +73,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int PrimitivesCreateSafeSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.CreateSafe<int>(target =>
         {
             target.OnNext(Value);
@@ -88,7 +88,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int PrimitivesDeferSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Lazy(() => Signal.Sequence(1, Count)).Subscribe(observer);
         return observer.Total;
     }
@@ -98,7 +98,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int SystemReactiveDeferSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Defer(static () => RxObservable.Range(1, Count)).Subscribe(observer);
         return observer.Total;
     }
@@ -108,7 +108,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int R3DeferSubscribe()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.Observable.Defer(static () => R3.Observable.Range(1, Count)).Subscribe(observer);
         return observer.Total;
     }
@@ -118,7 +118,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int PrimitivesStartSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Start(() => Value, Sequencer.Immediate).Subscribe(observer);
         return observer.Total;
     }
@@ -128,7 +128,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int SystemReactiveStartSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Start(static () => Value, ImmediateScheduler.Instance).Subscribe(observer);
         return observer.Total;
     }
@@ -138,7 +138,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int R3StartSubscribe()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.Observable.FromAsync(static _ => new ValueTask<int>(Value), configureAwait: false)
             .Subscribe(observer);
         return observer.Total;
@@ -149,7 +149,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int PrimitivesUnfoldSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Unfold(0, static state => state < Count, static state => state + 1, static state => state)
             .Subscribe(observer);
         return observer.Total;
@@ -160,7 +160,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int SystemReactiveUnfoldSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Generate(
                 0,
                 static state => state < Count,
@@ -175,7 +175,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int R3UnfoldSubscribe()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.Observable.Create<int>(static target =>
         {
             for (var state = 0; state < Count; state++)
@@ -194,7 +194,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int PrimitivesUseSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Use(static () => EmptyDisposable.Instance, static _ => Signal.Emit(Value)).Subscribe(observer);
         return observer.Total;
     }
@@ -204,7 +204,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int SystemReactiveUseSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Using(static () => RxDisposable.Empty, static _ => RxObservable.Return(Value))
             .Subscribe(observer);
         return observer.Total;
@@ -215,7 +215,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int R3UseSubscribe()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.Observable.Create<int>(static target =>
         {
             using var resource = R3.Disposable.Create(static () => { });
@@ -264,7 +264,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int PrimitivesNeverSubscribeDispose()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Silent<int>().Subscribe(observer);
         return observer.NextCount + observer.CompletionCount + observer.ErrorCount;
     }
@@ -274,7 +274,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int SystemReactiveNeverSubscribeDispose()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Never<int>().Subscribe(observer);
         return observer.NextCount + observer.CompletionCount + observer.ErrorCount;
     }
@@ -284,7 +284,7 @@ public class FactoryAdapterExpansionBenchmarks
     [Benchmark]
     public int R3NeverSubscribeDispose()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.Observable.Never<int>().Subscribe(observer);
         return observer.NextCount + observer.CompletionCount + observer.ErrorCount;
     }

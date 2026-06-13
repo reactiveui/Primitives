@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -11,23 +12,34 @@ public class AsyncSignalTests
     /// <summary>Defines the integer value observed by asynchronous tests.</summary>
     private const int ExpectedValue = 42;
 
+    /// <summary>The first value emitted before completion in churn coverage.</summary>
+    private const int FirstEmittedValue = 5;
+
+    /// <summary>A value emitted after completion that must be ignored.</summary>
+    private const int IgnoredAfterCompletion = 6;
+
     /// <summary>Defines the maximum time to wait for cross-thread test work.</summary>
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
 
+    /// <summary>The values expected after the first emission.</summary>
+    private static readonly int[] FirstEmittedValues = [FirstEmittedValue];
+
     /// <summary>Subscribes the argument checking.</summary>
     [Test]
-    public void Subscribe_ArgumentChecking() => Assert.Throws<ArgumentNullException>(() => new AsyncSignal<int>().Subscribe(null!));
+    public void Subscribe_ArgumentChecking() =>
+        Assert.Throws<ArgumentNullException>(() => new AsyncSignal<int>().Subscribe(null!));
 
     /// <summary>Called when [error argument checking].</summary>
     [Test]
-    public void OnError_ArgumentChecking() => Assert.Throws<ArgumentNullException>(() => new AsyncSignal<int>().OnError(null!));
+    public void OnError_ArgumentChecking() =>
+        Assert.Throws<ArgumentNullException>(() => new AsyncSignal<int>().OnError(null!));
 
     /// <summary>Awaits the blocking.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task Await_Blocking()
     {
-        var s = new AsyncSignal<int>();
+        AsyncSignal<int> s = new();
         await GetResult_BlockingImpl(s.GetAwaiter());
         await Assert.That(s.IsCompleted).IsTrue();
     }
@@ -37,7 +49,7 @@ public class AsyncSignalTests
     [Test]
     public async Task Await_Throw()
     {
-        var s = new AsyncSignal<int>();
+        AsyncSignal<int> s = new();
         await GetResult_Blocking_ThrowImpl(s.GetAwaiter());
         await Assert.That(s.IsCompleted).IsTrue();
     }
@@ -46,7 +58,7 @@ public class AsyncSignalTests
     [Test]
     public void GetResult_Empty()
     {
-        var s = new AsyncSignal<int>();
+        AsyncSignal<int> s = new();
         s.OnCompleted();
         Assert.Throws<InvalidOperationException>(() => s.GetResult());
     }
@@ -56,7 +68,7 @@ public class AsyncSignalTests
     [Test]
     public async Task GetResult_Blocking()
     {
-        var s = new AsyncSignal<int>();
+        AsyncSignal<int> s = new();
         await GetResult_BlockingImpl(s);
         await Assert.That(s.IsCompleted).IsTrue();
     }
@@ -66,7 +78,7 @@ public class AsyncSignalTests
     [Test]
     public async Task GetResult_Blocking_Throw()
     {
-        var s = new AsyncSignal<int>();
+        AsyncSignal<int> s = new();
         await GetResult_Blocking_ThrowImpl(s);
         await Assert.That(s.IsCompleted).IsTrue();
     }
@@ -76,11 +88,11 @@ public class AsyncSignalTests
     [Test]
     public async Task GetResult_Context()
     {
-        var x = new AsyncSignal<int>();
-        var ctx = new MyContext();
-        using var registered = new ManualResetEventSlim();
-        using var completed = new ManualResetEventSlim();
-        var registrationThread = new Thread(() =>
+        AsyncSignal<int> x = new();
+        MyContext ctx = new();
+        using ManualResetEventSlim registered = new();
+        using ManualResetEventSlim completed = new();
+        Thread registrationThread = new(() =>
         {
             SynchronizationContext.SetSynchronizationContext(ctx);
             var a = x.GetAwaiter();
@@ -101,21 +113,15 @@ public class AsyncSignalTests
     [Test]
     public async Task HasObservers()
     {
-        var s = new AsyncSignal<int>();
+        AsyncSignal<int> s = new();
         await Assert.That(s.HasObservers).IsFalse();
-        var d1 = s.Subscribe(_ =>
-        {
-        });
+        var d1 = s.Subscribe(_ => { });
         await Assert.That(s.HasObservers).IsTrue();
         d1.Dispose();
         await Assert.That(s.HasObservers).IsFalse();
-        var d2 = s.Subscribe(_ =>
-        {
-        });
+        var d2 = s.Subscribe(_ => { });
         await Assert.That(s.HasObservers).IsTrue();
-        var d3 = s.Subscribe(_ =>
-        {
-        });
+        var d3 = s.Subscribe(_ => { });
         await Assert.That(s.HasObservers).IsTrue();
         d2.Dispose();
         await Assert.That(s.HasObservers).IsTrue();
@@ -128,12 +134,10 @@ public class AsyncSignalTests
     [Test]
     public async Task HasObservers_Dispose1()
     {
-        var s = new AsyncSignal<int>();
+        AsyncSignal<int> s = new();
         await Assert.That(s.HasObservers).IsFalse();
         await Assert.That(s.IsDisposed).IsFalse();
-        var d = s.Subscribe(_ =>
-        {
-        });
+        var d = s.Subscribe(_ => { });
         await Assert.That(s.HasObservers).IsTrue();
         await Assert.That(s.IsDisposed).IsFalse();
         s.Dispose();
@@ -149,12 +153,10 @@ public class AsyncSignalTests
     [Test]
     public async Task HasObservers_Dispose2()
     {
-        var s = new AsyncSignal<int>();
+        AsyncSignal<int> s = new();
         await Assert.That(s.HasObservers).IsFalse();
         await Assert.That(s.IsDisposed).IsFalse();
-        var d = s.Subscribe(_ =>
-        {
-        });
+        var d = s.Subscribe(_ => { });
         await Assert.That(s.HasObservers).IsTrue();
         await Assert.That(s.IsDisposed).IsFalse();
         d.Dispose();
@@ -170,7 +172,7 @@ public class AsyncSignalTests
     [Test]
     public async Task HasObservers_Dispose3()
     {
-        var s = new AsyncSignal<int>();
+        AsyncSignal<int> s = new();
         await Assert.That(s.HasObservers).IsFalse();
         await Assert.That(s.IsDisposed).IsFalse();
         s.Dispose();
@@ -183,11 +185,9 @@ public class AsyncSignalTests
     [Test]
     public async Task HasObservers_OnCompleted()
     {
-        var s = new AsyncSignal<int>();
+        AsyncSignal<int> s = new();
         await Assert.That(s.HasObservers).IsFalse();
-        var d = s.Subscribe(_ =>
-        {
-        });
+        var d = s.Subscribe(_ => { });
         await Assert.That(s.HasObservers).IsTrue();
         s.OnNext(ExpectedValue);
         await Assert.That(s.HasObservers).IsTrue();
@@ -201,15 +201,11 @@ public class AsyncSignalTests
     [Test]
     public async Task HasObservers_OnError()
     {
-        var s = new AsyncSignal<int>();
+        AsyncSignal<int> s = new();
         await Assert.That(s.HasObservers).IsFalse();
         var d = s.Subscribe(
-            _ =>
-        {
-        },
-            _ =>
-        {
-        });
+            _ => { },
+            _ => { });
         await Assert.That(s.HasObservers).IsTrue();
         s.OnNext(ExpectedValue);
         await Assert.That(s.HasObservers).IsTrue();
@@ -218,15 +214,61 @@ public class AsyncSignalTests
         d.Dispose();
     }
 
+    /// <summary>Covers async-signal subscriber churn, late subscriptions, disposal, and terminal no-op branches.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AsyncSignalSubscriberChurnLateTerminalsAndDisposalCoverBranches()
+    {
+        var completionFaults = 0;
+        AsyncSignal<int> asyncSignal = new();
+        Assert.Throws<InvalidOperationException>(() => _ = asyncSignal.Value);
+        Assert.Throws<ArgumentNullException>(() => asyncSignal.OnCompleted(null!));
+        Assert.Throws<ArgumentNullException>(() => asyncSignal.OnError(null!));
+        RecordingWitness<int> asyncFirst = new();
+        RecordingWitness<int> asyncSecond = new();
+        using var asyncSubscription = asyncSignal.Subscribe(asyncFirst);
+        using var asyncSecondSubscription = asyncSignal.Subscribe(asyncSecond);
+        asyncSecondSubscription.Dispose();
+        asyncSignal.OnNext(FirstEmittedValue);
+        asyncSignal.OnCompleted(() => completionFaults++);
+        asyncSignal.OnCompleted();
+        asyncSignal.OnCompleted();
+        asyncSignal.OnNext(IgnoredAfterCompletion);
+        RecordingWitness<int> asyncLate = new();
+        asyncSignal.Subscribe(asyncLate).Dispose();
+        await Assert.That(asyncSignal.Value).IsEqualTo(FirstEmittedValue);
+        await Assert.That(asyncSignal.GetResult()).IsEqualTo(FirstEmittedValue);
+        await Assert.That(asyncFirst.Values.SequenceEqual(FirstEmittedValues)).IsTrue();
+        await Assert.That(asyncSecond.Values.Count).IsEqualTo(0);
+        await Assert.That(asyncLate.Values.SequenceEqual(FirstEmittedValues)).IsTrue();
+        await Assert.That(asyncLate.Completed).IsEqualTo(1);
+        AsyncSignal<int> asyncError = new();
+        RecordingWitness<int> asyncErrorObserver = new();
+        asyncError.Subscribe(asyncErrorObserver).Dispose();
+        InvalidOperationException asyncFault = new("async-fault");
+        asyncError.OnError(asyncFault);
+        asyncError.OnError(new InvalidOperationException("late"));
+        Assert.Throws<InvalidOperationException>(() => asyncError.GetResult());
+        RecordingWitness<int> asyncErrorLate = new();
+        asyncError.Subscribe(asyncErrorLate).Dispose();
+        await Assert.That(asyncErrorLate.Errors[0]).IsSameReferenceAs(asyncFault);
+        AsyncSignal<int> disposedAsync = new();
+        disposedAsync.Dispose();
+        disposedAsync.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => disposedAsync.OnNext(1));
+        Assert.Throws<ObjectDisposedException>(() => disposedAsync.Subscribe(new RecordingWitness<int>()));
+        await Assert.That(completionFaults).IsEqualTo(1);
+    }
+
     /// <summary>Gets the result blocking implementation.</summary>
     /// <param name = "s">The s.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task GetResult_BlockingImpl(IAwaitSignal<int> s)
     {
         await Assert.That(s.IsCompleted).IsFalse();
-        using var release = new ManualResetEventSlim();
-        using var started = new ManualResetEventSlim();
-        var producer = new Thread(() =>
+        using ManualResetEventSlim release = new();
+        using ManualResetEventSlim started = new();
+        Thread producer = new(() =>
         {
             if (!release.Wait(WaitTimeout))
             {
@@ -237,7 +279,7 @@ public class AsyncSignalTests
             s.OnCompleted();
         });
         var y = 0;
-        var consumer = new Thread(() =>
+        Thread consumer = new(() =>
         {
             started.Set();
             y = s.GetResult();
@@ -258,10 +300,10 @@ public class AsyncSignalTests
     private static async Task GetResult_Blocking_ThrowImpl(IAwaitSignal<int> s)
     {
         await Assert.That(s.IsCompleted).IsFalse();
-        using var release = new ManualResetEventSlim();
-        using var started = new ManualResetEventSlim();
-        var expectedException = new InvalidOperationException();
-        var producer = new Thread(() =>
+        using ManualResetEventSlim release = new();
+        using ManualResetEventSlim started = new();
+        InvalidOperationException expectedException = new();
+        Thread producer = new(() =>
         {
             if (!release.Wait(WaitTimeout))
             {
@@ -271,7 +313,7 @@ public class AsyncSignalTests
             s.OnError(expectedException);
         });
         Exception? caughtException = null;
-        var consumer = new Thread(() =>
+        Thread consumer = new(() =>
         {
             started.Set();
             try

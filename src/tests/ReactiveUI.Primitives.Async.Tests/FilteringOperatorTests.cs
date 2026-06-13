@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -104,7 +105,8 @@ public class FilteringOperatorTests
 
     /// <summary>Tests Take negative throws.</summary>
     [Test]
-    public void WhenTakeNegative_ThenThrowsArgumentOutOfRange() => Assert.Throws<ArgumentOutOfRangeException>(() => SignalAsync.Return(1).Take(-1));
+    public void WhenTakeNegative_ThenThrowsArgumentOutOfRange() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => SignalAsync.Return(1).Take(-1));
 
     /// <summary>Tests Skip skips first N.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -135,7 +137,8 @@ public class FilteringOperatorTests
 
     /// <summary>Tests Skip negative throws.</summary>
     [Test]
-    public void WhenSkipNegative_ThenThrowsArgumentOutOfRange() => Assert.Throws<ArgumentOutOfRangeException>(() => SignalAsync.Return(1).Skip(-1));
+    public void WhenSkipNegative_ThenThrowsArgumentOutOfRange() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => SignalAsync.Return(1).Skip(-1));
 
     /// <summary>Tests sync TakeWhile emits while true.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -179,7 +182,8 @@ public class FilteringOperatorTests
 
     /// <summary>Tests TakeWhile null predicate throws.</summary>
     [Test]
-    public void WhenTakeWhileNullPredicate_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(() => SignalAsync.Return(1).TakeWhile((Func<int, bool>)null!));
+    public void WhenTakeWhileNullPredicate_ThenThrowsArgumentNull() =>
+        Assert.Throws<ArgumentNullException>(() => SignalAsync.Return(1).TakeWhile((Func<int, bool>)null!));
 
     /// <summary>Tests sync SkipWhile skips while true.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -223,7 +227,8 @@ public class FilteringOperatorTests
 
     /// <summary>Tests SkipWhile null predicate throws.</summary>
     [Test]
-    public void WhenSkipWhileNullPredicate_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(() => SignalAsync.Return(1).SkipWhile((Func<int, bool>)null!));
+    public void WhenSkipWhileNullPredicate_ThenThrowsArgumentNull() =>
+        Assert.Throws<ArgumentNullException>(() => SignalAsync.Return(1).SkipWhile((Func<int, bool>)null!));
 
     /// <summary>Tests Distinct removes duplicates.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -291,7 +296,8 @@ public class FilteringOperatorTests
     public async Task WhenDistinctUntilChangedByWithComparer_ThenUsesComparer()
     {
         var source = SequenceAaAbBbBcAa.ToAsyncSignal();
-        var result = await source.DistinctUntilChangedBy(static value => value[..1], StringComparer.OrdinalIgnoreCase).ToListAsync();
+        var result = await source.DistinctUntilChangedBy(static value => value[..1], StringComparer.OrdinalIgnoreCase)
+            .ToListAsync();
         await Assert.That(result).IsCollectionEqualTo(["aa", "bb", "aa"]);
     }
 
@@ -302,14 +308,16 @@ public class FilteringOperatorTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.SkipWhile(static x => x < 2).SubscribeAsync(static (_, _) => default, (ex, _) =>
-        {
-            caught = ex;
-            errorTcs.TrySetResult();
-            return default;
-        });
-        var expected = new InvalidOperationException("skip-while-error");
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await signal.Values.SkipWhile(static x => x < 2).SubscribeAsync(
+            static (_, _) => default,
+            (ex, _) =>
+            {
+                caught = ex;
+                errorTcs.TrySetResult();
+                return default;
+            });
+        InvalidOperationException expected = new("skip-while-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -322,14 +330,16 @@ public class FilteringOperatorTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.TakeWhile(static x => x < 10).SubscribeAsync(static (_, _) => default, (ex, _) =>
-        {
-            caught = ex;
-            errorTcs.TrySetResult();
-            return default;
-        });
-        var expected = new InvalidOperationException("take-while-error");
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await signal.Values.TakeWhile(static x => x < 10).SubscribeAsync(
+            static (_, _) => default,
+            (ex, _) =>
+            {
+                caught = ex;
+                errorTcs.TrySetResult();
+                return default;
+            });
+        InvalidOperationException expected = new("take-while-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -363,14 +373,16 @@ public class FilteringOperatorTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.SkipWhile(static (_, _) => new(true)).SubscribeAsync(static (_, _) => default, (ex, _) =>
-        {
-            caught = ex;
-            errorTcs.TrySetResult();
-            return default;
-        });
-        var expected = new InvalidOperationException("skip-while-async-error");
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await signal.Values.SkipWhile(static (_, _) => new(true)).SubscribeAsync(
+            static (_, _) => default,
+            (ex, _) =>
+            {
+                caught = ex;
+                errorTcs.TrySetResult();
+                return default;
+            });
+        InvalidOperationException expected = new("skip-while-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -383,14 +395,16 @@ public class FilteringOperatorTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.TakeWhile(static (_, _) => new(true)).SubscribeAsync(static (_, _) => default, (ex, _) =>
-        {
-            caught = ex;
-            errorTcs.TrySetResult();
-            return default;
-        });
-        var expected = new InvalidOperationException("take-while-async-error");
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await signal.Values.TakeWhile(static (_, _) => new(true)).SubscribeAsync(
+            static (_, _) => default,
+            (ex, _) =>
+            {
+                caught = ex;
+                errorTcs.TrySetResult();
+                return default;
+            });
+        InvalidOperationException expected = new("take-while-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -404,14 +418,14 @@ public class FilteringOperatorTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await signal.Values.Distinct().SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             caught = ex;
             errorTcs.TrySetResult();
             return default;
         });
-        var expected = new InvalidOperationException("distinct-error");
+        InvalidOperationException expected = new("distinct-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -424,14 +438,16 @@ public class FilteringOperatorTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.DistinctBy(static x => x).SubscribeAsync(static (_, _) => default, (ex, _) =>
-        {
-            caught = ex;
-            errorTcs.TrySetResult();
-            return default;
-        });
-        var expected = new InvalidOperationException("distinct-by-error");
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await signal.Values.DistinctBy(static x => x).SubscribeAsync(
+            static (_, _) => default,
+            (ex, _) =>
+            {
+                caught = ex;
+                errorTcs.TrySetResult();
+                return default;
+            });
+        InvalidOperationException expected = new("distinct-by-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -444,14 +460,16 @@ public class FilteringOperatorTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.DistinctUntilChanged().SubscribeAsync(static (_, _) => default, (ex, _) =>
-        {
-            caught = ex;
-            errorTcs.TrySetResult();
-            return default;
-        });
-        var expected = new InvalidOperationException("distinct-until-changed-error");
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await signal.Values.DistinctUntilChanged().SubscribeAsync(
+            static (_, _) => default,
+            (ex, _) =>
+            {
+                caught = ex;
+                errorTcs.TrySetResult();
+                return default;
+            });
+        InvalidOperationException expected = new("distinct-until-changed-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -464,14 +482,16 @@ public class FilteringOperatorTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.DistinctUntilChangedBy(static x => x).SubscribeAsync(static (_, _) => default, (ex, _) =>
-        {
-            caught = ex;
-            errorTcs.TrySetResult();
-            return default;
-        });
-        var expected = new InvalidOperationException("distinct-until-changed-by-error");
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await signal.Values.DistinctUntilChangedBy(static x => x).SubscribeAsync(
+            static (_, _) => default,
+            (ex, _) =>
+            {
+                caught = ex;
+                errorTcs.TrySetResult();
+                return default;
+            });
+        InvalidOperationException expected = new("distinct-until-changed-by-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -485,14 +505,16 @@ public class FilteringOperatorTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.Where(static _ => true).SubscribeAsync(static (_, _) => default, (ex, _) =>
-        {
-            caught = ex;
-            errorTcs.TrySetResult();
-            return default;
-        });
-        var expected = new InvalidOperationException("where-sync-error");
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await signal.Values.Where(static _ => true).SubscribeAsync(
+            static (_, _) => default,
+            (ex, _) =>
+            {
+                caught = ex;
+                errorTcs.TrySetResult();
+                return default;
+            });
+        InvalidOperationException expected = new("where-sync-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -506,14 +528,14 @@ public class FilteringOperatorTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await signal.Values.Skip(1).SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             caught = ex;
             errorTcs.TrySetResult();
             return default;
         });
-        var expected = new InvalidOperationException("skip-error");
+        InvalidOperationException expected = new("skip-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -526,14 +548,14 @@ public class FilteringOperatorTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await signal.Values.Take(10).SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             caught = ex;
             errorTcs.TrySetResult();
             return default;
         });
-        var expected = new InvalidOperationException("take-error");
+        InvalidOperationException expected = new("take-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -546,14 +568,16 @@ public class FilteringOperatorTests
     {
         var signal = Signal.Create<object>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.Cast<object, int>().SubscribeAsync(static (_, _) => default, (ex, _) =>
-        {
-            caught = ex;
-            errorTcs.TrySetResult();
-            return default;
-        });
-        var expected = new InvalidOperationException("cast-error");
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await signal.Values.Cast<object, int>().SubscribeAsync(
+            static (_, _) => default,
+            (ex, _) =>
+            {
+                caught = ex;
+                errorTcs.TrySetResult();
+                return default;
+            });
+        InvalidOperationException expected = new("cast-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -566,14 +590,16 @@ public class FilteringOperatorTests
     {
         var signal = Signal.Create<object>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.OfType<object, string>().SubscribeAsync(static (_, _) => default, (ex, _) =>
-        {
-            caught = ex;
-            errorTcs.TrySetResult();
-            return default;
-        });
-        var expected = new InvalidOperationException("of-type-error");
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await signal.Values.OfType<object, string>().SubscribeAsync(
+            static (_, _) => default,
+            (ex, _) =>
+            {
+                caught = ex;
+                errorTcs.TrySetResult();
+                return default;
+            });
+        InvalidOperationException expected = new("of-type-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -587,14 +613,16 @@ public class FilteringOperatorTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.Select(static x => x + 1).SubscribeAsync(static (_, _) => default, (ex, _) =>
-        {
-            caught = ex;
-            errorTcs.TrySetResult();
-            return default;
-        });
-        var expected = new InvalidOperationException("select-sync-error");
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await signal.Values.Select(static x => x + 1).SubscribeAsync(
+            static (_, _) => default,
+            (ex, _) =>
+            {
+                caught = ex;
+                errorTcs.TrySetResult();
+                return default;
+            });
+        InvalidOperationException expected = new("select-sync-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -608,14 +636,16 @@ public class FilteringOperatorTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.Select(static (x, _) => new ValueTask<int>(x + 1)).SubscribeAsync(static (_, _) => default, (ex, _) =>
-        {
-            caught = ex;
-            errorTcs.TrySetResult();
-            return default;
-        });
-        var expected = new InvalidOperationException("select-async-error");
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await signal.Values.Select(static (x, _) => new ValueTask<int>(x + 1)).SubscribeAsync(
+            static (_, _) => default,
+            (ex, _) =>
+            {
+                caught = ex;
+                errorTcs.TrySetResult();
+                return default;
+            });
+        InvalidOperationException expected = new("select-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -629,14 +659,16 @@ public class FilteringOperatorTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.Where(static (_, _) => new(true)).SubscribeAsync(static (_, _) => default, (ex, _) =>
-        {
-            caught = ex;
-            errorTcs.TrySetResult();
-            return default;
-        });
-        var expected = new InvalidOperationException("where-async-error");
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await signal.Values.Where(static (_, _) => new(true)).SubscribeAsync(
+            static (_, _) => default,
+            (ex, _) =>
+            {
+                caught = ex;
+                errorTcs.TrySetResult();
+                return default;
+            });
+        InvalidOperationException expected = new("where-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);

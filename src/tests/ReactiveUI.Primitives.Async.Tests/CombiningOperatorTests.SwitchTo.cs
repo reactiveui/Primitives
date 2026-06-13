@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -39,7 +40,9 @@ public partial class CombiningOperatorTests
             completionResult = result;
             return default;
         });
-        await outer.OnNextAsync(SignalAsync.Throw<int>(new InvalidOperationException(InnerFailMessage)), CancellationToken.None);
+        await outer.OnNextAsync(
+            SignalAsync.Throw<int>(new InvalidOperationException(InnerFailMessage)),
+            CancellationToken.None);
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
         await outer.DisposeAsync();
@@ -96,19 +99,19 @@ public partial class CombiningOperatorTests
         var outer = Signal.Create<IObservableAsync<int>>();
         var innerSignal = Signal.Create<int>();
         Result? completionResult = null;
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await outer.Values.Switch().SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             null,
             result =>
-        {
-            completionResult = result;
-            return default;
-        });
+            {
+                completionResult = result;
+                return default;
+            });
         await outer.OnNextAsync(innerSignal.Values, CancellationToken.None);
 
         // Complete the outer while inner is still active
@@ -164,19 +167,19 @@ public partial class CombiningOperatorTests
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-        var errors = new List<Exception>();
-        var items = new List<int>();
+        List<Exception> errors = [];
+        List<int> items = [];
         await using var sub = await outerSource.Switch().SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             (ex, _) =>
-        {
-            errors.Add(ex);
-            return default;
-        });
+            {
+                errors.Add(ex);
+                return default;
+            });
         await Assert.That(errors).Count().IsEqualTo(1);
         await Assert.That(errors[0].Message).IsEqualTo(OuterWarningMessage);
     }
@@ -194,19 +197,19 @@ public partial class CombiningOperatorTests
             return DisposableAsync.Empty;
         });
         var outer = Signal.Create<IObservableAsync<int>>();
-        var errors = new List<Exception>();
-        var items = new List<int>();
+        List<Exception> errors = [];
+        List<int> items = [];
         await using var sub = await outer.Values.Switch().SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             (ex, _) =>
-        {
-            errors.Add(ex);
-            return default;
-        });
+            {
+                errors.Add(ex);
+                return default;
+            });
         await outer.OnNextAsync(innerWithError, CancellationToken.None);
         await Assert.That(errors).Count().IsEqualTo(1);
         await Assert.That(errors[0].Message).IsEqualTo(InnerWarningMessage);
@@ -241,15 +244,15 @@ public partial class CombiningOperatorTests
     public async Task WhenSwitchInnerError_ThenOuterReceivesError()
     {
         var outer = Signal.Create<IObservableAsync<int>>();
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
         await using var sub = await outer.Values.Switch().SubscribeAsync(
-            (Action<int>)(_ =>
-        {
-        }),
+            (Action<int>)(_ => { }),
             (Action<Exception>?)(ex => errors.Add(ex)),
             null,
             CancellationToken.None);
-        await outer.OnNextAsync(SignalAsync.Throw<int>(new InvalidOperationException("inner-error")), CancellationToken.None);
+        await outer.OnNextAsync(
+            SignalAsync.Throw<int>(new InvalidOperationException("inner-error")),
+            CancellationToken.None);
         await Task.Yield();
         await Assert.That(errors).Count().IsGreaterThanOrEqualTo(0);
     }
@@ -260,11 +263,14 @@ public partial class CombiningOperatorTests
     public async Task WhenSwitchOuterCompletesWithNoInner_ThenCompletes()
     {
         Result? completionResult = null;
-        await using var sub = await SignalAsync.Empty<IObservableAsync<int>>().Switch().SubscribeAsync((_, _) => default, null, result =>
-        {
-            completionResult = result;
-            return default;
-        });
+        await using var sub = await SignalAsync.Empty<IObservableAsync<int>>().Switch().SubscribeAsync(
+            (_, _) => default,
+            null,
+            result =>
+            {
+                completionResult = result;
+                return default;
+            });
         await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, TimeSpan.FromSeconds(5));
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
@@ -282,7 +288,9 @@ public partial class CombiningOperatorTests
             completionResult = result;
             return default;
         });
-        await outer.OnNextAsync(SignalAsync.Throw<int>(new InvalidOperationException(InnerFailMessage)), CancellationToken.None);
+        await outer.OnNextAsync(
+            SignalAsync.Throw<int>(new InvalidOperationException(InnerFailMessage)),
+            CancellationToken.None);
         await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, TimeSpan.FromSeconds(5));
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
@@ -295,7 +303,7 @@ public partial class CombiningOperatorTests
     public async Task WhenSwitchInnerErrorResume_ThenForwarded()
     {
         var outer = Signal.Create<IObservableAsync<int>>();
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
         var inner = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(new InvalidOperationException(InnerWarningMessage), ct);
@@ -319,13 +327,13 @@ public partial class CombiningOperatorTests
     public async Task WhenSwitch_ThenEmitsFromLatestInnerSequence()
     {
         var outer = Signal.Create<IObservableAsync<int>>();
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await outer.Values.Switch().SubscribeAsync(
             (x, _) =>
-        {
-            items.Add(x);
-            return default;
-        },
+            {
+                items.Add(x);
+                return default;
+            },
             null);
         var inner1 = Signal.Create<int>();
         await outer.OnNextAsync(inner1.Values, CancellationToken.None);
@@ -348,7 +356,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenSwitchInnerSubscriptionThrows_ThenCompletesWithFailure()
     {
-        var failingInner = SignalAsync.Create<int>((_, _) => throw new InvalidOperationException("inner subscribe boom"));
+        var failingInner =
+            SignalAsync.Create<int>((_, _) => throw new InvalidOperationException("inner subscribe boom"));
         var outer = SignalAsync.Return(failingInner);
         await Assert.That(async () => await outer.Switch().ToListAsync()).ThrowsExactly<InvalidOperationException>();
     }
@@ -367,8 +376,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenSwitchInnerFails_ThenErrorPropagated()
     {
-        var error = new InvalidOperationException("switch-inner");
-        await Assert.That(async () => await SignalAsync.Return(SignalAsync.Throw<int>(error)).Switch().FirstAsync()).ThrowsExactly<InvalidOperationException>();
+        InvalidOperationException error = new("switch-inner");
+        await Assert.That(async () => await SignalAsync.Return(SignalAsync.Throw<int>(error)).Switch().FirstAsync())
+            .ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Verifies that subscribing <c>Switch</c> with an already-cancelled token
@@ -377,9 +387,10 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenSwitchSubscribedWithAlreadyCancelledToken_ThenSubscriptionDisposes()
     {
-        using var cts = new CancellationTokenSource();
+        using CancellationTokenSource cts = new();
         await cts.CancelAsync();
-        await using var sub = await SignalAsync.Return(SignalAsync.Return(1)).Switch().SubscribeAsync(static (_, _) => default, cts.Token);
+        await using var sub = await SignalAsync.Return(SignalAsync.Return(1)).Switch()
+            .SubscribeAsync(static (_, _) => default, cts.Token);
         await Assert.That(sub).IsNotNull();
     }
 
@@ -389,7 +400,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenSwitchExternalTokenCancelledAfterSubscribe_ThenRegistrationFires()
     {
-        using var cts = new CancellationTokenSource();
+        using CancellationTokenSource cts = new();
         var outer = Signal.Create<IObservableAsync<int>>();
         await using var sub = await outer.Values.Switch().SubscribeAsync(static (_, _) => default, cts.Token);
         await cts.CancelAsync();

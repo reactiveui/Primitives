@@ -27,7 +27,7 @@ internal sealed class ThrottleDistinctObservable<T>(
 
         // Implementation of .DistinctUntilChanged().Throttle(throttle, scheduler).DistinctUntilChanged()
         // But fused into a single sink to avoid multiple operator allocations and observer chains.
-        var sink = new ThrottleDistinctSink(observer, throttle, scheduler);
+        ThrottleDistinctSink sink = new(observer, throttle, scheduler);
         var subscription = source.Subscribe(sink);
         return new DisposableBag(subscription, sink);
     }

@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -46,11 +47,14 @@ public class BlendUniqueTests
     [Test]
     public async Task MergesSourcesAndSuppressesConsecutiveDuplicates()
     {
-        var values = new List<int>();
+        List<int> values = [];
         var completed = 0;
 
         // source0 emits 1,1,2 (-> 1,2) then source1 emits 2,3,3 (2 == last, dropped -> 3).
-        LinqExtensions.BlendUnique(Signal.FromEnumerable(_firstDuplicatedThenSecond), Signal.FromEnumerable(_secondThenThirdDuplicated)).Subscribe(values.Add, ex => throw ex, () => completed++);
+        LinqExtensions
+            .BlendUnique(
+            Signal.FromEnumerable(_firstDuplicatedThenSecond),
+            Signal.FromEnumerable(_secondThenThirdDuplicated)).Subscribe(values.Add, ex => throw ex, () => completed++);
         await Assert.That(values.SequenceEqual(_distinctMerged)).IsTrue();
         await Assert.That(completed).IsEqualTo(Once);
     }
@@ -60,7 +64,7 @@ public class BlendUniqueTests
     [Test]
     public async Task EmptySourcesCompletesImmediately()
     {
-        var values = new List<int>();
+        List<int> values = [];
         var completed = 0;
         LinqExtensions.BlendUnique<int>().Subscribe(values.Add, ex => throw ex, () => completed++);
         await Assert.That(values.Count).IsEqualTo(0);
@@ -72,10 +76,11 @@ public class BlendUniqueTests
     [Test]
     public async Task UsesSuppliedComparer()
     {
-        var values = new List<string>();
+        List<string> values = [];
 
         // Case-insensitive: "a","A" collapse; "B" forwarded.
-        LinqExtensions.BlendUnique([Signal.FromEnumerable(_caseVariants)], StringComparer.OrdinalIgnoreCase).Subscribe(values.Add);
+        LinqExtensions.BlendUnique([Signal.FromEnumerable(_caseVariants)], StringComparer.OrdinalIgnoreCase)
+            .Subscribe(values.Add);
         await Assert.That(values.SequenceEqual(_distinctCaseInsensitive)).IsTrue();
     }
 
@@ -84,11 +89,11 @@ public class BlendUniqueTests
     [Test]
     public async Task ForwardsFirstSourceError()
     {
-        var values = new List<int>();
+        List<int> values = [];
         Exception? error = null;
-        LinqExtensions.BlendUnique(Signal.FromEnumerable(_single), Signal.Fail<int>(new InvalidOperationException("boom"))).Subscribe(values.Add, ex => error = ex, () =>
-        {
-        });
+        LinqExtensions
+            .BlendUnique(Signal.FromEnumerable(_single), Signal.Fail<int>(new InvalidOperationException("boom")))
+            .Subscribe(values.Add, ex => error = ex, () => { });
         await Assert.That(values.SequenceEqual(_single)).IsTrue();
         await Assert.That(error).IsNotNull();
         await Assert.That(error is InvalidOperationException).IsTrue();
@@ -99,8 +104,8 @@ public class BlendUniqueTests
     [Test]
     public async Task DisposeUnsubscribesFromSources()
     {
-        var source = new Signal<int>();
-        var values = new List<int>();
+        Signal<int> source = new();
+        List<int> values = [];
         var subscription = LinqExtensions.BlendUnique(source).Subscribe(values.Add);
         source.OnNext(One);
         subscription.Dispose();
@@ -113,10 +118,10 @@ public class BlendUniqueTests
     [Test]
     public async Task SuppressesNotificationsAfterTerminalError()
     {
-        var first = new Signal<int>();
-        var second = new Signal<int>();
-        var third = new Signal<int>();
-        var values = new List<int>();
+        Signal<int> first = new();
+        Signal<int> second = new();
+        Signal<int> third = new();
+        List<int> values = [];
         Exception? error = null;
         var completed = 0;
         LinqExtensions.BlendUnique(first, second, third).Subscribe(values.Add, ex => error = ex, () => completed++);
@@ -136,6 +141,7 @@ public class BlendUniqueTests
     {
         Assert.Throws<ArgumentNullException>(() => LinqExtensions.BlendUnique<int>(null!, comparer: null));
         Assert.Throws<ArgumentNullException>(() => LinqExtensions.BlendUnique(Signal.FromEnumerable(_single), null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.BlendUnique(Signal.FromEnumerable(_single)).Subscribe(null!));
+        Assert.Throws<ArgumentNullException>(() =>
+            LinqExtensions.BlendUnique(Signal.FromEnumerable(_single)).Subscribe(null!));
     }
 }

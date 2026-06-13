@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
-
+using ReactiveUI.Primitives.Async.Signals;
 using PrimitivesAsyncSignalFactory = ReactiveUI.Primitives.Async.Signals.Signal;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -33,7 +33,7 @@ public class AsyncSignalSubscriptionBenchmarks
 
             for (var i = 0; i < SubscriberCount; i++)
             {
-                var observer = new CountingWitness();
+                CountingWitness observer = new();
                 observers[i] = observer;
                 subscriptions[i] = await signal.SubscribeAsync(observer, CancellationToken.None).ConfigureAwait(false);
             }

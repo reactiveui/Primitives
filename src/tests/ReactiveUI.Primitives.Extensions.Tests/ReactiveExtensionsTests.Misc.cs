@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Concurrency;
@@ -31,9 +32,10 @@ public partial class ReactiveExtensionsTests
         // Given, When
         var result = 0;
         var itterations = 0;
-        var subject = new Subject<bool>();
-        var tasks = new List<Task>();
+        Subject<bool> subject = new();
+        List<Task> tasks = [];
         using var disposable = subject.SynchronizeAsync().Subscribe(x => tasks.Add(HandleAsync(x)));
+
         async Task HandleAsync((bool Value, IDisposable Sync) x)
         {
             try
@@ -77,8 +79,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task OnNext_WithMultipleValues_PushesAll()
     {
-        var results = new List<int>();
-        var subject = new Subject<int>();
+        List<int> results = [];
+        Subject<int> subject = new();
         using var sub = subject.Subscribe(results.Add);
         subject.OnNext(1, SampleValue2, SampleValue3, SampleValue4, SampleValue5);
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2, SampleValue3, SampleValue4, SampleValue5]);
@@ -89,15 +91,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task FromArray_WithScheduler_EmitsElements()
     {
-        var source = new[]
-        {
-            1,
-            2,
-            3,
-            4,
-            5
-        };
-        var results = new List<int>();
+        int[] source = [1, 2, 3, 4, 5];
+        List<int> results = [];
         using var sub = source.FromArray(Sequencer.Immediate).Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo(source);
     }
@@ -108,7 +103,7 @@ public partial class ReactiveExtensionsTests
     public async Task Filter_WithRegex_FiltersStrings()
     {
         var source = SequenceTest123HelloTest456World.ToObservable();
-        var results = new List<string>();
+        List<string> results = [];
         using var sub = source.Filter(@"^test\d+$").Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo(["test123", "test456"]);
     }
@@ -137,8 +132,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task TakeUntil_WithPredicate_CompletesWhenPredicateTrue()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         using var sub = subject.TakeUntil(x => x >= 5).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
@@ -152,13 +147,13 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Partition_SplitsSequence()
     {
-        var subject = new Subject<int>();
-        var trueResults = new List<int>();
-        var falseResults = new List<int>();
-        var(trueObs, falseObs) = subject.Partition(x => x % SampleValue2 == 0);
+        Subject<int> subject = new();
+        List<int> trueResults = [];
+        List<int> falseResults = [];
+        (var trueObs, var falseObs) = subject.Partition(x => x % SampleValue2 == 0);
         using var trueSub = trueObs.Subscribe(trueResults.Add);
         using var falseSub = falseObs.Subscribe(falseResults.Add);
-        for (int i = 1; i <= SampleValue10; i++)
+        for (var i = 1; i <= SampleValue10; i++)
         {
             subject.OnNext(i);
         }
@@ -166,8 +161,10 @@ public partial class ReactiveExtensionsTests
         subject.OnCompleted();
         using (Assert.Multiple())
         {
-            await Assert.That(trueResults).IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6, SampleValue8, SampleValue10]);
-            await Assert.That(falseResults).IsCollectionEqualTo([1, SampleValue3, SampleValue5, SampleValue7, SampleValue9]);
+            await Assert.That(trueResults)
+                .IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6, SampleValue8, SampleValue10]);
+            await Assert.That(falseResults)
+                .IsCollectionEqualTo([1, SampleValue3, SampleValue5, SampleValue7, SampleValue9]);
         }
     }
 
@@ -176,8 +173,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WaitUntil_TakesFirstMatching()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         using var sub = subject.WaitUntil(x => x > 5).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue3);
@@ -214,7 +211,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Stale_WithUpdate_IsNotStale()
     {
-        var stale = new Stale<int>(42);
+        Stale<int> stale = new(42);
         using (Assert.Multiple())
         {
             await Assert.That(stale.IsStale).IsFalse();
@@ -227,7 +224,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Stale_WithoutUpdate_IsStale()
     {
-        var stale = new Stale<int>();
+        Stale<int> stale = new();
         await Assert.That(stale.IsStale).IsTrue();
     }
 
@@ -236,7 +233,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Stale_WithoutUpdate_ThrowsOnUpdateAccess()
     {
-        var stale = new Stale<int>();
+        Stale<int> stale = new();
         var ex = Assert.Throws<InvalidOperationException>(() => _ = stale.Update);
         await Assert.That(ex).IsNotNull();
     }
@@ -245,7 +242,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public void Continuation_CanBeDisposed()
     {
-        var continuation = new Continuation();
+        Continuation continuation = new();
         continuation.Dispose();
     }
 
@@ -254,7 +251,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Continuation_TracksCompletedPhases()
     {
-        using var continuation = new Continuation();
+        using Continuation continuation = new();
         var phases = continuation.CompletedPhases;
         await Assert.That(phases).IsGreaterThanOrEqualTo(0);
     }
@@ -264,8 +261,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Pairwise_EmitsPairs()
     {
-        var subject = new Subject<int>();
-        var results = new List<(int Previous, int Current)>();
+        Subject<int> subject = new();
+        List<(int Previous, int Current)> results = [];
         subject.Pairwise().Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
@@ -283,8 +280,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ScanWithInitial_StartsWithInitial()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         subject.ScanWithInitial(SampleValue10, (acc, x) => acc + x).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
@@ -296,15 +293,15 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task SampleLatest_SamplesLatestOnTrigger()
     {
-        var subject = new Subject<int>();
-        var trigger = new Subject<object>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        Subject<object> trigger = new();
+        List<int> results = [];
         subject.SampleLatest(trigger).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
-        trigger.OnNext(new object ()); // Should emit 2
+        trigger.OnNext(new()); // Should emit 2
         subject.OnNext(SampleValue3);
-        trigger.OnNext(new object ()); // Should emit 3
+        trigger.OnNext(new()); // Should emit 3
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue3]);
     }
 
@@ -313,9 +310,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task SwitchIfEmpty_SwitchesWhenEmpty()
     {
-        var emptySubject = new Subject<int>();
-        var fallbackSubject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> emptySubject = new();
+        Subject<int> fallbackSubject = new();
+        List<int> results = [];
         emptySubject.SwitchIfEmpty(fallbackSubject).Subscribe(results.Add);
         emptySubject.OnCompleted(); // Empty completes
         fallbackSubject.OnNext(SampleValue42);
@@ -328,8 +325,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ToReadOnlyBehavior_CreatesReadOnly()
     {
-        var(observable, observer) = ReactiveExtensions.ToReadOnlyBehavior(SampleValue10);
-        var results = new List<int>();
+        (var observable, var observer) = ReactiveExtensions.ToReadOnlyBehavior(SampleValue10);
+        List<int> results = [];
         observable.Subscribe(results.Add);
         observer.OnNext(SampleValue20);
         observer.OnNext(SampleValue30);
@@ -341,7 +338,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ToHotTask_ConvertsToTask()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var task = subject.ToHotTask();
         subject.OnNext(SampleValue42);
         await Assert.That(await task).IsEqualTo(SampleValue42);
@@ -352,7 +349,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ToHotValueTask_ConvertsToValueTask()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var task = subject.ToHotValueTask();
         subject.OnNext(SampleValue42);
         await Assert.That(await task).IsEqualTo(SampleValue42);
@@ -363,11 +360,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ToPropertyObservable_ObservesProperty()
     {
-        var obj = new TestNotifyPropertyChanged
-        {
-            TestProperty = InitialValueLiteral
-        };
-        var results = new List<string>();
+        TestNotifyPropertyChanged obj = new() { TestProperty = InitialValueLiteral };
+        List<string> results = [];
         obj.ToPropertyObservable(x => x.TestProperty).Subscribe(results.Add);
         obj.TestProperty = ChangedValueLiteral;
         await Assert.That(results).IsCollectionEqualTo([InitialValueLiteral, ChangedValueLiteral]);
@@ -378,7 +372,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task SkipWhileNull_WhenFirstValueArrives_EmitsRemainingValues()
     {
-        IObservable<string> source = Observable.Create<string>(observer =>
+        var source = Observable.Create<string>(observer =>
         {
             observer.OnNext(null!);
             observer.OnNext(null!);
@@ -388,7 +382,7 @@ public partial class ReactiveExtensionsTests
             observer.OnCompleted();
             return EmptyDisposable.Instance;
         });
-        var results = new List<string>();
+        List<string> results = [];
         using var sub = source.SkipWhileNull().Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo(["first", null, "second"]);
     }
@@ -398,20 +392,20 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ReplayLastOnSubscribe_ReplaysLastValueToNewSubscribers()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var replayed = subject.ReplayLastOnSubscribe(SampleValue99);
-        var results1 = new List<int>();
+        List<int> results1 = [];
         using var sub1 = replayed.Subscribe(results1.Add);
 
         // First subscriber gets the per-subscription initial value.
         await Assert.That(results1).IsCollectionEqualTo([SampleValue99]);
         subject.OnNext(1);
         await Assert.That(results1).IsCollectionEqualTo([SampleValue99, 1]);
-        var results2 = new List<int>();
+        List<int> results2 = [];
         using var sub2 = replayed.Subscribe(results2.Add);
 
-        // ReplayLastOnSubscribe creates a fresh BehaviorSubject per subscriber seeded with the initial value;
-        // late subscribers therefore receive the initial value, not values emitted to earlier subscribers.
+        // Each subscriber gets its own replay hub seeded with the initial value, so a late subscriber
+        // observes that initial value rather than values delivered to earlier subscribers.
         await Assert.That(results2).IsCollectionEqualTo([SampleValue99]);
         subject.OnNext(SampleValue2);
         using (Assert.Multiple())
@@ -426,8 +420,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenLatestOrDefault_ThenEmitsDefaultThenDistinctValues()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         subject.LatestOrDefault(SampleValue42).Subscribe(results.Add);
         subject.OnNext(SampleValue42); // Same as default, should be suppressed by DistinctUntilChanged
         subject.OnNext(1);
@@ -451,7 +445,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenOnNextWithNullEvents_ThenThrowsArgumentNullException()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var ex = Assert.Throws<ArgumentNullException>(() => subject.OnNext(null!));
         await Assert.That(ex).IsNotNull();
     }
@@ -461,26 +455,26 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenSubscribeAsyncWithAllHandlers_ThenInvokesAll()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
         Exception? caughtError = null;
-        var completionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<bool> completionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
         const int ExpectedCount = 2;
-        var allReceived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = subject.SubscribeAsync(
             async x =>
-        {
-            await Task.Yield();
-            results.Add(x);
-            _ = results.Count == ExpectedCount && allReceived.TrySetResult();
-        },
+            {
+                await Task.Yield();
+                results.Add(x);
+                _ = results.Count == ExpectedCount && allReceived.TrySetResult();
+            },
             ex => caughtError = ex,
             () =>
-        {
-            completed = true;
-            completionSource.TrySetResult(true);
-        });
+            {
+                completed = true;
+                completionSource.TrySetResult(true);
+            });
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         await allReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -502,11 +496,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenToPropertyObservableDisposed_ThenUnsubscribesFromPropertyChanged()
     {
-        var obj = new TestNotifyPropertyChanged
-        {
-            TestProperty = InitialValueLiteral
-        };
-        var results = new List<string>();
+        TestNotifyPropertyChanged obj = new() { TestProperty = InitialValueLiteral };
+        List<string> results = [];
         var sub = obj.ToPropertyObservable(x => x.TestProperty).Subscribe(results.Add);
         obj.TestProperty = ChangedValueLiteral;
 
@@ -523,7 +514,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenScheduleSafeImmediateWithScheduler_ThenSchedulerIsUsed()
     {
-        var scheduler = new VirtualClock();
+        VirtualClock scheduler = new();
         var ran = false;
         scheduler.ScheduleSafe(() => ran = true);
         await Assert.That(ran).IsFalse();
@@ -537,7 +528,7 @@ public partial class ReactiveExtensionsTests
     public async Task WhenScheduleSafeDelayedWithScheduler_ThenSchedulerIsUsed()
     {
         const int DelayTicks = 50;
-        var scheduler = new VirtualClock();
+        VirtualClock scheduler = new();
         var ran = false;
         scheduler.ScheduleSafe(TimeSpan.FromTicks(DelayTicks), () => ran = true);
         await Assert.That(ran).IsFalse();
@@ -552,8 +543,8 @@ public partial class ReactiveExtensionsTests
     {
         const int SuccessAttempt = 2;
         var attempts = 0;
-        var values = new List<int>();
-        var caught = new List<InvalidOperationException>();
+        List<int> values = [];
+        List<InvalidOperationException> caught = [];
         var source = Observable.Create<int>(observer =>
         {
             var attempt = Interlocked.Increment(ref attempts);
@@ -579,18 +570,17 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenOnErrorRetryNonMatchingExceptionType_ThenOnErrorCallbackSkipped()
     {
-        var caught = new List<NotSupportedException>();
-        var values = new List<int>();
-        var failure = new InvalidOperationException("wrong type");
+        List<NotSupportedException> caught = [];
+        List<int> values = [];
+        InvalidOperationException failure = new("wrong type");
         var source = Observable.Create<int>(observer =>
         {
             observer.OnNext(1);
             observer.OnError(failure);
             return EmptyDisposable.Instance;
         });
-        using var sub = source.OnErrorRetry<int, NotSupportedException>(caught.Add, retryCount: 1, TimeSpan.Zero, Sequencer.Default).Subscribe(values.Add, static _ =>
-        {
-        });
+        using var sub = source.OnErrorRetry<int, NotSupportedException>(caught.Add, 1, TimeSpan.Zero, Sequencer.Default)
+            .Subscribe(values.Add, static _ => { });
         await Task.Delay(TimeSpan.FromMilliseconds(SchedulerStabilizeMilliseconds));
         await Assert.That(caught).IsEmpty();
         await Assert.That(values.Count).IsGreaterThanOrEqualTo(1);
@@ -603,8 +593,8 @@ public partial class ReactiveExtensionsTests
     {
         const int SuccessAttempt = 2;
         var attempts = 0;
-        var done = new TaskCompletionSource<List<int>>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var values = new List<int>();
+        TaskCompletionSource<List<int>> done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> values = [];
         var source = Observable.Create<int>(observer =>
         {
             var attempt = Interlocked.Increment(ref attempts);
@@ -620,24 +610,27 @@ public partial class ReactiveExtensionsTests
 
             return EmptyDisposable.Instance;
         });
-        using var sub = source.RetryWithBackoff(maxRetries: 3, TimeSpan.FromMilliseconds(1)).Subscribe(values.Add, () => done.TrySetResult(values));
+        using var sub = source.RetryWithBackoff(3, TimeSpan.FromMilliseconds(1))
+            .Subscribe(values.Add, () => done.TrySetResult(values));
         var captured = await done.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(captured).IsCollectionEqualTo([SuccessAttempt]);
     }
 
     /// <summary>Verifies <c>ReplayLastOnSubscribe</c> throws when the source is null.</summary>
     [Test]
-    public void WhenReplayLastOnSubscribeSourceNull_ThenThrows() => Assert.Throws<ArgumentNullException>(static () => ReactiveExtensions.ReplayLastOnSubscribe(null!, 0));
+    public void WhenReplayLastOnSubscribeSourceNull_ThenThrows() =>
+        Assert.Throws<ArgumentNullException>(static () => ReactiveExtensions.ReplayLastOnSubscribe(null!, 0));
 
     /// <summary>Verifies the two-argument <c>BufferUntilInactive</c> overload flushes a buffer on completion using the default scheduler.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenBufferUntilInactiveTwoArgOverload_ThenFlushesBufferOnCompletion()
     {
-        var subject = new Subject<int>();
-        var results = new List<IList<int>>();
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = subject.BufferUntilInactive(TimeSpan.FromSeconds(5)).Subscribe(results.Add, () => completed.TrySetResult());
+        Subject<int> subject = new();
+        List<IList<int>> results = [];
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var sub = subject.BufferUntilInactive(TimeSpan.FromSeconds(5))
+            .Subscribe(results.Add, () => completed.TrySetResult());
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnCompleted();
@@ -652,8 +645,8 @@ public partial class ReactiveExtensionsTests
     public async Task WhenCatchReturnSourceErrors_ThenEmitsFallbackAndCompletes()
     {
         const int Fallback = 99;
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
         using var sub = subject.CatchReturn(Fallback).Subscribe(results.Add, () => completed = true);
         subject.OnNext(1);
@@ -667,8 +660,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenCatchReturnUnitSourceErrors_ThenEmitsUnitAndCompletes()
     {
-        var subject = new Subject<RxVoid>();
-        var results = new List<RxVoid>();
+        Subject<RxVoid> subject = new();
+        List<RxVoid> results = [];
         var completed = false;
         using var sub = subject.CatchReturnUnit().Subscribe(results.Add, () => completed = true);
         subject.OnError(new InvalidOperationException("boom"));
@@ -683,8 +676,8 @@ public partial class ReactiveExtensionsTests
     public async Task WhenCatchReturnSourceCompletesNormally_ThenForwardsCompletion()
     {
         const int Fallback = 99;
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
         using var sub = subject.CatchReturn(Fallback).Subscribe(results.Add, () => completed = true);
         subject.OnNext(1);
@@ -699,12 +692,11 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenCatchIgnoreWithErrorActionSourceCompletesNormally_ThenForwardsCompletion()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
-        using var sub = subject.CatchIgnore<int, InvalidOperationException>(static _ =>
-        {
-        }).Subscribe(results.Add, () => completed = true);
+        using var sub = subject.CatchIgnore<int, InvalidOperationException>(static _ => { })
+            .Subscribe(results.Add, () => completed = true);
         subject.OnNext(1);
         subject.OnCompleted();
         await Assert.That(results).IsCollectionEqualTo([1]);
@@ -717,12 +709,10 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenCatchIgnoreEmptyOverloadSourceCompletesNormally_ThenForwardsCompletion()
     {
-        var subject = new Subject<int?>();
+        Subject<int?> subject = new();
         var completed = false;
         using var sub = subject.CatchIgnore().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completed = true);
         subject.OnCompleted();
         await Assert.That(completed).IsTrue();
@@ -734,7 +724,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenToPropertyObservableNonMemberExpression_ThenThrowsArgumentException()
     {
-        var owner = new ToPropertyNonMemberOwner();
+        ToPropertyNonMemberOwner owner = new();
         Action call = () => owner.ToPropertyObservable(static _ => 1 + 1);
         var ex = Assert.Throws<ArgumentException>(call);
         await Assert.That(ex).IsNotNull();
@@ -746,13 +736,11 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenAsSignalSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException("as-signal-error");
+        InvalidOperationException expected = new("as-signal-error");
         using var sub = subject.AsSignal().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -777,7 +765,7 @@ public partial class ReactiveExtensionsTests
                 }
 
                 field = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TestProperty)));
+                PropertyChanged?.Invoke(this, new(nameof(TestProperty)));
             }
         } = string.Empty;
     }
@@ -790,6 +778,10 @@ public partial class ReactiveExtensionsTests
     private sealed class ToPropertyNonMemberOwner : INotifyPropertyChanged
     {
         /// <inheritdoc/>
-        public event PropertyChangedEventHandler? PropertyChanged { add => _ = value; remove => _ = value; }
+        public event PropertyChangedEventHandler? PropertyChanged
+        {
+            add => _ = value;
+            remove => _ = value;
+        }
     }
 }

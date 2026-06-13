@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>ReplaySignal.</summary>
+/// <summary>A signal that replays buffered values to new subscribers.</summary>
 /// <typeparam name="T">The Type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class ReplaySignal<T> : ISignal<T>
@@ -183,7 +183,7 @@ public class ReplaySignal<T> : ISignal<T>
 
     /// <summary>Called when [error].</summary>
     /// <param name="error">The exception.</param>
-    /// <exception cref="ArgumentNullException">error.</exception>
+    /// <exception cref="ArgumentExceptionHelper">error.</exception>
     public void OnError(Exception error)
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
@@ -239,7 +239,7 @@ public class ReplaySignal<T> : ISignal<T>
     /// <summary>Subscribes the specified observer.</summary>
     /// <param name="observer">The observer.</param>
     /// <returns>A Disposable.</returns>
-    /// <exception cref="ArgumentNullException">observer.</exception>
+    /// <exception cref="ArgumentExceptionHelper">observer.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);

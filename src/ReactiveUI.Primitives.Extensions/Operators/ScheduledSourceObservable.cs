@@ -48,7 +48,7 @@ internal sealed class ScheduledSourceObservable<T> : IObservable<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new ScheduledSourceWitness(observer, _config);
+        ScheduledSourceWitness sink = new(observer, _config);
         return _source.Subscribe(sink);
     }
 
@@ -93,7 +93,7 @@ internal sealed class ScheduledSourceObservable<T> : IObservable<T>
         /// <inheritdoc/>
         public void OnNext(T value)
         {
-            var state = new EmitState(downstream, value, config.Transform, config.Action);
+            EmitState state = new(downstream, value, config.Transform, config.Action);
             var scheduler = config.Scheduler;
 
             if (!config.HasDelay)

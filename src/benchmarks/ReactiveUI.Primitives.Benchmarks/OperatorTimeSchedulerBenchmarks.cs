@@ -2,10 +2,12 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using BenchmarkDotNet.Attributes;
 using Microsoft.Extensions.Time.Testing;
+using R3;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Signals;
@@ -26,8 +28,8 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesDelayRange()
     {
-        var clock = new TestClock();
-        var observer = new IntSignalWitness();
+        TestClock clock = new();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(1, Count).Shift(TimeSpan.FromTicks(1), clock).Subscribe(observer);
         clock.AdvanceBy(TimeSpan.FromTicks(1));
         return observer.Total;
@@ -38,8 +40,8 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int SystemReactiveDelayRange()
     {
-        var scheduler = new HistoricalScheduler();
-        var observer = new IntSignalWitness();
+        HistoricalScheduler scheduler = new();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Range(1, Count).Delay(TimeSpan.FromTicks(1), scheduler).Subscribe(observer);
         scheduler.AdvanceBy(TimeSpan.FromTicks(1));
         return observer.Total;
@@ -50,8 +52,8 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int R3DelayRange()
     {
-        var timeProvider = new FakeTimeProvider();
-        var observer = new IntR3Witness();
+        FakeTimeProvider timeProvider = new();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.Delay(
                 R3.Observable.Range(1, Count),
                 TimeSpan.FromTicks(1),
@@ -66,8 +68,8 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int PrimitivesDelayStartRange()
     {
-        var clock = new TestClock();
-        var observer = new IntSignalWitness();
+        TestClock clock = new();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(1, Count).DelayStart(TimeSpan.FromTicks(1), clock).Subscribe(observer);
         clock.AdvanceBy(TimeSpan.FromTicks(1));
         return observer.Total;
@@ -78,8 +80,8 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int SystemReactiveDelayStartRange()
     {
-        var scheduler = new HistoricalScheduler();
-        var observer = new IntSignalWitness();
+        HistoricalScheduler scheduler = new();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Range(1, Count)
             .DelaySubscription(TimeSpan.FromTicks(1), scheduler)
             .Subscribe(observer);
@@ -92,8 +94,8 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int R3DelayStartRange()
     {
-        var timeProvider = new FakeTimeProvider();
-        var observer = new IntR3Witness();
+        FakeTimeProvider timeProvider = new();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.DelaySubscription(
                 R3.Observable.Range(1, Count),
                 TimeSpan.FromTicks(1),
@@ -108,9 +110,9 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int PrimitivesThrottleBurst()
     {
-        var clock = new TestClock();
-        var observer = new IntSignalWitness();
-        using var source = new Signal<int>();
+        TestClock clock = new();
+        IntSignalWitness observer = new();
+        using Signal<int> source = new();
         using var subscription = source.Calm(TimeSpan.FromTicks(1), clock).Subscribe(observer);
         for (var i = 0; i < Count; i++)
         {
@@ -126,9 +128,9 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int SystemReactiveThrottleBurst()
     {
-        var scheduler = new HistoricalScheduler();
-        var observer = new IntSignalWitness();
-        using var source = new RxSubject();
+        HistoricalScheduler scheduler = new();
+        IntSignalWitness observer = new();
+        using RxSubject source = new();
         using var subscription = source.Throttle(TimeSpan.FromTicks(1), scheduler).Subscribe(observer);
         for (var i = 0; i < Count; i++)
         {
@@ -144,9 +146,9 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int R3ThrottleBurst()
     {
-        var timeProvider = new FakeTimeProvider();
-        var observer = new IntR3Witness();
-        using var source = new R3.Subject<int>();
+        FakeTimeProvider timeProvider = new();
+        IntR3Witness observer = new();
+        using Subject<int> source = new();
         using var subscription = R3.ObservableExtensions.Debounce(source, TimeSpan.FromTicks(1), timeProvider)
             .Subscribe(observer);
         for (var i = 0; i < Count; i++)
@@ -163,9 +165,9 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int PrimitivesSampleLatest()
     {
-        var clock = new TestClock();
-        var observer = new IntSignalWitness();
-        using var source = new Signal<int>();
+        TestClock clock = new();
+        IntSignalWitness observer = new();
+        using Signal<int> source = new();
         using var subscription = source.Probe(TimeSpan.FromTicks(1), clock).Subscribe(observer);
         source.OnNext(Count);
         clock.AdvanceBy(TimeSpan.FromTicks(1));
@@ -177,9 +179,9 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int SystemReactiveSampleLatest()
     {
-        var scheduler = new HistoricalScheduler();
-        var observer = new IntSignalWitness();
-        using var source = new RxSubject();
+        HistoricalScheduler scheduler = new();
+        IntSignalWitness observer = new();
+        using RxSubject source = new();
         using var subscription = source.Sample(TimeSpan.FromTicks(1), scheduler).Subscribe(observer);
         source.OnNext(Count);
         scheduler.AdvanceBy(TimeSpan.FromTicks(1));
@@ -191,9 +193,9 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int R3SampleLatest()
     {
-        var timeProvider = new FakeTimeProvider();
-        var observer = new IntR3Witness();
-        using var source = new R3.Subject<int>();
+        FakeTimeProvider timeProvider = new();
+        IntR3Witness observer = new();
+        using Subject<int> source = new();
         using var subscription = R3.ObservableExtensions.ThrottleLast(source, TimeSpan.FromTicks(1), timeProvider)
             .Subscribe(observer);
         source.OnNext(Count);
@@ -206,7 +208,7 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int PrimitivesTimestampRange()
     {
-        var observer = new CountingSignalWitness<Moment<int>>();
+        CountingSignalWitness<Moment<int>> observer = new();
         using var subscription = Signal.Sequence(1, Count).Timestamp(Sequencer.Immediate).Subscribe(observer);
         return observer.Count;
     }
@@ -216,7 +218,7 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int SystemReactiveTimestampRange()
     {
-        var observer = new CountingSignalWitness<System.Reactive.Timestamped<int>>();
+        CountingSignalWitness<Timestamped<int>> observer = new();
         using var subscription = RxObservable.Range(1, Count).Timestamp(ImmediateScheduler.Instance).Subscribe(observer);
         return observer.Count;
     }
@@ -226,7 +228,7 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int R3TimestampRange()
     {
-        var observer = new CountingR3Witness<(long Timestamp, int Value)>();
+        CountingR3Witness<(long Timestamp, int Value)> observer = new();
         using var subscription = R3.ObservableExtensions.Timestamp(R3.Observable.Range(1, Count)).Subscribe(observer);
         return observer.Count;
     }
@@ -236,7 +238,7 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int PrimitivesTimeIntervalRange()
     {
-        var observer = new CountingSignalWitness<TimeInterval<int>>();
+        CountingSignalWitness<Core.TimeInterval<int>> observer = new();
         using var subscription = Signal.Sequence(1, Count).TimeInterval(Sequencer.Immediate).Subscribe(observer);
         return observer.Count;
     }
@@ -246,7 +248,7 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int SystemReactiveTimeIntervalRange()
     {
-        var observer = new CountingSignalWitness<System.Reactive.TimeInterval<int>>();
+        CountingSignalWitness<System.Reactive.TimeInterval<int>> observer = new();
         using var subscription = RxObservable.Range(1, Count)
             .TimeInterval(ImmediateScheduler.Instance)
             .Subscribe(observer);
@@ -258,7 +260,7 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int R3TimeIntervalRange()
     {
-        var observer = new CountingR3Witness<(TimeSpan Interval, int Value)>();
+        CountingR3Witness<(TimeSpan Interval, int Value)> observer = new();
         using var subscription = R3.ObservableExtensions.TimeInterval(R3.Observable.Range(1, Count)).Subscribe(observer);
         return observer.Count;
     }
@@ -268,9 +270,9 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int PrimitivesTimeoutIdle()
     {
-        var clock = new TestClock();
-        var observer = new IntSignalWitness();
-        using var source = new Signal<int>();
+        TestClock clock = new();
+        IntSignalWitness observer = new();
+        using Signal<int> source = new();
         using var subscription = source.Expire(TimeSpan.FromTicks(1), clock).Subscribe(observer);
         source.OnNext(0);
         clock.AdvanceBy(TimeSpan.FromTicks(1));
@@ -282,9 +284,9 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int SystemReactiveTimeoutIdle()
     {
-        var scheduler = new HistoricalScheduler();
-        var observer = new IntSignalWitness();
-        using var source = new RxSubject();
+        HistoricalScheduler scheduler = new();
+        IntSignalWitness observer = new();
+        using RxSubject source = new();
         using var subscription = source.Timeout(TimeSpan.FromTicks(1), scheduler).Subscribe(observer);
         source.OnNext(0);
         scheduler.AdvanceBy(TimeSpan.FromTicks(1));
@@ -296,9 +298,9 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int R3TimeoutIdle()
     {
-        var timeProvider = new FakeTimeProvider();
-        var observer = new IntR3Witness();
-        using var source = new R3.Subject<int>();
+        FakeTimeProvider timeProvider = new();
+        IntR3Witness observer = new();
+        using Subject<int> source = new();
         using var subscription = R3.ObservableExtensions.Timeout(
                 source,
                 TimeSpan.FromTicks(1),
@@ -314,7 +316,7 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int PrimitivesObserveOnImmediate()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(1, Count).ObserveOn(Sequencer.Immediate).Subscribe(observer);
         return observer.Total;
     }
@@ -324,7 +326,7 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int SystemReactiveObserveOnImmediate()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Range(1, Count).ObserveOn(ImmediateScheduler.Instance).Subscribe(observer);
         return observer.Total;
     }
@@ -334,8 +336,8 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int R3ObserveOnImmediate()
     {
-        var observer = new IntR3Witness();
-        using var context = new ImmediateSynchronizationContext();
+        IntR3Witness observer = new();
+        using ImmediateSynchronizationContext context = new();
         using var subscription = R3.ObservableExtensions.ObserveOn(R3.Observable.Range(1, Count), context).Subscribe(observer);
         return observer.Total;
     }

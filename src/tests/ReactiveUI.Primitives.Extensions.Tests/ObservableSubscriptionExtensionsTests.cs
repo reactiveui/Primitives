@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
@@ -47,7 +48,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenSubscribeGetError_ThenCapturesSyncError()
     {
-        var expected = new InvalidOperationException("sync");
+        InvalidOperationException expected = new("sync");
         var error = Observable.Throw<int>(expected).SubscribeGetError();
         await Assert.That(error).IsEqualTo(expected);
     }
@@ -57,7 +58,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenSubscribeGetErrorUnit_ThenCapturesSyncError()
     {
-        var expected = new InvalidOperationException("RxVoid-sync");
+        InvalidOperationException expected = new("RxVoid-sync");
         var error = Observable.Throw<RxVoid>(expected).SubscribeGetError();
         await Assert.That(error).IsEqualTo(expected);
     }
@@ -108,8 +109,8 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForCompletionWithError_ThenRethrows()
     {
-        var expected = new InvalidOperationException("wait");
-        Action call = () => Observable.Throw<RxVoid>(expected).WaitForCompletion(TimeSpan.FromSeconds(5));
+        InvalidOperationException expected = new("wait");
+        var call = () => Observable.Throw<RxVoid>(expected).WaitForCompletion(TimeSpan.FromSeconds(5));
         var ex = Assert.Throws<InvalidOperationException>(call);
         await Assert.That(ex).IsEqualTo(expected);
     }
@@ -119,7 +120,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForCompletionTimesOut_ThenTimeoutException()
     {
-        Action call = () => Observable.Never<RxVoid>().WaitForCompletion(TimeSpan.FromMilliseconds(50));
+        var call = () => Observable.Never<RxVoid>().WaitForCompletion(TimeSpan.FromMilliseconds(50));
         var ex = Assert.Throws<TimeoutException>(call);
         await Assert.That(ex).IsNotNull();
     }
@@ -147,7 +148,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForErrorSourceErrors_ThenReturnsCapturedError()
     {
-        var expected = new InvalidOperationException("captured");
+        InvalidOperationException expected = new("captured");
         var error = Observable.Throw<int>(expected).WaitForError(TimeSpan.FromSeconds(5));
         await Assert.That(error).IsEqualTo(expected);
     }
@@ -157,7 +158,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForErrorDefaultSourceErrors_ThenReturnsCapturedError()
     {
-        var expected = new InvalidOperationException("captured-default");
+        InvalidOperationException expected = new("captured-default");
         var error = Observable.Throw<int>(expected).WaitForError();
         await Assert.That(error).IsEqualTo(expected);
     }
@@ -178,7 +179,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForCompletionUnitDefault_ThenReturnsOnCompletion()
     {
-        var subject = new Subject<RxVoid>();
+        Subject<RxVoid> subject = new();
         var pump = Task.Run(() =>
         {
             subject.OnNext(RxVoid.Default);
@@ -195,7 +196,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenSubscribeGetValueSourceErrors_ThenErrorSwallowed()
     {
-        var error = new InvalidOperationException("source-error");
+        InvalidOperationException error = new("source-error");
         var source = Observable.Throw<int>(error);
         var value = source.SubscribeGetValue();
         await Assert.That(value).IsEqualTo(0);
@@ -208,7 +209,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenSubscribeGetErrorSourceCompletesWithValue_ThenReturnsNull()
     {
-        IObservable<int> source = Observable.Return(SentinelValue);
+        var source = Observable.Return(SentinelValue);
         var error = source.SubscribeGetError();
         await Assert.That(error).IsNull();
     }
@@ -220,7 +221,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForValueSourceErrors_ThenGateSignalledAndDefaultReturned()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var pump = Task.Run(() => subject.OnError(new InvalidOperationException("source-error")));
         var value = subject.WaitForValue();
         await pump;

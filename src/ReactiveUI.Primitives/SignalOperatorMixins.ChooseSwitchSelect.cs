@@ -119,7 +119,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new Sink(selector, observer);
+            Sink sink = new(selector, observer);
             sink.Run(source);
             return sink;
         }

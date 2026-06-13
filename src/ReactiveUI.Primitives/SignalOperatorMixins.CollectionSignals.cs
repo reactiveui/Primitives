@@ -30,7 +30,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new CollectListWitness<T>(observer);
+            CollectListWitness<T> sink = new(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -52,7 +52,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new CollectArrayWitness<T>(observer);
+            CollectArrayWitness<T> sink = new(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -76,7 +76,7 @@ public static partial class LinqExtensions
 
             if (typeof(T) == typeof(int))
             {
-                var ints = new List<int>(_range.Count);
+                List<int> ints = new(_range.Count);
                 for (var i = 0; i < _range.Count; i++)
                 {
                     ints.Add(_range.Start + i);
@@ -86,7 +86,7 @@ public static partial class LinqExtensions
             }
             else
             {
-                var values = new List<T>(_range.Count);
+                List<T> values = new(_range.Count);
                 for (var i = 0; i < _range.Count; i++)
                 {
                     values.Add((T)(object)(_range.Start + i));

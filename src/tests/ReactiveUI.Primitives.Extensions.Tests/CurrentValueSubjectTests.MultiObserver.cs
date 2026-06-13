@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
@@ -19,10 +20,10 @@ public partial class CurrentValueSubjectTests
     public async Task WhenThreeObserversAndOnNext_ThenAllReceiveValue()
     {
         const int Update = 2;
-        using var subject = new CurrentValueSubject<int>(MultiInitialValue);
-        var a = new List<int>();
-        var b = new List<int>();
-        var c = new List<int>();
+        using CurrentValueSubject<int> subject = new(MultiInitialValue);
+        List<int> a = [];
+        List<int> b = [];
+        List<int> c = [];
         using var subA = subject.Subscribe(a.Add);
         using var subB = subject.Subscribe(b.Add);
         using var subC = subject.Subscribe(c.Add);
@@ -38,10 +39,10 @@ public partial class CurrentValueSubjectTests
     public async Task WhenMiddleObserverDisposed_ThenOthersStillReceive()
     {
         const int Update = 2;
-        using var subject = new CurrentValueSubject<int>(MultiInitialValue);
-        var a = new List<int>();
-        var b = new List<int>();
-        var c = new List<int>();
+        using CurrentValueSubject<int> subject = new(MultiInitialValue);
+        List<int> a = [];
+        List<int> b = [];
+        List<int> c = [];
         using var subA = subject.Subscribe(a.Add);
         var subB = subject.Subscribe(b.Add);
         using var subC = subject.Subscribe(c.Add);
@@ -59,9 +60,9 @@ public partial class CurrentValueSubjectTests
     public async Task WhenSecondObserverDisposedFromPair_ThenSingleObserverStillReceives()
     {
         const int Update = 2;
-        using var subject = new CurrentValueSubject<int>(MultiInitialValue);
-        var a = new List<int>();
-        var b = new List<int>();
+        using CurrentValueSubject<int> subject = new(MultiInitialValue);
+        List<int> a = [];
+        List<int> b = [];
         using var subA = subject.Subscribe(a.Add);
         var subB = subject.Subscribe(b.Add);
         subB.Dispose();
@@ -78,9 +79,9 @@ public partial class CurrentValueSubjectTests
     public async Task WhenFirstObserverOfPairDisposed_ThenSingleSurvivorReceives()
     {
         const int Update = 2;
-        using var subject = new CurrentValueSubject<int>(MultiInitialValue);
-        var a = new List<int>();
-        var b = new List<int>();
+        using CurrentValueSubject<int> subject = new(MultiInitialValue);
+        List<int> a = [];
+        List<int> b = [];
         var subA = subject.Subscribe(a.Add);
         using var subB = subject.Subscribe(b.Add);
 
@@ -99,10 +100,10 @@ public partial class CurrentValueSubjectTests
     public async Task WhenFirstObserverDisposed_ThenOthersStillReceive()
     {
         const int Update = 2;
-        using var subject = new CurrentValueSubject<int>(MultiInitialValue);
-        var a = new List<int>();
-        var b = new List<int>();
-        var c = new List<int>();
+        using CurrentValueSubject<int> subject = new(MultiInitialValue);
+        List<int> a = [];
+        List<int> b = [];
+        List<int> c = [];
         var subA = subject.Subscribe(a.Add);
         using var subB = subject.Subscribe(b.Add);
         using var subC = subject.Subscribe(c.Add);
@@ -120,10 +121,10 @@ public partial class CurrentValueSubjectTests
     public async Task WhenLastObserverDisposed_ThenOthersStillReceive()
     {
         const int Update = 2;
-        using var subject = new CurrentValueSubject<int>(MultiInitialValue);
-        var a = new List<int>();
-        var b = new List<int>();
-        var c = new List<int>();
+        using CurrentValueSubject<int> subject = new(MultiInitialValue);
+        List<int> a = [];
+        List<int> b = [];
+        List<int> c = [];
         using var subA = subject.Subscribe(a.Add);
         using var subB = subject.Subscribe(b.Add);
         var subC = subject.Subscribe(c.Add);
@@ -139,14 +140,12 @@ public partial class CurrentValueSubjectTests
     [Test]
     public async Task WhenSubscribeAfterError_ThenErrorDeliveredImmediately()
     {
-        using var subject = new CurrentValueSubject<int>(MultiInitialValue);
-        var expected = new InvalidOperationException("late-error");
+        using CurrentValueSubject<int> subject = new(MultiInitialValue);
+        InvalidOperationException expected = new("late-error");
         subject.OnError(expected);
         Exception? caught = null;
         using var sub = subject.Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
@@ -156,9 +155,9 @@ public partial class CurrentValueSubjectTests
     [Test]
     public async Task WhenSubscribeAfterCompleted_ThenReplayThenCompletes()
     {
-        using var subject = new CurrentValueSubject<int>(MultiInitialValue);
+        using CurrentValueSubject<int> subject = new(MultiInitialValue);
         subject.OnCompleted();
-        var values = new List<int>();
+        List<int> values = [];
         var completed = false;
         using var sub = subject.Subscribe(values.Add, () => completed = true);
         await Assert.That(values).IsCollectionEqualTo([MultiInitialValue]);
@@ -170,25 +169,19 @@ public partial class CurrentValueSubjectTests
     [Test]
     public async Task WhenMultipleObserversAndOnError_ThenAllReceiveError()
     {
-        using var subject = new CurrentValueSubject<int>(MultiInitialValue);
+        using CurrentValueSubject<int> subject = new(MultiInitialValue);
         Exception? errA = null;
         Exception? errB = null;
         Exception? errC = null;
-        var expected = new InvalidOperationException("multi-error");
+        InvalidOperationException expected = new("multi-error");
         using var subA = subject.Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => errA = ex);
         using var subB = subject.Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => errB = ex);
         using var subC = subject.Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => errC = ex);
         subject.OnError(expected);
 
@@ -204,24 +197,18 @@ public partial class CurrentValueSubjectTests
     [Test]
     public async Task WhenMultipleObserversAndOnCompleted_ThenAllReceiveCompletionAndSecondIsNoOp()
     {
-        using var subject = new CurrentValueSubject<int>(MultiInitialValue);
+        using CurrentValueSubject<int> subject = new(MultiInitialValue);
         var completedA = 0;
         var completedB = 0;
         var completedC = 0;
         using var subA = subject.Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completedA++);
         using var subB = subject.Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completedB++);
         using var subC = subject.Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completedC++);
         subject.OnCompleted();
         subject.OnCompleted();
@@ -235,8 +222,8 @@ public partial class CurrentValueSubjectTests
     [Test]
     public async Task WhenSubscriptionDisposedTwice_ThenIdempotent()
     {
-        using var subject = new CurrentValueSubject<int>(MultiInitialValue);
-        var values = new List<int>();
+        using CurrentValueSubject<int> subject = new(MultiInitialValue);
+        List<int> values = [];
         var sub = subject.Subscribe(values.Add);
         sub.Dispose();
         sub.Dispose();
@@ -255,11 +242,11 @@ public partial class CurrentValueSubjectTests
     public async Task WhenMultiObserverDisposedTwice_ThenSecondDisposeIsNoOp()
     {
         const int Update = 2;
-        using var subject = new CurrentValueSubject<int>(MultiInitialValue);
-        var a = new List<int>();
-        var b = new List<int>();
-        var c = new List<int>();
-        var d = new List<int>();
+        using CurrentValueSubject<int> subject = new(MultiInitialValue);
+        List<int> a = [];
+        List<int> b = [];
+        List<int> c = [];
+        List<int> d = [];
         using var subA = subject.Subscribe(a.Add);
         var subB = subject.Subscribe(b.Add);
         using var subC = subject.Subscribe(c.Add);

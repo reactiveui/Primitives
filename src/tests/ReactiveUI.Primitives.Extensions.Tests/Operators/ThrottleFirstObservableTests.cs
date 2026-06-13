@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -21,13 +22,11 @@ public class ThrottleFirstObservableTests
     [Test]
     public async Task WhenThrottleFirstSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = subject.ThrottleFirst(ThrottleFirstWindow).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -40,8 +39,8 @@ public class ThrottleFirstObservableTests
     {
         const int Initial = 1;
         const int IgnoredAfterCompletion = 2;
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
         using var sub = subject.ThrottleFirst(ThrottleFirstWindow).Subscribe(results.Add, () => completed = true);
         subject.OnNext(Initial);
@@ -57,12 +56,10 @@ public class ThrottleFirstObservableTests
     public async Task WhenThrottleFirstValueAfterError_ThenIgnored()
     {
         const int IgnoredAfterError = 5;
-        var subject = new Subject<int>();
-        var results = new List<int>();
-        var expected = new InvalidOperationException(SourceErrorMessage);
-        using var sub = subject.ThrottleFirst(ThrottleFirstWindow).Subscribe(results.Add, static _ =>
-        {
-        });
+        Subject<int> subject = new();
+        List<int> results = [];
+        InvalidOperationException expected = new(SourceErrorMessage);
+        using var sub = subject.ThrottleFirst(ThrottleFirstWindow).Subscribe(results.Add, static _ => { });
         subject.OnError(expected);
         subject.OnNext(IgnoredAfterError);
         await Assert.That(results).IsEmpty();
@@ -74,11 +71,12 @@ public class ThrottleFirstObservableTests
     [Test]
     public async Task WhenEventsAfterCompleted_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
-        var values = new List<int>();
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
         Exception? caught = null;
         var completedCount = 0;
-        using var sub = source.ThrottleFirst(ThrottleFirstWindow).Subscribe(values.Add, ex => caught = ex, () => completedCount++);
+        using var sub = source.ThrottleFirst(ThrottleFirstWindow)
+            .Subscribe(values.Add, ex => caught = ex, () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));

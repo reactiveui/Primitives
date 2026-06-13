@@ -9,11 +9,11 @@ namespace ReactiveUI.Primitives.Core;
 internal sealed class ListWitness<T> : IObserver<T>
 {
     /// <summary>Immutable observer snapshot.</summary>
-    private readonly ImmutableList<IObserver<T>> _observers;
+    private readonly CopyOnWriteList<IObserver<T>> _observers;
 
     /// <summary>Initializes a new instance of the <see cref="ListWitness{T}"/> class.</summary>
     /// <param name="observers">Observers that receive forwarded notifications.</param>
-    public ListWitness(ImmutableList<IObserver<T>> observers) => _observers = observers;
+    public ListWitness(CopyOnWriteList<IObserver<T>> observers) => _observers = observers;
 
     /// <summary>Gets a value indicating whether the list contains observers.</summary>
     public bool HasObservers => _observers.Items.Length > 0;

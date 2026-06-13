@@ -68,7 +68,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
 
     /// <summary>Initializes a new instance of the <see cref="MultipleDisposable"/> class from a group of disposables.</summary>
     /// <param name="disposables">Disposables that will be disposed together.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="disposables"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="disposables"/> is <see langword="null"/>.</exception>
     public MultipleDisposable(params IDisposable[] disposables)
     {
         ArgumentExceptionHelper.ThrowIfNull(disposables);
@@ -126,11 +126,11 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
     public static IDisposable Create(params IDisposable[] disposables) => new MultipleDisposableBase(disposables);
 
     /// <summary>Adds a disposable to the <see cref="MultipleDisposable"/> or disposes it immediately if the pocket is already disposed.</summary>
-    /// <param name="disposable">Disposable to add.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="disposable"/> is <see langword="null"/>.</exception>
-    public void Add(IDisposable disposable)
+    /// <param name="item">Disposable to add.</param>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
+    public void Add(IDisposable item)
     {
-        ArgumentExceptionHelper.ThrowIfNull(disposable);
+        ArgumentExceptionHelper.ThrowIfNull(item);
 
         var shouldDispose = false;
         lock (_gate)
@@ -141,7 +141,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
             }
             else
             {
-                AddCore(disposable);
+                AddCore(item);
             }
         }
 
@@ -150,13 +150,13 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
             return;
         }
 
-        disposable.Dispose();
+        item.Dispose();
     }
 
     /// <summary>Removes and disposes the requested disposable from the pocket.</summary>
     /// <param name="item">Disposable to remove.</param>
     /// <returns><see langword="true"/> if the item was found and disposed; otherwise, <see langword="false"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is null.</exception>
     public bool Remove(IDisposable? item)
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
@@ -261,7 +261,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
     /// <summary>Copies the disposables currently held into <paramref name="array"/> starting at <paramref name="arrayIndex"/>.</summary>
     /// <param name="array">Destination array.</param>
     /// <param name="arrayIndex">Zero-based index in <paramref name="array"/> at which copying begins.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="array"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="array"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="arrayIndex"/> is negative.</exception>
     public void CopyTo(IDisposable[] array, int arrayIndex)
     {
@@ -345,7 +345,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
     {
         lock (_gate)
         {
-            var snapshot = new List<IDisposable>();
+            List<IDisposable> snapshot = [];
             if (_disposed)
             {
                 return snapshot;

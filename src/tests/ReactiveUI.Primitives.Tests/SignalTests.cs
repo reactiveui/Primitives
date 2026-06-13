@@ -1,13 +1,42 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
+using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Core;
+using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
+using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>SubjectTests.</summary>
+/// <summary>Tests for the signal type.</summary>
 public class SignalTests
 {
+    /// <summary>The integer constant one.</summary>
+    private const int One = 1;
+
+    /// <summary>The integer constant two.</summary>
+    private const int Two = 2;
+
+    /// <summary>The integer constant three.</summary>
+    private const int Three = 3;
+
+    /// <summary>The integer constant four.</summary>
+    private const int Four = 4;
+
+    /// <summary>The integer constant five.</summary>
+    private const int Five = 5;
+
+    /// <summary>The integer constant seven.</summary>
+    private const int Seven = 7;
+
+    /// <summary>The integer constant nine.</summary>
+    private const int Nine = 9;
+
+    /// <summary>The integer constant forty-two.</summary>
+    private const int FortyTwo = 42;
+
     /// <summary>Number of values expected in pair buffers.</summary>
     private const int PairCount = 2;
 
@@ -41,6 +70,9 @@ public class SignalTests
     /// <summary>Multiplier used by select projection tests.</summary>
     private const int SelectMultiplier = 2;
 
+    /// <summary>Expected immediate witness error messages.</summary>
+    private static readonly string[] ExpectedImmediateWitness = ["immediate", "witness"];
+
     /// <summary>Expected first pair of buffered values.</summary>
     private static readonly int[] FirstPair = [1, ValueTwo];
 
@@ -61,7 +93,7 @@ public class SignalTests
     [Test]
     public async Task OnNext()
     {
-        var subject = new Signal<int>();
+        Signal<int> subject = new();
         var value = 0;
         var subscription = subject.Subscribe(i => value += i);
         subject.OnNext(1);
@@ -77,7 +109,7 @@ public class SignalTests
     [Test]
     public void OnNextDisposed()
     {
-        var subject = new Signal<int>();
+        Signal<int> subject = new();
         subject.Dispose();
         Assert.Throws<ObjectDisposedException>(() => subject.OnNext(1));
     }
@@ -87,7 +119,7 @@ public class SignalTests
     [Test]
     public async Task OnNextDisposedSubscriber()
     {
-        var subject = new Signal<int>();
+        Signal<int> subject = new();
         var value = 0;
         subject.Subscribe(i => value += i).Dispose();
         subject.OnNext(1);
@@ -99,12 +131,10 @@ public class SignalTests
     [Test]
     public async Task OnCompleted()
     {
-        var subject = new Signal<int>();
+        Signal<int> subject = new();
         var completed = false;
         using var subscription = subject.Subscribe(
-            _ =>
-        {
-        },
+            _ => { },
             () => completed = true);
         subject.OnCompleted();
         await Assert.That(completed).IsTrue();
@@ -114,10 +144,8 @@ public class SignalTests
     [Test]
     public void OnCompleted_NoErrors()
     {
-        var subject = new Signal<int>();
-        using var subscription = subject.Subscribe(_ =>
-        {
-        });
+        Signal<int> subject = new();
+        using var subscription = subject.Subscribe(_ => { });
         subject.OnCompleted();
     }
 
@@ -126,12 +154,10 @@ public class SignalTests
     [Test]
     public async Task OnCompletedOnce()
     {
-        var subject = new Signal<int>();
+        Signal<int> subject = new();
         var completed = 0;
         using var subscription = subject.Subscribe(
-            _ =>
-        {
-        },
+            _ => { },
             () => completed++);
         subject.OnCompleted();
         await Assert.That(completed).IsEqualTo(1);
@@ -143,7 +169,7 @@ public class SignalTests
     [Test]
     public void OnCompletedDisposed()
     {
-        var subject = new Signal<int>();
+        Signal<int> subject = new();
         subject.Dispose();
         Assert.Throws<ObjectDisposedException>(subject.OnCompleted);
     }
@@ -153,12 +179,10 @@ public class SignalTests
     [Test]
     public async Task OnCompletedDisposedSubscriber()
     {
-        var subject = new Signal<int>();
+        Signal<int> subject = new();
         var completed = false;
         subject.Subscribe(
-            _ =>
-        {
-        },
+            _ => { },
             () => completed = true).Dispose();
         subject.OnCompleted();
         await Assert.That(completed).IsFalse();
@@ -169,12 +193,10 @@ public class SignalTests
     [Test]
     public async Task OnError()
     {
-        var subject = new Signal<int>();
+        Signal<int> subject = new();
         var error = false;
         using var subscription = subject.Subscribe(
-            _ =>
-        {
-        },
+            _ => { },
             _ => error = true);
         subject.OnError(new InvalidOperationException());
         await Assert.That(error).IsTrue();
@@ -185,12 +207,10 @@ public class SignalTests
     [Test]
     public async Task OnErrorOnce()
     {
-        var subject = new Signal<int>();
+        Signal<int> subject = new();
         var errors = 0;
         using var subscription = subject.Subscribe(
-            _ =>
-        {
-        },
+            _ => { },
             _ => errors++);
         subject.OnError(new InvalidOperationException());
         await Assert.That(errors).IsEqualTo(1);
@@ -202,7 +222,7 @@ public class SignalTests
     [Test]
     public void OnErrorDisposed()
     {
-        var subject = new Signal<int>();
+        Signal<int> subject = new();
         subject.Dispose();
         Assert.Throws<ObjectDisposedException>(() => subject.OnError(new InvalidOperationException()));
     }
@@ -212,12 +232,10 @@ public class SignalTests
     [Test]
     public async Task OnErrorDisposedSubscriber()
     {
-        var subject = new Signal<int>();
+        Signal<int> subject = new();
         var error = false;
         subject.Subscribe(
-            _ =>
-        {
-        },
+            _ => { },
             _ => error = true).Dispose();
         subject.OnError(new InvalidOperationException());
         await Assert.That(error).IsFalse();
@@ -228,8 +246,8 @@ public class SignalTests
     [Test]
     public async Task SingleObserverSubscriptionReceivesLifecycleAndDetaches()
     {
-        var subject = new Signal<int>();
-        var observer = new RecordingWitness();
+        Signal<int> subject = new();
+        RecordingWitness observer = new();
         var subscription = subject.Subscribe(observer);
         subject.OnNext(1);
         subject.OnCompleted();
@@ -239,8 +257,8 @@ public class SignalTests
         await Assert.That(observer.Errors).IsEqualTo(0);
         await Assert.That(subject.HasObservers).IsFalse();
         subscription.Dispose();
-        var faulted = new Signal<int>();
-        var faultObserver = new RecordingWitness();
+        Signal<int> faulted = new();
+        RecordingWitness faultObserver = new();
         using var faultSubscription = faulted.Subscribe(faultObserver);
         faulted.OnError(new InvalidOperationException());
         await Assert.That(faultObserver.Errors).IsEqualTo(1);
@@ -251,10 +269,8 @@ public class SignalTests
     [Test]
     public void OnErrorRethrowsByDefault()
     {
-        var subject = new Signal<int>();
-        using var subscription = subject.Subscribe(_ =>
-        {
-        });
+        Signal<int> subject = new();
+        using var subscription = subject.Subscribe(_ => { });
         Assert.Throws<ArgumentException>(() => subject.OnError(new ArgumentException("subject error")));
     }
 
@@ -270,11 +286,9 @@ public class SignalTests
     [Test]
     public void SubscribeDisposedThrows()
     {
-        var subject = new Signal<int>();
+        Signal<int> subject = new();
         subject.Dispose();
-        Assert.Throws<ObjectDisposedException>(() => subject.Subscribe(_ =>
-{
-}));
+        Assert.Throws<ObjectDisposedException>(() => subject.Subscribe(_ => { }));
     }
 
     /// <summary>Subscribes the on completed.</summary>
@@ -282,13 +296,11 @@ public class SignalTests
     [Test]
     public async Task SubscribeOnCompleted()
     {
-        var subject = new Signal<int>();
+        Signal<int> subject = new();
         subject.OnCompleted();
         var completed = false;
         subject.Subscribe(
-            _ =>
-        {
-        },
+            _ => { },
             () => completed = true).Dispose();
         await Assert.That(completed).IsTrue();
     }
@@ -298,13 +310,11 @@ public class SignalTests
     [Test]
     public async Task SubscribeOnError()
     {
-        var subject = new Signal<int>();
+        Signal<int> subject = new();
         subject.OnError(new InvalidOperationException());
         var error = false;
         subject.Subscribe(
-            _ =>
-        {
-        },
+            _ => { },
             _ => error = true);
         await Assert.That(error).IsTrue();
     }
@@ -314,7 +324,7 @@ public class SignalTests
     [Test]
     public async Task SubscribeActionObservers_DisposeIndependently()
     {
-        var subject = new Signal<int>();
+        Signal<int> subject = new();
         var first = 0;
         var second = 0;
         var firstSubscription = subject.Subscribe(i => first += i);
@@ -341,8 +351,8 @@ public class SignalTests
     [RequiresUnreferencedCode("Tests the action-based Subscribe overload that carries trimming annotations.")]
     public async Task SubjectWhere()
     {
-        var subject = new Signal<int>();
-        var values = new List<int>();
+        Signal<int> subject = new();
+        List<int> values = [];
         subject.Keep(i => i % EvenDivisor == 0).Subscribe(values.Add);
         subject.OnNext(1);
         subject.OnNext(ValueTwo);
@@ -357,8 +367,8 @@ public class SignalTests
     [RequiresUnreferencedCode("Tests the action-based Subscribe overload that carries trimming annotations.")]
     public async Task SubjectSelect()
     {
-        var subject = new Signal<int>();
-        var values = new List<int>();
+        Signal<int> subject = new();
+        List<int> values = [];
         subject.Map(i => i * SelectMultiplier).Subscribe(values.Add);
         subject.OnNext(ValueTwo);
         subject.Dispose();
@@ -370,8 +380,8 @@ public class SignalTests
     [Test]
     public async Task SubjectBuffer()
     {
-        var subject = new Signal<int>();
-        var result = new List<int>();
+        Signal<int> subject = new();
+        List<int> result = [];
         subject.Buffer(PairCount).Subscribe(i => result = [.. i]);
         subject.OnNext(1);
         subject.OnNext(ValueTwo);
@@ -390,8 +400,8 @@ public class SignalTests
     [Test]
     public async Task SubjectBufferTake2Skip2()
     {
-        var subject = new Signal<int>();
-        var result = new List<int>();
+        Signal<int> subject = new();
+        List<int> result = [];
         subject.Buffer(PairCount, SkipCount).Subscribe(i => result = [.. i]);
         subject.OnNext(1);
         subject.OnNext(ValueTwo);
@@ -413,14 +423,169 @@ public class SignalTests
     [Test]
     public async Task SubjectRxVoid()
     {
-        var subject = new Signal<RxVoid>();
-        var result = new List<RxVoid>();
+        Signal<RxVoid> subject = new();
+        List<RxVoid> result = [];
         subject.Subscribe(result.Add);
         subject.OnNext(RxVoid.Default);
         await Assert.That(result.SequenceEqual(SingleRxVoid)).IsTrue();
         subject.OnNext(RxVoid.Default);
         await Assert.That(result.SequenceEqual(DoubleRxVoid)).IsTrue();
         subject.Dispose();
+    }
+
+    /// <summary>Verifies immediate core signals, range, zip, repeat, and observer failures cover remainders.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ImmediateCoreSignalsRangeZipRepeatAndObserverFailuresCoverRemainders()
+    {
+        var completed = 0;
+        Signal.None<int>(Sequencer.Immediate).Subscribe(_ => { }, ex => throw ex, () => completed++);
+        Signal.None(0).Subscribe(_ => { }, ex => throw ex, () => completed++);
+        await Assert.That(completed).IsEqualTo(Two);
+        List<int> returnValues = [];
+        Signal.Emit(FortyTwo, Sequencer.Immediate).Subscribe(returnValues.Add);
+        int[] expectedReturnValues = [FortyTwo];
+        await Assert.That(returnValues.SequenceEqual(expectedReturnValues)).IsTrue();
+        List<string> throwErrors = [];
+        Signal.Fail<int>(new InvalidOperationException("immediate"), Sequencer.Immediate)
+            .Subscribe(_ => { }, ex => throwErrors.Add(ex.Message));
+        Signal.Fail(new InvalidOperationException("witness"), Sequencer.Immediate, 0)
+            .Subscribe(_ => { }, ex => throwErrors.Add(ex.Message));
+        await Assert.That(throwErrors.SequenceEqual(ExpectedImmediateWitness)).IsTrue();
+        var never = Signal.Silent(0);
+        await Assert.That(((IRequireCurrentThread<int>)never).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(((IRequireCurrentThread<RxVoid>)Signal.EmitRxVoid()).IsRequiredSubscribeOnCurrentThread())
+            .IsFalse();
+        RxVoid firstRxVoid = default;
+        RxVoid secondRxVoid = default;
+        await Assert.That(firstRxVoid == secondRxVoid).IsTrue();
+        await Assert.That(firstRxVoid != secondRxVoid).IsFalse();
+        RepeatSignal<int> repeat = new(Seven, Three);
+        List<int> repeatValues = [];
+        await Assert.That(repeat.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        repeat.Subscribe(new RecordingWitness<int>()).Dispose();
+        repeat.Subscribe(repeatValues.Add, ex => throw ex, () => completed++).Dispose();
+        int[] expectedRepeatValues = [Seven, Seven, Seven];
+        await Assert.That(repeatValues.SequenceEqual(expectedRepeatValues)).IsTrue();
+        Assert.Throws<ArgumentNullException>(() => repeat.Subscribe((IObserver<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => repeat.Subscribe(null!, _ => { }, () => { }));
+        RangeSignal range = new(One, Three);
+        List<int> rangeValues = [];
+        await Assert.That(range.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        range.Subscribe(new RecordingWitness<int>()).Dispose();
+        range.Subscribe(rangeValues.Add, ex => throw ex, () => completed++).Dispose();
+        int[] expectedRangeValues = [One, Two, Three];
+        await Assert.That(rangeValues.SequenceEqual(expectedRangeValues)).IsTrue();
+        Assert.Throws<ArgumentNullException>(() => range.Subscribe((IObserver<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => range.Subscribe(null!, _ => { }, () => { }));
+        RangeZipSignal<int> zip = new(new(One, Three), new(Four, Three), (left, right) => left + right);
+        List<int> zipValues = [];
+        await Assert.That(zip.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        zip.Subscribe(new RecordingWitness<int>()).Dispose();
+        zip.Subscribe(zipValues.Add, ex => throw ex, () => completed++).Dispose();
+        int[] expectedZipValues = [Five, Seven, Nine];
+        await Assert.That(zipValues.SequenceEqual(expectedZipValues)).IsTrue();
+        Assert.Throws<ArgumentNullException>(() => zip.Subscribe((IObserver<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => zip.Subscribe(null!, _ => { }, () => { }));
+        await Assert.That(new ImmediateReturnSignal<int>(One).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(
+                new ImmediateThrowSignal<int>(new InvalidOperationException("fast"))
+                    .IsRequiredSubscribeOnCurrentThread())
+            .IsFalse();
+        await Assert.That(ImmutableEmptySignal<int>.Instance.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(ImmutableNeverSignal<int>.Instance.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(
+            ((IRequireCurrentThread<int>)ImmutableReturnInt32Signal.GetInt32Signals(One))
+            .IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(
+            new RangeConcatSignal([new(One, Two), new(Three, Two)]).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(new SignalsBaseProbe<int>(false).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        Assert.Throws<InvalidOperationException>(() => Signal.Emit(One, Sequencer.Immediate)
+            .Subscribe(new ThrowingWitness<int>(true))
+            .Dispose());
+        Assert.Throws<InvalidOperationException>(() => Signal.None<int>(Sequencer.Immediate)
+            .Subscribe(new ThrowingWitness<int>(throwOnCompleted: true))
+            .Dispose());
+        Assert.Throws<InvalidOperationException>(() => Signal
+            .Fail<int>(new InvalidOperationException("observer"), Sequencer.Immediate)
+            .Subscribe(new ThrowingWitness<int>(throwOnError: true)).Dispose());
+        Assert.Throws<ArgumentNullException>(() =>
+            new ImmediateThrowSignal<int>(new InvalidOperationException("null-observer"))
+                .Subscribe((IObserver<int>)null!));
+    }
+
+    /// <summary>Covers signal subject subscriber churn, late subscriptions, disposal, and terminal no-op branches.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubjectsCoverMultipleSubscriberChurnLateTerminalsAndDisposalBranches()
+    {
+        const int IgnoredAfterCompletion = 2;
+        Signal<int> subject = new();
+        RecordingWitness<int> first = new();
+        RecordingWitness<int> second = new();
+        RecordingWitness<int> third = new();
+        RecordingWitness<int> fourth = new();
+        List<int> actionValues = [];
+        using var action = subject.Subscribe(actionValues.Add);
+        using var firstSubscription = subject.Subscribe(first);
+        using var secondSubscription = subject.Subscribe(second);
+        using var thirdSubscription = subject.Subscribe(third);
+        using var fourthSubscription = subject.Subscribe(fourth);
+        secondSubscription.Dispose();
+        subject.OnNext(1);
+        action.Dispose();
+        subject.OnCompleted();
+        subject.OnCompleted();
+        subject.OnNext(IgnoredAfterCompletion);
+        RecordingWitness<int> lateCompleted = new();
+        subject.Subscribe(lateCompleted).Dispose();
+        await Assert.That(first.Values.SequenceEqual([1])).IsTrue();
+        await Assert.That(first.Completed).IsEqualTo(1);
+        await Assert.That(second.Values.Count).IsEqualTo(0);
+        await Assert.That(third.Values.SequenceEqual([1])).IsTrue();
+        await Assert.That(fourth.Values.SequenceEqual([1])).IsTrue();
+        await Assert.That(actionValues.SequenceEqual([1])).IsTrue();
+        await Assert.That(lateCompleted.Completed).IsEqualTo(1);
+        Signal<int> faulted = new();
+        RecordingWitness<int> faultObserver = new();
+        var actionFaults = 0;
+        using var faultSubscription = faulted.Subscribe(faultObserver);
+        InvalidOperationException fault = new("fault");
+        faulted.OnError(fault);
+        faulted.OnError(new InvalidOperationException("late"));
+        RecordingWitness<int> lateFault = new();
+        faulted.Subscribe(lateFault).Dispose();
+        await Assert.That(lateFault.Errors[0]).IsSameReferenceAs(fault);
+        await Assert.That(actionFaults).IsEqualTo(0);
+        Assert.Throws<ArgumentNullException>(() => faulted.OnError(null!));
+        Signal<int> actionFaulted = new();
+        using var faultingAction = actionFaulted.Subscribe(_ => actionFaults++);
+        Assert.Throws<InvalidOperationException>(() =>
+            actionFaulted.OnError(new InvalidOperationException("action-fault")));
+        Signal<int> disposedSubject = new();
+        disposedSubject.Dispose();
+        disposedSubject.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => disposedSubject.Subscribe(new RecordingWitness<int>()));
+        Assert.Throws<ObjectDisposedException>(() => disposedSubject.OnNext(1));
+    }
+
+    /// <summary>A minimal <see cref="SignalsBase{T}"/> probe used to exercise base class behavior.</summary>
+    /// <typeparam name="T">The type of the signal sequence elements.</typeparam>
+    private sealed class SignalsBaseProbe<T> : SignalsBase<T>
+    {
+        /// <summary>Initializes a new instance of the <see cref="SignalsBaseProbe{T}"/> class.</summary>
+        /// <param name="required">Whether subscription must occur on the current thread.</param>
+        public SignalsBaseProbe(bool required)
+            : base(required)
+        {
+        }
+
+        /// <summary>Performs the core subscription by returning an empty disposable.</summary>
+        /// <param name="observer">The observer to subscribe.</param>
+        /// <param name="cancel">The disposable used to cancel the subscription.</param>
+        /// <returns>An empty disposable.</returns>
+        protected override IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
+            EmptyDisposable.Instance;
     }
 
     /// <summary>Records integer observer lifecycle calls.</summary>

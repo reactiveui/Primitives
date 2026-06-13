@@ -17,9 +17,9 @@ public class TakeUntilSourceObserverTests
     [Test]
     public async Task WhenOnNextAsync_ThenLifecycleForwardsValueToDownstream()
     {
-        var captured = new CaptureObserverAsync<int>();
-        var lifecycle = new TakeUntilLifecycle<int>(captured);
-        var observer = new TakeUntilSourceWitness<int>(lifecycle);
+        CaptureObserverAsync<int> captured = new();
+        TakeUntilLifecycle<int> lifecycle = new(captured);
+        TakeUntilSourceWitness<int> observer = new(lifecycle);
 
         await observer.OnNextAsync(SentinelValue, CancellationToken.None);
 
@@ -33,10 +33,10 @@ public class TakeUntilSourceObserverTests
     [Test]
     public async Task WhenOnErrorResumeAsync_ThenLifecycleForwardsErrorToDownstream()
     {
-        var captured = new CaptureObserverAsync<int>();
-        var lifecycle = new TakeUntilLifecycle<int>(captured);
-        var observer = new TakeUntilSourceWitness<int>(lifecycle);
-        var expected = new InvalidOperationException("forward");
+        CaptureObserverAsync<int> captured = new();
+        TakeUntilLifecycle<int> lifecycle = new(captured);
+        TakeUntilSourceWitness<int> observer = new(lifecycle);
+        InvalidOperationException expected = new("forward");
 
         await observer.OnErrorResumeAsync(expected, CancellationToken.None);
 
@@ -51,9 +51,9 @@ public class TakeUntilSourceObserverTests
     [Test]
     public async Task WhenOnCompletedAsync_ThenLifecycleForwardsCompletionToDownstream()
     {
-        var captured = new CaptureObserverAsync<int>();
-        var lifecycle = new TakeUntilLifecycle<int>(captured);
-        var observer = new TakeUntilSourceWitness<int>(lifecycle);
+        CaptureObserverAsync<int> captured = new();
+        TakeUntilLifecycle<int> lifecycle = new(captured);
+        TakeUntilSourceWitness<int> observer = new(lifecycle);
 
         await observer.OnCompletedAsync(Result.Success);
 
@@ -68,8 +68,8 @@ public class TakeUntilSourceObserverTests
     [Test]
     public async Task WhenLinkExternalCancellationNonCancellable_ThenNoOp()
     {
-        var captured = new CaptureObserverAsync<int>();
-        var lifecycle = new TakeUntilLifecycle<int>(captured);
+        CaptureObserverAsync<int> captured = new();
+        TakeUntilLifecycle<int> lifecycle = new(captured);
 
         lifecycle.LinkExternalCancellation(CancellationToken.None);
 
@@ -82,9 +82,9 @@ public class TakeUntilSourceObserverTests
     [Test]
     public async Task WhenLinkExternalCancellationAlreadyCancelled_ThenDisposeTokenFires()
     {
-        var captured = new CaptureObserverAsync<int>();
-        var lifecycle = new TakeUntilLifecycle<int>(captured);
-        using var cts = new CancellationTokenSource();
+        CaptureObserverAsync<int> captured = new();
+        TakeUntilLifecycle<int> lifecycle = new(captured);
+        using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
         lifecycle.LinkExternalCancellation(cts.Token);
@@ -98,9 +98,9 @@ public class TakeUntilSourceObserverTests
     [Test]
     public async Task WhenLinkExternalCancellationCancellable_ThenLaterCancelPropagates()
     {
-        var captured = new CaptureObserverAsync<int>();
-        var lifecycle = new TakeUntilLifecycle<int>(captured);
-        using var cts = new CancellationTokenSource();
+        CaptureObserverAsync<int> captured = new();
+        TakeUntilLifecycle<int> lifecycle = new(captured);
+        using CancellationTokenSource cts = new();
 
         lifecycle.LinkExternalCancellation(cts.Token);
         await Assert.That(lifecycle.DisposeToken.IsCancellationRequested).IsFalse();

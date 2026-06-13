@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Extensions.Operators;
 
@@ -18,11 +19,11 @@ public class LogErrorsObservableTests
     [Test]
     public async Task WhenLogErrorsSourceErrors_ThenLoggerInvokedAndErrorForwarded()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? logged = null;
         Exception? caught = null;
-        var values = new List<int>();
-        var expected = new InvalidOperationException("logged");
+        List<int> values = [];
+        InvalidOperationException expected = new("logged");
         using var sub = subject.LogErrors(ex => logged = ex).Subscribe(values.Add, ex => caught = ex);
         subject.OnNext(Sentinel);
         subject.OnError(expected);
@@ -36,13 +37,11 @@ public class LogErrorsObservableTests
     [Test]
     public async Task WhenLogErrorsSourceCompletes_ThenLoggerNotInvoked()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var logged = 0;
         var completed = false;
         using var sub = subject.LogErrors(_ => logged++).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completed = true);
         subject.OnCompleted();
         await Assert.That(logged).IsEqualTo(0);
@@ -53,9 +52,7 @@ public class LogErrorsObservableTests
     [Test]
     public void WhenLogErrorsObserverNull_ThenSubscribeThrows()
     {
-        var observable = new LogErrorsObservable<int>(new Subject<int>(), static _ =>
-        {
-        });
+        LogErrorsObservable<int> observable = new(new Subject<int>(), static _ => { });
         Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
     }
 }

@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 using System.Text.RegularExpressions;
 
@@ -19,13 +20,11 @@ public class SyncOperatorErrorForwardingTests
     [Test]
     public async Task WhenTrySelectSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(ForwardedMessage);
+        InvalidOperationException expected = new(ForwardedMessage);
         using var sub = subject.TrySelect(static x => (int?)x).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -36,13 +35,11 @@ public class SyncOperatorErrorForwardingTests
     [Test]
     public async Task WhenWhereTrueSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<bool>();
+        Subject<bool> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(ForwardedMessage);
+        InvalidOperationException expected = new(ForwardedMessage);
         using var sub = subject.WhereTrue().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -53,13 +50,11 @@ public class SyncOperatorErrorForwardingTests
     [Test]
     public async Task WhenWhereFalseSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<bool>();
+        Subject<bool> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(ForwardedMessage);
+        InvalidOperationException expected = new(ForwardedMessage);
         using var sub = subject.WhereFalse().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -70,13 +65,11 @@ public class SyncOperatorErrorForwardingTests
     [Test]
     public async Task WhenWhereIsNotNullSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<string?>();
+        Subject<string?> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(ForwardedMessage);
+        InvalidOperationException expected = new(ForwardedMessage);
         using var sub = subject.WhereIsNotNull().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -87,13 +80,11 @@ public class SyncOperatorErrorForwardingTests
     [Test]
     public async Task WhenSkipWhileNullSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<string>();
+        Subject<string> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(ForwardedMessage);
+        InvalidOperationException expected = new(ForwardedMessage);
         using var sub = subject.SkipWhileNull().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -104,13 +95,11 @@ public class SyncOperatorErrorForwardingTests
     [Test]
     public async Task WhenFilterRegexSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<string>();
+        Subject<string> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(ForwardedMessage);
+        InvalidOperationException expected = new(ForwardedMessage);
         using var sub = subject.Filter(new Regex("x", RegexOptions.None, TimeSpan.FromSeconds(1))).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -121,13 +110,11 @@ public class SyncOperatorErrorForwardingTests
     [Test]
     public async Task WhenSelectConstantSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(ForwardedMessage);
+        InvalidOperationException expected = new(ForwardedMessage);
         using var sub = subject.SelectConstant("constant").Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);

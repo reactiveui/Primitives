@@ -66,8 +66,8 @@ internal static class Program
         if (args.Contains("--smoke", StringComparer.OrdinalIgnoreCase))
         {
             var originalOutput = Console.Out;
-            var capturedOutput = new StringWriter(CultureInfo.InvariantCulture);
-            var teeOutput = new SmokeTeeTextWriter(originalOutput, capturedOutput);
+            StringWriter capturedOutput = new(CultureInfo.InvariantCulture);
+            SmokeTeeTextWriter teeOutput = new(originalOutput, capturedOutput);
             Console.SetOut(teeOutput);
             try
             {
@@ -119,12 +119,12 @@ internal static class Program
     /// <returns>A task that completes when all smoke benchmarks have run.</returns>
     private static async Task RunSmokeBenchmarksAsync()
     {
-        var scalar = new ScalarSignalBenchmarks();
+        ScalarSignalBenchmarks scalar = new();
         Console.WriteLine($"PrimitivesReturnSubscribe={scalar.PrimitivesReturnSubscribe()}");
         Console.WriteLine($"SystemReactiveReturnSubscribe={scalar.SystemReactiveReturnSubscribe()}");
         Console.WriteLine($"R3ReturnSubscribe={scalar.R3ReturnSubscribe()}");
 
-        var factory = new FactorySignalBenchmarks();
+        FactorySignalBenchmarks factory = new();
         Console.WriteLine($"PrimitivesEmptySubscribe={factory.PrimitivesEmptySubscribe()}");
         Console.WriteLine($"SystemReactiveEmptySubscribe={factory.SystemReactiveEmptySubscribe()}");
         Console.WriteLine($"R3EmptySubscribe={factory.R3EmptySubscribe()}");
@@ -138,12 +138,12 @@ internal static class Program
         Console.WriteLine($"SystemReactiveThrowSubscribe={factory.SystemReactiveThrowSubscribe()}");
         Console.WriteLine($"R3ThrowSubscribe={factory.R3ThrowSubscribe()}");
 
-        var fromEnumerable = new FactoryFromEnumerableBenchmarks();
+        FactoryFromEnumerableBenchmarks fromEnumerable = new();
         Console.WriteLine($"PrimitivesFromEnumerableSubscribe={fromEnumerable.PrimitivesFromEnumerableSubscribe()}");
         Console.WriteLine($"SystemReactiveToObservableSubscribe={fromEnumerable.SystemReactiveToObservableSubscribe()}");
         Console.WriteLine($"R3ToObservableSubscribe={fromEnumerable.R3ToObservableSubscribe()}");
 
-        var operators = new OperatorMapKeepBenchmarks();
+        OperatorMapKeepBenchmarks operators = new();
         Console.WriteLine($"PrimitivesRangeMapKeep={operators.PrimitivesRangeMapKeep()}");
         Console.WriteLine($"SystemReactiveRangeSelectWhere={operators.SystemReactiveRangeSelectWhere()}");
         Console.WriteLine($"R3RangeSelectWhere={operators.R3RangeSelectWhere()}");
@@ -151,7 +151,7 @@ internal static class Program
         Console.WriteLine($"SystemReactiveAggregateAnyCount={operators.SystemReactiveAggregateAnyCount()}");
         Console.WriteLine($"R3AggregateAnyCount={await operators.R3AggregateAnyCount()}");
 
-        var startWith = new OperatorStartWithAppendDefaultIfEmptyBenchmarks();
+        OperatorStartWithAppendDefaultIfEmptyBenchmarks startWith = new();
         Console.WriteLine(
             $"PrimitivesStartWithAppendDefaultIfEmpty={startWith.PrimitivesStartWithAppendDefaultIfEmpty()}");
         Console.WriteLine(
@@ -162,17 +162,17 @@ internal static class Program
         Console.WriteLine($"SystemReactiveDefaultIfEmptyEmpty={startWith.SystemReactiveDefaultIfEmptyEmpty()}");
         Console.WriteLine($"R3DefaultIfEmptyEmpty={startWith.R3DefaultIfEmptyEmpty()}");
 
-        var flatMap = new OperatorFlatMapRangeBenchmarks();
+        OperatorFlatMapRangeBenchmarks flatMap = new();
         Console.WriteLine($"PrimitivesFlatMapRange={flatMap.PrimitivesFlatMapRange()}");
         Console.WriteLine($"SystemReactiveSelectManyRange={flatMap.SystemReactiveSelectManyRange()}");
         Console.WriteLine($"R3SelectManyRange={flatMap.R3SelectManyRange()}");
 
-        var zip = new OperatorZipBenchmarks();
+        OperatorZipBenchmarks zip = new();
         Console.WriteLine($"PrimitivesZip={zip.PrimitivesZip()}");
         Console.WriteLine($"SystemReactiveZip={zip.SystemReactiveZip()}");
         Console.WriteLine($"R3Zip={zip.R3Zip()}");
 
-        var throughput = new SubjectThroughputBenchmarks();
+        SubjectThroughputBenchmarks throughput = new();
         Console.WriteLine($"PrimitivesSubjectEmitN32={throughput.PrimitivesSubjectEmit32()}");
         Console.WriteLine($"SystemReactiveSubjectEmitN32={throughput.SystemReactiveSubjectEmit32()}");
         Console.WriteLine($"R3SubjectEmitN32={throughput.R3SubjectEmit32()}");
@@ -180,7 +180,7 @@ internal static class Program
         Console.WriteLine($"SystemReactiveSubjectEmitN1024={throughput.SystemReactiveSubjectEmit1024()}");
         Console.WriteLine($"R3SubjectEmitN1024={throughput.R3SubjectEmit1024()}");
 
-        var subscriptions = new SubjectSubscriptionBenchmarks();
+        SubjectSubscriptionBenchmarks subscriptions = new();
         Console.WriteLine($"PrimitivesSubjectSubscribeDispose8={subscriptions.PrimitivesSubjectSubscribeDispose8()}");
         Console.WriteLine(
             $"SystemReactiveSubjectSubscribeDispose8={subscriptions.SystemReactiveSubjectSubscribeDispose8()}");
@@ -190,7 +190,7 @@ internal static class Program
             $"SystemReactiveSubjectSubscribeDispose64={subscriptions.SystemReactiveSubjectSubscribeDispose64()}");
         Console.WriteLine($"R3SubjectSubscribeDispose64={subscriptions.R3SubjectSubscribeDispose64()}");
 
-        var stateful = new StatefulSignalBenchmarks();
+        StatefulSignalBenchmarks stateful = new();
         Console.WriteLine($"PrimitivesStateSignal32={stateful.PrimitivesStateSignal32()}");
         Console.WriteLine($"SystemReactiveBehaviorSubject32={stateful.SystemReactiveBehaviorSubject32()}");
         Console.WriteLine($"R3BehaviorSubject32={stateful.R3BehaviorSubject32()}");
@@ -198,12 +198,12 @@ internal static class Program
         Console.WriteLine($"SystemReactiveBehaviorSubject1024={stateful.SystemReactiveBehaviorSubject1024()}");
         Console.WriteLine($"R3BehaviorSubject1024={stateful.R3BehaviorSubject1024()}");
 
-        var history = new ReplaySignalBenchmarks();
+        ReplaySignalBenchmarks history = new();
         Console.WriteLine($"PrimitivesHistorySubscribe={history.PrimitivesHistorySubscribe()}");
         Console.WriteLine($"SystemReactiveReplaySubscribe={history.SystemReactiveReplaySubscribe()}");
         Console.WriteLine($"R3ReplaySubscribe={history.R3ReplaySubscribe()}");
 
-        var taskBridge = new AsyncBridgeBenchmarks();
+        AsyncBridgeBenchmarks taskBridge = new();
         Console.WriteLine($"PrimitivesCompletedTaskBridge={taskBridge.PrimitivesCompletedTaskBridge()}");
         Console.WriteLine($"SystemReactiveCompletedTaskBridge={taskBridge.SystemReactiveCompletedTaskBridge()}");
         Console.WriteLine($"R3CompletedTaskBridge={taskBridge.R3CompletedTaskBridge()}");
@@ -229,7 +229,7 @@ internal static class Program
     /// <returns>A task that completes when the factory-adapter smoke benchmarks have run.</returns>
     private static async Task RunFactoryAdapterExpansionSmokeAsync()
     {
-        var factoryAdapters = new FactoryAdapterExpansionBenchmarks();
+        FactoryAdapterExpansionBenchmarks factoryAdapters = new();
         Console.WriteLine($"PrimitivesCreateSubscribe={factoryAdapters.PrimitivesCreateSubscribe()}");
         Console.WriteLine($"SystemReactiveCreateSubscribe={factoryAdapters.SystemReactiveCreateSubscribe()}");
         Console.WriteLine($"R3CreateSubscribe={factoryAdapters.R3CreateSubscribe()}");
@@ -260,7 +260,7 @@ internal static class Program
     /// <summary>Runs the time and scheduler operator smoke benchmarks and writes their results to the console.</summary>
     private static void RunTimeSchedulerSmoke()
     {
-        var timeSchedulers = new OperatorTimeSchedulerBenchmarks();
+        OperatorTimeSchedulerBenchmarks timeSchedulers = new();
         Console.WriteLine($"PrimitivesDelayRange={timeSchedulers.PrimitivesDelayRange()}");
         Console.WriteLine($"SystemReactiveDelayRange={timeSchedulers.SystemReactiveDelayRange()}");
         Console.WriteLine($"R3DelayRange={timeSchedulers.R3DelayRange()}");
@@ -290,7 +290,7 @@ internal static class Program
     /// <summary>Runs the higher-order operator smoke benchmarks and writes their results to the console.</summary>
     private static void RunHigherOrderSmoke()
     {
-        var higherOrder = new OperatorHigherOrderBenchmarks();
+        OperatorHigherOrderBenchmarks higherOrder = new();
         Console.WriteLine($"PrimitivesConcatRanges={higherOrder.PrimitivesConcatRanges()}");
         Console.WriteLine($"SystemReactiveConcatRanges={higherOrder.SystemReactiveConcatRanges()}");
         Console.WriteLine($"R3ConcatRanges={higherOrder.R3ConcatRanges()}");
@@ -318,7 +318,7 @@ internal static class Program
     /// <returns>A task that completes when the terminal-collection smoke benchmarks have run.</returns>
     private static async Task RunTerminalCollectionSmokeAsync()
     {
-        var terminalCollections = new TerminalCollectionBenchmarks();
+        TerminalCollectionBenchmarks terminalCollections = new();
         Console.WriteLine($"PrimitivesCollectList={terminalCollections.PrimitivesCollectList()}");
         Console.WriteLine($"SystemReactiveCollectList={terminalCollections.SystemReactiveCollectList()}");
         Console.WriteLine($"R3CollectList={await terminalCollections.R3CollectList()}");
@@ -364,7 +364,7 @@ internal static class Program
     /// <summary>Runs the connectable/share smoke benchmarks and writes their results to the console.</summary>
     private static void RunConnectableShareSmoke()
     {
-        var connectableShare = new ConnectableShareBenchmarks();
+        ConnectableShareBenchmarks connectableShare = new();
         Console.WriteLine($"PrimitivesPublishLiveConnect={connectableShare.PrimitivesPublishLiveConnect()}");
         Console.WriteLine($"SystemReactivePublishLiveConnect={connectableShare.SystemReactivePublishLiveConnect()}");
         Console.WriteLine($"R3PublishLiveConnect={connectableShare.R3PublishLiveConnect()}");
@@ -384,7 +384,7 @@ internal static class Program
     /// <returns>A task that completes when the state/task/command smoke benchmarks have run.</returns>
     private static async Task RunStateTaskCommandSmokeAsync()
     {
-        var stateTaskCommand = new StateTaskCommandBenchmarks();
+        StateTaskCommandBenchmarks stateTaskCommand = new();
         Console.WriteLine($"PrimitivesStateSignalUpdates={stateTaskCommand.PrimitivesStateSignalUpdates()}");
         Console.WriteLine($"SystemReactiveStateSignalUpdates={stateTaskCommand.SystemReactiveStateSignalUpdates()}");
         Console.WriteLine($"R3StateSignalUpdates={stateTaskCommand.R3StateSignalUpdates()}");
@@ -407,7 +407,7 @@ internal static class Program
     /// <summary>Runs the core-runtime smoke benchmark scenarios and writes their results to the console.</summary>
     private static void RunCoreRuntimeSmokeBenchmarks()
     {
-        var coreRuntime = new CoreRuntimeBenchmarks();
+        CoreRuntimeBenchmarks coreRuntime = new();
         Console.WriteLine($"PrimitivesPocketDispose={coreRuntime.PrimitivesPocketDispose()}");
         Console.WriteLine($"SystemReactiveCompositeDispose={coreRuntime.SystemReactiveCompositeDispose()}");
         Console.WriteLine($"R3CompositeDispose={coreRuntime.R3CompositeDispose()}");
@@ -428,18 +428,18 @@ internal static class Program
     private static void ValidateSmokeOutput(string output)
     {
         var results = output.Split([Environment.NewLine], StringSplitOptions.RemoveEmptyEntries);
-        var failures = new List<string>();
+        List<string> failures = [];
         var groupCount = 0;
         var index = 0;
         while (index < results.Length)
         {
-            var (firstName, firstValue) = ParseSmokeResult(results[index]);
+            (var firstName, var firstValue) = ParseSmokeResult(results[index]);
             var scenario = NormalizeSmokeScenarioName(firstName);
-            var rows = new List<(string Name, int Value)> { (firstName, firstValue) };
+            List<(string Name, int Value)> rows = [(firstName, firstValue)];
             var next = index + 1;
             while (next < results.Length)
             {
-                var (name, value) = ParseSmokeResult(results[next]);
+                (var name, var value) = ParseSmokeResult(results[next]);
                 if (NormalizeSmokeScenarioName(name) != scenario)
                 {
                     break;
@@ -575,7 +575,7 @@ internal static class Program
         var r3Value = 0;
         for (var i = 0; i < rows.Count; i++)
         {
-            var (name, value) = rows[i];
+            (var name, var value) = rows[i];
             if (name.StartsWith(SystemReactivePrefix, StringComparison.Ordinal))
             {
                 systemReactiveValue = value;
@@ -599,7 +599,7 @@ internal static class Program
     /// <returns>A failure description, or <see langword="null"/> when the values match the documented difference.</returns>
     private static string? ValidateDocumentedSmokeDifference(List<(string Name, int Value)> rows)
     {
-        var (primitivesName, primitivesValue, systemReactiveValue, r3Value) = SplitLibraryValues(rows);
+        (var primitivesName, var primitivesValue, var systemReactiveValue, var r3Value) = SplitLibraryValues(rows);
 
         var expected = primitivesName switch
         {

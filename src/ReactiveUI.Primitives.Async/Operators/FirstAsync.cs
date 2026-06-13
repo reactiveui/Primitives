@@ -34,7 +34,7 @@ public static partial class SignalAsyncExtensions
         public async ValueTask<T> FirstAsync(Func<T, bool> predicate, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var observer = new FirstTaskWitness<T>(predicate, cancellationToken);
+            FirstTaskWitness<T> observer = new(predicate, cancellationToken);
             await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
@@ -56,7 +56,7 @@ public static partial class SignalAsyncExtensions
         public async ValueTask<T> FirstAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var observer = new FirstTaskWitness<T>(null, cancellationToken);
+            FirstTaskWitness<T> observer = new(null, cancellationToken);
             await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }

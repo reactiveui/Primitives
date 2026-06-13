@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Disposables;
@@ -24,7 +25,7 @@ public class FirstAsValueTaskHelperTests
     [Test]
     public async Task WhenSourceEmits_ThenValueTaskCompletesWithFirst()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var task = FirstAsValueTaskHelper<int>.FirstAsValueTask(subject);
         subject.OnNext(FirstValue);
         subject.OnNext(SecondValue);
@@ -37,7 +38,7 @@ public class FirstAsValueTaskHelperTests
     [Test]
     public async Task WhenSourceErrors_ThenValueTaskFaults()
     {
-        var expected = new InvalidOperationException("boom");
+        InvalidOperationException expected = new("boom");
         var task = FirstAsValueTaskHelper<int>.FirstAsValueTask(Observable.Throw<int>(expected));
         var ex = await Assert.That(async () => await task).ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex).IsSameReferenceAs(expected);
@@ -55,7 +56,9 @@ public class FirstAsValueTaskHelperTests
     /// <summary>Verifies the helper throws when the source argument is null.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenSourceNull_ThenThrowsArgumentNullException() => await Assert.That(static async () => await FirstAsValueTaskHelper<int>.FirstAsValueTask(null!)).ThrowsExactly<ArgumentNullException>();
+    public async Task WhenSourceNull_ThenThrowsArgumentNullException() => await Assert
+        .That(static async () => await FirstAsValueTaskHelper<int>.FirstAsValueTask(null!))
+        .ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Exercises the <c>Subscription?.Dispose()</c> null-conditional branch when a source
     /// synchronously emits during <c>Subscribe</c> before the subscription field is assigned.</summary>
@@ -86,7 +89,7 @@ public class FirstAsValueTaskHelperTests
     [Test]
     public async Task WhenAwaitedBeforeEmission_ThenCompletesOnLaterValue()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var pending = FirstAsValueTaskHelper<int>.FirstAsValueTask(subject).AsTask();
         subject.OnNext(FirstValue);
         var result = await pending.WaitAsync(TimeSpan.FromSeconds(5));
@@ -98,7 +101,7 @@ public class FirstAsValueTaskHelperTests
     [Test]
     public async Task WhenSecondTerminalAfterSettled_ThenIgnored()
     {
-        var source = new InvasiveObservable<int>();
+        InvasiveObservable<int> source = new();
         var task = FirstAsValueTaskHelper<int>.FirstAsValueTask(source);
         source.Observer.OnNext(FirstValue);
         source.Observer.OnNext(SecondValue);
@@ -112,9 +115,9 @@ public class FirstAsValueTaskHelperTests
     [Test]
     public async Task WhenSecondOnErrorAfterSettled_ThenIgnored()
     {
-        var source = new InvasiveObservable<int>();
+        InvasiveObservable<int> source = new();
         var task = FirstAsValueTaskHelper<int>.FirstAsValueTask(source);
-        var expected = new InvalidOperationException("first");
+        InvalidOperationException expected = new("first");
         source.Observer.OnError(expected);
         source.Observer.OnError(new InvalidOperationException("ignored"));
         source.Observer.OnCompleted();
@@ -127,7 +130,7 @@ public class FirstAsValueTaskHelperTests
     [Test]
     public async Task WhenSecondOnCompletedAfterSettled_ThenIgnored()
     {
-        var source = new InvasiveObservable<int>();
+        InvasiveObservable<int> source = new();
         var task = FirstAsValueTaskHelper<int>.FirstAsValueTask(source);
         source.Observer.OnCompleted();
         source.Observer.OnCompleted();

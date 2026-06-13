@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Disposables;
 using ReactiveUI.Primitives.Concurrency;
 
@@ -23,14 +24,12 @@ public class DetectStaleObservableTests
     [Test]
     public async Task WhenSourceTerminatesDuringSubscribe_ThenLateAttachDisposesSubscription()
     {
-        var scheduler = new VirtualClock();
-        var expected = new InvalidOperationException(SourceErrorMessage);
-        var source = new SyncErroringObservable<int>(expected);
+        VirtualClock scheduler = new();
+        InvalidOperationException expected = new(SourceErrorMessage);
+        SyncErroringObservable<int> source = new(expected);
         Exception? caught = null;
         using var sub = source.DetectStale(TimeSpan.FromTicks(WindowTicks), scheduler).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(source.Subscription.IsDisposed).IsTrue();

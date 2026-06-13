@@ -25,7 +25,7 @@ internal sealed class DetectStaleObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(scheduler);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new DetectStaleSink(observer, stalenessPeriod, scheduler);
+        DetectStaleSink sink = new(observer, stalenessPeriod, scheduler);
         sink.AttachSourceSubscription(source.Subscribe(sink));
         sink.Initialize();
         return sink;
@@ -81,7 +81,7 @@ internal sealed class DetectStaleObservable<T>(
                     return;
                 }
 
-                downstream.OnNext(new Stale<T>(value));
+                downstream.OnNext(new(value));
                 ScheduleStale();
             }
         }
@@ -129,7 +129,7 @@ internal sealed class DetectStaleObservable<T>(
             {
                 if (!_state.Done)
                 {
-                    downstream.OnNext(new Stale<T>());
+                    downstream.OnNext(new());
                 }
             }
 

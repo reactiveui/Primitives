@@ -1,7 +1,6 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-#pragma warning disable S103 // Coverage tests intentionally group branch-heavy scenarios.
 
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
@@ -16,7 +15,7 @@ namespace ReactiveUI.Primitives.Tests;
 /// Primitives-named counterpart. Each operator pair is one data-source row consumed by a single test body, so the
 /// behavior is asserted once and checked for both names (and for identity between them).
 /// </summary>
-public class RxNameParityTests
+public class RxNamesTests
 {
     /// <summary>The multiplier/state used by projection cases.</summary>
     private const int Ten = 10;
@@ -115,16 +114,56 @@ public class RxNameParityTests
         yield return new("Select-Map", s => s.Map(Double), s => s.Select(Double), _oneToFive, _doubled);
         yield return new("Where-Keep", s => s.Keep(IsEven), s => s.Where(IsEven), _oneToFive, _evens);
         yield return new("Scan-Fold", s => s.Fold(Seed, Add), s => s.Scan(Seed, Add), _oneToFive, _runningSum);
-        yield return new("Aggregate-Reduce", s => s.Reduce(Seed, Add), s => s.Aggregate(Seed, Add), _oneToFive, _finalSum);
-        yield return new("DistinctUntilChanged-Unique", s => s.Unique(), s => s.DistinctUntilChanged(), _adjacentDuplicates, _deduplicated);
-        yield return new("DistinctUntilChangedBy-UniqueBy", s => s.UniqueBy(Identity), s => s.DistinctUntilChangedBy(Identity), _adjacentDuplicates, _deduplicated);
-        yield return new("IgnoreElements-IgnoreValues", s => s.IgnoreValues(), s => s.IgnoreElements(), _oneToFive, _empty);
-        yield return new("SelectWith-MapWith", s => s.MapWith(Ten, AddState), s => s.SelectWith(Ten, AddState), _oneToFive, _plusTen);
-        yield return new("WhereWith-KeepWith", s => s.KeepWith(Two, IsMultiple), s => s.WhereWith(Two, IsMultiple), _oneToFive, _evens);
+        yield return new(
+            "Aggregate-Reduce",
+            s => s.Reduce(Seed, Add),
+            s => s.Aggregate(Seed, Add),
+            _oneToFive,
+            _finalSum);
+        yield return new(
+            "DistinctUntilChanged-Unique",
+            s => s.Unique(),
+            s => s.DistinctUntilChanged(),
+            _adjacentDuplicates,
+            _deduplicated);
+        yield return new(
+            "DistinctUntilChangedBy-UniqueBy",
+            s => s.UniqueBy(Identity),
+            s => s.DistinctUntilChangedBy(Identity),
+            _adjacentDuplicates,
+            _deduplicated);
+        yield return new(
+            "IgnoreElements-IgnoreValues",
+            s => s.IgnoreValues(),
+            s => s.IgnoreElements(),
+            _oneToFive,
+            _empty);
+        yield return new(
+            "SelectWith-MapWith",
+            s => s.MapWith(Ten, AddState),
+            s => s.SelectWith(Ten, AddState),
+            _oneToFive,
+            _plusTen);
+        yield return new(
+            "WhereWith-KeepWith",
+            s => s.KeepWith(Two, IsMultiple),
+            s => s.WhereWith(Two, IsMultiple),
+            _oneToFive,
+            _evens);
         yield return new("Do-Tap", s => s.Tap(Ignore), s => s.Do(Ignore), _oneToFive, _oneToFive);
-        yield return new("DoWith-TapWith", s => s.TapWith(Ten, IgnoreState), s => s.DoWith(Ten, IgnoreState), _oneToFive, _oneToFive);
+        yield return new(
+            "DoWith-TapWith",
+            s => s.TapWith(Ten, IgnoreState),
+            s => s.DoWith(Ten, IgnoreState),
+            _oneToFive,
+            _oneToFive);
         yield return new("SelectMany-FlatMap", s => s.FlatMap(Fan), s => s.SelectMany(Fan), _oneToThree, _fanned);
-        yield return new("Materialize-Spark", s => s.Spark().Unspark(), s => s.Materialize().Dematerialize(), _oneToFive, _oneToFive);
+        yield return new(
+            "Materialize-Spark",
+            s => s.Spark().Unspark(),
+            s => s.Materialize().Dematerialize(),
+            _oneToFive,
+            _oneToFive);
     }
 
     /// <summary>Provides the higher-order <c>source-of-sources</c> parity cases.</summary>
@@ -142,16 +181,38 @@ public class RxNameParityTests
     public static IEnumerable<BinaryCase> BinaryCases()
     {
         yield return new("Zip-Pair", (l, r) => l.Pair(r, Add), (l, r) => l.Zip(r, Add), DriveZip, _zipped);
-        yield return new("CombineLatest-SyncLatest", (l, r) => l.SyncLatest(r, Add), (l, r) => l.CombineLatest(r, Add), DriveCombine, _combined);
-        yield return new("WithLatestFrom-Latch", (l, r) => l.Latch(r, Add), (l, r) => l.WithLatestFrom(r, Add), DriveLatch, _latched);
+        yield return new(
+            "CombineLatest-SyncLatest",
+            (l, r) => l.SyncLatest(r, Add),
+            (l, r) => l.CombineLatest(r, Add),
+            DriveCombine,
+            _combined);
+        yield return new(
+            "WithLatestFrom-Latch",
+            (l, r) => l.Latch(r, Add),
+            (l, r) => l.WithLatestFrom(r, Add),
+            DriveLatch,
+            _latched);
     }
 
     /// <summary>Provides the time-based parity cases, driven by a virtual clock.</summary>
     /// <returns>The time-based parity cases.</returns>
     public static IEnumerable<TimeCase> TimeCases()
     {
-        yield return new("Delay-Shift", (s, c) => s.Shift(TimeSpan.FromTicks(DueTicks), c), (s, c) => s.Delay(TimeSpan.FromTicks(DueTicks), c), FromOneToThree, _oneToThree, false);
-        yield return new("Timeout-Expire", (s, c) => s.Expire(TimeSpan.FromTicks(DueTicks), c), (s, c) => s.Timeout(TimeSpan.FromTicks(DueTicks), c), Silent, _empty, true);
+        yield return new(
+            "Delay-Shift",
+            (s, c) => s.Shift(TimeSpan.FromTicks(DueTicks), c),
+            (s, c) => s.Delay(TimeSpan.FromTicks(DueTicks), c),
+            FromOneToThree,
+            _oneToThree,
+            false);
+        yield return new(
+            "Timeout-Expire",
+            (s, c) => s.Expire(TimeSpan.FromTicks(DueTicks), c),
+            (s, c) => s.Timeout(TimeSpan.FromTicks(DueTicks), c),
+            Silent,
+            _empty,
+            true);
     }
 
     /// <summary>Verifies each unary name produces the expected sequence and is identical to its counterpart.</summary>
@@ -203,8 +264,8 @@ public class RxNameParityTests
     [MethodDataSource(nameof(TimeCases))]
     public async Task TimeNamesAreBehaviorallyIdentical(TimeCase testCase)
     {
-        var (deviantValues, deviantError) = RunTimed(testCase.Deviant, testCase.Source);
-        var (rxValues, rxError) = RunTimed(testCase.Rx, testCase.Source);
+        (var deviantValues, var deviantError) = RunTimed(testCase.Deviant, testCase.Source);
+        (var rxValues, var rxError) = RunTimed(testCase.Rx, testCase.Source);
         await Assert.That(deviantValues.SequenceEqual(testCase.Expected)).IsTrue();
         await Assert.That(rxValues.SequenceEqual(testCase.Expected)).IsTrue();
         await Assert.That(rxValues).IsEquivalentTo(deviantValues, EqualityComparer<int>.Default);
@@ -217,10 +278,10 @@ public class RxNameParityTests
     [Test]
     public async Task WhereNotNullMatchesKeepNotNull()
     {
-        var keep = new List<string>();
-        var where = new List<string>();
-        Signal.FromEnumerable<string?>(["a", null, "b"]).KeepNotNull().Subscribe(keep.Add);
-        Signal.FromEnumerable<string?>(["a", null, "b"]).WhereNotNull().Subscribe(where.Add);
+        List<string> keep = [];
+        List<string> where = [];
+        Signal.FromEnumerable(["a", null, "b"]).KeepNotNull().Subscribe(keep.Add);
+        Signal.FromEnumerable(["a", null, "b"]).WhereNotNull().Subscribe(where.Add);
         await Assert.That(where).IsEquivalentTo(keep, EqualityComparer<string>.Default);
         await Assert.That(where.Count).IsEqualTo(Two);
     }
@@ -230,8 +291,8 @@ public class RxNameParityTests
     [Test]
     public async Task BinaryConcatMatchesChain()
     {
-        var chain = new List<int>();
-        var concat = new List<int>();
+        List<int> chain = [];
+        List<int> concat = [];
         Signal.FromEnumerable(_oneToThree).Chain(Signal.FromEnumerable(_oneToThree)).Subscribe(chain.Add);
         Signal.FromEnumerable(_oneToThree).Concat(Signal.FromEnumerable(_oneToThree)).Subscribe(concat.Add);
         await Assert.That(concat).IsEquivalentTo(chain, EqualityComparer<int>.Default);
@@ -283,11 +344,11 @@ public class RxNameParityTests
         Assert.Throws<ArgumentNullException>(() => source.Select<int, int>(null!));
         Assert.Throws<ArgumentNullException>(() => source.SelectWith<int, int, int>(Ten, null!));
         Assert.Throws<ArgumentNullException>(() => source.Where(null!));
-        Assert.Throws<ArgumentNullException>(() => source.WhereWith<int, int>(Two, null!));
+        Assert.Throws<ArgumentNullException>(() => source.WhereWith(Two, null!));
         Assert.Throws<ArgumentNullException>(() => source.Do(null!));
-        Assert.Throws<ArgumentNullException>(() => source.DoWith<int, int>(Ten, null!));
-        Assert.Throws<ArgumentNullException>(() => source.Scan<int, int>(Seed, null!));
-        Assert.Throws<ArgumentNullException>(() => source.Aggregate<int, int>(Seed, null!));
+        Assert.Throws<ArgumentNullException>(() => source.DoWith(Ten, null!));
+        Assert.Throws<ArgumentNullException>(() => source.Scan(Seed, null!));
+        Assert.Throws<ArgumentNullException>(() => source.Aggregate(Seed, null!));
         Assert.Throws<ArgumentNullException>(() => source.DistinctUntilChangedBy<int, int>(null!));
         Assert.Throws<ArgumentNullException>(() => source.SelectMany<int, int>(null!));
         Assert.Throws<ArgumentNullException>(() => source.Zip<int, int, int>(source, null!));
@@ -325,8 +386,8 @@ public class RxNameParityTests
     [Test]
     public async Task StatefulProjectionForwardsThrownError()
     {
-        await Assert.That(RunStatefulThrow(s => s.SelectWith<int, int, int>(Ten, ThrowProjection))).IsTrue();
-        await Assert.That(RunStatefulThrow(s => s.WhereWith<int, int>(Two, ThrowPredicate))).IsTrue();
+        await Assert.That(RunStatefulThrow(s => s.SelectWith(Ten, ThrowProjection))).IsTrue();
+        await Assert.That(RunStatefulThrow(s => s.WhereWith(Two, ThrowPredicate))).IsTrue();
     }
 
     /// <summary>Verifies Resume switches to the fallback sequence after the source errors.</summary>
@@ -334,10 +395,11 @@ public class RxNameParityTests
     [Test]
     public async Task ResumeSwitchesToFallbackOnError()
     {
-        var source = new Signal<int>();
-        var values = new List<int>();
+        Signal<int> source = new();
+        List<int> values = [];
         var completed = 0;
-        using var subscription = source.Resume(Signal.FromEnumerable(_oneToThree)).Subscribe(values.Add, static ex => throw ex, () => completed++);
+        using var subscription = source.Resume(Signal.FromEnumerable(_oneToThree))
+            .Subscribe(values.Add, static ex => throw ex, () => completed++);
         source.OnNext(Ten);
         source.OnError(new InvalidOperationException(Boom));
         await Assert.That(values.SequenceEqual(_tenThenFallback)).IsTrue();
@@ -349,10 +411,11 @@ public class RxNameParityTests
     [Test]
     public async Task ResumeForwardsCompletionWithoutFallback()
     {
-        var source = new Signal<int>();
-        var values = new List<int>();
+        Signal<int> source = new();
+        List<int> values = [];
         var completed = 0;
-        using var subscription = source.Resume(Signal.FromEnumerable(_oneToThree)).Subscribe(values.Add, static ex => throw ex, () => completed++);
+        using var subscription = source.Resume(Signal.FromEnumerable(_oneToThree))
+            .Subscribe(values.Add, static ex => throw ex, () => completed++);
         source.OnNext(Ten);
         source.OnCompleted();
         await Assert.That(values.SequenceEqual(_tenOnly)).IsTrue();
@@ -364,8 +427,8 @@ public class RxNameParityTests
     [Test]
     public async Task ResumeDisposeStopsForwarding()
     {
-        var source = new Signal<int>();
-        var values = new List<int>();
+        Signal<int> source = new();
+        List<int> values = [];
         var subscription = source.Resume(Signal.FromEnumerable(_oneToThree)).Subscribe(values.Add);
         source.OnNext(Ten);
         subscription.Dispose();
@@ -388,8 +451,8 @@ public class RxNameParityTests
     [Test]
     public async Task SelectManyWithResultSelectorMatchesFlatMap()
     {
-        var flatMap = new List<int>();
-        var selectMany = new List<int>();
+        List<int> flatMap = [];
+        List<int> selectMany = [];
         Signal.FromEnumerable(_oneToThree).FlatMap(Fan, AddPair).Subscribe(flatMap.Add);
         Signal.FromEnumerable(_oneToThree).SelectMany(Fan, AddPair).Subscribe(selectMany.Add);
         await Assert.That(selectMany).IsEquivalentTo(flatMap, EqualityComparer<int>.Default);
@@ -419,22 +482,18 @@ public class RxNameParityTests
     /// <summary>Verifies <c>Retry</c> mirrors the source when no error occurs (covers the happy path).</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task RetryMirrorsSourceWhenNoError() => await Assert.That(Collect(Signal.FromEnumerable(_oneToThree).Retry(Two)).SequenceEqual(_oneToThree)).IsTrue();
+    public async Task RetryMirrorsSourceWhenNoError() =>
+        await Assert.That(Collect(Signal.FromEnumerable(_oneToThree).Retry(Two)).SequenceEqual(_oneToThree)).IsTrue();
 
     /// <summary>Exercises the default-sequencer (no-scheduler) overloads of the time operators.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TimeOperatorsAcceptDefaultSequencer()
     {
-        Signal.Sequence(One, Three).Delay(TimeSpan.FromTicks(DueTicks)).Subscribe(static _ =>
-        {
-        }).Dispose();
-        Signal.FromEnumerable(_oneToThree).Timeout(TimeSpan.FromSeconds(AdvanceTicks)).Subscribe(static _ =>
-        {
-        }).Dispose();
-        Signal.FromEnumerable(_oneToThree).Sample(TimeSpan.FromTicks(DueTicks)).Subscribe(static _ =>
-        {
-        }).Dispose();
+        Signal.Sequence(One, Three).Delay(TimeSpan.FromTicks(DueTicks)).Subscribe(static _ => { }).Dispose();
+        Signal.FromEnumerable(_oneToThree).Timeout(TimeSpan.FromSeconds(AdvanceTicks)).Subscribe(static _ => { })
+            .Dispose();
+        Signal.FromEnumerable(_oneToThree).Sample(TimeSpan.FromTicks(DueTicks)).Subscribe(static _ => { }).Dispose();
         await Task.CompletedTask.ConfigureAwait(false);
     }
 
@@ -463,27 +522,44 @@ public class RxNameParityTests
     [Test]
     public async Task StatefulSinksReportCurrentThreadRequirement()
     {
-        await Assert.That(new MapWithSignal<int, int, int>(new CurrentThreadSource<int>(), Ten, AddState).IsRequiredSubscribeOnCurrentThread()).IsTrue();
-        await Assert.That(new KeepWithSignal<int, int>(new CurrentThreadSource<int>(), Two, IsMultiple).IsRequiredSubscribeOnCurrentThread()).IsTrue();
-        await Assert.That(new TapWithSignal<int, int>(new CurrentThreadSource<int>(), Ten, IgnoreState).IsRequiredSubscribeOnCurrentThread()).IsTrue();
-        await Assert.That(!new MapWithSignal<int, int, int>(new ManualSource<int>(), Ten, AddState).IsRequiredSubscribeOnCurrentThread()).IsTrue();
-        await Assert.That(!new KeepWithSignal<int, int>(new ManualSource<int>(), Two, IsMultiple).IsRequiredSubscribeOnCurrentThread()).IsTrue();
-        await Assert.That(!new TapWithSignal<int, int>(new ManualSource<int>(), Ten, IgnoreState).IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(
+            new MapWithSignal<int, int, int>(new CurrentThreadSource<int>(), Ten, AddState)
+                .IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(
+            new KeepWithSignal<int, int>(new CurrentThreadSource<int>(), Two, IsMultiple)
+                .IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(
+            new TapWithSignal<int, int>(new CurrentThreadSource<int>(), Ten, IgnoreState)
+                .IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(
+            !new MapWithSignal<int, int, int>(new ManualSource<int>(), Ten, AddState)
+                .IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(
+            !new KeepWithSignal<int, int>(new ManualSource<int>(), Two, IsMultiple)
+                .IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(
+            !new TapWithSignal<int, int>(new ManualSource<int>(), Ten, IgnoreState)
+                .IsRequiredSubscribeOnCurrentThread()).IsTrue();
     }
 
     /// <summary>Verifies Resume rejects a null observer.</summary>
     [Test]
-    public void ResumeThrowsOnNullObserver() => Assert.Throws<ArgumentNullException>(() => Signal.FromEnumerable(_oneToFive).Resume(Signal.FromEnumerable(_oneToThree)).Subscribe((IObserver<int>)null!));
+    public void ResumeThrowsOnNullObserver() =>
+        Assert.Throws<ArgumentNullException>(() => Signal.FromEnumerable(_oneToFive)
+            .Resume(Signal.FromEnumerable(_oneToThree))
+            .Subscribe((IObserver<int>)null!));
 
     /// <summary>Verifies Resume takes the scheduled subscription path when a current-thread sequencer is already active.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ResumeSchedulesWhenCurrentThreadSequencerActive()
     {
-        var values = new List<int>();
-        Sequencer.CurrentThread.Schedule(() => new Signal<int>().Resume(Signal.FromEnumerable(_oneToThree)).Subscribe(values.Add));
+        List<int> values = [];
+        Sequencer.CurrentThread.Schedule(() =>
+            new Signal<int>().Resume(Signal.FromEnumerable(_oneToThree)).Subscribe(values.Add));
         await Assert.That(values.Count).IsEqualTo(0);
-        await Assert.That(new ResumeSignal<int>(Signal.FromEnumerable(_oneToThree), Signal.FromEnumerable(_oneToThree)).IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(new ResumeSignal<int>(Signal.FromEnumerable(_oneToThree), Signal.FromEnumerable(_oneToThree))
+            .IsRequiredSubscribeOnCurrentThread()).IsTrue();
     }
 
     /// <summary>Doubles a value.</summary>
@@ -589,7 +665,7 @@ public class RxNameParityTests
     /// <returns>The forwarded values.</returns>
     private static List<int> RunUnary(Func<IObservable<int>, IObservable<int>> op, int[] input)
     {
-        var values = new List<int>();
+        List<int> values = [];
         op(Signal.FromEnumerable(input)).Subscribe(values.Add);
         return values;
     }
@@ -601,7 +677,7 @@ public class RxNameParityTests
     private static List<int> RunHigherOrder(Func<IObservable<IObservable<int>>, IObservable<int>> op, int[][] inners)
     {
         var outer = Signal.FromEnumerable(Array.ConvertAll(inners, ToSource));
-        var values = new List<int>();
+        List<int> values = [];
         op(outer).Subscribe(values.Add);
         return values;
     }
@@ -615,11 +691,13 @@ public class RxNameParityTests
     /// <param name = "op">The operator under test.</param>
     /// <param name = "drive">The script that pushes values into the subjects.</param>
     /// <returns>The forwarded values.</returns>
-    private static List<int> RunBinary(Func<IObservable<int>, IObservable<int>, IObservable<int>> op, Action<Signal<int>, Signal<int>> drive)
+    private static List<int> RunBinary(
+        Func<IObservable<int>, IObservable<int>, IObservable<int>> op,
+        Action<Signal<int>, Signal<int>> drive)
     {
-        var left = new Signal<int>();
-        var right = new Signal<int>();
-        var values = new List<int>();
+        Signal<int> left = new();
+        Signal<int> right = new();
+        List<int> values = [];
         using var subscription = op(left, right).Subscribe(values.Add);
         drive(left, right);
         return values;
@@ -629,14 +707,14 @@ public class RxNameParityTests
     /// <param name = "op">The operator under test.</param>
     /// <param name = "source">The source factory.</param>
     /// <returns>The forwarded values and any terminal error.</returns>
-    private static (List<int> Values, Exception? Error) RunTimed(Func<IObservable<int>, ISequencer, IObservable<int>> op, Func<IObservable<int>> source)
+    private static (List<int> Values, Exception? Error) RunTimed(
+        Func<IObservable<int>, ISequencer, IObservable<int>> op,
+        Func<IObservable<int>> source)
     {
-        var clock = new TestClock(DateTimeOffset.UnixEpoch);
-        var values = new List<int>();
+        TestClock clock = new(DateTimeOffset.UnixEpoch);
+        List<int> values = [];
         Exception? error = null;
-        using var subscription = op(source(), clock).Subscribe(values.Add, captured => error = captured, () =>
-        {
-        });
+        using var subscription = op(source(), clock).Subscribe(values.Add, captured => error = captured, () => { });
         clock.AdvanceBy(TimeSpan.FromTicks(AdvanceTicks));
         return (values, error);
     }
@@ -646,12 +724,10 @@ public class RxNameParityTests
     /// <returns><see langword="true"/> when one value and the error were forwarded.</returns>
     private static bool RunStatefulError(Func<IObservable<int>, IObservable<int>> op)
     {
-        var source = new Signal<int>();
-        var values = new List<int>();
+        Signal<int> source = new();
+        List<int> values = [];
         Exception? error = null;
-        using var subscription = op(source).Subscribe(values.Add, captured => error = captured, () =>
-        {
-        });
+        using var subscription = op(source).Subscribe(values.Add, captured => error = captured, () => { });
         source.OnNext(Two);
         source.OnError(new InvalidOperationException(Boom));
         return values.Count == One && error is InvalidOperationException;
@@ -662,16 +738,12 @@ public class RxNameParityTests
     /// <returns><see langword="true"/> when the thrown error was forwarded downstream.</returns>
     private static bool RunStatefulThrow(Func<IObservable<int>, IObservable<int>> op)
     {
-        var source = new Signal<int>();
+        Signal<int> source = new();
         Exception? error = null;
         using var subscription = op(source).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             captured => error = captured,
-            () =>
-        {
-        });
+            () => { });
         source.OnNext(One);
         return error is InvalidOperationException;
     }
@@ -693,9 +765,9 @@ public class RxNameParityTests
     /// <returns>The sampled values.</returns>
     private static List<int> RunSampling(Func<IObservable<int>, ISequencer, IObservable<int>> op)
     {
-        var clock = new TestClock(DateTimeOffset.UnixEpoch);
-        var source = new Signal<int>();
-        var values = new List<int>();
+        TestClock clock = new(DateTimeOffset.UnixEpoch);
+        Signal<int> source = new();
+        List<int> values = [];
         using var subscription = op(source, clock).Subscribe(values.Add);
         source.OnNext(One);
         clock.AdvanceBy(TimeSpan.FromTicks(Two));
@@ -715,14 +787,15 @@ public class RxNameParityTests
     /// <returns>The forwarded values.</returns>
     private static List<int> Collect(IObservable<int> source)
     {
-        var values = new List<int>();
+        List<int> values = [];
         source.Subscribe(values.Add);
         return values;
     }
 
     /// <summary>Builds a source of two int-range inner sources (exercises the synchronous Switch range fast path).</summary>
     /// <returns>An outer source of two range inners.</returns>
-    private static IObservable<IObservable<int>> RangeInners() => Signal.FromEnumerable<IObservable<int>>([Signal.Sequence(One, Two), Signal.Sequence(Three, Two)]);
+    private static IObservable<IObservable<int>> RangeInners() =>
+        Signal.FromEnumerable([Signal.Sequence(One, Two), Signal.Sequence(Three, Two)]);
 
     /// <summary>
     /// Drives a stateful sink through a value, a terminal completion, and then further notifications, reporting
@@ -732,13 +805,11 @@ public class RxNameParityTests
     /// <returns><see langword="true"/> when notifications after the terminal were dropped.</returns>
     private static bool RunStopGuards(Func<IObservable<int>, IObservable<int>> op)
     {
-        var source = new ManualSource<int>();
+        ManualSource<int> source = new();
         var completed = 0;
         Exception? error = null;
         using var subscription = op(source).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             captured => error = captured,
             () => completed++);
         source.Next(Two);
@@ -795,7 +866,12 @@ public class RxNameParityTests
     /// <param name = "Rx">The Rx/LINQ-named builder.</param>
     /// <param name = "Input">The source values.</param>
     /// <param name = "Expected">The expected forwarded values.</param>
-    public sealed record UnaryCase(string Name, Func<IObservable<int>, IObservable<int>> Deviant, Func<IObservable<int>, IObservable<int>> Rx, int[] Input, int[] Expected)
+    public sealed record UnaryCase(
+        string Name,
+        Func<IObservable<int>, IObservable<int>> Deviant,
+        Func<IObservable<int>, IObservable<int>> Rx,
+        int[] Input,
+        int[] Expected)
     {
         /// <inheritdoc/>
         public override string ToString() => Name;
@@ -807,11 +883,16 @@ public class RxNameParityTests
     /// <param name = "Rx">The Rx/LINQ-named builder.</param>
     /// <param name = "Inners">The inner source values.</param>
     /// <param name = "Expected">The expected forwarded values.</param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+    [SuppressMessage(
         "Major Code Smell",
         "S2368:Public methods should not have multidimensional array parameters",
         Justification = "The jagged array is the public TUnit method-data shape for higher-order parity cases.")]
-    public sealed record HigherOrderCase(string Name, Func<IObservable<IObservable<int>>, IObservable<int>> Deviant, Func<IObservable<IObservable<int>>, IObservable<int>> Rx, int[][] Inners, int[] Expected)
+    public sealed record HigherOrderCase(
+        string Name,
+        Func<IObservable<IObservable<int>>, IObservable<int>> Deviant,
+        Func<IObservable<IObservable<int>>, IObservable<int>> Rx,
+        int[][] Inners,
+        int[] Expected)
     {
         /// <inheritdoc/>
         public override string ToString() => Name;
@@ -823,7 +904,12 @@ public class RxNameParityTests
     /// <param name = "Rx">The Rx/LINQ-named builder.</param>
     /// <param name = "Drive">The script that pushes values into the left and right subjects.</param>
     /// <param name = "Expected">The expected forwarded values.</param>
-    public sealed record BinaryCase(string Name, Func<IObservable<int>, IObservable<int>, IObservable<int>> Deviant, Func<IObservable<int>, IObservable<int>, IObservable<int>> Rx, Action<Signal<int>, Signal<int>> Drive, int[] Expected)
+    public sealed record BinaryCase(
+        string Name,
+        Func<IObservable<int>, IObservable<int>, IObservable<int>> Deviant,
+        Func<IObservable<int>, IObservable<int>, IObservable<int>> Rx,
+        Action<Signal<int>, Signal<int>> Drive,
+        int[] Expected)
     {
         /// <inheritdoc/>
         public override string ToString() => Name;
@@ -836,7 +922,13 @@ public class RxNameParityTests
     /// <param name = "Source">The source factory.</param>
     /// <param name = "Expected">The expected forwarded values.</param>
     /// <param name = "ExpectsTimeout">Whether a <see cref = "TimeoutException"/> is expected.</param>
-    public sealed record TimeCase(string Name, Func<IObservable<int>, ISequencer, IObservable<int>> Deviant, Func<IObservable<int>, ISequencer, IObservable<int>> Rx, Func<IObservable<int>> Source, int[] Expected, bool ExpectsTimeout)
+    public sealed record TimeCase(
+        string Name,
+        Func<IObservable<int>, ISequencer, IObservable<int>> Deviant,
+        Func<IObservable<int>, ISequencer, IObservable<int>> Rx,
+        Func<IObservable<int>> Source,
+        int[] Expected,
+        bool ExpectsTimeout)
     {
         /// <inheritdoc/>
         public override string ToString() => Name;

@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Disposables;
 
-/// <summary>SingleReplaceableDisposable.</summary>
+/// <summary>A disposable slot whose inner disposable can be replaced, disposing the previous one.</summary>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class SingleReplaceableDisposable : IsDisposed
 {
@@ -55,7 +55,7 @@ public class SingleReplaceableDisposable : IsDisposed
 
     /// <summary>Creates the specified disposable.</summary>
     /// <param name="disposable">The disposable.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="disposable"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="disposable"/> is <see langword="null"/>.</exception>
     public void Create(IDisposable disposable)
     {
         ArgumentExceptionHelper.ThrowIfNull(disposable);
@@ -108,6 +108,7 @@ public class SingleReplaceableDisposable : IsDisposed
         /// <inheritdoc/>
         public void Dispose()
         {
+            // Intentionally empty: a sentinel marking an already-disposed slot; there is nothing to release.
         }
     }
 }

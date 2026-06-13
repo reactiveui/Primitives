@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -58,7 +59,7 @@ public class ErrorHandlingOperatorTests
             return DisposableAsync.Empty;
         });
         Result? completionResult = null;
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await source.OnErrorResumeAsFailure().SubscribeAsync((_, _) => default, null, result =>
         {
             completionResult = result;
@@ -108,17 +109,17 @@ public class ErrorHandlingOperatorTests
         var attempt = 0;
         var source = SignalAsync.CreateAsBackgroundJob<int>(
             async (obs, ct) =>
-        {
-            attempt++;
-            if (attempt < 3)
             {
-                await obs.OnCompletedAsync(Result.Failure(new InvalidOperationException($"attempt {attempt}")));
-                return;
-            }
+                attempt++;
+                if (attempt < 3)
+                {
+                    await obs.OnCompletedAsync(Result.Failure(new InvalidOperationException($"attempt {attempt}")));
+                    return;
+                }
 
-            await obs.OnNextAsync(SuccessValue, ct);
-            await obs.OnCompletedAsync(Result.Success);
-        },
+                await obs.OnNextAsync(SuccessValue, ct);
+                await obs.OnCompletedAsync(Result.Success);
+            },
             NewThreadTaskScheduler.Instance);
         var result = await source.Retry(5).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([SuccessValue]);
@@ -132,12 +133,14 @@ public class ErrorHandlingOperatorTests
     {
         const int RetryCount = 2;
         var source = SignalAsync.Throw<int>(new InvalidOperationException("permanent failure"));
-        await Assert.That(async () => await source.Retry(RetryCount).ToListAsync()).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(async () => await source.Retry(RetryCount).ToListAsync())
+            .ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Tests Retry negative count throws.</summary>
     [Test]
-    public void WhenRetryNegativeCount_ThenThrowsArgumentOutOfRange() => Assert.Throws<ArgumentOutOfRangeException>(() => SignalAsync.Return(1).Retry(-1));
+    public void WhenRetryNegativeCount_ThenThrowsArgumentOutOfRange() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => SignalAsync.Return(1).Retry(-1));
 
     /// <summary>Tests Retry on success completes normally.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -158,14 +161,16 @@ public class ErrorHandlingOperatorTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.Catch(static _ => SignalAsync.Return(42)).SubscribeAsync(static (_, _) => default, (ex, _) =>
-        {
-            caught = ex;
-            errorTcs.TrySetResult();
-            return default;
-        });
-        var expected = new InvalidOperationException("catch-passthrough");
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await signal.Values.Catch(static _ => SignalAsync.Return(42)).SubscribeAsync(
+            static (_, _) => default,
+            (ex, _) =>
+            {
+                caught = ex;
+                errorTcs.TrySetResult();
+                return default;
+            });
+        InvalidOperationException expected = new("catch-passthrough");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -177,7 +182,7 @@ public class ErrorHandlingOperatorTests
     public async Task WhenCatchWithErrorResumeCallback_ThenCallbackInvoked()
     {
         const int FallbackValue = 99;
-        var errorResumes = new List<Exception>();
+        List<Exception> errorResumes = [];
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(new InvalidOperationException("warning"), ct);
@@ -198,13 +203,13 @@ public class ErrorHandlingOperatorTests
     public async Task WhenRetryWithCountZero_ThenPropagatesErrorImmediately()
     {
         var attempt = 0;
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var source = SignalAsync.CreateAsBackgroundJob<int>(
             async (obs, _) =>
-        {
-            attempt++;
-            await obs.OnCompletedAsync(Result.Failure(new InvalidOperationException($"attempt {attempt}")));
-        },
+            {
+                attempt++;
+                await obs.OnCompletedAsync(Result.Failure(new InvalidOperationException($"attempt {attempt}")));
+            },
             NewThreadTaskScheduler.Instance);
         await using var sub = await source.Retry(0).SubscribeAsync((_, _) => default, null, result =>
         {
@@ -223,13 +228,13 @@ public class ErrorHandlingOperatorTests
     {
         const int ExpectedAttempts = 3;
         var attempt = 0;
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var source = SignalAsync.CreateAsBackgroundJob<int>(
             async (obs, _) =>
-        {
-            attempt++;
-            await obs.OnCompletedAsync(Result.Failure(new InvalidOperationException($"attempt {attempt}")));
-        },
+            {
+                attempt++;
+                await obs.OnCompletedAsync(Result.Failure(new InvalidOperationException($"attempt {attempt}")));
+            },
             NewThreadTaskScheduler.Instance);
         await using var sub = await source.Retry(2).SubscribeAsync((_, _) => default, null, result =>
         {
@@ -248,13 +253,13 @@ public class ErrorHandlingOperatorTests
     {
         const int ExpectedAttempts = 2;
         var attempt = 0;
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var source = SignalAsync.CreateAsBackgroundJob<int>(
             async (obs, _) =>
-        {
-            attempt++;
-            await obs.OnCompletedAsync(Result.Failure(new InvalidOperationException($"attempt {attempt}")));
-        },
+            {
+                attempt++;
+                await obs.OnCompletedAsync(Result.Failure(new InvalidOperationException($"attempt {attempt}")));
+            },
             NewThreadTaskScheduler.Instance);
         await using var sub = await source.Retry(1).SubscribeAsync((_, _) => default, null, result =>
         {
@@ -271,13 +276,16 @@ public class ErrorHandlingOperatorTests
     [Test]
     public async Task WhenCatchHandlerThrows_ThenCompletesWithHandlerException()
     {
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var source = SignalAsync.Throw<int>(new InvalidOperationException("source error"));
-        await using var sub = await source.Catch(_ => throw new ArithmeticException("handler error")).SubscribeAsync((_, _) => default, null, result =>
-        {
-            completed.TrySetResult(result);
-            return default;
-        });
+        await using var sub = await source.Catch(_ => throw new ArithmeticException("handler error")).SubscribeAsync(
+            (_, _) => default,
+            null,
+            result =>
+            {
+                completed.TrySetResult(result);
+                return default;
+            });
         var completionResult = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(completionResult.IsFailure).IsTrue();
         await Assert.That(completionResult.Exception).IsTypeOf<ArithmeticException>();
@@ -288,7 +296,7 @@ public class ErrorHandlingOperatorTests
     [Test]
     public async Task WhenCatchDisposed_ThenDisposesSourceAndHandler()
     {
-        var handlerItemReceived = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<bool> handlerItemReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var source = SignalAsync.Throw<int>(new InvalidOperationException("fail"));
         var handlerObservable = SignalAsync.Create<int>(async (observer, ct) =>
         {
@@ -314,21 +322,22 @@ public class ErrorHandlingOperatorTests
         try
         {
             Exception? unhandled = null;
-            var unhandledTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource unhandledTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
             UnhandledExceptionHandler.Register(ex =>
             {
                 unhandled = ex;
                 unhandledTcs.TrySetResult();
             });
-            var disposeFailure = new InvalidOperationException("handler-dispose-failed");
+            InvalidOperationException disposeFailure = new("handler-dispose-failed");
             var source = SignalAsync.Throw<int>(new InvalidOperationException("fail"));
-            var handlerSubscribed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource handlerSubscribed = new(TaskCreationOptions.RunContinuationsAsynchronously);
             var handlerObservable = SignalAsync.Create<int>((_, _) =>
             {
                 handlerSubscribed.TrySetResult();
                 return new(new ThrowingDisposable(disposeFailure));
             });
-            var sub = await source.Catch(_ => handlerObservable).SubscribeAsync(static (_, _) => default, null, static _ => default);
+            var sub = await source.Catch(_ => handlerObservable)
+                .SubscribeAsync(static (_, _) => default, null, static _ => default);
             await handlerSubscribed.Task.WaitAsync(TimeSpan.FromSeconds(5));
             await sub.DisposeAsync();
             await unhandledTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -345,7 +354,7 @@ public class ErrorHandlingOperatorTests
     [Test]
     public async Task WhenCatchAndIgnoreErrorResume_ThenReportsToUnhandledExceptionHandler()
     {
-        var reportedExceptions = new List<Exception>();
+        List<Exception> reportedExceptions = [];
         UnhandledExceptionHandler.Register(reportedExceptions.Add);
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
@@ -366,7 +375,7 @@ public class ErrorHandlingOperatorTests
     public async Task WhenRetryResubscriptionCancelled_ThenSwallowsCancellation()
     {
         var attempt = 0;
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var source = SignalAsync.Create<int>(async (observer, _) =>
         {
             attempt++;
@@ -400,7 +409,7 @@ public class ErrorHandlingOperatorTests
     public async Task WhenRetryResubscriptionThrows_ThenCompletesWithFailure()
     {
         var attempt = 0;
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var source = SignalAsync.Create<int>(async (observer, _) =>
         {
             attempt++;
@@ -434,17 +443,17 @@ public class ErrorHandlingOperatorTests
         var attempt = 0;
         var source = SignalAsync.CreateAsBackgroundJob<int>(
             async (obs, ct) =>
-        {
-            attempt++;
-            if (attempt < 5)
             {
-                await obs.OnCompletedAsync(Result.Failure(new InvalidOperationException($"attempt {attempt}")));
-                return;
-            }
+                attempt++;
+                if (attempt < 5)
+                {
+                    await obs.OnCompletedAsync(Result.Failure(new InvalidOperationException($"attempt {attempt}")));
+                    return;
+                }
 
-            await obs.OnNextAsync(100, ct);
-            await obs.OnCompletedAsync(Result.Success);
-        },
+                await obs.OnNextAsync(100, ct);
+                await obs.OnCompletedAsync(Result.Success);
+            },
             NewThreadTaskScheduler.Instance);
         const int SuccessValue = 100;
         const int ExpectedAttempts = 5;

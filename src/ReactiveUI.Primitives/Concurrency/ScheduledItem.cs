@@ -63,7 +63,7 @@ public abstract class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICom
     /// Equality operators use reference equality. They do not compare <see cref="DueTime"/> values and are therefore
     /// intentionally different from the ordering behavior used by <see cref="CompareTo(ScheduledItem{TAbsolute}?)"/>.
     /// </remarks>
-    public static bool operator !=(ScheduledItem<TAbsolute>? left, ScheduledItem<TAbsolute>? right) => !(left == right);
+    public static bool operator !=(ScheduledItem<TAbsolute>? left, ScheduledItem<TAbsolute>? right) => !ReferenceEquals(left, right);
 
     /// <summary>Determines whether the first scheduled item is due before the second scheduled item.</summary>
     /// <param name="left">The scheduled item on the left side of the comparison.</param>

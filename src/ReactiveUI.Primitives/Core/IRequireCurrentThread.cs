@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Core;
 
-/// <summary>IRequireCurrentThread.</summary>
+/// <summary>Marks a sequencer that must run on the current thread.</summary>
 /// <typeparam name="T">The Type.</typeparam>
 public interface IRequireCurrentThread<out T> : IObservable<T>
 {

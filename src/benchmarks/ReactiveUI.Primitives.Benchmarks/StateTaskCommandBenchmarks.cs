@@ -4,6 +4,7 @@
 
 using System.Reactive.Concurrency;
 using BenchmarkDotNet.Attributes;
+using R3;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
@@ -24,8 +25,8 @@ public class StateTaskCommandBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesStateSignalUpdates()
     {
-        var observer = new IntSignalWitness();
-        using var state = new StateSignal<int>(0);
+        IntSignalWitness observer = new();
+        using StateSignal<int> state = new(0);
         using var subscription = state.Subscribe(observer);
         for (var i = 0; i < Count; i++)
         {
@@ -40,8 +41,8 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int SystemReactiveStateSignalUpdates()
     {
-        var observer = new IntSignalWitness();
-        using var state = new System.Reactive.Subjects.BehaviorSubject<int>(0);
+        IntSignalWitness observer = new();
+        using System.Reactive.Subjects.BehaviorSubject<int> state = new(0);
         using var subscription = state.Subscribe(observer);
         for (var i = 0; i < Count; i++)
         {
@@ -56,8 +57,8 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int R3StateSignalUpdates()
     {
-        var observer = new IntR3Witness();
-        using var state = new R3.BehaviorSubject<int>(0);
+        IntR3Witness observer = new();
+        using R3.BehaviorSubject<int> state = new(0);
         using var subscription = state.Subscribe(observer);
         for (var i = 0; i < Count; i++)
         {
@@ -72,7 +73,7 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int PrimitivesReadOnlyStateProjection()
     {
-        using var state = new StateSignal<int>(Value);
+        using StateSignal<int> state = new(Value);
         using var projected = state.ToReadOnlyState(static value => value + 1);
         state.Value = Value + 1;
         return projected.Value;
@@ -84,7 +85,7 @@ public class StateTaskCommandBenchmarks
     public int SystemReactiveReadOnlyStateProjection()
     {
         var current = 0;
-        using var state = new System.Reactive.Subjects.BehaviorSubject<int>(Value);
+        using System.Reactive.Subjects.BehaviorSubject<int> state = new(Value);
         using var subscription = state.Map(static value => value + 1).Subscribe(value => current = value);
         state.OnNext(Value + 1);
         return current;
@@ -95,7 +96,7 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int R3ReadOnlyStateProjection()
     {
-        using var state = new R3.BehaviorSubject<int>(Value);
+        using R3.BehaviorSubject<int> state = new(Value);
         using var projected = R3.ReactivePropertyExtensions.ToReadOnlyReactiveProperty(
             R3.ObservableExtensions.Select(state, static value => value + 1),
             Value + 1);
@@ -108,7 +109,7 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int PrimitivesTaskSignalSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var signal = Signal.FromTask(static _ => Task.FromResult(Value), Sequencer.Immediate);
         using var subscription = signal.Subscribe(observer);
         return observer.Total;
@@ -119,7 +120,7 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int SystemReactiveTaskSignalSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = System.Reactive.Linq.Observable.FromAsync(
                 static () => Task.FromResult(Value),
                 ImmediateScheduler.Instance)
@@ -132,7 +133,7 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int R3TaskSignalSubscribe()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.Observable.ToObservable(Task.FromResult(Value), configureAwait: false)
             .Subscribe(observer);
         return observer.Total;
@@ -143,7 +144,7 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public async Task<int> PrimitivesCommandExecuteAsync()
     {
-        using var command = new CommandSignal<int>(static () => Value);
+        using CommandSignal<int> command = new(static () => Value);
         return await command.ExecuteAsync().ConfigureAwait(false);
     }
 
@@ -159,7 +160,7 @@ public class StateTaskCommandBenchmarks
     public int R3CommandExecute()
     {
         var result = 0;
-        using var command = new R3.ReactiveCommand<int>(value => result = value);
+        using ReactiveCommand<int> command = new(value => result = value);
         command.Execute(Value);
         return result;
     }
@@ -169,8 +170,8 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public async Task<int> PrimitivesCommandResultSubscribeAsync()
     {
-        var observer = new IntSignalWitness();
-        using var command = new CommandSignal<int>(static () => Value);
+        IntSignalWitness observer = new();
+        using CommandSignal<int> command = new(static () => Value);
         using var subscription = command.Results.Subscribe(observer);
         await command.ExecuteAsync().ConfigureAwait(false);
         return observer.Total;
@@ -181,8 +182,8 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int SystemReactiveCommandResultSubscribe()
     {
-        var observer = new IntSignalWitness();
-        using var results = new System.Reactive.Subjects.Subject<int>();
+        IntSignalWitness observer = new();
+        using System.Reactive.Subjects.Subject<int> results = new();
         using var subscription = results.Subscribe(observer);
         results.OnNext(Value);
         return observer.Total;
@@ -193,8 +194,8 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int R3CommandResultSubscribe()
     {
-        var observer = new IntR3Witness();
-        using var results = new R3.Subject<int>();
+        IntR3Witness observer = new();
+        using Subject<int> results = new();
         using var subscription = results.Subscribe(observer);
         results.OnNext(Value);
         return observer.Total;

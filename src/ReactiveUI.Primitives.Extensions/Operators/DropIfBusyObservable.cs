@@ -24,7 +24,7 @@ internal sealed class DropIfBusyObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         InvalidOperationExceptionHelper.ThrowIfNull(asyncAction);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        var sink = new DropIfBusySink(observer, asyncAction);
+        DropIfBusySink sink = new(observer, asyncAction);
         var sub = source.Subscribe(sink);
         return new DisposableBag(sub, sink);
     }

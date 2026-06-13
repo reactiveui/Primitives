@@ -146,8 +146,8 @@ public class ParityHelpersOperatorFusionsTests
     [Test]
     public async Task WhenForEachOverReadOnlyList_ThenUsesListFastPath()
     {
-        var firstList = new List<int>(ArraySlice1);
-        var secondList = new List<int>(1) { Three };
+        List<int> firstList = [.. ArraySlice1];
+        List<int> secondList = [Three];
         IEnumerable<int>[] lists = [firstList, secondList];
 
         var result = await lists.ToAsyncSignal()
@@ -178,12 +178,12 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenPartitionSourceErrorResume_ThenBothBranchesReceiveError()
     {
         var signal = Signal.Create<int>();
-        var (evens, odds) = signal.Values.Partition(static x => x % Two == 0);
+        (var evens, var odds) = signal.Values.Partition(static x => x % Two == 0);
 
         Exception? evenError = null;
         Exception? oddError = null;
-        var evenTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var oddTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource evenTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource oddTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var evenSub = await evens.SubscribeAsync(
             static (_, _) => default,
@@ -202,7 +202,7 @@ public class ParityHelpersOperatorFusionsTests
                 return default;
             });
 
-        var expected = new InvalidOperationException("partition-error");
+        InvalidOperationException expected = new("partition-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await Task.WhenAll(evenTcs.Task, oddTcs.Task).WaitAsync(TimeSpan.FromSeconds(5));
@@ -217,15 +217,15 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenPartitionLateBranchSubscribesAfterCompletion_ThenCachedTerminalForwarded()
     {
         var signal = Signal.Create<int>();
-        var (evens, odds) = signal.Values.Partition(static x => x % Two == 0);
+        (var evens, var odds) = signal.Values.Partition(static x => x % Two == 0);
 
         var firstTask = evens.ToListAsync().AsTask();
         await signal.OnNextAsync(Two, CancellationToken.None);
         await signal.OnCompletedAsync(Result.Success);
         await firstTask;
 
-        var lateValues = new List<int>();
-        var lateCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> lateValues = [];
+        TaskCompletionSource lateCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var lateSub = await odds.SubscribeAsync(
             (v, _) =>
             {
@@ -249,7 +249,7 @@ public class ParityHelpersOperatorFusionsTests
     [Test]
     public async Task WhenDropIfBusyActionThrowsSynchronously_ThenBusyFlagResetAndErrorObserved()
     {
-        var failure = new InvalidOperationException("sync-throw");
+        InvalidOperationException failure = new("sync-throw");
         InvalidOperationException? observed = null;
 
         try
@@ -273,9 +273,9 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenScanWithInitialSourceErrorResumes_ThenForwardsDownstream()
     {
         var signal = Signal.Create<int>();
-        var values = new List<int>();
+        List<int> values = [];
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
             .ScanWithInitial(ScanSeed, static (acc, x) => acc + x)
@@ -292,7 +292,7 @@ public class ParityHelpersOperatorFusionsTests
                     return default;
                 });
 
-        var expected = new InvalidOperationException("scan-error");
+        InvalidOperationException expected = new("scan-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -307,7 +307,7 @@ public class ParityHelpersOperatorFusionsTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
             .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds))
@@ -320,7 +320,7 @@ public class ParityHelpersOperatorFusionsTests
                     return default;
                 });
 
-        var expected = new InvalidOperationException("throttle-error");
+        InvalidOperationException expected = new("throttle-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -334,7 +334,7 @@ public class ParityHelpersOperatorFusionsTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
             .DebounceUntil(TimeSpan.FromSeconds(5), static _ => false)
@@ -347,7 +347,7 @@ public class ParityHelpersOperatorFusionsTests
                     return default;
                 });
 
-        var expected = new InvalidOperationException("debounce-error");
+        InvalidOperationException expected = new("debounce-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -361,7 +361,7 @@ public class ParityHelpersOperatorFusionsTests
     {
         var signal = Signal.Create<IEnumerable<int>>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
             .ForEach()
@@ -374,7 +374,7 @@ public class ParityHelpersOperatorFusionsTests
                     return default;
                 });
 
-        var expected = new InvalidOperationException("foreach-error");
+        InvalidOperationException expected = new("foreach-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -388,7 +388,7 @@ public class ParityHelpersOperatorFusionsTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
             .DropIfBusy(static (_, _) => default)
@@ -401,7 +401,7 @@ public class ParityHelpersOperatorFusionsTests
                     return default;
                 });
 
-        var expected = new InvalidOperationException("dropifbusy-error");
+        InvalidOperationException expected = new("dropifbusy-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -416,8 +416,8 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenDropIfBusySyncActionAsyncDownstream_ThenAwaitForwardSlowPathResets()
     {
         var signal = Signal.Create<int>();
-        var values = new List<int>();
-        var emittedTcs = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> values = [];
+        TaskCompletionSource<int> emittedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
             .DropIfBusy(static (_, _) => default)
@@ -432,7 +432,7 @@ public class ParityHelpersOperatorFusionsTests
         await emittedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         // After the slow path resets _isBusy, a second emission must also flow through.
-        var secondTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource secondTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub2 = await signal.Values
             .DropIfBusy(static (_, _) => default)
             .SubscribeAsync(async (_, _) =>
@@ -454,7 +454,7 @@ public class ParityHelpersOperatorFusionsTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
             .ScanWithInitial(ScanSeed, static (acc, x, _) => new(acc + x))
@@ -467,7 +467,7 @@ public class ParityHelpersOperatorFusionsTests
                     return default;
                 });
 
-        var expected = new InvalidOperationException("scan-async-error");
+        InvalidOperationException expected = new("scan-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -481,7 +481,7 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenPartitionBranchDisposedTwice_ThenIdempotent()
     {
         var signal = Signal.Create<int>();
-        var (evens, _) = signal.Values.Partition(static x => x % Two == 0);
+        (var evens, _) = signal.Values.Partition(static x => x % Two == 0);
 
         var sub = await evens.SubscribeAsync(static (_, _) => default);
 
@@ -499,7 +499,7 @@ public class ParityHelpersOperatorFusionsTests
     [Test]
     public async Task WhenFusedOperatorSubscribedWithAlreadyCancelledToken_ThenSinkCancelsImmediately()
     {
-        using var cts = new CancellationTokenSource();
+        using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
         try
@@ -522,10 +522,10 @@ public class ParityHelpersOperatorFusionsTests
     [Test]
     public async Task WhenThrottleDistinctDownstreamThrowsInDelay_ThenRoutedToUnhandled()
     {
-        using var unhandled = new UnhandledExceptionCapture();
+        using UnhandledExceptionCapture unhandled = new();
 
         var signal = Signal.Create<int>();
-        var throwingObserver = new ThrowingAsyncWitness<int>(new InvalidOperationException("downstream-throws"));
+        ThrowingAsyncWitness<int> throwingObserver = new(new InvalidOperationException("downstream-throws"));
 
         await using var sub = await signal.Values
             .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds))
@@ -545,10 +545,10 @@ public class ParityHelpersOperatorFusionsTests
     [Test]
     public async Task WhenThrottleDownstreamThrowsInDelay_ThenRoutedToUnhandled()
     {
-        using var unhandled = new UnhandledExceptionCapture();
+        using UnhandledExceptionCapture unhandled = new();
 
         var signal = Signal.Create<int>();
-        var throwingObserver = new ThrowingAsyncWitness<int>(new InvalidOperationException("throttle-downstream-throws"));
+        ThrowingAsyncWitness<int> throwingObserver = new(new InvalidOperationException("throttle-downstream-throws"));
 
         await using var sub = await signal.Values
             .Throttle(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds))
@@ -570,18 +570,17 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenDebounceUntilSecondEmissionSupersedesFirst_ThenStaleDelayDropsValue()
     {
         var signal = Signal.Create<int>();
-        var values = new List<int>();
-        var emitted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> values = [];
+        TaskCompletionSource emitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
             .DebounceUntil(TimeSpan.FromMilliseconds(80), static _ => false)
-            .SubscribeAsync(
-                (v, _) =>
-                {
-                    values.Add(v);
-                    emitted.TrySetResult();
-                    return default;
-                });
+            .SubscribeAsync((v, _) =>
+            {
+                values.Add(v);
+                emitted.TrySetResult();
+                return default;
+            });
 
         await signal.OnNextAsync(One, CancellationToken.None);
         await signal.OnNextAsync(Two, CancellationToken.None);
@@ -598,10 +597,10 @@ public class ParityHelpersOperatorFusionsTests
     [Test]
     public async Task WhenDebounceUntilDownstreamThrowsInDelay_ThenRoutedToUnhandled()
     {
-        using var unhandled = new UnhandledExceptionCapture();
+        using UnhandledExceptionCapture unhandled = new();
 
         var signal = Signal.Create<int>();
-        var throwingObserver = new ThrowingAsyncWitness<int>(new InvalidOperationException("debounce-downstream-throws"));
+        ThrowingAsyncWitness<int> throwingObserver = new(new InvalidOperationException("debounce-downstream-throws"));
 
         await using var sub = await signal.Values
             .DebounceUntil(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), static _ => false)
@@ -622,9 +621,9 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenPartitionEmitsWhileMatchingBranchUnsubscribed_ThenDropped()
     {
         var signal = Signal.Create<int>();
-        var (evens, _) = signal.Values.Partition(static x => x % Two == 0);
+        (var evens, _) = signal.Values.Partition(static x => x % Two == 0);
 
-        var values = new List<int>();
+        List<int> values = [];
         await using var sub = await evens.SubscribeAsync((v, _) =>
         {
             values.Add(v);
@@ -645,7 +644,7 @@ public class ParityHelpersOperatorFusionsTests
     [Test]
     public async Task WhenThrottleDistinctTryClaimEmissionSuperseded_ThenReturnsFalse()
     {
-        var observer = new SignalAsyncExtensions.ThrottleDistinctSignal<int>.ThrottleDistinctWitness(
+        SignalAsyncExtensions.ThrottleDistinctSignal<int>.ThrottleDistinctWitness observer = new(
             new NoOpAsyncWitness<int>(),
             TimeSpan.FromHours(1),
             TimeProvider.System,
@@ -655,7 +654,7 @@ public class ParityHelpersOperatorFusionsTests
         await observer.OnNextAsync(One, CancellationToken.None);
         await observer.OnNextAsync(Two, CancellationToken.None);
 
-        var claimed = observer.TryClaimEmission(One, id: 1);
+        var claimed = observer.TryClaimEmission(One, 1);
 
         await Assert.That(claimed).IsFalse();
     }
@@ -665,7 +664,7 @@ public class ParityHelpersOperatorFusionsTests
     [Test]
     public async Task WhenThrottleDistinctTryClaimEmissionDuplicate_ThenReturnsFalse()
     {
-        var observer = new SignalAsyncExtensions.ThrottleDistinctSignal<int>.ThrottleDistinctWitness(
+        SignalAsyncExtensions.ThrottleDistinctSignal<int>.ThrottleDistinctWitness observer = new(
             new NoOpAsyncWitness<int>(),
             TimeSpan.FromHours(1),
             TimeProvider.System,
@@ -674,14 +673,14 @@ public class ParityHelpersOperatorFusionsTests
         await observer.OnNextAsync(One, CancellationToken.None);
 
         // First claim latches the downstream-distinct state with value One.
-        var firstClaim = observer.TryClaimEmission(One, id: 1);
+        var firstClaim = observer.TryClaimEmission(One, 1);
 
         // Drive another upstream so id matches the second claim.
         await observer.OnNextAsync(Two, CancellationToken.None);
 
         // Re-claim with the previously-emitted value at the new id — rejected by the
         // downstream-distinct check.
-        var secondClaim = observer.TryClaimEmission(One, id: 2);
+        var secondClaim = observer.TryClaimEmission(One, 2);
 
         await Assert.That(firstClaim).IsTrue();
         await Assert.That(secondClaim).IsFalse();
@@ -692,7 +691,7 @@ public class ParityHelpersOperatorFusionsTests
     [Test]
     public async Task WhenDebounceUntilIsCurrentEmission_ThenMatchesIdState()
     {
-        var observer = new SignalAsyncExtensions.DebounceUntilSignal<int>.DebounceUntilWitness(
+        SignalAsyncExtensions.DebounceUntilSignal<int>.DebounceUntilWitness observer = new(
             new NoOpAsyncWitness<int>(),
             TimeSpan.FromHours(1),
             static _ => false,
@@ -702,8 +701,8 @@ public class ParityHelpersOperatorFusionsTests
         await observer.OnNextAsync(One, CancellationToken.None);
         await observer.OnNextAsync(Two, CancellationToken.None);
 
-        await Assert.That(observer.IsCurrentEmission(id: 2)).IsTrue();
-        await Assert.That(observer.IsCurrentEmission(id: 1)).IsFalse();
+        await Assert.That(observer.IsCurrentEmission(Two)).IsTrue();
+        await Assert.That(observer.IsCurrentEmission(1)).IsFalse();
     }
 
     /// <summary>Verifies that <see cref="SignalAsyncExtensions.PartitionCoordinator{T}.TryAttachSourceSubscription"/>
@@ -715,7 +714,7 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenPartitionTryAttachSourceSubscriptionAndBothBranchesGone_ThenReturnsFalse()
     {
         var signal = Signal.Create<int>();
-        var coordinator = new SignalAsyncExtensions.PartitionCoordinator<int>(signal.Values, static x => x % Two == 0);
+        SignalAsyncExtensions.PartitionCoordinator<int> coordinator = new(signal.Values, static x => x % Two == 0);
 
         // Subscribe then immediately dispose so both branch slots are null.
         var sub = await coordinator.TrueBranch.SubscribeAsync(static (_, _) => default);
@@ -732,7 +731,7 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenPartitionTryAttachSourceSubscriptionAndBranchAlive_ThenReturnsTrue()
     {
         var signal = Signal.Create<int>();
-        var coordinator = new SignalAsyncExtensions.PartitionCoordinator<int>(signal.Values, static x => x % Two == 0);
+        SignalAsyncExtensions.PartitionCoordinator<int> coordinator = new(signal.Values, static x => x % Two == 0);
 
         await using var sub = await coordinator.TrueBranch.SubscribeAsync(static (_, _) => default);
 

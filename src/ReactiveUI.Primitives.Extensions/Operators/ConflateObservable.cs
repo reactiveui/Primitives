@@ -25,7 +25,7 @@ internal sealed class ConflateObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(scheduler);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new ConflateSink(observer, minimumUpdatePeriod, scheduler);
+        ConflateSink sink = new(observer, minimumUpdatePeriod, scheduler);
         sink.AttachSourceSubscription(source.Subscribe(sink));
         return sink;
     }
@@ -60,7 +60,7 @@ internal sealed class ConflateObservable<T>(
         /// <summary>Wall-clock timestamp of the last emission forwarded downstream.</summary>
         private DateTimeOffset _lastUpdateTime = DateTimeOffset.MinValue;
 
-        /// <summary><see langword="true"/> when an upstream OnCompleted is queued but a deferred
+        /// <summary>Set to <see langword="true"/> when an upstream OnCompleted is queued but a deferred
         /// emission is still pending; the completion fires after that emission lands.</summary>
         private bool _completionRequested;
 
@@ -73,7 +73,7 @@ internal sealed class ConflateObservable<T>(
             _downstream = downstream;
             _minimumUpdatePeriod = minimumUpdatePeriod;
             _scheduler = scheduler;
-            _state = new ScheduledDrainState<T>(scheduler, this, _gate);
+            _state = new(scheduler, this, _gate);
         }
 
         /// <summary>Records the upstream subscription so <see cref="Dispose"/> can tear it down.</summary>

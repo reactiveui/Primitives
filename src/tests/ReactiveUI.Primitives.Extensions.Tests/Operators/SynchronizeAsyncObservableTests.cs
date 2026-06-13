@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
 /// <summary>Tests for <c>SynchronizeAsyncObservable</c> — covers the after-terminal guards
@@ -16,11 +17,12 @@ public class SynchronizeAsyncObservableTests
     [Test]
     public async Task WhenEventsAfterCompleted_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
-        var values = new List<int>();
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
         Exception? caught = null;
         var completedCount = 0;
-        using var sub = source.SynchronizeAsync().Subscribe(t => values.Add(t.Value), ex => caught = ex, () => completedCount++);
+        using var sub = source.SynchronizeAsync()
+            .Subscribe(t => values.Add(t.Value), ex => caught = ex, () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));
@@ -36,14 +38,12 @@ public class SynchronizeAsyncObservableTests
     [Test]
     public async Task WhenOnCompletedAfterError_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
+        SyncDirectSource<int> source = new();
         Exception? caught = null;
         var completedCount = 0;
-        var expected = new InvalidOperationException("first");
+        InvalidOperationException expected = new("first");
         using var sub = source.SynchronizeAsync().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex,
             () => completedCount++);
         source.Observer.OnError(expected);
@@ -57,7 +57,7 @@ public class SynchronizeAsyncObservableTests
     [Test]
     public async Task WhenSyncSignalDisposedTwice_ThenSecondDisposeIsNoOp()
     {
-        var source = new SyncDirectSource<int>();
+        SyncDirectSource<int> source = new();
         var processed = 0;
         using var sub = source.SynchronizeAsync().Subscribe(t =>
         {

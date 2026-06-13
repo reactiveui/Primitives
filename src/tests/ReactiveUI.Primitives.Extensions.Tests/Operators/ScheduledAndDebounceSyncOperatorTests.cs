@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Concurrency;
@@ -41,14 +42,12 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenDetectStaleSourceErrors_ThenForwardsError()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = subject.DetectStale(TimeSpan.FromTicks(WindowTicks), scheduler).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -59,13 +58,11 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenDetectStaleSourceCompletes_ThenForwardsCompletion()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         var completed = false;
         using var sub = subject.DetectStale(TimeSpan.FromTicks(WindowTicks), scheduler).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completed = true);
         subject.OnCompleted();
         await Assert.That(completed).IsTrue();
@@ -76,12 +73,13 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenBufferUntilIdleSourceErrors_ThenFlushesThenForwardsError()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<IList<int>>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<IList<int>> results = [];
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
-        using var sub = subject.BufferUntilIdle(TimeSpan.FromTicks(WindowTicks), scheduler).Subscribe(results.Add, ex => caught = ex);
+        InvalidOperationException expected = new(SourceErrorMessage);
+        using var sub = subject.BufferUntilIdle(TimeSpan.FromTicks(WindowTicks), scheduler)
+            .Subscribe(results.Add, ex => caught = ex);
         subject.OnNext(Value1);
         subject.OnNext(Value2);
         subject.OnError(expected);
@@ -95,9 +93,9 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenDebounceImmediate_ThenFirstInlineThenDebouncedTail()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         using var sub = subject.DebounceImmediate(TimeSpan.FromTicks(WindowTicks), scheduler).Subscribe(results.Add);
         subject.OnNext(Value1);
         subject.OnNext(Value2);
@@ -111,11 +109,12 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenDebounceImmediateCompletesWithPending_ThenFlushesThenCompletes()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
-        using var sub = subject.DebounceImmediate(TimeSpan.FromTicks(WindowTicks), scheduler).Subscribe(results.Add, () => completed = true);
+        using var sub = subject.DebounceImmediate(TimeSpan.FromTicks(WindowTicks), scheduler)
+            .Subscribe(results.Add, () => completed = true);
         subject.OnNext(Value1);
         subject.OnNext(Value2);
         subject.OnCompleted();
@@ -128,12 +127,13 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenDebounceImmediateSourceErrors_ThenFlushesThenForwardsError()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
-        using var sub = subject.DebounceImmediate(TimeSpan.FromTicks(WindowTicks), scheduler).Subscribe(results.Add, ex => caught = ex);
+        InvalidOperationException expected = new(SourceErrorMessage);
+        using var sub = subject.DebounceImmediate(TimeSpan.FromTicks(WindowTicks), scheduler)
+            .Subscribe(results.Add, ex => caught = ex);
         subject.OnNext(Value1);
         subject.OnNext(Value2);
         subject.OnError(expected);
@@ -146,10 +146,11 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenDebounceUntilConditionTrue_ThenImmediate()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
-        using var sub = subject.DebounceUntil(TimeSpan.FromTicks(WindowTicks), static x => x >= Value3, scheduler).Subscribe(results.Add);
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
+        using var sub = subject.DebounceUntil(TimeSpan.FromTicks(WindowTicks), static x => x >= Value3, scheduler)
+            .Subscribe(results.Add);
         subject.OnNext(Value3);
         await Assert.That(results).IsCollectionEqualTo([Value3]);
     }
@@ -159,10 +160,11 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenDebounceUntilConditionFalse_ThenDebounced()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
-        using var sub = subject.DebounceUntil(TimeSpan.FromTicks(WindowTicks), static _ => false, scheduler).Subscribe(results.Add);
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
+        using var sub = subject.DebounceUntil(TimeSpan.FromTicks(WindowTicks), static _ => false, scheduler)
+            .Subscribe(results.Add);
         subject.OnNext(Value1);
         scheduler.AdvanceBy(AdvancePastWindowTicks);
         await Assert.That(results).IsCollectionEqualTo([Value1]);
@@ -175,8 +177,8 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenScheduleValueWithDelay_ThenEmitsAfterDelay()
     {
-        var scheduler = new VirtualClock();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        List<int> results = [];
         using var sub = Value1.Schedule(TimeSpan.FromTicks(WindowTicks), scheduler).Subscribe(results.Add);
         await Assert.That(results).IsEmpty();
         scheduler.AdvanceBy(AdvancePastWindowTicks);
@@ -188,8 +190,8 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenScheduleValueAbsolute_ThenEmitsAtTime()
     {
-        var scheduler = new VirtualClock();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        List<int> results = [];
         var due = scheduler.Now.AddTicks(WindowTicks);
         using var sub = Value1.Schedule(due, scheduler).Subscribe(results.Add);
         scheduler.AdvanceBy(AdvancePastWindowTicks);
@@ -202,10 +204,11 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenScheduleSourceWithDelay_ThenEmitsAfterDelay()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
-        using var sub = ((IObservable<int>)subject).Schedule(TimeSpan.FromTicks(WindowTicks), scheduler).Subscribe(results.Add);
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
+        using var sub = ((IObservable<int>)subject).Schedule(TimeSpan.FromTicks(WindowTicks), scheduler)
+            .Subscribe(results.Add);
         subject.OnNext(Value1);
         await Assert.That(results).IsEmpty();
         scheduler.AdvanceBy(AdvancePastWindowTicks);
@@ -217,9 +220,9 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenScheduleSourceAbsolute_ThenEmitsAtTime()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         var due = scheduler.Now.AddTicks(WindowTicks);
         using var sub = ((IObservable<int>)subject).Schedule(due, scheduler).Subscribe(results.Add);
         subject.OnNext(Value2);
@@ -232,8 +235,8 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenLatestOrDefault_ThenSeedThenDistinctValues()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         using var sub = subject.LatestOrDefault(Fallback).Subscribe(results.Add);
         subject.OnNext(Fallback);
         subject.OnNext(Value1);
@@ -248,13 +251,11 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenLatestOrDefaultSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = subject.LatestOrDefault(Fallback).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -265,8 +266,8 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenPairwise_ThenAdjacentPairs()
     {
-        var subject = new Subject<int>();
-        var results = new List<(int Previous, int Current)>();
+        Subject<int> subject = new();
+        List<(int Previous, int Current)> results = [];
         using var sub = subject.Pairwise().Subscribe(results.Add);
         subject.OnNext(Value1);
         subject.OnNext(Value2);
@@ -279,8 +280,8 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenPairwiseSingleElement_ThenEmpty()
     {
-        var subject = new Subject<int>();
-        var results = new List<(int Previous, int Current)>();
+        Subject<int> subject = new();
+        List<(int Previous, int Current)> results = [];
         var completed = false;
         using var sub = subject.Pairwise().Subscribe(results.Add, () => completed = true);
         subject.OnNext(Value1);
@@ -294,13 +295,11 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenPairwiseSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = subject.Pairwise().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -311,8 +310,8 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenWaitUntilMatches_ThenEmitsAndCompletes()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
         using var sub = subject.WaitUntil(static x => x >= Value3).Subscribe(results.Add, () => completed = true);
         subject.OnNext(Value1);
@@ -328,13 +327,11 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenWaitUntilSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = subject.WaitUntil(static _ => false).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -345,9 +342,10 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenSwitchIfEmptySourceEmpty_ThenEmitsFallback()
     {
-        var results = new List<int>();
+        List<int> results = [];
         var completed = false;
-        using var sub = Observable.Empty<int>().SwitchIfEmpty(Observable.Return(Fallback)).Subscribe(results.Add, () => completed = true);
+        using var sub = Observable.Empty<int>().SwitchIfEmpty(Observable.Return(Fallback))
+            .Subscribe(results.Add, () => completed = true);
         await Assert.That(results).IsCollectionEqualTo([Fallback]);
         await Assert.That(completed).IsTrue();
     }
@@ -357,9 +355,10 @@ public class ScheduledAndDebounceSyncOperatorTests
     [Test]
     public async Task WhenSwitchIfEmptySourceNonEmpty_ThenPassthrough()
     {
-        var results = new List<int>();
+        List<int> results = [];
         var completed = false;
-        using var sub = Observable.Return(Value1).SwitchIfEmpty(Observable.Return(Fallback)).Subscribe(results.Add, () => completed = true);
+        using var sub = Observable.Return(Value1).SwitchIfEmpty(Observable.Return(Fallback))
+            .Subscribe(results.Add, () => completed = true);
         await Assert.That(results).IsCollectionEqualTo([Value1]);
         await Assert.That(completed).IsTrue();
     }
@@ -370,11 +369,9 @@ public class ScheduledAndDebounceSyncOperatorTests
     public async Task WhenSwitchIfEmptySourceErrors_ThenForwardsError()
     {
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = Observable.Throw<int>(expected).SwitchIfEmpty(Observable.Return(Fallback)).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }

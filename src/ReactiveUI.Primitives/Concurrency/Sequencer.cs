@@ -8,7 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>Sequencer.</summary>
+/// <summary>Provides built-in sequencers for scheduling work over time.</summary>
 public static partial class Sequencer
 {
     /// <summary>Gets a sequencer that schedules work as soon as possible on the current thread.</summary>

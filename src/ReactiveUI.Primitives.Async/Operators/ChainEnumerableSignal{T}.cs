@@ -31,7 +31,7 @@ internal sealed class ChainEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> 
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)
     {
-        var subscription = new ChainSequenceCoordinator(this, observer);
+        ChainSequenceCoordinator subscription = new(this, observer);
         return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
             subscription,
             subscription.SubscribeNextSignalAsync);

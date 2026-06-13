@@ -70,7 +70,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that mirrors the source, switching to the fallback sequence
         /// if any inter-element interval exceeds the specified dueTime.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative or zero.</exception>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="fallback"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="fallback"/> is null.</exception>
         public IObservableAsync<T> Timeout(TimeSpan dueTime, IObservableAsync<T> fallback)
             => @this.Timeout(dueTime, fallback, (TimeProvider?)null);
 
@@ -85,7 +85,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that mirrors the source, switching to the fallback sequence
         /// if any inter-element interval exceeds the specified dueTime.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative or zero.</exception>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="fallback"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="fallback"/> is null.</exception>
         public IObservableAsync<T> Timeout(
             TimeSpan dueTime,
             IObservableAsync<T> fallback,
@@ -124,7 +124,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var timeoutObserver = new TimeoutWitness(observer, dueTime, timeProvider);
+            TimeoutWitness timeoutObserver = new(observer, dueTime, timeProvider);
             var subscription = await source.SubscribeAsync(timeoutObserver, cancellationToken).ConfigureAwait(false);
             timeoutObserver.StartTimer(cancellationToken);
             return subscription;
@@ -306,7 +306,7 @@ public static partial class SignalAsyncExtensions
             CancellationToken cancellationToken)
         {
             // Wrap with Catch to switch to fallback on TimeoutException
-            var withTimeout = new TimeoutSignal<T>(source, dueTime, timeProvider);
+            TimeoutSignal<T> withTimeout = new(source, dueTime, timeProvider);
             var withFallback = withTimeout.Catch(ex => ex is TimeoutException ? fallback : SignalAsync.Throw<T>(ex));
             return withFallback.SubscribeAsync(observer.Wrap(), cancellationToken);
         }

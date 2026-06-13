@@ -23,7 +23,7 @@ public static class Spark
     /// </typeparam>
     /// <param name="error">The exception contained in the spark.</param>
     /// <returns>The OnError spark containing the exception.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="error"/> is null.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="error"/> is null.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",

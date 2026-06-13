@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -16,11 +17,12 @@ public class DropIfBusyObservableTests
     [Test]
     public async Task WhenHandlerCompletesAfterSourceDone_ThenValueDropped()
     {
-        var subject = new Subject<int>();
-        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var values = new List<int>();
+        Subject<int> subject = new();
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> values = [];
         var completed = false;
-        using var sub = subject.DropIfBusy(async _ => await release.Task.ConfigureAwait(false)).Subscribe(values.Add, () => completed = true);
+        using var sub = subject.DropIfBusy(async _ => await release.Task.ConfigureAwait(false))
+            .Subscribe(values.Add, () => completed = true);
         subject.OnNext(1);
         subject.OnCompleted();
         release.SetResult();
@@ -34,9 +36,9 @@ public class DropIfBusyObservableTests
     [Test]
     public async Task WhenHandlerThrowsAfterSourceDone_ThenErrorDropped()
     {
-        var subject = new Subject<int>();
-        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var expected = new InvalidOperationException("late-handler");
+        Subject<int> subject = new();
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        InvalidOperationException expected = new("late-handler");
         Exception? caught = null;
         var completed = false;
         using var sub = subject.DropIfBusy(async _ =>
@@ -44,9 +46,7 @@ public class DropIfBusyObservableTests
             await release.Task.ConfigureAwait(false);
             throw expected;
         }).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex,
             () => completed = true);
         subject.OnNext(1);
@@ -62,13 +62,11 @@ public class DropIfBusyObservableTests
     [Test]
     public async Task WhenSourceErrorsBeforeDone_ThenForwardsError()
     {
-        var subject = new Subject<int>();
-        var expected = new InvalidOperationException("source-error");
+        Subject<int> subject = new();
+        InvalidOperationException expected = new("source-error");
         Exception? caught = null;
         using var sub = subject.DropIfBusy(static _ => default).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -79,18 +77,16 @@ public class DropIfBusyObservableTests
     [Test]
     public async Task WhenHandlerThrowsBeforeDone_ThenForwardsError()
     {
-        var subject = new Subject<int>();
-        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var error = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var expected = new InvalidOperationException("handler");
+        Subject<int> subject = new();
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Exception> error = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        InvalidOperationException expected = new("handler");
         using var sub = subject.DropIfBusy(async _ =>
         {
             await release.Task.ConfigureAwait(false);
             throw expected;
         }).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => error.TrySetResult(ex));
         subject.OnNext(1);
         release.SetResult();

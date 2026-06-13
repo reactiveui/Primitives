@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>Continuation.</summary>
+/// <summary>Coordinates phase synchronization between a lock holder and its continuation.</summary>
 public class Continuation : IDisposable
 {
     /// <summary>The barrier used to synchronize phases between the lock holder and the continuation.</summary>
@@ -66,7 +66,7 @@ public class Continuation : IDisposable
 
         _locked = true;
         observer?.OnNext((item, this));
-        return new ValueTask(ScheduleSignalPhase());
+        return new(ScheduleSignalPhase());
     }
 
     /// <summary>UnLocks this instance.</summary>

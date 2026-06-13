@@ -34,7 +34,7 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
             return source.Subscribe(observer);
         }
 
-        var sink = new ObserveOnSink(observer, scheduler);
+        ObserveOnSink sink = new(observer, scheduler);
         sink.AttachSourceSubscription(source.Subscribe(sink));
         return sink;
     }
@@ -61,7 +61,7 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
         public ObserveOnSink(IObserver<T> downstream, ISequencer scheduler)
         {
             _downstream = downstream;
-            _state = new ScheduledDrainState<T>(scheduler, this, _gate);
+            _state = new(scheduler, this, _gate);
         }
 
         /// <summary>Records the upstream subscription so <see cref="Dispose"/> can tear it down.</summary>

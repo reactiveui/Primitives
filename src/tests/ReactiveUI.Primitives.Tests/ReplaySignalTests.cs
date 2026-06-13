@@ -1,12 +1,13 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>ReplaySignalTests.</summary>
+/// <summary>Tests for the replay signal type.</summary>
 public class ReplaySignalTests
 {
     /// <summary>Value emitted while checking observer state.</summary>
@@ -18,6 +19,18 @@ public class ReplaySignalTests
     /// <summary>Buffer size of three used across replay signal tests.</summary>
     private const int Three = 3;
 
+    /// <summary>The integer constant one.</summary>
+    private const int One = 1;
+
+    /// <summary>The integer constant four.</summary>
+    private const int Four = 4;
+
+    /// <summary>The integer constant five.</summary>
+    private const int Five = 5;
+
+    /// <summary>The integer constant ten.</summary>
+    private const int Ten = 10;
+
     /// <summary>Constructors the argument checking.</summary>
     [Test]
     public void Constructor_ArgumentChecking()
@@ -25,11 +38,14 @@ public class ReplaySignalTests
         Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1)));
         Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1, EmptySequencer.Instance)));
         Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1, TimeSpan.Zero)));
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1, TimeSpan.Zero, EmptySequencer.Instance)));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            CreateAndDispose(() => new(-1, TimeSpan.Zero, EmptySequencer.Instance)));
         Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(TimeSpan.FromTicks(-1))));
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(TimeSpan.FromTicks(-1), EmptySequencer.Instance)));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            CreateAndDispose(() => new(TimeSpan.FromTicks(-1), EmptySequencer.Instance)));
         Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(0, TimeSpan.FromTicks(-1))));
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(0, TimeSpan.FromTicks(-1), EmptySequencer.Instance)));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            CreateAndDispose(() => new(0, TimeSpan.FromTicks(-1), EmptySequencer.Instance)));
         Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(null!)));
         Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(0, null!)));
         Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(TimeSpan.Zero, null!)));
@@ -138,6 +154,80 @@ public class ReplaySignalTests
         Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(EmptySequencer.Instance).Subscribe(null!));
     }
 
+    /// <summary>Verifies subjects, replay, behavior, state, and connectable aliases cover late terminal branches.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubjectsReplayBehaviorStateAndConnectableAliasesCoverLateTerminalBranches()
+    {
+        BehaviorSignal<int> behavior = new(One);
+        await Assert.That(behavior.ToString()!.Contains(nameof(BehaviorSignal<int>), StringComparison.Ordinal))
+            .IsTrue();
+        RecordingWitness<int> initial = new();
+        using var behaviorSubscription = behavior.Subscribe(initial);
+        behavior.OnCompleted();
+        behavior.OnCompleted();
+        behavior.OnNext(Two);
+        RecordingWitness<int> lateCompleted = new();
+        behavior.Subscribe(lateCompleted).Dispose();
+        int[] expectedInitial = [One];
+        await Assert.That(initial.Values.SequenceEqual(expectedInitial)).IsTrue();
+        await Assert.That(lateCompleted.Completed).IsEqualTo(1);
+        BehaviorSignal<int> behaviorError = new(One);
+        behaviorError.OnError(new InvalidOperationException("behavior"));
+        behaviorError.OnError(new InvalidOperationException("late"));
+        RecordingWitness<int> lateError = new();
+        behaviorError.Subscribe(lateError).Dispose();
+        await Assert.That(lateError.Errors[0].Message).IsEqualTo("behavior");
+        behaviorError.Dispose();
+        behaviorError.Dispose();
+        await Assert.That(behaviorError.TryGetValue(out _)).IsFalse();
+        ReplaySignal<int> replayCompleted = new(
+            Two,
+            TimeSpan.MaxValue,
+            Sequencer.CurrentThread);
+        replayCompleted.OnNext(One);
+        replayCompleted.OnNext(Two);
+        replayCompleted.OnNext(Three);
+        replayCompleted.OnCompleted();
+        replayCompleted.OnCompleted();
+        replayCompleted.OnNext(Four);
+        RecordingWitness<int> replayLateCompleted = new();
+        replayCompleted.Subscribe(replayLateCompleted).Dispose();
+        int[] expectedReplayLateCompleted = [Two, Three];
+        await Assert.That(replayLateCompleted.Values.SequenceEqual(expectedReplayLateCompleted)).IsTrue();
+        await Assert.That(replayLateCompleted.Completed).IsEqualTo(1);
+        ReplaySignal<int> replayError = new(
+            1,
+            TimeSpan.MaxValue,
+            Sequencer.CurrentThread);
+        replayError.OnNext(Five);
+        replayError.OnError(new InvalidOperationException("replay"));
+        replayError.OnError(new InvalidOperationException("late"));
+        RecordingWitness<int> replayLateError = new();
+        replayError.Subscribe(replayLateError).Dispose();
+        int[] expectedReplayLateError = [Five];
+        await Assert.That(replayLateError.Values.SequenceEqual(expectedReplayLateError)).IsTrue();
+        await Assert.That(replayLateError.Errors[0].Message).IsEqualTo("replay");
+        replayError.Dispose();
+        replayError.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => replayError.Subscribe(new RecordingWitness<int>()));
+        TestClock clock = new(DateTimeOffset.UnixEpoch);
+        ReplaySignal<int> windowedReplay = new(Ten, TimeSpan.FromTicks(Two), clock);
+        windowedReplay.OnNext(One);
+        clock.AdvanceBy(TimeSpan.FromTicks(Three));
+        windowedReplay.OnNext(Two);
+        RecordingWitness<int> windowedLate = new();
+        windowedReplay.Subscribe(windowedLate).Dispose();
+        int[] expectedWindowedLate = [Two];
+        await Assert.That(windowedLate.Values.SequenceEqual(expectedWindowedLate)).IsTrue();
+        var shared = Signal.Sequence(One, Three).Share();
+        var replayed = Signal.Sequence(One, Three).Replay(Two);
+        await Assert.That(shared).IsNotNull();
+        await Assert.That(replayed).IsNotNull();
+        var state = Assert.Throws<ArgumentNullException>(() => new StateSignal<int>(One).ToReadOnlyState<int>(null!));
+        await Assert.That(state.ParamName).IsEqualTo("selector");
+    }
+
     /// <summary>Creates a replay signal and disposes it immediately.</summary>
     /// <param name = "factory">Factory used to create the signal.</param>
     private static void CreateAndDispose(Func<ReplaySignal<int>> factory)
@@ -152,9 +242,7 @@ public class ReplaySignalTests
     {
         await Assert.That(s.HasObservers).IsFalse();
         await Assert.That(s.IsDisposed).IsFalse();
-        var d = s.Subscribe(_ =>
-        {
-        });
+        var d = s.Subscribe(_ => { });
         await Assert.That(s.HasObservers).IsTrue();
         await Assert.That(s.IsDisposed).IsFalse();
         s.Dispose();
@@ -172,9 +260,7 @@ public class ReplaySignalTests
     {
         await Assert.That(s.HasObservers).IsFalse();
         await Assert.That(s.IsDisposed).IsFalse();
-        var d = s.Subscribe(_ =>
-        {
-        });
+        var d = s.Subscribe(_ => { });
         await Assert.That(s.HasObservers).IsTrue();
         await Assert.That(s.IsDisposed).IsFalse();
         d.Dispose();
@@ -203,9 +289,7 @@ public class ReplaySignalTests
     private static async Task HasObservers_OnCompletedImpl(ReplaySignal<int> s)
     {
         await Assert.That(s.HasObservers).IsFalse();
-        using var subscription = s.Subscribe(_ =>
-        {
-        });
+        using var subscription = s.Subscribe(_ => { });
         await Assert.That(s.HasObservers).IsTrue();
         s.OnNext(ReplayValue);
         await Assert.That(s.HasObservers).IsTrue();
@@ -220,12 +304,8 @@ public class ReplaySignalTests
     {
         await Assert.That(s.HasObservers).IsFalse();
         using var subscription = s.Subscribe(
-            _ =>
-        {
-        },
-            _ =>
-        {
-        });
+            _ => { },
+            _ => { });
         await Assert.That(s.HasObservers).IsTrue();
         s.OnNext(ReplayValue);
         await Assert.That(s.HasObservers).IsTrue();
@@ -239,19 +319,13 @@ public class ReplaySignalTests
     private static async Task HasObserversImpl(ReplaySignal<int> s)
     {
         await Assert.That(s.HasObservers).IsFalse();
-        var d1 = s.Subscribe(_ =>
-        {
-        });
+        var d1 = s.Subscribe(_ => { });
         await Assert.That(s.HasObservers).IsTrue();
         d1.Dispose();
         await Assert.That(s.HasObservers).IsFalse();
-        var d2 = s.Subscribe(_ =>
-        {
-        });
+        var d2 = s.Subscribe(_ => { });
         await Assert.That(s.HasObservers).IsTrue();
-        var d3 = s.Subscribe(_ =>
-        {
-        });
+        var d3 = s.Subscribe(_ => { });
         await Assert.That(s.HasObservers).IsTrue();
         d2.Dispose();
         await Assert.That(s.HasObservers).IsTrue();

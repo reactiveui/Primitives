@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
@@ -27,13 +28,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenCombineLatestValuesAreAllFalseNonListEnumerable_ThenMaterializedToList()
     {
-        var subject1 = new BehaviorSubject<bool>(false);
-        var subject2 = new BehaviorSubject<bool>(false);
-        IEnumerable<IObservable<bool>> sources = new[]
-        {
-            subject1.AsObservable(),
-            subject2.AsObservable()
-        }.Where(static _ => true);
+        BehaviorSubject<bool> subject1 = new(false);
+        BehaviorSubject<bool> subject2 = new(false);
+        var sources = new[] { subject1.AsObservable(), subject2.AsObservable() }.Where(static _ => true);
         bool? result = null;
         using var sub = sources.CombineLatestValuesAreAllFalse().Subscribe(x => result = x);
         await Assert.That(result).IsTrue();
@@ -44,13 +41,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task CombineLatestValuesAreAllFalse_WhenAllFalse_ReturnsTrue()
     {
-        var subject1 = new BehaviorSubject<bool>(false);
-        var subject2 = new BehaviorSubject<bool>(false);
-        var sources = new[]
-        {
-            subject1.AsObservable(),
-            subject2.AsObservable()
-        };
+        BehaviorSubject<bool> subject1 = new(false);
+        BehaviorSubject<bool> subject2 = new(false);
+        IObservable<bool>[] sources = [subject1.AsObservable(), subject2.AsObservable()];
         bool? result = null;
         using var sub = sources.CombineLatestValuesAreAllFalse().Subscribe(x => result = x);
         await Assert.That(result).IsTrue();
@@ -61,13 +54,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task CombineLatestValuesAreAllTrue_WhenAllTrue_ReturnsTrue()
     {
-        var subject1 = new BehaviorSubject<bool>(true);
-        var subject2 = new BehaviorSubject<bool>(true);
-        var sources = new[]
-        {
-            subject1.AsObservable(),
-            subject2.AsObservable()
-        };
+        BehaviorSubject<bool> subject1 = new(true);
+        BehaviorSubject<bool> subject2 = new(true);
+        IObservable<bool>[] sources = [subject1.AsObservable(), subject2.AsObservable()];
         bool? result = null;
         using var sub = sources.CombineLatestValuesAreAllTrue().Subscribe(x => result = x);
         await Assert.That(result).IsTrue();
@@ -78,9 +67,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task GetMax_WithMultipleSources_ReturnsMaximum()
     {
-        var subject1 = new BehaviorSubject<int>(5);
-        var subject2 = new BehaviorSubject<int>(10);
-        var subject3 = new BehaviorSubject<int>(3);
+        BehaviorSubject<int> subject1 = new(5);
+        BehaviorSubject<int> subject2 = new(10);
+        BehaviorSubject<int> subject3 = new(3);
         int? result = null;
         using var sub = subject1.GetMax(subject2, subject3).Subscribe(x => result = x);
         await Assert.That(result).IsEqualTo(SampleValue10);
@@ -91,9 +80,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task GetMin_WithMultipleSources_ReturnsMinimum()
     {
-        var subject1 = new BehaviorSubject<int>(5);
-        var subject2 = new BehaviorSubject<int>(10);
-        var subject3 = new BehaviorSubject<int>(3);
+        BehaviorSubject<int> subject1 = new(5);
+        BehaviorSubject<int> subject2 = new(10);
+        BehaviorSubject<int> subject3 = new(3);
         int? result = null;
         using var sub = subject1.GetMin(subject2, subject3).Subscribe(x => result = x);
         await Assert.That(result).IsEqualTo(SampleValue3);
@@ -104,10 +93,10 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task GetMin_TracksMinimumOverTime()
     {
-        var subject1 = new BehaviorSubject<int>(5);
-        var subject2 = new BehaviorSubject<int>(10);
-        var subject3 = new BehaviorSubject<int>(3);
-        var results = new List<int>();
+        BehaviorSubject<int> subject1 = new(5);
+        BehaviorSubject<int> subject2 = new(10);
+        BehaviorSubject<int> subject3 = new(3);
+        List<int> results = [];
         using var sub = subject1.GetMin(subject2, subject3).Subscribe(results.Add);
 
         // Initial minimum is 3
@@ -127,10 +116,10 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task GetMax_TracksMaximumOverTime()
     {
-        var subject1 = new BehaviorSubject<int>(5);
-        var subject2 = new BehaviorSubject<int>(10);
-        var subject3 = new BehaviorSubject<int>(3);
-        var results = new List<int>();
+        BehaviorSubject<int> subject1 = new(5);
+        BehaviorSubject<int> subject2 = new(10);
+        BehaviorSubject<int> subject3 = new(3);
+        List<int> results = [];
         using var sub = subject1.GetMax(subject2, subject3).Subscribe(results.Add);
 
         // Initial maximum is 10
@@ -150,16 +139,11 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task CombineLatestValuesAreAllTrue_TracksStateChanges()
     {
-        var subject1 = new BehaviorSubject<bool>(false);
-        var subject2 = new BehaviorSubject<bool>(false);
-        var subject3 = new BehaviorSubject<bool>(false);
-        var results = new List<bool>();
-        using var sub = new[]
-        {
-            subject1,
-            subject2,
-            subject3
-        }.CombineLatestValuesAreAllTrue().Subscribe(results.Add);
+        BehaviorSubject<bool> subject1 = new(false);
+        BehaviorSubject<bool> subject2 = new(false);
+        BehaviorSubject<bool> subject3 = new(false);
+        List<bool> results = [];
+        using var sub = new[] { subject1, subject2, subject3 }.CombineLatestValuesAreAllTrue().Subscribe(results.Add);
 
         // Initially all false
         await Assert.That(results).IsCollectionEqualTo([false]);
@@ -186,16 +170,11 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task CombineLatestValuesAreAllFalse_TracksStateChanges()
     {
-        var subject1 = new BehaviorSubject<bool>(false);
-        var subject2 = new BehaviorSubject<bool>(false);
-        var subject3 = new BehaviorSubject<bool>(false);
-        var results = new List<bool>();
-        using var sub = new[]
-        {
-            subject1,
-            subject2,
-            subject3
-        }.CombineLatestValuesAreAllFalse().Subscribe(results.Add);
+        BehaviorSubject<bool> subject1 = new(false);
+        BehaviorSubject<bool> subject2 = new(false);
+        BehaviorSubject<bool> subject3 = new(false);
+        List<bool> results = [];
+        using var sub = new[] { subject1, subject2, subject3 }.CombineLatestValuesAreAllFalse().Subscribe(results.Add);
 
         // Initially all false - result is true
         await Assert.That(results).IsCollectionEqualTo([true]);

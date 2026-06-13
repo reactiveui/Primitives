@@ -9,6 +9,21 @@ namespace System.Threading.Tasks;
 /// <summary>Polyfill extensions for <see cref="Task"/> on frameworks without the .NET 6 <c>WaitAsync</c> overloads.</summary>
 internal static class TaskPolyfillExtensions
 {
+    /// <summary>Polyfill awaiting operations for a task.</summary>
+    /// <param name="task">The task to await.</param>
+    extension(Task task)
+    {
+        /// <summary>Gets a task that completes with <paramref name="task"/>, or faults when the timeout elapses or the token is cancelled.</summary>
+        /// <param name="timeout">The timeout after which the returned task faults, or <see cref="Timeout.InfiniteTimeSpan"/> for no timeout.</param>
+        /// <param name="cancellationToken">A token that cancels the wait.</param>
+        /// <returns>A task that mirrors <paramref name="task"/> subject to the timeout and cancellation.</returns>
+        public async Task WaitAsync(TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            await WaitForCompletionAsync(task, timeout, cancellationToken).ConfigureAwait(false);
+            await task.ConfigureAwait(false);
+        }
+    }
+
     /// <summary>Polyfill awaiting operations for a task that produces a result.</summary>
     /// <param name="task">The task to await.</param>
     /// <typeparam name="T">The task result type.</typeparam>
@@ -25,21 +40,6 @@ internal static class TaskPolyfillExtensions
         }
     }
 
-    /// <summary>Polyfill awaiting operations for a task.</summary>
-    /// <param name="task">The task to await.</param>
-    extension(Task task)
-    {
-        /// <summary>Gets a task that completes with <paramref name="task"/>, or faults when the timeout elapses or the token is cancelled.</summary>
-        /// <param name="timeout">The timeout after which the returned task faults, or <see cref="Timeout.InfiniteTimeSpan"/> for no timeout.</param>
-        /// <param name="cancellationToken">A token that cancels the wait.</param>
-        /// <returns>A task that mirrors <paramref name="task"/> subject to the timeout and cancellation.</returns>
-        public async Task WaitAsync(TimeSpan timeout, CancellationToken cancellationToken)
-        {
-            await WaitForCompletionAsync(task, timeout, cancellationToken).ConfigureAwait(false);
-            await task.ConfigureAwait(false);
-        }
-    }
-
     /// <summary>Waits for the task to complete, timeout, or cancellation.</summary>
     /// <param name="task">The task to observe.</param>
     /// <param name="timeout">The timeout after which the wait fails, or <see cref="Timeout.InfiniteTimeSpan"/> for no timeout.</param>
@@ -52,7 +52,7 @@ internal static class TaskPolyfillExtensions
             return;
         }
 
-        var signal = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<bool> signal = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         if (timeout != Timeout.InfiniteTimeSpan)
         {

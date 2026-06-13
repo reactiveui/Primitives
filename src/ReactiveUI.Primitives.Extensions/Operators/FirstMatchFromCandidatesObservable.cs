@@ -80,7 +80,7 @@ internal sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
                 if (!probe.Completed)
                 {
                     sub.Dispose();
-                    var sink = new AsyncSink(observer, candidates, project, transform, predicate, fallback, i);
+                    AsyncSink sink = new(observer, candidates, project, transform, predicate, fallback, i);
                     sink.TryNext();
                     SyncProbe.ReturnToCurrentThread(probe);
                     return sink;
@@ -146,7 +146,7 @@ internal sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
             var rented = _cached;
             if (rented is null)
             {
-                return new SyncProbe();
+                return new();
             }
 
             _cached = null;
@@ -306,7 +306,7 @@ internal sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
                         continue;
                     }
 
-                    var probe = new CompletionFlagWitness(this);
+                    CompletionFlagWitness probe = new(this);
                     var sub = projected.Subscribe(probe);
                     Interlocked.Exchange(ref _currentSubscription, sub);
 

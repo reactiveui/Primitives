@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Async.Signals;
 using AsyncObs = ReactiveUI.Primitives.Async.SignalAsync;
 
@@ -19,7 +20,16 @@ public partial class CombineLatestArityTests
         var s3 = Signal.Create<int>();
         var s4 = Signal.Create<int>();
         var throwingSrc = AsyncObs.Create<int>((_, _) => throw new InvalidOperationException("subscribe failed"));
-        await Assert.That(async () => await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, throwingSrc, (v1, v2, v3, v4, v5) => v1 + v2 + v3 + v4 + v5).SubscribeAsync((_, _) => default, null)).ThrowsExactly<InvalidOperationException>();
+        await Assert
+            .That(async () =>
+                await s1.Values
+                    .CombineLatest(
+                    s2.Values,
+                    s3.Values,
+                    s4.Values,
+                    throwingSrc,
+                    (v1, v2, v3, v4, v5) => v1 + v2 + v3 + v4 + v5).SubscribeAsync((_, _) => default, null))
+            .ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Verifies that CombineLatest5 OnNextCombined guard returns when disposed.</summary>
@@ -32,14 +42,16 @@ public partial class CombineLatestArityTests
         var s3 = Signal.Create<int>();
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
-        var results = new List<int>();
-        var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, (v1, v2, v3, v4, v5) => v1 + v2 + v3 + v4 + v5).SubscribeAsync(
-            (x, _) =>
-        {
-            results.Add(x);
-            return default;
-        },
-            null);
+        List<int> results = [];
+        var sub = await s1.Values
+            .CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, (v1, v2, v3, v4, v5) => v1 + v2 + v3 + v4 + v5)
+            .SubscribeAsync(
+                (x, _) =>
+                {
+                    results.Add(x);
+                    return default;
+                },
+                null);
         await s1.OnNextAsync(1, CancellationToken.None);
         await s2.OnNextAsync(SeedValue2, CancellationToken.None);
         await s3.OnNextAsync(SeedValue3, CancellationToken.None);
@@ -61,11 +73,13 @@ public partial class CombineLatestArityTests
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
         Exception? receivedError = null;
-        var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, (v1, v2, v3, v4, v5) => v1 + v2 + v3 + v4 + v5).SubscribeAsync((_, _) => default, (ex, _) =>
-        {
-            receivedError = ex;
-            return default;
-        });
+        var sub = await s1.Values
+            .CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, (v1, v2, v3, v4, v5) => v1 + v2 + v3 + v4 + v5)
+            .SubscribeAsync((_, _) => default, (ex, _) =>
+            {
+                receivedError = ex;
+                return default;
+            });
         await sub.DisposeAsync();
         await s1.OnErrorResumeAsync(new InvalidOperationException("post-dispose error"), CancellationToken.None);
         await Assert.That(receivedError).IsNull();
@@ -81,14 +95,16 @@ public partial class CombineLatestArityTests
         var s3 = Signal.Create<int>();
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
-        var results = new List<int>();
-        await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, (v1, v2, v3, v4, v5) => v1 + v2 + v3 + v4 + v5).SubscribeAsync(
-            (x, _) =>
-        {
-            results.Add(x);
-            return default;
-        },
-            null);
+        List<int> results = [];
+        await using var sub = await s1.Values
+            .CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, (v1, v2, v3, v4, v5) => v1 + v2 + v3 + v4 + v5)
+            .SubscribeAsync(
+                (x, _) =>
+                {
+                    results.Add(x);
+                    return default;
+                },
+                null);
         await s5.OnNextAsync(SentinelValue1, CancellationToken.None);
         await Assert.That(results).IsEmpty();
         await s1.OnCompletedAsync(Result.Success);
@@ -108,14 +124,16 @@ public partial class CombineLatestArityTests
         var s3 = Signal.Create<int>();
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
-        var results = new List<int>();
-        await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, (v1, v2, v3, v4, v5) => v1 + v2 + v3 + v4 + v5).SubscribeAsync(
-            (x, _) =>
-        {
-            results.Add(x);
-            return default;
-        },
-            null);
+        List<int> results = [];
+        await using var sub = await s1.Values
+            .CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, (v1, v2, v3, v4, v5) => v1 + v2 + v3 + v4 + v5)
+            .SubscribeAsync(
+                (x, _) =>
+                {
+                    results.Add(x);
+                    return default;
+                },
+                null);
         await s2.OnNextAsync(SentinelValue1, CancellationToken.None);
         await s3.OnNextAsync(SentinelValue2, CancellationToken.None);
         await s4.OnNextAsync(SentinelValue3, CancellationToken.None);
@@ -138,14 +156,16 @@ public partial class CombineLatestArityTests
         var s3 = Signal.Create<int>();
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
-        var results = new List<int>();
-        await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
-            (x, _) =>
-        {
-            results.Add(x);
-            return default;
-        },
-            null);
+        List<int> results = [];
+        await using var sub = await s1.Values
+            .CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, (a, b, c, d, e) => a + b + c + d + e)
+            .SubscribeAsync(
+                (x, _) =>
+                {
+                    results.Add(x);
+                    return default;
+                },
+                null);
         await s1.OnNextAsync(1, CancellationToken.None);
         await s2.OnNextAsync(PlaceValue1, CancellationToken.None);
         await s3.OnNextAsync(PlaceValue2, CancellationToken.None);
@@ -171,14 +191,16 @@ public partial class CombineLatestArityTests
         var s3 = Signal.Create<int>();
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
-        var results = new List<int>();
-        await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
-            (x, _) =>
-        {
-            results.Add(x);
-            return default;
-        },
-            null);
+        List<int> results = [];
+        await using var sub = await s1.Values
+            .CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, (a, b, c, d, e) => a + b + c + d + e)
+            .SubscribeAsync(
+                (x, _) =>
+                {
+                    results.Add(x);
+                    return default;
+                },
+                null);
         await s1.OnNextAsync(1, CancellationToken.None);
         await s2.OnNextAsync(PlaceValue1, CancellationToken.None);
         await s3.OnNextAsync(PlaceValue2, CancellationToken.None);
@@ -204,14 +226,16 @@ public partial class CombineLatestArityTests
         var s3 = Signal.Create<int>();
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
-        var results = new List<int>();
-        await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
-            (x, _) =>
-        {
-            results.Add(x);
-            return default;
-        },
-            null);
+        List<int> results = [];
+        await using var sub = await s1.Values
+            .CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, (a, b, c, d, e) => a + b + c + d + e)
+            .SubscribeAsync(
+                (x, _) =>
+                {
+                    results.Add(x);
+                    return default;
+                },
+                null);
         await s1.OnNextAsync(1, CancellationToken.None);
         await s2.OnNextAsync(PlaceValue1, CancellationToken.None);
         await s3.OnNextAsync(PlaceValue2, CancellationToken.None);
@@ -237,14 +261,16 @@ public partial class CombineLatestArityTests
         var s3 = Signal.Create<int>();
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
-        var results = new List<int>();
-        await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
-            (x, _) =>
-        {
-            results.Add(x);
-            return default;
-        },
-            null);
+        List<int> results = [];
+        await using var sub = await s1.Values
+            .CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, (a, b, c, d, e) => a + b + c + d + e)
+            .SubscribeAsync(
+                (x, _) =>
+                {
+                    results.Add(x);
+                    return default;
+                },
+                null);
         await s1.OnNextAsync(1, CancellationToken.None);
         await s2.OnNextAsync(PlaceValue1, CancellationToken.None);
         await s3.OnNextAsync(PlaceValue2, CancellationToken.None);
@@ -270,7 +296,16 @@ public partial class CombineLatestArityTests
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
         var throwingSrc = AsyncObs.Create<int>((_, _) => throw new InvalidOperationException("subscribe failed"));
-        await Assert.That(async () => await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, throwingSrc, (v1, v2, v3, v4, v5, v6) => v1 + v2 + v3 + v4 + v5 + v6).SubscribeAsync((_, _) => default, null)).ThrowsExactly<InvalidOperationException>();
+        await Assert
+            .That(async () =>
+                await s1.Values
+                    .CombineLatest(
+                    s2.Values,
+                    s3.Values,
+                    s4.Values,
+                    s5.Values,
+                    throwingSrc,
+                    (v1, v2, v3, v4, v5, v6) => v1 + v2 + v3 + v4 + v5 + v6).SubscribeAsync((_, _) => default, null)).ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Verifies that CombineLatest6 OnNextCombined guard returns when disposed.</summary>
@@ -284,13 +319,19 @@ public partial class CombineLatestArityTests
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
         var s6 = Signal.Create<int>();
-        var results = new List<int>();
-        var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, s6.Values, (v1, v2, v3, v4, v5, v6) => v1 + v2 + v3 + v4 + v5 + v6).SubscribeAsync(
+        List<int> results = [];
+        var sub = await s1.Values.CombineLatest(
+            s2.Values,
+            s3.Values,
+            s4.Values,
+            s5.Values,
+            s6.Values,
+            (v1, v2, v3, v4, v5, v6) => v1 + v2 + v3 + v4 + v5 + v6).SubscribeAsync(
             (x, _) =>
-        {
-            results.Add(x);
-            return default;
-        },
+            {
+                results.Add(x);
+                return default;
+            },
             null);
         await s1.OnNextAsync(1, CancellationToken.None);
         await s2.OnNextAsync(SeedValue2, CancellationToken.None);
@@ -315,11 +356,18 @@ public partial class CombineLatestArityTests
         var s5 = Signal.Create<int>();
         var s6 = Signal.Create<int>();
         Exception? receivedError = null;
-        var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, s6.Values, (v1, v2, v3, v4, v5, v6) => v1 + v2 + v3 + v4 + v5 + v6).SubscribeAsync((_, _) => default, (ex, _) =>
-        {
-            receivedError = ex;
-            return default;
-        });
+        var sub = await s1.Values
+            .CombineLatest(
+            s2.Values,
+            s3.Values,
+            s4.Values,
+            s5.Values,
+            s6.Values,
+            (v1, v2, v3, v4, v5, v6) => v1 + v2 + v3 + v4 + v5 + v6).SubscribeAsync((_, _) => default, (ex, _) =>
+            {
+                receivedError = ex;
+                return default;
+            });
         await sub.DisposeAsync();
         await s1.OnErrorResumeAsync(new InvalidOperationException("post-dispose error"), CancellationToken.None);
         await Assert.That(receivedError).IsNull();
@@ -336,14 +384,21 @@ public partial class CombineLatestArityTests
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
         var s6 = Signal.Create<int>();
-        var results = new List<int>();
-        await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, s6.Values, (v1, v2, v3, v4, v5, v6) => v1 + v2 + v3 + v4 + v5 + v6).SubscribeAsync(
-            (x, _) =>
-        {
-            results.Add(x);
-            return default;
-        },
-            null);
+        List<int> results = [];
+        await using var sub = await s1.Values
+            .CombineLatest(
+            s2.Values,
+            s3.Values,
+            s4.Values,
+            s5.Values,
+            s6.Values,
+            (v1, v2, v3, v4, v5, v6) => v1 + v2 + v3 + v4 + v5 + v6).SubscribeAsync(
+                (x, _) =>
+                {
+                    results.Add(x);
+                    return default;
+                },
+                null);
         await s6.OnNextAsync(SentinelValue1, CancellationToken.None);
         await Assert.That(results).IsEmpty();
         await s1.OnCompletedAsync(Result.Success);
@@ -365,14 +420,21 @@ public partial class CombineLatestArityTests
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
         var s6 = Signal.Create<int>();
-        var results = new List<int>();
-        await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, s6.Values, (v1, v2, v3, v4, v5, v6) => v1 + v2 + v3 + v4 + v5 + v6).SubscribeAsync(
-            (x, _) =>
-        {
-            results.Add(x);
-            return default;
-        },
-            null);
+        List<int> results = [];
+        await using var sub = await s1.Values
+            .CombineLatest(
+            s2.Values,
+            s3.Values,
+            s4.Values,
+            s5.Values,
+            s6.Values,
+            (v1, v2, v3, v4, v5, v6) => v1 + v2 + v3 + v4 + v5 + v6).SubscribeAsync(
+                (x, _) =>
+                {
+                    results.Add(x);
+                    return default;
+                },
+                null);
         await s2.OnNextAsync(SentinelValue1, CancellationToken.None);
         await s3.OnNextAsync(SentinelValue2, CancellationToken.None);
         await s4.OnNextAsync(SentinelValue3, CancellationToken.None);
@@ -398,14 +460,21 @@ public partial class CombineLatestArityTests
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
         var s6 = Signal.Create<int>();
-        var results = new List<int>();
-        await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, s6.Values, (a, b, c, d, e, f) => a + b + c + d + e + f).SubscribeAsync(
-            (x, _) =>
-        {
-            results.Add(x);
-            return default;
-        },
-            null);
+        List<int> results = [];
+        await using var sub = await s1.Values
+            .CombineLatest(
+            s2.Values,
+            s3.Values,
+            s4.Values,
+            s5.Values,
+            s6.Values,
+            (a, b, c, d, e, f) => a + b + c + d + e + f).SubscribeAsync(
+                (x, _) =>
+                {
+                    results.Add(x);
+                    return default;
+                },
+                null);
         await s1.OnNextAsync(1, CancellationToken.None);
         await s2.OnNextAsync(PlaceValue1, CancellationToken.None);
         await s3.OnNextAsync(PlaceValue2, CancellationToken.None);
@@ -434,14 +503,21 @@ public partial class CombineLatestArityTests
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
         var s6 = Signal.Create<int>();
-        var results = new List<int>();
-        await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, s6.Values, (a, b, c, d, e, f) => a + b + c + d + e + f).SubscribeAsync(
-            (x, _) =>
-        {
-            results.Add(x);
-            return default;
-        },
-            null);
+        List<int> results = [];
+        await using var sub = await s1.Values
+            .CombineLatest(
+            s2.Values,
+            s3.Values,
+            s4.Values,
+            s5.Values,
+            s6.Values,
+            (a, b, c, d, e, f) => a + b + c + d + e + f).SubscribeAsync(
+                (x, _) =>
+                {
+                    results.Add(x);
+                    return default;
+                },
+                null);
         await s1.OnNextAsync(1, CancellationToken.None);
         await s2.OnNextAsync(PlaceValue1, CancellationToken.None);
         await s3.OnNextAsync(PlaceValue2, CancellationToken.None);
@@ -470,14 +546,21 @@ public partial class CombineLatestArityTests
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
         var s6 = Signal.Create<int>();
-        var results = new List<int>();
-        await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, s6.Values, (a, b, c, d, e, f) => a + b + c + d + e + f).SubscribeAsync(
-            (x, _) =>
-        {
-            results.Add(x);
-            return default;
-        },
-            null);
+        List<int> results = [];
+        await using var sub = await s1.Values
+            .CombineLatest(
+            s2.Values,
+            s3.Values,
+            s4.Values,
+            s5.Values,
+            s6.Values,
+            (a, b, c, d, e, f) => a + b + c + d + e + f).SubscribeAsync(
+                (x, _) =>
+                {
+                    results.Add(x);
+                    return default;
+                },
+                null);
         await s1.OnNextAsync(1, CancellationToken.None);
         await s2.OnNextAsync(PlaceValue1, CancellationToken.None);
         await s3.OnNextAsync(PlaceValue2, CancellationToken.None);
@@ -506,14 +589,21 @@ public partial class CombineLatestArityTests
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
         var s6 = Signal.Create<int>();
-        var results = new List<int>();
-        await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, s6.Values, (a, b, c, d, e, f) => a + b + c + d + e + f).SubscribeAsync(
-            (x, _) =>
-        {
-            results.Add(x);
-            return default;
-        },
-            null);
+        List<int> results = [];
+        await using var sub = await s1.Values
+            .CombineLatest(
+            s2.Values,
+            s3.Values,
+            s4.Values,
+            s5.Values,
+            s6.Values,
+            (a, b, c, d, e, f) => a + b + c + d + e + f).SubscribeAsync(
+                (x, _) =>
+                {
+                    results.Add(x);
+                    return default;
+                },
+                null);
         await s1.OnNextAsync(1, CancellationToken.None);
         await s2.OnNextAsync(PlaceValue1, CancellationToken.None);
         await s3.OnNextAsync(PlaceValue2, CancellationToken.None);
@@ -542,14 +632,21 @@ public partial class CombineLatestArityTests
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
         var s6 = Signal.Create<int>();
-        var results = new List<int>();
-        await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, s4.Values, s5.Values, s6.Values, (a, b, c, d, e, f) => a + b + c + d + e + f).SubscribeAsync(
-            (x, _) =>
-        {
-            results.Add(x);
-            return default;
-        },
-            null);
+        List<int> results = [];
+        await using var sub = await s1.Values
+            .CombineLatest(
+            s2.Values,
+            s3.Values,
+            s4.Values,
+            s5.Values,
+            s6.Values,
+            (a, b, c, d, e, f) => a + b + c + d + e + f).SubscribeAsync(
+                (x, _) =>
+                {
+                    results.Add(x);
+                    return default;
+                },
+                null);
         await s1.OnNextAsync(1, CancellationToken.None);
         await s2.OnNextAsync(PlaceValue1, CancellationToken.None);
         await s3.OnNextAsync(PlaceValue2, CancellationToken.None);

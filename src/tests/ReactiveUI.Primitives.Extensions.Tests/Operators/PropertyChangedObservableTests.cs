@@ -24,8 +24,8 @@ public class PropertyChangedObservableTests
     [Test]
     public async Task WhenSubscribePropertyObservable_ThenEmitsCurrentValue()
     {
-        var owner = new ObservableOwner { Value = InitialValue };
-        var results = new List<int>();
+        ObservableOwner owner = new() { Value = InitialValue };
+        List<int> results = [];
 
         using var sub = owner.ToPropertyObservable(x => x.Value)
             .Subscribe(results.Add);
@@ -38,8 +38,8 @@ public class PropertyChangedObservableTests
     [Test]
     public async Task WhenMatchingPropertyChanges_ThenForwardsValue()
     {
-        var owner = new ObservableOwner { Value = InitialValue };
-        var results = new List<int>();
+        ObservableOwner owner = new() { Value = InitialValue };
+        List<int> results = [];
 
         using var sub = owner.ToPropertyObservable(x => x.Value)
             .Subscribe(results.Add);
@@ -54,8 +54,8 @@ public class PropertyChangedObservableTests
     [Test]
     public async Task WhenUnrelatedPropertyChanges_ThenIgnored()
     {
-        var owner = new ObservableOwner { Value = InitialValue };
-        var results = new List<int>();
+        ObservableOwner owner = new() { Value = InitialValue };
+        List<int> results = [];
 
         using var sub = owner.ToPropertyObservable(x => x.Value)
             .Subscribe(results.Add);
@@ -70,8 +70,8 @@ public class PropertyChangedObservableTests
     [Test]
     public async Task WhenSubscriptionDisposed_ThenNoFurtherEmissions()
     {
-        var owner = new ObservableOwner { Value = InitialValue };
-        var results = new List<int>();
+        ObservableOwner owner = new() { Value = InitialValue };
+        List<int> results = [];
 
         var sub = owner.ToPropertyObservable(x => x.Value)
             .Subscribe(results.Add);
@@ -89,7 +89,7 @@ public class PropertyChangedObservableTests
     [Test]
     public async Task WhenGetterThrowsOnChange_ThenForwardsError()
     {
-        var owner = new LatchingThrowingOwner();
+        LatchingThrowingOwner owner = new();
         Exception? caught = null;
 
         using var sub = owner.ToPropertyObservable(x => x.Latched)
@@ -108,8 +108,8 @@ public class PropertyChangedObservableTests
     [Test]
     public async Task WhenPropertyEventFiresAfterDispose_ThenHandlerGuardSkipsForward()
     {
-        var owner = new RetainingObservableOwner();
-        var results = new List<int>();
+        RetainingObservableOwner owner = new();
+        List<int> results = [];
 
         var sub = owner.ToPropertyObservable(x => x.Value).Subscribe(results.Add);
 
@@ -146,7 +146,7 @@ public class PropertyChangedObservableTests
         public int Value => GetHashCode() & 0;
 
         /// <summary>Invokes the retained handler with a <c>PropertyChanged</c> event for <see cref="Value"/>.</summary>
-        public void Raise() => _retained?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
+        public void Raise() => _retained?.Invoke(this, new(nameof(Value)));
     }
 
     /// <summary>Test owner that fires <see cref="INotifyPropertyChanged"/> on property writes.</summary>
@@ -162,7 +162,7 @@ public class PropertyChangedObservableTests
             set
             {
                 field = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
+                PropertyChanged?.Invoke(this, new(nameof(Value)));
             }
         }
 
@@ -173,7 +173,7 @@ public class PropertyChangedObservableTests
             set
             {
                 field = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Other)));
+                PropertyChanged?.Invoke(this, new(nameof(Other)));
             }
         } = string.Empty;
     }
@@ -197,7 +197,7 @@ public class PropertyChangedObservableTests
         public void ArmAndRaise()
         {
             _armed = true;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Latched)));
+            PropertyChanged?.Invoke(this, new(nameof(Latched)));
         }
     }
 }

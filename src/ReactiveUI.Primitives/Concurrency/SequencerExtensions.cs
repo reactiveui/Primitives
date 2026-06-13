@@ -18,14 +18,14 @@ public static class SequencerExtensions
         /// <param name="state">State passed to the action to be executed.</param>
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
         public IDisposable Schedule<TState>(TState state, Func<ISequencer, TState, IDisposable> action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
             ArgumentExceptionHelper.ThrowIfNull(action);
 
-            var item = new Sequencer.DelegateWorkItem<TState>(scheduler, state, action);
+            Sequencer.DelegateWorkItem<TState> item = new(scheduler, state, action);
             scheduler.Schedule(item);
             return item;
         }
@@ -35,14 +35,14 @@ public static class SequencerExtensions
         /// <param name="state">State passed to the action to be executed.</param>
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
         public IDisposable Schedule<TState>(TState state, Action<TState> action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
             ArgumentExceptionHelper.ThrowIfNull(action);
 
-            var item = new Sequencer.ActionWorkItem<TState>(state, action);
+            Sequencer.ActionWorkItem<TState> item = new(state, action);
             scheduler.Schedule(item);
             return item;
         }
@@ -53,7 +53,7 @@ public static class SequencerExtensions
         /// <param name="dueTime">Relative time after which to execute the action.</param>
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
         public IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<ISequencer, TState, IDisposable> action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -61,7 +61,7 @@ public static class SequencerExtensions
             ArgumentExceptionHelper.ThrowIfNull(action);
 
             var normalized = Sequencer.Normalize(dueTime);
-            var item = new Sequencer.DelegateWorkItem<TState>(scheduler, state, action);
+            Sequencer.DelegateWorkItem<TState> item = new(scheduler, state, action);
             if (normalized == TimeSpan.Zero)
             {
                 scheduler.Schedule(item);
@@ -80,7 +80,7 @@ public static class SequencerExtensions
         /// <param name="dueTime">Relative time after which to execute the action.</param>
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
         public IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Action<TState> action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -96,14 +96,14 @@ public static class SequencerExtensions
         /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the action.</param>
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
         public IDisposable Schedule<TState>(TState state, long dueTimestamp, Action<TState> action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
             ArgumentExceptionHelper.ThrowIfNull(action);
 
-            var item = new Sequencer.ActionWorkItem<TState>(state, action);
+            Sequencer.ActionWorkItem<TState> item = new(state, action);
             scheduler.Schedule(item, dueTimestamp);
             return item;
         }
@@ -114,7 +114,7 @@ public static class SequencerExtensions
         /// <param name="dueTime">Absolute time at which to execute the action.</param>
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
         public IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -127,7 +127,7 @@ public static class SequencerExtensions
         /// <summary>Schedules an action to be executed.</summary>
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
         public IDisposable Schedule(Action action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -143,12 +143,12 @@ public static class SequencerExtensions
         /// <returns>
         /// The disposable object used to cancel the scheduled action (best effort).
         /// </returns>
-        /// <exception cref="ArgumentNullException">
+        /// <exception cref="ArgumentExceptionHelper">
         /// scheduler
         /// or
         /// action.
         /// </exception>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
         public IDisposable Schedule(TimeSpan dueTime, Action action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -164,12 +164,12 @@ public static class SequencerExtensions
         /// <returns>
         /// The disposable object used to cancel the scheduled action (best effort).
         /// </returns>
-        /// <exception cref="ArgumentNullException">
+        /// <exception cref="ArgumentExceptionHelper">
         /// scheduler
         /// or
         /// action.
         /// </exception>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
         public IDisposable Schedule(DateTimeOffset dueTime, Action action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -197,7 +197,7 @@ public static class SequencerExtensions
         /// <param name="state">A state object to be passed to <paramref name="action" />.</param>
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
         public IDisposable ScheduleAction<TState>(TState state, Action<TState> action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -219,7 +219,7 @@ public static class SequencerExtensions
         /// <param name="state">A state object to be passed to <paramref name="action"/>.</param>
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
         internal IDisposable ScheduleAction<TState>(TState state, Func<TState, IDisposable> action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -239,12 +239,12 @@ public static class SequencerExtensions
         /// <returns>
         /// The disposable object used to cancel the scheduled action (best effort).
         /// </returns>
-        /// <exception cref="ArgumentNullException">
+        /// <exception cref="ArgumentExceptionHelper">
         /// scheduler
         /// or
         /// action.
         /// </exception>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
         internal IDisposable ScheduleAction<TState>(TState state, TimeSpan dueTime, Action<TState> action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -262,12 +262,12 @@ public static class SequencerExtensions
         /// <returns>
         /// The disposable object used to cancel the scheduled action (best effort).
         /// </returns>
-        /// <exception cref="ArgumentNullException">
+        /// <exception cref="ArgumentExceptionHelper">
         /// scheduler
         /// or
         /// action.
         /// </exception>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
         internal IDisposable ScheduleAction<TState>(TState state, TimeSpan dueTime, Func<TState, IDisposable> action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -285,12 +285,12 @@ public static class SequencerExtensions
         /// <returns>
         /// The disposable object used to cancel the scheduled action (best effort).
         /// </returns>
-        /// <exception cref="ArgumentNullException">
+        /// <exception cref="ArgumentExceptionHelper">
         /// scheduler
         /// or
         /// action.
         /// </exception>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
         internal IDisposable ScheduleAction<TState>(TState state, DateTimeOffset dueTime, Action<TState> action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -308,12 +308,12 @@ public static class SequencerExtensions
         /// <returns>
         /// The disposable object used to cancel the scheduled action (best effort).
         /// </returns>
-        /// <exception cref="ArgumentNullException">
+        /// <exception cref="ArgumentExceptionHelper">
         /// scheduler
         /// or
         /// action.
         /// </exception>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
         internal IDisposable ScheduleAction<TState>(TState state, DateTimeOffset dueTime, Func<TState, IDisposable> action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);

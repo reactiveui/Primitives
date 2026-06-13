@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>Signals.</summary>
+/// <summary>Provides static factory and operator methods for signals.</summary>
 public static partial class Signal
 {
     /// <summary>Non-Terminating Signals. It's no returns, never finish.</summary>

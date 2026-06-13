@@ -25,7 +25,7 @@ public static partial class SignalAsync
     /// observer and a cancellation token, and returns a task that yields a disposable resource representing the
     /// subscription.</param>
     /// <returns>An SignalAsync{T} that invokes the specified subscription function for each observer.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="subscribeAsync"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="subscribeAsync"/> is <see langword="null"/>.</exception>
     public static IObservableAsync<T> Create<T>(
         Func<IObserverAsync<T>, CancellationToken, ValueTask<IAsyncDisposable>> subscribeAsync) =>
         subscribeAsync is null

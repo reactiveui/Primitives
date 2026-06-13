@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Concurrency;
 
@@ -46,12 +47,13 @@ public class ThrottleAndWaitOperatorCoverageTests
     [Test]
     public async Task WhenThrottleOnSchedulerSourceErrors_ThenForwardsErrorAndDropsPending()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
-        using var sub = subject.ThrottleOnScheduler(TimeSpan.FromTicks(ThrottleTicks), scheduler).Subscribe(results.Add, ex => caught = ex);
+        InvalidOperationException expected = new(SourceErrorMessage);
+        using var sub = subject.ThrottleOnScheduler(TimeSpan.FromTicks(ThrottleTicks), scheduler)
+            .Subscribe(results.Add, ex => caught = ex);
         subject.OnNext(Sample1);
         subject.OnError(expected);
         scheduler.AdvanceBy(AdvancePastWindowTicks);
@@ -65,11 +67,12 @@ public class ThrottleAndWaitOperatorCoverageTests
     public async Task WhenThrottleOnSchedulerCompletesWithPending_ThenFlushesLatestThenCompletes()
     {
         const int Pending = 7;
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
-        using var sub = subject.ThrottleOnScheduler(TimeSpan.FromTicks(ThrottleTicks), scheduler).Subscribe(results.Add, () => completed = true);
+        using var sub = subject.ThrottleOnScheduler(TimeSpan.FromTicks(ThrottleTicks), scheduler)
+            .Subscribe(results.Add, () => completed = true);
         subject.OnNext(Pending);
         subject.OnCompleted();
         await Assert.That(results).IsCollectionEqualTo([Pending]);
@@ -81,11 +84,12 @@ public class ThrottleAndWaitOperatorCoverageTests
     [Test]
     public async Task WhenThrottleOnSchedulerCompletesEmpty_ThenCompletesWithoutValue()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
-        using var sub = subject.ThrottleOnScheduler(TimeSpan.FromTicks(ThrottleTicks), scheduler).Subscribe(results.Add, () => completed = true);
+        using var sub = subject.ThrottleOnScheduler(TimeSpan.FromTicks(ThrottleTicks), scheduler)
+            .Subscribe(results.Add, () => completed = true);
         subject.OnCompleted();
         await Assert.That(results).IsEmpty();
         await Assert.That(completed).IsTrue();
@@ -97,9 +101,9 @@ public class ThrottleAndWaitOperatorCoverageTests
     [Test]
     public async Task WhenThrottleOnSchedulerDisposed_ThenScheduledEmissionDropped()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
+        List<int> results = [];
         var sub = subject.ThrottleOnScheduler(TimeSpan.FromTicks(ThrottleTicks), scheduler).Subscribe(results.Add);
         subject.OnNext(Sample1);
         sub.Dispose();
@@ -112,13 +116,11 @@ public class ThrottleAndWaitOperatorCoverageTests
     [Test]
     public async Task WhenWaitUntilSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = subject.WaitUntil(static x => x > NoMatchThreshold).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnNext(Sample1);
         subject.OnError(expected);
@@ -130,10 +132,11 @@ public class ThrottleAndWaitOperatorCoverageTests
     [Test]
     public async Task WhenWaitUntilSourceCompletesWithoutMatch_ThenCompletesWithoutValue()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
-        using var sub = subject.WaitUntil(static x => x > NoMatchThreshold).Subscribe(results.Add, () => completed = true);
+        using var sub = subject.WaitUntil(static x => x > NoMatchThreshold)
+            .Subscribe(results.Add, () => completed = true);
         subject.OnNext(Sample1);
         subject.OnNext(Sample2);
         subject.OnCompleted();
@@ -146,11 +149,12 @@ public class ThrottleAndWaitOperatorCoverageTests
     [Test]
     public async Task WhenWaitUntilPredicateThrows_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var results = new List<int>();
-        var expected = new InvalidOperationException(PredicateFailedMessage);
-        using var sub = subject.WaitUntil((Func<int, bool>)(_ => throw expected)).Subscribe(results.Add, ex => caught = ex);
+        List<int> results = [];
+        InvalidOperationException expected = new(PredicateFailedMessage);
+        using var sub = subject.WaitUntil((Func<int, bool>)(_ => throw expected))
+            .Subscribe(results.Add, ex => caught = ex);
         subject.OnNext(Sample1);
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(results).IsEmpty();
@@ -161,8 +165,8 @@ public class ThrottleAndWaitOperatorCoverageTests
     [Test]
     public async Task WhenWaitUntilDisposedBeforeMatch_ThenNoDownstreamEmission()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
         var sub = subject.WaitUntil(static x => x > NoMatchThreshold).Subscribe(results.Add, () => completed = true);
         sub.Dispose();
@@ -176,8 +180,8 @@ public class ThrottleAndWaitOperatorCoverageTests
     [Test]
     public async Task WhenTakeUntilInclusivePredicateMatches_ThenEmitsThroughMatchAndCompletes()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
         using var sub = subject.TakeUntil(static x => x >= Sample3).Subscribe(results.Add, () => completed = true);
         subject.OnNext(Sample1);
@@ -193,13 +197,11 @@ public class ThrottleAndWaitOperatorCoverageTests
     [Test]
     public async Task WhenTakeUntilInclusiveSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = subject.TakeUntil(static x => x >= NoMatchThreshold).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnNext(Sample1);
         subject.OnError(expected);
@@ -211,11 +213,12 @@ public class ThrottleAndWaitOperatorCoverageTests
     [Test]
     public async Task WhenTakeUntilInclusivePredicateThrows_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var results = new List<int>();
-        var expected = new InvalidOperationException(PredicateFailedMessage);
-        using var sub = subject.TakeUntil((Func<int, bool>)(_ => throw expected)).Subscribe(results.Add, ex => caught = ex);
+        List<int> results = [];
+        InvalidOperationException expected = new(PredicateFailedMessage);
+        using var sub = subject.TakeUntil((Func<int, bool>)(_ => throw expected))
+            .Subscribe(results.Add, ex => caught = ex);
         subject.OnNext(Sample1);
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(results).IsEmpty();
@@ -226,10 +229,11 @@ public class ThrottleAndWaitOperatorCoverageTests
     [Test]
     public async Task WhenTakeUntilInclusiveSourceCompletesBeforeMatch_ThenCompletes()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         var completed = false;
-        using var sub = subject.TakeUntil(static x => x >= NoMatchThreshold).Subscribe(results.Add, () => completed = true);
+        using var sub = subject.TakeUntil(static x => x >= NoMatchThreshold)
+            .Subscribe(results.Add, () => completed = true);
         subject.OnNext(Sample1);
         subject.OnNext(Sample2);
         subject.OnCompleted();
@@ -242,13 +246,11 @@ public class ThrottleAndWaitOperatorCoverageTests
     [Test]
     public async Task WhenSynchronizeAsyncSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = subject.SynchronizeAsync().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -259,12 +261,10 @@ public class ThrottleAndWaitOperatorCoverageTests
     [Test]
     public async Task WhenSynchronizeAsyncSourceCompletes_ThenForwardsCompletion()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var completed = false;
         using var sub = subject.SynchronizeAsync().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completed = true);
         subject.OnCompleted();
         await Assert.That(completed).IsTrue();
@@ -275,7 +275,7 @@ public class ThrottleAndWaitOperatorCoverageTests
     [Test]
     public async Task WhenSynchronizeAsyncDisposed_ThenSuppressesSubsequentEmissions()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var emissions = 0;
         var sub = subject.SynchronizeAsync().Subscribe(tuple =>
         {

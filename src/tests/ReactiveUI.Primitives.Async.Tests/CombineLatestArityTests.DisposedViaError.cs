@@ -18,11 +18,11 @@ public partial class CombineLatestArityTests
     [Test]
     public async Task WhenCombineLatest2DisposedViaError_ThenOnNextCombinedGuardHits()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
-        var results = new List<int>();
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
+        List<int> results = [];
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
             .CombineLatest(src2, (a, b) => a + b)
@@ -61,11 +61,11 @@ public partial class CombineLatestArityTests
     [Test]
     public async Task WhenCombineLatest2DisposedViaError_ThenOnErrorResumeGuardHits()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
         Exception? receivedError = null;
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
             .CombineLatest(src2, (a, b) => a + b)
@@ -102,15 +102,18 @@ public partial class CombineLatestArityTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
+    [SuppressMessage(
+        "Major Code Smell",
+        "S107:Methods should not have too many parameters",
+        Justification = "Test Reasons")]
     public async Task WhenCombineLatest3DisposedViaError_ThenOnNextCombinedGuardHits()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
-        var src3 = new DirectSource<int>();
-        var results = new List<int>();
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
+        DirectSource<int> src3 = new();
+        List<int> results = [];
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
             .CombineLatest(src2, src3, (a, b, c) => a + b + c)
@@ -150,12 +153,12 @@ public partial class CombineLatestArityTests
     [Test]
     public async Task WhenCombineLatest3DisposedViaError_ThenOnErrorResumeGuardHits()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
-        var src3 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
+        DirectSource<int> src3 = new();
         Exception? receivedError = null;
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
             .CombineLatest(src2, src3, (a, b, c) => a + b + c)
@@ -195,13 +198,13 @@ public partial class CombineLatestArityTests
     [Test]
     public async Task WhenCombineLatest4DisposedViaError_ThenOnNextCombinedGuardHits()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
-        var src3 = new DirectSource<int>();
-        var src4 = new DirectSource<int>();
-        var results = new List<int>();
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
+        DirectSource<int> src3 = new();
+        DirectSource<int> src4 = new();
+        List<int> results = [];
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
             .CombineLatest(src2, src3, src4, (a, b, c, d) => a + b + c + d)
@@ -242,13 +245,13 @@ public partial class CombineLatestArityTests
     [Test]
     public async Task WhenCombineLatest4DisposedViaError_ThenOnErrorResumeGuardHits()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
-        var src3 = new DirectSource<int>();
-        var src4 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
+        DirectSource<int> src3 = new();
+        DirectSource<int> src4 = new();
         Exception? receivedError = null;
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
             .CombineLatest(src2, src3, src4, (a, b, c, d) => a + b + c + d)
@@ -289,14 +292,14 @@ public partial class CombineLatestArityTests
     [Test]
     public async Task WhenCombineLatest5DisposedViaError_ThenOnNextCombinedGuardHits()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
-        var src3 = new DirectSource<int>();
-        var src4 = new DirectSource<int>();
-        var src5 = new DirectSource<int>();
-        var results = new List<int>();
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
+        DirectSource<int> src3 = new();
+        DirectSource<int> src4 = new();
+        DirectSource<int> src5 = new();
+        List<int> results = [];
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
             .CombineLatest(src2, src3, src4, src5, (a, b, c, d, e) => a + b + c + d + e)
@@ -338,14 +341,14 @@ public partial class CombineLatestArityTests
     [Test]
     public async Task WhenCombineLatest5DisposedViaError_ThenOnErrorResumeGuardHits()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
-        var src3 = new DirectSource<int>();
-        var src4 = new DirectSource<int>();
-        var src5 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
+        DirectSource<int> src3 = new();
+        DirectSource<int> src4 = new();
+        DirectSource<int> src5 = new();
         Exception? receivedError = null;
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
             .CombineLatest(src2, src3, src4, src5, (a, b, c, d, e) => a + b + c + d + e)
@@ -387,15 +390,15 @@ public partial class CombineLatestArityTests
     [Test]
     public async Task WhenCombineLatest6DisposedViaError_ThenOnNextCombinedGuardHits()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
-        var src3 = new DirectSource<int>();
-        var src4 = new DirectSource<int>();
-        var src5 = new DirectSource<int>();
-        var src6 = new DirectSource<int>();
-        var results = new List<int>();
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
+        DirectSource<int> src3 = new();
+        DirectSource<int> src4 = new();
+        DirectSource<int> src5 = new();
+        DirectSource<int> src6 = new();
+        List<int> results = [];
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
             .CombineLatest(src2, src3, src4, src5, src6, (a, b, c, d, e, f) => a + b + c + d + e + f)
@@ -438,15 +441,15 @@ public partial class CombineLatestArityTests
     [Test]
     public async Task WhenCombineLatest6DisposedViaError_ThenOnErrorResumeGuardHits()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
-        var src3 = new DirectSource<int>();
-        var src4 = new DirectSource<int>();
-        var src5 = new DirectSource<int>();
-        var src6 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
+        DirectSource<int> src3 = new();
+        DirectSource<int> src4 = new();
+        DirectSource<int> src5 = new();
+        DirectSource<int> src6 = new();
         Exception? receivedError = null;
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
             .CombineLatest(src2, src3, src4, src5, src6, (a, b, c, d, e, f) => a + b + c + d + e + f)
@@ -489,16 +492,16 @@ public partial class CombineLatestArityTests
     [Test]
     public async Task WhenCombineLatest7DisposedViaError_ThenOnNextCombinedGuardHits()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
-        var src3 = new DirectSource<int>();
-        var src4 = new DirectSource<int>();
-        var src5 = new DirectSource<int>();
-        var src6 = new DirectSource<int>();
-        var src7 = new DirectSource<int>();
-        var results = new List<int>();
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
+        DirectSource<int> src3 = new();
+        DirectSource<int> src4 = new();
+        DirectSource<int> src5 = new();
+        DirectSource<int> src6 = new();
+        DirectSource<int> src7 = new();
+        List<int> results = [];
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
             .CombineLatest(src2, src3, src4, src5, src6, src7, (a, b, c, d, e, f, g) => a + b + c + d + e + f + g)
@@ -542,16 +545,16 @@ public partial class CombineLatestArityTests
     [Test]
     public async Task WhenCombineLatest7DisposedViaError_ThenOnErrorResumeGuardHits()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
-        var src3 = new DirectSource<int>();
-        var src4 = new DirectSource<int>();
-        var src5 = new DirectSource<int>();
-        var src6 = new DirectSource<int>();
-        var src7 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
+        DirectSource<int> src3 = new();
+        DirectSource<int> src4 = new();
+        DirectSource<int> src5 = new();
+        DirectSource<int> src6 = new();
+        DirectSource<int> src7 = new();
         Exception? receivedError = null;
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
             .CombineLatest(src2, src3, src4, src5, src6, src7, (a, b, c, d, e, f, g) => a + b + c + d + e + f + g)
@@ -593,20 +596,23 @@ public partial class CombineLatestArityTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
+    [SuppressMessage(
+        "Major Code Smell",
+        "S107:Methods should not have too many parameters",
+        Justification = "Test Reasons")]
     public async Task WhenCombineLatest8DisposedViaError_ThenOnNextCombinedGuardHits()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
-        var src3 = new DirectSource<int>();
-        var src4 = new DirectSource<int>();
-        var src5 = new DirectSource<int>();
-        var src6 = new DirectSource<int>();
-        var src7 = new DirectSource<int>();
-        var src8 = new DirectSource<int>();
-        var results = new List<int>();
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
+        DirectSource<int> src3 = new();
+        DirectSource<int> src4 = new();
+        DirectSource<int> src5 = new();
+        DirectSource<int> src6 = new();
+        DirectSource<int> src7 = new();
+        DirectSource<int> src8 = new();
+        List<int> results = [];
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
             .CombineLatest(
@@ -656,20 +662,23 @@ public partial class CombineLatestArityTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Reasons")]
+    [SuppressMessage(
+        "Major Code Smell",
+        "S107:Methods should not have too many parameters",
+        Justification = "Test Reasons")]
     public async Task WhenCombineLatest8DisposedViaError_ThenOnErrorResumeGuardHits()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
-        var src3 = new DirectSource<int>();
-        var src4 = new DirectSource<int>();
-        var src5 = new DirectSource<int>();
-        var src6 = new DirectSource<int>();
-        var src7 = new DirectSource<int>();
-        var src8 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
+        DirectSource<int> src3 = new();
+        DirectSource<int> src4 = new();
+        DirectSource<int> src5 = new();
+        DirectSource<int> src6 = new();
+        DirectSource<int> src7 = new();
+        DirectSource<int> src8 = new();
         Exception? receivedError = null;
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
             .CombineLatest(

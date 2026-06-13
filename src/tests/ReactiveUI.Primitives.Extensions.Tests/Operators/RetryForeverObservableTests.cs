@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Disposables;
@@ -28,7 +29,7 @@ public class RetryForeverObservableTests
     public async Task WhenRetryForeverSourceErrorsThenCompletes_ThenResubscribesAndForwards()
     {
         var attempts = 0;
-        var values = new List<int>();
+        List<int> values = [];
         var completed = false;
         var source = Observable.Create<int>(observer =>
         {
@@ -64,9 +65,7 @@ public class RetryForeverObservableTests
             captured = observer;
             return EmptyDisposable.Instance;
         });
-        var sub = source.OnErrorRetry().Subscribe(static _ =>
-        {
-        });
+        var sub = source.OnErrorRetry().Subscribe(static _ => { });
         await Assert.That(subscribeCount).IsEqualTo(1);
         sub.Dispose();
         captured!.OnError(new InvalidOperationException("after-dispose"));
@@ -78,12 +77,10 @@ public class RetryForeverObservableTests
     [Test]
     public async Task WhenRetryForeverDisposedBeforeCompletion_ThenCompletionDropped()
     {
-        var source = new SyncDirectSource<int>();
+        SyncDirectSource<int> source = new();
         var completedCount = 0;
         var sub = source.OnErrorRetry().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completedCount++);
         sub.Dispose();
         source.Observer.OnCompleted();
@@ -94,7 +91,7 @@ public class RetryForeverObservableTests
     [Test]
     public void WhenRetryForeverObserverNull_ThenSubscribeThrows()
     {
-        var observable = new RetryForeverObservable<int>(new Subject<int>());
+        RetryForeverObservable<int> observable = new(new Subject<int>());
         Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
     }
 }

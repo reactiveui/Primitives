@@ -4,6 +4,7 @@
 
 using System.Reactive.Concurrency;
 using BenchmarkDotNet.Attributes;
+using R3;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
@@ -26,7 +27,7 @@ public class CoreRuntimeBenchmarks
     public int PrimitivesPocketDispose()
     {
         var disposed = 0;
-        var pocket = new Pocket(
+        Pocket pocket = new(
             new ActionDisposable(() => disposed++),
             new ActionDisposable(() => disposed++),
             new ActionDisposable(() => disposed++));
@@ -41,7 +42,7 @@ public class CoreRuntimeBenchmarks
     public int SystemReactiveCompositeDispose()
     {
         var disposed = 0;
-        var pocket = new RxCompositeDisposable(
+        RxCompositeDisposable pocket = new(
             RxDisposable.Create(() => disposed++),
             RxDisposable.Create(() => disposed++),
             RxDisposable.Create(() => disposed++));
@@ -56,7 +57,7 @@ public class CoreRuntimeBenchmarks
     public int R3CompositeDispose()
     {
         var disposed = 0;
-        var pocket = new R3.CompositeDisposable(
+        CompositeDisposable pocket = new(
             R3.Disposable.Create(() => disposed++),
             R3.Disposable.Create(() => disposed++),
             R3.Disposable.Create(() => disposed++));
@@ -90,7 +91,7 @@ public class CoreRuntimeBenchmarks
     [Benchmark]
     public int R3CurrentThreadSchedule()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.Observable.Return(1).Subscribe(observer);
         return observer.LastValue;
     }
@@ -125,7 +126,7 @@ public class CoreRuntimeBenchmarks
     public int R3SafeWitness()
     {
         var value = 0;
-        var observer = new IntR3ActionWitness(x => value = x);
+        IntR3ActionWitness observer = new(x => value = x);
         observer.OnNext(ForwardedValue);
         observer.OnCompleted(R3.Result.Success);
         return value;
@@ -154,7 +155,7 @@ public class CoreRuntimeBenchmarks
     [Benchmark]
     public int R3CompletedSpark()
     {
-        var notification = new R3.Notification<int>(R3.Result.Success);
+        Notification<int> notification = new(R3.Result.Success);
         return (int)notification.Kind;
     }
 }

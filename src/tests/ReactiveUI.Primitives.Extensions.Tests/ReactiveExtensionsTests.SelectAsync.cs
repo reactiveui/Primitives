@@ -13,13 +13,13 @@ public partial class ReactiveExtensionsTests
     public async Task WhenSelectAsyncWithCancellationToken_ThenProjectsValues()
     {
         var source = ExpectedSequence123.ToObservable();
-        var results = new List<int>();
-        var tcs = new TaskCompletionSource<bool>();
+        List<int> results = [];
+        TaskCompletionSource<bool> tcs = new();
 
         source.SelectAsync((x, _) => Task.FromResult(x * SampleValue2))
             .Subscribe(
-            results.Add,
-            () => tcs.TrySetResult(true));
+                results.Add,
+                () => tcs.TrySetResult(true));
 
         await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
@@ -32,13 +32,13 @@ public partial class ReactiveExtensionsTests
     public async Task WhenSelectAsyncSimple_ThenProjectsValues()
     {
         var source = ExpectedSequence123.ToObservable();
-        var results = new List<int>();
-        var tcs = new TaskCompletionSource<bool>();
+        List<int> results = [];
+        TaskCompletionSource<bool> tcs = new();
 
         source.SelectAsync(x => Task.FromResult(x * SampleValue2))
             .Subscribe(
-            results.Add,
-            () => tcs.TrySetResult(true));
+                results.Add,
+                () => tcs.TrySetResult(true));
 
         await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
@@ -51,13 +51,13 @@ public partial class ReactiveExtensionsTests
     public async Task WhenSelectAsyncSequential_ThenProcessesInOrder()
     {
         var source = ExpectedSequence123.ToObservable();
-        var results = new List<int>();
-        var tcs = new TaskCompletionSource<bool>();
+        List<int> results = [];
+        TaskCompletionSource<bool> tcs = new();
 
         source.SelectAsyncSequential(x => Task.FromResult(x * SampleValue2))
             .Subscribe(
-            results.Add,
-            () => tcs.TrySetResult(true));
+                results.Add,
+                () => tcs.TrySetResult(true));
 
         await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
@@ -71,8 +71,8 @@ public partial class ReactiveExtensionsTests
     {
         const int AsyncDelayMs = 10;
         var source = ExpectedSequence123.ToObservable();
-        var results = new List<int>();
-        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> results = [];
+        TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         source.SelectLatestAsync(async x =>
         {
@@ -94,8 +94,9 @@ public partial class ReactiveExtensionsTests
     public async Task WhenSelectAsyncConcurrent_ThenProcessesConcurrently()
     {
         var source = ExpectedSequence123.ToObservable();
-        var results = new List<int>();
-        var tcs = new TaskCompletionSource<bool>();
+        List<int> results = [];
+        TaskCompletionSource<bool> tcs = new();
+        const int MaxConcurrency = 2;
 
         source.SelectAsyncConcurrent(
             async x =>
@@ -103,7 +104,7 @@ public partial class ReactiveExtensionsTests
                 await Task.Delay(1);
                 return x * SampleValue2;
             },
-            maxConcurrency: 2).Subscribe(results.Add, () => tcs.TrySetResult(true));
+            MaxConcurrency).Subscribe(results.Add, () => tcs.TrySetResult(true));
 
         await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
 

@@ -26,12 +26,11 @@ public sealed class BlazorRendererSequencerTests
     [Test]
     public async Task ReactiveComponentObserveRejectsNullArguments()
     {
-        var component = new TestReactiveComponent();
-        var source = new PassiveObservable<int>();
+        TestReactiveComponent component = new();
+        PassiveObservable<int> source = new();
 
-        await Assert.That(() => component.ObserveSource<int>(null!, static _ =>
-        {
-        })).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(() => component.ObserveSource<int>(null!, static _ => { }))
+            .ThrowsExactly<ArgumentNullException>();
         await Assert.That(() => component.ObserveSource(source, null!)).ThrowsExactly<ArgumentNullException>();
     }
 
@@ -40,11 +39,12 @@ public sealed class BlazorRendererSequencerTests
     [Test]
     public async Task ReactiveComponentObservedErrorRejectsNullAndWrapsError()
     {
-        var component = new TestReactiveComponent();
+        TestReactiveComponent component = new();
         await Assert.That(() => component.NotifyObservedError(null!)).ThrowsExactly<ArgumentNullException>();
 
-        var error = new InvalidOperationException("observed");
-        var caught = await Assert.That(() => component.NotifyObservedError(error)).ThrowsExactly<InvalidOperationException>();
+        InvalidOperationException error = new("observed");
+        var caught = await Assert.That(() => component.NotifyObservedError(error))
+            .ThrowsExactly<InvalidOperationException>();
 
         await Assert.That(caught!.InnerException).IsSameReferenceAs(error);
     }
@@ -54,8 +54,8 @@ public sealed class BlazorRendererSequencerTests
     [Test]
     public async Task ImmediateScheduleMarshalsThroughRenderer()
     {
-        var renderer = new FakeRenderer();
-        var sequencer = new BlazorRendererSequencer(renderer.InvokeAsync);
+        FakeRenderer renderer = new();
+        BlazorRendererSequencer sequencer = new(renderer.InvokeAsync);
         var executed = false;
 
         sequencer.Schedule(new DelegateWorkItem(() => executed = true));
@@ -69,9 +69,9 @@ public sealed class BlazorRendererSequencerTests
     [Test]
     public async Task ImmediateBurstExecutesInOrder()
     {
-        var renderer = new FakeRenderer();
-        var sequencer = new BlazorRendererSequencer(renderer.InvokeAsync);
-        var values = new List<int>();
+        FakeRenderer renderer = new();
+        BlazorRendererSequencer sequencer = new(renderer.InvokeAsync);
+        List<int> values = [];
 
         foreach (var value in ExpectedBurst)
         {

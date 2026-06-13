@@ -19,7 +19,7 @@ public partial class CombiningOperatorTests
     {
         var innerSignal = Signal.Create<int>();
         var outer = Signal.Create<IObservableAsync<int>>();
-        var items = new List<int>();
+        List<int> items = [];
 
         var sub = await outer.Values
             .Merge()
@@ -61,7 +61,7 @@ public partial class CombiningOperatorTests
     {
         var innerSignal = Signal.Create<int>();
         var outer = Signal.Create<IObservableAsync<int>>();
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
 
         var sub = await outer.Values
             .Merge()
@@ -81,7 +81,9 @@ public partial class CombiningOperatorTests
         // Error resume after dispose should be silently ignored
         try
         {
-            await innerSignal.OnErrorResumeAsync(new InvalidOperationException(LateErrorMessage), CancellationToken.None);
+            await innerSignal.OnErrorResumeAsync(
+                new InvalidOperationException(LateErrorMessage),
+                CancellationToken.None);
         }
         catch (OperationCanceledException)
         {
@@ -99,7 +101,7 @@ public partial class CombiningOperatorTests
     {
         var source = Signal.Create<int>();
         var inner = Signal.Create<IObservableAsync<int>>();
-        var items = new List<int>();
+        List<int> items = [];
         Result? completionResult = null;
 
         await using var sub = await inner.Values
@@ -136,7 +138,7 @@ public partial class CombiningOperatorTests
     public async Task WhenMergeDisposedDuringEmission_ThenRelayNextAsyncReturnsEarly()
     {
         var signal = Signal.Create<int>();
-        var items = new List<int>();
+        List<int> items = [];
 
         var sub = await signal.Values.Merge(SignalAsync.Never<int>())
             .SubscribeAsync(
@@ -171,9 +173,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeSignalOfSignalsDisposed_ThenRelayNextAsyncReturnsPreGate()
     {
-        var innerSource = new DirectSource<int>();
-        var outerSource = new DirectSource<IObservableAsync<int>>();
-        var items = new List<int>();
+        DirectSource<int> innerSource = new();
+        DirectSource<IObservableAsync<int>> outerSource = new();
+        List<int> items = [];
 
         var sub = await outerSource
             .Merge()
@@ -218,9 +220,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeSignalOfSignalsDisposed_ThenRelayErrorAsyncReturns()
     {
-        var innerSource = new DirectSource<int>();
-        var outerSource = new DirectSource<IObservableAsync<int>>();
-        var errors = new List<Exception>();
+        DirectSource<int> innerSource = new();
+        DirectSource<IObservableAsync<int>> outerSource = new();
+        List<Exception> errors = [];
 
         var sub = await outerSource
             .Merge()
@@ -264,11 +266,11 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeSignalOfSignalsDisposedWhileGateHeld_ThenRelayNextAsyncReturnsPostGate()
     {
-        var innerSource = new DirectSource<int>();
-        var outerSource = new DirectSource<IObservableAsync<int>>();
-        var items = new List<int>();
-        var gateHeld = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var proceedWithFirstEmission = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        DirectSource<int> innerSource = new();
+        DirectSource<IObservableAsync<int>> outerSource = new();
+        List<int> items = [];
+        TaskCompletionSource gateHeld = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource proceedWithFirstEmission = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var sub = await outerSource
             .Merge()
@@ -337,11 +339,11 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeSignalOfSignalsDisposedWhileGateHeld_ThenRelayErrorAsyncReturnsPostGate()
     {
-        var innerSource = new DirectSource<int>();
-        var outerSource = new DirectSource<IObservableAsync<int>>();
-        var errors = new List<Exception>();
-        var gateHeld = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var proceedWithFirstEmission = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        DirectSource<int> innerSource = new();
+        DirectSource<IObservableAsync<int>> outerSource = new();
+        List<Exception> errors = [];
+        TaskCompletionSource gateHeld = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource proceedWithFirstEmission = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var sub = await outerSource
             .Merge()
@@ -405,8 +407,8 @@ public partial class CombiningOperatorTests
     public async Task WhenMergeSignalDisposed_ThenRelayNextAsyncReturnsEarly()
     {
         var outer = Signal.Create<IObservableAsync<int>>();
-        var inner = new DirectSource<int>();
-        var items = new List<int>();
+        DirectSource<int> inner = new();
+        List<int> items = [];
 
         var sub = await outer.Values.Merge().SubscribeAsync(
             (x, _) =>
@@ -430,8 +432,8 @@ public partial class CombiningOperatorTests
     public async Task WhenMergeSignalDisposed_ThenRelayErrorAsyncReturnsEarly()
     {
         var outer = Signal.Create<IObservableAsync<int>>();
-        var inner = new DirectSource<int>();
-        var errors = new List<Exception>();
+        DirectSource<int> inner = new();
+        List<Exception> errors = [];
 
         var sub = await outer.Values.Merge().SubscribeAsync(
             (_, _) => default,
@@ -457,10 +459,10 @@ public partial class CombiningOperatorTests
     public async Task WhenMergeSignalDisposedWhileGateHeld_ThenRelayNextAsyncReturnsPostGate()
     {
         var outer = Signal.Create<IObservableAsync<int>>();
-        var inner = new DirectSource<int>();
-        var items = new List<int>();
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        DirectSource<int> inner = new();
+        List<int> items = [];
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         _ = await outer.Values.Merge().SubscribeAsync(
             (x, _) =>
@@ -497,9 +499,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeOfSignalsDisposedDuringEmission_ThenDropsSubsequentValues()
     {
-        var outerSource = new DirectSource<IObservableAsync<int>>();
-        var innerSource = new DirectSource<int>();
-        var results = new List<int>();
+        DirectSource<IObservableAsync<int>> outerSource = new();
+        DirectSource<int> innerSource = new();
+        List<int> results = [];
 
         var sub = await outerSource
             .Merge()
@@ -534,9 +536,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeOfSignalsDisposedDuringErrorResume_ThenDropsSubsequentErrors()
     {
-        var outerSource = new DirectSource<IObservableAsync<int>>();
-        var innerSource = new DirectSource<int>();
-        var errors = new List<Exception>();
+        DirectSource<IObservableAsync<int>> outerSource = new();
+        DirectSource<int> innerSource = new();
+        List<Exception> errors = [];
 
         var sub = await outerSource
             .Merge()

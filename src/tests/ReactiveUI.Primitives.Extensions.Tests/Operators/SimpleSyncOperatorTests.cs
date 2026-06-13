@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 using System.Text.RegularExpressions;
 
@@ -38,7 +39,7 @@ public partial class SimpleSyncOperatorTests
     [Test]
     public async Task WhenShuffle_ThenPreservesMultiset()
     {
-        var subject = new Subject<int[]>();
+        Subject<int[]> subject = new();
         int[]? shuffled = null;
         using var sub = subject.Shuffle().Subscribe(value => shuffled = value);
         subject.OnNext((int[])ShuffleInput.Clone());
@@ -53,7 +54,7 @@ public partial class SimpleSyncOperatorTests
     [Test]
     public async Task WhenShuffleNullArray_ThenForwardsAsIs()
     {
-        var subject = new Subject<int[]>();
+        Subject<int[]> subject = new();
         var received = 0;
         int[]? value = null;
         using var sub = subject.Shuffle().Subscribe(v =>
@@ -71,13 +72,11 @@ public partial class SimpleSyncOperatorTests
     [Test]
     public async Task WhenShuffleSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int[]>();
+        Subject<int[]> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
+        InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = subject.Shuffle().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -88,12 +87,10 @@ public partial class SimpleSyncOperatorTests
     [Test]
     public async Task WhenShuffleSourceCompletes_ThenForwardsCompletion()
     {
-        var subject = new Subject<int[]>();
+        Subject<int[]> subject = new();
         var completed = false;
         using var sub = subject.Shuffle().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completed = true);
         subject.OnCompleted();
         await Assert.That(completed).IsTrue();
@@ -105,7 +102,7 @@ public partial class SimpleSyncOperatorTests
     public async Task WhenFilterRegexMatches_ThenForwardsMatching()
     {
         string[] input = [Apple, "banana", "avocado"];
-        var results = new List<string>();
+        List<string> results = [];
         using var sub = input.ToObservable().Filter("^a").Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo([Apple, "avocado"]);
     }
@@ -116,7 +113,7 @@ public partial class SimpleSyncOperatorTests
     public async Task WhenFilterRegexCompiled_ThenForwardsMatching()
     {
         string[] input = ["aa", "bb", "ac"];
-        var results = new List<string>();
+        List<string> results = [];
         var regex = StartsWithA();
         using var sub = input.ToObservable().Filter(regex).Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo(["aa", "ac"]);
@@ -127,8 +124,8 @@ public partial class SimpleSyncOperatorTests
     [Test]
     public async Task WhenFilterNullInput_ThenIgnored()
     {
-        var subject = new Subject<string>();
-        var results = new List<string>();
+        Subject<string> subject = new();
+        List<string> results = [];
         using var sub = subject.Filter("^a").Subscribe(results.Add);
         subject.OnNext(null!);
         subject.OnNext(Apple);
@@ -142,14 +139,12 @@ public partial class SimpleSyncOperatorTests
     {
         // A regex with a 1-microsecond timeout against pathological input should throw.
         var regex = PathologicalCatastrophicBacktrack();
-        var subject = new Subject<string>();
+        Subject<string> subject = new();
         Exception? caught = null;
         using var sub = subject.Filter(regex).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
-        subject.OnNext(new string ('a', 100) + "!");
+        subject.OnNext(new string('a', 100) + "!");
         await Assert.That(caught).IsNotNull();
     }
 
@@ -159,8 +154,9 @@ public partial class SimpleSyncOperatorTests
     public async Task WhenTrySelectNullProjection_ThenDropped()
     {
         int[] input = [1, 2, 3, 4];
-        var results = new List<string>();
-        using var sub = input.ToObservable().TrySelect(static x => x % 2 == 0 ? x.ToString() : null).Subscribe(results.Add);
+        List<string> results = [];
+        using var sub = input.ToObservable().TrySelect(static x => x % 2 == 0 ? x.ToString() : null)
+            .Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo(["2", "4"]);
     }
 
@@ -169,13 +165,11 @@ public partial class SimpleSyncOperatorTests
     [Test]
     public async Task WhenTrySelectThrows_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException("selector failed");
+        InvalidOperationException expected = new("selector failed");
         using var sub = subject.TrySelect<int, string>(_ => throw expected).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnNext(1);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -186,12 +180,10 @@ public partial class SimpleSyncOperatorTests
     [Test]
     public async Task WhenTrySelectSourceCompletes_ThenForwardsCompletion()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var completed = false;
         using var sub = subject.TrySelect(static x => x.ToString()).Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             () => completed = true);
         subject.OnCompleted();
         await Assert.That(completed).IsTrue();
@@ -206,6 +198,6 @@ public partial class SimpleSyncOperatorTests
     /// guaranteed to throw <see cref = "RegexMatchTimeoutException"/> on pathological input.
     /// Used to exercise the error-forwarding branch of <c>Filter</c>.</summary>
     /// <returns>A compile-time generated <see cref = "Regex"/> instance with a 1-tick match timeout.</returns>
-    [GeneratedRegex("(a+)+$", RegexOptions.None, matchTimeoutMilliseconds: 1)]
+    [GeneratedRegex("(a+)+$", RegexOptions.None, 1)]
     private static partial Regex PathologicalCatastrophicBacktrack();
 }

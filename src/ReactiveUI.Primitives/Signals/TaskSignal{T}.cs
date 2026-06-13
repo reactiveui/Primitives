@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>TaskSignal.</summary>
+/// <summary>A task-backed signal of values.</summary>
 /// <typeparam name="T">The object that provides notification information.</typeparam>
 internal sealed class TaskSignal<T> : ITaskSignal<T>
 {

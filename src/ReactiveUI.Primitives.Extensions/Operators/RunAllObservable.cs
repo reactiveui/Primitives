@@ -34,7 +34,7 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
             return EmptyDisposable.Instance;
         }
 
-        var sink = new Sink(observer, sources);
+        Sink sink = new(observer, sources);
         sink.RunNext();
         return sink;
     }

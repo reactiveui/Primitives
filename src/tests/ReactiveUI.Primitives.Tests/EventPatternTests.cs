@@ -1,0 +1,161 @@
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// ReactiveUI Association Incorporated licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
+
+using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
+using ReactiveUI.Primitives.Core;
+using ReactiveUI.Primitives.Signals;
+
+namespace ReactiveUI.Primitives.Tests;
+
+/// <summary>Verifies <see cref="EventPattern{TEventArgs}"/> equality and formatting contracts.</summary>
+public class EventPatternTests
+{
+    /// <summary>Covers event-pattern equality, hashing, formatting, and argument validation.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task EventPatternEqualityAndFormattingCoverContracts()
+    {
+        object sender = new();
+        var args = EventArgs.Empty;
+        EventPattern<EventArgs> pattern = new(sender, args);
+        EventPattern<EventArgs> same = new(sender, args);
+        EventPattern<EventArgs> other = new(new(), args);
+        await Assert.That(pattern == same).IsTrue();
+        await Assert.That(pattern != other).IsTrue();
+        await Assert.That(pattern.Equals((object)same)).IsTrue();
+        await Assert.That(pattern.Equals("not an event")).IsFalse();
+        await Assert.That(pattern.GetHashCode()).IsNotEqualTo(0);
+        await Assert.That(pattern.ToString().Contains(nameof(EventArgs), StringComparison.Ordinal)).IsTrue();
+        Assert.Throws<ArgumentNullException>(() => _ = new EventPattern<EventArgs>(sender, null!));
+    }
+
+    /// <summary>Verifies generic event factory overloads for supported and unsupported handler shapes.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task GenericFromEventPatternCoversPropertyChangedGenericAndUnsupportedHandlers()
+    {
+        const int EventValue = 7;
+        GenericEventSource source = new();
+        List<int> values = [];
+        var genericSubscription = Signal.FromEventPattern<EventHandler<TestEventArgs>, TestEventArgs>(
+                handler => source.Changed += handler,
+                handler => source.Changed -= handler)
+            .Subscribe(pattern => values.Add(pattern.EventArgs.Value));
+        source.Raise(EventValue);
+        genericSubscription.Dispose();
+        source.Raise(EventValue + 1);
+        await Assert.That(values.SequenceEqual([EventValue])).IsTrue();
+        PropertyChangedEventSource propertySource = new();
+        List<string?> propertyNames = [];
+        var propertySubscription = Signal.FromEventPattern<PropertyChangedEventHandler, PropertyChangedEventArgs>(
+                handler => propertySource.PropertyChanged += handler,
+                handler => propertySource.PropertyChanged -= handler)
+            .Subscribe(pattern => propertyNames.Add(pattern.EventArgs.PropertyName));
+        propertySource.Raise(nameof(PropertyChangedEventSource.Value));
+        propertySubscription.Dispose();
+        propertySource.Raise("ignored");
+        await Assert.That(propertyNames.SequenceEqual([nameof(PropertyChangedEventSource.Value)])).IsTrue();
+        Assert.Throws<ArgumentNullException>(() =>
+            Signal.FromEventPattern<EventHandler<TestEventArgs>, TestEventArgs>(null!, _ => { }));
+        Assert.Throws<ArgumentNullException>(() =>
+            Signal.FromEventPattern<EventHandler<TestEventArgs>, TestEventArgs>(_ => { }, null!));
+        Assert.Throws<NotSupportedException>(() =>
+            Signal.FromEventPattern<Action, EventArgs>(_ => { }, _ => { }).Subscribe(_ => { }));
+    }
+
+    /// <summary>Verifies event-pattern bridges preserve sender/arguments and detach handlers on disposal.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task EventPatternBridgePreservesSenderArgumentsAndDisposesHandler()
+    {
+        const int ExpectedEventCount = 2;
+        FakeButton button = new();
+        List<EventPattern<FakeClickEventArgs>> events = [];
+        using (Signal.FromEventPattern<FakeClickEventArgs>(
+                   handler => button.Clicked += handler,
+                   handler => button.Clicked -= handler).Subscribe(events.Add))
+        {
+            button.Raise("open");
+            button.Raise("save");
+        }
+
+        button.Raise("ignored");
+        await Assert.That(events.Count).IsEqualTo(ExpectedEventCount);
+        await Assert.That(events[0].Sender!).IsSameReferenceAs(button);
+        await Assert.That(events[0].EventArgs.Command).IsEqualTo("open");
+        await Assert.That(events[1].EventArgs.Command).IsEqualTo("save");
+        await Assert.That(button.SubscriberCount).IsEqualTo(0);
+        var expectedDescription = $"{typeof(FakeButton).FullName}: {typeof(FakeClickEventArgs).FullName}";
+        await Assert.That(events[0].ToString()).IsEqualTo(expectedDescription);
+    }
+
+    /// <summary>Event arguments carrying a deterministic integer value.</summary>
+    /// <param name="value">The value supplied by the event.</param>
+    private sealed class TestEventArgs(int value) : EventArgs
+    {
+        /// <summary>Gets the event value.</summary>
+        public int Value { get; } = value;
+    }
+
+    /// <summary>Source used to exercise generic <see cref="EventHandler{TEventArgs}"/> event conversion.</summary>
+    private sealed class GenericEventSource
+    {
+        /// <summary>Raised by the test source.</summary>
+        public event EventHandler<TestEventArgs>? Changed;
+
+        /// <summary>Raises <see cref="Changed"/> with the supplied value.</summary>
+        /// <param name="value">The value supplied to the event arguments.</param>
+        public void Raise(int value) => Changed?.Invoke(this, new(value));
+    }
+
+    /// <summary>Source used to exercise <see cref="PropertyChangedEventHandler"/> event conversion.</summary>
+    private sealed class PropertyChangedEventSource
+    {
+        /// <summary>Raised by the test source.</summary>
+        [SuppressMessage(
+            "Roslynator",
+            "RCS1159:Use EventHandler<T>",
+            Justification =
+                "This test deliberately covers the PropertyChangedEventHandler branch of the factory overload.")]
+        [SuppressMessage(
+            "Major Code Smell",
+            "S3908:Refactor this delegate to use 'System.EventHandler<TEventArgs>'.",
+            Justification =
+                "This test deliberately covers the PropertyChangedEventHandler branch of the factory overload.")]
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        /// <summary>Gets a placeholder property name used by the event test.</summary>
+        public static int Value => 0;
+
+        /// <summary>Raises <see cref="PropertyChanged"/> with the supplied property name.</summary>
+        /// <param name="propertyName">The property name supplied to the event arguments.</param>
+        public void Raise(string propertyName) => PropertyChanged?.Invoke(this, new(propertyName));
+    }
+
+    /// <summary>Event arguments for fake click events.</summary>
+    private sealed class FakeClickEventArgs : EventArgs
+    {
+        /// <summary>Initializes a new instance of the <see cref="FakeClickEventArgs"/> class.</summary>
+        /// <param name="command">The command associated with the click.</param>
+        public FakeClickEventArgs(string command) => Command = command;
+
+        /// <summary>Gets the command associated with the click.</summary>
+        public string Command { get; }
+    }
+
+    /// <summary>Fake event source used by event-pattern bridge scenarios.</summary>
+    private sealed class FakeButton
+    {
+        /// <summary>Raised when the fake button is clicked.</summary>
+        public event EventHandler<FakeClickEventArgs>? Clicked;
+
+        /// <summary>Gets the current subscriber count.</summary>
+        public int SubscriberCount => Clicked?.GetInvocationList().Length ?? 0;
+
+        /// <summary>Raises the fake click event.</summary>
+        /// <param name="command">The click command.</param>
+        public void Raise(string command) => Clicked?.Invoke(this, new(command));
+    }
+}

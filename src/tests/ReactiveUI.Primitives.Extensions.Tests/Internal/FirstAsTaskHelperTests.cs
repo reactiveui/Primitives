@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Disposables;
@@ -22,7 +23,7 @@ public class FirstAsTaskHelperTests
     [Test]
     public async Task WhenSourceErrors_ThenTaskFaults()
     {
-        var expected = new InvalidOperationException("boom");
+        InvalidOperationException expected = new("boom");
         var task = FirstAsTaskHelper.FirstAsTask(Observable.Throw<int>(expected));
         var ex = await Assert.That(() => task).ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex).IsSameReferenceAs(expected);
@@ -42,7 +43,7 @@ public class FirstAsTaskHelperTests
     [Test]
     public async Task WhenSourceEmitsMultiple_ThenTaskCompletesWithFirst()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var task = FirstAsTaskHelper.FirstAsTask(subject);
         subject.OnNext(FirstValue);
         subject.OnNext(SecondValue);
@@ -52,7 +53,8 @@ public class FirstAsTaskHelperTests
 
     /// <summary>Verifies the helper throws when the source argument is null.</summary>
     [Test]
-    public void WhenSourceNull_ThenThrowsArgumentNullException() => Assert.Throws<ArgumentNullException>(static () => FirstAsTaskHelper.FirstAsTask<int>(null!));
+    public void WhenSourceNull_ThenThrowsArgumentNullException() =>
+        Assert.Throws<ArgumentNullException>(static () => FirstAsTaskHelper.FirstAsTask<int>(null!));
 
     /// <summary>Exercises the <c>Subscription?.Dispose()</c> null-conditional branch on
     /// <c>FirstWitness.OnNext</c> — a source that synchronously emits during <c>Subscribe</c>
@@ -73,9 +75,9 @@ public class FirstAsTaskHelperTests
     [Test]
     public async Task WhenSubjectErrorsThenLaterEvents_ThenLaterEventsIgnored()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var task = FirstAsTaskHelper.FirstAsTask(subject);
-        var expected = new InvalidOperationException("first");
+        InvalidOperationException expected = new("first");
         subject.OnError(expected);
         subject.OnCompleted();
         subject.OnNext(FirstValue);
@@ -89,7 +91,7 @@ public class FirstAsTaskHelperTests
     [Test]
     public async Task WhenSecondOnNextAfterFirstSettled_ThenIgnored()
     {
-        var source = new InvasiveObservable<int>();
+        InvasiveObservable<int> source = new();
         var task = FirstAsTaskHelper.FirstAsTask(source);
         source.Observer.OnNext(FirstValue);
         source.Observer.OnNext(SecondValue);
@@ -103,9 +105,9 @@ public class FirstAsTaskHelperTests
     [Test]
     public async Task WhenSecondOnErrorAfterFirstSettled_ThenIgnored()
     {
-        var source = new InvasiveObservable<int>();
+        InvasiveObservable<int> source = new();
         var task = FirstAsTaskHelper.FirstAsTask(source);
-        var expected = new InvalidOperationException("first");
+        InvalidOperationException expected = new("first");
         source.Observer.OnError(expected);
         source.Observer.OnError(new InvalidOperationException("ignored"));
         source.Observer.OnCompleted();
@@ -118,7 +120,7 @@ public class FirstAsTaskHelperTests
     [Test]
     public async Task WhenSecondOnCompletedAfterFirstSettled_ThenIgnored()
     {
-        var source = new InvasiveObservable<int>();
+        InvasiveObservable<int> source = new();
         var task = FirstAsTaskHelper.FirstAsTask(source);
         source.Observer.OnCompleted();
         source.Observer.OnCompleted();

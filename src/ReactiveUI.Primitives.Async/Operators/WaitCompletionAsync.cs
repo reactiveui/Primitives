@@ -32,7 +32,7 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(@this);
             cancellationToken.ThrowIfCancellationRequested();
 
-            var observer = new CompletionTaskWitness<T>(cancellationToken);
+            CompletionTaskWitness<T> observer = new(cancellationToken);
             await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             await observer.AwaitResultAsync().ConfigureAwait(false);
         }

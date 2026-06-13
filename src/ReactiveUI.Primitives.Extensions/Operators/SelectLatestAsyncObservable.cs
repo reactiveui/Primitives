@@ -23,7 +23,7 @@ internal sealed class SelectLatestAsyncObservable<TSource, TResult>(
         InvalidOperationExceptionHelper.ThrowIfNull(selector);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new SelectLatestAsyncSink(observer, selector);
+        SelectLatestAsyncSink sink = new(observer, selector);
         var sub = source.Subscribe(sink);
         return new DisposableBag(sub, sink);
     }

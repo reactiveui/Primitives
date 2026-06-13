@@ -40,7 +40,7 @@ public static partial class SignalAsyncExtensions
         {
             cancellationToken.ThrowIfCancellationRequested();
             var cmp = comparer ?? EqualityComparer<T>.Default;
-            var observer = new ContainsTaskWitness<T>(value, cmp, cancellationToken);
+            ContainsTaskWitness<T> observer = new(value, cmp, cancellationToken);
             await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }

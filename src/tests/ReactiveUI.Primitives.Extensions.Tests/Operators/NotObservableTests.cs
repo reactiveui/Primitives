@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Extensions.Operators;
 
@@ -14,8 +15,8 @@ public class NotObservableTests
     [Test]
     public async Task WhenNotSourceEmitsAndCompletes_ThenValuesNegatedAndCompletes()
     {
-        var subject = new Subject<bool>();
-        var values = new List<bool>();
+        Subject<bool> subject = new();
+        List<bool> values = [];
         var completed = false;
         using var sub = subject.Not().Subscribe(values.Add, () => completed = true);
         subject.OnNext(true);
@@ -30,13 +31,11 @@ public class NotObservableTests
     [Test]
     public async Task WhenNotSourceErrors_ThenErrorForwarded()
     {
-        var subject = new Subject<bool>();
+        Subject<bool> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException("boom");
+        InvalidOperationException expected = new("boom");
         using var sub = subject.Not().Subscribe(
-            static _ =>
-        {
-        },
+            static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -46,7 +45,7 @@ public class NotObservableTests
     [Test]
     public void WhenNotObserverNull_ThenSubscribeThrows()
     {
-        var observable = new NotObservable(new Subject<bool>());
+        NotObservable observable = new(new Subject<bool>());
         Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
     }
 }

@@ -22,7 +22,7 @@ public class StartFuncObservableTests
     [Test]
     public async Task WhenStartFuncInline_ThenEmitsResultAndCompletes()
     {
-        var results = new List<int>();
+        List<int> results = [];
         var completed = false;
 
         using var sub = ReactiveExtensions.Start(static () => StartResult, null)
@@ -37,8 +37,8 @@ public class StartFuncObservableTests
     [Test]
     public async Task WhenStartFuncOnScheduler_ThenRunsOnSchedulerAndCompletes()
     {
-        var results = new List<int>();
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> results = [];
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         using var sub = ReactiveExtensions.Start(static () => StartResult, Sequencer.Default)
             .Subscribe(results.Add, () => completed.TrySetResult());
@@ -53,7 +53,7 @@ public class StartFuncObservableTests
     public async Task WhenStartFuncThrows_ThenForwardsError()
     {
         Exception? caught = null;
-        var expected = new InvalidOperationException(FunctionFailedMessage);
+        InvalidOperationException expected = new(FunctionFailedMessage);
 
         using var sub = ReactiveExtensions.Start((Func<int>)(() => throw expected), null)
             .Subscribe(static _ => { }, ex => caught = ex);
@@ -66,8 +66,8 @@ public class StartFuncObservableTests
     [Test]
     public async Task WhenStartFuncOnSchedulerThrows_ThenForwardsError()
     {
-        var faulted = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var expected = new InvalidOperationException(FunctionFailedMessage);
+        TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        InvalidOperationException expected = new(FunctionFailedMessage);
 
         using var sub = ReactiveExtensions.Start((Func<int>)(() => throw expected), Sequencer.Default)
             .Subscribe(static _ => { }, ex => faulted.TrySetResult(ex));

@@ -17,7 +17,7 @@ public partial class CombineLatestOperatorTests
         var s1 = Signal.Create<int>();
         var s2 = Signal.Create<int>();
 
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values.CombineLatest(s2.Values, (a, b) => a + b)
             .SubscribeAsync(
                 (_, _) => default,
@@ -42,7 +42,7 @@ public partial class CombineLatestOperatorTests
         var s1 = Signal.Create<int>();
         var s2 = Signal.Create<int>();
 
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values.CombineLatest(s2.Values, (a, b) => a + b)
             .SubscribeAsync(
                 (_, _) => default,
@@ -67,7 +67,7 @@ public partial class CombineLatestOperatorTests
         var s1 = Signal.Create<int>();
         var s2 = Signal.Create<int>();
 
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values.CombineLatest(s2.Values, (a, b) => a + b)
             .SubscribeAsync(
                 (_, _) => default,
@@ -95,7 +95,7 @@ public partial class CombineLatestOperatorTests
         var s1 = Signal.Create<int>();
         var s2 = Signal.Create<int>();
 
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values.CombineLatest(s2.Values, (a, b) => a + b)
             .SubscribeAsync(
                 (_, _) => default,
@@ -123,7 +123,7 @@ public partial class CombineLatestOperatorTests
         var s1 = Signal.Create<int>();
         var s2 = Signal.Create<int>();
 
-        var results = new List<int>();
+        List<int> results = [];
         var sub = await s1.Values.CombineLatest(s2.Values, (a, b) => a + b)
             .SubscribeAsync(
                 (x, _) =>
@@ -175,7 +175,7 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
         var s3 = Signal.Create<int>();
 
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
             .SubscribeAsync(
                 (_, _) => default,
@@ -201,7 +201,7 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
         var s3 = Signal.Create<int>();
 
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
             .SubscribeAsync(
                 (_, _) => default,
@@ -227,7 +227,7 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
         var s3 = Signal.Create<int>();
 
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
             .SubscribeAsync(
                 (_, _) => default,
@@ -253,7 +253,7 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
         var s3 = Signal.Create<int>();
 
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
             .SubscribeAsync(
                 (_, _) => default,
@@ -284,7 +284,7 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
         var s3 = Signal.Create<int>();
 
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
             .SubscribeAsync(
                 (_, _) => default,
@@ -315,7 +315,7 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
         var s3 = Signal.Create<int>();
 
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
             .SubscribeAsync(
                 (_, _) => default,
@@ -346,7 +346,7 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
         var s3 = Signal.Create<int>();
 
-        var results = new List<int>();
+        List<int> results = [];
         var sub = await s1.Values.CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
             .SubscribeAsync(
                 (x, _) =>

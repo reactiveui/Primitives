@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
@@ -18,7 +18,7 @@ public readonly record struct Result
 {
     /// <summary>Initializes a new instance of the <see cref="Result"/> struct. Initializes a new instance of the Result class with the specified exception.</summary>
     /// <param name="exception">The exception that represents the error condition for this result. Cannot be null.</param>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="exception"/> is null.</exception>
+    /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="exception"/> is null.</exception>
     public Result(Exception exception)
     {
         ArgumentExceptionHelper.ThrowIfNull(exception);

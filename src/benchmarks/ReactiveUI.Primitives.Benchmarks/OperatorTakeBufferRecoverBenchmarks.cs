@@ -34,7 +34,7 @@ public class OperatorTakeBufferRecoverBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesTakeRange()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(1, Count).Take(TakeCount).Subscribe(observer);
         return observer.Total;
     }
@@ -44,7 +44,7 @@ public class OperatorTakeBufferRecoverBenchmarks
     [Benchmark]
     public int SystemReactiveTakeRange()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Range(1, Count).Take(TakeCount).Subscribe(observer);
         return observer.Total;
     }
@@ -54,7 +54,7 @@ public class OperatorTakeBufferRecoverBenchmarks
     [Benchmark]
     public int R3TakeRange()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.Take(R3.Observable.Range(1, Count), TakeCount).Subscribe(observer);
         return observer.Total;
     }
@@ -64,7 +64,7 @@ public class OperatorTakeBufferRecoverBenchmarks
     [Benchmark]
     public int PrimitivesBufferRange()
     {
-        var observer = new CountingSignalWitness<IList<int>>();
+        CountingSignalWitness<IList<int>> observer = new();
         using var subscription = Signal.Sequence(1, Count).Buffer(BufferSize).Subscribe(observer);
         return observer.Count;
     }
@@ -74,7 +74,7 @@ public class OperatorTakeBufferRecoverBenchmarks
     [Benchmark]
     public int SystemReactiveBufferRange()
     {
-        var observer = new CountingSignalWitness<IList<int>>();
+        CountingSignalWitness<IList<int>> observer = new();
         using var subscription = RxObservable.Range(1, Count).Buffer(BufferSize).Subscribe(observer);
         return observer.Count;
     }
@@ -84,7 +84,7 @@ public class OperatorTakeBufferRecoverBenchmarks
     [Benchmark]
     public int R3BufferRange()
     {
-        var observer = new CountingR3Witness<int[]>();
+        CountingR3Witness<int[]> observer = new();
         using var subscription = R3.ObservableExtensions.Chunk(R3.Observable.Range(1, Count), BufferSize).Subscribe(observer);
         return observer.Count;
     }
@@ -94,7 +94,7 @@ public class OperatorTakeBufferRecoverBenchmarks
     [Benchmark]
     public int PrimitivesRecover()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Fail<int>(Boom, Sequencer.Immediate)
             .Recover<int, Exception>(static _ => Signal.Sequence(1, Count))
             .Subscribe(observer);
@@ -106,7 +106,7 @@ public class OperatorTakeBufferRecoverBenchmarks
     [Benchmark]
     public int SystemReactiveRecover()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Throw<int>(Boom)
             .Catch<int, Exception>(static _ => RxObservable.Range(1, Count))
             .Subscribe(observer);
@@ -118,7 +118,7 @@ public class OperatorTakeBufferRecoverBenchmarks
     [Benchmark]
     public int R3Recover()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions
             .Catch<int, Exception>(R3.Observable.Throw<int>(Boom), static _ => R3.Observable.Range(1, Count))
             .Subscribe(observer);
@@ -130,7 +130,7 @@ public class OperatorTakeBufferRecoverBenchmarks
     [Benchmark]
     public int PrimitivesResume()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Fail<int>(Boom, Sequencer.Immediate)
             .Resume(Signal.Sequence(1, Count))
             .Subscribe(observer);
@@ -142,7 +142,7 @@ public class OperatorTakeBufferRecoverBenchmarks
     [Benchmark]
     public int SystemReactiveResume()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Throw<int>(Boom)
             .Catch(RxObservable.Range(1, Count))
             .Subscribe(observer);

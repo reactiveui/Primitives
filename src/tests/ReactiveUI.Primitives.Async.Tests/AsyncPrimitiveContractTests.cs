@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Collections.Concurrent;
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Concurrency;
@@ -78,13 +79,13 @@ public sealed class AsyncPrimitiveContractTests
     private static readonly string[] LengthDuplicateInput = ["aa", "ab", "bbb"];
 
     /// <summary>Mixed-type input used by the type-filtering tests.</summary>
-    private static readonly object? [] MixedTypeInput = ["one", 2, "three", null];
+    private static readonly object?[] MixedTypeInput = ["one", 2, "three", null];
 
     /// <summary>Single boxed string input.</summary>
-    private static readonly object? [] BoxedOne = ["one"];
+    private static readonly object?[] BoxedOne = ["one"];
 
     /// <summary>Nullable string input with a null gap.</summary>
-    private static readonly string? [] NullableOneNullTwo = ["one", null, "two"];
+    private static readonly string?[] NullableOneNullTwo = ["one", null, "two"];
 
     /// <summary>Expected single-element sequence containing "2a".</summary>
     private static readonly string[] TwoA = ["2a"];
@@ -138,7 +139,7 @@ public sealed class AsyncPrimitiveContractTests
         await Assert.That(emitted.SequenceEqual(NineOnly)).IsTrue();
         await Assert.That(none.SequenceEqual(empty)).IsTrue();
         await Assert.That(enumerable.SequenceEqual(OneTwoThree)).IsTrue();
-        var error = new InvalidOperationException("failure");
+        InvalidOperationException error = new("failure");
         InvalidOperationException? observed = null;
         try
         {
@@ -162,7 +163,7 @@ public sealed class AsyncPrimitiveContractTests
         const int ThirdValue = 3;
         const int FourthValue = 4;
         var period = TimeSpan.FromMilliseconds(1);
-        var rxVoid = await AsyncObs.EmitRxVoid().FirstAsync();
+        var unit = await AsyncObs.EmitRxVoid().FirstAsync();
         var enumerable = await AsyncObs.FromEnumerable(FourFive).ToListAsync();
         var asyncEnumerable = await AsyncObs.FromAsyncEnumerable(ReadValuesAsync()).ToListAsync();
         var after = await AsyncObs.After(TimeSpan.Zero).ToListAsync();
@@ -171,9 +172,9 @@ public sealed class AsyncPrimitiveContractTests
         var pulse = await AsyncObs.Pulse(period).Take(1).ToListAsync();
         var chained = await AsyncObs.Chain(AsyncObs.Emit(FirstValue), AsyncObs.Emit(SecondValue)).ToListAsync();
         var blended = await AsyncObs.Blend(AsyncObs.Emit(ThirdValue), AsyncObs.Emit(FourthValue)).ToListAsync();
-        var subscribed = new List<int>();
+        List<int> subscribed = [];
         await using var subscription = await AsyncObs.Emit(FirstValue).SubscribeAsync(subscribed.Add);
-        await Assert.That(rxVoid).IsEqualTo(RxVoid.Default);
+        await Assert.That(unit).IsEqualTo(RxVoid.Default);
         await Assert.That(enumerable.SequenceEqual(FourFive)).IsTrue();
         await Assert.That(asyncEnumerable.SequenceEqual(FourFive)).IsTrue();
         await Assert.That(after.SequenceEqual(ZeroOnly)).IsTrue();
@@ -196,8 +197,9 @@ public sealed class AsyncPrimitiveContractTests
         const int SequenceCount = 6;
         const int KeepThreshold = 4;
         const int Seed = 0;
-        var tapped = new List<int>();
-        var values = await AsyncObs.Sequence(SequenceStart, SequenceCount).Map(value => value * Two).Keep(value => value > KeepThreshold).Tap(tapped.Add).Fold(Seed, (acc, value) => acc + value).ToListAsync();
+        List<int> tapped = [];
+        var values = await AsyncObs.Sequence(SequenceStart, SequenceCount).Map(value => value * Two)
+            .Keep(value => value > KeepThreshold).Tap(tapped.Add).Fold(Seed, (acc, value) => acc + value).ToListAsync();
         await Assert.That(tapped.SequenceEqual(TappedExpected)).IsTrue();
         await Assert.That(values.SequenceEqual(FoldedExpected)).IsTrue();
         var typed = await MixedTypeInput.ToAsyncSignal().KeepType<string>().ToListAsync();
@@ -217,41 +219,46 @@ public sealed class AsyncPrimitiveContractTests
         await Assert.That(source.ToAsyncSignal()).IsSameReferenceAs(source);
         var mappedAsync = await source.Map(static (value, _) => new ValueTask<int>(value * Two)).ToListAsync();
         var mappedWith = await source.MapWith(State, static (state, value) => state + value).ToListAsync();
-        var keptAsync = await source.Keep(static (value, _) => new ValueTask<bool>(value % Two == 0)).ToListAsync();
-        var keptWith = await source.KeepWith(State, static (state, value) => state + value > KeepWithThreshold).ToListAsync();
-        var asyncTapped = new List<int>();
+        var keptAsync = await source.Keep(static (value, _) => new(value % Two == 0)).ToListAsync();
+        var keptWith = await source.KeepWith(State, static (state, value) => state + value > KeepWithThreshold)
+            .ToListAsync();
+        List<int> asyncTapped = [];
         var asyncCompleted = false;
         var asyncTapValues = await source.Tap(
             (value, _) =>
-        {
-            asyncTapped.Add(value);
-            return default;
-        },
+            {
+                asyncTapped.Add(value);
+                return default;
+            },
             null,
             _ =>
-        {
-            asyncCompleted = true;
-            return default;
-        }).ToListAsync();
-        var syncTapErrors = new List<Exception>();
+            {
+                asyncCompleted = true;
+                return default;
+            }).ToListAsync();
+        List<Exception> syncTapErrors = [];
         var syncCompleted = false;
         var syncTapValues = await AsyncObs.Emit(FirstValue).Tap(
-            _ =>
-        {
-        },
+            _ => { },
             syncTapErrors.Add,
             () => syncCompleted = true).ToListAsync();
-        var foldedAsync = await source.Fold(0, static (accumulator, value, _) => new ValueTask<int>(accumulator + value)).ToListAsync();
+        var foldedAsync =
+            await source.Fold(0, static (accumulator, value, _) => new(accumulator + value)).ToListAsync();
         var bound = await AsyncObs.Emit(FirstValue).Bind(static value => AsyncObs.Emit(value + State)).ToListAsync();
-        var flatMapped = await AsyncObs.Emit(FirstValue).FlatMap(static value => AsyncObs.Emit(value + State)).ToListAsync();
-        var flatMappedAsync = await AsyncObs.Emit(FirstValue).FlatMap(static (value, _) => new ValueTask<IObservableAsync<int>>(AsyncObs.Emit(value + State))).ToListAsync();
+        var flatMapped = await AsyncObs.Emit(FirstValue).FlatMap(static value => AsyncObs.Emit(value + State))
+            .ToListAsync();
+        var flatMappedAsync = await AsyncObs.Emit(FirstValue)
+            .FlatMap(static (value, _) => new ValueTask<IObservableAsync<int>>(AsyncObs.Emit(value + State)))
+            .ToListAsync();
         var unique = await OneOneTwo.ToAsyncSignal().Unique().ToListAsync();
-        var uniqueComparer = await CaseInsensitiveInput.ToAsyncSignal().Unique(StringComparer.OrdinalIgnoreCase).ToListAsync();
+        var uniqueComparer = await CaseInsensitiveInput.ToAsyncSignal().Unique(StringComparer.OrdinalIgnoreCase)
+            .ToListAsync();
         var uniqueBy = await LengthDuplicateInput.ToAsyncSignal().UniqueBy(static value => value.Length).ToListAsync();
-        var uniqueByComparer = await CaseInsensitiveInput.ToAsyncSignal().UniqueBy(static value => value, StringComparer.OrdinalIgnoreCase).ToListAsync();
+        var uniqueByComparer = await CaseInsensitiveInput.ToAsyncSignal()
+            .UniqueBy(static value => value, StringComparer.OrdinalIgnoreCase).ToListAsync();
         var casted = await BoxedOne.ToAsyncSignal().CastTo<string>().ToListAsync();
         var notNull = await NullableOneNullTwo.ToAsyncSignal().KeepNotNull().ToListAsync();
-        Assert.Throws<ArgumentNullException>(() => source.MapWith(State, (Func<int, int, int>)null!));
+        Assert.Throws<ArgumentNullException>(() => source.MapWith<int, int, int>(State, null!));
         Assert.Throws<ArgumentNullException>(() => source.KeepWith(State, (Func<int, int, bool>)null!));
         await Assert.That(mappedAsync.SequenceEqual(TwoFourSix)).IsTrue();
         await Assert.That(mappedWith.SequenceEqual(ElevenTwelveThirteen)).IsTrue();
@@ -288,8 +295,10 @@ public sealed class AsyncPrimitiveContractTests
         const int BlendLeft = 10;
         const int BlendRight = 20;
         var chained = await AsyncObs.Emit(1).Chain(AsyncObs.Sequence(ChainStart, ChainCount)).ToListAsync();
-        var paired = await AsyncObs.Emit(PairLeft).Pair(AsyncObs.Emit("a"), (left, right) => $"{left}{right}").ToListAsync();
-        var latest = await AsyncObs.Emit(LatestLeft).SyncLatest(AsyncObs.Emit(LatestRight), (left, right) => left + right).ToListAsync();
+        var paired = await AsyncObs.Emit(PairLeft).Pair(AsyncObs.Emit("a"), (left, right) => $"{left}{right}")
+            .ToListAsync();
+        var latest = await AsyncObs.Emit(LatestLeft)
+            .SyncLatest(AsyncObs.Emit(LatestRight), (left, right) => left + right).ToListAsync();
         var blended = await AsyncObs.Emit(BlendLeft).Blend(AsyncObs.Emit(BlendRight)).ToListAsync();
         await Assert.That(chained.SequenceEqual(OneTwoThree)).IsTrue();
         await Assert.That(paired.SequenceEqual(TwoA)).IsTrue();
@@ -308,10 +317,16 @@ public sealed class AsyncPrimitiveContractTests
         const int SecondValue = 2;
         const int ThirdValue = 3;
         const int FourthValue = 4;
-        var latest = await AsyncObs.Emit(FirstValue).PairLatest(AsyncObs.Emit(SecondValue), static (left, right) => left + right).ToListAsync();
-        var chained = await ((IEnumerable<IObservableAsync<int>>)[AsyncObs.Emit(FirstValue), AsyncObs.Emit(SecondValue)]).ToAsyncSignal().Chain().ToListAsync();
-        var blended = await ((IEnumerable<IObservableAsync<int>>)[AsyncObs.Emit(ThirdValue), AsyncObs.Emit(FourthValue)]).ToAsyncSignal().Blend().ToListAsync();
-        var switched = await ((IEnumerable<IObservableAsync<int>>)[AsyncObs.Never<int>(), AsyncObs.Emit(FourthValue)]).ToAsyncSignal().SwitchTo().Take(1).ToListAsync();
+        var latest = await AsyncObs.Emit(FirstValue)
+            .PairLatest(AsyncObs.Emit(SecondValue), static (left, right) => left + right).ToListAsync();
+        var chained =
+            await ((IEnumerable<IObservableAsync<int>>)[AsyncObs.Emit(FirstValue), AsyncObs.Emit(SecondValue)])
+                .ToAsyncSignal().Chain().ToListAsync();
+        var blended =
+            await ((IEnumerable<IObservableAsync<int>>)[AsyncObs.Emit(ThirdValue), AsyncObs.Emit(FourthValue)])
+                .ToAsyncSignal().Blend().ToListAsync();
+        var switched = await ((IEnumerable<IObservableAsync<int>>)[AsyncObs.Never<int>(), AsyncObs.Emit(FourthValue)])
+            .ToAsyncSignal().SwitchTo().Take(1).ToListAsync();
         await Assert.That(latest.SequenceEqual(ThreeOnly)).IsTrue();
         await Assert.That(chained.SequenceEqual(OneTwo)).IsTrue();
         await Assert.That(blended.Count).IsEqualTo(BlendedCount);
@@ -331,10 +346,15 @@ public sealed class AsyncPrimitiveContractTests
         const int ReattemptCount = 1;
         const int SequenceStart = 1;
         const int SequenceCount = 3;
-        var recovered = await AsyncObs.Fail<int>(new InvalidOperationException()).Recover(_ => AsyncObs.Emit(RecoveredValue)).ToListAsync();
-        var resumed = await AsyncObs.Fail<int>(new InvalidOperationException()).Resume(AsyncObs.Emit(ResumedValue)).ToListAsync();
+        var recovered = await AsyncObs.Fail<int>(new InvalidOperationException())
+            .Recover(_ => AsyncObs.Emit(RecoveredValue)).ToListAsync();
+        var resumed = await AsyncObs.Fail<int>(new InvalidOperationException()).Resume(AsyncObs.Emit(ResumedValue))
+            .ToListAsync();
         var attempt = 0;
-        var reattempted = await AsyncObs.Defer(() => ++attempt == 1 ? AsyncObs.Fail<int>(new InvalidOperationException()) : AsyncObs.Emit(ReattemptValue)).Reattempt(ReattemptCount).ToListAsync();
+        var reattempted = await AsyncObs
+            .Defer(() =>
+                ++attempt == 1 ? AsyncObs.Fail<int>(new InvalidOperationException()) : AsyncObs.Emit(ReattemptValue))
+            .Reattempt(ReattemptCount).ToListAsync();
         var collected = await AsyncObs.Sequence(SequenceStart, SequenceCount).CollectArrayAsync();
         await Assert.That(recovered.SequenceEqual(FortyTwoOnly)).IsTrue();
         await Assert.That(resumed.SequenceEqual(TwentyFourOnly)).IsTrue();
@@ -352,10 +372,12 @@ public sealed class AsyncPrimitiveContractTests
         const int SequenceStart = 1;
         const int SequenceCount = 3;
         const int Seed = 0;
-        var rescued = await AsyncObs.Fail<int>(new InvalidOperationException()).Rescue(_ => AsyncObs.Emit(RescuedValue)).ToListAsync();
+        var rescued = await AsyncObs.Fail<int>(new InvalidOperationException()).Rescue(_ => AsyncObs.Emit(RescuedValue))
+            .ToListAsync();
         var led = await AsyncObs.Sequence(SequenceStart, SequenceCount).Lead(LeadValue).ToListAsync();
         var collected = await AsyncObs.Sequence(SequenceStart, SequenceCount).CollectListAsync();
-        var reduced = await AsyncObs.Sequence(SequenceStart, SequenceCount).ReduceAsync(Seed, static (accumulator, value) => accumulator + value);
+        var reduced = await AsyncObs.Sequence(SequenceStart, SequenceCount)
+            .ReduceAsync(Seed, static (accumulator, value) => accumulator + value);
         await Assert.That(rescued.SequenceEqual(FortyTwoOnly)).IsTrue();
         await Assert.That(led.SequenceEqual(ZeroOneTwoThree)).IsTrue();
         await Assert.That(collected.SequenceEqual(OneTwoThree)).IsTrue();
@@ -369,7 +391,10 @@ public sealed class AsyncPrimitiveContractTests
     {
         const int EmittedValue = 5;
         var disposed = false;
-        var values = await AsyncObs.Use(_ => new ValueTask<TestAsyncResource>(new TestAsyncResource(() => disposed = true)), _ => AsyncObs.Emit(EmittedValue)).ToListAsync();
+        var values = await AsyncObs
+            .Use(
+            _ => new ValueTask<TestAsyncResource>(new TestAsyncResource(() => disposed = true)),
+            _ => AsyncObs.Emit(EmittedValue)).ToListAsync();
         await Assert.That(values.SequenceEqual(FiveOnly)).IsTrue();
         await Assert.That(disposed).IsTrue();
     }
@@ -380,8 +405,8 @@ public sealed class AsyncPrimitiveContractTests
     public async Task ObserveOnSequencerSchedulesDirectWorkItems()
     {
         const int EmittedValue = 11;
-        var sequencer = new QueuedSequencer();
-        var task = AsyncObs.Emit(EmittedValue).WitnessOn(sequencer, forceYielding: true).ToListAsync().AsTask();
+        QueuedSequencer sequencer = new();
+        var task = AsyncObs.Emit(EmittedValue).WitnessOn(sequencer, true).ToListAsync().AsTask();
         var values = await DrainUntilComplete(task, sequencer);
         await Assert.That(values.SequenceEqual(ElevenOnly)).IsTrue();
         await Assert.That(sequencer.ScheduleCount > 0).IsTrue();
@@ -394,7 +419,8 @@ public sealed class AsyncPrimitiveContractTests
     {
         const int EmittedValue = 3;
         const int DelayMilliseconds = 1;
-        var shifted = await AsyncObs.Emit(EmittedValue).Shift(TimeSpan.FromMilliseconds(DelayMilliseconds)).ToListAsync();
+        var shifted = await AsyncObs.Emit(EmittedValue).Shift(TimeSpan.FromMilliseconds(DelayMilliseconds))
+            .ToListAsync();
         await Assert.That(shifted.SequenceEqual(ThreeOnly)).IsTrue();
         TimeoutException? timeout = null;
         try

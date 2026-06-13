@@ -29,7 +29,7 @@ public static partial class SignalAsyncExtensions
         /// the buffering and backpressure behavior between the asynchronous observable and the asynchronous enumerable.</param>
         /// <returns>An asynchronous enumerable sequence that yields elements from the asynchronous observable. The
         /// enumeration completes when the source observable completes, or an unhandled error occurs.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="this"/> or <paramref name="channelFactory"/>
+        /// <exception cref="ArgumentExceptionHelper">Thrown when <paramref name="this"/> or <paramref name="channelFactory"/>
         /// is null.</exception>
         public IAsyncEnumerable<T> ToAsyncEnumerable(
             Func<Channel<T>> channelFactory)
@@ -50,7 +50,7 @@ public static partial class SignalAsyncExtensions
         /// sequence completes with the error.</param>
         /// <returns>An asynchronous enumerable sequence that yields the elements produced by the observable sequence. The
         /// enumeration completes when the observable completes or an unhandled error occurs.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="this"/> or <paramref name="channelFactory"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="this"/> or <paramref name="channelFactory"/> is null.</exception>
         public IAsyncEnumerable<T> ToAsyncEnumerable(
             Func<Channel<T>> channelFactory,
             Func<Exception, CancellationToken, ValueTask>? onErrorResume)

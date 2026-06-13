@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
 
@@ -26,8 +27,8 @@ public sealed class DispatchSequencerBaseTests
     [Test]
     public async Task DispatchSequencerBaseCoalescesBurstIntoOneDrain()
     {
-        var sequencer = new TestDispatchSequencer();
-        var values = new List<int>();
+        TestDispatchSequencer sequencer = new();
+        List<int> values = [];
         sequencer.Schedule(new RecordingWorkItem(values, 1));
         sequencer.Schedule(new RecordingWorkItem(values, 2));
         sequencer.Schedule(new RecordingWorkItem(values, 3));
@@ -42,9 +43,9 @@ public sealed class DispatchSequencerBaseTests
     [Test]
     public async Task DispatchSequencerBaseSkipsCancelledQueuedWork()
     {
-        var sequencer = new TestDispatchSequencer();
-        var values = new List<int>();
-        var item = new RecordingWorkItem(values, 1);
+        TestDispatchSequencer sequencer = new();
+        List<int> values = [];
+        RecordingWorkItem item = new(values, 1);
         sequencer.Schedule(item);
         item.Dispose();
         sequencer.RunNextDrain();
@@ -56,8 +57,8 @@ public sealed class DispatchSequencerBaseTests
     [Test]
     public async Task DispatchSequencerBaseDefersReentrantWorkToNextDrain()
     {
-        var sequencer = new TestDispatchSequencer();
-        var values = new List<int>();
+        TestDispatchSequencer sequencer = new();
+        List<int> values = [];
         sequencer.Schedule(new ReentrantWorkItem(sequencer, values));
         sequencer.RunNextDrain();
         await Assert.That(values.SequenceEqual(ExpectedReentrantValues[..1])).IsTrue();
@@ -71,8 +72,10 @@ public sealed class DispatchSequencerBaseTests
     [Test]
     public async Task StatefulScheduleOverloadPassesState()
     {
-        var values = new List<int>();
-        Sequencer.Immediate.Schedule((values, value: StatefulScheduleValue), static state => state.values.Add(state.value));
+        List<int> values = [];
+        Sequencer.Immediate.Schedule(
+            (values, value: StatefulScheduleValue),
+            static state => state.values.Add(state.value));
         await Assert.That(values[0]).IsEqualTo(StatefulScheduleValue);
     }
 
