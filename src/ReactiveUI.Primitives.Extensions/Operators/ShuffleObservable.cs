@@ -62,6 +62,7 @@ internal sealed class ShuffleObservable<T>(IObservable<T[]> source) : IObservabl
             }
 
 #if NET8_0_OR_GREATER
+
             // Random.Shared.Shuffle: fast, thread-safe, NON-CRYPTO BY DESIGN. WE WANT THIS. DO NOT TOUCH.
             Random.Shared.Shuffle(value);
 #else
