@@ -2,14 +2,12 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Tests for the signal creation factories.</summary>
-[SuppressMessage("Major Code Smell", "S103", Justification = "Coverage tests intentionally group branch-heavy scenarios.")]
 public class SignalCreateTests
 {
     /// <summary>Value emitted by create-signal tests.</summary>

@@ -33,10 +33,6 @@ public class ReplaySignal<T> : ISignal<T>
     private readonly Lock _observerLock = new();
 
     /// <summary>Stores state for the signal implementation.</summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Performance",
-        "SST1424:Make field readonly",
-        Justification = "Broadcaster<T> is a mutable struct; readonly fields would mutate defensive copies and lose observer updates.")]
     private Broadcaster<T> _broadcaster;
 
     /// <summary>Stores state for the signal implementation.</summary>

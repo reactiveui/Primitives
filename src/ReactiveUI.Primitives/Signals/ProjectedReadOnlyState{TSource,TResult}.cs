@@ -22,10 +22,6 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     private IDisposable? _subscription;
 
     /// <summary>Current subscribers.</summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Performance",
-        "SST1424:Make field readonly",
-        Justification = "Broadcaster<T> is a mutable struct; readonly fields would mutate defensive copies and lose observer updates.")]
     private Broadcaster<TResult> _broadcaster;
 
     /// <summary>Last projected value.</summary>

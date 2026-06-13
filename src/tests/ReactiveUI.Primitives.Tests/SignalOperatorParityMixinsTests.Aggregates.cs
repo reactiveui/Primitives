@@ -8,7 +8,6 @@ using ReactiveUI.Primitives.Signals;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Verifies optimized aggregate and flat-map helper contracts.</summary>
-[SuppressMessage("Major Code Smell", "S6966", Justification = "Coverage tests intentionally group branch-heavy scenarios.")]
 public partial class SignalOperatorParityMixinsTests
 {
     /// <summary>The first value.</summary>

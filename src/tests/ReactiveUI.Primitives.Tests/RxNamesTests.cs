@@ -16,7 +16,6 @@ namespace ReactiveUI.Primitives.Tests;
 /// Primitives-named counterpart. Each operator pair is one data-source row consumed by a single test body, so the
 /// behavior is asserted once and checked for both names (and for identity between them).
 /// </summary>
-[SuppressMessage("Major Code Smell", "S103", Justification = "Coverage tests intentionally group branch-heavy scenarios.")]
 public class RxNamesTests
 {
     /// <summary>The multiplier/state used by projection cases.</summary>
