@@ -39,7 +39,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="equalityComparer">An equality comparer used to determine whether consecutive elements are considered equal.</param>
         /// <returns>An observable sequence that contains only distinct consecutive elements from the source sequence, as
         /// determined by the specified equality comparer.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="equalityComparer"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="equalityComparer"/> is <see langword="null"/>.</exception>
         public IObservableAsync<T> Unique(IEqualityComparer<T> equalityComparer)
         {
             ArgumentExceptionHelper.ThrowIfNull(@this);
@@ -74,7 +74,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="equalityComparer">An equality comparer used to compare keys for equality.</param>
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
         /// duplicates according to the specified key and comparer.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> or <paramref name="equalityComparer"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="keySelector"/> or <paramref name="equalityComparer"/> is null.</exception>
         public IObservableAsync<T> UniqueBy<TKey>(
             Func<T, TKey> keySelector,
             IEqualityComparer<TKey> equalityComparer)
@@ -101,7 +101,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="equalityComparer">An equality comparer used to determine whether consecutive elements are considered equal.</param>
         /// <returns>An observable sequence that contains only distinct consecutive elements from the source sequence, as
         /// determined by the specified equality comparer.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="equalityComparer"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="equalityComparer"/> is <see langword="null"/>.</exception>
         public IObservableAsync<T> DistinctUntilChanged(IEqualityComparer<T> equalityComparer) =>
             @this.Unique(equalityComparer);
 
@@ -125,7 +125,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="equalityComparer">An equality comparer used to compare keys for equality.</param>
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
         /// duplicates according to the specified key and comparer.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> or <paramref name="equalityComparer"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="keySelector"/> or <paramref name="equalityComparer"/> is null.</exception>
         public IObservableAsync<T> DistinctUntilChangedBy<TKey>(
             Func<T, TKey> keySelector,
             IEqualityComparer<TKey> equalityComparer) =>

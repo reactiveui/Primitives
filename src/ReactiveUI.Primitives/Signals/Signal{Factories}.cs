@@ -184,7 +184,7 @@ public static partial class Signal
     /// <param name="addHandler">The action that attaches the generated event handler.</param>
     /// <param name="removeHandler">The action that detaches the generated event handler.</param>
     /// <returns>A signal that emits event patterns for each raised event.</returns>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="addHandler"/> or <paramref name="removeHandler"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="addHandler"/> or <paramref name="removeHandler"/> is <see langword="null"/>.</exception>
     /// <exception cref="NotSupportedException"><typeparamref name="TEventHandler"/> is not a supported event delegate type.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",

@@ -31,7 +31,7 @@ public static partial class SignalAsyncExtensions
         /// items from the source.</param>
         /// <returns>An observable sequence that emits items from the source sequence until the other observable emits an item or
         /// completes.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if either the source sequence or the other observable is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if either the source sequence or the other observable is null.</exception>
         public IObservableAsync<T> TakeUntil<TOther>(IObservableAsync<TOther> other) =>
             source.TakeUntil(other, null, CancellationToken.None);
 
@@ -46,7 +46,7 @@ public static partial class SignalAsyncExtensions
         /// are used.</param>
         /// <returns>An observable sequence that emits items from the source sequence until the other observable emits an item or
         /// completes.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if either the source sequence or the other observable is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if either the source sequence or the other observable is null.</exception>
         public IObservableAsync<T> TakeUntil<TOther>(IObservableAsync<TOther> other, TakeUntilOptions? options) =>
             source.TakeUntil(other, options, CancellationToken.None);
 
@@ -80,7 +80,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="task">The task whose completion will signal the termination of the observable sequence. The sequence will stop
         /// emitting items when this task completes, regardless of its result.</param>
         /// <returns>An observable sequence that emits items from the source until the specified task completes.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if the source observable is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if the source observable is null.</exception>
         public IObservableAsync<T> TakeUntil(Task task) =>
             source.TakeUntil(task, null, CancellationToken.None);
 
@@ -90,7 +90,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="options">An optional set of options that control the behavior of the take-until operation. If null, default options
         /// are used.</param>
         /// <returns>An observable sequence that emits items from the source until the specified task completes.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if the source observable is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if the source observable is null.</exception>
         public IObservableAsync<T> TakeUntil(Task task, TakeUntilOptions? options) =>
             source.TakeUntil(task, options, CancellationToken.None);
 
@@ -142,7 +142,7 @@ public static partial class SignalAsyncExtensions
         /// returns true.</param>
         /// <returns>An observable sequence that contains the elements from the source sequence up to, but not including, the
         /// first element for which the predicate returns true.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="predicate"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="predicate"/> is null.</exception>
         public IObservableAsync<T> TakeUntil(Func<T, bool> predicate) =>
             source.TakeUntil(predicate, CancellationToken.None);
 
@@ -170,7 +170,7 @@ public static partial class SignalAsyncExtensions
         /// stops emitting elements when this function returns true.</param>
         /// <returns>An observable sequence that contains the elements from the source sequence up to, but not including, the
         /// first element for which the asynchronous predicate returns true.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="asyncPredicate"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="asyncPredicate"/> is null.</exception>
         public IObservableAsync<T> TakeUntil(Func<T, CancellationToken, ValueTask<bool>> asyncPredicate) =>
             source.TakeUntil(asyncPredicate, CancellationToken.None);
 
@@ -196,7 +196,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="stopSignal">A delegate that provides a completion signal. The returned observable will stop emitting items when this
         /// signal completes.</param>
         /// <returns>An observable sequence that emits items from the source until the stop signal completes.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="stopSignal"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="stopSignal"/> is null.</exception>
         public IObservableAsync<T> TakeUntil(CompletionSignalDelegate stopSignal) =>
             source.TakeUntil(stopSignal, null, CancellationToken.None);
 
@@ -206,7 +206,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="options">An optional set of options that configure the behavior of the take-until operation. If null, default options
         /// are used.</param>
         /// <returns>An observable sequence that emits items from the source until the stop signal completes.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="stopSignal"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="stopSignal"/> is null.</exception>
         public IObservableAsync<T> TakeUntil(
             CompletionSignalDelegate stopSignal,
             TakeUntilOptions? options) =>

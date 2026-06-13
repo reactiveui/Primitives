@@ -29,7 +29,7 @@ public static partial class SignalAsyncExtensions
         /// sequence to continue with.</param>
         /// <returns>An observable sequence that emits items from the source sequence, or from the handler-provided sequence if
         /// an exception is encountered.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
         public IObservableAsync<T> Recover(Func<Exception, IObservableAsync<T>> handler)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -46,7 +46,7 @@ public static partial class SignalAsyncExtensions
         /// sequence to continue with.</param>
         /// <returns>An observable sequence that emits items from the source sequence, or from the handler-provided sequence if
         /// an exception is encountered.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
         public IObservableAsync<T> Catch(Func<Exception, IObservableAsync<T>> handler)
             => source.Recover(handler);
 
@@ -64,7 +64,7 @@ public static partial class SignalAsyncExtensions
         /// error handler is used.</param>
         /// <returns>An observable sequence that emits items from the source sequence, or from the handler-provided sequence if
         /// an exception is encountered.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
         public IObservableAsync<T> Catch(
             Func<Exception, IObservableAsync<T>> handler,
             Func<Exception, CancellationToken, ValueTask>? onErrorResume)

@@ -23,7 +23,7 @@ public static partial class LinqExtensions
     {
         /// <summary>Subscribes to all inner sequences and forwards their values as they arrive. System.Reactive name for <c>Blend</c>.</summary>
         /// <returns>A sequence containing values from all inner sequences.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="sources"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
         public IObservable<T> Merge()
         {
             ArgumentExceptionHelper.ThrowIfNull(sources);
@@ -33,7 +33,7 @@ public static partial class LinqExtensions
 
         /// <summary>Subscribes to inner sequences one at a time in source order. System.Reactive name for <c>Chain</c>.</summary>
         /// <returns>A sequence that emits each inner sequence after the previous one completes.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="sources"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
         public IObservable<T> Concat()
         {
             ArgumentExceptionHelper.ThrowIfNull(sources);
@@ -43,7 +43,7 @@ public static partial class LinqExtensions
 
         /// <summary>Mirrors the first inner sequence to produce any notification. System.Reactive name for <c>Race</c>.</summary>
         /// <returns>A sequence that mirrors the winning inner sequence.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="sources"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
         public IObservable<T> Amb()
         {
             ArgumentExceptionHelper.ThrowIfNull(sources);
@@ -53,7 +53,7 @@ public static partial class LinqExtensions
 
         /// <summary>Switches to the most recent inner sequence. System.Reactive name for <c>SwitchTo</c>.</summary>
         /// <returns>A sequence that mirrors only the latest inner sequence.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="sources"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
         public IObservable<T> Switch()
         {
             ArgumentExceptionHelper.ThrowIfNull(sources);
@@ -74,7 +74,7 @@ public static partial class LinqExtensions
     {
         /// <summary>Converts <see cref="Spark{T}"/> values back into observer notifications. System.Reactive name for <c>Unspark</c>.</summary>
         /// <returns>A sequence represented by the supplied spark values.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         public IObservable<T> Dematerialize()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -91,7 +91,7 @@ public static partial class LinqExtensions
         /// <summary>Invokes an action for each value while preserving the sequence. System.Reactive name for <c>Tap</c>.</summary>
         /// <param name="onNext">The action to invoke for each value.</param>
         /// <returns>The source values after the action has run.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="onNext"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="onNext"/> is <see langword="null"/>.</exception>
         public IObservable<T> Do(Action<T> onNext)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -107,7 +107,7 @@ public static partial class LinqExtensions
         /// concurrently. System.Reactive name for the same operation.
         /// </summary>
         /// <returns>A sequence that forwards the source notifications one at a time.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         public IObservable<T> Synchronize()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -142,7 +142,7 @@ public static partial class LinqExtensions
         /// <param name="state">The state passed to <paramref name="onNext"/>.</param>
         /// <param name="onNext">The action to invoke for each value.</param>
         /// <returns>The source values after the action has run.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="onNext"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="onNext"/> is <see langword="null"/>.</exception>
         public IObservable<T> DoWith<TState>(TState state, Action<TState, T> onNext)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -157,7 +157,7 @@ public static partial class LinqExtensions
         /// <param name="seed">The initial accumulated value.</param>
         /// <param name="accumulator">The function that combines the current state with the next source value.</param>
         /// <returns>A sequence of intermediate accumulated values.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="accumulator"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="accumulator"/> is <see langword="null"/>.</exception>
         public IObservable<TAccumulate> Scan<TAccumulate>(TAccumulate seed, Func<TAccumulate, T, TAccumulate> accumulator)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -172,7 +172,7 @@ public static partial class LinqExtensions
         /// <param name="seed">The initial accumulated value.</param>
         /// <param name="accumulator">The function that combines the current state with the next source value.</param>
         /// <returns>A sequence that emits one accumulated value on completion.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="accumulator"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="accumulator"/> is <see langword="null"/>.</exception>
         public IObservable<TAccumulate> Aggregate<TAccumulate>(TAccumulate seed, Func<TAccumulate, T, TAccumulate> accumulator)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -184,14 +184,14 @@ public static partial class LinqExtensions
 
         /// <summary>Suppresses adjacent duplicate values. System.Reactive name for <c>Unique</c>.</summary>
         /// <returns>A sequence with adjacent duplicates removed.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         public IObservable<T> DistinctUntilChanged() =>
             DistinctUntilChanged(source, null);
 
         /// <summary>Suppresses adjacent duplicate values using the supplied comparer. System.Reactive name for <c>Unique</c>.</summary>
         /// <param name="comparer">The comparer used to compare adjacent values.</param>
         /// <returns>A sequence with adjacent duplicates removed.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         public IObservable<T> DistinctUntilChanged(IEqualityComparer<T>? comparer)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -204,7 +204,7 @@ public static partial class LinqExtensions
         /// <typeparam name="TKey">The key type.</typeparam>
         /// <param name="keySelector">The function that selects the comparison key.</param>
         /// <returns>A sequence with adjacent duplicate keys removed.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="keySelector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="keySelector"/> is <see langword="null"/>.</exception>
         public IObservable<T> DistinctUntilChangedBy<TKey>(Func<T, TKey> keySelector) =>
             DistinctUntilChangedBy(source, keySelector, null);
 
@@ -213,7 +213,7 @@ public static partial class LinqExtensions
         /// <param name="keySelector">The function that selects the comparison key.</param>
         /// <param name="comparer">The comparer used to compare adjacent keys.</param>
         /// <returns>A sequence with adjacent duplicate keys removed.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="keySelector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="keySelector"/> is <see langword="null"/>.</exception>
         public IObservable<T> DistinctUntilChangedBy<TKey>(Func<T, TKey> keySelector, IEqualityComparer<TKey>? comparer)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -226,7 +226,7 @@ public static partial class LinqExtensions
 
         /// <summary>Drops every value, forwarding only the terminal notification. System.Reactive name for <c>IgnoreValues</c>.</summary>
         /// <returns>A sequence that forwards only completion or error.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         public IObservable<T> IgnoreElements()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -238,7 +238,7 @@ public static partial class LinqExtensions
         /// <typeparam name="TResult">The inner value type.</typeparam>
         /// <param name="selector">The function that projects each source value to an inner sequence.</param>
         /// <returns>A sequence containing the merged values of every inner sequence.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
         public IObservable<TResult> SelectMany<TResult>(Func<T, IObservable<TResult>> selector)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -254,7 +254,7 @@ public static partial class LinqExtensions
         /// <param name="collectionSelector">The function that projects each source value to an inner sequence.</param>
         /// <param name="resultSelector">The function that combines a source value with each inner value.</param>
         /// <returns>A sequence containing selected outer/inner combinations.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="collectionSelector"/> or <paramref name="resultSelector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="collectionSelector"/> or <paramref name="resultSelector"/> is <see langword="null"/>.</exception>
         public IObservable<TResult> SelectMany<TCollection, TResult>(
             Func<T, IObservable<TCollection>> collectionSelector,
             Func<T, TCollection, TResult> resultSelector)
@@ -269,7 +269,7 @@ public static partial class LinqExtensions
         /// <summary>Concatenates two sequences. System.Reactive name for <c>Chain</c>.</summary>
         /// <param name="second">The second sequence.</param>
         /// <returns>A sequence that emits <paramref name="second"/> after <paramref name="source"/> completes.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="second"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="second"/> is <see langword="null"/>.</exception>
         public IObservable<T> Concat(IObservable<T> second)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -288,7 +288,7 @@ public static partial class LinqExtensions
     {
         /// <summary>Filters out null values, emitting only non-null values. Familiar name for <c>KeepNotNull</c>.</summary>
         /// <returns>An observable sequence that emits only the non-null values from the source sequence.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         public IObservable<T> WhereNotNull()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -308,7 +308,7 @@ public static partial class LinqExtensions
         /// <param name="right">The right sequence.</param>
         /// <param name="selector">The function that combines paired values.</param>
         /// <returns>A sequence containing one result for each available value pair.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="left"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="left"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
         public IObservable<TResult> Zip<TRight, TResult>(IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
@@ -331,7 +331,7 @@ public static partial class LinqExtensions
         /// <param name="right">The right sequence.</param>
         /// <param name="selector">The function that combines the latest values.</param>
         /// <returns>A sequence containing selected latest-value combinations.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="left"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="left"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
         public IObservable<TResult> CombineLatest<TRight, TResult>(IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
@@ -354,7 +354,7 @@ public static partial class LinqExtensions
         /// <param name="right">The sequence that supplies the latest value.</param>
         /// <param name="selector">The function that combines the left value with the latest right value.</param>
         /// <returns>A sequence containing selected left/latest-right combinations.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="left"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="left"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
         public IObservable<TResult> WithLatestFrom<TRight, TResult>(IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
@@ -422,7 +422,7 @@ public static partial class LinqExtensions
         /// <param name="interval">The sampling period.</param>
         /// <param name="scheduler">The sequencer used to schedule sampling.</param>
         /// <returns>A sequence containing the latest source value sampled at each period boundary.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="left"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="left"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="interval"/> is less than <see cref="TimeSpan.Zero"/>.</exception>
         public IObservable<TLeft> Sample(TimeSpan interval, ISequencer? scheduler)
         {
@@ -437,7 +437,7 @@ public static partial class LinqExtensions
         /// <summary>Resubscribes to the source after an error up to <paramref name="retryCount"/> times. System.Reactive name for <c>Reattempt</c>.</summary>
         /// <param name="retryCount">The maximum number of retry attempts after the initial subscription.</param>
         /// <returns>A sequence that retries the source before forwarding the final error.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="left"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="left"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="retryCount"/> is less than zero.</exception>
         public IObservable<TLeft> Retry(int retryCount)
         {
@@ -450,7 +450,7 @@ public static partial class LinqExtensions
 
         /// <summary>Converts source values and terminal notifications into <see cref="Spark{T}"/> values. System.Reactive name for <c>Spark</c>.</summary>
         /// <returns>A sequence of spark values representing source notifications.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="left"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="left"/> is <see langword="null"/>.</exception>
         public IObservable<Spark<TLeft>> Materialize()
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
@@ -468,7 +468,7 @@ public static partial class LinqExtensions
         /// <typeparam name="TResult">The type of the elements in the result sequence.</typeparam>
         /// <param name="selector">A transform function to apply to each element.</param>
         /// <returns>An observable sequence whose elements are the result of invoking the transform function on each source element.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
         public IObservable<TResult> Select<TResult>(Func<TSource, TResult> selector)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -484,7 +484,7 @@ public static partial class LinqExtensions
         /// <param name="state">The state to pass to the selector function.</param>
         /// <param name="selector">A transform function to apply to each source element along with the state.</param>
         /// <returns>An observable sequence whose elements are the result of invoking the transform on each source element and the state.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
         public IObservable<TResult> SelectWith<TState, TResult>(TState state, Func<TState, TSource, TResult> selector)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -497,7 +497,7 @@ public static partial class LinqExtensions
         /// <summary>Filters an observable sequence to elements that satisfy a predicate. LINQ name for <c>Keep</c>.</summary>
         /// <param name="predicate">A function to test each element for a condition.</param>
         /// <returns>An observable sequence containing the elements that satisfy <paramref name="predicate"/>.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="predicate"/> is <see langword="null"/>.</exception>
         public IObservable<TSource> Where(Func<TSource, bool> predicate)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -512,7 +512,7 @@ public static partial class LinqExtensions
         /// <param name="state">The state value to pass to the predicate for each element.</param>
         /// <param name="predicate">A function to test each element along with the state.</param>
         /// <returns>An observable sequence containing only the elements that satisfy the predicate.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="predicate"/> is <see langword="null"/>.</exception>
         public IObservable<TSource> WhereWith<TState>(TState state, Func<TState, TSource, bool> predicate)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

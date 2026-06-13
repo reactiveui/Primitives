@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
@@ -12,6 +13,8 @@ using ReactiveUI.Primitives.Signals.Core;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Verifies factory and operator composition behavior across the <see cref="Signal"/> surface.</summary>
+[SuppressMessage("Major Code Smell", "S103", Justification = "Coverage tests intentionally group branch-heavy scenarios.")]
+[SuppressMessage("Major Code Smell", "S6966", Justification = "Coverage tests intentionally group branch-heavy scenarios.")]
 public partial class SignalFactoriesTests
 {
     /// <summary>The first integer used by parity sequences.</summary>

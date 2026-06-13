@@ -33,6 +33,10 @@ public class ReplaySignal<T> : ISignal<T>
     private readonly Lock _observerLock = new();
 
     /// <summary>Stores state for the signal implementation.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Performance",
+        "SST1424:Make field readonly",
+        Justification = "Broadcaster<T> is a mutable struct; readonly fields would mutate defensive copies and lose observer updates.")]
     private Broadcaster<T> _broadcaster;
 
     /// <summary>Stores state for the signal implementation.</summary>
@@ -183,7 +187,7 @@ public class ReplaySignal<T> : ISignal<T>
 
     /// <summary>Called when [error].</summary>
     /// <param name="error">The exception.</param>
-    /// <exception cref="ArgumentExceptionHelper">error.</exception>
+    /// <exception cref="ArgumentNullException">error.</exception>
     public void OnError(Exception error)
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
@@ -239,7 +243,7 @@ public class ReplaySignal<T> : ISignal<T>
     /// <summary>Subscribes the specified observer.</summary>
     /// <param name="observer">The observer.</param>
     /// <returns>A Disposable.</returns>
-    /// <exception cref="ArgumentExceptionHelper">observer.</exception>
+    /// <exception cref="ArgumentNullException">observer.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
