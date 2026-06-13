@@ -555,7 +555,7 @@ ReactiveUI.Primitives.Signals.ReplaySignal<T>.Dispose() -> void
 ReactiveUI.Primitives.Signals.ReplaySignal<T>.HasObservers.get -> bool
 ReactiveUI.Primitives.Signals.ReplaySignal<T>.IsDisposed.get -> bool
 ReactiveUI.Primitives.Signals.ReplaySignal<T>.OnCompleted() -> void
-ReactiveUI.Primitives.Signals.ReplaySignal<T>.OnError(System.Exception! exception) -> void
+ReactiveUI.Primitives.Signals.ReplaySignal<T>.OnError(System.Exception! error) -> void
 ReactiveUI.Primitives.Signals.ReplaySignal<T>.OnNext(T value) -> void
 ReactiveUI.Primitives.Signals.ReplaySignal<T>.ReplaySignal(int bufferSize, ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> void
 ReactiveUI.Primitives.Signals.ReplaySignal<T>.ReplaySignal(int bufferSize, System.TimeSpan window, ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> void
