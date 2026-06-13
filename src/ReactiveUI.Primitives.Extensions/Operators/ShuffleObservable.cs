@@ -38,8 +38,10 @@ internal sealed class ShuffleObservable<T>(IObservable<T[]> source) : IObservabl
 
     /// <summary>Observer that shuffles arrays in place.</summary>
     /// <param name="downstream">The downstream observer receiving shuffled arrays.</param>
-    // INTENTIONAL non-crypto randomness. CA5394 here is a FALSE POSITIVE — see the banner at the top
-    // of this file. This is a fast, general-purpose shuffle, NOT a security primitive. DO NOT TOUCH.
+    /// <remarks>
+    /// INTENTIONAL non-crypto randomness. CA5394 here is a FALSE POSITIVE — see the banner at the top
+    /// of this file. This is a fast, general-purpose shuffle, NOT a security primitive. DO NOT TOUCH.
+    /// </remarks>
     [SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Shuffle is non-cryptographic by design; Random is faster and crypto RNG buys nothing here. FALSE POSITIVE.")]
     private sealed class ShuffleWitness(IObserver<T[]> downstream) : IObserver<T[]>
     {
