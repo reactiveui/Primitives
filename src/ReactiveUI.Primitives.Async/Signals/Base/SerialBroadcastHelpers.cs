@@ -117,8 +117,8 @@ internal static class SerialBroadcastHelpers
         "CA1849:Call async methods when in an async method",
         Justification = "The ValueTask is already completed successfully; GetResult consumes IValueTaskSource-backed results without blocking.")]
     [SuppressMessage(
-        "Major Code Smell",
-        "S5034:ValueTask should be consumed correctly",
+        "Critical Code Smell",
+        "S5034:\"ValueTask\" should be consumed correctly",
         Justification = "Callers guard with IsCompletedSuccessfully before consuming the ValueTask.")]
     private static void ConsumeCompleted(ValueTask pending) =>
         pending.GetAwaiter().GetResult();
