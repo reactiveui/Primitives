@@ -52,10 +52,7 @@ public class SingleDisposable : IsDisposed
     /// <exception cref="InvalidOperationException">The slot already has an assignment.</exception>
     public void Create(IDisposable disposable)
     {
-        if (disposable is null)
-        {
-            throw new ArgumentNullException(nameof(disposable));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(disposable);
 
         var current = Interlocked.CompareExchange(ref _disposable, disposable, null);
         if (current is null)

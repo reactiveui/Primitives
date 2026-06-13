@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+#pragma warning disable S138 // Coverage tests intentionally group branch-heavy scenarios.
 
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
@@ -54,8 +55,7 @@ public partial class InternalInfrastructureCoverageTests
     private const long TwoLong = 2L;
 
     /// <summary>The expected side-effect log produced by the tapped source and the faulted tap.</summary>
-    private static readonly string[] ExpectedTapSideEffects =
-        ["next:1", "next:2", "next:3", "next:4", "completed", "error:do-error"];
+    private static readonly string[] ExpectedTapSideEffects = ["next:1", "next:2", "next:3", "next:4", "completed", "error:do-error"];
 
     /// <summary>The expected keys retained when distinct-by length is applied.</summary>
     private static readonly string[] ExpectedDistinctKeys = ["aa", "ccc", "dd", "e"];
@@ -67,8 +67,7 @@ public partial class InternalInfrastructureCoverageTests
     private static readonly string[] ExpectedRepeatValues = ["r", "r", "r"];
 
     /// <summary>The expected error type names produced by the task factory continuations.</summary>
-    private static readonly string[] ExpectedTaskErrorNames =
-        [nameof(InvalidOperationException), nameof(TaskCanceledException)];
+    private static readonly string[] ExpectedTaskErrorNames = [nameof(InvalidOperationException), nameof(TaskCanceledException)];
 
     /// <summary>The expected single zero-tick emission produced by one-shot timer factories.</summary>
     private static readonly long[] ExpectedSingleZeroTick = [ZeroLong];
@@ -158,7 +157,7 @@ public partial class InternalInfrastructureCoverageTests
     private static readonly int[] ExpectedThreeFive = [Three, Five];
 
     /// <summary>Asserts the argument guards exposed by the parity operator surface.</summary>
-    /// <param name="source">A non-null source used to exercise instance guards.</param>
+    /// <param name = "source">A non-null source used to exercise instance guards.</param>
     private static void AssertParityOperatorArgumentGuards(IObservable<int> source)
     {
         Assert.Throws<ArgumentNullException>(() => LinqExtensions.Prepend(null!, One, Two));
@@ -169,10 +168,41 @@ public partial class InternalInfrastructureCoverageTests
         Assert.Throws<ArgumentNullException>(() => source.ObserveOn(null!));
         Assert.Throws<ArgumentNullException>(() => LinqExtensions.SubscribeOn<int>(null!, Sequencer.Immediate));
         Assert.Throws<ArgumentNullException>(() => source.SubscribeOn(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.Tap<int>(null!, _ => { }, _ => { }, () => { }));
-        Assert.Throws<ArgumentNullException>(() => source.Tap(null!, _ => { }, () => { }));
-        Assert.Throws<ArgumentNullException>(() => source.Tap(_ => { }, null!, () => { }));
-        Assert.Throws<ArgumentNullException>(() => source.Tap(_ => { }, _ => { }, null!));
+        Assert.Throws<ArgumentNullException>(() => LinqExtensions.Tap<int>(
+            null!,
+            _ =>
+{
+},
+            _ =>
+{
+},
+            () =>
+{
+}));
+        Assert.Throws<ArgumentNullException>(() => source.Tap(
+            null!,
+            _ =>
+{
+},
+            () =>
+{
+}));
+        Assert.Throws<ArgumentNullException>(() => source.Tap(
+            _ =>
+{
+},
+            null!,
+            () =>
+{
+}));
+        Assert.Throws<ArgumentNullException>(() => source.Tap(
+            _ =>
+{
+},
+            _ =>
+{
+},
+            null!));
         Assert.Throws<ArgumentNullException>(() => LinqExtensions.IgnoreValues<int>(null!));
         Assert.Throws<ArgumentNullException>(() => LinqExtensions.DistinctBy<int, int>(null!, value => value));
         Assert.Throws<ArgumentNullException>(() => source.DistinctBy<int, int>(null!));
@@ -214,9 +244,10 @@ public partial class InternalInfrastructureCoverageTests
         Assert.Throws<ArgumentOutOfRangeException>(() => source.Reattempt(-1));
     }
 
-    /// <summary>Covers <see cref="AsyncSignal{T}"/> subscriber churn, late subscriptions, disposal, and terminal no-op branches.</summary>
-    /// <param name="actionFaults">The shared action-fault counter incremented by the completion callback.</param>
-    private static void AssertAsyncSignalSubscriberChurnAndTerminals(ref int actionFaults)
+    /// <summary>Covers <see cref = "AsyncSignal{T}"/> subscriber churn, late subscriptions, disposal, and terminal no-op branches.</summary>
+    /// <param name = "actionFaults">The initial action-fault counter incremented by the completion callback.</param>
+    /// <returns>The updated action-fault counter.</returns>
+    private static async Task<int> AssertAsyncSignalSubscriberChurnAndTerminals(int actionFaults)
     {
         var completionFaults = actionFaults;
         var asyncSignal = new AsyncSignal<int>();
@@ -233,16 +264,14 @@ public partial class InternalInfrastructureCoverageTests
         asyncSignal.OnCompleted();
         asyncSignal.OnCompleted();
         asyncSignal.OnNext(Six);
-        actionFaults = completionFaults;
         var asyncLate = new RecordingWitness<int>();
         asyncSignal.Subscribe(asyncLate).Dispose();
-        Assert.Equal(Five, asyncSignal.Value);
-        Assert.Equal(Five, asyncSignal.GetResult());
-        Assert.Equal(ExpectedSingleFive, asyncFirst.Values);
-        Assert.Equal(0, asyncSecond.Values.Count);
-        Assert.Equal(ExpectedSingleFive, asyncLate.Values);
-        Assert.Equal(1, asyncLate.Completed);
-
+        await Assert.That(asyncSignal.Value).IsEqualTo(Five);
+        await Assert.That(asyncSignal.GetResult()).IsEqualTo(Five);
+        await Assert.That(asyncFirst.Values.SequenceEqual(ExpectedSingleFive)).IsTrue();
+        await Assert.That(asyncSecond.Values.Count).IsEqualTo(0);
+        await Assert.That(asyncLate.Values.SequenceEqual(ExpectedSingleFive)).IsTrue();
+        await Assert.That(asyncLate.Completed).IsEqualTo(1);
         var asyncError = new AsyncSignal<int>();
         var asyncErrorObserver = new RecordingWitness<int>();
         asyncError.Subscribe(asyncErrorObserver).Dispose();
@@ -252,18 +281,18 @@ public partial class InternalInfrastructureCoverageTests
         Assert.Throws<InvalidOperationException>(() => asyncError.GetResult());
         var asyncErrorLate = new RecordingWitness<int>();
         asyncError.Subscribe(asyncErrorLate).Dispose();
-        Assert.Same(asyncFault, asyncErrorLate.Errors[0]);
-
+        await Assert.That(asyncErrorLate.Errors[0]).IsSameReferenceAs(asyncFault);
         var disposedAsync = new AsyncSignal<int>();
         disposedAsync.Dispose();
         disposedAsync.Dispose();
         Assert.Throws<ObjectDisposedException>(() => disposedAsync.OnNext(One));
         Assert.Throws<ObjectDisposedException>(() => disposedAsync.Subscribe(new RecordingWitness<int>()));
+        return completionFaults;
     }
 
     /// <summary>Polls a condition until it succeeds or the timeout elapses.</summary>
-    /// <param name="condition">The condition to evaluate on each poll.</param>
-    /// <param name="timeout">The maximum time to wait for the condition.</param>
+    /// <param name = "condition">The condition to evaluate on each poll.</param>
+    /// <param name = "timeout">The maximum time to wait for the condition.</param>
     /// <returns>A task that completes when the condition is satisfied.</returns>
     private static async Task SpinUntil(Func<bool> condition, TimeSpan timeout)
     {
@@ -285,13 +314,13 @@ public partial class InternalInfrastructureCoverageTests
     private sealed class ThrowingComparer : IEqualityComparer<int>
     {
         /// <summary>Defers to a faulting comparison so the equality comparison throws when invoked.</summary>
-        /// <param name="x">The first value to compare.</param>
-        /// <param name="y">The second value to compare.</param>
+        /// <param name = "x">The first value to compare.</param>
+        /// <param name = "y">The second value to compare.</param>
         /// <returns>This method never returns; the faulting comparison always throws.</returns>
         public bool Equals(int x, int y) => Fail();
 
         /// <summary>Returns the hash code for the specified value.</summary>
-        /// <param name="obj">The value to hash.</param>
+        /// <param name = "obj">The value to hash.</param>
         /// <returns>The hash code for the value.</returns>
         public int GetHashCode(int obj) => obj.GetHashCode();
 
@@ -301,18 +330,18 @@ public partial class InternalInfrastructureCoverageTests
     }
 
     /// <summary>An observable that replays a scripted sequence of observer callbacks on subscribe.</summary>
-    /// <typeparam name="T">The type of the elements produced by the observable.</typeparam>
+    /// <typeparam name = "T">The type of the elements produced by the observable.</typeparam>
     private sealed class ScriptedObservable<T> : IObservable<T>
     {
         /// <summary>The scripted callback invoked against each subscribing observer.</summary>
         private readonly Action<IObserver<T>> _script;
 
-        /// <summary>Initializes a new instance of the <see cref="ScriptedObservable{T}"/> class.</summary>
-        /// <param name="script">The scripted callback to invoke on each subscription.</param>
+        /// <summary>Initializes a new instance of the <see cref = "ScriptedObservable{T}"/> class.</summary>
+        /// <param name = "script">The scripted callback to invoke on each subscription.</param>
         public ScriptedObservable(Action<IObserver<T>> script) => _script = script;
 
         /// <summary>Subscribes the observer and replays the scripted callback.</summary>
-        /// <param name="observer">The observer to drive with the script.</param>
+        /// <param name = "observer">The observer to drive with the script.</param>
         /// <returns>An empty disposable subscription.</returns>
         public IDisposable Subscribe(IObserver<T> observer)
         {
@@ -327,23 +356,23 @@ public partial class InternalInfrastructureCoverageTests
         /// <summary>The scheduled work items keyed by their absolute due time.</summary>
         private readonly SortedDictionary<long, Queue<Scheduled>> _scheduled = [];
 
-        /// <summary>Initializes a new instance of the <see cref="MinimalVirtualClock"/> class.</summary>
+        /// <summary>Initializes a new instance of the <see cref = "MinimalVirtualClock"/> class.</summary>
         public MinimalVirtualClock()
         {
         }
 
-        /// <summary>Initializes a new instance of the <see cref="MinimalVirtualClock"/> class.</summary>
-        /// <param name="comparer">The comparer used to order scheduled times.</param>
+        /// <summary>Initializes a new instance of the <see cref = "MinimalVirtualClock"/> class.</summary>
+        /// <param name = "comparer">The comparer used to order scheduled times.</param>
         public MinimalVirtualClock(IComparer<long> comparer)
             : base(0L, comparer)
         {
         }
 
         /// <summary>Schedules an action at the specified absolute due time.</summary>
-        /// <typeparam name="TState">The type of the state passed to the action.</typeparam>
-        /// <param name="state">The state passed to the action when invoked.</param>
-        /// <param name="dueTime">The absolute due time at which to run the action.</param>
-        /// <param name="action">The action to run when the due time is reached.</param>
+        /// <typeparam name = "TState">The type of the state passed to the action.</typeparam>
+        /// <param name = "state">The state passed to the action when invoked.</param>
+        /// <param name = "dueTime">The absolute due time at which to run the action.</param>
+        /// <param name = "action">The action to run when the due time is reached.</param>
         /// <returns>A disposable that cancels the scheduled action.</returns>
         public override IDisposable ScheduleAbsolute<TState>(TState state, long dueTime, Func<ISequencer, TState, IDisposable> action)
         {
@@ -359,8 +388,8 @@ public partial class InternalInfrastructureCoverageTests
         }
 
         /// <summary>Adds a relative offset to an absolute time.</summary>
-        /// <param name="absolute">The absolute time.</param>
-        /// <param name="relative">The relative offset to add.</param>
+        /// <param name = "absolute">The absolute time.</param>
+        /// <param name = "relative">The relative offset to add.</param>
         /// <returns>The resulting absolute time.</returns>
         protected override long Add(long absolute, long relative) => absolute + relative;
 
@@ -388,13 +417,13 @@ public partial class InternalInfrastructureCoverageTests
             return null;
         }
 
-        /// <summary>Converts an absolute time to a <see cref="DateTimeOffset"/>.</summary>
-        /// <param name="absolute">The absolute time to convert.</param>
-        /// <returns>The equivalent <see cref="DateTimeOffset"/>.</returns>
+        /// <summary>Converts an absolute time to a <see cref = "DateTimeOffset"/>.</summary>
+        /// <param name = "absolute">The absolute time to convert.</param>
+        /// <returns>The equivalent <see cref = "DateTimeOffset"/>.</returns>
         protected override DateTimeOffset ToDateTimeOffset(long absolute) => DateTimeOffset.UnixEpoch.AddTicks(absolute);
 
         /// <summary>Converts a time span to the relative tick representation.</summary>
-        /// <param name="timeSpan">The time span to convert.</param>
+        /// <param name = "timeSpan">The time span to convert.</param>
         /// <returns>The number of ticks represented by the time span.</returns>
         protected override long ToRelative(TimeSpan timeSpan) => timeSpan.Ticks;
 
@@ -404,9 +433,9 @@ public partial class InternalInfrastructureCoverageTests
             /// <summary>The action to run when the item is invoked.</summary>
             private readonly Func<IDisposable> _action;
 
-            /// <summary>Initializes a new instance of the <see cref="Scheduled"/> class.</summary>
-            /// <param name="dueTime">The absolute due time for the item.</param>
-            /// <param name="action">The action to run when invoked.</param>
+            /// <summary>Initializes a new instance of the <see cref = "Scheduled"/> class.</summary>
+            /// <param name = "dueTime">The absolute due time for the item.</param>
+            /// <param name = "action">The action to run when invoked.</param>
             public Scheduled(long dueTime, Func<IDisposable> action)
             {
                 DueTime = dueTime;
@@ -433,22 +462,22 @@ public partial class InternalInfrastructureCoverageTests
     }
 
     /// <summary>An observer that can be configured to throw on specific callbacks.</summary>
-    /// <typeparam name="T">The type of the observed values.</typeparam>
+    /// <typeparam name = "T">The type of the observed values.</typeparam>
     private sealed class ThrowingWitness<T> : IObserver<T>
     {
-        /// <summary>A value indicating whether to throw on <see cref="OnNext"/>.</summary>
+        /// <summary>A value indicating whether to throw on <see cref = "OnNext"/>.</summary>
         private readonly bool _throwOnNext;
 
-        /// <summary>A value indicating whether to throw on <see cref="OnError"/>.</summary>
+        /// <summary>A value indicating whether to throw on <see cref = "OnError"/>.</summary>
         private readonly bool _throwOnError;
 
-        /// <summary>A value indicating whether to throw on <see cref="OnCompleted"/>.</summary>
+        /// <summary>A value indicating whether to throw on <see cref = "OnCompleted"/>.</summary>
         private readonly bool _throwOnCompleted;
 
-        /// <summary>Initializes a new instance of the <see cref="ThrowingWitness{T}"/> class.</summary>
-        /// <param name="throwOnNext">Configures throwing from the value callback.</param>
-        /// <param name="throwOnError">Configures throwing from the error callback.</param>
-        /// <param name="throwOnCompleted">Configures throwing from the completion callback.</param>
+        /// <summary>Initializes a new instance of the <see cref = "ThrowingWitness{T}"/> class.</summary>
+        /// <param name = "throwOnNext">Configures throwing from the value callback.</param>
+        /// <param name = "throwOnError">Configures throwing from the error callback.</param>
+        /// <param name = "throwOnCompleted">Configures throwing from the completion callback.</param>
         public ThrowingWitness(bool throwOnNext = false, bool throwOnError = false, bool throwOnCompleted = false)
         {
             _throwOnNext = throwOnNext;
@@ -471,7 +500,7 @@ public partial class InternalInfrastructureCoverageTests
         }
 
         /// <summary>Handles an error, throwing when configured to do so.</summary>
-        /// <param name="error">The error to handle.</param>
+        /// <param name = "error">The error to handle.</param>
         public void OnError(Exception error)
         {
             SeenError = true;
@@ -484,7 +513,7 @@ public partial class InternalInfrastructureCoverageTests
         }
 
         /// <summary>Handles a value, throwing when configured to do so.</summary>
-        /// <param name="value">The value to handle.</param>
+        /// <param name = "value">The value to handle.</param>
         public void OnNext(T value)
         {
             if (!_throwOnNext)
@@ -502,12 +531,11 @@ public partial class InternalInfrastructureCoverageTests
         /// <summary>The factory invoked when the item runs.</summary>
         private readonly Func<IDisposable> _invoke;
 
-        /// <summary>Initializes a new instance of the <see cref="ScheduledProbe"/> class.</summary>
-        /// <param name="dueTime">The due time for the scheduled item.</param>
-        /// <param name="invoke">The factory invoked when the item runs.</param>
+        /// <summary>Initializes a new instance of the <see cref = "ScheduledProbe"/> class.</summary>
+        /// <param name = "dueTime">The due time for the scheduled item.</param>
+        /// <param name = "invoke">The factory invoked when the item runs.</param>
         public ScheduledProbe(int dueTime, Func<IDisposable> invoke)
-            : base(dueTime, Comparer<int>.Default) =>
-            _invoke = invoke;
+            : base(dueTime, Comparer<int>.Default) => _invoke = invoke;
 
         /// <summary>Invokes the supplied factory.</summary>
         /// <returns>The disposable returned by the factory.</returns>
@@ -515,7 +543,7 @@ public partial class InternalInfrastructureCoverageTests
     }
 
     /// <summary>An observer that records all values, errors, and completion counts.</summary>
-    /// <typeparam name="T">The type of the observed values.</typeparam>
+    /// <typeparam name = "T">The type of the observed values.</typeparam>
     private sealed class RecordingWitness<T> : IObserver<T>
     {
         /// <summary>Gets the recorded values.</summary>
@@ -531,11 +559,11 @@ public partial class InternalInfrastructureCoverageTests
         public void OnCompleted() => Completed++;
 
         /// <summary>Records an error callback.</summary>
-        /// <param name="error">The error to record.</param>
+        /// <param name = "error">The error to record.</param>
         public void OnError(Exception error) => Errors.Add(error);
 
         /// <summary>Records a value callback.</summary>
-        /// <param name="value">The value to record.</param>
+        /// <param name = "value">The value to record.</param>
         public void OnNext(T value) => Values.Add(value);
     }
 }

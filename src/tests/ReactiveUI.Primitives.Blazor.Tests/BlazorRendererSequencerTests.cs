@@ -17,7 +17,7 @@ public sealed class BlazorRendererSequencerTests
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullDelegate() =>
-        await Assert.That(() => new BlazorRendererSequencer(null!)).Throws<ArgumentNullException>();
+        await Assert.That(() => new BlazorRendererSequencer(null!)).ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Verifies immediate work is marshalled through the renderer delegate and executed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>

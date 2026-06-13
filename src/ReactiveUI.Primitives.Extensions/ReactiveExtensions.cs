@@ -472,10 +472,7 @@ public static class ReactiveExtensions
         /// <returns>An IObservable of T.</returns>
         public IObservable<T> ReplayLastOnSubscribe(T initialValue)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             return new ReplayLastOnSubscribeObservable<T>(source, initialValue);
         }

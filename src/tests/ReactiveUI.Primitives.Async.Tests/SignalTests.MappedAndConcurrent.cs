@@ -1,17 +1,16 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using System.Collections.Immutable;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>Mapped Signal, mixins, concurrent multi-observer, and edge-case tests for <see cref="SignalTests"/>.</summary>
+/// <summary>Mapped Signal, mixins, concurrent multi-observer, and edge-case tests for <see cref = "SignalTests"/>.</summary>
 public partial class SignalTests
 {
     /// <summary>Tests MapValues transforms observable.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMapValues_ThenTransformsObservable()
     {
@@ -20,144 +19,137 @@ public partial class SignalTests
         const int SecondInput = 2;
         const int FirstMapped = 10;
         const int SecondMapped = 20;
-
         var signal = Signal.Create<int>();
         var mapped = signal.MapValues(values => values.Select(x => x * Multiplier));
-
         var items = new List<int>();
         var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await mapped.Values.SubscribeAsync(
             (x, _) =>
-            {
-                items.Add(x);
-                return default;
-            },
+        {
+            items.Add(x);
+            return default;
+        },
             null,
             _ =>
-            {
-                completed.TrySetResult();
-                return default;
-            });
-
+        {
+            completed.TrySetResult();
+            return default;
+        });
         await mapped.OnNextAsync(FirstInput, CancellationToken.None);
         await mapped.OnNextAsync(SecondInput, CancellationToken.None);
         await mapped.OnCompletedAsync(Result.Success);
-
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
-
         await Assert.That(items).IsCollectionEqualTo([FirstMapped, SecondMapped]);
     }
 
     /// <summary>Tests that OnErrorResumeAsync on a serial stateless Signal delivers the error to the observer.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSerialStatelessSignalOnErrorResume_ThenObserverReceivesError()
     {
-        var options = new SignalCreationOptions { PublishingOption = PublishingOption.Serial, IsStateless = true };
+        var options = new SignalCreationOptions
+        {
+            PublishingOption = PublishingOption.Serial,
+            IsStateless = true
+        };
         var signal = Signal.Create<int>(options);
         var errorTcs = new TaskCompletionSource<Exception>();
-
-        await using var sub = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            (ex, _) =>
-            {
-                errorTcs.TrySetResult(ex);
-                return default;
-            });
-
+        await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
+        {
+            errorTcs.TrySetResult(ex);
+            return default;
+        });
         var expected = new InvalidOperationException("serial-stateless-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-
         var received = await errorTcs.Task;
         await Assert.That(received).IsEqualTo(expected);
     }
 
     /// <summary>Tests that OnErrorResumeAsync on a concurrent stateless Signal delivers the error to the observer.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenConcurrentStatelessSignalOnErrorResume_ThenObserverReceivesError()
     {
-        var options = new SignalCreationOptions { PublishingOption = PublishingOption.Concurrent, IsStateless = true };
+        var options = new SignalCreationOptions
+        {
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = true
+        };
         var signal = Signal.Create<int>(options);
         var errorTcs = new TaskCompletionSource<Exception>();
-
-        await using var sub = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            (ex, _) =>
-            {
-                errorTcs.TrySetResult(ex);
-                return default;
-            });
-
+        await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
+        {
+            errorTcs.TrySetResult(ex);
+            return default;
+        });
         var expected = new InvalidOperationException("concurrent-stateless-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-
         var received = await errorTcs.Task;
         await Assert.That(received).IsEqualTo(expected);
     }
 
     /// <summary>Tests that DisposeAsync on a serial stateless Signal clears observers and completes without error.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSerialStatelessSignalDispose_ThenCompletesAndClearsObservers()
     {
-        var options = new SignalCreationOptions { PublishingOption = PublishingOption.Serial, IsStateless = true };
+        var options = new SignalCreationOptions
+        {
+            PublishingOption = PublishingOption.Serial,
+            IsStateless = true
+        };
         var signal = Signal.Create<int>(options);
         var items = new List<int>();
-
         await using var sub = await signal.Values.SubscribeAsync(
             (x, _) =>
-            {
-                items.Add(x);
-                return default;
-            },
+        {
+            items.Add(x);
+            return default;
+        },
             null);
-
         const int PostDisposeValue = 2;
-
         await signal.OnNextAsync(1, CancellationToken.None);
         await signal.DisposeAsync();
 
         // After dispose, observers are cleared so no further values should be delivered.
         await signal.OnNextAsync(PostDisposeValue, CancellationToken.None);
-
         await Assert.That(items).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Tests that DisposeAsync on a concurrent stateless Signal clears observers and completes without error.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenConcurrentStatelessSignalDispose_ThenCompletesAndClearsObservers()
     {
-        var options = new SignalCreationOptions { PublishingOption = PublishingOption.Concurrent, IsStateless = true };
+        var options = new SignalCreationOptions
+        {
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = true
+        };
         var signal = Signal.Create<int>(options);
         var items = new List<int>();
-
         await using var sub = await signal.Values.SubscribeAsync(
             (x, _) =>
+        {
+            lock (_gate)
             {
-                lock (_gate)
-                {
-                    items.Add(x);
-                }
+                items.Add(x);
+            }
 
-                return default;
-            },
+            return default;
+        },
             null);
-
         const int PostDisposeValue = 2;
-
         await signal.OnNextAsync(1, CancellationToken.None);
         await signal.DisposeAsync();
 
         // After dispose, observers are cleared so no further values should be delivered.
         await signal.OnNextAsync(PostDisposeValue, CancellationToken.None);
-
         await Assert.That(items).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Tests that OnErrorResumeAsync on a concurrent stateful Signal delivers the error to observers.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenConcurrentSignalOnErrorResume_ThenObserverReceivesError()
     {
@@ -168,230 +160,180 @@ public partial class SignalTests
         };
         var signal = Signal.Create<int>(options);
         var errorTcs = new TaskCompletionSource<Exception>();
-
-        await using var sub = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            (ex, _) =>
-            {
-                errorTcs.TrySetResult(ex);
-                return default;
-            });
-
+        await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
+        {
+            errorTcs.TrySetResult(ex);
+            return default;
+        });
         var expected = new InvalidOperationException("concurrent-stateful");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-
         var received = await errorTcs.Task;
         await Assert.That(received).IsEqualTo(expected);
     }
 
     /// <summary>Tests that OnErrorResumeAsync is ignored after the Signal has already completed.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnErrorResumeAsyncCalledAfterCompletion_ThenIsIgnored()
     {
         var signal = Signal.Create<int>();
         var errors = new List<Exception>();
         var completionTcs = new TaskCompletionSource();
-
         await using var sub = await signal.Values.SubscribeAsync(
             static (_, _) => default,
             (ex, _) =>
-            {
-                errors.Add(ex);
-                return default;
-            },
+        {
+            errors.Add(ex);
+            return default;
+        },
             _ =>
-            {
-                completionTcs.TrySetResult();
-                return default;
-            });
-
+        {
+            completionTcs.TrySetResult();
+            return default;
+        });
         await signal.OnCompletedAsync(Result.Success);
         await completionTcs.Task;
-
         await signal.OnErrorResumeAsync(new InvalidOperationException("should be ignored"), CancellationToken.None);
-
         await Assert.That(errors).IsEmpty();
     }
 
     /// <summary>Tests that OnCompletedAsync is ignored on the second call after the Signal has already completed.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnCompletedAsyncCalledTwice_ThenSecondCallIsIgnored()
     {
         var signal = Signal.Create<int>();
         var completionCount = 0;
         var completionTcs = new TaskCompletionSource();
-
-        await using var sub = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            null,
-            _ =>
-            {
-                Interlocked.Increment(ref completionCount);
-                completionTcs.TrySetResult();
-                return default;
-            });
-
+        await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, null, _ =>
+        {
+            Interlocked.Increment(ref completionCount);
+            completionTcs.TrySetResult();
+            return default;
+        });
         await signal.OnCompletedAsync(Result.Success);
         await completionTcs.Task;
-
         await signal.OnCompletedAsync(Result.Failure(new InvalidOperationException("second")));
-
         await Assert.That(completionCount).IsEqualTo(1);
     }
 
     /// <summary>Tests that subscribing to an already-completed Signal immediately delivers the completion result.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSubscribingToAlreadyCompletedSignal_ThenObserverReceivesCompletionImmediately()
     {
         var signal = Signal.Create<int>();
         var firstCompletionTcs = new TaskCompletionSource();
-
-        await using var firstSub = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            null,
-            _ =>
-            {
-                firstCompletionTcs.TrySetResult();
-                return default;
-            });
-
+        await using var firstSub = await signal.Values.SubscribeAsync(static (_, _) => default, null, _ =>
+        {
+            firstCompletionTcs.TrySetResult();
+            return default;
+        });
         await signal.OnCompletedAsync(Result.Success);
         await firstCompletionTcs.Task;
-
         Result? lateResult = null;
         var lateTcs = new TaskCompletionSource();
-
-        await using var lateSub = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            null,
-            result =>
-            {
-                lateResult = result;
-                lateTcs.TrySetResult();
-                return default;
-            });
-
+        await using var lateSub = await signal.Values.SubscribeAsync(static (_, _) => default, null, result =>
+        {
+            lateResult = result;
+            lateTcs.TrySetResult();
+            return default;
+        });
         await lateTcs.Task;
-
         await Assert.That(lateResult).IsNotNull();
         await Assert.That(lateResult!.Value.IsSuccess).IsTrue();
     }
 
     /// <summary>Tests that OnNextAsync is ignored after the Signal has already completed.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnNextAsyncCalledAfterCompletion_ThenIsIgnored()
     {
         var signal = Signal.Create<int>();
         var items = new List<int>();
         var completionTcs = new TaskCompletionSource();
-
         await using var sub = await signal.Values.SubscribeAsync(
             (x, _) =>
-            {
-                items.Add(x);
-                return default;
-            },
+        {
+            items.Add(x);
+            return default;
+        },
             null,
             _ =>
-            {
-                completionTcs.TrySetResult();
-                return default;
-            });
-
+        {
+            completionTcs.TrySetResult();
+            return default;
+        });
         const int PostCompletionValue = 2;
-
         await signal.OnNextAsync(1, CancellationToken.None);
         await signal.OnCompletedAsync(Result.Success);
         await completionTcs.Task;
-
         await signal.OnNextAsync(PostCompletionValue, CancellationToken.None);
-
         await Assert.That(items).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Tests that OnErrorResumeAsync forwards the error to observers when the Signal has not completed.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnErrorResumeAsyncCalledBeforeCompletion_ThenErrorIsForwarded()
     {
         var signal = Signal.Create<int>();
         var errorTcs = new TaskCompletionSource<Exception>();
-
-        await using var sub = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            (ex, _) =>
-            {
-                errorTcs.TrySetResult(ex);
-                return default;
-            });
-
+        await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
+        {
+            errorTcs.TrySetResult(ex);
+            return default;
+        });
         var expected = new InvalidOperationException("forwarded");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-
         var received = await errorTcs.Task;
-
         await Assert.That(received).IsEqualTo(expected);
     }
 
     /// <summary>Tests that OnCompletedAsync forwards the result to observers and clears the observer list.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnCompletedAsyncCalled_ThenResultIsForwardedToObservers()
     {
         var signal = Signal.Create<int>();
         var resultTcs = new TaskCompletionSource<Result>();
-
-        await using var sub = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            null,
-            result =>
-            {
-                resultTcs.TrySetResult(result);
-                return default;
-            });
-
+        await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, null, result =>
+        {
+            resultTcs.TrySetResult(result);
+            return default;
+        });
         var failure = Result.Failure(new InvalidOperationException("done"));
         await signal.OnCompletedAsync(failure);
-
         var received = await resultTcs.Task;
-
         await Assert.That(received.IsFailure).IsTrue();
     }
 
     /// <summary>Tests that OnErrorResumeAsync on a serial stateless Signal delivers the error to multiple observers sequentially.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSerialStatelessSignalOnErrorResumeWithMultipleObservers_ThenAllObserversReceiveError()
     {
-        var options = new SignalCreationOptions { PublishingOption = PublishingOption.Serial, IsStateless = true };
+        var options = new SignalCreationOptions
+        {
+            PublishingOption = PublishingOption.Serial,
+            IsStateless = true
+        };
         var signal = Signal.Create<int>(options);
         var errors1 = new List<Exception>();
         var errors2 = new List<Exception>();
-
-        await using var sub1 = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            (ex, _) =>
-            {
-                errors1.Add(ex);
-                return default;
-            });
-
-        await using var sub2 = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            (ex, _) =>
-            {
-                errors2.Add(ex);
-                return default;
-            });
-
+        await using var sub1 = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
+        {
+            errors1.Add(ex);
+            return default;
+        });
+        await using var sub2 = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
+        {
+            errors2.Add(ex);
+            return default;
+        });
         var expected = new InvalidOperationException("multi-observer-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
         await signal.OnCompletedAsync(Result.Success);
-
         await Assert.That(errors1).Count().IsEqualTo(1);
         await Assert.That(errors1[0]).IsEqualTo(expected);
         await Assert.That(errors2).Count().IsEqualTo(1);
@@ -400,79 +342,63 @@ public partial class SignalTests
 
     /// <summary>Tests that SignalAsync.Create throws ArgumentOutOfRangeException for an invalid options combination.</summary>
     [Test]
-    public void WhenCreateWithInvalidOptions_ThenThrowsArgumentOutOfRangeException() =>
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            Signal.Create<int>(null!));
+    public void WhenCreateWithInvalidOptions_ThenThrowsArgumentOutOfRangeException() => Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Create<int>(null!));
 
     /// <summary>Tests that Signal.CreateBehavior throws ArgumentOutOfRangeException for an invalid options combination.</summary>
     [Test]
-    public void WhenCreateBehaviorWithInvalidOptions_ThenThrowsArgumentOutOfRangeException() =>
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            Signal.CreateBehavior(0, null!));
+    public void WhenCreateBehaviorWithInvalidOptions_ThenThrowsArgumentOutOfRangeException() => Assert.Throws<ArgumentOutOfRangeException>(() => Signal.CreateBehavior(0, null!));
 
     /// <summary>Tests that SignalAsync.CreateReplayLatest throws ArgumentOutOfRangeException for an invalid options combination.</summary>
     [Test]
-    public void WhenCreateReplayLatestWithInvalidOptions_ThenThrowsArgumentOutOfRangeException() =>
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            Signal.CreateReplayLatest<int>(null!));
+    public void WhenCreateReplayLatestWithInvalidOptions_ThenThrowsArgumentOutOfRangeException() => Assert.Throws<ArgumentOutOfRangeException>(() => Signal.CreateReplayLatest<int>(null!));
 
     /// <summary>Tests that Mappedsignal.SubscribeAsync subscribes an observer through the mapped values observable.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMappedSignalSubscribeAsync_ThenObserverReceivesMappedValues()
     {
         const int InputValue = 10;
         const int Increment = 1;
         const int MappedValue = 11;
-
         var signal = Signal.Create<int>();
         var mapped = signal.MapValues(values => values.Select(x => x + Increment));
-
         var collector = Signal.Create<int>();
         var items = new List<int>();
         await using var collectorSub = await collector.Values.SubscribeAsync(
             (x, _) =>
-            {
-                items.Add(x);
-                return default;
-            },
+        {
+            items.Add(x);
+            return default;
+        },
             null);
-
         var observer = collector.AsObserverAsync();
         await using var sub = await mapped.SubscribeAsync(observer, CancellationToken.None);
-
         await mapped.OnNextAsync(InputValue, CancellationToken.None);
         await mapped.OnCompletedAsync(Result.Success);
-
         await Assert.That(items).IsCollectionEqualTo([MappedValue]);
     }
 
     /// <summary>Tests that Mappedsignal.OnErrorResumeAsync forwards the error to the original Signal.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMappedSignalOnErrorResumeAsync_ThenErrorIsForwardedToOriginal()
     {
         var signal = Signal.Create<int>();
         var mapped = signal.MapValues(values => values);
         var errorTcs = new TaskCompletionSource<Exception>();
-
-        await using var sub = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            (ex, _) =>
-            {
-                errorTcs.TrySetResult(ex);
-                return default;
-            });
-
+        await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
+        {
+            errorTcs.TrySetResult(ex);
+            return default;
+        });
         var expected = new InvalidOperationException("mapped-error");
         await mapped.OnErrorResumeAsync(expected, CancellationToken.None);
-
         var received = await errorTcs.Task;
         await Assert.That(received).IsEqualTo(expected);
     }
 
     /// <summary>Tests that Mappedsignal.DisposeAsync disposes the original Signal.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMappedSignalDisposeAsync_ThenOriginalSignalIsDisposed()
     {
@@ -487,201 +413,151 @@ public partial class SignalTests
     }
 
     /// <summary>Tests that AsObserverAsync forwards OnErrorResumeAsync to the underlying Signal.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsObserverAsyncOnErrorResume_ThenErrorIsForwardedToSignal()
     {
         var signal = Signal.Create<int>();
         var observer = signal.AsObserverAsync();
         var errorTcs = new TaskCompletionSource<Exception>();
-
-        await using var sub = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            (ex, _) =>
-            {
-                errorTcs.TrySetResult(ex);
-                return default;
-            });
-
+        await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
+        {
+            errorTcs.TrySetResult(ex);
+            return default;
+        });
         var expected = new InvalidOperationException("observer-error");
         await observer.OnErrorResumeAsync(expected, CancellationToken.None);
-
         var received = await errorTcs.Task;
         await Assert.That(received).IsEqualTo(expected);
     }
 
     /// <summary>Tests that AsObserverAsync forwards OnCompletedAsync to the underlying Signal.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsObserverAsyncOnCompleted_ThenCompletionIsForwardedToSignal()
     {
         var signal = Signal.Create<int>();
         var observer = signal.AsObserverAsync();
         var resultTcs = new TaskCompletionSource<Result>();
-
-        await using var sub = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            null,
-            result =>
-            {
-                resultTcs.TrySetResult(result);
-                return default;
-            });
-
+        await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, null, result =>
+        {
+            resultTcs.TrySetResult(result);
+            return default;
+        });
         await observer.OnCompletedAsync(Result.Success);
-
         var received = await resultTcs.Task;
         await Assert.That(received.IsSuccess).IsTrue();
     }
 
     /// <summary>Tests that ForwardOnErrorResumeConcurrently with an empty observer list completes immediately.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForwardOnErrorResumeConcurrentlyWithEmptyObservers_ThenCompletesImmediately()
     {
         var emptyObservers = ImmutableArray<IObserverAsync<int>>.Empty;
-
-        var task = Concurrent.ForwardOnErrorResumeConcurrently(
-            emptyObservers,
-            new InvalidOperationException("unused"),
-            CancellationToken.None);
-
+        var task = Concurrent.ForwardOnErrorResumeConcurrently(emptyObservers, new InvalidOperationException("unused"), CancellationToken.None);
         await Assert.That(task.IsCompletedSuccessfully).IsTrue();
     }
 
     /// <summary>Tests that ForwardOnCompletedConcurrently with an empty observer list completes immediately.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForwardOnCompletedConcurrentlyWithEmptyObservers_ThenCompletesImmediately()
     {
         var emptyObservers = ImmutableArray<IObserverAsync<int>>.Empty;
-
         var task = Concurrent.ForwardOnCompletedConcurrently(emptyObservers, Result.Success);
-
         await Assert.That(task.IsCompletedSuccessfully).IsTrue();
     }
 
     /// <summary>Tests that concurrent Signal forwards OnNext to multiple observers concurrently.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenConcurrentSignalWithMultipleObservers_ThenAllReceiveOnNext()
     {
-        var signal = Signal.Create<int>(new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = false
-        });
+        var signal = Signal.Create<int>(new() { PublishingOption = PublishingOption.Concurrent, IsStateless = false });
         var items1 = new List<int>();
         var items2 = new List<int>();
-
         await using var sub1 = await signal.Values.SubscribeAsync(
             (x, _) =>
+        {
+            lock (_gate)
             {
-                lock (_gate)
-                {
-                    items1.Add(x);
-                }
+                items1.Add(x);
+            }
 
-                return default;
-            },
+            return default;
+        },
             null);
         await using var sub2 = await signal.Values.SubscribeAsync(
             (x, _) =>
+        {
+            lock (_gate)
             {
-                lock (_gate)
-                {
-                    items2.Add(x);
-                }
+                items2.Add(x);
+            }
 
-                return default;
-            },
+            return default;
+        },
             null);
-
         const int PushedValue = 42;
-
         await signal.OnNextAsync(PushedValue, CancellationToken.None);
         await signal.OnCompletedAsync(Result.Success);
-
         await Assert.That(items1).IsCollectionEqualTo([PushedValue]);
         await Assert.That(items2).IsCollectionEqualTo([PushedValue]);
     }
 
     /// <summary>Tests that concurrent Signal forwards OnErrorResume to multiple observers concurrently.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenConcurrentSignalWithMultipleObservers_ThenAllReceiveOnErrorResume()
     {
-        var signal = Signal.Create<int>(new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = false
-        });
+        var signal = Signal.Create<int>(new() { PublishingOption = PublishingOption.Concurrent, IsStateless = false });
         var errors1 = new List<Exception>();
         var errors2 = new List<Exception>();
         var error = new InvalidOperationException("test");
-
-        await using var sub1 = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            (ex, _) =>
+        await using var sub1 = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
+        {
+            lock (_gate)
             {
-                lock (_gate)
-                {
-                    errors1.Add(ex);
-                }
+                errors1.Add(ex);
+            }
 
-                return default;
-            });
-        await using var sub2 = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            (ex, _) =>
+            return default;
+        });
+        await using var sub2 = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
+        {
+            lock (_gate)
             {
-                lock (_gate)
-                {
-                    errors2.Add(ex);
-                }
+                errors2.Add(ex);
+            }
 
-                return default;
-            });
-
+            return default;
+        });
         await signal.OnErrorResumeAsync(error, CancellationToken.None);
         await signal.OnCompletedAsync(Result.Success);
-
         await Assert.That(errors1).Count().IsEqualTo(1);
         await Assert.That(errors2).Count().IsEqualTo(1);
     }
 
     /// <summary>Tests that concurrent Signal forwards OnCompleted to multiple observers concurrently.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenConcurrentSignalWithMultipleObservers_ThenAllReceiveOnCompleted()
     {
-        var signal = Signal.Create<int>(new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = false
-        });
+        var signal = Signal.Create<int>(new() { PublishingOption = PublishingOption.Concurrent, IsStateless = false });
         var completed1 = new TaskCompletionSource();
         var completed2 = new TaskCompletionSource();
-
-        await using var sub1 = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            null,
-            _ =>
-            {
-                completed1.TrySetResult();
-                return default;
-            });
-        await using var sub2 = await signal.Values.SubscribeAsync(
-            static (_, _) => default,
-            null,
-            _ =>
-            {
-                completed2.TrySetResult();
-                return default;
-            });
-
+        await using var sub1 = await signal.Values.SubscribeAsync(static (_, _) => default, null, _ =>
+        {
+            completed1.TrySetResult();
+            return default;
+        });
+        await using var sub2 = await signal.Values.SubscribeAsync(static (_, _) => default, null, _ =>
+        {
+            completed2.TrySetResult();
+            return default;
+        });
         await signal.OnCompletedAsync(Result.Success);
-
         await completed1.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await completed2.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }

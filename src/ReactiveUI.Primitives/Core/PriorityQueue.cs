@@ -40,10 +40,7 @@ internal sealed class PriorityQueue<T>
     /// <param name="capacity">Initial queue capacity.</param>
     public PriorityQueue(int capacity)
     {
-        if (capacity < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(capacity));
-        }
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(capacity);
 
         _items = new IndexedItem[Math.Max(1, capacity)];
         Count = 0;
@@ -193,6 +190,10 @@ internal sealed class PriorityQueue<T>
     }
 
     /// <summary>Heap item with an insertion-order tie-breaker.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S1210:Equals and the comparison operators should be overridden when implementing IComparable",
+        Justification = "IndexedItem is an internal heap slot compared only through IComparable within PriorityQueue.")]
     internal struct IndexedItem : IComparable<IndexedItem>, IEquatable<IndexedItem>
     {
         /// <summary>Gets or sets the insertion order id.</summary>

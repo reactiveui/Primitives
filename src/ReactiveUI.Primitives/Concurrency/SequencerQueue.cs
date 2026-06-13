@@ -30,10 +30,7 @@ public class SequencerQueue<TAbsolute>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="capacity"/> is less than zero.</exception>
     public SequencerQueue(int capacity)
     {
-        if (capacity < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(capacity));
-        }
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(capacity);
 
         _queue = new(capacity);
     }

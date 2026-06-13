@@ -1,7 +1,6 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
@@ -14,10 +13,10 @@ public partial class ReactiveExtensionsTests
     private static readonly bool[] WhereIsNotNullSignalAlternatingTrueFalse = [true, false, true, false, true];
 
     /// <summary>Expected sequence of first/second/third strings (nullable element type to match WhereIsNotNull source signature).</summary>
-    private static readonly string?[] ExpectedFirstSecondThirdNullable = ["first", "second", "third"];
+    private static readonly string? [] ExpectedFirstSecondThirdNullable = ["first", "second", "third"];
 
     /// <summary>Tests the WhereIsNotNull extension.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task GivenNull_WhenWhereIsNotNull_ThenNoNotification()
     {
@@ -30,7 +29,7 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Tests the WhereIsNotNull extension.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task GivenValue_WhenWhereIsNotNull_ThenNotification()
     {
@@ -43,7 +42,7 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Tests the AsSignal extension.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task GivenObservable_WhenAsSignal_ThenNotifiesUnit()
     {
@@ -56,76 +55,75 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Tests Not inverts boolean.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Not_InvertsBoolean()
     {
         var subject = new BehaviorSubject<bool>(true);
         bool? result = null;
         using var sub = subject.Not().Subscribe(x => result = x);
-
         await Assert.That(result).IsFalse();
     }
 
     /// <summary>Tests WhereTrue filters to true values.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhereTrue_FiltersTrueValues()
     {
         var source = WhereIsNotNullSignalAlternatingTrueFalse.ToObservable();
         var results = new List<bool>();
         using var sub = source.WhereTrue().Subscribe(results.Add);
-
         await Assert.That(results).IsCollectionEqualTo([true, true, true]);
     }
 
     /// <summary>Tests WhereFalse filters to false values.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhereFalse_FiltersFalseValues()
     {
         var source = WhereIsNotNullSignalAlternatingTrueFalse.ToObservable();
         var results = new List<bool>();
         using var sub = source.WhereFalse().Subscribe(results.Add);
-
         await Assert.That(results).IsCollectionEqualTo([false, false]);
     }
 
     /// <summary>Tests WhereIsNotNull filters null values.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhereIsNotNull_FiltersNullValues()
     {
-        var source = new[] { "a", null, "b", null, "c" }.ToObservable();
+        var source = new[]
+        {
+            "a",
+            null,
+            "b",
+            null,
+            "c"
+        }.ToObservable();
         var results = new List<string>();
         using var sub = source.WhereIsNotNull().Subscribe(x => results.Add(x!));
-
         await Assert.That(results).IsCollectionEqualTo(["a", "b", "c"]);
     }
 
     /// <summary>Tests AsSignal converts to RxVoid.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task AsSignal_ConvertsToUnit()
     {
         var source = Observable.Range(1, 3);
         var results = new List<RxVoid>();
         using var sub = source.AsSignal().Subscribe(results.Add);
-
         await Assert.That(results).Count().IsEqualTo(SampleValue3);
     }
 
     /// <summary>Tests WhereIsNotNull filtering nulls over time.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhereIsNotNull_FiltersNullsOverTime()
     {
         var subject = new Subject<string?>();
         var results = new List<string?>();
-
-        subject.WhereIsNotNull()
-            .Subscribe(results.Add);
-
+        subject.WhereIsNotNull().Subscribe(results.Add);
         subject.OnNext("first");
         subject.OnNext(null);
         subject.OnNext("second");
@@ -137,35 +135,28 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Tests Not operator inverting boolean values over time.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Not_InvertsBooleanValuesOverTime()
     {
         var subject = new Subject<bool>();
         var results = new List<bool>();
-
-        subject.Not()
-            .Subscribe(results.Add);
-
+        subject.Not().Subscribe(results.Add);
         subject.OnNext(true);
         subject.OnNext(false);
         subject.OnNext(true);
         subject.OnNext(false);
-
         await Assert.That(results).IsCollectionEqualTo([false, true, false, true]);
     }
 
     /// <summary>Tests AsSignal converting values to RxVoid over time.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task AsSignal_ConvertsToUnitOverTime()
     {
         var subject = new Subject<int>();
         var results = new List<RxVoid>();
-
-        subject.AsSignal()
-            .Subscribe(results.Add);
-
+        subject.AsSignal().Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnNext(SampleValue3);

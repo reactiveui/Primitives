@@ -1,7 +1,6 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -17,7 +16,7 @@ public class DebounceImmediateObservableTests
     private const int SettleTicks = 100;
 
     /// <summary>Verifies that <c>OnNext</c> after the source has completed is silently dropped.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnNextAfterCompleted_ThenDropped()
     {
@@ -25,21 +24,17 @@ public class DebounceImmediateObservableTests
         var source = new SyncDirectSource<int>();
         var values = new List<int>();
         var completed = false;
-
-        using var sub = source.DebounceImmediate(TimeSpan.FromTicks(DebounceTicks), scheduler)
-            .Subscribe(values.Add, () => completed = true);
-
+        using var sub = source.DebounceImmediate(TimeSpan.FromTicks(DebounceTicks), scheduler).Subscribe(values.Add, () => completed = true);
         source.Observer.OnCompleted();
         scheduler.AdvanceBy(SettleTicks);
         source.Observer.OnNext(1);
         scheduler.AdvanceBy(SettleTicks);
-
         await Assert.That(completed).IsTrue();
         await Assert.That(values).IsEmpty();
     }
 
     /// <summary>Verifies that <c>OnError</c> after the source has completed is silently dropped.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnErrorAfterCompleted_ThenDropped()
     {
@@ -47,19 +42,20 @@ public class DebounceImmediateObservableTests
         var source = new SyncDirectSource<int>();
         Exception? caught = null;
         var completed = false;
-
-        using var sub = source.DebounceImmediate(TimeSpan.FromTicks(DebounceTicks), scheduler)
-            .Subscribe(static _ => { }, ex => caught = ex, () => completed = true);
-
+        using var sub = source.DebounceImmediate(TimeSpan.FromTicks(DebounceTicks), scheduler).Subscribe(
+            static _ =>
+        {
+        },
+            ex => caught = ex,
+            () => completed = true);
         source.Observer.OnCompleted();
         source.Observer.OnError(new InvalidOperationException("late"));
-
         await Assert.That(completed).IsTrue();
         await Assert.That(caught).IsNull();
     }
 
     /// <summary>Verifies that a duplicate <c>OnCompleted</c> after an error is silently dropped.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnCompletedAfterError_ThenDropped()
     {
@@ -68,13 +64,14 @@ public class DebounceImmediateObservableTests
         Exception? caught = null;
         var completed = false;
         var expected = new InvalidOperationException("first");
-
-        using var sub = source.DebounceImmediate(TimeSpan.FromTicks(DebounceTicks), scheduler)
-            .Subscribe(static _ => { }, ex => caught = ex, () => completed = true);
-
+        using var sub = source.DebounceImmediate(TimeSpan.FromTicks(DebounceTicks), scheduler).Subscribe(
+            static _ =>
+        {
+        },
+            ex => caught = ex,
+            () => completed = true);
         source.Observer.OnError(expected);
         source.Observer.OnCompleted();
-
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(completed).IsFalse();
     }

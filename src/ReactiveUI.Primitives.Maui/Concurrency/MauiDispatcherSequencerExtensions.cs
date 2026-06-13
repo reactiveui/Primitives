@@ -18,10 +18,7 @@ public static class MauiDispatcherSequencerExtensions
         /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is <see langword="null"/>.</exception>
         public MauiDispatcherSequencer ToSequencer()
         {
-            if (dispatcher is null)
-            {
-                throw new ArgumentNullException(nameof(dispatcher));
-            }
+            ArgumentNullException.ThrowIfNull(dispatcher);
 
             return new(dispatcher);
         }

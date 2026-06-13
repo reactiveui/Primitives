@@ -66,15 +66,9 @@ public class ReplaySignal<T> : ISignal<T>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
     public ReplaySignal(int bufferSize, TimeSpan window, ISequencer scheduler)
     {
-        if (bufferSize < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(bufferSize));
-        }
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(bufferSize);
 
-        if (window < TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(window));
-        }
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(window, TimeSpan.Zero);
 
         _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
         _bufferSize = bufferSize;
@@ -190,6 +184,10 @@ public class ReplaySignal<T> : ISignal<T>
     /// <summary>Called when [error].</summary>
     /// <param name="exception">The exception.</param>
     /// <exception cref="ArgumentNullException">exception.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S927:Parameter names should match base declaration and other partial definitions",
+        Justification = "The shipped public API includes the historical parameter name.")]
     public void OnError(Exception exception)
     {
         ArgumentExceptionHelper.ThrowIfNull(exception);

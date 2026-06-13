@@ -23,10 +23,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (count <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count));
-            }
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(count);
 
             return new BufferCountSignal<TSource>(source, count, 0);
         }
@@ -45,15 +42,9 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (count <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count));
-            }
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(count);
 
-            if (skip <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(skip));
-            }
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(skip);
 
             return new BufferCountSignal<TSource>(source, count, skip);
         }

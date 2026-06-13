@@ -20,7 +20,7 @@ public sealed class ControlSequencerTests
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullControl() =>
-        await Assert.That(() => new ControlSequencer(null!)).Throws<ArgumentNullException>();
+        await Assert.That(() => new ControlSequencer(null!)).ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Verifies immediate work is posted to and executed on the control's UI thread.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>

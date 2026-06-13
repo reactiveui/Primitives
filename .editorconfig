@@ -1307,6 +1307,9 @@ dotnet_diagnostic.SST1612.severity = error # Parameter documentation should matc
 dotnet_diagnostic.SST1613.severity = error # Parameter documentation should declare a name
 dotnet_diagnostic.SST1614.severity = error # Parameter documentation should have text
 dotnet_diagnostic.SST1615.severity = error # The return value should be documented
+
+[src/tests/ReactiveUI.Primitives.Tests/DeterministicEdgeCaseTests.cs]
+dotnet_diagnostic.S104.severity = none
 dotnet_diagnostic.SST1616.severity = error # Return value documentation should have text
 dotnet_diagnostic.SST1617.severity = error # A void return value should not be documented
 dotnet_diagnostic.SST1618.severity = error # Generic type parameters should be documented
@@ -2195,3 +2198,6 @@ end_of_line = lf
 
 [*.{cmd, bat}]
 end_of_line = crlf
+
+[src/tests/ReactiveUI.Primitives.Tests/DeterministicEdgeCaseTests.cs]
+dotnet_diagnostic.S104.severity = none

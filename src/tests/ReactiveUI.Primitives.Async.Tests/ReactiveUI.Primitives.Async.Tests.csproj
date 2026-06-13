@@ -25,6 +25,7 @@
     <Using Include="System.Linq.Expressions" />
     <Using Include="System.Threading" />
     <Using Include="System.Threading.Tasks" />
+    <Using Include="TUnit.Assertions.Extensions" />
     <Using Include="TUnit.Core.Executors" />
     <Using Include="TUnit.Core.Interfaces" />
   </ItemGroup>

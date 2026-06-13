@@ -50,10 +50,7 @@ public static partial class SignalAsyncExtensions
             TState state,
             Func<TState, T, TDest> selector)
         {
-            if (selector is null)
-            {
-                throw new ArgumentNullException(nameof(selector));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(selector);
 
             return @this.Map(value => selector(state, value));
         }

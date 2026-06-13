@@ -286,6 +286,7 @@ internal static class AllocationProbe
     /// <summary>Warms up, measures, and prints the per-operation allocation for a single probe row.</summary>
     /// <param name="name">The operator label to print.</param>
     /// <param name="op">The operation to measure.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1215:GC.Collect should not be called", Justification = "The allocation probe forces a collection before measuring current-thread allocations.")]
     private static void Row(string name, Action op)
     {
         for (var i = 0; i < Warmup; i++)

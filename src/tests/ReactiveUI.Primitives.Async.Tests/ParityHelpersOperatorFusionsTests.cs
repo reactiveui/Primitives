@@ -766,7 +766,7 @@ public class ParityHelpersOperatorFusionsTests
             throw error;
 
         /// <inheritdoc/>
-        public ValueTask OnErrorResumeAsync(Exception err, CancellationToken cancellationToken) =>
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
             default;
 
         /// <inheritdoc/>

@@ -71,10 +71,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
     /// <exception cref="ArgumentNullException"><paramref name="disposables"/> is <see langword="null"/>.</exception>
     public MultipleDisposable(params IDisposable[] disposables)
     {
-        if (disposables is null)
-        {
-            throw new ArgumentNullException(nameof(disposables));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(disposables);
 
         for (var i = 0; i < disposables.Length; i++)
         {
@@ -133,10 +130,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
     /// <exception cref="ArgumentNullException"><paramref name="disposable"/> is <see langword="null"/>.</exception>
     public void Add(IDisposable disposable)
     {
-        if (disposable is null)
-        {
-            throw new ArgumentNullException(nameof(disposable));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(disposable);
 
         var shouldDispose = false;
         lock (_gate)
@@ -165,10 +159,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
     /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
     public bool Remove(IDisposable? item)
     {
-        if (item is null)
-        {
-            throw new ArgumentNullException(nameof(item));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(item);
 
         bool shouldDispose;
         lock (_gate)
@@ -274,15 +265,16 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="arrayIndex"/> is negative.</exception>
     public void CopyTo(IDisposable[] array, int arrayIndex)
     {
-        if (array is null)
-        {
-            throw new ArgumentNullException(nameof(array));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(array);
 
+#if NET8_0_OR_GREATER
+        ArgumentOutOfRangeException.ThrowIfNegative(arrayIndex);
+#else
         if (arrayIndex < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(arrayIndex));
         }
+#endif
 
         Snapshot().CopyTo(array, arrayIndex);
     }

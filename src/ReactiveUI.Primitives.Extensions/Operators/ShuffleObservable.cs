@@ -32,6 +32,7 @@ internal sealed class ShuffleObservable<T>(IObservable<T[]> source) : IObservabl
 #if !NET8_0_OR_GREATER
         /// <summary>Per-thread <see cref="Random"/> used by the netfx fallback path.</summary>
         [ThreadStatic]
+        [SuppressMessage("Major Code Smell", "S2743:Static fields should not be used in generic types", Justification = "The netfx fallback keeps a per-thread random instance for each closed shuffle witness type.")]
         private static Random? _threadRandom;
 #endif
 

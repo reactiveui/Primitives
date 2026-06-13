@@ -1,7 +1,6 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -210,97 +209,63 @@ public static class CoreOnlySmoke
 """;
 
     /// <summary>The platform assemblies needed by the in-memory generator smoke compilation.</summary>
-    private static readonly string[] PlatformReferenceNames =
-    [
-        "System.Collections.dll",
-        "System.Linq.dll",
-        "System.Private.CoreLib.dll",
-        "System.Runtime.dll",
-        "System.Runtime.Extensions.dll",
-        "System.Threading.dll",
-        "System.Threading.Tasks.dll",
-    ];
+    private static readonly string[] PlatformReferenceNames = ["System.Collections.dll", "System.Linq.dll", "System.Private.CoreLib.dll", "System.Runtime.dll", "System.Runtime.Extensions.dll", "System.Threading.dll", "System.Threading.Tasks.dll",];
 
     /// <summary>Verifies bridge generators emit async adapter extensions when async primitives are referenced.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [RequiresAssemblyFiles]
-    public void BridgeGeneratorsEmitAsyncAdaptersOnlyWhenAsyncShapesArePresent()
+    public async Task BridgeGeneratorsEmitAsyncAdaptersOnlyWhenAsyncShapesArePresent()
     {
         const string Source = BaseSmokeUsings + AsyncBridgeSmokeUsings + BridgeShapeSource + AsyncBridgeSmokeSource;
-        var (diagnostics, generatedSources) = RunGenerators(Source, includeAsyncReference: true);
-
-        Assert.Equal(0, diagnostics.Length);
-        Assert.True(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncBridgeName));
-        Assert.True(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncObservableBridgeName));
-        Assert.True(GeneratedBridgeTypeExists(generatedSources, R3AsyncBridgeName));
-        Assert.True(GeneratedBridgeTypeExists(generatedSources, R3AsyncObservableBridgeName));
+        var(diagnostics, generatedSources) = RunGenerators(Source, includeAsyncReference: true);
+        await Assert.That(diagnostics.Length).IsEqualTo(0);
+        await Assert.That(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncBridgeName)).IsTrue();
+        await Assert.That(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncObservableBridgeName)).IsTrue();
+        await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncBridgeName)).IsTrue();
+        await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncObservableBridgeName)).IsTrue();
     }
 
     /// <summary>Verifies bridge generators skip async adapter extensions when async primitives are absent.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [RequiresAssemblyFiles]
-    public void BridgeGeneratorsSkipAsyncAdaptersWhenAsyncAssemblyIsAbsent()
+    public async Task BridgeGeneratorsSkipAsyncAdaptersWhenAsyncAssemblyIsAbsent()
     {
         const string Source = BaseSmokeUsings + CoreBridgeSmokeUsings + BridgeShapeSource + CoreOnlySmokeSource;
-        var (diagnostics, generatedSources) = RunGenerators(Source, includeAsyncReference: false);
-
-        Assert.Equal(0, diagnostics.Length);
-        Assert.False(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncBridgeName));
-        Assert.False(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncObservableBridgeName));
-        Assert.False(GeneratedBridgeTypeExists(generatedSources, R3AsyncBridgeName));
-        Assert.False(GeneratedBridgeTypeExists(generatedSources, R3AsyncObservableBridgeName));
+        var(diagnostics, generatedSources) = RunGenerators(Source, includeAsyncReference: false);
+        await Assert.That(diagnostics.Length).IsEqualTo(0);
+        await Assert.That(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncBridgeName)).IsFalse();
+        await Assert.That(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncObservableBridgeName)).IsFalse();
+        await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncBridgeName)).IsFalse();
+        await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncObservableBridgeName)).IsFalse();
     }
 
     /// <summary>Checks whether generated source contains the named bridge type rather than a marker attribute substring.</summary>
-    /// <param name="generatedSources">The generated source texts.</param>
-    /// <param name="typeName">The bridge type name.</param>
+    /// <param name = "generatedSources">The generated source texts.</param>
+    /// <param name = "typeName">The bridge type name.</param>
     /// <returns><see langword="true"/> when the bridge type is emitted.</returns>
-    private static bool GeneratedBridgeTypeExists(string[] generatedSources, string typeName) =>
-        Array.Exists(
-            generatedSources,
-            text => text.Contains($"internal static class {typeName}", StringComparison.Ordinal));
+    private static bool GeneratedBridgeTypeExists(string[] generatedSources, string typeName) => Array.Exists(generatedSources, text => text.Contains($"internal static class {typeName}", StringComparison.Ordinal));
 
     /// <summary>Runs the System.Reactive and R3 bridge generators against an in-memory compilation.</summary>
-    /// <param name="source">The source text to compile.</param>
-    /// <param name="includeAsyncReference">Whether to include the async primitives assembly reference.</param>
+    /// <param name = "source">The source text to compile.</param>
+    /// <param name = "includeAsyncReference">Whether to include the async primitives assembly reference.</param>
     /// <returns>The diagnostics and generated source texts produced by the generator run.</returns>
     [RequiresAssemblyFiles("Calls System.Reflection.Assembly.Location")]
-    private static (ImmutableArray<Diagnostic> Diagnostics, string[] GeneratedSources) RunGenerators(
-        string source,
-        bool includeAsyncReference)
+    private static (ImmutableArray<Diagnostic> Diagnostics, string[] GeneratedSources) RunGenerators(string source, bool includeAsyncReference)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview);
         var references = CreateReferences(includeAsyncReference);
-
-        var compilation = CSharpCompilation.Create(
-            "AsyncBridgeGeneratorSmoke",
-            [CSharpSyntaxTree.ParseText(source, parseOptions)],
-            references,
-            new(OutputKind.DynamicallyLinkedLibrary));
-
-        var driver = CSharpGeneratorDriver.Create(
-            [
-                new SystemReactiveBridgeGenerator().AsSourceGenerator(),
-                new SystemReactiveAsyncBridgeGenerator().AsSourceGenerator(),
-                new R3BridgeGenerator().AsSourceGenerator(),
-                new R3AsyncBridgeGenerator().AsSourceGenerator(),
-            ],
-            parseOptions: parseOptions);
-
+        var compilation = CSharpCompilation.Create("AsyncBridgeGeneratorSmoke", [CSharpSyntaxTree.ParseText(source, parseOptions)], references, new(OutputKind.DynamicallyLinkedLibrary));
+        var driver = CSharpGeneratorDriver.Create([new SystemReactiveBridgeGenerator().AsSourceGenerator(), new SystemReactiveAsyncBridgeGenerator().AsSourceGenerator(), new R3BridgeGenerator().AsSourceGenerator(), new R3AsyncBridgeGenerator().AsSourceGenerator(),], parseOptions: parseOptions);
         driver = (CSharpGeneratorDriver)driver.RunGeneratorsAndUpdateCompilation(compilation, out var updatedCompilation, out var generatorDiagnostics);
-        var diagnostics = generatorDiagnostics
-            .Concat(updatedCompilation.GetDiagnostics().Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
-            .ToImmutableArray();
-        var generatedSources = driver.GetRunResult().Results
-            .SelectMany(result => result.GeneratedSources)
-            .Select(sourceText => sourceText.SourceText.ToString())
-            .ToArray();
-
+        var diagnostics = generatorDiagnostics.Concat(updatedCompilation.GetDiagnostics().Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)).ToImmutableArray();
+        var generatedSources = driver.GetRunResult().Results.SelectMany(result => result.GeneratedSources).Select(sourceText => sourceText.SourceText.ToString()).ToArray();
         return (diagnostics, generatedSources);
     }
 
     /// <summary>Creates the bounded metadata reference set required by the generator smoke compilation.</summary>
-    /// <param name="includeAsyncReference">Whether to include the async primitives assembly reference.</param>
+    /// <param name = "includeAsyncReference">Whether to include the async primitives assembly reference.</param>
     /// <returns>The metadata references for the in-memory Roslyn compilation.</returns>
     [RequiresAssemblyFiles("Calls System.Reflection.Assembly.Location")]
     private static List<MetadataReference> CreateReferences(bool includeAsyncReference)

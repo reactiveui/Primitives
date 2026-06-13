@@ -530,10 +530,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (period < TimeSpan.Zero)
-            {
-                throw new ArgumentOutOfRangeException(nameof(period));
-            }
+            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(period, TimeSpan.Zero);
 
             scheduler ??= ThreadPoolSequencer.Instance;
             return new ProbeSignal<T>(source, period, scheduler);

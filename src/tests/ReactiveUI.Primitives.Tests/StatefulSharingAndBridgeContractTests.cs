@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+#pragma warning disable S103 // Coverage tests intentionally group branch-heavy scenarios.
 
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
@@ -73,29 +74,28 @@ public class StatefulSharingAndBridgeContractTests
     private static readonly int[] ExpectedBridgeScheduleValues = [FirstSharedValue, SecondSharedValue];
 
     /// <summary>Verifies mutable state exposes latest values and read-only projected values.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void StatefulSignalsExposeLatestValuesAndReadOnlyProjections()
+    public async Task StatefulSignalsExposeLatestValuesAndReadOnlyProjections()
     {
         var state = new StateSignal<int>(InitialStateValue);
         var values = new List<int>();
         var readonlyValues = new List<string>();
-
         state.Changed.Subscribe(values.Add);
         using var readOnly = state.ToReadOnlyState(value => $"v:{value}");
         readOnly.Changed.Subscribe(readonlyValues.Add);
-
         state.Value = UpdatedStateValue;
         state.Refresh();
-
-        Assert.Equal(UpdatedStateValue, state.Value);
-        Assert.Equal("v:11", readOnly.Value);
-        Assert.Equal(ExpectedStateValues, values);
-        Assert.Equal(ExpectedReadOnlyValues, readonlyValues);
+        await Assert.That(state.Value).IsEqualTo(UpdatedStateValue);
+        await Assert.That(readOnly.Value).IsEqualTo("v:11");
+        await Assert.That(values.SequenceEqual(ExpectedStateValues)).IsTrue();
+        await Assert.That(readonlyValues.SequenceEqual(ExpectedReadOnlyValues)).IsTrue();
     }
 
     /// <summary>Verifies shared and replayed connectable signals control source subscriptions.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void ConnectableShareAndReplayLiveControlSourceSubscriptions()
+    public async Task ConnectableShareAndReplayLiveControlSourceSubscriptions()
     {
         var source = new Signal<int>();
         var sourceSubscriptions = 0;
@@ -104,11 +104,9 @@ public class StatefulSharingAndBridgeContractTests
             sourceSubscriptions++;
             return source.Subscribe(observer);
         });
-
         var shared = cold.ShareLatest();
         var first = new List<int>();
         var second = new List<int>();
-
         using var firstSubscription = shared.Subscribe(first.Add);
         using var secondSubscription = shared.Subscribe(second.Add);
         source.OnNext(FirstSharedValue);
@@ -116,11 +114,9 @@ public class StatefulSharingAndBridgeContractTests
         source.OnNext(SecondSharedValue);
         secondSubscription.Dispose();
         source.OnNext(UnobservedSharedValue);
-
-        Assert.Equal(1, sourceSubscriptions);
-        Assert.Equal(ExpectedFirstSharedValues, first);
-        Assert.Equal(ExpectedSecondSharedValues, second);
-
+        await Assert.That(sourceSubscriptions).IsEqualTo(1);
+        await Assert.That(first.SequenceEqual(ExpectedFirstSharedValues)).IsTrue();
+        await Assert.That(second.SequenceEqual(ExpectedSecondSharedValues)).IsTrue();
         var replayed = cold.ReplayLive(1);
         var replayConnection = replayed.Connect();
         var replayFirst = new List<int>();
@@ -130,9 +126,8 @@ public class StatefulSharingAndBridgeContractTests
         replayed.Subscribe(replaySecond.Add);
         source.OnNext(SecondReplayValue);
         replayConnection.Dispose();
-
-        Assert.Equal(ExpectedReplayValues, replayFirst);
-        Assert.Equal(ExpectedReplayValues, replaySecond);
+        await Assert.That(replayFirst.SequenceEqual(ExpectedReplayValues)).IsTrue();
+        await Assert.That(replaySecond.SequenceEqual(ExpectedReplayValues)).IsTrue();
     }
 
     /// <summary>Verifies command signals publish results, failures, and running state.</summary>
@@ -149,12 +144,10 @@ public class StatefulSharingAndBridgeContractTests
                 return CommandResult;
             },
             canRun);
-
         var results = new List<int>();
         var running = new List<bool>();
         command.Results.Subscribe(results.Add);
         command.IsRunning.Changed.Subscribe(running.Add);
-
         var executed = await command.ExecuteAsync();
         canRun.Value = false;
         InvalidOperationException? rejected = null;
@@ -167,16 +160,17 @@ public class StatefulSharingAndBridgeContractTests
             rejected = error;
         }
 
-        Assert.NotNull(rejected);
-        Assert.Equal(CommandResult, executed);
-        Assert.Equal(ExpectedCommandResults, results);
-        Assert.Equal(ExpectedRunningValues, running);
-        Assert.Equal("Command cannot run.", rejected!.Message);
+        await Assert.That(rejected).IsNotNull();
+        await Assert.That(executed).IsEqualTo(CommandResult);
+        await Assert.That(results.SequenceEqual(ExpectedCommandResults)).IsTrue();
+        await Assert.That(running.SequenceEqual(ExpectedRunningValues)).IsTrue();
+        await Assert.That(rejected!.Message).IsEqualTo("Command cannot run.");
     }
 
     /// <summary>Verifies connectable aliases, auto-connect validation, and replay window overloads.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void ConnectableAliasesValidateAndConnectAtThreshold()
+    public async Task ConnectableAliasesValidateAndConnectAtThreshold()
     {
         var source = new Signal<int>();
         var sourceSubscriptions = 0;
@@ -185,7 +179,6 @@ public class StatefulSharingAndBridgeContractTests
             sourceSubscriptions++;
             return source.Subscribe(observer);
         });
-
         var auto = cold.Share().AutoConnect(2);
         var first = new List<int>();
         var second = new List<int>();
@@ -193,23 +186,20 @@ public class StatefulSharingAndBridgeContractTests
         source.OnNext(FirstSharedValue);
         using var secondSubscription = auto.Subscribe(second.Add);
         source.OnNext(SecondSharedValue);
-
-        Assert.Equal(1, sourceSubscriptions);
-        Assert.Equal(ExpectedSecondSharedValues[1..], first);
-        Assert.Equal(ExpectedSecondSharedValues[1..], second);
+        await Assert.That(sourceSubscriptions).IsEqualTo(1);
+        await Assert.That(first.SequenceEqual(ExpectedSecondSharedValues[1..])).IsTrue();
+        await Assert.That(second.SequenceEqual(ExpectedSecondSharedValues[1..])).IsTrue();
         Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.Multicast(null!, new Signal<int>()));
         Assert.Throws<ArgumentNullException>(() => Signal.Silent<int>().Multicast(null!));
         Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.AutoShare<int>(null!));
         Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.AutoConnect<int>(null!));
         Assert.Throws<ArgumentOutOfRangeException>(() => cold.ShareLive().AutoConnect(-1));
-
         var replayed = cold.Replay(1, TimeSpan.FromSeconds(1));
         using var connection = replayed.Connect();
         source.OnNext(FirstReplayValue);
         var replayValues = new List<int>();
         replayed.Subscribe(replayValues.Add);
-
-        Assert.Equal(ExpectedReplayValues[..1], replayValues);
+        await Assert.That(replayValues.SequenceEqual(ExpectedReplayValues[..1])).IsTrue();
     }
 
     /// <summary>Verifies command aliases, sync execution failures, and disposal branches.</summary>
@@ -223,12 +213,10 @@ public class StatefulSharingAndBridgeContractTests
         var command = new CommandSignal<int>(() => throw fault);
         var results = new List<int>();
         var faults = new List<Exception>();
-
         command.Results.Subscribe(results.Add);
         command.Faults.Subscribe(faults.Add);
         behavior.OnNext(UpdatedStateValue);
         disposable.Dispose();
-
         InvalidOperationException? observed = null;
         try
         {
@@ -251,20 +239,21 @@ public class StatefulSharingAndBridgeContractTests
             disposed = error;
         }
 
-        Assert.Same(fault, observed!);
-        Assert.Equal(0, results.Count);
-        Assert.Equal(1, faults.Count);
-        Assert.Same(fault, faults[0]);
-        Assert.Equal(UpdatedStateValue, behavior.Value);
-        Assert.True(disposable.IsDisposed);
-        Assert.NotNull(disposed);
+        await Assert.That(observed!).IsSameReferenceAs(fault);
+        await Assert.That(results.Count).IsEqualTo(0);
+        await Assert.That(faults.Count).IsEqualTo(1);
+        await Assert.That(faults[0]).IsSameReferenceAs(fault);
+        await Assert.That(behavior.Value).IsEqualTo(UpdatedStateValue);
+        await Assert.That(disposable.IsDisposed).IsTrue();
+        await Assert.That(disposed).IsNotNull();
     }
 
     /// <summary>Verifies bridge generators emit adapters when external shapes are present.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [RequiresAssemblyFiles]
     [SuppressMessage("Major Code Smell", "S138:Functions should not have too many lines", Justification = "Embedded generator smoke source keeps the emitted API contract local to the test.")]
-    public void BridgeGeneratorsEmitOnlyWhenExternalShapesArePresentAndCompileSmokeAdapters()
+    public async Task BridgeGeneratorsEmitOnlyWhenExternalShapesArePresentAndCompileSmokeAdapters()
     {
         const string Source = """
 using System;
@@ -358,20 +347,19 @@ public static class BridgeSmoke
     }
 }
 """;
-
         var (diagnostics, generatedSources) = RunGenerators(Source);
-
-        Assert.Equal(0, diagnostics.Length);
-        Assert.True(Array.Exists(generatedSources, static text => text.Contains(SystemReactiveBridgeName, StringComparison.Ordinal)));
-        Assert.True(Array.Exists(generatedSources, static text => text.Contains(SystemReactiveSchedulerBridgeName, StringComparison.Ordinal)));
-        Assert.True(Array.Exists(generatedSources, static text => text.Contains(R3BridgeName, StringComparison.Ordinal)));
+        await Assert.That(diagnostics.Length).IsEqualTo(0);
+        await Assert.That(Array.Exists(generatedSources, static text => text.Contains(SystemReactiveBridgeName, StringComparison.Ordinal))).IsTrue();
+        await Assert.That(Array.Exists(generatedSources, static text => text.Contains(SystemReactiveSchedulerBridgeName, StringComparison.Ordinal))).IsTrue();
+        await Assert.That(Array.Exists(generatedSources, static text => text.Contains(R3BridgeName, StringComparison.Ordinal))).IsTrue();
     }
 
     /// <summary>Verifies generated System.Reactive scheduler adapters preserve immediate recursive scheduling order.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [RequiresAssemblyFiles]
     [SuppressMessage("Major Code Smell", "S138:Functions should not have too many lines", Justification = "Embedded generator smoke source keeps the emitted API contract local to the test.")]
-    public void SystemReactiveSchedulerBridgePreservesImmediateRecursiveOrdering()
+    public async Task SystemReactiveSchedulerBridgePreservesImmediateRecursiveOrdering()
     {
         const string Source = """
 using System;
@@ -475,18 +463,17 @@ public static class BridgeSchedulerRuntimeSmoke
     }
 }
 """;
-
-        var systemToPrimitives = (int[])InvokeGeneratedBridge(Source, "BridgeSchedulerRuntimeSmoke", "RunSystemSchedulerToSequencer");
-        var primitivesToSystem = (int[])InvokeGeneratedBridge(Source, "BridgeSchedulerRuntimeSmoke", "RunSequencerToSystemScheduler");
-
-        Assert.Equal(ExpectedBridgeScheduleValues.AsEnumerable(), systemToPrimitives);
-        Assert.Equal(ExpectedBridgeScheduleValues.AsEnumerable(), primitivesToSystem);
+        var systemToPrimitives = (int[])await InvokeGeneratedBridge(Source, "BridgeSchedulerRuntimeSmoke", "RunSystemSchedulerToSequencer").ConfigureAwait(false);
+        var primitivesToSystem = (int[])await InvokeGeneratedBridge(Source, "BridgeSchedulerRuntimeSmoke", "RunSequencerToSystemScheduler").ConfigureAwait(false);
+        await Assert.That(systemToPrimitives.SequenceEqual(ExpectedBridgeScheduleValues.AsEnumerable())).IsTrue();
+        await Assert.That(primitivesToSystem.SequenceEqual(ExpectedBridgeScheduleValues.AsEnumerable())).IsTrue();
     }
 
     /// <summary>Verifies bridge generators skip adapters when external packages are absent.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [RequiresAssemblyFiles]
-    public void BridgeGeneratorsDoNotEmitExternalAdaptersWhenExternalPackagesAreAbsent()
+    public async Task BridgeGeneratorsDoNotEmitExternalAdaptersWhenExternalPackagesAreAbsent()
     {
         const string Source = """
 using System;
@@ -497,17 +484,15 @@ public static class CoreOnlySmoke
     public static IObservable<int> Use() => Signal.Emit(1);
 }
 """;
-
         var (diagnostics, generatedSources) = RunGenerators(Source);
-
-        Assert.Equal(0, diagnostics.Length);
-        Assert.False(Array.Exists(generatedSources, static text => text.Contains(SystemReactiveBridgeName, StringComparison.Ordinal)));
-        Assert.False(Array.Exists(generatedSources, static text => text.Contains(SystemReactiveSchedulerBridgeName, StringComparison.Ordinal)));
-        Assert.False(Array.Exists(generatedSources, static text => text.Contains(R3BridgeName, StringComparison.Ordinal)));
+        await Assert.That(diagnostics.Length).IsEqualTo(0);
+        await Assert.That(Array.Exists(generatedSources, static text => text.Contains(SystemReactiveBridgeName, StringComparison.Ordinal))).IsFalse();
+        await Assert.That(Array.Exists(generatedSources, static text => text.Contains(SystemReactiveSchedulerBridgeName, StringComparison.Ordinal))).IsFalse();
+        await Assert.That(Array.Exists(generatedSources, static text => text.Contains(R3BridgeName, StringComparison.Ordinal))).IsFalse();
     }
 
     /// <summary>Runs the bridge source generators for the supplied source.</summary>
-    /// <param name="source">Source code to compile.</param>
+    /// <param name = "source">Source code to compile.</param>
     /// <returns>Compilation diagnostics and generated source text.</returns>
     [RequiresAssemblyFiles("Calls System.Reflection.Assembly.Location")]
     private static (ImmutableArray<Diagnostic> Diagnostics, string[] GeneratedSources) RunGenerators(string source)
@@ -517,19 +502,18 @@ public static class CoreOnlySmoke
     }
 
     /// <summary>Runs the bridge source generators and invokes a generated bridge smoke method.</summary>
-    /// <param name="source">Source code to compile.</param>
-    /// <param name="typeName">Type containing the method.</param>
-    /// <param name="methodName">Static method name.</param>
+    /// <param name = "source">Source code to compile.</param>
+    /// <param name = "typeName">Type containing the method.</param>
+    /// <param name = "methodName">Static method name.</param>
     /// <returns>The method result.</returns>
     [RequiresAssemblyFiles("Calls System.Reflection.Assembly.Location")]
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "The test intentionally loads a Roslyn-emitted in-memory assembly.")]
     [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "The test invokes a known public static method from a Roslyn-emitted smoke type.")]
-    private static object InvokeGeneratedBridge(string source, string typeName, string methodName)
+    private static async Task<object> InvokeGeneratedBridge(string source, string typeName, string methodName)
     {
         var (diagnostics, _, updatedCompilation) = CompileWithGenerators(source);
-        Assert.Equal(0, diagnostics.Length);
-
-        using var stream = new MemoryStream();
+        await Assert.That(diagnostics.Length).IsEqualTo(0);
+        await using var stream = new MemoryStream();
         var emit = updatedCompilation.Emit(stream);
         if (!emit.Success)
         {
@@ -543,47 +527,20 @@ public static class CoreOnlySmoke
     }
 
     /// <summary>Compiles the supplied source with bridge source generators.</summary>
-    /// <param name="source">Source code to compile.</param>
+    /// <param name = "source">Source code to compile.</param>
     /// <returns>Compilation diagnostics, generated source text, and updated compilation.</returns>
     [RequiresAssemblyFiles("Calls System.Reflection.Assembly.Location")]
     private static (ImmutableArray<Diagnostic> Diagnostics, string[] GeneratedSources, Compilation UpdatedCompilation) CompileWithGenerators(string source)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview);
-        var references = AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!
-            .ToString()!
-            .Split(Path.PathSeparator)
-            .Where(path =>
-                !Path.GetFileName(path).StartsWith("System.Reactive", StringComparison.OrdinalIgnoreCase) &&
-                !Path.GetFileName(path).StartsWith("R3", StringComparison.OrdinalIgnoreCase))
-            .Select(path => MetadataReference.CreateFromFile(path))
-            .Cast<MetadataReference>()
-            .ToList();
-
+        var references = AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!.ToString()!.Split(Path.PathSeparator).Where(path => !Path.GetFileName(path).StartsWith("System.Reactive", StringComparison.OrdinalIgnoreCase) && !Path.GetFileName(path).StartsWith("R3", StringComparison.OrdinalIgnoreCase)).Select(path => MetadataReference.CreateFromFile(path)).Cast<MetadataReference>().ToList();
         references.Add(MetadataReference.CreateFromFile(typeof(Signal).Assembly.Location));
         references.Add(MetadataReference.CreateFromFile(typeof(StateSignal<>).Assembly.Location));
-
-        var compilation = CSharpCompilation.Create(
-            "BridgeGeneratorSmoke",
-            [CSharpSyntaxTree.ParseText(source, parseOptions)],
-            references,
-            new(OutputKind.DynamicallyLinkedLibrary));
-
-        var driver = CSharpGeneratorDriver.Create(
-            [
-                new SystemReactiveBridgeGenerator().AsSourceGenerator(),
-                new R3BridgeGenerator().AsSourceGenerator(),
-            ],
-            parseOptions: parseOptions);
-
+        var compilation = CSharpCompilation.Create("BridgeGeneratorSmoke", [CSharpSyntaxTree.ParseText(source, parseOptions)], references, new(OutputKind.DynamicallyLinkedLibrary));
+        var driver = CSharpGeneratorDriver.Create([new SystemReactiveBridgeGenerator().AsSourceGenerator(), new R3BridgeGenerator().AsSourceGenerator(),], parseOptions: parseOptions);
         driver = (CSharpGeneratorDriver)driver.RunGeneratorsAndUpdateCompilation(compilation, out var updatedCompilation, out var generatorDiagnostics);
-        var diagnostics = generatorDiagnostics
-            .Concat(updatedCompilation.GetDiagnostics().Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
-            .ToImmutableArray();
-        var generatedSources = driver.GetRunResult().Results
-            .SelectMany(result => result.GeneratedSources)
-            .Select(sourceText => sourceText.SourceText.ToString())
-            .ToArray();
-
+        var diagnostics = generatorDiagnostics.Concat(updatedCompilation.GetDiagnostics().Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)).ToImmutableArray();
+        var generatedSources = driver.GetRunResult().Results.SelectMany(result => result.GeneratedSources).Select(sourceText => sourceText.SourceText.ToString()).ToArray();
         return (diagnostics, generatedSources, updatedCompilation);
     }
 }

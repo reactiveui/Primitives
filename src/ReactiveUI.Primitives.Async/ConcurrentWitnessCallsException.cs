@@ -16,6 +16,10 @@ namespace ReactiveUI.Primitives.Async;
 /// attempted while a previous call to one of these methods is still pending. ObserverAsync{T} does not allow concurrent
 /// invocations of these methods; callers should ensure that each call completes before initiating another.</remarks>
 [Serializable]
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Major Code Smell",
+    "S3925:ISerializable should be implemented correctly",
+    Justification = "The serialization constructor is present for .NET Framework targets where binary serialization is supported.")]
 public class ConcurrentWitnessCallsException : Exception
 {
     /// <summary>The default error message describing the concurrent observer call violation.</summary>

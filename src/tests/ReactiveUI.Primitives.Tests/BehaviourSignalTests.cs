@@ -1,7 +1,6 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -23,240 +22,225 @@ public class BehaviourSignalTests
 
     /// <summary>Subscribes the argument checking.</summary>
     [Test]
-    public void Subscribe_ArgumentChecking() =>
-        Assert.Throws<ArgumentNullException>(() => new BehaviorSignal<int>(1).Subscribe(null!));
+    public void Subscribe_ArgumentChecking() => Assert.Throws<ArgumentNullException>(() => new BehaviorSignal<int>(1).Subscribe(null!));
 
     /// <summary>Called when [error argument checking].</summary>
     [Test]
-    public void OnError_ArgumentChecking() =>
-        Assert.Throws<ArgumentNullException>(() => new BehaviorSignal<int>(1).OnError(null!));
+    public void OnError_ArgumentChecking() => Assert.Throws<ArgumentNullException>(() => new BehaviorSignal<int>(1).OnError(null!));
 
     /// <summary>Determines whether this instance has observers.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void HasObservers()
+    public async Task HasObservers()
     {
         var s = new BehaviorSignal<int>(42);
-        Assert.False(s.HasObservers);
-
-        var d1 = s.Subscribe(_ => { });
-        Assert.True(s.HasObservers);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        var d1 = s.Subscribe(_ =>
+        {
+        });
+        await Assert.That(s.HasObservers).IsTrue();
         d1.Dispose();
-        Assert.False(s.HasObservers);
-
-        var d2 = s.Subscribe(_ => { });
-        Assert.True(s.HasObservers);
-
-        var d3 = s.Subscribe(_ => { });
-        Assert.True(s.HasObservers);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        var d2 = s.Subscribe(_ =>
+        {
+        });
+        await Assert.That(s.HasObservers).IsTrue();
+        var d3 = s.Subscribe(_ =>
+        {
+        });
+        await Assert.That(s.HasObservers).IsTrue();
         d2.Dispose();
-        Assert.True(s.HasObservers);
-
+        await Assert.That(s.HasObservers).IsTrue();
         d3.Dispose();
-        Assert.False(s.HasObservers);
+        await Assert.That(s.HasObservers).IsFalse();
     }
 
     /// <summary>Determines whether [has observers dispose1].</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void HasObservers_Dispose1()
+    public async Task HasObservers_Dispose1()
     {
         var s = new BehaviorSignal<int>(42);
-        Assert.False(s.HasObservers);
-        Assert.False(s.IsDisposed);
-
-        var d = s.Subscribe(_ => { });
-        Assert.True(s.HasObservers);
-        Assert.False(s.IsDisposed);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        await Assert.That(s.IsDisposed).IsFalse();
+        var d = s.Subscribe(_ =>
+        {
+        });
+        await Assert.That(s.HasObservers).IsTrue();
+        await Assert.That(s.IsDisposed).IsFalse();
         s.Dispose();
-        Assert.False(s.HasObservers);
-        Assert.True(s.IsDisposed);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        await Assert.That(s.IsDisposed).IsTrue();
         d.Dispose();
-        Assert.False(s.HasObservers);
-        Assert.True(s.IsDisposed);
+        await Assert.That(s.HasObservers).IsFalse();
+        await Assert.That(s.IsDisposed).IsTrue();
     }
 
     /// <summary>Determines whether [has observers dispose2].</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void HasObservers_Dispose2()
+    public async Task HasObservers_Dispose2()
     {
         var s = new BehaviorSignal<int>(42);
-        Assert.False(s.HasObservers);
-        Assert.False(s.IsDisposed);
-
-        var d = s.Subscribe(_ => { });
-        Assert.True(s.HasObservers);
-        Assert.False(s.IsDisposed);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        await Assert.That(s.IsDisposed).IsFalse();
+        var d = s.Subscribe(_ =>
+        {
+        });
+        await Assert.That(s.HasObservers).IsTrue();
+        await Assert.That(s.IsDisposed).IsFalse();
         d.Dispose();
-        Assert.False(s.HasObservers);
-        Assert.False(s.IsDisposed);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        await Assert.That(s.IsDisposed).IsFalse();
         s.Dispose();
-        Assert.False(s.HasObservers);
-        Assert.True(s.IsDisposed);
+        await Assert.That(s.HasObservers).IsFalse();
+        await Assert.That(s.IsDisposed).IsTrue();
     }
 
     /// <summary>Determines whether [has observers dispose3].</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void HasObservers_Dispose3()
+    public async Task HasObservers_Dispose3()
     {
         var s = new BehaviorSignal<int>(42);
-        Assert.False(s.HasObservers);
-        Assert.False(s.IsDisposed);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        await Assert.That(s.IsDisposed).IsFalse();
         s.Dispose();
-        Assert.False(s.HasObservers);
-        Assert.True(s.IsDisposed);
+        await Assert.That(s.HasObservers).IsFalse();
+        await Assert.That(s.IsDisposed).IsTrue();
     }
 
     /// <summary>Determines whether [has observers on completed].</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void HasObservers_OnCompleted()
+    public async Task HasObservers_OnCompleted()
     {
         var s = new BehaviorSignal<int>(42);
-        Assert.False(s.HasObservers);
-
-        using var subscription = s.Subscribe(_ => { });
-        Assert.True(s.HasObservers);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        using var subscription = s.Subscribe(_ =>
+        {
+        });
+        await Assert.That(s.HasObservers).IsTrue();
         s.OnNext(InitialValue);
-        Assert.True(s.HasObservers);
-
+        await Assert.That(s.HasObservers).IsTrue();
         s.OnCompleted();
-        Assert.False(s.HasObservers);
+        await Assert.That(s.HasObservers).IsFalse();
     }
 
     /// <summary>Determines whether [has observers on error].</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void HasObservers_OnError()
+    public async Task HasObservers_OnError()
     {
         var s = new BehaviorSignal<int>(42);
-        Assert.False(s.HasObservers);
-
-        using var subscription = s.Subscribe(_ => { }, _ => { });
-        Assert.True(s.HasObservers);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        using var subscription = s.Subscribe(
+            _ =>
+        {
+        },
+            _ =>
+        {
+        });
+        await Assert.That(s.HasObservers).IsTrue();
         s.OnNext(InitialValue);
-        Assert.True(s.HasObservers);
-
+        await Assert.That(s.HasObservers).IsTrue();
         s.OnError(new InvalidOperationException());
-        Assert.False(s.HasObservers);
+        await Assert.That(s.HasObservers).IsFalse();
     }
 
     /// <summary>Values the initial.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void Value_Initial()
+    public async Task Value_Initial()
     {
         var s = new BehaviorSignal<int>(InitialValue);
-        Assert.Equal(InitialValue, s.Value);
-
-        Assert.True(s.TryGetValue(out var x));
-        Assert.Equal(InitialValue, x);
+        await Assert.That(s.Value).IsEqualTo(InitialValue);
+        await Assert.That(s.TryGetValue(out var x)).IsTrue();
+        await Assert.That(x).IsEqualTo(InitialValue);
     }
 
     /// <summary>Values the first.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void Value_First()
+    public async Task Value_First()
     {
         var s = new BehaviorSignal<int>(InitialValue);
-        Assert.Equal(InitialValue, s.Value);
-
-        Assert.True(s.TryGetValue(out var x));
-        Assert.Equal(InitialValue, x);
-
+        await Assert.That(s.Value).IsEqualTo(InitialValue);
+        await Assert.That(s.TryGetValue(out var x)).IsTrue();
+        await Assert.That(x).IsEqualTo(InitialValue);
         s.OnNext(FirstUpdatedValue);
-        Assert.Equal(FirstUpdatedValue, s.Value);
-
-        Assert.True(s.TryGetValue(out x));
-        Assert.Equal(FirstUpdatedValue, x);
+        await Assert.That(s.Value).IsEqualTo(FirstUpdatedValue);
+        await Assert.That(s.TryGetValue(out x)).IsTrue();
+        await Assert.That(x).IsEqualTo(FirstUpdatedValue);
     }
 
     /// <summary>Values the second.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void Value_Second()
+    public async Task Value_Second()
     {
         var s = new BehaviorSignal<int>(InitialValue);
-        Assert.Equal(InitialValue, s.Value);
-
-        Assert.True(s.TryGetValue(out var x));
-        Assert.Equal(InitialValue, x);
-
+        await Assert.That(s.Value).IsEqualTo(InitialValue);
+        await Assert.That(s.TryGetValue(out var x)).IsTrue();
+        await Assert.That(x).IsEqualTo(InitialValue);
         s.OnNext(FirstUpdatedValue);
-        Assert.Equal(FirstUpdatedValue, s.Value);
-
-        Assert.True(s.TryGetValue(out x));
-        Assert.Equal(FirstUpdatedValue, x);
-
+        await Assert.That(s.Value).IsEqualTo(FirstUpdatedValue);
+        await Assert.That(s.TryGetValue(out x)).IsTrue();
+        await Assert.That(x).IsEqualTo(FirstUpdatedValue);
         s.OnNext(SecondUpdatedValue);
-        Assert.Equal(SecondUpdatedValue, s.Value);
-
-        Assert.True(s.TryGetValue(out x));
-        Assert.Equal(SecondUpdatedValue, x);
+        await Assert.That(s.Value).IsEqualTo(SecondUpdatedValue);
+        await Assert.That(s.TryGetValue(out x)).IsTrue();
+        await Assert.That(x).IsEqualTo(SecondUpdatedValue);
     }
 
     /// <summary>Values the frozen after on completed.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void Value_FrozenAfterOnCompleted()
+    public async Task Value_FrozenAfterOnCompleted()
     {
         var s = new BehaviorSignal<int>(InitialValue);
-        Assert.Equal(InitialValue, s.Value);
-
-        Assert.True(s.TryGetValue(out var x));
-        Assert.Equal(InitialValue, x);
-
+        await Assert.That(s.Value).IsEqualTo(InitialValue);
+        await Assert.That(s.TryGetValue(out var x)).IsTrue();
+        await Assert.That(x).IsEqualTo(InitialValue);
         s.OnNext(FirstUpdatedValue);
-        Assert.Equal(FirstUpdatedValue, s.Value);
-
-        Assert.True(s.TryGetValue(out x));
-        Assert.Equal(FirstUpdatedValue, x);
-
+        await Assert.That(s.Value).IsEqualTo(FirstUpdatedValue);
+        await Assert.That(s.TryGetValue(out x)).IsTrue();
+        await Assert.That(x).IsEqualTo(FirstUpdatedValue);
         s.OnNext(SecondUpdatedValue);
-        Assert.Equal(SecondUpdatedValue, s.Value);
-
-        Assert.True(s.TryGetValue(out x));
-        Assert.Equal(SecondUpdatedValue, x);
-
+        await Assert.That(s.Value).IsEqualTo(SecondUpdatedValue);
+        await Assert.That(s.TryGetValue(out x)).IsTrue();
+        await Assert.That(x).IsEqualTo(SecondUpdatedValue);
         s.OnCompleted();
-        Assert.Equal(SecondUpdatedValue, s.Value);
-
-        Assert.True(s.TryGetValue(out x));
-        Assert.Equal(SecondUpdatedValue, x);
-
+        await Assert.That(s.Value).IsEqualTo(SecondUpdatedValue);
+        await Assert.That(s.TryGetValue(out x)).IsTrue();
+        await Assert.That(x).IsEqualTo(SecondUpdatedValue);
         s.OnNext(IgnoredAfterCompletionValue);
-        Assert.Equal(SecondUpdatedValue, s.Value);
-
-        Assert.True(s.TryGetValue(out x));
-        Assert.Equal(SecondUpdatedValue, x);
+        await Assert.That(s.Value).IsEqualTo(SecondUpdatedValue);
+        await Assert.That(s.TryGetValue(out x)).IsTrue();
+        await Assert.That(x).IsEqualTo(SecondUpdatedValue);
     }
 
     /// <summary>Values the throws after on error.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void Value_ThrowsAfterOnError()
+    public async Task Value_ThrowsAfterOnError()
     {
         var s = new BehaviorSignal<int>(InitialValue);
-        Assert.Equal(InitialValue, s.Value);
-
+        await Assert.That(s.Value).IsEqualTo(InitialValue);
         s.OnError(new InvalidOperationException());
-
         Assert.Throws<InvalidOperationException>(() => _ = s.Value);
-
         Assert.Throws<InvalidOperationException>(() => s.TryGetValue(out _));
     }
 
     /// <summary>Values the throws on dispose.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void Value_ThrowsOnDispose()
+    public async Task Value_ThrowsOnDispose()
     {
         var s = new BehaviorSignal<int>(InitialValue);
-        Assert.Equal(InitialValue, s.Value);
-
+        await Assert.That(s.Value).IsEqualTo(InitialValue);
         s.Dispose();
-
         Assert.Throws<ObjectDisposedException>(() => _ = s.Value);
-
-        Assert.False(s.TryGetValue(out _));
+        await Assert.That(s.TryGetValue(out _)).IsFalse();
     }
 }

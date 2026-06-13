@@ -21,7 +21,7 @@ public sealed class MauiDispatcherSequencerTests
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullDispatcher() =>
-        await Assert.That(() => new MauiDispatcherSequencer(null!)).Throws<ArgumentNullException>();
+        await Assert.That(() => new MauiDispatcherSequencer(null!)).ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Verifies immediate work is marshalled through <see cref="IDispatcher.Dispatch(Action)"/> and executed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>

@@ -58,10 +58,7 @@ public static partial class SignalAsync
         Justification = "This is an existing method")]
     public static IObservableAsync<RxVoid> FromAsync(Func<CancellationToken, ValueTask> factory)
     {
-        if (factory is null)
-        {
-            throw new ArgumentNullException(nameof(factory));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(factory);
 
         return CreateAsBackgroundJob<RxVoid>(
             async (obs, token) =>

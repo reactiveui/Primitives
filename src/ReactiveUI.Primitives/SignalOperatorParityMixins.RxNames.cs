@@ -476,10 +476,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
 
-            if (interval < TimeSpan.Zero)
-            {
-                throw new ArgumentOutOfRangeException(nameof(interval));
-            }
+            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(interval, TimeSpan.Zero);
 
             scheduler ??= ThreadPoolSequencer.Instance;
             return new ProbeSignal<TLeft>(left, interval, scheduler);
@@ -494,10 +491,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
 
-            if (retryCount < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(retryCount));
-            }
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(retryCount);
 
             return new ReattemptSignal<TLeft>(left, retryCount);
         }

@@ -1,7 +1,6 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -23,9 +22,9 @@ public class SignalFromTaskTest
 
     /// <summary>
     /// Time spent performing synchronous cancellation cleanup work. Kept short so the
-    /// blocking <see cref="Thread.Sleep(int)"/> does not occupy a thread-pool thread long
+    /// blocking <see cref = "Thread.Sleep(int)"/> does not occupy a thread-pool thread long
     /// enough to delay the timer-driven cancellation callbacks the tests wait on (which
-    /// previously tipped the loaded CI runners over <see cref="CancellationCallbackTimeoutMilliseconds"/>).
+    /// previously tipped the loaded CI runners over <see cref = "CancellationCallbackTimeoutMilliseconds"/>).
     /// </summary>
     private const int CleanupWorkMilliseconds = 250;
 
@@ -60,98 +59,79 @@ public class SignalFromTaskTest
     private const string ShouldAlwaysComeHere = "Should always come here.";
 
     /// <summary>Signals from task handles user exceptions.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTaskHandlesUserExceptions()
     {
         var statusTrail = new StatusTrail();
         var position = 0;
-        var fixture = Signal.FromTask(
-             async cts =>
-             {
-                 RecordStatus(statusTrail, ref position, StartedCommand);
-                 await Task.Delay(CommandDelayMilliseconds, cts.Token)
-                     .HandleCancellation(() => RecordCancellationCleanup(statusTrail, ref position))
-                     .ConfigureAwait(true);
-
-                 if (!cts.IsCancellationRequested)
-                 {
-                     RecordStatus(statusTrail, ref position, FinishedCommandNormally);
-                 }
-
-                 throw new InvalidOperationException(BreakExecutionMessage);
-             }).Recover<RxVoid, Exception>(
-            ex =>
+        var fixture = Signal.FromTask(async cts =>
+        {
+            RecordStatus(statusTrail, ref position, StartedCommand);
+            await Task.Delay(CommandDelayMilliseconds, cts.Token).HandleCancellation(() => RecordCancellationCleanup(statusTrail, ref position)).ConfigureAwait(true);
+            if (!cts.IsCancellationRequested)
             {
-                RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Fail<RxVoid>(ex);
-            }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+                RecordStatus(statusTrail, ref position, FinishedCommandNormally);
+            }
 
+            throw new InvalidOperationException(BreakExecutionMessage);
+        }).Recover<RxVoid, Exception>(ex =>
+        {
+            RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
+            return Signal.Fail<RxVoid>(ex);
+        }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
-
-        Assert.Contains(StartedCommand, StatusMessages(statusTrail));
-
+        await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
         await Task.Delay(CommandDelayMilliseconds).ConfigureAwait(true);
         subscription.Dispose();
-
         await Task.Delay(CancellationWaitDelayMilliseconds).ConfigureAwait(false);
-
-        Assert.DoesNotContain(StartingCancellingCommand, StatusMessages(statusTrail));
-        Assert.Contains(ShouldAlwaysComeHere, StatusMessages(statusTrail));
-        Assert.DoesNotContain(FinishedCancellingCommand, StatusMessages(statusTrail));
-        Assert.Contains(ExceptionShouldBeHere, StatusMessages(statusTrail));
-        Assert.Contains(FinishedCommandNormally, StatusMessages(statusTrail));
-        Assert.False(result);
+        await Assert.That(StatusMessages(statusTrail)).DoesNotContain(StartingCancellingCommand);
+        await Assert.That(StatusMessages(statusTrail)).Contains(ShouldAlwaysComeHere);
+        await Assert.That(StatusMessages(statusTrail)).DoesNotContain(FinishedCancellingCommand);
+        await Assert.That(StatusMessages(statusTrail)).Contains(ExceptionShouldBeHere);
+        await Assert.That(StatusMessages(statusTrail)).Contains(FinishedCommandNormally);
+        await Assert.That(result).IsFalse();
     }
 
     /// <summary>Signals from task handles cancellation.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTaskHandlesCancellation()
     {
         var statusTrail = new StatusTrail();
         var position = 0;
-        var fixture = Signal.FromTask(
-             async cts =>
-             {
-                 RecordStatus(statusTrail, ref position, StartedCommand);
-                 await Task.Delay(CommandDelayMilliseconds, cts.Token)
-                     .HandleCancellation(() => RecordCancellationCleanup(statusTrail, ref position))
-                     .ConfigureAwait(true);
-
-                 if (!cts.IsCancellationRequested)
-                 {
-                     RecordStatus(statusTrail, ref position, FinishedCommandNormally);
-                 }
-
-                 return RxVoid.Default;
-             }).Recover<RxVoid, Exception>(
-            ex =>
+        var fixture = Signal.FromTask(async cts =>
+        {
+            RecordStatus(statusTrail, ref position, StartedCommand);
+            await Task.Delay(CommandDelayMilliseconds, cts.Token).HandleCancellation(() => RecordCancellationCleanup(statusTrail, ref position)).ConfigureAwait(true);
+            if (!cts.IsCancellationRequested)
             {
-                RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Fail<RxVoid>(ex);
-            }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+                RecordStatus(statusTrail, ref position, FinishedCommandNormally);
+            }
 
+            return RxVoid.Default;
+        }).Recover<RxVoid, Exception>(ex =>
+        {
+            RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
+            return Signal.Fail<RxVoid>(ex);
+        }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
-
-        Assert.Contains(StartedCommand, StatusMessages(statusTrail));
+        await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
         subscription.Dispose();
-
         await Task.Delay(CancellationWaitDelayMilliseconds).ConfigureAwait(false);
-
-        Assert.Contains(StartingCancellingCommand, StatusMessages(statusTrail));
-        Assert.Contains(ShouldAlwaysComeHere, StatusMessages(statusTrail));
-        Assert.Contains(FinishedCancellingCommand, StatusMessages(statusTrail));
-        Assert.DoesNotContain(FinishedCommandNormally, StatusMessages(statusTrail));
-        Assert.False(result);
+        await Assert.That(StatusMessages(statusTrail)).Contains(StartingCancellingCommand);
+        await Assert.That(StatusMessages(statusTrail)).Contains(ShouldAlwaysComeHere);
+        await Assert.That(StatusMessages(statusTrail)).Contains(FinishedCancellingCommand);
+        await Assert.That(StatusMessages(statusTrail)).DoesNotContain(FinishedCommandNormally);
+        await Assert.That(result).IsFalse();
     }
 
     /// <summary>Signals from task handles token cancellation.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTaskHandlesTokenCancellation()
     {
@@ -159,228 +139,183 @@ public class SignalFromTaskTest
         var cleanupCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var finallyCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var position = 0;
-        var fixture = Signal.FromTask(
-             async cts =>
-             {
-                 RecordStatus(statusTrail, ref position, StartedCommand);
-                 await Task.Delay(TokenCancellationDelayMilliseconds, cts.Token).HandleCancellation().ConfigureAwait(true);
-
-                 var cancellationTask = CancelAfterDelayAsync(cts);
-                 await Task.Delay(CleanupDelayMilliseconds, cts.Token)
-                     .HandleCancellation(() =>
-                     {
-                         RecordCancellationCleanup(statusTrail, ref position);
-                         cleanupCompleted.TrySetResult();
-                     })
-                     .ConfigureAwait(true);
-                 await cancellationTask.ConfigureAwait(false);
-
-                 if (!cts.IsCancellationRequested)
-                 {
-                     RecordStatus(statusTrail, ref position, FinishedCommandNormally);
-                 }
-
-                 return RxVoid.Default;
-             }).Recover<RxVoid, Exception>(
-            ex =>
+        var fixture = Signal.FromTask(async cts =>
+        {
+            RecordStatus(statusTrail, ref position, StartedCommand);
+            await Task.Delay(TokenCancellationDelayMilliseconds, cts.Token).HandleCancellation().ConfigureAwait(true);
+            var cancellationTask = CancelAfterDelayAsync(cts);
+            await Task.Delay(CleanupDelayMilliseconds, cts.Token).HandleCancellation(() =>
             {
-                RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Fail<RxVoid>(ex);
-            }).OnCleanup(() =>
+                RecordCancellationCleanup(statusTrail, ref position);
+                cleanupCompleted.TrySetResult();
+            }).ConfigureAwait(true);
+            await cancellationTask.ConfigureAwait(false);
+            if (!cts.IsCancellationRequested)
             {
-                RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere);
-                finallyCompleted.TrySetResult();
-            });
+                RecordStatus(statusTrail, ref position, FinishedCommandNormally);
+            }
 
+            return RxVoid.Default;
+        }).Recover<RxVoid, Exception>(ex =>
+        {
+            RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
+            return Signal.Fail<RxVoid>(ex);
+        }).OnCleanup(() =>
+        {
+            RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere);
+            finallyCompleted.TrySetResult();
+        });
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
-
-        Assert.Contains(StartedCommand, StatusMessages(statusTrail));
-
-        await WaitForAsync(
-            Task.WhenAll(cleanupCompleted.Task, finallyCompleted.Task),
-            CancellationCallbackTimeoutMilliseconds).ConfigureAwait(false);
-
-        Assert.Contains(StartingCancellingCommand, StatusMessages(statusTrail));
-        Assert.Contains(ShouldAlwaysComeHere, StatusMessages(statusTrail));
-        Assert.Contains(FinishedCancellingCommand, StatusMessages(statusTrail));
-        Assert.DoesNotContain(FinishedCommandNormally, StatusMessages(statusTrail));
-        Assert.False(result);
+        await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
+        await WaitForAsync(Task.WhenAll(cleanupCompleted.Task, finallyCompleted.Task), CancellationCallbackTimeoutMilliseconds).ConfigureAwait(false);
+        await Assert.That(StatusMessages(statusTrail)).Contains(StartingCancellingCommand);
+        await Assert.That(StatusMessages(statusTrail)).Contains(ShouldAlwaysComeHere);
+        await Assert.That(StatusMessages(statusTrail)).Contains(FinishedCancellingCommand);
+        await Assert.That(StatusMessages(statusTrail)).DoesNotContain(FinishedCommandNormally);
+        await Assert.That(result).IsFalse();
     }
 
     /// <summary>Signals from task handles cancellation in base.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTaskHandlesCancellationInBase()
     {
         var statusTrail = new StatusTrail();
         var position = 0;
-        var fixture = Signal.FromTask(
-             async cts =>
-             {
-                 RecordStatus(statusTrail, ref position, StartedCommand);
-                 await Task.Delay(CommandDelayMilliseconds, cts.Token).ConfigureAwait(true);
-                 if (!cts.IsCancellationRequested)
-                 {
-                     RecordStatus(statusTrail, ref position, FinishedCommandNormally);
-                 }
-
-                 return RxVoid.Default;
-             }).Recover<RxVoid, Exception>(
-            ex =>
+        var fixture = Signal.FromTask(async cts =>
+        {
+            RecordStatus(statusTrail, ref position, StartedCommand);
+            await Task.Delay(CommandDelayMilliseconds, cts.Token).ConfigureAwait(true);
+            if (!cts.IsCancellationRequested)
             {
-                RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Fail<RxVoid>(ex);
-            }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+                RecordStatus(statusTrail, ref position, FinishedCommandNormally);
+            }
 
+            return RxVoid.Default;
+        }).Recover<RxVoid, Exception>(ex =>
+        {
+            RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
+            return Signal.Fail<RxVoid>(ex);
+        }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
         using var subscription = fixture.Subscribe();
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
-        Assert.Contains(StartedCommand, StatusMessages(statusTrail));
+        await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
         subscription.Dispose();
-
         await Task.Delay(CancellationWaitDelayMilliseconds).ConfigureAwait(false);
-
-        Assert.DoesNotContain(FinishedCommandNormally, StatusMessages(statusTrail));
-        Assert.Equal(ShouldAlwaysComeHere, statusTrail.LastMessage);
+        await Assert.That(StatusMessages(statusTrail)).DoesNotContain(FinishedCommandNormally);
+        await Assert.That(statusTrail.LastMessage).IsEqualTo(ShouldAlwaysComeHere);
     }
 
     /// <summary>Signals from task handles completion.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTaskHandlesCompletion()
     {
         var statusTrail = new StatusTrail();
         var position = 0;
-        var fixture = Signal.FromTask(
-             async cts =>
-             {
-                 RecordStatus(statusTrail, ref position, StartedCommand);
-                 await Task.Delay(CommandDelayMilliseconds, cts.Token)
-                     .HandleCancellation(() => RecordCancellationCleanup(statusTrail, ref position))
-                     .ConfigureAwait(true);
-
-                 if (!cts.IsCancellationRequested)
-                 {
-                     RecordStatus(statusTrail, ref position, FinishedCommandNormally);
-                 }
-
-                 return RxVoid.Default;
-             }).Recover<RxVoid, Exception>(
-            ex =>
+        var fixture = Signal.FromTask(async cts =>
+        {
+            RecordStatus(statusTrail, ref position, StartedCommand);
+            await Task.Delay(CommandDelayMilliseconds, cts.Token).HandleCancellation(() => RecordCancellationCleanup(statusTrail, ref position)).ConfigureAwait(true);
+            if (!cts.IsCancellationRequested)
             {
-                RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Fail<RxVoid>(ex);
-            }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+                RecordStatus(statusTrail, ref position, FinishedCommandNormally);
+            }
 
+            return RxVoid.Default;
+        }).Recover<RxVoid, Exception>(ex =>
+        {
+            RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
+            return Signal.Fail<RxVoid>(ex);
+        }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
-
-        Assert.Contains(StartedCommand, StatusMessages(statusTrail));
-
+        await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
         await Task.Delay(CompletionWaitDelayMilliseconds).ConfigureAwait(false);
-
-        Assert.DoesNotContain(StartingCancellingCommand, StatusMessages(statusTrail));
-        Assert.DoesNotContain(FinishedCancellingCommand, StatusMessages(statusTrail));
-        Assert.Contains(FinishedCommandNormally, StatusMessages(statusTrail));
-        Assert.Equal(ShouldAlwaysComeHere, statusTrail.LastMessage);
-        Assert.True(result);
+        await Assert.That(StatusMessages(statusTrail)).DoesNotContain(StartingCancellingCommand);
+        await Assert.That(StatusMessages(statusTrail)).DoesNotContain(FinishedCancellingCommand);
+        await Assert.That(StatusMessages(statusTrail)).Contains(FinishedCommandNormally);
+        await Assert.That(statusTrail.LastMessage).IsEqualTo(ShouldAlwaysComeHere);
+        await Assert.That(result).IsTrue();
     }
 
     /// <summary>Signals from task t handles user exceptions.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTask_T_HandlesUserExceptions()
     {
         var statusTrail = new StatusTrail();
         var position = 0;
-        var fixture = Signal.FromTask<RxVoid>(
-             async cts =>
-             {
-                 RecordStatus(statusTrail, ref position, StartedCommand);
-                 await Task.Delay(CommandDelayMilliseconds, cts.Token)
-                     .HandleCancellation(() => RecordCancellationCleanup(statusTrail, ref position))
-                     .ConfigureAwait(true);
-
-                 if (!cts.IsCancellationRequested)
-                 {
-                     RecordStatus(statusTrail, ref position, FinishedCommandNormally);
-                 }
-
-                 throw new InvalidOperationException(BreakExecutionMessage);
-             }).Recover<RxVoid, Exception>(
-            ex =>
+        var fixture = Signal.FromTask<RxVoid>(async cts =>
+        {
+            RecordStatus(statusTrail, ref position, StartedCommand);
+            await Task.Delay(CommandDelayMilliseconds, cts.Token).HandleCancellation(() => RecordCancellationCleanup(statusTrail, ref position)).ConfigureAwait(true);
+            if (!cts.IsCancellationRequested)
             {
-                RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Fail<RxVoid>(ex);
-            }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+                RecordStatus(statusTrail, ref position, FinishedCommandNormally);
+            }
 
+            throw new InvalidOperationException(BreakExecutionMessage);
+        }).Recover<RxVoid, Exception>(ex =>
+        {
+            RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
+            return Signal.Fail<RxVoid>(ex);
+        }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
-
-        Assert.Contains(StartedCommand, StatusMessages(statusTrail));
-
+        await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
         await Task.Delay(CommandDelayMilliseconds).ConfigureAwait(true);
         subscription.Dispose();
-
         await Task.Delay(CancellationWaitDelayMilliseconds).ConfigureAwait(false);
-
-        Assert.DoesNotContain(StartingCancellingCommand, StatusMessages(statusTrail));
-        Assert.Contains(ShouldAlwaysComeHere, StatusMessages(statusTrail));
-        Assert.DoesNotContain(FinishedCancellingCommand, StatusMessages(statusTrail));
-        Assert.Contains(ExceptionShouldBeHere, StatusMessages(statusTrail));
-        Assert.Contains(FinishedCommandNormally, StatusMessages(statusTrail));
-        Assert.False(result);
+        await Assert.That(StatusMessages(statusTrail)).DoesNotContain(StartingCancellingCommand);
+        await Assert.That(StatusMessages(statusTrail)).Contains(ShouldAlwaysComeHere);
+        await Assert.That(StatusMessages(statusTrail)).DoesNotContain(FinishedCancellingCommand);
+        await Assert.That(StatusMessages(statusTrail)).Contains(ExceptionShouldBeHere);
+        await Assert.That(StatusMessages(statusTrail)).Contains(FinishedCommandNormally);
+        await Assert.That(result).IsFalse();
     }
 
     /// <summary>Signals from task t handles cancellation.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTask_T_HandlesCancellation()
     {
         var statusTrail = new StatusTrail();
         var position = 0;
-        var fixture = Signal.FromTask<RxVoid>(
-             async cts =>
-             {
-                 RecordStatus(statusTrail, ref position, StartedCommand);
-                 await Task.Delay(CommandDelayMilliseconds, cts.Token)
-                     .HandleCancellation(() => RecordCancellationCleanup(statusTrail, ref position))
-                     .ConfigureAwait(true);
-
-                 if (!cts.IsCancellationRequested)
-                 {
-                     RecordStatus(statusTrail, ref position, FinishedCommandNormally);
-                 }
-
-                 return RxVoid.Default;
-             }).Recover<RxVoid, Exception>(
-            ex =>
+        var fixture = Signal.FromTask<RxVoid>(async cts =>
+        {
+            RecordStatus(statusTrail, ref position, StartedCommand);
+            await Task.Delay(CommandDelayMilliseconds, cts.Token).HandleCancellation(() => RecordCancellationCleanup(statusTrail, ref position)).ConfigureAwait(true);
+            if (!cts.IsCancellationRequested)
             {
-                RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Fail<RxVoid>(ex);
-            }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+                RecordStatus(statusTrail, ref position, FinishedCommandNormally);
+            }
 
+            return RxVoid.Default;
+        }).Recover<RxVoid, Exception>(ex =>
+        {
+            RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
+            return Signal.Fail<RxVoid>(ex);
+        }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
-
-        Assert.Contains(StartedCommand, StatusMessages(statusTrail));
+        await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
         subscription.Dispose();
-
         await Task.Delay(CancellationWaitDelayMilliseconds).ConfigureAwait(false);
-
-        Assert.Contains(StartingCancellingCommand, StatusMessages(statusTrail));
-        Assert.Contains(ShouldAlwaysComeHere, StatusMessages(statusTrail));
-        Assert.Contains(FinishedCancellingCommand, StatusMessages(statusTrail));
-        Assert.DoesNotContain(FinishedCommandNormally, StatusMessages(statusTrail));
-        Assert.False(result);
+        await Assert.That(StatusMessages(statusTrail)).Contains(StartingCancellingCommand);
+        await Assert.That(StatusMessages(statusTrail)).Contains(ShouldAlwaysComeHere);
+        await Assert.That(StatusMessages(statusTrail)).Contains(FinishedCancellingCommand);
+        await Assert.That(StatusMessages(statusTrail)).DoesNotContain(FinishedCommandNormally);
+        await Assert.That(result).IsFalse();
     }
 
     /// <summary>Signals from task t handles token cancellation.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTask_T_HandlesTokenCancellation()
     {
@@ -388,144 +323,118 @@ public class SignalFromTaskTest
         var cleanupCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var finallyCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var position = 0;
-        var fixture = Signal.FromTask<RxVoid>(
-             async cts =>
-             {
-                 RecordStatus(statusTrail, ref position, StartedCommand);
-                 await Task.Delay(TokenCancellationDelayMilliseconds, cts.Token).HandleCancellation().ConfigureAwait(true);
-
-                 var cancellationTask = CancelAfterDelayAsync(cts);
-                 await Task.Delay(CleanupDelayMilliseconds, cts.Token)
-                     .HandleCancellation(() =>
-                     {
-                         RecordCancellationCleanup(statusTrail, ref position);
-                         cleanupCompleted.TrySetResult();
-                     })
-                     .ConfigureAwait(true);
-                 await cancellationTask.ConfigureAwait(false);
-
-                 if (!cts.IsCancellationRequested)
-                 {
-                     RecordStatus(statusTrail, ref position, FinishedCommandNormally);
-                 }
-
-                 return RxVoid.Default;
-             }).Recover<RxVoid, Exception>(
-            ex =>
+        var fixture = Signal.FromTask<RxVoid>(async cts =>
+        {
+            RecordStatus(statusTrail, ref position, StartedCommand);
+            await Task.Delay(TokenCancellationDelayMilliseconds, cts.Token).HandleCancellation().ConfigureAwait(true);
+            var cancellationTask = CancelAfterDelayAsync(cts);
+            await Task.Delay(CleanupDelayMilliseconds, cts.Token).HandleCancellation(() =>
             {
-                RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Fail<RxVoid>(ex);
-            }).OnCleanup(() =>
+                RecordCancellationCleanup(statusTrail, ref position);
+                cleanupCompleted.TrySetResult();
+            }).ConfigureAwait(true);
+            await cancellationTask.ConfigureAwait(false);
+            if (!cts.IsCancellationRequested)
             {
-                RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere);
-                finallyCompleted.TrySetResult();
-            });
+                RecordStatus(statusTrail, ref position, FinishedCommandNormally);
+            }
 
+            return RxVoid.Default;
+        }).Recover<RxVoid, Exception>(ex =>
+        {
+            RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
+            return Signal.Fail<RxVoid>(ex);
+        }).OnCleanup(() =>
+        {
+            RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere);
+            finallyCompleted.TrySetResult();
+        });
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
-
-        Assert.Contains(StartedCommand, StatusMessages(statusTrail));
-
-        await WaitForAsync(
-            Task.WhenAll(cleanupCompleted.Task, finallyCompleted.Task),
-            CancellationCallbackTimeoutMilliseconds).ConfigureAwait(false);
-
-        Assert.Contains(StartingCancellingCommand, StatusMessages(statusTrail));
-        Assert.Contains(ShouldAlwaysComeHere, StatusMessages(statusTrail));
-        Assert.Contains(FinishedCancellingCommand, StatusMessages(statusTrail));
-        Assert.DoesNotContain(FinishedCommandNormally, StatusMessages(statusTrail));
-        Assert.False(result);
+        await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
+        await WaitForAsync(Task.WhenAll(cleanupCompleted.Task, finallyCompleted.Task), CancellationCallbackTimeoutMilliseconds).ConfigureAwait(false);
+        await Assert.That(StatusMessages(statusTrail)).Contains(StartingCancellingCommand);
+        await Assert.That(StatusMessages(statusTrail)).Contains(ShouldAlwaysComeHere);
+        await Assert.That(StatusMessages(statusTrail)).Contains(FinishedCancellingCommand);
+        await Assert.That(StatusMessages(statusTrail)).DoesNotContain(FinishedCommandNormally);
+        await Assert.That(result).IsFalse();
     }
 
     /// <summary>Signals from task t handles cancellation in base.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTask_T_HandlesCancellationInBase()
     {
         var statusTrail = new StatusTrail();
         var position = 0;
-        var fixture = Signal.FromTask<RxVoid>(
-             async cts =>
-             {
-                 RecordStatus(statusTrail, ref position, StartedCommand);
-                 await Task.Delay(CommandDelayMilliseconds, cts.Token).ConfigureAwait(true);
-                 if (!cts.IsCancellationRequested)
-                 {
-                     RecordStatus(statusTrail, ref position, FinishedCommandNormally);
-                 }
-
-                 return RxVoid.Default;
-             }).Recover<RxVoid, Exception>(
-            ex =>
+        var fixture = Signal.FromTask<RxVoid>(async cts =>
+        {
+            RecordStatus(statusTrail, ref position, StartedCommand);
+            await Task.Delay(CommandDelayMilliseconds, cts.Token).ConfigureAwait(true);
+            if (!cts.IsCancellationRequested)
             {
-                RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Fail<RxVoid>(ex);
-            }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+                RecordStatus(statusTrail, ref position, FinishedCommandNormally);
+            }
 
+            return RxVoid.Default;
+        }).Recover<RxVoid, Exception>(ex =>
+        {
+            RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
+            return Signal.Fail<RxVoid>(ex);
+        }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
         using var subscription = fixture.Subscribe();
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
-        Assert.Contains(StartedCommand, StatusMessages(statusTrail));
+        await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
         subscription.Dispose();
-
         await Task.Delay(CancellationWaitDelayMilliseconds).ConfigureAwait(false);
-
-        Assert.DoesNotContain(FinishedCommandNormally, StatusMessages(statusTrail));
-        Assert.Equal(ShouldAlwaysComeHere, statusTrail.LastMessage);
+        await Assert.That(StatusMessages(statusTrail)).DoesNotContain(FinishedCommandNormally);
+        await Assert.That(statusTrail.LastMessage).IsEqualTo(ShouldAlwaysComeHere);
     }
 
     /// <summary>Signals from task t handles completion.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
     [Test]
     public async Task SignalFromTask_T_HandlesCompletion()
     {
         var statusTrail = new StatusTrail();
         var position = 0;
-        var fixture = Signal.FromTask<RxVoid>(
-             async cts =>
-             {
-                 RecordStatus(statusTrail, ref position, StartedCommand);
-                 await Task.Delay(CommandDelayMilliseconds, cts.Token)
-                     .HandleCancellation(() => RecordCancellationCleanup(statusTrail, ref position))
-                     .ConfigureAwait(true);
-
-                 if (!cts.IsCancellationRequested)
-                 {
-                     RecordStatus(statusTrail, ref position, FinishedCommandNormally);
-                 }
-
-                 return RxVoid.Default;
-             }).Recover<RxVoid, Exception>(
-            ex =>
+        var fixture = Signal.FromTask<RxVoid>(async cts =>
+        {
+            RecordStatus(statusTrail, ref position, StartedCommand);
+            await Task.Delay(CommandDelayMilliseconds, cts.Token).HandleCancellation(() => RecordCancellationCleanup(statusTrail, ref position)).ConfigureAwait(true);
+            if (!cts.IsCancellationRequested)
             {
-                RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
-                return Signal.Fail<RxVoid>(ex);
-            }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+                RecordStatus(statusTrail, ref position, FinishedCommandNormally);
+            }
 
+            return RxVoid.Default;
+        }).Recover<RxVoid, Exception>(ex =>
+        {
+            RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
+            return Signal.Fail<RxVoid>(ex);
+        }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
-
-        Assert.Contains(StartedCommand, StatusMessages(statusTrail));
-
+        await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
         await Task.Delay(CompletionWaitDelayMilliseconds).ConfigureAwait(false);
-
-        Assert.DoesNotContain(StartingCancellingCommand, StatusMessages(statusTrail));
-        Assert.DoesNotContain(FinishedCancellingCommand, StatusMessages(statusTrail));
-        Assert.Contains(FinishedCommandNormally, StatusMessages(statusTrail));
-        Assert.Equal(ShouldAlwaysComeHere, statusTrail.LastMessage);
-        Assert.True(result);
+        await Assert.That(StatusMessages(statusTrail)).DoesNotContain(StartingCancellingCommand);
+        await Assert.That(StatusMessages(statusTrail)).DoesNotContain(FinishedCancellingCommand);
+        await Assert.That(StatusMessages(statusTrail)).Contains(FinishedCommandNormally);
+        await Assert.That(statusTrail.LastMessage).IsEqualTo(ShouldAlwaysComeHere);
+        await Assert.That(result).IsTrue();
     }
 
     /// <summary>Gets the recorded status messages.</summary>
-    /// <param name="statusTrail">The status trail.</param>
+    /// <param name = "statusTrail">The status trail.</param>
     /// <returns>The recorded messages.</returns>
     private static string[] StatusMessages(StatusTrail statusTrail) => statusTrail.Messages();
 
     /// <summary>Waits for a timed test callback to complete.</summary>
-    /// <param name="task">The task to await.</param>
-    /// <param name="timeoutMilliseconds">The timeout in milliseconds.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <param name = "task">The task to await.</param>
+    /// <param name = "timeoutMilliseconds">The timeout in milliseconds.</param>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous operation.</returns>
     private static async Task WaitForAsync(Task task, int timeoutMilliseconds)
     {
         var timeout = Task.Delay(timeoutMilliseconds);
@@ -539,15 +448,14 @@ public class SignalFromTaskTest
     }
 
     /// <summary>Records a status message.</summary>
-    /// <param name="statusTrail">The status trail.</param>
-    /// <param name="position">The current status position.</param>
-    /// <param name="message">The message to record.</param>
-    private static void RecordStatus(StatusTrail statusTrail, ref int position, string message) =>
-        statusTrail.Add(ref position, message);
+    /// <param name = "statusTrail">The status trail.</param>
+    /// <param name = "position">The current status position.</param>
+    /// <param name = "message">The message to record.</param>
+    private static void RecordStatus(StatusTrail statusTrail, ref int position, string message) => statusTrail.Add(ref position, message);
 
     /// <summary>Records synchronous cancellation cleanup.</summary>
-    /// <param name="statusTrail">The status trail.</param>
-    /// <param name="position">The current status position.</param>
+    /// <param name = "statusTrail">The status trail.</param>
+    /// <param name = "position">The current status position.</param>
     private static void RecordCancellationCleanup(StatusTrail statusTrail, ref int position)
     {
         RecordStatus(statusTrail, ref position, StartingCancellingCommand);
@@ -556,8 +464,8 @@ public class SignalFromTaskTest
     }
 
     /// <summary>Cancels the source after the token cancellation delay.</summary>
-    /// <param name="cts">The cancellation source.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <param name = "cts">The cancellation source.</param>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous operation.</returns>
     private static async Task CancelAfterDelayAsync(CancellationTokenSource cts)
     {
         await Task.Delay(TokenCancellationDelayMilliseconds).ConfigureAwait(false);
@@ -586,8 +494,8 @@ public class SignalFromTaskTest
         }
 
         /// <summary>Adds a status message.</summary>
-        /// <param name="position">The current status position.</param>
-        /// <param name="message">The message.</param>
+        /// <param name = "position">The current status position.</param>
+        /// <param name = "message">The message.</param>
         public void Add(ref int position, string message)
         {
             lock (_gate)

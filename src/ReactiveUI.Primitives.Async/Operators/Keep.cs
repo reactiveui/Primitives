@@ -55,10 +55,7 @@ public static partial class SignalAsyncExtensions
             TState state,
             Func<TState, T, bool> predicate)
         {
-            if (predicate is null)
-            {
-                throw new ArgumentNullException(nameof(predicate));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(predicate);
 
             return @this.Keep(value => predicate(state, value));
         }

@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+#pragma warning disable S103 // Coverage tests intentionally group branch-heavy scenarios.
 
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
@@ -67,42 +68,38 @@ public class CoverageRuntimeTests
     private static readonly string[] ExpectedRepeatedScheduledItemInvocations = ["first", "first"];
 
     /// <summary>Covers disposable slot constructor, disposal, removal, and disposed-assignment branches.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void DisposableSlotsCoverAssignmentReplacementAndRemovalBranches()
+    public async Task DisposableSlotsCoverAssignmentReplacementAndRemovalBranches()
     {
         var disposedBeforeAssign = 0;
         var lateSingle = new SingleDisposable(() => disposedBeforeAssign++);
         lateSingle.Dispose();
         lateSingle.Create(new ActionDisposable(() => disposedBeforeAssign++));
-        Assert.Equal(Two, disposedBeforeAssign);
+        await Assert.That(disposedBeforeAssign).IsEqualTo(Two);
         Assert.Throws<ArgumentNullException>(() => lateSingle.Create(null!));
-
         var replaced = 0;
         var replaceable = new SingleReplaceableDisposable(new ActionDisposable(() => replaced++), () => replaced++);
         replaceable.Create(new ActionDisposable(() => replaced++));
         replaceable.Dispose();
         replaceable.Create(new ActionDisposable(() => replaced++));
-        Assert.Equal(Five, replaced);
+        await Assert.That(replaced).IsEqualTo(Five);
         Assert.Throws<ArgumentNullException>(() => replaceable.Create(null!));
-
         var disposeFalse = 0;
         var single = new ExposedSingleDisposable(new ActionDisposable(() => disposeFalse++));
         single.DisposeFalse();
         single.Dispose();
-        Assert.Equal(1, disposeFalse);
-
+        await Assert.That(disposeFalse).IsEqualTo(1);
         var replaceableFalse = 0;
         var exposedReplaceable = new ExposedSingleReplaceableDisposable(new ActionDisposable(() => replaceableFalse++));
         exposedReplaceable.DisposeFalse();
         exposedReplaceable.Dispose();
-        Assert.Equal(1, replaceableFalse);
-
+        await Assert.That(replaceableFalse).IsEqualTo(1);
         var multipleFalse = 0;
         var exposedMultiple = new ExposedMultipleDisposable(new ActionDisposable(() => multipleFalse++));
         exposedMultiple.DisposeFalse();
         exposedMultiple.Dispose();
-        Assert.Equal(1, multipleFalse);
-
+        await Assert.That(multipleFalse).IsEqualTo(1);
         var firstDisposed = 0;
         var secondDisposed = 0;
         var thirdDisposed = 0;
@@ -113,33 +110,30 @@ public class CoverageRuntimeTests
         var third = new ActionDisposable(() => thirdDisposed++);
         var fourth = new ActionDisposable(() => fourthDisposed++);
         MultipleDisposable group = [first, second, third, fourth];
-
-        Assert.True(group.Remove(first));
-        Assert.True(group.Remove(second));
-        Assert.True(group.Remove(third));
-        Assert.False(group.Remove(missing));
+        await Assert.That(group.Remove(first)).IsTrue();
+        await Assert.That(group.Remove(second)).IsTrue();
+        await Assert.That(group.Remove(third)).IsTrue();
+        await Assert.That(group.Remove(missing)).IsFalse();
         group.Dispose();
-
-        Assert.Equal(1, firstDisposed);
-        Assert.Equal(1, secondDisposed);
-        Assert.Equal(1, thirdDisposed);
-        Assert.Equal(1, fourthDisposed);
-
+        await Assert.That(firstDisposed).IsEqualTo(1);
+        await Assert.That(secondDisposed).IsEqualTo(1);
+        await Assert.That(thirdDisposed).IsEqualTo(1);
+        await Assert.That(fourthDisposed).IsEqualTo(1);
         var factoryDisposed = 0;
-        var factoryGroup = MultipleDisposable.Create(
-            new ActionDisposable(() => factoryDisposed++),
-            null!,
-            new ActionDisposable(() => factoryDisposed++));
+        var factoryGroup = MultipleDisposable.Create(new ActionDisposable(() => factoryDisposed++), null!, new ActionDisposable(() => factoryDisposed++));
         factoryGroup.Dispose();
         factoryGroup.Dispose();
-        Assert.Equal(Two, factoryDisposed);
+        await Assert.That(factoryDisposed).IsEqualTo(Two);
         Assert.Throws<ArgumentNullException>(() => MultipleDisposable.Create(null!));
-
         _ = new AssignmentSlot();
-        _ = new AssignmentSlot(() => { });
+        _ = new AssignmentSlot(() =>
+        {
+        });
         _ = new AssignmentSlot(EmptyDisposable.Instance);
         _ = new Slot();
-        _ = new Slot(() => { });
+        _ = new Slot(() =>
+        {
+        });
         _ = new Slot(EmptyDisposable.Instance);
         _ = new Pocket();
         _ = new Pocket(EmptyDisposable.Instance, EmptyDisposable.Instance);
@@ -147,17 +141,16 @@ public class CoverageRuntimeTests
     }
 
     /// <summary>Covers internal witness implementations and safe observer terminal behavior.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void WitnessesCoverDisposedThrowEmptyAndSafeBranches()
+    public async Task WitnessesCoverDisposedThrowEmptyAndSafeBranches()
     {
         Assert.Throws<ObjectDisposedException>(() => DisposedWitness<int>.Instance.OnNext(One));
         Assert.Throws<ObjectDisposedException>(DisposedWitness<int>.Instance.OnCompleted);
         Assert.Throws<ObjectDisposedException>(() => DisposedWitness<int>.Instance.OnError(new InvalidOperationException("disposed")));
-
         ThrowWitness<int>.Instance.OnNext(One);
         ThrowWitness<int>.Instance.OnCompleted();
         Assert.Throws<InvalidOperationException>(() => ThrowWitness<int>.Instance.OnError(new InvalidOperationException("throw")));
-
         var values = new List<int>();
         var errors = new List<string>();
         var completed = 0;
@@ -167,59 +160,67 @@ public class CoverageRuntimeTests
         new EmptyWitness<int>(values.Add, () => completed++).OnCompleted();
         new EmptyWitness<int>(values.Add, ex => errors.Add(ex.Message), () => completed++).OnCompleted();
         Assert.Throws<InvalidOperationException>(() => new EmptyWitness<int>(values.Add).OnError(new InvalidOperationException("rethrown")));
-
-        Assert.Equal(ExpectedTwoOnly, values);
-        Assert.Equal(ExpectedHandledErrors, errors);
-        Assert.Equal(Two, completed);
-
+        await Assert.That(values.SequenceEqual(ExpectedTwoOnly)).IsTrue();
+        await Assert.That(errors.SequenceEqual(ExpectedHandledErrors)).IsTrue();
+        await Assert.That(completed).IsEqualTo(Two);
         Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, (Action<Exception>)null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, (Action)null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, _ => { }, null!));
+        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(
+            _ =>
+{
+},
+            (Action<Exception>)null!));
+        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(
+            _ =>
+{
+},
+            (Action)null!));
+        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(
+            _ =>
+{
+},
+            _ =>
+{
+},
+            null!));
         Assert.Throws<ArgumentNullException>(() => Witness.Safe<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Safe(Witness.Create<int>(_ => { }), null!));
-
+        Assert.Throws<ArgumentNullException>(() => Witness.Safe(
+            Witness.Create<int>(_ =>
+{
+}),
+            null!));
         var events = new List<string>();
         var cancelDisposed = 0;
-        var safe = Witness.Safe(
-            Witness.Create<int>(
-                value => events.Add("next:" + value),
-                ex => events.Add("error:" + ex.Message),
-                () => events.Add("completed")),
-            new ActionDisposable(() => cancelDisposed++));
+        var safe = Witness.Safe(Witness.Create<int>(value => events.Add("next:" + value), ex => events.Add("error:" + ex.Message), () => events.Add("completed")), new ActionDisposable(() => cancelDisposed++));
         safe.OnNext(Three);
         safe.OnCompleted();
         safe.OnCompleted();
         safe.OnNext(Four);
         safe.OnError(new InvalidOperationException("late"));
-        Assert.Equal(ExpectedSafeEvents, events);
-        Assert.Equal(1, cancelDisposed);
-
+        await Assert.That(events.SequenceEqual(ExpectedSafeEvents)).IsTrue();
+        await Assert.That(cancelDisposed).IsEqualTo(1);
         var throwingCancel = 0;
-        var throwing = Witness.Safe(
-            Witness.Create<int>(_ => throw new InvalidOperationException("next-failed")),
-            new ActionDisposable(() => throwingCancel++));
+        var throwing = Witness.Safe(Witness.Create<int>(_ => throw new InvalidOperationException("next-failed")), new ActionDisposable(() => throwingCancel++));
         Assert.Throws<InvalidOperationException>(() => throwing.OnNext(One));
         throwing.OnNext(Two);
-        Assert.Equal(1, throwingCancel);
+        await Assert.That(throwingCancel).IsEqualTo(1);
         Assert.Throws<ArgumentNullException>(() => safe.OnError(null!));
     }
 
     /// <summary>Covers priority queues, sequencer queues, and scheduled item comparison and disposal paths.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void QueuesAndScheduledItemsCoverOrderingComparisonAndDisposalBranches()
+    public async Task QueuesAndScheduledItemsCoverOrderingComparisonAndDisposalBranches()
     {
         var queue = new PriorityQueue<int>(Two);
         queue.Enqueue(Three);
         queue.Enqueue(One);
         queue.Enqueue(Two);
-        Assert.Equal(One, queue.Peek());
-        Assert.True(queue.Remove(Two));
-        Assert.False(queue.Remove(Four));
-        Assert.Equal(One, queue.Dequeue());
-        Assert.Equal(Three, queue.Dequeue());
+        await Assert.That(queue.Peek()).IsEqualTo(One);
+        await Assert.That(queue.Remove(Two)).IsTrue();
+        await Assert.That(queue.Remove(Four)).IsFalse();
+        await Assert.That(queue.Dequeue()).IsEqualTo(One);
+        await Assert.That(queue.Dequeue()).IsEqualTo(Three);
         Assert.Throws<InvalidOperationException>(() => queue.Peek());
-
         var shrinkQueue = new PriorityQueue<int>(Eight);
         for (var i = 0; i < Eight; i++)
         {
@@ -228,12 +229,11 @@ public class CoverageRuntimeTests
 
         for (var i = 0; i < Seven; i++)
         {
-            Assert.Equal(i, shrinkQueue.Dequeue());
+            await Assert.That(shrinkQueue.Dequeue()).IsEqualTo(i);
         }
 
-        Assert.Equal(Seven, shrinkQueue.Dequeue());
+        await Assert.That(shrinkQueue.Dequeue()).IsEqualTo(Seven);
         Assert.Throws<ArgumentOutOfRangeException>(CreateInvalidSequencerQueue);
-
         var invoked = new List<string>();
         var disposed = 0;
         var first = new ScheduledItem<int, string>(
@@ -247,31 +247,27 @@ public class CoverageRuntimeTests
             One);
         var second = new ScheduledItem<int, string>(Sequencer.Immediate, "second", (_, _) => EmptyDisposable.Instance, Two);
         var equalDue = new ScheduledItem<int, string>(Sequencer.Immediate, "equal", (_, _) => EmptyDisposable.Instance, One);
-
-        Assert.True(first < second);
-        Assert.True(first <= equalDue);
-        Assert.True(second > first);
-        Assert.True(second >= first);
-        Assert.False(first == second);
-        Assert.True(first != second);
-        Assert.False(first.Equals(second));
-        Assert.Equal(One, first.CompareTo(null));
+        await Assert.That(first < second).IsTrue();
+        await Assert.That(first <= equalDue).IsTrue();
+        await Assert.That(second > first).IsTrue();
+        await Assert.That(second >= first).IsTrue();
+        await Assert.That(first == second).IsFalse();
+        await Assert.That(first != second).IsTrue();
+        await Assert.That(first.Equals(second)).IsFalse();
+        await Assert.That(first.CompareTo(null)).IsEqualTo(One);
         Assert.Throws<ArgumentException>(() => CompareScheduledItemWithInvalidObject(first));
-
         var sequencerQueue = new SequencerQueue<int>(Two);
         sequencerQueue.Enqueue(second);
         sequencerQueue.Enqueue(first);
-        Assert.Same(first, sequencerQueue.Peek());
-        Assert.True(sequencerQueue.Remove(second));
-        Assert.Same(first, sequencerQueue.Dequeue());
-
+        await Assert.That(sequencerQueue.Peek()).IsSameReferenceAs(first);
+        await Assert.That(sequencerQueue.Remove(second)).IsTrue();
+        await Assert.That(sequencerQueue.Dequeue()).IsSameReferenceAs(first);
         first.Invoke();
         first.Invoke();
         first.Dispose();
         first.Dispose();
-        Assert.Equal(ExpectedRepeatedScheduledItemInvocations, invoked);
-        Assert.Equal(Two, disposed);
-
+        await Assert.That(invoked.SequenceEqual(ExpectedRepeatedScheduledItemInvocations)).IsTrue();
+        await Assert.That(disposed).IsEqualTo(Two);
         var cancelled = new ScheduledItem<int, string>(
             Sequencer.Immediate,
             "cancelled",
@@ -283,54 +279,58 @@ public class CoverageRuntimeTests
             Three);
         cancelled.Cancel();
         cancelled.Invoke();
-        Assert.DoesNotContain("cancelled", invoked);
+        await Assert.That(invoked).DoesNotContain("cancelled");
         Assert.Throws<ArgumentNullException>(CreateScheduledItemWithoutSequencer);
         Assert.Throws<ArgumentNullException>(CreateScheduledItemWithoutAction);
         Assert.Throws<ArgumentNullException>(CreateScheduledItemWithoutComparer);
-
         var defaultClock = new TestClock();
         var initialClock = new TestClock(DateTimeOffset.UnixEpoch);
-        Assert.Equal(DateTimeOffset.MinValue, defaultClock.Now);
-        Assert.Equal(DateTimeOffset.UnixEpoch, initialClock.Now);
+        await Assert.That(defaultClock.Now).IsEqualTo(DateTimeOffset.MinValue);
+        await Assert.That(initialClock.Now).IsEqualTo(DateTimeOffset.UnixEpoch);
     }
 
     /// <summary>Covers enumerable signal fast paths for arrays, read-only lists, iterators, and delegate subscriptions.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void FromEnumerableSignalCoversAllSynchronousFastPaths()
+    public async Task FromEnumerableSignalCoversAllSynchronousFastPaths()
     {
         var arrayObserver = new RecordingWitness<int>();
         var arraySignal = new FromEnumerableSignal<int>([One, Two]);
-        Assert.False(arraySignal.IsRequiredSubscribeOnCurrentThread());
+        await Assert.That(arraySignal.IsRequiredSubscribeOnCurrentThread()).IsFalse();
         arraySignal.Subscribe(arrayObserver).Dispose();
-        Assert.Equal(ExpectedOneTwo, arrayObserver.Values);
-        Assert.Equal(1, arrayObserver.Completed);
-
+        await Assert.That(arrayObserver.Values.SequenceEqual(ExpectedOneTwo)).IsTrue();
+        await Assert.That(arrayObserver.Completed).IsEqualTo(1);
         var listValues = new List<int>();
         var listCompleted = 0;
-        new FromEnumerableSignal<int>([Three, Four]).Subscribe(
-            listValues.Add,
-            ex => throw ex,
-            () => listCompleted++).Dispose();
-        Assert.Equal(ExpectedThreeFour, listValues);
-        Assert.Equal(1, listCompleted);
-
+        new FromEnumerableSignal<int>([Three, Four]).Subscribe(listValues.Add, ex => throw ex, () => listCompleted++).Dispose();
+        await Assert.That(listValues.SequenceEqual(ExpectedThreeFour)).IsTrue();
+        await Assert.That(listCompleted).IsEqualTo(1);
         var iteratorObserver = new RecordingWitness<int>();
         new FromEnumerableSignal<int>(YieldValues()).Subscribe(iteratorObserver).Dispose();
-        Assert.Equal(ExpectedFiveSix, iteratorObserver.Values);
-        Assert.Equal(1, iteratorObserver.Completed);
-
+        await Assert.That(iteratorObserver.Values.SequenceEqual(ExpectedFiveSix)).IsTrue();
+        await Assert.That(iteratorObserver.Completed).IsEqualTo(1);
         var iteratorValues = new List<int>();
         var iteratorCompleted = 0;
-        new FromEnumerableSignal<int>(YieldValues()).Subscribe(
-            iteratorValues.Add,
-            ex => throw ex,
-            () => iteratorCompleted++).Dispose();
-        Assert.Equal(ExpectedFiveSix, iteratorValues);
-        Assert.Equal(1, iteratorCompleted);
-
+        new FromEnumerableSignal<int>(YieldValues()).Subscribe(iteratorValues.Add, ex => throw ex, () => iteratorCompleted++).Dispose();
+        await Assert.That(iteratorValues.SequenceEqual(ExpectedFiveSix)).IsTrue();
+        await Assert.That(iteratorCompleted).IsEqualTo(1);
         Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe((IObserver<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe(null!, ex => { }, () => { }));
-        Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe(_ => { }, ex => { }, null!));
+        Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe(
+            null!,
+            ex =>
+{
+},
+            () =>
+{
+}));
+        Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe(
+            _ =>
+{
+},
+            ex =>
+{
+},
+            null!));
     }
 
     /// <summary>Covers immediate and background sequencer argument validation and execution paths.</summary>
@@ -338,15 +338,13 @@ public class CoverageRuntimeTests
     [Test]
     public async Task SequencersCoverValidationAndExecutionBranches()
     {
-        Assert.Same(ImmediateSequencer.Instance, Sequencer.Immediate);
-        Assert.Same(TaskPoolSequencer.Instance, TaskPoolSequencer.Default);
-        Assert.Same(TaskPoolSequencer.Default, Sequencer.Default);
-        Assert.True(Sequencer.Immediate.Now > DateTimeOffset.MinValue);
-        Assert.Equal(TimeSpan.Zero, Sequencer.Normalize(TimeSpan.FromTicks(NegativeOne)));
-
+        await Assert.That(Sequencer.Immediate).IsSameReferenceAs(ImmediateSequencer.Instance);
+        await Assert.That(TaskPoolSequencer.Default).IsSameReferenceAs(TaskPoolSequencer.Instance);
+        await Assert.That(Sequencer.Default).IsSameReferenceAs(TaskPoolSequencer.Default);
+        await Assert.That(Sequencer.Immediate.Now > DateTimeOffset.MinValue).IsTrue();
+        await Assert.That(Sequencer.Normalize(TimeSpan.FromTicks(NegativeOne))).IsEqualTo(TimeSpan.Zero);
         Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.Schedule(One, null!));
         Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.Schedule(One, TimeSpan.Zero, null!));
-
         var immediateValues = new List<int>();
         Sequencer.Immediate.Schedule(One, (_, state) =>
         {
@@ -363,11 +361,9 @@ public class CoverageRuntimeTests
             immediateValues.Add(state);
             return EmptyDisposable.Instance;
         }).Dispose();
-        Assert.Equal(ExpectedImmediateValues, immediateValues);
-
+        await Assert.That(immediateValues.SequenceEqual(ExpectedImmediateValues)).IsTrue();
         Assert.Throws<ArgumentNullException>(() => TaskPoolSequencer.Instance.Schedule(One, null!));
         Assert.Throws<ArgumentNullException>(() => TaskPoolSequencer.Instance.Schedule(One, TimeSpan.Zero, null!));
-
         var taskPoolCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var taskPoolSubscription = TaskPoolSequencer.Instance.Schedule(Seven, (_, _) =>
         {
@@ -375,7 +371,6 @@ public class CoverageRuntimeTests
             return EmptyDisposable.Instance;
         });
         await WaitForAsync(taskPoolCompletion.Task);
-
         var threadPoolCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var threadPoolSubscription = ThreadPoolSequencer.Instance.Schedule(Eight, TimeSpan.Zero, (_, _) =>
         {
@@ -383,17 +378,15 @@ public class CoverageRuntimeTests
             return EmptyDisposable.Instance;
         });
         await WaitForAsync(threadPoolCompletion.Task);
-
         Assert.Throws<ArgumentNullException>(() => ThreadPoolSequencer.Instance.Schedule(One, null!));
         Assert.Throws<ArgumentNullException>(() => ThreadPoolSequencer.Instance.Schedule(One, TimeSpan.Zero, null!));
-
         var synchronizationContext = new ImmediateSynchronizationContext();
         Assert.Throws<ArgumentNullException>(CreateSynchronizationContextSequencerWithoutContext);
         var previousContext = SynchronizationContext.Current;
         try
         {
             SynchronizationContext.SetSynchronizationContext(synchronizationContext);
-            Assert.Same(synchronizationContext, SynchronizationContextSequencer.Current.Context);
+            await Assert.That(SynchronizationContextSequencer.Current.Context).IsSameReferenceAs(synchronizationContext);
         }
         finally
         {
@@ -401,17 +394,15 @@ public class CoverageRuntimeTests
         }
 
         var synchronizationSequencer = new SynchronizationContextSequencer(synchronizationContext);
-        Assert.True(synchronizationSequencer.Now > DateTimeOffset.MinValue);
+        await Assert.That(synchronizationSequencer.Now > DateTimeOffset.MinValue).IsTrue();
         Assert.Throws<ArgumentNullException>(() => synchronizationSequencer.Schedule(One, null!));
         Assert.Throws<ArgumentNullException>(() => synchronizationSequencer.Schedule(One, TimeSpan.Zero, null!));
-
         var synchronizationValues = new List<int>();
         using var synchronizationSubscription = synchronizationSequencer.Schedule(One, (_, state) =>
         {
             synchronizationValues.Add(state);
             return EmptyDisposable.Instance;
         });
-
         var delayedSynchronizationCompletion = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var delayedSynchronizationSubscription = synchronizationSequencer.Schedule(Two, TimeSpan.Zero, (_, state) =>
         {
@@ -419,29 +410,31 @@ public class CoverageRuntimeTests
             return EmptyDisposable.Instance;
         });
         var delayedValue = await delayedSynchronizationCompletion.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
-        Assert.Equal(ExpectedOneTwo, (IEnumerable<int>)[.. synchronizationValues, delayedValue]);
+        var synchronizedValues = synchronizationValues.Append(delayedValue);
+        await Assert.That(synchronizedValues.SequenceEqual(ExpectedOneTwo)).IsTrue();
     }
 
     /// <summary>Covers virtual-time extension validation and action scheduling.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void VirtualTimeSequencerExtensionsValidateAndRunActions()
+    public async Task VirtualTimeSequencerExtensionsValidateAndRunActions()
     {
         var clock = new TestClock(DateTimeOffset.UnixEpoch);
         var invoked = 0;
-
-        Assert.Throws<ArgumentNullException>(() => VirtualTimeSequencerExtensions.ScheduleRelative<DateTimeOffset, TimeSpan>(null!, TimeSpan.Zero, () => { }));
+        Assert.Throws<ArgumentNullException>(() => VirtualTimeSequencerExtensions.ScheduleRelative<DateTimeOffset, TimeSpan>(null!, TimeSpan.Zero, () =>
+{
+}));
         Assert.Throws<ArgumentNullException>(() => clock.ScheduleRelative(TimeSpan.Zero, null!));
-        Assert.Throws<ArgumentNullException>(() => VirtualTimeSequencerExtensions.ScheduleAbsolute<DateTimeOffset, TimeSpan>(null!, DateTimeOffset.UnixEpoch, () => { }));
+        Assert.Throws<ArgumentNullException>(() => VirtualTimeSequencerExtensions.ScheduleAbsolute<DateTimeOffset, TimeSpan>(null!, DateTimeOffset.UnixEpoch, () =>
+{
+}));
         Assert.Throws<ArgumentNullException>(() => clock.ScheduleAbsolute(DateTimeOffset.UnixEpoch, null!));
-
         clock.ScheduleRelative(TimeSpan.FromTicks(One), () => invoked += One);
         clock.ScheduleAbsolute(DateTimeOffset.UnixEpoch.AddTicks(Two), () => invoked += Two);
-
         clock.AdvanceBy(TimeSpan.FromTicks(One));
-        Assert.Equal(One, invoked);
-
+        await Assert.That(invoked).IsEqualTo(One);
         clock.AdvanceBy(TimeSpan.FromTicks(One));
-        Assert.Equal(Three, invoked);
+        await Assert.That(invoked).IsEqualTo(Three);
     }
 
     /// <summary>Creates an iterator-backed enumerable for the non-indexable enumerable path.</summary>
@@ -456,28 +449,23 @@ public class CoverageRuntimeTests
     private static void CreateInvalidSequencerQueue() => _ = new SequencerQueue<int>(NegativeOne);
 
     /// <summary>Creates a scheduled item without a sequencer.</summary>
-    private static void CreateScheduledItemWithoutSequencer() =>
-        _ = new ScheduledItem<int, string>(null!, "x", (_, _) => EmptyDisposable.Instance, One);
+    private static void CreateScheduledItemWithoutSequencer() => _ = new ScheduledItem<int, string>(null!, "x", (_, _) => EmptyDisposable.Instance, One);
 
     /// <summary>Creates a scheduled item without an action.</summary>
-    private static void CreateScheduledItemWithoutAction() =>
-        _ = new ScheduledItem<int, string>(Sequencer.Immediate, "x", null!, One);
+    private static void CreateScheduledItemWithoutAction() => _ = new ScheduledItem<int, string>(Sequencer.Immediate, "x", null!, One);
 
     /// <summary>Creates a scheduled item without a comparer.</summary>
-    private static void CreateScheduledItemWithoutComparer() =>
-        _ = new ScheduledItem<int, string>(Sequencer.Immediate, "x", (_, _) => EmptyDisposable.Instance, One, null!);
+    private static void CreateScheduledItemWithoutComparer() => _ = new ScheduledItem<int, string>(Sequencer.Immediate, "x", (_, _) => EmptyDisposable.Instance, One, null!);
 
     /// <summary>Creates a synchronization-context sequencer without a context.</summary>
-    private static void CreateSynchronizationContextSequencerWithoutContext() =>
-        _ = new SynchronizationContextSequencer(null!);
+    private static void CreateSynchronizationContextSequencerWithoutContext() => _ = new SynchronizationContextSequencer(null!);
 
     /// <summary>Compares a scheduled item through the non-generic comparable interface.</summary>
-    /// <param name="item">The scheduled item.</param>
-    private static void CompareScheduledItemWithInvalidObject(ScheduledItem<int, string> item) =>
-        item.CompareTo("bad");
+    /// <param name = "item">The scheduled item.</param>
+    private static void CompareScheduledItemWithInvalidObject(ScheduledItem<int, string> item) => item.CompareTo("bad");
 
     /// <summary>Waits for a task with a bounded timeout.</summary>
-    /// <param name="task">The task to wait for.</param>
+    /// <param name = "task">The task to wait for.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task WaitForAsync(Task task)
     {
@@ -494,8 +482,8 @@ public class CoverageRuntimeTests
     /// <summary>Exposes the protected dispose path for coverage.</summary>
     private sealed class ExposedSingleDisposable : SingleDisposable
     {
-        /// <summary>Initializes a new instance of the <see cref="ExposedSingleDisposable"/> class.</summary>
-        /// <param name="disposable">The disposable to assign.</param>
+        /// <summary>Initializes a new instance of the <see cref = "ExposedSingleDisposable"/> class.</summary>
+        /// <param name = "disposable">The disposable to assign.</param>
         public ExposedSingleDisposable(IDisposable disposable)
             : base(disposable)
         {
@@ -508,8 +496,8 @@ public class CoverageRuntimeTests
     /// <summary>Exposes the protected dispose path for coverage.</summary>
     private sealed class ExposedSingleReplaceableDisposable : SingleReplaceableDisposable
     {
-        /// <summary>Initializes a new instance of the <see cref="ExposedSingleReplaceableDisposable"/> class.</summary>
-        /// <param name="disposable">The disposable to assign.</param>
+        /// <summary>Initializes a new instance of the <see cref = "ExposedSingleReplaceableDisposable"/> class.</summary>
+        /// <param name = "disposable">The disposable to assign.</param>
         public ExposedSingleReplaceableDisposable(IDisposable disposable)
             : base(disposable)
         {
@@ -522,8 +510,8 @@ public class CoverageRuntimeTests
     /// <summary>Exposes the protected dispose path for coverage.</summary>
     private sealed class ExposedMultipleDisposable : MultipleDisposable
     {
-        /// <summary>Initializes a new instance of the <see cref="ExposedMultipleDisposable"/> class.</summary>
-        /// <param name="disposable">The disposable to assign.</param>
+        /// <summary>Initializes a new instance of the <see cref = "ExposedMultipleDisposable"/> class.</summary>
+        /// <param name = "disposable">The disposable to assign.</param>
         public ExposedMultipleDisposable(IDisposable disposable)
             : base(disposable, EmptyDisposable.Instance)
         {
@@ -541,7 +529,7 @@ public class CoverageRuntimeTests
     }
 
     /// <summary>Records observer values and terminal signals.</summary>
-    /// <typeparam name="T">The observed value type.</typeparam>
+    /// <typeparam name = "T">The observed value type.</typeparam>
     private sealed class RecordingWitness<T> : IObserver<T>
     {
         /// <summary>Gets observed values.</summary>

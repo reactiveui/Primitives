@@ -56,10 +56,10 @@ public static partial class SignalAsync
         private sealed class ReturnSubscription(IObserverAsync<T> observer, T value) : TaskSignalSubscription<T>(observer)
         {
             /// <inheritdoc/>
-            protected override async ValueTask ExecuteAsyncCore(IObserverAsync<T> downstream, CancellationToken cancellationToken)
+            protected override async ValueTask ExecuteAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken)
             {
-                await downstream.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
-                await downstream.OnCompletedAsync(Result.Success).ConfigureAwait(false);
+                await observer.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
+                await observer.OnCompletedAsync(Result.Success).ConfigureAwait(false);
             }
         }
     }

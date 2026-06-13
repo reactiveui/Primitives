@@ -269,10 +269,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (count < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count));
-            }
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
 
             if (source is LoopSignal<T> loop)
             {
@@ -291,10 +288,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (count < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count));
-            }
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
 
             return new SkipSignal<T>(source, count);
         }
@@ -436,10 +430,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (retryCount < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(retryCount));
-            }
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(retryCount);
 
             return new ReattemptSignal<T>(source, retryCount);
         }

@@ -1,7 +1,6 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
@@ -27,12 +26,10 @@ public class ReplaySignalTests
         Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1, EmptySequencer.Instance)));
         Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1, TimeSpan.Zero)));
         Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1, TimeSpan.Zero, EmptySequencer.Instance)));
-
         Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(TimeSpan.FromTicks(-1))));
         Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(TimeSpan.FromTicks(-1), EmptySequencer.Instance)));
         Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(0, TimeSpan.FromTicks(-1))));
         Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(0, TimeSpan.FromTicks(-1), EmptySequencer.Instance)));
-
         Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(null!)));
         Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(0, null!)));
         Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(TimeSpan.Zero, null!)));
@@ -45,7 +42,6 @@ public class ReplaySignalTests
         CreateAndDispose(() => new(0, EmptySequencer.Instance));
         CreateAndDispose(() => new(TimeSpan.Zero, EmptySequencer.Instance));
         CreateAndDispose(() => new(0, TimeSpan.Zero, EmptySequencer.Instance));
-
         CreateAndDispose(() => new HistorySignal<int>());
         CreateAndDispose(() => new HistorySignal<int>(EmptySequencer.Instance));
         CreateAndDispose(() => new HistorySignal<int>(0));
@@ -57,63 +53,69 @@ public class ReplaySignalTests
     }
 
     /// <summary>Determines whether this instance has observers.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void HasObservers()
+    public async Task HasObservers()
     {
-        HasObserversImpl(new());
-        HasObserversImpl(new(1));
-        HasObserversImpl(new(Three));
-        HasObserversImpl(new(TimeSpan.FromSeconds(1)));
+        await HasObserversImpl(new());
+        await HasObserversImpl(new(1));
+        await HasObserversImpl(new(Three));
+        await HasObserversImpl(new(TimeSpan.FromSeconds(1)));
     }
 
     /// <summary>Determines whether [has observers dispose1].</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void HasObservers_Dispose1()
+    public async Task HasObservers_Dispose1()
     {
-        HasObservers_Dispose1Impl(new());
-        HasObservers_Dispose1Impl(new(1));
-        HasObservers_Dispose1Impl(new(Three));
-        HasObservers_Dispose1Impl(new(TimeSpan.FromSeconds(1)));
+        await HasObservers_Dispose1Impl(new());
+        await HasObservers_Dispose1Impl(new(1));
+        await HasObservers_Dispose1Impl(new(Three));
+        await HasObservers_Dispose1Impl(new(TimeSpan.FromSeconds(1)));
     }
 
     /// <summary>Determines whether [has observers dispose2].</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void HasObservers_Dispose2()
+    public async Task HasObservers_Dispose2()
     {
-        HasObservers_Dispose2Impl(new());
-        HasObservers_Dispose2Impl(new(1));
-        HasObservers_Dispose2Impl(new(Three));
-        HasObservers_Dispose2Impl(new(TimeSpan.FromSeconds(1)));
+        await HasObservers_Dispose2Impl(new());
+        await HasObservers_Dispose2Impl(new(1));
+        await HasObservers_Dispose2Impl(new(Three));
+        await HasObservers_Dispose2Impl(new(TimeSpan.FromSeconds(1)));
     }
 
     /// <summary>Determines whether [has observers dispose3].</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void HasObservers_Dispose3()
+    public async Task HasObservers_Dispose3()
     {
-        HasObservers_Dispose3Impl(new());
-        HasObservers_Dispose3Impl(new(1));
-        HasObservers_Dispose3Impl(new(Three));
-        HasObservers_Dispose3Impl(new(TimeSpan.FromSeconds(1)));
+        await HasObservers_Dispose3Impl(new());
+        await HasObservers_Dispose3Impl(new(1));
+        await HasObservers_Dispose3Impl(new(Three));
+        await HasObservers_Dispose3Impl(new(TimeSpan.FromSeconds(1)));
     }
 
     /// <summary>Determines whether [has observers on completed].</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void HasObservers_OnCompleted()
+    public async Task HasObservers_OnCompleted()
     {
-        HasObservers_OnCompletedImpl(new());
-        HasObservers_OnCompletedImpl(new(1));
-        HasObservers_OnCompletedImpl(new(Three));
-        HasObservers_OnCompletedImpl(new(TimeSpan.FromSeconds(1)));
+        await HasObservers_OnCompletedImpl(new());
+        await HasObservers_OnCompletedImpl(new(1));
+        await HasObservers_OnCompletedImpl(new(Three));
+        await HasObservers_OnCompletedImpl(new(TimeSpan.FromSeconds(1)));
     }
 
     /// <summary>Determines whether [has observers on error].</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void HasObservers_OnError()
+    public async Task HasObservers_OnError()
     {
-        HasObservers_OnErrorImpl(new());
-        HasObservers_OnErrorImpl(new(1));
-        HasObservers_OnErrorImpl(new(Three));
-        HasObservers_OnErrorImpl(new(TimeSpan.FromSeconds(1)));
+        await HasObservers_OnErrorImpl(new());
+        await HasObservers_OnErrorImpl(new(1));
+        await HasObservers_OnErrorImpl(new(Three));
+        await HasObservers_OnErrorImpl(new(TimeSpan.FromSeconds(1)));
     }
 
     /// <summary>Called when [error argument checking].</summary>
@@ -137,118 +139,123 @@ public class ReplaySignalTests
     }
 
     /// <summary>Creates a replay signal and disposes it immediately.</summary>
-    /// <param name="factory">Factory used to create the signal.</param>
+    /// <param name = "factory">Factory used to create the signal.</param>
     private static void CreateAndDispose(Func<ReplaySignal<int>> factory)
     {
         using var signal = factory();
     }
 
     /// <summary>Verifies observer state when the source is disposed before subscription disposal.</summary>
-    /// <param name="s">Signal to test.</param>
-    private static void HasObservers_Dispose1Impl(ReplaySignal<int> s)
+    /// <param name = "s">Signal to test.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task HasObservers_Dispose1Impl(ReplaySignal<int> s)
     {
-        Assert.False(s.HasObservers);
-        Assert.False(s.IsDisposed);
-
-        var d = s.Subscribe(_ => { });
-        Assert.True(s.HasObservers);
-        Assert.False(s.IsDisposed);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        await Assert.That(s.IsDisposed).IsFalse();
+        var d = s.Subscribe(_ =>
+        {
+        });
+        await Assert.That(s.HasObservers).IsTrue();
+        await Assert.That(s.IsDisposed).IsFalse();
         s.Dispose();
-        Assert.False(s.HasObservers);
-        Assert.True(s.IsDisposed);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        await Assert.That(s.IsDisposed).IsTrue();
         d.Dispose();
-        Assert.False(s.HasObservers);
-        Assert.True(s.IsDisposed);
+        await Assert.That(s.HasObservers).IsFalse();
+        await Assert.That(s.IsDisposed).IsTrue();
     }
 
     /// <summary>Verifies observer state when the subscription is disposed before the source.</summary>
-    /// <param name="s">Signal to test.</param>
-    private static void HasObservers_Dispose2Impl(ReplaySignal<int> s)
+    /// <param name = "s">Signal to test.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task HasObservers_Dispose2Impl(ReplaySignal<int> s)
     {
-        Assert.False(s.HasObservers);
-        Assert.False(s.IsDisposed);
-
-        var d = s.Subscribe(_ => { });
-        Assert.True(s.HasObservers);
-        Assert.False(s.IsDisposed);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        await Assert.That(s.IsDisposed).IsFalse();
+        var d = s.Subscribe(_ =>
+        {
+        });
+        await Assert.That(s.HasObservers).IsTrue();
+        await Assert.That(s.IsDisposed).IsFalse();
         d.Dispose();
-        Assert.False(s.HasObservers);
-        Assert.False(s.IsDisposed);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        await Assert.That(s.IsDisposed).IsFalse();
         s.Dispose();
-        Assert.False(s.HasObservers);
-        Assert.True(s.IsDisposed);
+        await Assert.That(s.HasObservers).IsFalse();
+        await Assert.That(s.IsDisposed).IsTrue();
     }
 
     /// <summary>Verifies observer state when the source is disposed without subscribers.</summary>
-    /// <param name="s">Signal to test.</param>
-    private static void HasObservers_Dispose3Impl(ReplaySignal<int> s)
+    /// <param name = "s">Signal to test.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task HasObservers_Dispose3Impl(ReplaySignal<int> s)
     {
-        Assert.False(s.HasObservers);
-        Assert.False(s.IsDisposed);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        await Assert.That(s.IsDisposed).IsFalse();
         s.Dispose();
-        Assert.False(s.HasObservers);
-        Assert.True(s.IsDisposed);
+        await Assert.That(s.HasObservers).IsFalse();
+        await Assert.That(s.IsDisposed).IsTrue();
     }
 
     /// <summary>Verifies observer state after completion.</summary>
-    /// <param name="s">Signal to test.</param>
-    private static void HasObservers_OnCompletedImpl(ReplaySignal<int> s)
+    /// <param name = "s">Signal to test.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task HasObservers_OnCompletedImpl(ReplaySignal<int> s)
     {
-        Assert.False(s.HasObservers);
-
-        using var subscription = s.Subscribe(_ => { });
-        Assert.True(s.HasObservers);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        using var subscription = s.Subscribe(_ =>
+        {
+        });
+        await Assert.That(s.HasObservers).IsTrue();
         s.OnNext(ReplayValue);
-        Assert.True(s.HasObservers);
-
+        await Assert.That(s.HasObservers).IsTrue();
         s.OnCompleted();
-        Assert.False(s.HasObservers);
+        await Assert.That(s.HasObservers).IsFalse();
     }
 
     /// <summary>Verifies observer state after error.</summary>
-    /// <param name="s">Signal to test.</param>
-    private static void HasObservers_OnErrorImpl(ReplaySignal<int> s)
+    /// <param name = "s">Signal to test.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task HasObservers_OnErrorImpl(ReplaySignal<int> s)
     {
-        Assert.False(s.HasObservers);
-
-        using var subscription = s.Subscribe(_ => { }, _ => { });
-        Assert.True(s.HasObservers);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        using var subscription = s.Subscribe(
+            _ =>
+        {
+        },
+            _ =>
+        {
+        });
+        await Assert.That(s.HasObservers).IsTrue();
         s.OnNext(ReplayValue);
-        Assert.True(s.HasObservers);
-
+        await Assert.That(s.HasObservers).IsTrue();
         s.OnError(new InvalidOperationException());
-        Assert.False(s.HasObservers);
+        await Assert.That(s.HasObservers).IsFalse();
     }
 
     /// <summary>Verifies observer state as subscriptions are added and removed.</summary>
-    /// <param name="s">Signal to test.</param>
-    private static void HasObserversImpl(ReplaySignal<int> s)
+    /// <param name = "s">Signal to test.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task HasObserversImpl(ReplaySignal<int> s)
     {
-        Assert.False(s.HasObservers);
-
-        var d1 = s.Subscribe(_ => { });
-        Assert.True(s.HasObservers);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        var d1 = s.Subscribe(_ =>
+        {
+        });
+        await Assert.That(s.HasObservers).IsTrue();
         d1.Dispose();
-        Assert.False(s.HasObservers);
-
-        var d2 = s.Subscribe(_ => { });
-        Assert.True(s.HasObservers);
-
-        var d3 = s.Subscribe(_ => { });
-        Assert.True(s.HasObservers);
-
+        await Assert.That(s.HasObservers).IsFalse();
+        var d2 = s.Subscribe(_ =>
+        {
+        });
+        await Assert.That(s.HasObservers).IsTrue();
+        var d3 = s.Subscribe(_ =>
+        {
+        });
+        await Assert.That(s.HasObservers).IsTrue();
         d2.Dispose();
-        Assert.True(s.HasObservers);
-
+        await Assert.That(s.HasObservers).IsTrue();
         d3.Dispose();
-        Assert.False(s.HasObservers);
+        await Assert.That(s.HasObservers).IsFalse();
     }
 }

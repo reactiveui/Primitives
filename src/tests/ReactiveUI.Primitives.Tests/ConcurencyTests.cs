@@ -1,7 +1,6 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
 
@@ -26,75 +25,83 @@ public class ConcurencyTests
     private static readonly TimeSpan CancelObservationWindow = TimeSpan.FromMilliseconds(400);
 
     /// <summary>Verifies that scheduling state returns a disposable.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void TestCreate()
+    public async Task TestCreate()
     {
         var scheduler = TaskPoolSequencer.Instance;
         var disposable = scheduler.Schedule(0, (_, _) => EmptyDisposable.Instance);
-        Assert.NotNull(disposable);
+        await Assert.That(disposable).IsNotNull();
         disposable.Dispose();
     }
 
     /// <summary>Verifies that the task-pool sequencer reports current UTC time.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void TaskPoolNow()
+    public async Task TaskPoolNow()
     {
         var delta = TaskPoolSequencer.Instance.Now - TimeProvider.System.GetUtcNow();
-
-        Assert.True(delta.Duration() < ClockTolerance);
+        await Assert.That(delta.Duration() < ClockTolerance).IsTrue();
     }
 
     /// <summary>Verifies that immediate work is scheduled on a different thread.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void TaskPoolScheduleAction()
+    public async Task TaskPoolScheduleAction()
     {
         var id = Environment.CurrentManagedThreadId;
         var nt = TaskPoolSequencer.Instance;
         using var completed = new ManualResetEventSlim();
+        var observedThreadId = id;
         using var scheduled = nt.Schedule(() =>
         {
-            Assert.NotEqual(id, Environment.CurrentManagedThreadId);
+            observedThreadId = Environment.CurrentManagedThreadId;
             completed.Set();
         });
-
-        Assert.True(completed.Wait(ScheduleTimeout));
+        await Assert.That(completed.Wait(ScheduleTimeout)).IsTrue();
+        await Assert.That(observedThreadId).IsNotEqualTo(id);
     }
 
     /// <summary>Verifies that work due immediately is scheduled on a different thread.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void TaskPoolScheduleActionDueNow()
+    public async Task TaskPoolScheduleActionDueNow()
     {
         var id = Environment.CurrentManagedThreadId;
         var nt = TaskPoolSequencer.Instance;
         using var completed = new ManualResetEventSlim();
+        var observedThreadId = id;
         using var scheduled = nt.Schedule(TimeSpan.Zero, () =>
         {
-            Assert.NotEqual(id, Environment.CurrentManagedThreadId);
+            observedThreadId = Environment.CurrentManagedThreadId;
             completed.Set();
         });
-
-        Assert.True(completed.Wait(ScheduleTimeout));
+        await Assert.That(completed.Wait(ScheduleTimeout)).IsTrue();
+        await Assert.That(observedThreadId).IsNotEqualTo(id);
     }
 
     /// <summary>Verifies that delayed work is scheduled on a different thread.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void TaskPoolScheduleActionDue()
+    public async Task TaskPoolScheduleActionDue()
     {
         var id = Environment.CurrentManagedThreadId;
         var nt = TaskPoolSequencer.Instance;
         using var completed = new ManualResetEventSlim();
+        var observedThreadId = id;
         using var scheduled = nt.Schedule(ShortDueTime, () =>
         {
-            Assert.NotEqual(id, Environment.CurrentManagedThreadId);
+            observedThreadId = Environment.CurrentManagedThreadId;
             completed.Set();
         });
-
-        Assert.True(completed.Wait(ScheduleTimeout));
+        await Assert.That(completed.Wait(ScheduleTimeout)).IsTrue();
+        await Assert.That(observedThreadId).IsNotEqualTo(id);
     }
 
     /// <summary>Verifies that canceled delayed work does not run.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void TaskPoolScheduleActionCancel()
+    public async Task TaskPoolScheduleActionCancel()
     {
         var nt = TaskPoolSequencer.Instance;
         var runCount = 0;
@@ -104,21 +111,20 @@ public class ConcurencyTests
             Volatile.Write(ref runCount, 1);
             completed.Set();
         });
-
         scheduled.Dispose();
-
-        Assert.False(completed.Wait(CancelObservationWindow));
-        Assert.Equal(0, Volatile.Read(ref runCount));
+        await Assert.That(completed.Wait(CancelObservationWindow)).IsFalse();
+        await Assert.That(Volatile.Read(ref runCount)).IsEqualTo(0);
     }
 
-    /// <summary>Verifies that delays larger than <see cref="int.MaxValue"/> milliseconds are accepted.</summary>
+    /// <summary>Verifies that delays larger than <see cref = "int.MaxValue"/> milliseconds are accepted.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void TaskPoolDelayLargerThanIntMaxValue()
+    public async Task TaskPoolDelayLargerThanIntMaxValue()
     {
         var dueTime = TimeSpan.FromMilliseconds((double)int.MaxValue + 1);
-
-        using var scheduled = TaskPoolSequencer.Instance.Schedule(dueTime, () => { });
-
-        Assert.NotNull(scheduled);
+        using var scheduled = TaskPoolSequencer.Instance.Schedule(dueTime, () =>
+        {
+        });
+        await Assert.That(scheduled).IsNotNull();
     }
 }

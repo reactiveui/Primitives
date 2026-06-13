@@ -93,10 +93,7 @@ public static class ConnectableSignalExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (subscriberCount < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(subscriberCount));
-            }
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(subscriberCount);
 
             return AutoConnectGate<T>.For(source, subscriberCount);
         }

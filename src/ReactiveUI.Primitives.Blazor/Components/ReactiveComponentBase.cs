@@ -98,15 +98,8 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
         Action? onCompleted,
         bool refreshAfterCallbacks)
     {
-        if (source is null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
-
-        if (onNext is null)
-        {
-            throw new ArgumentNullException(nameof(onNext));
-        }
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(onNext);
 
         return Track(source.Subscribe(
             value => _ = InvokeAsync(() =>
@@ -143,10 +136,7 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
     /// <exception cref="InvalidOperationException">Always thrown to surface the subscription error.</exception>
     protected virtual void OnObservedError(Exception error)
     {
-        if (error is null)
-        {
-            throw new ArgumentNullException(nameof(error));
-        }
+        ArgumentNullException.ThrowIfNull(error);
 
         throw new InvalidOperationException("The reactive subscription failed.", error);
     }

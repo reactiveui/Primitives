@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+#pragma warning disable S6966 // Coverage tests intentionally group branch-heavy scenarios.
 
 using ReactiveUI.Primitives.Signals;
 
@@ -94,8 +95,9 @@ public class OperatorCoverageExpansionTests
     private static readonly int[] ResultFlatMapExpected = [First + FirstInner, Second + FirstInner];
 
     /// <summary>Covers count, long-count, distinct fast count, and any helper branches.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void AggregateHelpersCoverPredicateDistinctAndAnyPaths()
+    public async Task AggregateHelpersCoverPredicateDistinctAndAnyPaths()
     {
         var countPredicate = new List<int>();
         var distinctCount = new List<int>();
@@ -112,7 +114,6 @@ public class OperatorCoverageExpansionTests
         var rangeAllFalse = new List<bool>();
         var rangeContainsTrue = new List<bool>();
         var rangeContainsFalse = new List<bool>();
-
         Signal.FromEnumerable(AggregateSource).Count(value => value % Second == 0).Subscribe(countPredicate.Add);
         Signal.FromEnumerable(DuplicateKeySource).DistinctBy(value => value).Count().Subscribe(distinctCount.Add);
         Signal.FromEnumerable(AggregateSource).LongCount().Subscribe(longCount.Add);
@@ -128,98 +129,119 @@ public class OperatorCoverageExpansionTests
         Signal.Sequence(First, Fourth).All(value => value < Fourth).Subscribe(rangeAllFalse.Add);
         Signal.Sequence(First, Fourth).Contains(Third).Subscribe(rangeContainsTrue.Add);
         Signal.Sequence(First, Fourth).Contains(MissingRangeValue).Subscribe(rangeContainsFalse.Add);
-
-        Assert.Equal(CountTwoExpected, countPredicate);
-        Assert.Equal(DistinctCountExpected, distinctCount);
-        Assert.Equal(LongCountFourExpected, longCount);
-        Assert.Equal(LongCountTwoExpected, longCountPredicate);
-        Assert.Equal(DistinctLongCountExpected, distinctLongCount);
-        Assert.Equal(TrueExpected, anyTrue);
-        Assert.Equal(FalseExpected, anyFalse);
+        await Assert.That(countPredicate.SequenceEqual(CountTwoExpected)).IsTrue();
+        await Assert.That(distinctCount.SequenceEqual(DistinctCountExpected)).IsTrue();
+        await Assert.That(longCount.SequenceEqual(LongCountFourExpected)).IsTrue();
+        await Assert.That(longCountPredicate.SequenceEqual(LongCountTwoExpected)).IsTrue();
+        await Assert.That(distinctLongCount.SequenceEqual(DistinctLongCountExpected)).IsTrue();
+        await Assert.That(anyTrue.SequenceEqual(TrueExpected)).IsTrue();
+        await Assert.That(anyFalse.SequenceEqual(FalseExpected)).IsTrue();
         int[] expectedRangeDistinctCount = [Third];
-        Assert.Equal(expectedRangeDistinctCount, rangeDistinctCount);
+        await Assert.That(rangeDistinctCount.SequenceEqual(expectedRangeDistinctCount)).IsTrue();
         long[] expectedRangeDistinctLongCount = [Third];
-        Assert.Equal(expectedRangeDistinctLongCount, rangeDistinctLongCount);
-        Assert.Equal(TrueExpected, rangeAnyTrue);
-        Assert.Equal(FalseExpected, rangeAnyFalse);
-        Assert.Equal(TrueExpected, rangeAllTrue);
-        Assert.Equal(FalseExpected, rangeAllFalse);
-        Assert.Equal(TrueExpected, rangeContainsTrue);
-        Assert.Equal(FalseExpected, rangeContainsFalse);
+        await Assert.That(rangeDistinctLongCount.SequenceEqual(expectedRangeDistinctLongCount)).IsTrue();
+        await Assert.That(rangeAnyTrue.SequenceEqual(TrueExpected)).IsTrue();
+        await Assert.That(rangeAnyFalse.SequenceEqual(FalseExpected)).IsTrue();
+        await Assert.That(rangeAllTrue.SequenceEqual(TrueExpected)).IsTrue();
+        await Assert.That(rangeAllFalse.SequenceEqual(FalseExpected)).IsTrue();
+        await Assert.That(rangeContainsTrue.SequenceEqual(TrueExpected)).IsTrue();
+        await Assert.That(rangeContainsFalse.SequenceEqual(FalseExpected)).IsTrue();
     }
 
     /// <summary>Covers optimized aggregate observer error paths.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void AggregateHelpersForwardSourceErrors()
+    public async Task AggregateHelpersForwardSourceErrors()
     {
         var countError = new InvalidOperationException("count");
         var longCountError = new InvalidOperationException("long-count");
         var anyError = new InvalidOperationException("any");
         var distinctError = new InvalidOperationException("distinct");
         var observed = new List<Exception>();
-
-        Signal.Fail<int>(countError).Count().Subscribe(_ => { }, observed.Add, () => { });
-        Signal.Fail<int>(longCountError).LongCount().Subscribe(_ => { }, observed.Add, () => { });
-        Signal.Fail<int>(anyError).Any().Subscribe(_ => { }, observed.Add, () => { });
-        Signal.Fail<int>(distinctError).DistinctBy(value => value).Count().Subscribe(_ => { }, observed.Add, () => { });
-
-        Assert.Same(countError, observed[0]);
-        Assert.Same(longCountError, observed[1]);
-        Assert.Same(anyError, observed[AnyErrorIndex]);
-        Assert.Same(distinctError, observed[DistinctErrorIndex]);
+        Signal.Fail<int>(countError).Count().Subscribe(
+            _ =>
+        {
+        },
+            observed.Add,
+            () =>
+        {
+        });
+        Signal.Fail<int>(longCountError).LongCount().Subscribe(
+            _ =>
+        {
+        },
+            observed.Add,
+            () =>
+        {
+        });
+        Signal.Fail<int>(anyError).Any().Subscribe(
+            _ =>
+        {
+        },
+            observed.Add,
+            () =>
+        {
+        });
+        Signal.Fail<int>(distinctError).DistinctBy(value => value).Count().Subscribe(
+            _ =>
+        {
+        },
+            observed.Add,
+            () =>
+        {
+        });
+        await Assert.That(observed[0]).IsSameReferenceAs(countError);
+        await Assert.That(observed[1]).IsSameReferenceAs(longCountError);
+        await Assert.That(observed[AnyErrorIndex]).IsSameReferenceAs(anyError);
+        await Assert.That(observed[DistinctErrorIndex]).IsSameReferenceAs(distinctError);
     }
 
     /// <summary>Covers predicate exceptions for aggregate boolean terminals.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void AggregateBooleanTerminalsForwardPredicateErrors()
+    public async Task AggregateBooleanTerminalsForwardPredicateErrors()
     {
         var allError = new InvalidOperationException(AllMessage);
         var observed = new List<Exception>();
-
-        Signal.Sequence(First, Fourth).All(_ => throw allError).Subscribe(_ => { }, observed.Add, () => { });
-
-        Assert.Same(allError, observed[0]);
+        Signal.Sequence(First, Fourth).All(_ => throw allError).Subscribe(
+            _ =>
+        {
+        },
+            observed.Add,
+            () =>
+        {
+        });
+        await Assert.That(observed[0]).IsSameReferenceAs(allError);
     }
 
     /// <summary>Covers fused prepend/default-if-empty/append and empty Prepend helpers.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void PrependAppendDefaultIfEmptyFusionPreservesOrderingAndTerminals()
+    public async Task PrependAppendDefaultIfEmptyFusionPreservesOrderingAndTerminals()
     {
         var values = new List<int>();
         var emptyPrependValues = new List<int>();
         var completed = 0;
-
-        Signal.None<int>()
-            .DefaultIfEmpty(Second)
-            .Prepend(First)
-            .Append(Third)
-            .Subscribe(values.Add, ex => throw ex, () => completed++);
-
-        Signal.FromEnumerable(AggregateSource)
-            .Prepend()
-            .Append(Fourth)
-            .Subscribe(emptyPrependValues.Add);
-
+        Signal.None<int>().DefaultIfEmpty(Second).Prepend(First).Append(Third).Subscribe(values.Add, ex => throw ex, () => completed++);
+        Signal.FromEnumerable(AggregateSource).Prepend().Append(Fourth).Subscribe(emptyPrependValues.Add);
         int[] expectedValues = [First, Second, Third];
-        Assert.Equal(expectedValues, values);
-        Assert.Equal(1, completed);
+        await Assert.That(values.SequenceEqual(expectedValues)).IsTrue();
+        await Assert.That(completed).IsEqualTo(1);
         int[] expectedEmptyPrependValues = [First, Second, Third, Fourth, Fourth];
-        Assert.Equal(expectedEmptyPrependValues, emptyPrependValues);
+        await Assert.That(emptyPrependValues.SequenceEqual(expectedEmptyPrependValues)).IsTrue();
     }
 
     /// <summary>Covers FlatMap queuing while an inner signal is active.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void FlatMapQueuesInnerSignalsUntilActiveInnerCompletes()
+    public async Task FlatMapQueuesInnerSignalsUntilActiveInnerCompletes()
     {
         var outer = new Signal<int>();
         var firstInner = new Signal<int>();
         var secondInner = new Signal<int>();
         var values = new List<int>();
         var completed = 0;
-
-        using var subscription = outer.FlatMap(value => value == First ? firstInner : secondInner)
-            .Subscribe(values.Add, ex => throw ex, () => completed++);
-
+        using var subscription = outer.FlatMap(value => value == First ? firstInner : secondInner).Subscribe(values.Add, ex => throw ex, () => completed++);
         outer.OnNext(First);
         outer.OnNext(Second);
         outer.OnCompleted();
@@ -227,44 +249,60 @@ public class OperatorCoverageExpansionTests
         firstInner.OnCompleted();
         secondInner.OnNext(SecondInner);
         secondInner.OnCompleted();
-
-        Assert.Equal(QueuedFlatMapExpected, values);
-        Assert.Equal(1, completed);
+        await Assert.That(values.SequenceEqual(QueuedFlatMapExpected)).IsTrue();
+        await Assert.That(completed).IsEqualTo(1);
     }
 
     /// <summary>Covers the FlatMap overload with an outer and inner result selector.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void FlatMapResultSelectorProjectsOuterAndInnerValues()
+    public async Task FlatMapResultSelectorProjectsOuterAndInnerValues()
     {
         var values = new List<int>();
-
-        Signal.FromEnumerable(FirstSecondSource)
-            .FlatMap(value => Signal.FromEnumerable(SingleInnerSource), (outer, inner) => outer + inner)
-            .Subscribe(values.Add);
-
-        Assert.Equal(ResultFlatMapExpected, values);
+        Signal.FromEnumerable(FirstSecondSource).FlatMap(value => Signal.FromEnumerable(SingleInnerSource), (outer, inner) => outer + inner).Subscribe(values.Add);
+        await Assert.That(values.SequenceEqual(ResultFlatMapExpected)).IsTrue();
     }
 
     /// <summary>Covers FlatMap selector, inner, and outer error forwarding.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void FlatMapForwardsSelectorInnerAndOuterErrors()
+    public async Task FlatMapForwardsSelectorInnerAndOuterErrors()
     {
         var selectorError = new InvalidOperationException(SelectorMessage);
         var innerError = new InvalidOperationException(InnerMessage);
         var outerError = new InvalidOperationException(OuterMessage);
         var observed = new List<Exception>();
-
-        Signal.FromEnumerable(SingleFirstSource).FlatMap<int, int>(_ => throw selectorError).Subscribe(_ => { }, observed.Add, () => { });
-        Signal.FromEnumerable(SingleFirstSource).FlatMap(_ => Signal.Fail<int>(innerError)).Subscribe(_ => { }, observed.Add, () => { });
-        Signal.Fail<int>(outerError).FlatMap(ReturnValue).Subscribe(_ => { }, observed.Add, () => { });
-
-        Assert.Same(selectorError, observed[0]);
-        Assert.Same(innerError, observed[1]);
-        Assert.Same(outerError, observed[OuterErrorIndex]);
+        Signal.FromEnumerable(SingleFirstSource).FlatMap<int, int>(_ => throw selectorError).Subscribe(
+            _ =>
+        {
+        },
+            observed.Add,
+            () =>
+        {
+        });
+        Signal.FromEnumerable(SingleFirstSource).FlatMap(_ => Signal.Fail<int>(innerError)).Subscribe(
+            _ =>
+        {
+        },
+            observed.Add,
+            () =>
+        {
+        });
+        Signal.Fail<int>(outerError).FlatMap(ReturnValue).Subscribe(
+            _ =>
+        {
+        },
+            observed.Add,
+            () =>
+        {
+        });
+        await Assert.That(observed[0]).IsSameReferenceAs(selectorError);
+        await Assert.That(observed[1]).IsSameReferenceAs(innerError);
+        await Assert.That(observed[OuterErrorIndex]).IsSameReferenceAs(outerError);
     }
 
     /// <summary>Returns a scalar signal for the supplied value.</summary>
-    /// <param name="value">The value to emit.</param>
+    /// <param name = "value">The value to emit.</param>
     /// <returns>A scalar signal.</returns>
     private static IObservable<int> ReturnValue(int value) => Signal.Emit(value);
 }

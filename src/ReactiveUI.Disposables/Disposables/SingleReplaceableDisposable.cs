@@ -58,10 +58,7 @@ public class SingleReplaceableDisposable : IsDisposed
     /// <exception cref="ArgumentNullException"><paramref name="disposable"/> is <see langword="null"/>.</exception>
     public void Create(IDisposable disposable)
     {
-        if (disposable is null)
-        {
-            throw new ArgumentNullException(nameof(disposable));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(disposable);
 
         while (true)
         {

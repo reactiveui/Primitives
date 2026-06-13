@@ -94,11 +94,10 @@ internal static class Program
     /// <summary>Runs the extension comparison scenarios once to validate benchmark delegates.</summary>
     private static void RunExtensionComparisonSmoke()
     {
-        var benchmarks = new ReactiveExtensionsComparisonBenchmarks();
-        RunExtensionScenarioSet(nameof(benchmarks.PrimitivesScenarios), benchmarks.PrimitivesScenarios);
-        RunExtensionScenarioSet(nameof(benchmarks.ReactiveUIExtensionsScenarios), benchmarks.ReactiveUIExtensionsScenarios);
-        RunExtensionScenarioSet(nameof(benchmarks.SystemReactiveScenarios), benchmarks.SystemReactiveScenarios);
-        RunExtensionScenarioSet(nameof(benchmarks.R3Scenarios), benchmarks.R3Scenarios);
+        RunExtensionScenarioSet(nameof(ReactiveExtensionsComparisonBenchmarks.PrimitivesScenarios), ReactiveExtensionsComparisonBenchmarks.PrimitivesScenarios);
+        RunExtensionScenarioSet(nameof(ReactiveExtensionsComparisonBenchmarks.ReactiveUIExtensionsScenarios), ReactiveExtensionsComparisonBenchmarks.ReactiveUIExtensionsScenarios);
+        RunExtensionScenarioSet(nameof(ReactiveExtensionsComparisonBenchmarks.SystemReactiveScenarios), ReactiveExtensionsComparisonBenchmarks.SystemReactiveScenarios);
+        RunExtensionScenarioSet(nameof(ReactiveExtensionsComparisonBenchmarks.R3Scenarios), ReactiveExtensionsComparisonBenchmarks.R3Scenarios);
         Console.WriteLine("Extensions scenario smoke validation passed.");
     }
 

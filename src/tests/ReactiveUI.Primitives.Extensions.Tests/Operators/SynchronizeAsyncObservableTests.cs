@@ -1,7 +1,6 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
 /// <summary>Tests for <c>SynchronizeAsyncObservable</c> — covers the after-terminal guards
@@ -13,7 +12,7 @@ public class SynchronizeAsyncObservableTests
 
     /// <summary>Verifies that <c>OnNext</c>, <c>OnError</c> and a duplicate <c>OnCompleted</c>
     /// arriving after the source has already completed are silently dropped.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenEventsAfterCompleted_ThenDropped()
     {
@@ -21,15 +20,11 @@ public class SynchronizeAsyncObservableTests
         var values = new List<int>();
         Exception? caught = null;
         var completedCount = 0;
-
-        using var sub = source.SynchronizeAsync()
-            .Subscribe(t => values.Add(t.Value), ex => caught = ex, () => completedCount++);
-
+        using var sub = source.SynchronizeAsync().Subscribe(t => values.Add(t.Value), ex => caught = ex, () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));
         source.Observer.OnCompleted();
-
         await Task.Delay(SettleDelayMilliseconds);
         await Assert.That(completedCount).IsEqualTo(1);
         await Assert.That(values).IsEmpty();
@@ -37,7 +32,7 @@ public class SynchronizeAsyncObservableTests
     }
 
     /// <summary>Verifies that an <c>OnCompleted</c> arriving after a prior <c>OnError</c> is silently dropped.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnCompletedAfterError_ThenDropped()
     {
@@ -45,35 +40,32 @@ public class SynchronizeAsyncObservableTests
         Exception? caught = null;
         var completedCount = 0;
         var expected = new InvalidOperationException("first");
-
-        using var sub = source.SynchronizeAsync()
-            .Subscribe(static _ => { }, ex => caught = ex, () => completedCount++);
-
+        using var sub = source.SynchronizeAsync().Subscribe(
+            static _ =>
+        {
+        },
+            ex => caught = ex,
+            () => completedCount++);
         source.Observer.OnError(expected);
         source.Observer.OnCompleted();
-
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(completedCount).IsEqualTo(0);
     }
 
     /// <summary>Verifies the per-emission <c>Sync</c> signal latches on first dispose so a second dispose by the consumer is a silent no-op.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSyncSignalDisposedTwice_ThenSecondDisposeIsNoOp()
     {
         var source = new SyncDirectSource<int>();
         var processed = 0;
-
-        using var sub = source.SynchronizeAsync()
-            .Subscribe(t =>
-            {
-                t.Sync.Dispose();
-                t.Sync.Dispose();
-                processed++;
-            });
-
+        using var sub = source.SynchronizeAsync().Subscribe(t =>
+        {
+            t.Sync.Dispose();
+            t.Sync.Dispose();
+            processed++;
+        });
         source.Observer.OnNext(1);
-
         await Task.Delay(SettleDelayMilliseconds);
         await Assert.That(processed).IsEqualTo(1);
     }
