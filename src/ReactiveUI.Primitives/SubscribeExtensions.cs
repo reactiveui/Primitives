@@ -27,7 +27,7 @@ public static class SubscribeExtensions
         /// This method can be used to evaluate the Signals sequence for its side-effects only.
         /// </summary>
         /// <returns><see cref="IDisposable"/> object used to unsubscribe from the Signals sequence.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <c>null</c>.</exception>
         public IDisposable Subscribe()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

@@ -52,7 +52,7 @@ public sealed class CurrentThreadSequencer : ISequencer
     /// <summary>Schedules an action to be executed on the current-thread trampoline.</summary>
     /// <param name="action">Action to execute.</param>
     /// <returns>The disposable object used to cancel queued work, or an empty disposable when the action has already run.</returns>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="action"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
     public IDisposable Schedule(Action action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
@@ -85,7 +85,7 @@ public sealed class CurrentThreadSequencer : ISequencer
 
     /// <summary>Schedules a work item to be executed.</summary>
     /// <param name="item">Work item to execute.</param>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item)
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
@@ -96,7 +96,7 @@ public sealed class CurrentThreadSequencer : ISequencer
     /// <summary>Schedules a work item to be executed at the specified monotonic timestamp.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item, long dueTimestamp)
     {
         ArgumentExceptionHelper.ThrowIfNull(item);

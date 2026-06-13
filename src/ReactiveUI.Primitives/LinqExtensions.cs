@@ -17,7 +17,7 @@ public static partial class LinqExtensions
         /// <summary>Buffers the specified count.</summary>
         /// <param name="count">The count of each buffer.</param>
         /// <returns>An Signals sequence of buffers.</returns>
-        /// <exception cref="ArgumentExceptionHelper">source.</exception>
+        /// <exception cref="ArgumentNullException">source.</exception>
         /// <exception cref="ArgumentOutOfRangeException">count.</exception>
         public IObservable<IList<TSource>> Buffer(int count)
         {
@@ -35,7 +35,7 @@ public static partial class LinqExtensions
         /// <param name="count">Length of each buffer before being skipped.</param>
         /// <param name="skip">Number of elements to skip between creation of consecutive buffers.</param>
         /// <returns>An Signals sequence of buffers taking the count then skipping the skipped value, the sequecnce is then repeated.</returns>
-        /// <exception cref="ArgumentExceptionHelper">source.</exception>
+        /// <exception cref="ArgumentNullException">source.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         /// count
         /// or

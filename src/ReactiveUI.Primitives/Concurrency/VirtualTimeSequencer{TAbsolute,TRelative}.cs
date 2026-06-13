@@ -28,7 +28,7 @@ public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSe
     /// <summary>Initializes a new instance of the <see cref="VirtualTimeSequencer{TAbsolute, TRelative}"/> class. Creates a new virtual time scheduler.</summary>
     /// <param name="initialClock">Initial value for the clock.</param>
     /// <param name="comparer">Comparer to determine causality of events based on absolute time.</param>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="comparer"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="comparer"/> is <c>null</c>.</exception>
     protected VirtualTimeSequencer(TAbsolute initialClock, IComparer<TAbsolute> comparer)
         : base(initialClock, comparer)
     {
@@ -46,8 +46,8 @@ public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSe
     /// <returns>
     /// The disposable object used to cancel the scheduled action (best effort).
     /// </returns>
-    /// <exception cref="ArgumentExceptionHelper">action.</exception>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="action" /> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentNullException">action.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="action" /> is <c>null</c>.</exception>
     public override IDisposable ScheduleAbsolute<TState>(TState state, TAbsolute dueTime, Func<ISequencer, TState, IDisposable> action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);

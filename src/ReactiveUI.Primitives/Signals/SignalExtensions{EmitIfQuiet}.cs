@@ -17,7 +17,7 @@ public static partial class SignalExtensions
         /// <summary>Emits only the latest value after a quiet period using the default sequencer.</summary>
         /// <param name="dueTime">The quiet period before the latest value is emitted.</param>
         /// <returns>A throttled signal.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         public IObservable<TSource> EmitIfQuiet(TimeSpan dueTime) =>
             source.EmitIfQuiet(dueTime, Sequencer.Default);
 
@@ -25,7 +25,7 @@ public static partial class SignalExtensions
         /// <param name="dueTime">The quiet period before the latest value is emitted.</param>
         /// <param name="sequencer">The sequencer used to schedule delayed emissions.</param>
         /// <returns>A throttled signal.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
         public IObservable<TSource> EmitIfQuiet(
             TimeSpan dueTime,
             ISequencer sequencer)

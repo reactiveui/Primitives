@@ -17,7 +17,7 @@ public static partial class SignalExtensions
         /// This operation subscribes to the observable sequence, making it hot.
         /// </summary>
         /// <returns>A final signal awaiter.</returns>
-        /// <exception cref="ArgumentExceptionHelper">source.</exception>
+        /// <exception cref="ArgumentNullException">source.</exception>
         public IAwaitSignal<TSource> GetAwaiter()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -33,7 +33,7 @@ public static partial class SignalExtensions
         /// <returns>
         /// A final signal awaiter.
         /// </returns>
-        /// <exception cref="ArgumentExceptionHelper">source.</exception>
+        /// <exception cref="ArgumentNullException">source.</exception>
         public IAwaitSignal<TSource> GetAwaiter(CancellationToken cancellationToken)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

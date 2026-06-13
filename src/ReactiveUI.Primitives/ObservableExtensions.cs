@@ -18,7 +18,7 @@ internal static class ObservableExtensions
         /// <typeparam name="TOther">The cancellation value type.</typeparam>
         /// <param name="other">The observable that stops the source when it emits.</param>
         /// <returns>An observable that completes when the source completes or <paramref name="other"/> emits.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="other"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="other"/> is <see langword="null"/>.</exception>
         public IObservable<T> TakeUntil<TOther>(IObservable<TOther> other)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

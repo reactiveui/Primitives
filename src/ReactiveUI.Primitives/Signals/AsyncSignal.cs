@@ -106,7 +106,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
 
     /// <summary>Specifies a callback action that will be invoked when the subject completes.</summary>
     /// <param name="continuation">Callback action that will be invoked when the subject completes.</param>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="continuation"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="continuation"/> is null.</exception>
     public void OnCompleted(Action continuation)
     {
         ArgumentExceptionHelper.ThrowIfNull(continuation);
@@ -116,7 +116,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
 
     /// <summary>Called when [error].</summary>
     /// <param name="error">The error.</param>
-    /// <exception cref="ArgumentExceptionHelper">error.</exception>
+    /// <exception cref="ArgumentNullException">error.</exception>
     public void OnError(Exception error)
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
@@ -159,7 +159,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
     /// <summary>Subscribes the specified observer.</summary>
     /// <param name="observer">The observer.</param>
     /// <returns>A Disposable.</returns>
-    /// <exception cref="ArgumentExceptionHelper">observer.</exception>
+    /// <exception cref="ArgumentNullException">observer.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);

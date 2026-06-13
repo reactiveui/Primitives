@@ -15,7 +15,7 @@ public static class TaskSignal
     /// <returns>
     /// An AsyncObservable.
     /// </returns>
-    /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
+    /// <exception cref="ArgumentNullException">observableFactory.</exception>
     public static ITaskSignal<TResult> Create<TResult>(Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory) =>
         Instance(observableFactory, null, null);
 
@@ -26,7 +26,7 @@ public static class TaskSignal
     /// <returns>
     /// An AsyncObservable.
     /// </returns>
-    /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
+    /// <exception cref="ArgumentNullException">observableFactory.</exception>
     public static ITaskSignal<TResult> Create<TResult>(Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory, ISequencer? scheduler) =>
         Instance(observableFactory, scheduler, null);
 
@@ -38,7 +38,7 @@ public static class TaskSignal
     /// <returns>
     /// An AsyncObservable.
     /// </returns>
-    /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
+    /// <exception cref="ArgumentNullException">observableFactory.</exception>
     public static ITaskSignal<TResult> Create<TResult>(
         Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory,
         ISequencer? scheduler,

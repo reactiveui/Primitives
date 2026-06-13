@@ -17,7 +17,7 @@ public static partial class SignalExtensions
         /// <summary>Collects values into time-windowed batches using the default sequencer.</summary>
         /// <param name="timeSpan">The duration of each buffer window.</param>
         /// <returns>A signal that emits batches of source values.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         public IObservable<IList<TSource>> Collect(TimeSpan timeSpan) =>
             source.Collect(timeSpan, Sequencer.Default);
 
@@ -25,7 +25,7 @@ public static partial class SignalExtensions
         /// <param name="timeSpan">The duration of each buffer window.</param>
         /// <param name="sequencer">The sequencer used to schedule buffer flushes.</param>
         /// <returns>A signal that emits batches of source values.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
         public IObservable<IList<TSource>> Collect(
             TimeSpan timeSpan,
             ISequencer sequencer)

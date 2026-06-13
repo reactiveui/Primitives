@@ -24,7 +24,7 @@ public static partial class SignalExtensions
 
         /// <summary>Blocks until the signal completes and returns the observed values.</summary>
         /// <returns>The values observed before completion.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         /// <exception cref="Exception">Rethrows the source error if the signal terminates with an error.</exception>
         public IEnumerable<T> ToEnumerable()
         {
