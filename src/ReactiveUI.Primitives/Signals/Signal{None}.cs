@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>Signals.</summary>
+/// <summary>Provides static factory and operator methods for signals.</summary>
 public static partial class Signal
 {
     /// <summary>Empty Signals. Returns only OnCompleted on specified scheduler.</summary>

@@ -52,7 +52,7 @@ public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSe
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
 
-        var si = new VirtualScheduledItem<TState>(this, state, action, dueTime, Comparer);
+        VirtualScheduledItem<TState> si = new(this, state, action, dueTime, Comparer);
 
         lock (_gate)
         {

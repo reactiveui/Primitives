@@ -51,6 +51,11 @@ internal sealed class UsingActionObservable<T>(
     /// <param name="observer">The downstream observer.</param>
     /// <param name="resource">The resource to use and dispose.</param>
     /// <param name="action">The optional action.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST1429:Handle, rethrow, or narrow this catch; an empty catch of the base exception hides failures",
+        Justification =
+            "A secondary dispose failure during error handling is intentionally swallowed so the primary exception sent to the observer wins; this assembly has no unhandled-exception sink.")]
     private static void Run(IObserver<RxVoid> observer, T resource, Action<T>? action)
     {
         try

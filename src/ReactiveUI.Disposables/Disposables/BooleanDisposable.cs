@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Disposables;
 
-/// <summary>BooleanDisposable.</summary>
+/// <summary>A disposable that exposes its disposed state as a boolean flag.</summary>
 /// <seealso cref="Disposables.IsDisposed" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class BooleanDisposable : IsDisposed

@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives.Async.Internals;
 
 /// <summary>An async-disposable that can be disposed from within its own in-flight notification.</summary>
 /// <remarks>Terminal sinks dispose themselves from inside the very <c>OnNext</c>/<c>OnCompleted</c> call that
-/// produced their result. The normal <see cref="System.IAsyncDisposable.DisposeAsync"/> path waits for in-flight
+/// produced their result. The normal <see cref="IAsyncDisposable.DisposeAsync"/> path waits for in-flight
 /// calls on other threads to drain before completing; once that notification's continuation has hopped threads the
 /// wait would block on the call that is itself awaiting the dispose. This entry point skips that self-join.</remarks>
 internal interface IReentrantAsyncDisposable

@@ -17,13 +17,14 @@ public class CombineLatestEnumerableInternalsTests
     [Test]
     public async Task WhenIndexedObserverDisposed_ThenNoOp()
     {
-        var sources = new[] { SignalAsync.Return(1) };
-        var downstream = new NoOpWitness();
-        var subscription = new SignalAsyncExtensions.SyncLatestEnumerableSignal<int, int>.EnumerableSyncLatestCoordinator(
-            sources,
-            downstream,
-            static s => s[0]);
-        var indexed = new SignalAsyncExtensions.SyncLatestEnumerableSignal<int, int>.IndexedWitness(subscription, 0);
+        IObservableAsync<int>[] sources = [SignalAsync.Return(1)];
+        NoOpWitness downstream = new();
+        SignalAsyncExtensions.SyncLatestEnumerableSignal<int, int>.EnumerableSyncLatestCoordinator subscription =
+            new(
+                sources,
+                downstream,
+                static s => s[0]);
+        SignalAsyncExtensions.SyncLatestEnumerableSignal<int, int>.IndexedWitness indexed = new(subscription, 0);
 
         await indexed.DisposeAsync();
 

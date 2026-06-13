@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>IAwaitSignal.</summary>
+/// <summary>A signal whose next value can be awaited.</summary>
 /// <typeparam name="T">The Type of Signal.</typeparam>
 /// <seealso cref="ISignal&lt;T&gt;" />
 /// <seealso cref="System.Runtime.CompilerServices.INotifyCompletion" />

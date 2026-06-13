@@ -10,9 +10,6 @@ namespace System.Diagnostics.CodeAnalysis;
 [ExcludeFromCodeCoverage]
 [DebuggerNonUserCode]
 [AttributeUsage(
-    AttributeTargets.Field |
-    AttributeTargets.Parameter |
-    AttributeTargets.Property |
-    AttributeTargets.ReturnValue)]
+    AttributeTargets.Field | AttributeTargets.Parameter | AttributeTargets.Property | AttributeTargets.ReturnValue)]
 internal sealed class NotNullAttribute : Attribute;
 #endif

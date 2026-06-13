@@ -73,7 +73,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPrependDisposedDuringPrependPhase_ThenStopsEmitting()
     {
-        var items = new List<int>();
+        List<int> items = [];
 
         var sub = await SignalAsync.Range(100, 5)
             .Prepend([1, 2, 3, 4, 5])
@@ -96,8 +96,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPrependCancelledDuringValues_ThenOperationCanceledExceptionCaught()
     {
-        using var cts = new CancellationTokenSource();
-        var items = new List<int>();
+        using CancellationTokenSource cts = new();
+        List<int> items = [];
 
         // Create a long prepend that will be cancelled
         var manyValues = Enumerable.Range(1, 100);
@@ -134,7 +134,7 @@ public partial class CombiningOperatorTests
             throw new InvalidOperationException("source subscribe fail"));
 
         Result? completionResult = null;
-        var items = new List<int>();
+        List<int> items = [];
 
         await using var sub = await failing.Prepend(Sentinel42)
             .SubscribeAsync(
@@ -165,7 +165,8 @@ public partial class CombiningOperatorTests
     public async Task WhenPrepend_ThenEmitsPrependedValuesFirst()
     {
         var result = await SignalAsync.Range(4, 2).Prepend([1, 2, 3]).ToListAsync();
-        await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4, SampleValue5]);
+        await Assert.That(result)
+            .IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4, SampleValue5]);
     }
 
     /// <summary>Verifies that Prepend with a single value emits the value before source.</summary>
@@ -182,8 +183,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPrependCancelledDuringPrepend_ThenStopsGracefully()
     {
-        var items = new List<int>();
-        using var cts = new CancellationTokenSource();
+        List<int> items = [];
+        using CancellationTokenSource cts = new();
 
         var source = SignalAsync.Range(100, 3).Prepend([1, 2, 3, 4, 5]);
 
@@ -232,7 +233,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPrependCancelledDuringValues_ThenStopsEarly()
     {
-        var items = new List<int>();
+        List<int> items = [];
 
         var sub = await SignalAsync.Never<int>()
             .Prepend([1, 2, 3, 4, 5])
@@ -255,7 +256,8 @@ public partial class CombiningOperatorTests
 
         await sub.DisposeAsync();
 
-        await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4, SampleValue5]);
+        await Assert.That(items)
+            .IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4, SampleValue5]);
     }
 
     /// <summary>Verifies that Prepend handles source subscription errors.</summary>
@@ -292,7 +294,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPrependSourceCancelled_ThenSwallowsCancellation()
     {
-        var items = new List<int>();
+        List<int> items = [];
 
         // Create a source that throws OperationCanceledException on subscribe
         var cancellingSource = SignalAsync.Create<int>((_, _) =>

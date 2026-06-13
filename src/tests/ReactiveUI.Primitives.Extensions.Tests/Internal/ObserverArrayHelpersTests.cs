@@ -23,7 +23,7 @@ public class ObserverArrayHelpersTests
     [Test]
     public async Task WhenBroadcastEmpty_ThenNoOp()
     {
-        var observers = Array.Empty<IObserver<int>>();
+        IObserver<int>[] observers = [];
 
         ObserverArrayHelpers.Broadcast(observers, Sentinel);
 
@@ -35,9 +35,9 @@ public class ObserverArrayHelpersTests
     [Test]
     public async Task WhenBroadcastMultiple_ThenEveryObserverReceivesValue()
     {
-        var first = new RecordingWitness<int>();
-        var second = new RecordingWitness<int>();
-        var third = new RecordingWitness<int>();
+        RecordingWitness<int> first = new();
+        RecordingWitness<int> second = new();
+        RecordingWitness<int> third = new();
         IObserver<int>[] observers = [first, second, third];
 
         ObserverArrayHelpers.Broadcast(observers, Sentinel);
@@ -52,9 +52,9 @@ public class ObserverArrayHelpersTests
     [Test]
     public async Task WhenRemoveNotPresent_ThenReturnsNull()
     {
-        var empty = Array.Empty<IObserver<int>>();
-        var resident = new RecordingWitness<int>();
-        var stranger = new RecordingWitness<int>();
+        IObserver<int>[] empty = [];
+        RecordingWitness<int> resident = new();
+        RecordingWitness<int> stranger = new();
         IObserver<int>[] current = [resident];
 
         var result = ObserverArrayHelpers.RemoveOrNull(current, stranger, empty);
@@ -67,8 +67,8 @@ public class ObserverArrayHelpersTests
     [Test]
     public async Task WhenRemoveSingleton_ThenReturnsEmptySentinel()
     {
-        var empty = Array.Empty<IObserver<int>>();
-        var only = new RecordingWitness<int>();
+        IObserver<int>[] empty = [];
+        RecordingWitness<int> only = new();
         IObserver<int>[] current = [only];
 
         var result = ObserverArrayHelpers.RemoveOrNull(current, only, empty);
@@ -81,10 +81,10 @@ public class ObserverArrayHelpersTests
     [Test]
     public async Task WhenRemoveFirstFromThree_ThenLeavesTrailingPair()
     {
-        var empty = Array.Empty<IObserver<int>>();
-        var a = new RecordingWitness<int>();
-        var b = new RecordingWitness<int>();
-        var c = new RecordingWitness<int>();
+        IObserver<int>[] empty = [];
+        RecordingWitness<int> a = new();
+        RecordingWitness<int> b = new();
+        RecordingWitness<int> c = new();
         IObserver<int>[] current = [a, b, c];
 
         var result = ObserverArrayHelpers.RemoveOrNull(current, a, empty);
@@ -100,10 +100,10 @@ public class ObserverArrayHelpersTests
     [Test]
     public async Task WhenRemoveMiddleFromThree_ThenLeavesFirstAndLast()
     {
-        var empty = Array.Empty<IObserver<int>>();
-        var a = new RecordingWitness<int>();
-        var b = new RecordingWitness<int>();
-        var c = new RecordingWitness<int>();
+        IObserver<int>[] empty = [];
+        RecordingWitness<int> a = new();
+        RecordingWitness<int> b = new();
+        RecordingWitness<int> c = new();
         IObserver<int>[] current = [a, b, c];
 
         var result = ObserverArrayHelpers.RemoveOrNull(current, b, empty);
@@ -119,10 +119,10 @@ public class ObserverArrayHelpersTests
     [Test]
     public async Task WhenRemoveLastFromThree_ThenLeavesLeadingPair()
     {
-        var empty = Array.Empty<IObserver<int>>();
-        var a = new RecordingWitness<int>();
-        var b = new RecordingWitness<int>();
-        var c = new RecordingWitness<int>();
+        IObserver<int>[] empty = [];
+        RecordingWitness<int> a = new();
+        RecordingWitness<int> b = new();
+        RecordingWitness<int> c = new();
         IObserver<int>[] current = [a, b, c];
 
         var result = ObserverArrayHelpers.RemoveOrNull(current, c, empty);

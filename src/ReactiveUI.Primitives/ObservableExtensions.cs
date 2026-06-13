@@ -54,7 +54,7 @@ internal static class ObservableExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var coordinator = new Coordinator(observer);
+            Coordinator coordinator = new(observer);
             coordinator.Add(_other.Subscribe(new CancelWitness(coordinator)));
             if (coordinator.IsStopped)
             {

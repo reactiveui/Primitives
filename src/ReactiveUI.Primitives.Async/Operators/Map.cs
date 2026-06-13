@@ -50,10 +50,7 @@ public static partial class SignalAsyncExtensions
             TState state,
             Func<TState, T, TDest> selector)
         {
-            if (selector is null)
-            {
-                throw new ArgumentNullException(nameof(selector));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(selector);
 
             return @this.Map(value => selector(state, value));
         }
@@ -93,7 +90,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<TDest> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new MapAsyncWitness(observer, selector, cancellationToken);
+            MapAsyncWitness sink = new(observer, selector, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
             // recognises this token without allocating a per-emission linked CTS.
@@ -151,7 +148,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<TDest> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new MapSyncWitness(observer, selector, cancellationToken);
+            MapSyncWitness sink = new(observer, selector, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
             // recognises this token without allocating a per-emission linked CTS.

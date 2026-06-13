@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>BehaviourSignal.</summary>
+/// <summary>A signal that replays its most recent value to new subscribers.</summary>
 /// <typeparam name="T">The Type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class BehaviorSignal<T> : ISignal<T>

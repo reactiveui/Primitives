@@ -16,6 +16,32 @@ namespace ReactiveUI.Primitives.Async;
 /// models.</remarks>
 public static partial class SignalAsyncExtensions
 {
+    /// <summary>Blend/Merge operators for an enumerable collection of observable source sequences.</summary>
+    /// <param name="this">A collection of asynchronous observable sequences to be merged.</param>
+    /// <typeparam name="T">The type of the elements produced by the observable sequences.</typeparam>
+    extension<T>(IEnumerable<IObservableAsync<T>> @this)
+    {
+        /// <summary>
+        /// Combines multiple asynchronous observable sequences into a single observable sequence that emits items from all
+        /// source sequences as they arrive.
+        /// </summary>
+        /// <remarks>The resulting observable sequence emits items from all source sequences in the order they
+        /// arrive, interleaving emissions if sources produce items concurrently. The merged sequence completes when all
+        /// source sequences have completed. If any source sequence signals an error, the merged sequence will propagate
+        /// that error and terminate.</remarks>
+        /// <returns>An observable sequence that emits items from all input sequences as they are produced.</returns>
+        public IObservableAsync<T> Blend() =>
+            new BlendEnumerableSignal<T>(@this);
+
+        /// <summary>
+        /// Combines multiple asynchronous observable sequences into a single observable sequence that emits items from all
+        /// source sequences as they arrive.
+        /// </summary>
+        /// <returns>An observable sequence that emits items from all input sequences as they are produced.</returns>
+        public IObservableAsync<T> Merge() =>
+            @this.Blend();
+    }
+
     /// <summary>Blend/Merge operators for an observable source sequence of inner observable sequences.</summary>
     /// <param name="this">The source asynchronous observable sequence whose elements are themselves observable sequences to be merged.
     /// Cannot be null.</param>
@@ -51,32 +77,6 @@ public static partial class SignalAsyncExtensions
             new BlendSignalSourcesSignalWithMaxConcurrency<T>(@this, maxConcurrent);
     }
 
-    /// <summary>Blend/Merge operators for an enumerable collection of observable source sequences.</summary>
-    /// <param name="this">A collection of asynchronous observable sequences to be merged.</param>
-    /// <typeparam name="T">The type of the elements produced by the observable sequences.</typeparam>
-    extension<T>(IEnumerable<IObservableAsync<T>> @this)
-    {
-        /// <summary>
-        /// Combines multiple asynchronous observable sequences into a single observable sequence that emits items from all
-        /// source sequences as they arrive.
-        /// </summary>
-        /// <remarks>The resulting observable sequence emits items from all source sequences in the order they
-        /// arrive, interleaving emissions if sources produce items concurrently. The merged sequence completes when all
-        /// source sequences have completed. If any source sequence signals an error, the merged sequence will propagate
-        /// that error and terminate.</remarks>
-        /// <returns>An observable sequence that emits items from all input sequences as they are produced.</returns>
-        public IObservableAsync<T> Blend() =>
-            new BlendEnumerableSignal<T>(@this);
-
-        /// <summary>
-        /// Combines multiple asynchronous observable sequences into a single observable sequence that emits items from all
-        /// source sequences as they arrive.
-        /// </summary>
-        /// <returns>An observable sequence that emits items from all input sequences as they are produced.</returns>
-        public IObservableAsync<T> Merge() =>
-            @this.Blend();
-    }
-
     /// <summary>Blend/Merge operators that combine an observable source sequence with another sequence.</summary>
     /// <param name="this">The first asynchronous observable sequence to merge.</param>
     /// <typeparam name="T">The type of the elements in the observable sequences.</typeparam>
@@ -109,7 +109,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new BlendCoordinator<T>(observer);
+            BlendCoordinator<T> subscription = new(observer);
             subscription.LinkExternalCancellation(cancellationToken);
             return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
                 subscription,
@@ -130,7 +130,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new BoundedBlendCoordinator<T>(observer, maxConcurrent);
+            BoundedBlendCoordinator<T> subscription = new(observer, maxConcurrent);
             subscription.LinkExternalCancellation(cancellationToken);
             return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
                 subscription,
@@ -487,7 +487,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new BlendSequenceCoordinator(observer, sources);
+            BlendSequenceCoordinator subscription = new(observer, sources);
             subscription.LinkExternalCancellation(cancellationToken);
             subscription.BeginSubscribing();
             return new(subscription);
@@ -559,7 +559,7 @@ public static partial class SignalAsyncExtensions
                     {
                         Interlocked.Increment(ref _active);
 
-                        var innerObserver = new BlendBranchWitness(this);
+                        BlendBranchWitness innerObserver = new(this);
                         await _innerDisposables.AddAsync(innerObserver).ConfigureAwait(false);
                         try
                         {

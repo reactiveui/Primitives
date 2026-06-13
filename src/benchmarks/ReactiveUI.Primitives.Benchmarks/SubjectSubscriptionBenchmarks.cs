@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
+using R3;
 using ReactiveUI.Primitives.Signals;
 using RxSubject = System.Reactive.Subjects.Subject<int>;
 
@@ -53,8 +54,8 @@ public class SubjectSubscriptionBenchmarks
     /// <returns>A lifecycle marker confirming the subscriptions were created and disposed.</returns>
     private static int SubscribeDisposeCountSignal(int subscribers)
     {
-        var observer = new IntSignalWitness();
-        using var subject = new Signal<int>();
+        IntSignalWitness observer = new();
+        using Signal<int> subject = new();
         var disposables = new IDisposable[subscribers];
         for (var i = 0; i < subscribers; i++)
         {
@@ -75,8 +76,8 @@ public class SubjectSubscriptionBenchmarks
     /// <returns>A lifecycle marker confirming the subscriptions were created and disposed.</returns>
     private static int SubscribeDisposeCountSystemSubject(int subscribers)
     {
-        var observer = new IntSignalWitness();
-        using var subject = new RxSubject();
+        IntSignalWitness observer = new();
+        using RxSubject subject = new();
         var disposables = new IDisposable[subscribers];
         for (var i = 0; i < subscribers; i++)
         {
@@ -97,7 +98,7 @@ public class SubjectSubscriptionBenchmarks
     /// <returns>A lifecycle marker confirming the subscriptions were created and disposed.</returns>
     private static int SubscribeDisposeCountR3Subject(int subscribers)
     {
-        using var subject = new R3.Subject<int>();
+        using Subject<int> subject = new();
         var disposables = new IDisposable[subscribers];
         for (var i = 0; i < subscribers; i++)
         {

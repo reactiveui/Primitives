@@ -29,240 +29,236 @@ public sealed class AsyncBridgeGeneratorContractTests
 
     /// <summary>Base imports for in-memory bridge generator smoke compilations.</summary>
     private const string BaseSmokeUsings = """
-using System;
-using System.Threading;
-using System.Threading.Tasks;
+                                           using System;
+                                           using System.Threading;
+                                           using System.Threading.Tasks;
 
-""";
+                                           """;
 
     /// <summary>Imports needed when the smoke compilation includes async primitives.</summary>
     private const string AsyncBridgeSmokeUsings = """
-using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using ReactiveUI.Primitives.R3Bridge;
+                                                  using ReactiveUI.Primitives.Async;
+                                                  using ReactiveUI.Primitives.SystemReactiveBridge;
+                                                  using ReactiveUI.Primitives.R3Bridge;
 
-""";
+                                                  """;
 
     /// <summary>Imports needed when the smoke compilation intentionally omits async primitives.</summary>
     private const string CoreBridgeSmokeUsings = """
-using ReactiveUI.Primitives.SystemReactiveBridge;
-using ReactiveUI.Primitives.R3Bridge;
+                                                 using ReactiveUI.Primitives.SystemReactiveBridge;
+                                                 using ReactiveUI.Primitives.R3Bridge;
 
-""";
+                                                 """;
 
     /// <summary>Minimal System.Reactive, R3, and R3Async contract shapes consumed by the generated bridge source.</summary>
     private const string BridgeShapeSource = """
-namespace System.Reactive.Linq
-{
-    public static class Observable { }
-}
+                                             namespace System.Reactive.Linq
+                                             {
+                                                 public static class Observable { }
+                                             }
 
-namespace System
-{
-    public interface IAsyncObservable<out T>
-    {
-        ValueTask<IAsyncDisposable> SubscribeAsync(IAsyncObserver<T> observer);
-    }
+                                             namespace System
+                                             {
+                                                 public interface IAsyncObservable<out T>
+                                                 {
+                                                     ValueTask<IAsyncDisposable> SubscribeAsync(IAsyncObserver<T> observer);
+                                                 }
 
-    public interface IAsyncObserver<in T>
-    {
-        ValueTask OnNextAsync(T value);
+                                                 public interface IAsyncObserver<in T>
+                                                 {
+                                                     ValueTask OnNextAsync(T value);
 
-        ValueTask OnErrorAsync(Exception error);
+                                                     ValueTask OnErrorAsync(Exception error);
 
-        ValueTask OnCompletedAsync();
-    }
-}
+                                                     ValueTask OnCompletedAsync();
+                                                 }
+                                             }
 
-namespace R3
-{
-    public readonly struct Result
-    {
-        public static Result Success => default;
+                                             namespace R3
+                                             {
+                                                 public readonly struct Result
+                                                 {
+                                                     public static Result Success => default;
 
-        public static Result Failure(Exception exception) => new Result(exception);
+                                                     public static Result Failure(Exception exception) => new Result(exception);
 
-        private Result(Exception exception) => Exception = exception;
+                                                     private Result(Exception exception) => Exception = exception;
 
-        public Exception Exception { get; }
+                                                     public Exception Exception { get; }
 
-        public bool IsFailure => Exception != null;
-    }
+                                                     public bool IsFailure => Exception != null;
+                                                 }
 
-    public abstract class Observer<T> : IDisposable
-    {
-        public void OnNext(T value) => OnNextCore(value);
+                                                 public abstract class Observer<T> : IDisposable
+                                                 {
+                                                     public void OnNext(T value) => OnNextCore(value);
 
-        public void OnErrorResume(Exception error) => OnErrorResumeCore(error);
+                                                     public void OnErrorResume(Exception error) => OnErrorResumeCore(error);
 
-        public void OnCompleted(Result result) => OnCompletedCore(result);
+                                                     public void OnCompleted(Result result) => OnCompletedCore(result);
 
-        public void Dispose() { }
+                                                     public void Dispose() { }
 
-        protected abstract void OnNextCore(T value);
+                                                     protected abstract void OnNextCore(T value);
 
-        protected abstract void OnErrorResumeCore(Exception error);
+                                                     protected abstract void OnErrorResumeCore(Exception error);
 
-        protected abstract void OnCompletedCore(Result result);
-    }
+                                                     protected abstract void OnCompletedCore(Result result);
+                                                 }
 
-    public abstract class Observable<T>
-    {
-        public abstract IDisposable Subscribe(Observer<T> observer);
-    }
+                                                 public abstract class Observable<T>
+                                                 {
+                                                     public abstract IDisposable Subscribe(Observer<T> observer);
+                                                 }
 
-    public static class Observable
-    {
-        public static Observable<T> Create<T>(Func<Observer<T>, IDisposable> subscribe) => new DelegateObservable<T>(subscribe);
+                                                 public static class Observable
+                                                 {
+                                                     public static Observable<T> Create<T>(Func<Observer<T>, IDisposable> subscribe) => new DelegateObservable<T>(subscribe);
 
-        private sealed class DelegateObservable<TValue> : Observable<TValue>
-        {
-            private readonly Func<Observer<TValue>, IDisposable> _subscribe;
-            public DelegateObservable(Func<Observer<TValue>, IDisposable> subscribe) => _subscribe = subscribe;
-            public override IDisposable Subscribe(Observer<TValue> observer) => _subscribe(observer);
-        }
-    }
-}
+                                                     private sealed class DelegateObservable<TValue> : Observable<TValue>
+                                                     {
+                                                         private readonly Func<Observer<TValue>, IDisposable> _subscribe;
+                                                         public DelegateObservable(Func<Observer<TValue>, IDisposable> subscribe) => _subscribe = subscribe;
+                                                         public override IDisposable Subscribe(Observer<TValue> observer) => _subscribe(observer);
+                                                     }
+                                                 }
+                                             }
 
-namespace R3Async
-{
-    public readonly struct Result
-    {
-        public static Result Success => default;
+                                             namespace R3Async
+                                             {
+                                                 public readonly struct Result
+                                                 {
+                                                     public static Result Success => default;
 
-        public static Result Failure(Exception exception) => new Result(exception);
+                                                     public static Result Failure(Exception exception) => new Result(exception);
 
-        private Result(Exception exception) => Exception = exception;
+                                                     private Result(Exception exception) => Exception = exception;
 
-        public Exception? Exception { get; }
+                                                     public Exception? Exception { get; }
 
-        public bool IsFailure => Exception != null;
-    }
+                                                     public bool IsFailure => Exception != null;
+                                                 }
 
-    public abstract class AsyncObserver<T> : IAsyncDisposable
-    {
-        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
-            OnNextAsyncCore(value, cancellationToken);
+                                                 public abstract class AsyncObserver<T> : IAsyncDisposable
+                                                 {
+                                                     public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                                                         OnNextAsyncCore(value, cancellationToken);
 
-        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
-            OnErrorResumeAsyncCore(error, cancellationToken);
+                                                     public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                                                         OnErrorResumeAsyncCore(error, cancellationToken);
 
-        public ValueTask OnCompletedAsync(Result result) => OnCompletedAsyncCore(result);
+                                                     public ValueTask OnCompletedAsync(Result result) => OnCompletedAsyncCore(result);
 
-        public ValueTask DisposeAsync() => default;
+                                                     public ValueTask DisposeAsync() => default;
 
-        protected abstract ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken);
+                                                     protected abstract ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken);
 
-        protected abstract ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken);
+                                                     protected abstract ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken);
 
-        protected abstract ValueTask OnCompletedAsyncCore(Result result);
-    }
+                                                     protected abstract ValueTask OnCompletedAsyncCore(Result result);
+                                                 }
 
-    public abstract class AsyncObservable<T>
-    {
-        public ValueTask<IAsyncDisposable> SubscribeAsync(AsyncObserver<T> observer, CancellationToken cancellationToken) =>
-            SubscribeAsyncCore(observer, cancellationToken);
+                                                 public abstract class AsyncObservable<T>
+                                                 {
+                                                     public ValueTask<IAsyncDisposable> SubscribeAsync(AsyncObserver<T> observer, CancellationToken cancellationToken) =>
+                                                         SubscribeAsyncCore(observer, cancellationToken);
 
-        protected abstract ValueTask<IAsyncDisposable> SubscribeAsyncCore(
-            AsyncObserver<T> observer,
-            CancellationToken cancellationToken);
-    }
-}
+                                                     protected abstract ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+                                                         AsyncObserver<T> observer,
+                                                         CancellationToken cancellationToken);
+                                                 }
+                                             }
 
-""";
+                                             """;
 
     /// <summary>Smoke code that compiles only when async bridge adapters are emitted.</summary>
     private const string AsyncBridgeSmokeSource = """
-public static class AsyncBridgeSmoke
-{
-    public static void Use(
-        IObservable<int> source,
-        IObservableAsync<int> asyncSource,
-        System.IAsyncObservable<int> systemAsync,
-        System.IAsyncObserver<int> systemAsyncObserver,
-        ReactiveUI.Primitives.Async.IObserverAsync<int> primitivesAsyncObserver,
-        R3.Observable<int> r3,
-        R3Async.AsyncObservable<int> r3Async)
-    {
-        IObservableAsync<int> fromSystem = source.ToObservableAsync();
-        IObservable<int> toSystem = asyncSource.ToObservable();
-        IObservableAsync<int> fromSystemAsync = systemAsync.AsPrimitivesAsyncObservable();
-        System.IAsyncObservable<int> toSystemAsync = asyncSource.AsSystemReactiveAsyncObservable();
-        ReactiveUI.Primitives.Async.IObserverAsync<int> primitivesObserver = systemAsyncObserver.AsPrimitivesAsyncObserver();
-        System.IAsyncObserver<int> systemObserver = primitivesAsyncObserver.AsSystemReactiveAsyncObserver();
-        IObservable<int> fromR3 = r3.AsPrimitivesSignal();
-        R3.Observable<int> toR3 = fromR3.AsR3Observable();
-        IObservableAsync<int> asyncFromR3 = r3.AsPrimitivesAsyncObservable();
-        R3.Observable<int> asyncToR3 = asyncSource.AsR3Observable();
-        IObservableAsync<int> fromR3Async = r3Async.AsPrimitivesAsyncObservable();
-        R3Async.AsyncObservable<int> toR3Async = asyncSource.AsR3AsyncObservable();
-    }
-}
-""";
+                                                  public static class AsyncBridgeSmoke
+                                                  {
+                                                      public static void Use(
+                                                          IObservable<int> source,
+                                                          IObservableAsync<int> asyncSource,
+                                                          System.IAsyncObservable<int> systemAsync,
+                                                          System.IAsyncObserver<int> systemAsyncObserver,
+                                                          ReactiveUI.Primitives.Async.IObserverAsync<int> primitivesAsyncObserver,
+                                                          R3.Observable<int> r3,
+                                                          R3Async.AsyncObservable<int> r3Async)
+                                                      {
+                                                          IObservableAsync<int> fromSystem = source.ToObservableAsync();
+                                                          IObservable<int> toSystem = asyncSource.ToObservable();
+                                                          IObservableAsync<int> fromSystemAsync = systemAsync.AsPrimitivesAsyncObservable();
+                                                          System.IAsyncObservable<int> toSystemAsync = asyncSource.AsSystemReactiveAsyncObservable();
+                                                          ReactiveUI.Primitives.Async.IObserverAsync<int> primitivesObserver = systemAsyncObserver.AsPrimitivesAsyncObserver();
+                                                          System.IAsyncObserver<int> systemObserver = primitivesAsyncObserver.AsSystemReactiveAsyncObserver();
+                                                          IObservable<int> fromR3 = r3.AsPrimitivesSignal();
+                                                          R3.Observable<int> toR3 = fromR3.AsR3Observable();
+                                                          IObservableAsync<int> asyncFromR3 = r3.AsPrimitivesAsyncObservable();
+                                                          R3.Observable<int> asyncToR3 = asyncSource.AsR3Observable();
+                                                          IObservableAsync<int> fromR3Async = r3Async.AsPrimitivesAsyncObservable();
+                                                          R3Async.AsyncObservable<int> toR3Async = asyncSource.AsR3AsyncObservable();
+                                                      }
+                                                  }
+                                                  """;
 
     /// <summary>Smoke code that compiles when async primitives are intentionally absent.</summary>
     private const string CoreOnlySmokeSource = """
-public static class CoreOnlySmoke
-{
-    public static (IObservable<int> System, IObservable<int> R3) Use(IObservable<int> source, R3.Observable<int> r3) =>
-        (source.AsSystemObservable(), r3.AsPrimitivesSignal());
-}
-""";
+                                               public static class CoreOnlySmoke
+                                               {
+                                                   public static (IObservable<int> System, IObservable<int> R3) Use(IObservable<int> source, R3.Observable<int> r3) =>
+                                                       (source.AsSystemObservable(), r3.AsPrimitivesSignal());
+                                               }
+                                               """;
 
     /// <summary>The platform assemblies needed by the in-memory generator smoke compilation.</summary>
     private static readonly string[] PlatformReferenceNames =
     [
-        "System.Collections.dll",
-        "System.Linq.dll",
-        "System.Private.CoreLib.dll",
-        "System.Runtime.dll",
-        "System.Runtime.Extensions.dll",
-        "System.Threading.dll",
-        "System.Threading.Tasks.dll",
+        "System.Collections.dll", "System.Linq.dll", "System.Private.CoreLib.dll", "System.Runtime.dll",
+        "System.Runtime.Extensions.dll", "System.Threading.dll", "System.Threading.Tasks.dll"
     ];
 
     /// <summary>Verifies bridge generators emit async adapter extensions when async primitives are referenced.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [RequiresAssemblyFiles]
-    public void BridgeGeneratorsEmitAsyncAdaptersOnlyWhenAsyncShapesArePresent()
+    public async Task BridgeGeneratorsEmitAsyncAdaptersOnlyWhenAsyncShapesArePresent()
     {
         const string Source = BaseSmokeUsings + AsyncBridgeSmokeUsings + BridgeShapeSource + AsyncBridgeSmokeSource;
-        var (diagnostics, generatedSources) = RunGenerators(Source, includeAsyncReference: true);
-
-        Assert.Equal(0, diagnostics.Length);
-        Assert.True(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncBridgeName));
-        Assert.True(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncObservableBridgeName));
-        Assert.True(GeneratedBridgeTypeExists(generatedSources, R3AsyncBridgeName));
-        Assert.True(GeneratedBridgeTypeExists(generatedSources, R3AsyncObservableBridgeName));
+        (var diagnostics, var generatedSources) = RunGenerators(Source, true);
+        await Assert.That(diagnostics.Length).IsEqualTo(0);
+        await Assert.That(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncBridgeName)).IsTrue();
+        await Assert.That(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncObservableBridgeName))
+            .IsTrue();
+        await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncBridgeName)).IsTrue();
+        await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncObservableBridgeName)).IsTrue();
     }
 
     /// <summary>Verifies bridge generators skip async adapter extensions when async primitives are absent.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [RequiresAssemblyFiles]
-    public void BridgeGeneratorsSkipAsyncAdaptersWhenAsyncAssemblyIsAbsent()
+    public async Task BridgeGeneratorsSkipAsyncAdaptersWhenAsyncAssemblyIsAbsent()
     {
         const string Source = BaseSmokeUsings + CoreBridgeSmokeUsings + BridgeShapeSource + CoreOnlySmokeSource;
-        var (diagnostics, generatedSources) = RunGenerators(Source, includeAsyncReference: false);
-
-        Assert.Equal(0, diagnostics.Length);
-        Assert.False(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncBridgeName));
-        Assert.False(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncObservableBridgeName));
-        Assert.False(GeneratedBridgeTypeExists(generatedSources, R3AsyncBridgeName));
-        Assert.False(GeneratedBridgeTypeExists(generatedSources, R3AsyncObservableBridgeName));
+        (var diagnostics, var generatedSources) = RunGenerators(Source, false);
+        await Assert.That(diagnostics.Length).IsEqualTo(0);
+        await Assert.That(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncBridgeName)).IsFalse();
+        await Assert.That(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncObservableBridgeName))
+            .IsFalse();
+        await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncBridgeName)).IsFalse();
+        await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncObservableBridgeName)).IsFalse();
     }
 
     /// <summary>Checks whether generated source contains the named bridge type rather than a marker attribute substring.</summary>
-    /// <param name="generatedSources">The generated source texts.</param>
-    /// <param name="typeName">The bridge type name.</param>
+    /// <param name = "generatedSources">The generated source texts.</param>
+    /// <param name = "typeName">The bridge type name.</param>
     /// <returns><see langword="true"/> when the bridge type is emitted.</returns>
-    private static bool GeneratedBridgeTypeExists(string[] generatedSources, string typeName) =>
-        Array.Exists(
-            generatedSources,
-            text => text.Contains($"internal static class {typeName}", StringComparison.Ordinal));
+    private static bool GeneratedBridgeTypeExists(string[] generatedSources, string typeName) => Array.Exists(
+        generatedSources,
+        text => text.Contains($"internal static class {typeName}", StringComparison.Ordinal));
 
     /// <summary>Runs the System.Reactive and R3 bridge generators against an in-memory compilation.</summary>
-    /// <param name="source">The source text to compile.</param>
-    /// <param name="includeAsyncReference">Whether to include the async primitives assembly reference.</param>
+    /// <param name = "source">The source text to compile.</param>
+    /// <param name = "includeAsyncReference">Whether to include the async primitives assembly reference.</param>
     /// <returns>The diagnostics and generated source texts produced by the generator run.</returns>
     [RequiresAssemblyFiles("Calls System.Reflection.Assembly.Location")]
     private static (ImmutableArray<Diagnostic> Diagnostics, string[] GeneratedSources) RunGenerators(
@@ -271,41 +267,38 @@ public static class CoreOnlySmoke
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview);
         var references = CreateReferences(includeAsyncReference);
-
         var compilation = CSharpCompilation.Create(
             "AsyncBridgeGeneratorSmoke",
             [CSharpSyntaxTree.ParseText(source, parseOptions)],
             references,
             new(OutputKind.DynamicallyLinkedLibrary));
-
         var driver = CSharpGeneratorDriver.Create(
-            [
-                new SystemReactiveBridgeGenerator().AsSourceGenerator(),
-                new SystemReactiveAsyncBridgeGenerator().AsSourceGenerator(),
-                new R3BridgeGenerator().AsSourceGenerator(),
-                new R3AsyncBridgeGenerator().AsSourceGenerator(),
-            ],
-            parseOptions: parseOptions);
-
-        driver = (CSharpGeneratorDriver)driver.RunGeneratorsAndUpdateCompilation(compilation, out var updatedCompilation, out var generatorDiagnostics);
-        var diagnostics = generatorDiagnostics
-            .Concat(updatedCompilation.GetDiagnostics().Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
-            .ToImmutableArray();
-        var generatedSources = driver.GetRunResult().Results
-            .SelectMany(result => result.GeneratedSources)
-            .Select(sourceText => sourceText.SourceText.ToString())
-            .ToArray();
-
+        [
+            new SystemReactiveBridgeGenerator().AsSourceGenerator(),
+            new SystemReactiveAsyncBridgeGenerator().AsSourceGenerator(), new R3BridgeGenerator().AsSourceGenerator(),
+            new R3AsyncBridgeGenerator().AsSourceGenerator()
+        ], parseOptions: parseOptions);
+        driver = (CSharpGeneratorDriver)driver.RunGeneratorsAndUpdateCompilation(
+            compilation,
+            out var updatedCompilation,
+            out var generatorDiagnostics);
+        ImmutableArray<Diagnostic> diagnostics = [
+            ..generatorDiagnostics
+                .Concat(updatedCompilation.GetDiagnostics()
+                    .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
+        ];
+        var generatedSources = driver.GetRunResult().Results.SelectMany(result => result.GeneratedSources)
+            .Select(sourceText => sourceText.SourceText.ToString()).ToArray();
         return (diagnostics, generatedSources);
     }
 
     /// <summary>Creates the bounded metadata reference set required by the generator smoke compilation.</summary>
-    /// <param name="includeAsyncReference">Whether to include the async primitives assembly reference.</param>
+    /// <param name = "includeAsyncReference">Whether to include the async primitives assembly reference.</param>
     /// <returns>The metadata references for the in-memory Roslyn compilation.</returns>
     [RequiresAssemblyFiles("Calls System.Reflection.Assembly.Location")]
     private static List<MetadataReference> CreateReferences(bool includeAsyncReference)
     {
-        var platformAssemblies = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> platformAssemblies = new(StringComparer.OrdinalIgnoreCase);
         foreach (var path in AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!.ToString()!.Split(Path.PathSeparator))
         {
             var name = Path.GetFileName(path);
@@ -315,7 +308,7 @@ public static class CoreOnlySmoke
             }
         }
 
-        var references = new List<MetadataReference>(PlatformReferenceNames.Length + 2);
+        List<MetadataReference> references = new(PlatformReferenceNames.Length + 2);
         foreach (var name in PlatformReferenceNames)
         {
             if (platformAssemblies.TryGetValue(name, out var path))

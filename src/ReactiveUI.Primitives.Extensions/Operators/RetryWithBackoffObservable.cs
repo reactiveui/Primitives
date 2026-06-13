@@ -23,7 +23,7 @@ internal sealed class RetryWithBackoffObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(policy.Scheduler);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new RetryWithBackoffSink(observer, source, policy);
+        RetryWithBackoffSink sink = new(observer, source, policy);
         sink.Run();
         return sink;
     }

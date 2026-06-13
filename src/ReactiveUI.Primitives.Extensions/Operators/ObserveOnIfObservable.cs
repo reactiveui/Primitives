@@ -37,7 +37,7 @@ internal sealed class ObserveOnIfObservable<T>(
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new ObserveOnIfSink(observer, _trueScheduler, _falseScheduler);
+        ObserveOnIfSink sink = new(observer, _trueScheduler, _falseScheduler);
         var conditionSub = _condition.Subscribe(sink.ConditionObserver);
         var sourceSub = _source.Subscribe(sink);
         return new DisposableBag(sourceSub, conditionSub, sink);

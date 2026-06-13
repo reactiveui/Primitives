@@ -27,10 +27,7 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     public static IObservable<int> Sequence(int start, int count, ISequencer scheduler)
     {
-        if (count < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(count));
-        }
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
 
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
@@ -71,10 +68,7 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     public static IObservable<T> Loop<T>(T value, int count)
     {
-        if (count < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(count));
-        }
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
 
         if (count == 0)
         {
@@ -212,13 +206,13 @@ public static partial class Signal
             if (typeof(TEventHandler) == typeof(PropertyChangedEventHandler))
             {
                 PropertyChangedEventHandler typed = (sender, args) =>
-                    observer.OnNext(new EventPattern<TEventArgs>(sender, (TEventArgs)(EventArgs)args));
+                    observer.OnNext(new(sender, (TEventArgs)(EventArgs)args));
                 handler = (TEventHandler)(object)typed;
             }
             else if (typeof(TEventHandler) == typeof(EventHandler<TEventArgs>))
             {
                 EventHandler<TEventArgs> typed = (sender, args) =>
-                    observer.OnNext(new EventPattern<TEventArgs>(sender, args));
+                    observer.OnNext(new(sender, args));
                 handler = (TEventHandler)(object)typed;
             }
             else
@@ -495,7 +489,7 @@ public static partial class Signal
         return CreateSafe<long>(
             observer =>
             {
-                var pocket = new MultipleDisposable();
+                MultipleDisposable pocket = [];
                 var current = 0L;
                 pocket.Add(
                     scheduler.Schedule(
@@ -523,10 +517,7 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     public static IObservable<long> Every(TimeSpan period, ISequencer scheduler)
     {
-        if (period < TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(period));
-        }
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(period, TimeSpan.Zero);
 
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
 

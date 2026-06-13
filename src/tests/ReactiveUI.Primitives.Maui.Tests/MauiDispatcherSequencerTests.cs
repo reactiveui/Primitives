@@ -21,15 +21,29 @@ public sealed class MauiDispatcherSequencerTests
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullDispatcher() =>
-        await Assert.That(() => new MauiDispatcherSequencer(null!)).Throws<ArgumentNullException>();
+        await Assert.That(() => new MauiDispatcherSequencer(null!)).ThrowsExactly<ArgumentNullException>();
+
+    /// <summary>Verifies the dispatcher extension method validates and adapts dispatchers.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ToSequencerValidatesAndAdaptsDispatcher()
+    {
+        const IDispatcher nullDispatcher = null!;
+        await Assert.That(() => nullDispatcher!.ToSequencer()).ThrowsExactly<ArgumentNullException>();
+
+        FakeDispatcher dispatcher = new();
+        var sequencer = dispatcher.ToSequencer();
+
+        await Assert.That(sequencer).IsNotNull();
+    }
 
     /// <summary>Verifies immediate work is marshalled through <see cref="IDispatcher.Dispatch(Action)"/> and executed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ImmediateScheduleDispatchesAndExecutes()
     {
-        var dispatcher = new FakeDispatcher();
-        var sequencer = new MauiDispatcherSequencer(dispatcher);
+        FakeDispatcher dispatcher = new();
+        MauiDispatcherSequencer sequencer = new(dispatcher);
         var executed = false;
 
         sequencer.Schedule(new DelegateWorkItem(() => executed = true));
@@ -47,8 +61,8 @@ public sealed class MauiDispatcherSequencerTests
     [Test]
     public async Task DelayedScheduleUsesDispatchDelayed()
     {
-        var dispatcher = new FakeDispatcher();
-        var sequencer = new MauiDispatcherSequencer(dispatcher);
+        FakeDispatcher dispatcher = new();
+        MauiDispatcherSequencer sequencer = new(dispatcher);
         var executed = false;
 
         var due = sequencer.Timestamp + Stopwatch.Frequency; // ~1 second into the future.
@@ -64,8 +78,8 @@ public sealed class MauiDispatcherSequencerTests
     [Test]
     public async Task PastDueTimestampUsesImmediatePath()
     {
-        var dispatcher = new FakeDispatcher();
-        var sequencer = new MauiDispatcherSequencer(dispatcher);
+        FakeDispatcher dispatcher = new();
+        MauiDispatcherSequencer sequencer = new(dispatcher);
         var executed = false;
 
         var due = sequencer.Timestamp - Stopwatch.Frequency; // already elapsed.
@@ -81,9 +95,9 @@ public sealed class MauiDispatcherSequencerTests
     [Test]
     public async Task ImmediateBurstExecutesInOrder()
     {
-        var dispatcher = new FakeDispatcher();
-        var sequencer = new MauiDispatcherSequencer(dispatcher);
-        var values = new List<int>();
+        FakeDispatcher dispatcher = new();
+        MauiDispatcherSequencer sequencer = new(dispatcher);
+        List<int> values = [];
 
         foreach (var value in ExpectedBurst)
         {

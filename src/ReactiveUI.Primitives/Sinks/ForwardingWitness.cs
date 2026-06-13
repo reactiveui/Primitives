@@ -13,10 +13,7 @@ public sealed class ForwardingWitness<T> : IObserver<T>
 
     /// <summary>Initializes a new instance of the <see cref="ForwardingWitness{T}"/> class.</summary>
     /// <param name="observer">Wrapped observer.</param>
-    public ForwardingWitness(IObserver<T> observer)
-    {
-        _observer = observer ?? throw new ArgumentNullException(nameof(observer));
-    }
+    public ForwardingWitness(IObserver<T> observer) => _observer = observer ?? throw new ArgumentNullException(nameof(observer));
 
     /// <inheritdoc/>
     public void OnCompleted() => _observer.OnCompleted();

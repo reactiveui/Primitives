@@ -24,7 +24,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="resultSelector">A function to apply to each pair of elements. Cannot be null.</param>
         /// <returns>An observable sequence whose elements are the result of pair-wise combining the source
         /// elements using the result selector.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if any argument is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if any argument is null.</exception>
         public IObservableAsync<TResult> Pair<T2, TResult>(
             IObservableAsync<T2> second,
             Func<T1, T2, TResult> resultSelector)
@@ -83,7 +83,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<TResult> observer,
             CancellationToken cancellationToken)
         {
-            var state = new ZipState(observer, resultSelector);
+            ZipState state = new(observer, resultSelector);
             state.LinkExternalCancellation(cancellationToken);
 
             var sub1 = await first.SubscribeAsync(

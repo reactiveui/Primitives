@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>TaskSignal.</summary>
+/// <summary>Provides factory methods for creating task-backed signals.</summary>
 public static class TaskSignal
 {
     /// <summary>Creates the specified source.</summary>

@@ -130,7 +130,7 @@ public class TerminalCollectionBenchmarks
     [Benchmark]
     public int PrimitivesCountPredicate()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(1, Count).Count(static value => value % EvenDivisor == 0).Subscribe(observer);
         return observer.Total;
     }
@@ -140,7 +140,7 @@ public class TerminalCollectionBenchmarks
     [Benchmark]
     public int SystemReactiveCountPredicate()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Range(1, Count).Count(static value => value % EvenDivisor == 0).Subscribe(observer);
         return observer.Total;
     }
@@ -159,7 +159,7 @@ public class TerminalCollectionBenchmarks
     [Benchmark]
     public long PrimitivesLongCountPredicate()
     {
-        var observer = new LongSignalWitness();
+        LongSignalWitness observer = new();
         using var subscription = Signal.Sequence(1, Count).LongCount(static value => value % EvenDivisor == 0).Subscribe(observer);
         return observer.Total;
     }
@@ -169,7 +169,7 @@ public class TerminalCollectionBenchmarks
     [Benchmark]
     public long SystemReactiveLongCountPredicate()
     {
-        var observer = new LongSignalWitness();
+        LongSignalWitness observer = new();
         using var subscription = RxObservable.Range(1, Count).LongCount(static value => value % EvenDivisor == 0).Subscribe(observer);
         return observer.Total;
     }
@@ -188,7 +188,7 @@ public class TerminalCollectionBenchmarks
     [Benchmark]
     public int PrimitivesAllRange()
     {
-        var observer = new BoolSignalWitness();
+        BoolSignalWitness observer = new();
         using var subscription = Signal.Sequence(1, Count).All(static value => value > 0).Subscribe(observer);
         return observer.Total;
     }
@@ -198,7 +198,7 @@ public class TerminalCollectionBenchmarks
     [Benchmark]
     public int SystemReactiveAllRange()
     {
-        var observer = new BoolSignalWitness();
+        BoolSignalWitness observer = new();
         using var subscription = RxObservable.Range(1, Count).All(static value => value > 0).Subscribe(observer);
         return observer.Total;
     }
@@ -217,7 +217,7 @@ public class TerminalCollectionBenchmarks
     [Benchmark]
     public int PrimitivesContainsRange()
     {
-        var observer = new BoolSignalWitness();
+        BoolSignalWitness observer = new();
         using var subscription = Signal.Sequence(1, Count).Contains(Count).Subscribe(observer);
         return observer.Total;
     }
@@ -227,7 +227,7 @@ public class TerminalCollectionBenchmarks
     [Benchmark]
     public int SystemReactiveContainsRange()
     {
-        var observer = new BoolSignalWitness();
+        BoolSignalWitness observer = new();
         using var subscription = RxObservable.Range(1, Count).Contains(Count).Subscribe(observer);
         return observer.Total;
     }
@@ -246,8 +246,8 @@ public class TerminalCollectionBenchmarks
     [Benchmark]
     public int PrimitivesAllContains()
     {
-        var allObserver = new BoolSignalWitness();
-        var containsObserver = new BoolSignalWitness();
+        BoolSignalWitness allObserver = new();
+        BoolSignalWitness containsObserver = new();
         using var all = Signal.Sequence(1, Count).All(static value => value > 0).Subscribe(allObserver);
         using var contains = Signal.Sequence(1, Count).Contains(Count).Subscribe(containsObserver);
         return allObserver.Total + containsObserver.Total;
@@ -258,8 +258,8 @@ public class TerminalCollectionBenchmarks
     [Benchmark]
     public int SystemReactiveAllContains()
     {
-        var allObserver = new BoolSignalWitness();
-        var containsObserver = new BoolSignalWitness();
+        BoolSignalWitness allObserver = new();
+        BoolSignalWitness containsObserver = new();
         using var all = RxObservable.Range(1, Count).All(static value => value > 0).Subscribe(allObserver);
         using var contains = RxObservable.Range(1, Count).Contains(Count).Subscribe(containsObserver);
         return allObserver.Total + containsObserver.Total;

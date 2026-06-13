@@ -16,7 +16,7 @@ public static partial class SignalAsyncExtensions
     {
         /// <summary>Wraps the specified asynchronous observer in a decorator that ensures consistent behavior and interface compliance.</summary>
         /// <returns>A wrapped asynchronous observer that delegates calls to the specified observer.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="observer"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="observer"/> is null.</exception>
         public IObserverAsync<T> Wrap() => observer is null
             ? throw new ArgumentNullException(nameof(observer))
             : new RelayWitnessAsync<T>(observer);

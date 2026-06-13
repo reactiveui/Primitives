@@ -22,7 +22,7 @@ internal sealed class SwitchIfEmptyObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(fallback);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new SwitchIfEmptySink(observer, fallback);
+        SwitchIfEmptySink sink = new(observer, fallback);
         var sub = source.Subscribe(sink);
         sink.SetSubscription(sub);
         return sink;

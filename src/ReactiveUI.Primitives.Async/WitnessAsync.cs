@@ -407,7 +407,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
             && initialThreadId != Environment.CurrentManagedThreadId
             && Volatile.Read(ref _disposeFromNotification) == 0)
         {
-            var tcs = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource<object?> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
             Volatile.Write(ref _allCallsCompletedTcs, tcs);
 
             // Re-read after publishing the TCS — Exit may have raced past us and decremented
@@ -613,7 +613,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private CancellationTokenSource MaterializeDisposeCts()
     {
-        var fresh = new CancellationTokenSource();
+        CancellationTokenSource fresh = new();
         var prior = Interlocked.CompareExchange(ref _disposeCts, fresh, null);
         if (prior is not null)
         {

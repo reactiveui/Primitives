@@ -31,7 +31,7 @@ internal sealed class ThrottleObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(scheduler);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new ThrottleSink(observer, dueTime, scheduler);
+        ThrottleSink sink = new(observer, dueTime, scheduler);
         var subscription = source.Subscribe(sink);
         return new DisposableBag(subscription, sink);
     }

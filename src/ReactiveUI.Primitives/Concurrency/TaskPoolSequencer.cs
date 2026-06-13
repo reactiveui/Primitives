@@ -6,7 +6,7 @@ using System.Runtime.ExceptionServices;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>TaskPoolSequencer.</summary>
+/// <summary>A sequencer that schedules work on the task pool.</summary>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class TaskPoolSequencer : ISequencer

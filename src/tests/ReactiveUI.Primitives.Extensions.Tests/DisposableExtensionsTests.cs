@@ -12,12 +12,12 @@ namespace ReactiveUI.Primitives.Extensions.Tests;
 public class DisposableExtensionsTests
 {
     /// <summary>Tests DisposeWith returns a disposable.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task GivenNull_WhenDisposeWith_ThenExceptionThrown()
     {
         // Given
-        var sut = new ActionDisposable(() => { });
+        ActionDisposable sut = new(() => { });
 
         // When
         var result = Assert.Throws<ArgumentNullException>(() => sut.DisposeWith((CompositeDisposable)null!));
@@ -27,13 +27,13 @@ public class DisposableExtensionsTests
     }
 
     /// <summary>Tests DisposeWith disposes the underlying disposable.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task GivenDisposable_WhenDisposeWith_ThenDisposed()
     {
         // Given
-        var sut = new CompositeDisposable();
-        var compositeDisposable = new CompositeDisposable();
+        CompositeDisposable sut = [];
+        CompositeDisposable compositeDisposable = [];
         sut.DisposeWith(compositeDisposable);
 
         // When
@@ -44,13 +44,13 @@ public class DisposableExtensionsTests
     }
 
     /// <summary>Tests DisposeWith returns the original disposable.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task GivenDisposable_WhenDisposeWith_ThenReturnsDisposable()
     {
         // Given, When
-        var sut = new CompositeDisposable();
-        var compositeDisposable = new CompositeDisposable();
+        CompositeDisposable sut = [];
+        CompositeDisposable compositeDisposable = [];
         var result = sut.DisposeWith(compositeDisposable);
 
         // Then

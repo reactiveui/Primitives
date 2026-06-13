@@ -32,7 +32,7 @@ internal sealed class BooleanReduceObservable(IEnumerable<IObservable<bool>> sou
             return EmptyDisposable.Instance;
         }
 
-        var sink = new Sink(observer, _sourceList.Count, target);
+        Sink sink = new(observer, _sourceList.Count, target);
         return IndexedSubscribeHelper.SubscribeIndexed(_sourceList, sink.OnNext, sink.OnError, sink.OnCompleted);
     }
 
@@ -55,7 +55,7 @@ internal sealed class BooleanReduceObservable(IEnumerable<IObservable<bool>> sou
             return materialized;
         }
 
-        var buffer = Array.Empty<IObservable<bool>>();
+        IObservable<bool>[] buffer = [];
         var count = 0;
         foreach (var source in sources)
         {

@@ -13,72 +13,20 @@ namespace ReactiveUI.Primitives;
 /// <summary>Additional ReactiveUI.Primitives operator surface using distinct Primitives vocabulary.</summary>
 public static partial class LinqExtensions
 {
-    /// <summary>Null-filtering operator for an observable source of nullable reference values.</summary>
-    /// <param name="source">The source observable sequence to filter.</param>
-    /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
-    extension<T>(IObservable<T?> source)
-        where T : class
-    {
-        /// <summary>Filters out null values from the source observable sequence, emitting only non-null values.</summary>
-        /// <returns>An observable sequence that emits only non-null values from the source sequence.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is null.</exception>
-        public IObservable<T> KeepNotNull()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new KeepNotNullSignal<T>(source);
-        }
-    }
-
-    /// <summary>Type-filtering and casting operators for an untyped observable source.</summary>
-    /// <param name="source">The source sequence.</param>
-    extension(IObservable<object?> source)
-    {
-        /// <summary>Filters values to those assignable to <typeparamref name="TResult"/>.</summary>
-        /// <typeparam name="TResult">The result value type.</typeparam>
-        /// <returns>A sequence containing only values assignable to <typeparamref name="TResult"/>.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Major Code Smell",
-            "S4018:Generic methods should provide type parameters",
-            Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
-        public IObservable<TResult> KeepType<TResult>()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new KeepTypeSignal<TResult>(source);
-        }
-
-        /// <summary>Casts each source value to <typeparamref name="TResult"/>.</summary>
-        /// <typeparam name="TResult">The result value type.</typeparam>
-        /// <returns>A sequence containing each value cast to <typeparamref name="TResult"/>.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Major Code Smell",
-            "S4018:Generic methods should provide type parameters",
-            Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
-        public IObservable<TResult> CastTo<TResult>()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return source.Map(value => (TResult)value!);
-        }
-    }
-
-    /// <summary>Notification-materialization operator for an observable source of spark values.</summary>
-    /// <param name="source">The spark sequence.</param>
+    /// <summary>Signal-conversion operators for an enumerable source.</summary>
+    /// <param name="values">The values to enumerate.</param>
     /// <typeparam name="T">The value type.</typeparam>
-    extension<T>(IObservable<Spark<T>> source)
+    extension<T>(IEnumerable<T> values)
     {
-        /// <summary>Converts <see cref="Spark{T}"/> values back into observer notifications.</summary>
-        /// <returns>A sequence represented by the supplied spark values.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
-        public IObservable<T> Unspark()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
+        /// <summary>Converts an enumerable sequence to a signal.</summary>
+        /// <returns>A signal that emits the enumerable values.</returns>
+        public IObservable<T> ToSignal() => Signal.FromEnumerable(values);
 
-            return new UnsparkSignal<T>(source);
-        }
+        /// <summary>Converts an enumerable sequence to a signal that observes cancellation.</summary>
+        /// <param name="cancellationToken">The token used to stop enumeration.</param>
+        /// <returns>A signal that emits the enumerable values until enumeration completes or cancellation is requested.</returns>
+        public IObservable<T> ToSignal(CancellationToken cancellationToken) =>
+            Signal.FromEnumerable(values, cancellationToken);
     }
 
     /// <summary>Combining operators for an observable source of inner observable sequences.</summary>
@@ -129,6 +77,22 @@ public static partial class LinqExtensions
             }
 
             return new SwitchSignal<T>(sources);
+        }
+    }
+
+    /// <summary>Notification-materialization operator for an observable source of spark values.</summary>
+    /// <param name="source">The spark sequence.</param>
+    /// <typeparam name="T">The value type.</typeparam>
+    extension<T>(IObservable<Spark<T>> source)
+    {
+        /// <summary>Converts <see cref="Spark{T}"/> values back into observer notifications.</summary>
+        /// <returns>A sequence represented by the supplied spark values.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Unspark()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new UnsparkSignal<T>(source);
         }
     }
 
@@ -264,15 +228,12 @@ public static partial class LinqExtensions
         /// <param name="count">The maximum number of values to emit.</param>
         /// <returns>A sequence containing at most <paramref name="count"/> source values.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is less than zero.</exception>
+        /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="count"/> is less than zero.</exception>
         public IObservable<T> Take(int count)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (count < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count));
-            }
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
 
             if (source is LoopSignal<T> loop)
             {
@@ -286,15 +247,12 @@ public static partial class LinqExtensions
         /// <param name="count">The number of values to skip.</param>
         /// <returns>A sequence containing source values after the skipped prefix.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is less than zero.</exception>
+        /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="count"/> is less than zero.</exception>
         public IObservable<T> Skip(int count)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (count < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count));
-            }
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
 
             return new SkipSignal<T>(source, count);
         }
@@ -431,15 +389,12 @@ public static partial class LinqExtensions
         /// <param name="retryCount">The maximum number of retry attempts after the initial subscription.</param>
         /// <returns>A sequence that retries the source before forwarding the final error.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="retryCount"/> is less than zero.</exception>
+        /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="retryCount"/> is less than zero.</exception>
         public IObservable<T> Reattempt(int retryCount)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (retryCount < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(retryCount));
-            }
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(retryCount);
 
             return new ReattemptSignal<T>(source, retryCount);
         }
@@ -546,20 +501,56 @@ public static partial class LinqExtensions
         public IObservable<T> ToSignal() => source ?? throw new ArgumentNullException(nameof(source));
     }
 
-    /// <summary>Signal-conversion operators for an enumerable source.</summary>
-    /// <param name="values">The values to enumerate.</param>
-    /// <typeparam name="T">The value type.</typeparam>
-    extension<T>(IEnumerable<T> values)
+    /// <summary>Null-filtering operator for an observable source of nullable reference values.</summary>
+    /// <param name="source">The source observable sequence to filter.</param>
+    /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
+    extension<T>(IObservable<T?> source)
+        where T : class
     {
-        /// <summary>Converts an enumerable sequence to a signal.</summary>
-        /// <returns>A signal that emits the enumerable values.</returns>
-        public IObservable<T> ToSignal() => Signal.FromEnumerable(values);
+        /// <summary>Filters out null values from the source observable sequence, emitting only non-null values.</summary>
+        /// <returns>An observable sequence that emits only non-null values from the source sequence.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is null.</exception>
+        public IObservable<T> KeepNotNull()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-        /// <summary>Converts an enumerable sequence to a signal that observes cancellation.</summary>
-        /// <param name="cancellationToken">The token used to stop enumeration.</param>
-        /// <returns>A signal that emits the enumerable values until enumeration completes or cancellation is requested.</returns>
-        public IObservable<T> ToSignal(CancellationToken cancellationToken) =>
-            Signal.FromEnumerable(values, cancellationToken);
+            return new KeepNotNullSignal<T>(source);
+        }
+    }
+
+    /// <summary>Type-filtering and casting operators for an untyped observable source.</summary>
+    /// <param name="source">The source sequence.</param>
+    extension(IObservable<object?> source)
+    {
+        /// <summary>Filters values to those assignable to <typeparamref name="TResult"/>.</summary>
+        /// <typeparam name="TResult">The result value type.</typeparam>
+        /// <returns>A sequence containing only values assignable to <typeparamref name="TResult"/>.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Major Code Smell",
+            "S4018:Generic methods should provide type parameters",
+            Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        public IObservable<TResult> KeepType<TResult>()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new KeepTypeSignal<TResult>(source);
+        }
+
+        /// <summary>Casts each source value to <typeparamref name="TResult"/>.</summary>
+        /// <typeparam name="TResult">The result value type.</typeparam>
+        /// <returns>A sequence containing each value cast to <typeparamref name="TResult"/>.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Major Code Smell",
+            "S4018:Generic methods should provide type parameters",
+            Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        public IObservable<TResult> CastTo<TResult>()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return source.Map(value => (TResult)value!);
+        }
     }
 
     /// <summary>Creates the optimized range-backed combine-latest sequence.</summary>

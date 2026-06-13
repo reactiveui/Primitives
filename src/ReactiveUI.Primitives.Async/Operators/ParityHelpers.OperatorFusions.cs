@@ -34,7 +34,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<TAccumulate> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new ScanWithInitialWitness(observer, initial, accumulator, cancellationToken);
+            ScanWithInitialWitness sink = new(observer, initial, accumulator, cancellationToken);
 
             if (observer is WitnessAsync<TAccumulate> downstreamBase)
             {
@@ -95,7 +95,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<TAccumulate> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new ScanWithInitialAsyncWitness(observer, initial, accumulator, cancellationToken);
+            ScanWithInitialAsyncWitness sink = new(observer, initial, accumulator, cancellationToken);
 
             if (observer is WitnessAsync<TAccumulate> downstreamBase)
             {
@@ -176,7 +176,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new ThrottleDistinctWitness(observer, dueTime, timeProvider, cancellationToken);
+            ThrottleDistinctWitness sink = new(observer, dueTime, timeProvider, cancellationToken);
 
             if (observer is WitnessAsync<T> downstreamBase)
             {
@@ -211,10 +211,10 @@ public static partial class SignalAsyncExtensions
             /// <summary>Most-recently-forwarded value (for downstream DistinctUntilChanged).</summary>
             private T _lastEmitted = default!;
 
-            /// <summary><see langword="true"/> after the first upstream emission has been seen.</summary>
+            /// <summary>Set to <see langword="true"/> after the first upstream emission has been seen.</summary>
             private bool _hasUpstream;
 
-            /// <summary><see langword="true"/> after the first value has been forwarded downstream.</summary>
+            /// <summary>Set to <see langword="true"/> after the first value has been forwarded downstream.</summary>
             private bool _hasEmitted;
 
             /// <summary>Monotonically increasing identifier used to detect supersession.</summary>
@@ -349,7 +349,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new DropIfBusyWitness(observer, asyncAction, cancellationToken);
+            DropIfBusyWitness sink = new(observer, asyncAction, cancellationToken);
 
             if (observer is WitnessAsync<T> downstreamBase)
             {
@@ -691,12 +691,11 @@ public static partial class SignalAsyncExtensions
             /// <inheritdoc/>
             protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
                 IObserverAsync<T> observer,
-                CancellationToken cancellationToken)
-            {
+                CancellationToken cancellationToken) =>
+
                 // The PartitionBranchSignal is created by the coordinator's constructor; the
                 // coordinator field is filled in below.
-                return Coordinator.SubscribeBranchAsync(isTrueBranch, observer, cancellationToken);
-            }
+                Coordinator.SubscribeBranchAsync(isTrueBranch, observer, cancellationToken);
         }
 
         /// <summary>Branch subscription handle returned to the subscriber.</summary>
@@ -738,7 +737,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new DebounceUntilWitness(observer, debounce, condition, timeProvider, cancellationToken);
+            DebounceUntilWitness sink = new(observer, debounce, condition, timeProvider, cancellationToken);
 
             if (observer is WitnessAsync<T> downstreamBase)
             {
@@ -887,7 +886,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new ForEachEnumerableWitness(observer, cancellationToken);
+            ForEachEnumerableWitness sink = new(observer, cancellationToken);
 
             if (observer is WitnessAsync<T> downstreamBase)
             {
@@ -907,9 +906,9 @@ public static partial class SignalAsyncExtensions
             CancellationToken subscribeToken) : WitnessAsync<IEnumerable<T>>(subscribeToken)
         {
             /// <inheritdoc/>
-            protected override async ValueTask OnNextAsyncCore(IEnumerable<T> values, CancellationToken cancellationToken)
+            protected override async ValueTask OnNextAsyncCore(IEnumerable<T> value, CancellationToken cancellationToken)
             {
-                if (values is T[] array)
+                if (value is T[] array)
                 {
                     for (var i = 0; i < array.Length; i++)
                     {
@@ -919,7 +918,7 @@ public static partial class SignalAsyncExtensions
                     return;
                 }
 
-                if (values is IReadOnlyList<T> list)
+                if (value is IReadOnlyList<T> list)
                 {
                     for (var i = 0; i < list.Count; i++)
                     {
@@ -929,9 +928,9 @@ public static partial class SignalAsyncExtensions
                     return;
                 }
 
-                foreach (var value in values)
+                foreach (var item in value)
                 {
-                    await downstream.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
+                    await downstream.OnNextAsync(item, cancellationToken).ConfigureAwait(false);
                 }
             }
 

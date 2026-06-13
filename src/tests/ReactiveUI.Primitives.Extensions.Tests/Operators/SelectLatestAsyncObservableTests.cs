@@ -27,58 +27,52 @@ public class SelectLatestAsyncObservableTests
     private const int ProjectionMultiplier = 10;
 
     /// <summary>Verifies that <c>SelectLatestAsync</c> forwards selector exceptions.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectLatestAsyncSelectorThrows_ThenForwardsError()
     {
         const int TriggerValue = 1;
-        var subject = new Subject<int>();
-        var faulted = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var expected = new InvalidOperationException(SelectorErrorMessage);
-
-        using var sub = subject.SelectLatestAsync(_ => Task.FromException<int>(expected))
-            .Subscribe(static _ => { }, ex => faulted.TrySetResult(ex));
-
+        Subject<int> subject = new();
+        TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        InvalidOperationException expected = new(SelectorErrorMessage);
+        using var sub = subject.SelectLatestAsync(_ => Task.FromException<int>(expected)).Subscribe(
+            static _ => { },
+            ex => faulted.TrySetResult(ex));
         subject.OnNext(TriggerValue);
-
         var caught = await faulted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
     /// <summary>Verifies that <c>SelectLatestAsync</c> forwards source errors immediately.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectLatestAsyncSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
-
-        using var sub = subject.SelectLatestAsync(static x => Task.FromResult(x))
-            .Subscribe(static _ => { }, ex => caught = ex);
-
+        InvalidOperationException expected = new(SourceErrorMessage);
+        using var sub = subject.SelectLatestAsync(static x => Task.FromResult(x)).Subscribe(
+            static _ => { },
+            ex => caught = ex);
         subject.OnError(expected);
-
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
     /// <summary>Verifies that disposing the subscription before the selector completes suppresses any later <c>OnNext</c> / <c>OnCompleted</c>.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectLatestAsyncDisposedMidFlight_ThenSuppressesEmissionAndCompletion()
     {
         const int TriggerValue = 1;
-        var subject = new Subject<int>();
-        var gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var results = new List<int>();
+        Subject<int> subject = new();
+        TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> results = [];
         var completed = false;
-
         var sub = subject.SelectLatestAsync(async x =>
         {
             await gate.Task.ConfigureAwait(false);
             return x * 2;
         }).Subscribe(results.Add, () => completed = true);
-
         subject.OnNext(TriggerValue);
         subject.OnCompleted();
         sub.Dispose();
@@ -86,23 +80,21 @@ public class SelectLatestAsyncObservableTests
 
         // Give the awaited continuation a chance to attempt delivery.
         await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
-
         await Assert.That(results).IsEmpty();
         await Assert.That(completed).IsFalse();
     }
 
     /// <summary>Verifies that a newer value supersedes a slower in-flight projection, so only the latest result is emitted.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectLatestAsyncNewerArrives_ThenOlderResultDropped()
     {
         const int Slow = 1;
         const int Fast = 2;
-        var subject = new Subject<int>();
-        var slowGate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var results = new List<int>();
-        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-
+        Subject<int> subject = new();
+        TaskCompletionSource<bool> slowGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> results = [];
+        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = subject.SelectLatestAsync(async x =>
         {
             if (x == Slow)
@@ -112,7 +104,6 @@ public class SelectLatestAsyncObservableTests
 
             return x * ProjectionMultiplier;
         }).Subscribe(results.Add, () => completed.TrySetResult(true));
-
         subject.OnNext(Slow);
         subject.OnNext(Fast);
 
@@ -124,7 +115,6 @@ public class SelectLatestAsyncObservableTests
 
         slowGate.TrySetResult(true);
         subject.OnCompleted();
-
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Only the latest (Fast) projection's result should appear.
@@ -132,41 +122,36 @@ public class SelectLatestAsyncObservableTests
     }
 
     /// <summary>Verifies that source completion before any value still completes downstream.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectLatestAsyncSourceCompletesWithNoValues_ThenForwardsCompletion()
     {
-        var subject = new Subject<int>();
-        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        using var sub = subject.SelectLatestAsync(static x => Task.FromResult(x))
-            .Subscribe(static _ => { }, () => completed.TrySetResult(true));
-
+        Subject<int> subject = new();
+        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var sub = subject.SelectLatestAsync(static x => Task.FromResult(x)).Subscribe(
+            static _ => { },
+            () => completed.TrySetResult(true));
         subject.OnCompleted();
-
         var done = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(done).IsTrue();
     }
 
     /// <summary>Verifies that <c>OnNext</c>, <c>OnError</c> and a duplicate <c>OnCompleted</c>
     /// arriving after the source has already completed are silently dropped.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenEventsAfterCompleted_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
-        var values = new List<int>();
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
         Exception? caught = null;
         var completedCount = 0;
-
         using var sub = source.SelectLatestAsync(static x => Task.FromResult(x))
             .Subscribe(values.Add, ex => caught = ex, () => completedCount++);
-
         source.Observer.OnCompleted();
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));
         source.Observer.OnCompleted();
-
         await Task.Delay(SettleDelayMilliseconds);
         await Assert.That(completedCount).IsLessThanOrEqualTo(1);
         await Assert.That(values).IsEmpty();

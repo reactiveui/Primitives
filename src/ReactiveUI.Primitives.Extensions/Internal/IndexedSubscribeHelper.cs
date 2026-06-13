@@ -38,7 +38,7 @@ internal static class IndexedSubscribeHelper
         ArgumentExceptionHelper.ThrowIfNull(onError);
         ArgumentExceptionHelper.ThrowIfNull(onCompleted);
 
-        var composite = new DisposableBag();
+        DisposableBag composite = new();
         for (var i = 0; i < sources.Count; i++)
         {
             composite.Add(sources[i].Subscribe(new IndexedWitness<T>(i, onNext, onError, onCompleted)));

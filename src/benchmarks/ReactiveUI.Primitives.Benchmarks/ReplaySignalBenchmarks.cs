@@ -21,8 +21,8 @@ public class ReplaySignalBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesHistorySubscribe()
     {
-        var observer = new IntSignalWitness();
-        using var subject = new HistorySignal<int>(BufferSize);
+        IntSignalWitness observer = new();
+        using HistorySignal<int> subject = new(BufferSize);
         PopulateHistorySignal(subject);
         using var subscription = subject.Subscribe(observer);
         return observer.Total;
@@ -33,8 +33,8 @@ public class ReplaySignalBenchmarks
     [Benchmark]
     public int SystemReactiveReplaySubscribe()
     {
-        var observer = new IntSignalWitness();
-        using var subject = new RxReplaySubject(BufferSize);
+        IntSignalWitness observer = new();
+        using RxReplaySubject subject = new(BufferSize);
         PopulateReplaySubject(subject);
         using var subscription = subject.Subscribe(observer);
         return observer.Total;
@@ -45,8 +45,8 @@ public class ReplaySignalBenchmarks
     [Benchmark]
     public int R3ReplaySubscribe()
     {
-        var observer = new IntR3Witness();
-        using var subject = new R3ReplaySubject(BufferSize);
+        IntR3Witness observer = new();
+        using R3ReplaySubject subject = new(BufferSize);
         PopulateReplaySubject(subject);
         using var subscription = subject.Subscribe(observer);
         return observer.Total;

@@ -131,7 +131,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>DrainArray</c> result.</returns>
     private static int DrainArray(IObservable<int[]> source)
     {
-        var observer = new ArrayWitness();
+        ArrayWitness observer = new();
         using var subscription = source.Subscribe(observer);
         return observer.Total;
     }
@@ -141,7 +141,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>DrainBool</c> result.</returns>
     private static int DrainBool(IObservable<bool> source)
     {
-        var observer = new BoolSignalWitness();
+        BoolSignalWitness observer = new();
         using var subscription = source.Subscribe(observer);
         return observer.Total + observer.NextCount;
     }
@@ -151,7 +151,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>DrainInt</c> result.</returns>
     private static int DrainInt(IObservable<int> source)
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = source.Subscribe(observer);
         return observer.Total + observer.NextCount;
     }
@@ -161,7 +161,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>DrainList</c> result.</returns>
     private static int DrainList(IObservable<IList<int>> source)
     {
-        var observer = new ListWitness();
+        ListWitness observer = new();
         using var subscription = source.Subscribe(observer);
         return observer.Total;
     }
@@ -171,7 +171,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>DrainPackageUnit</c> result.</returns>
     private static int DrainPackageUnit(IObservable<RxUnit> source)
     {
-        var observer = new CountingSignalWitness<RxUnit>();
+        CountingSignalWitness<RxUnit> observer = new();
         using var subscription = source.Subscribe(observer);
         return observer.Count + observer.CompletionCount;
     }
@@ -181,7 +181,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>DrainPrimitiveUnit</c> result.</returns>
     private static int DrainPrimitiveUnit(IObservable<RxVoid> source)
     {
-        var observer = new CountingSignalWitness<RxVoid>();
+        CountingSignalWitness<RxVoid> observer = new();
         using var subscription = source.Subscribe(observer);
         return observer.Count + observer.CompletionCount;
     }
@@ -191,7 +191,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>DrainString</c> result.</returns>
     private static int DrainString(IObservable<string?> source)
     {
-        var observer = new NullableStringLengthWitness();
+        NullableStringLengthWitness observer = new();
         using var subscription = source.Subscribe(observer);
         return observer.TotalLength + observer.ItemCount;
     }
@@ -201,7 +201,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>DrainSyncTuple</c> result.</returns>
     private static int DrainSyncTuple(IObservable<(int Value, IDisposable Sync)> source)
     {
-        var observer = new SyncTupleWitness();
+        SyncTupleWitness observer = new();
         using var subscription = source.Subscribe(observer);
         return observer.Total;
     }

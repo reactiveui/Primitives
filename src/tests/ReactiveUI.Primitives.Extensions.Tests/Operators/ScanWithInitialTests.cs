@@ -6,10 +6,11 @@ using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests for the <see cref="ScanWithInitialObservable{TSource, TAccumulate}"/> class.</summary>
+/// <summary>Tests for the <see cref = "ScanWithInitialObservable{TSource, TAccumulate}"/> class.</summary>
 public partial class ScanWithInitialTests
 {
 #if NET9_0_OR_GREATER
+
     /// <summary>Synchronization gate used by tests.</summary>
     private readonly Lock _gate = new();
 #else
@@ -17,22 +18,20 @@ public partial class ScanWithInitialTests
     private readonly object _gate = new();
 #endif
 
-    /// <summary>Tests that <see cref="ScanWithInitialObservable{TSource, TAccumulate}"/> emits the initial value immediately upon subscription.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <summary>Tests that <see cref = "ScanWithInitialObservable{TSource, TAccumulate}"/> emits the initial value immediately upon subscription.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Subscribe_EmitsInitialValueImmediately()
     {
         // Arrange
-        var source = new Subject<int>();
+        Subject<int> source = new();
         const int Initial = 10;
-        var accumulator = (int acc, int x) =>
-            acc + x;
-        var observable = new ScanWithInitialObservable<int, int>(source, Initial, accumulator);
-        var results = new List<int>();
+        var accumulator = (int acc, int x) => acc + x;
+        ScanWithInitialObservable<int, int> observable = new(source, Initial, accumulator);
+        List<int> results = [];
 
         // Act
-        using (observable.Subscribe(
-                   results.Add))
+        using (observable.Subscribe(results.Add))
         {
             // Assert
             const int ExpectedInitial = 10;
@@ -40,22 +39,20 @@ public partial class ScanWithInitialTests
         }
     }
 
-    /// <summary>Tests that <see cref="ScanWithInitialObservable{TSource, TAccumulate}"/> accumulates values correctly.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <summary>Tests that <see cref = "ScanWithInitialObservable{TSource, TAccumulate}"/> accumulates values correctly.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task OnNext_AccumulatesValues()
     {
         // Arrange
-        var source = new Subject<int>();
+        Subject<int> source = new();
         const int Initial = 0;
-        var accumulator = (int acc, int x) =>
-            acc + x;
-        var observable = new ScanWithInitialObservable<int, int>(source, Initial, accumulator);
-        var results = new List<int>();
+        var accumulator = (int acc, int x) => acc + x;
+        ScanWithInitialObservable<int, int> observable = new(source, Initial, accumulator);
+        List<int> results = [];
 
         // Act
-        using (observable.Subscribe(
-                   results.Add))
+        using (observable.Subscribe(results.Add))
         {
             const int Second = 2;
             const int Third = 3;
@@ -70,19 +67,18 @@ public partial class ScanWithInitialTests
         await Assert.That(results).IsCollectionEqualTo([0, 1, RunningSumAfterSecond, RunningSumAfterThird]);
     }
 
-    /// <summary>Tests that <see cref="ScanWithInitialObservable{TSource, TAccumulate}"/> handles errors in the accumulator.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <summary>Tests that <see cref = "ScanWithInitialObservable{TSource, TAccumulate}"/> handles errors in the accumulator.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task AccumulatorError_PropagatesError()
     {
         // Arrange
-        var source = new Subject<int>();
+        Subject<int> source = new();
         const int Initial = 0;
         Exception exception = new InvalidOperationException("Accumulator failed");
-        Func<int, int, int> accumulator = (_, _) =>
-            throw exception;
-        var observable = new ScanWithInitialObservable<int, int>(source, Initial, accumulator);
-        var errors = new List<Exception>();
+        Func<int, int, int> accumulator = (_, _) => throw exception;
+        ScanWithInitialObservable<int, int> observable = new(source, Initial, accumulator);
+        List<Exception> errors = [];
 
         // Act
         using (observable.Subscribe(
@@ -96,22 +92,25 @@ public partial class ScanWithInitialTests
         await Assert.That(errors).IsCollectionEqualTo([exception]);
     }
 
-    /// <summary>Tests that <see cref="ScanWithInitialObservable{TSource, TAccumulate}"/> is thread-safe.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <summary>Tests that <see cref = "ScanWithInitialObservable{TSource, TAccumulate}"/> is thread-safe.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage("Blocker Code Smell", "S4462:Calls to \"async\" methods should not be blocking", Justification = "Test is synchronous.")]
+    [SuppressMessage(
+        "Blocker Code Smell",
+        "S4462:Calls to \"async\" methods should not be blocking",
+        Justification = "Test is synchronous.")]
     public async Task Observable_IsThreadSafe()
     {
         // Arrange
-        var source = new Subject<int>();
+        Subject<int> source = new();
         const int Initial = 0;
         var accumulator = (int acc, int x) =>
         {
             Thread.Sleep(1); // Force potential race condition
             return acc + x;
         };
-        var observable = new ScanWithInitialObservable<int, int>(source, Initial, accumulator);
-        var results = new List<int>();
+        ScanWithInitialObservable<int, int> observable = new(source, Initial, accumulator);
+        List<int> results = [];
         var completedCount = 0;
 
         // Act
@@ -133,13 +132,11 @@ public partial class ScanWithInitialTests
                     source.OnNext(i);
                 }
             });
-
             var t2 = Task.Run(async () =>
             {
                 await Task.Delay(50);
                 source.OnCompleted();
             });
-
             await Task.WhenAll(t1, t2);
         }
 

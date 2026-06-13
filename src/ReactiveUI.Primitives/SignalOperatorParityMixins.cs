@@ -516,7 +516,7 @@ public static partial class LinqExtensions
         /// <param name="period">The interval between sampling ticks.</param>
         /// <returns>A sequence that emits the latest source value on each sampling tick.</returns>
         /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="period"/> is less than <see cref="TimeSpan.Zero"/>.</exception>
+        /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="period"/> is less than <see cref="TimeSpan.Zero"/>.</exception>
         public IObservable<T> Probe(TimeSpan period) =>
             source.Probe(period, null);
 
@@ -525,15 +525,12 @@ public static partial class LinqExtensions
         /// <param name="scheduler">The sequencer used to schedule sampling ticks.</param>
         /// <returns>A sequence that emits the latest source value on each sampling tick.</returns>
         /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="period"/> is less than <see cref="TimeSpan.Zero"/>.</exception>
+        /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="period"/> is less than <see cref="TimeSpan.Zero"/>.</exception>
         public IObservable<T> Probe(TimeSpan period, ISequencer? scheduler)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (period < TimeSpan.Zero)
-            {
-                throw new ArgumentOutOfRangeException(nameof(period));
-            }
+            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(period, TimeSpan.Zero);
 
             scheduler ??= ThreadPoolSequencer.Instance;
             return new ProbeSignal<T>(source, period, scheduler);
@@ -701,7 +698,7 @@ public static partial class LinqExtensions
                 return rangeTask;
             }
 
-            var completion = new TaskCompletionSource<T>();
+            TaskCompletionSource<T> completion = new();
             var seen = false;
             var last = default(T);
             var subscription = default(IDisposable);
@@ -852,8 +849,8 @@ public static partial class LinqExtensions
             }
 #endif
 
-            var completion = new TaskCompletionSource<T[]>();
-            var values = new List<T>();
+            TaskCompletionSource<T[]> completion = new();
+            List<T> values = [];
             source.Subscribe(values.Add, error => completion.TrySetException(error), () => completion.TrySetResult([.. values]));
             return completion.Task;
         }
@@ -877,7 +874,7 @@ public static partial class LinqExtensions
             {
                 if (typeof(T) == typeof(int))
                 {
-                    var integers = new List<int>(range.Count);
+                    List<int> integers = new(range.Count);
                     for (var i = 0; i < range.Count; i++)
                     {
                         integers.Add(range.Start + i);
@@ -886,17 +883,17 @@ public static partial class LinqExtensions
                     return Task.FromResult((IList<T>)(object)integers);
                 }
 
-                var rangeValues = new List<T>(range.Count);
+                List<T> rangeValues = new(range.Count);
                 for (var i = 0; i < range.Count; i++)
                 {
                     rangeValues.Add((T)(object)(range.Start + i));
                 }
 
-                return Task.FromResult((IList<T>)rangeValues);
+                return Task.FromResult<IList<T>>(rangeValues);
             }
 
-            var completion = new TaskCompletionSource<IList<T>>();
-            var values = new List<T>();
+            TaskCompletionSource<IList<T>> completion = new();
+            List<T> values = [];
             source.Subscribe(values.Add, error => completion.TrySetException(error), () => completion.TrySetResult(values));
             return completion.Task;
         }
@@ -917,7 +914,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            var completion = new TaskCompletionSource<T>();
+            TaskCompletionSource<T> completion = new();
             var seen = false;
             source.Subscribe(
                 value =>

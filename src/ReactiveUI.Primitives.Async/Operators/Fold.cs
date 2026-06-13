@@ -28,7 +28,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="accumulator">An asynchronous accumulator function to be invoked on each element. Receives the current accumulator value,
         /// the current element, and a cancellation token.</param>
         /// <returns>An observable sequence containing the accumulated values produced after each element is processed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
         public IObservableAsync<TAcc> Fold<TAcc>(
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator)
@@ -44,7 +44,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="accumulator">An accumulator function to be invoked on each element. Receives the current accumulator value and the
         /// current element.</param>
         /// <returns>An observable sequence containing the accumulated values produced after each element is processed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
         public IObservableAsync<TAcc> Fold<TAcc>(TAcc seed, Func<TAcc, T, TAcc> accumulator)
         {
             ArgumentExceptionHelper.ThrowIfNull(accumulator);
@@ -94,7 +94,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<TAcc> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new FoldAsyncWitness(observer, seed, accumulator, cancellationToken);
+            FoldAsyncWitness sink = new(observer, seed, accumulator, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
             // recognises this token without allocating a per-emission linked CTS.
@@ -176,7 +176,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<TAcc> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new FoldSyncWitness(observer, seed, accumulator, cancellationToken);
+            FoldSyncWitness sink = new(observer, seed, accumulator, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
             // recognises this token without allocating a per-emission linked CTS.

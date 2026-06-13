@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>AsyncSignal.</summary>
+/// <summary>A signal that exposes its next value as an awaitable operation.</summary>
 /// <typeparam name="T">The Type.</typeparam>
 /// <seealso cref="ISignal&lt;T&gt;" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
@@ -227,7 +227,7 @@ public class AsyncSignal<T> : IAwaitSignal<T>
     {
         if (!IsCompleted)
         {
-            var completionEvent = new ManualResetEvent(false);
+            ManualResetEvent completionEvent = new(false);
             SubscribeCompletion(() => completionEvent.Set(), false);
             completionEvent.WaitOne();
         }

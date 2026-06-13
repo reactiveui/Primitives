@@ -18,7 +18,7 @@ public partial class CombiningOperatorTests
     public async Task WhenMergeEnumerableDisposedDuringInnerNext_ThenOnNextSilentlyReturns()
     {
         var innerSignal = Signal.Create<int>();
-        var items = new List<int>();
+        List<int> items = [];
 
         var sub = await new[] { innerSignal.Values }.Merge()
             .SubscribeAsync(
@@ -56,7 +56,7 @@ public partial class CombiningOperatorTests
     public async Task WhenMergeEnumerableDisposedDuringInnerErrorResume_ThenSilentlyReturns()
     {
         var innerSignal = Signal.Create<int>();
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
 
         var sub = await new[] { innerSignal.Values }.Merge()
             .SubscribeAsync(
@@ -71,7 +71,9 @@ public partial class CombiningOperatorTests
 
         try
         {
-            await innerSignal.OnErrorResumeAsync(new InvalidOperationException(LateErrorMessage), CancellationToken.None);
+            await innerSignal.OnErrorResumeAsync(
+                new InvalidOperationException(LateErrorMessage),
+                CancellationToken.None);
         }
         catch (OperationCanceledException)
         {
@@ -90,7 +92,7 @@ public partial class CombiningOperatorTests
     {
         var signal1 = Signal.Create<int>();
         var signal2 = Signal.Create<int>();
-        var items = new List<int>();
+        List<int> items = [];
 
         IObservableAsync<int>[] sources = [signal1.Values, signal2.Values];
 
@@ -121,7 +123,7 @@ public partial class CombiningOperatorTests
     public async Task WhenMergeEnumerableDisposed_ThenOnErrorResumeReturnsEarly()
     {
         var signal = Signal.Create<int>();
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
 
         IObservableAsync<int>[] sources = [signal.Values];
 
@@ -182,8 +184,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposed_ThenOnNextReturnsEarlyViaDirectSource()
     {
-        var directSource = new DirectSource<int>();
-        var items = new List<int>();
+        DirectSource<int> directSource = new();
+        List<int> items = [];
 
         IObservableAsync<int>[] sources = [directSource];
 
@@ -226,8 +228,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposed_ThenOnErrorResumeReturnsEarlyViaDirectSource()
     {
-        var directSource = new DirectSource<int>();
-        var errors = new List<Exception>();
+        DirectSource<int> directSource = new();
+        List<Exception> errors = [];
 
         IObservableAsync<int>[] sources = [directSource];
 
@@ -272,8 +274,8 @@ public partial class CombiningOperatorTests
         Exception? unhandledException = null;
         UnhandledExceptionHandler.Register(ex => unhandledException = ex);
 
-        var directSource1 = new DirectSource<int>();
-        var directSource2 = new DirectSource<int>();
+        DirectSource<int> directSource1 = new();
+        DirectSource<int> directSource2 = new();
         IObservableAsync<int>[] sources = [directSource1, directSource2];
 
         await using var sub = await sources.Merge()
@@ -334,11 +336,11 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableThrowsDuringIteration_ThenRoutesToUnhandled()
     {
-        using var unhandled = new UnhandledExceptionCapture();
+        using UnhandledExceptionCapture unhandled = new();
 
         // Use an enumerable whose GetEnumerator throws, triggering the error path
         // inside BeginSubscribing's inner try block.
-        var throwingEnumerable = new ThrowingEnumerable<int>();
+        ThrowingEnumerable<int> throwingEnumerable = new();
 
         await using var sub = await throwingEnumerable.Merge()
             .SubscribeAsync(
@@ -359,10 +361,10 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposedWhileGateHeld_ThenOnNextReturnsPostGate()
     {
-        var directSource = new DirectSource<int>();
-        var items = new List<int>();
-        var gateHeld = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var proceedWithFirstEmission = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        DirectSource<int> directSource = new();
+        List<int> items = [];
+        TaskCompletionSource gateHeld = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource proceedWithFirstEmission = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var sub = await new IObservableAsync<int>[] { directSource }
             .Merge()
@@ -421,10 +423,10 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposedWhileGateHeld_ThenOnErrorResumeReturnsPostGate()
     {
-        var directSource = new DirectSource<int>();
-        var errors = new List<Exception>();
-        var gateHeld = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var proceedWithFirstEmission = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        DirectSource<int> directSource = new();
+        List<Exception> errors = [];
+        TaskCompletionSource gateHeld = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource proceedWithFirstEmission = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var sub = await new IObservableAsync<int>[] { directSource }
             .Merge()
@@ -486,7 +488,7 @@ public partial class CombiningOperatorTests
         Exception? unhandled = null;
         UnhandledExceptionHandler.Register(ex => unhandled = ex);
 
-        var sources = new ThrowingEnumerable<int>();
+        ThrowingEnumerable<int> sources = new();
 
         await using var sub = await sources.Merge().SubscribeAsync(
             (_, _) => default,
@@ -504,10 +506,10 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposed_ThenOnNextReturnsEarly()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
         IObservableAsync<int>[] sources = [src1, src2];
-        var items = new List<int>();
+        List<int> items = [];
 
         var sub = await sources.Merge().SubscribeAsync(
             (x, _) =>
@@ -550,8 +552,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposedDuringEmission_ThenDropsValues()
     {
-        var innerSource = new DirectSource<int>();
-        var results = new List<int>();
+        DirectSource<int> innerSource = new();
+        List<int> results = [];
 
         var sub = await new IObservableAsync<int>[] { innerSource }
             .Merge()
@@ -585,8 +587,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposedDuringErrorResume_ThenDropsErrors()
     {
-        var innerSource = new DirectSource<int>();
-        var errors = new List<Exception>();
+        DirectSource<int> innerSource = new();
+        List<Exception> errors = [];
 
         var sub = await new IObservableAsync<int>[] { innerSource }
             .Merge()
@@ -617,12 +619,12 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposedWhileGateHeld_ThenOnNextPostGateReturns()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
         IObservableAsync<int>[] sources = [src1, src2];
-        var items = new List<int>();
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> items = [];
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await sources.Merge()
             .SubscribeAsync(
@@ -656,12 +658,12 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposedWhileGateHeld_ThenOnErrorResumePostGateReturns()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
         IObservableAsync<int>[] sources = [src1, src2];
-        var errors = new List<Exception>();
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<Exception> errors = [];
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await sources.Merge()
             .SubscribeAsync(

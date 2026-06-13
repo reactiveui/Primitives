@@ -47,7 +47,7 @@ public class ConcurrencyRaceHelpersTests
     [Test]
     public async Task WhenTryCancelOpenCts_ThenReturnsTrueAndTokenCancels()
     {
-        var cts = new CancellationTokenSource();
+        CancellationTokenSource cts = new();
 
         var succeeded = await ConcurrencyRaceHelpers.TryCancelAsync(cts);
 
@@ -60,7 +60,7 @@ public class ConcurrencyRaceHelpersTests
     [Test]
     public async Task WhenTryCancelDisposedCts_ThenReturnsFalseAndSwallowsObjectDisposed()
     {
-        var cts = new CancellationTokenSource();
+        CancellationTokenSource cts = new();
         cts.Dispose();
 
         var succeeded = await ConcurrencyRaceHelpers.TryCancelAsync(cts);

@@ -49,15 +49,18 @@
     <Compile Include="..\Polyfills\CancellationTokenPolyfillExtensions.cs" Link="Polyfills\CancellationTokenPolyfillExtensions.cs" />
     <Compile Include="..\Polyfills\TaskPolyfillExtensions.cs" Link="Polyfills\TaskPolyfillExtensions.cs" />
     <Compile Include="..\Polyfills\ArgumentExceptionHelper.cs" Link="Polyfills\ArgumentExceptionHelper.cs" />
+    <Compile Include="..\Polyfills\ArgumentOutOfRangeExceptionHelper.cs" Link="Polyfills\ArgumentOutOfRangeExceptionHelper.cs" />
   </ItemGroup>
 
   <!-- ArgumentExceptionHelper is a polyfill for ArgumentNullException.ThrowIfNull: it is compiled only on
        net462-net481 (above). On net8.0+ the BCL has the method, so alias the identifier straight to it. -->
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
     <Using Include="ReactiveUI.Primitives.Internal.ArgumentExceptionHelper" Alias="ArgumentExceptionHelper" />
+    <Using Include="ReactiveUI.Primitives.Internal.ArgumentOutOfRangeExceptionHelper" Alias="ArgumentOutOfRangeExceptionHelper" />
   </ItemGroup>
   <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
     <Using Include="System.ArgumentNullException" Alias="ArgumentExceptionHelper" />
+    <Using Include="System.ArgumentOutOfRangeException" Alias="ArgumentOutOfRangeExceptionHelper" />
   </ItemGroup>
 
   <ItemGroup>

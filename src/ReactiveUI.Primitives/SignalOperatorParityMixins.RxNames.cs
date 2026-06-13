@@ -16,84 +16,70 @@ namespace ReactiveUI.Primitives;
 /// </summary>
 public static partial class LinqExtensions
 {
-    /// <summary>LINQ-named projection and filtering operators for an observable source sequence.</summary>
-    /// <param name="source">An observable sequence of elements to project.</param>
-    /// <typeparam name="TSource">The type of the elements in the source sequence.</typeparam>
-    extension<TSource>(IObservable<TSource> source)
+    /// <summary>System.Reactive-named combining operators for an observable source of inner observable sequences.</summary>
+    /// <param name="sources">The outer sequence of inner sequences.</param>
+    /// <typeparam name="T">The value type.</typeparam>
+    extension<T>(IObservable<IObservable<T>> sources)
     {
-        /// <summary>Projects each element of an observable sequence into a new form. LINQ name for <c>Map</c>.</summary>
-        /// <typeparam name="TResult">The type of the elements in the result sequence.</typeparam>
-        /// <param name="selector">A transform function to apply to each element.</param>
-        /// <returns>An observable sequence whose elements are the result of invoking the transform function on each source element.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
-        public IObservable<TResult> Select<TResult>(Func<TSource, TResult> selector)
+        /// <summary>Subscribes to all inner sequences and forwards their values as they arrive. System.Reactive name for <c>Blend</c>.</summary>
+        /// <returns>A sequence containing values from all inner sequences.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="sources"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Merge()
         {
-            ArgumentExceptionHelper.ThrowIfNull(source);
+            ArgumentExceptionHelper.ThrowIfNull(sources);
 
-            ArgumentExceptionHelper.ThrowIfNull(selector);
-
-            return new MapSignal<TSource, TResult>(source, selector);
+            return new BlendSignal<T>(sources);
         }
 
-        /// <summary>Projects each element into a new form using external state passed to the selector. State-carrying name for <c>MapWith</c>.</summary>
-        /// <typeparam name="TState">The type of the state used in the selector function.</typeparam>
-        /// <typeparam name="TResult">The type of the elements in the result sequence.</typeparam>
-        /// <param name="state">The state to pass to the selector function.</param>
-        /// <param name="selector">A transform function to apply to each source element along with the state.</param>
-        /// <returns>An observable sequence whose elements are the result of invoking the transform on each source element and the state.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
-        public IObservable<TResult> SelectWith<TState, TResult>(TState state, Func<TState, TSource, TResult> selector)
+        /// <summary>Subscribes to inner sequences one at a time in source order. System.Reactive name for <c>Chain</c>.</summary>
+        /// <returns>A sequence that emits each inner sequence after the previous one completes.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="sources"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Concat()
         {
-            ArgumentExceptionHelper.ThrowIfNull(source);
+            ArgumentExceptionHelper.ThrowIfNull(sources);
 
-            ArgumentExceptionHelper.ThrowIfNull(selector);
-
-            return new MapWithSignal<TSource, TState, TResult>(source, state, selector);
+            return new ChainSignal<T>(sources);
         }
 
-        /// <summary>Filters an observable sequence to elements that satisfy a predicate. LINQ name for <c>Keep</c>.</summary>
-        /// <param name="predicate">A function to test each element for a condition.</param>
-        /// <returns>An observable sequence containing the elements that satisfy <paramref name="predicate"/>.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="predicate"/> is <see langword="null"/>.</exception>
-        public IObservable<TSource> Where(Func<TSource, bool> predicate)
+        /// <summary>Mirrors the first inner sequence to produce any notification. System.Reactive name for <c>Race</c>.</summary>
+        /// <returns>A sequence that mirrors the winning inner sequence.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="sources"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Amb()
         {
-            ArgumentExceptionHelper.ThrowIfNull(source);
+            ArgumentExceptionHelper.ThrowIfNull(sources);
 
-            ArgumentExceptionHelper.ThrowIfNull(predicate);
-
-            return new KeepSignal<TSource>(source, predicate);
+            return new RaceSignal<T>(sources);
         }
 
-        /// <summary>Filters elements using a predicate that uses external state. State-carrying name for <c>KeepWith</c>.</summary>
-        /// <typeparam name="TState">The type of the state parameter passed to the predicate.</typeparam>
-        /// <param name="state">The state value to pass to the predicate for each element.</param>
-        /// <param name="predicate">A function to test each element along with the state.</param>
-        /// <returns>An observable sequence containing only the elements that satisfy the predicate.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="predicate"/> is <see langword="null"/>.</exception>
-        public IObservable<TSource> WhereWith<TState>(TState state, Func<TState, TSource, bool> predicate)
+        /// <summary>Switches to the most recent inner sequence. System.Reactive name for <c>SwitchTo</c>.</summary>
+        /// <returns>A sequence that mirrors only the latest inner sequence.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="sources"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Switch()
         {
-            ArgumentExceptionHelper.ThrowIfNull(source);
+            ArgumentExceptionHelper.ThrowIfNull(sources);
 
-            ArgumentExceptionHelper.ThrowIfNull(predicate);
+            if (TryCreateSynchronousSwitchRangeSignal(sources, out var rangeSignal))
+            {
+                return rangeSignal;
+            }
 
-            return new KeepWithSignal<TSource, TState>(source, state, predicate);
+            return new SwitchSignal<T>(sources);
         }
     }
 
-    /// <summary>Null-filtering operator using System.Reactive vocabulary for an observable source of nullable reference values.</summary>
-    /// <param name="source">The source observable sequence to filter.</param>
-    /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
-    extension<T>(IObservable<T?> source)
-        where T : class
+    /// <summary>System.Reactive-named notification-materialization operator for an observable source of spark values.</summary>
+    /// <param name="source">The spark sequence.</param>
+    /// <typeparam name="T">The value type.</typeparam>
+    extension<T>(IObservable<Spark<T>> source)
     {
-        /// <summary>Filters out null values, emitting only non-null values. Familiar name for <c>KeepNotNull</c>.</summary>
-        /// <returns>An observable sequence that emits only the non-null values from the source sequence.</returns>
+        /// <summary>Converts <see cref="Spark{T}"/> values back into observer notifications. System.Reactive name for <c>Unspark</c>.</summary>
+        /// <returns>A sequence represented by the supplied spark values.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
-        public IObservable<T> WhereNotNull()
+        public IObservable<T> Dematerialize()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return new KeepNotNullSignal<T>(source);
+            return new UnsparkSignal<T>(source);
         }
     }
 
@@ -136,7 +122,7 @@ public static partial class LinqExtensions
         /// </summary>
         /// <param name="gate">The gate shared with other synchronized sequences.</param>
         /// <returns>A sequence that forwards the source notifications one at a time under the shared gate.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="gate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="gate"/> is <see langword="null"/>.</exception>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Modernization", "SST2000:Use ArgumentNullException.ThrowIfNull", Justification = "Uses variable types")]
         public IObservable<T> Synchronize(Lock gate)
@@ -294,54 +280,20 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>System.Reactive-named combining operators for an observable source of inner observable sequences.</summary>
-    /// <param name="sources">The outer sequence of inner sequences.</param>
-    /// <typeparam name="T">The value type.</typeparam>
-    extension<T>(IObservable<IObservable<T>> sources)
+    /// <summary>Null-filtering operator using System.Reactive vocabulary for an observable source of nullable reference values.</summary>
+    /// <param name="source">The source observable sequence to filter.</param>
+    /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
+    extension<T>(IObservable<T?> source)
+        where T : class
     {
-        /// <summary>Subscribes to all inner sequences and forwards their values as they arrive. System.Reactive name for <c>Blend</c>.</summary>
-        /// <returns>A sequence containing values from all inner sequences.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="sources"/> is <see langword="null"/>.</exception>
-        public IObservable<T> Merge()
+        /// <summary>Filters out null values, emitting only non-null values. Familiar name for <c>KeepNotNull</c>.</summary>
+        /// <returns>An observable sequence that emits only the non-null values from the source sequence.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
+        public IObservable<T> WhereNotNull()
         {
-            ArgumentExceptionHelper.ThrowIfNull(sources);
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return new BlendSignal<T>(sources);
-        }
-
-        /// <summary>Subscribes to inner sequences one at a time in source order. System.Reactive name for <c>Chain</c>.</summary>
-        /// <returns>A sequence that emits each inner sequence after the previous one completes.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="sources"/> is <see langword="null"/>.</exception>
-        public IObservable<T> Concat()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(sources);
-
-            return new ChainSignal<T>(sources);
-        }
-
-        /// <summary>Mirrors the first inner sequence to produce any notification. System.Reactive name for <c>Race</c>.</summary>
-        /// <returns>A sequence that mirrors the winning inner sequence.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="sources"/> is <see langword="null"/>.</exception>
-        public IObservable<T> Amb()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(sources);
-
-            return new RaceSignal<T>(sources);
-        }
-
-        /// <summary>Switches to the most recent inner sequence. System.Reactive name for <c>SwitchTo</c>.</summary>
-        /// <returns>A sequence that mirrors only the latest inner sequence.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="sources"/> is <see langword="null"/>.</exception>
-        public IObservable<T> Switch()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(sources);
-
-            if (TryCreateSynchronousSwitchRangeSignal(sources, out var rangeSignal))
-            {
-                return rangeSignal;
-            }
-
-            return new SwitchSignal<T>(sources);
+            return new KeepNotNullSignal<T>(source);
         }
     }
 
@@ -471,15 +423,12 @@ public static partial class LinqExtensions
         /// <param name="scheduler">The sequencer used to schedule sampling.</param>
         /// <returns>A sequence containing the latest source value sampled at each period boundary.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="left"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="interval"/> is less than <see cref="TimeSpan.Zero"/>.</exception>
+        /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="interval"/> is less than <see cref="TimeSpan.Zero"/>.</exception>
         public IObservable<TLeft> Sample(TimeSpan interval, ISequencer? scheduler)
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
 
-            if (interval < TimeSpan.Zero)
-            {
-                throw new ArgumentOutOfRangeException(nameof(interval));
-            }
+            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(interval, TimeSpan.Zero);
 
             scheduler ??= ThreadPoolSequencer.Instance;
             return new ProbeSignal<TLeft>(left, interval, scheduler);
@@ -489,15 +438,12 @@ public static partial class LinqExtensions
         /// <param name="retryCount">The maximum number of retry attempts after the initial subscription.</param>
         /// <returns>A sequence that retries the source before forwarding the final error.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="left"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="retryCount"/> is less than zero.</exception>
+        /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="retryCount"/> is less than zero.</exception>
         public IObservable<TLeft> Retry(int retryCount)
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
 
-            if (retryCount < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(retryCount));
-            }
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(retryCount);
 
             return new ReattemptSignal<TLeft>(left, retryCount);
         }
@@ -513,19 +459,67 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>System.Reactive-named notification-materialization operator for an observable source of spark values.</summary>
-    /// <param name="source">The spark sequence.</param>
-    /// <typeparam name="T">The value type.</typeparam>
-    extension<T>(IObservable<Spark<T>> source)
+    /// <summary>LINQ-named projection and filtering operators for an observable source sequence.</summary>
+    /// <param name="source">An observable sequence of elements to project.</param>
+    /// <typeparam name="TSource">The type of the elements in the source sequence.</typeparam>
+    extension<TSource>(IObservable<TSource> source)
     {
-        /// <summary>Converts <see cref="Spark{T}"/> values back into observer notifications. System.Reactive name for <c>Unspark</c>.</summary>
-        /// <returns>A sequence represented by the supplied spark values.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
-        public IObservable<T> Dematerialize()
+        /// <summary>Projects each element of an observable sequence into a new form. LINQ name for <c>Map</c>.</summary>
+        /// <typeparam name="TResult">The type of the elements in the result sequence.</typeparam>
+        /// <param name="selector">A transform function to apply to each element.</param>
+        /// <returns>An observable sequence whose elements are the result of invoking the transform function on each source element.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        public IObservable<TResult> Select<TResult>(Func<TSource, TResult> selector)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return new UnsparkSignal<T>(source);
+            ArgumentExceptionHelper.ThrowIfNull(selector);
+
+            return new MapSignal<TSource, TResult>(source, selector);
+        }
+
+        /// <summary>Projects each element into a new form using external state passed to the selector. State-carrying name for <c>MapWith</c>.</summary>
+        /// <typeparam name="TState">The type of the state used in the selector function.</typeparam>
+        /// <typeparam name="TResult">The type of the elements in the result sequence.</typeparam>
+        /// <param name="state">The state to pass to the selector function.</param>
+        /// <param name="selector">A transform function to apply to each source element along with the state.</param>
+        /// <returns>An observable sequence whose elements are the result of invoking the transform on each source element and the state.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        public IObservable<TResult> SelectWith<TState, TResult>(TState state, Func<TState, TSource, TResult> selector)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(selector);
+
+            return new MapWithSignal<TSource, TState, TResult>(source, state, selector);
+        }
+
+        /// <summary>Filters an observable sequence to elements that satisfy a predicate. LINQ name for <c>Keep</c>.</summary>
+        /// <param name="predicate">A function to test each element for a condition.</param>
+        /// <returns>An observable sequence containing the elements that satisfy <paramref name="predicate"/>.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        public IObservable<TSource> Where(Func<TSource, bool> predicate)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(predicate);
+
+            return new KeepSignal<TSource>(source, predicate);
+        }
+
+        /// <summary>Filters elements using a predicate that uses external state. State-carrying name for <c>KeepWith</c>.</summary>
+        /// <typeparam name="TState">The type of the state parameter passed to the predicate.</typeparam>
+        /// <param name="state">The state value to pass to the predicate for each element.</param>
+        /// <param name="predicate">A function to test each element along with the state.</param>
+        /// <returns>An observable sequence containing only the elements that satisfy the predicate.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        public IObservable<TSource> WhereWith<TState>(TState state, Func<TState, TSource, bool> predicate)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(predicate);
+
+            return new KeepWithSignal<TSource, TState>(source, state, predicate);
         }
     }
 }

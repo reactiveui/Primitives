@@ -47,13 +47,13 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var coordinator = new CalmCoordinator<T>(_source, _dueTime, _scheduler);
+            CalmCoordinator<T> coordinator = new(_source, _dueTime, _scheduler);
             if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return coordinator.Run(observer);
             }
 
-            var subscription = new SingleDisposable();
+            SingleDisposable subscription = new();
             Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run(observer)));
             return subscription;
         }
@@ -96,7 +96,7 @@ public static partial class LinqExtensions
                 return RunCore(observer);
             }
 
-            var subscription = new SingleDisposable();
+            SingleDisposable subscription = new();
             Sequencer.CurrentThread.Schedule(() => subscription.Create(RunCore(observer)));
             return subscription;
         }
@@ -106,7 +106,7 @@ public static partial class LinqExtensions
         /// <returns>The disposable that cancels the source subscription and pending timers.</returns>
         private MultipleDisposable RunCore(IObserver<T> observer)
         {
-            var pocket = new MultipleDisposable();
+            MultipleDisposable pocket = [];
             pocket.Add(_source.Subscribe(
                 value => pocket.Add(_scheduler.Schedule(_dueTime, () => observer.OnNext(value))),
                 error => pocket.Add(_scheduler.Schedule(_dueTime, () => observer.OnError(error))),
@@ -139,7 +139,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var subscription = new SingleReplaceableDisposable();
+            SingleReplaceableDisposable subscription = new();
             var scheduled = _scheduler.Schedule(() => subscription.Create(_source.Subscribe(observer)));
             return new MultipleDisposable(scheduled, subscription);
         }
@@ -174,7 +174,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var pocket = new MultipleDisposable();
+            MultipleDisposable pocket = [];
             pocket.Add(_scheduler.Schedule(Sequencer.Normalize(_dueTime), () => pocket.Add(_source.Subscribe(observer))));
             return pocket;
         }

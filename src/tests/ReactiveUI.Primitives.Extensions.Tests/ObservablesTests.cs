@@ -13,7 +13,7 @@ public class ObservablesTests
     public async Task WhenReturn_ThenEmitsValueAndCompletes()
     {
         const int Value = 42;
-        var values = new List<int>();
+        List<int> values = [];
         var completed = false;
 
         using var sub = Observables.Return(Value).Subscribe(values.Add, () => completed = true);

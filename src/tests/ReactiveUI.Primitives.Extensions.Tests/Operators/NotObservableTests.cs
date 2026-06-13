@@ -7,39 +7,37 @@ using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests for <see cref="NotObservable"/> — boolean negation, terminal forwarding, and the null-observer subscribe guard.</summary>
+/// <summary>Tests for <see cref = "NotObservable"/> — boolean negation, terminal forwarding, and the null-observer subscribe guard.</summary>
 public class NotObservableTests
 {
     /// <summary>Verifies values are negated and completion is forwarded.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenNotSourceEmitsAndCompletes_ThenValuesNegatedAndCompletes()
     {
-        var subject = new Subject<bool>();
-        var values = new List<bool>();
+        Subject<bool> subject = new();
+        List<bool> values = [];
         var completed = false;
         using var sub = subject.Not().Subscribe(values.Add, () => completed = true);
-
         subject.OnNext(true);
         subject.OnNext(false);
         subject.OnCompleted();
-
         await Assert.That(values).IsCollectionEqualTo([false, true]);
         await Assert.That(completed).IsTrue();
     }
 
     /// <summary>Verifies source errors are forwarded.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenNotSourceErrors_ThenErrorForwarded()
     {
-        var subject = new Subject<bool>();
+        Subject<bool> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException("boom");
-        using var sub = subject.Not().Subscribe(static _ => { }, ex => caught = ex);
-
+        InvalidOperationException expected = new("boom");
+        using var sub = subject.Not().Subscribe(
+            static _ => { },
+            ex => caught = ex);
         subject.OnError(expected);
-
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -47,8 +45,7 @@ public class NotObservableTests
     [Test]
     public void WhenNotObserverNull_ThenSubscribeThrows()
     {
-        var observable = new NotObservable(new Subject<bool>());
-
+        NotObservable observable = new(new Subject<bool>());
         Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
     }
 }

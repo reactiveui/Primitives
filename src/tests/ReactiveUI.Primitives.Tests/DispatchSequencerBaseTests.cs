@@ -23,65 +23,60 @@ public sealed class DispatchSequencerBaseTests
     private static readonly int[] ExpectedReentrantValues = [1, 2];
 
     /// <summary>Verifies a burst posts one dispatcher drain and preserves FIFO order.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void DispatchSequencerBaseCoalescesBurstIntoOneDrain()
+    public async Task DispatchSequencerBaseCoalescesBurstIntoOneDrain()
     {
-        var sequencer = new TestDispatchSequencer();
-        var values = new List<int>();
-
+        TestDispatchSequencer sequencer = new();
+        List<int> values = [];
         sequencer.Schedule(new RecordingWorkItem(values, 1));
         sequencer.Schedule(new RecordingWorkItem(values, 2));
         sequencer.Schedule(new RecordingWorkItem(values, 3));
-
-        Assert.Equal(1, sequencer.PostCount);
+        await Assert.That(sequencer.PostCount).IsEqualTo(1);
         sequencer.RunNextDrain();
-
-        Assert.Equal(ExpectedBurstValues.AsEnumerable(), values);
-        Assert.Equal(1, sequencer.PostCount);
+        await Assert.That(values.SequenceEqual(ExpectedBurstValues)).IsTrue();
+        await Assert.That(sequencer.PostCount).IsEqualTo(1);
     }
 
     /// <summary>Verifies cancelled queued work is skipped when the drain runs.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void DispatchSequencerBaseSkipsCancelledQueuedWork()
+    public async Task DispatchSequencerBaseSkipsCancelledQueuedWork()
     {
-        var sequencer = new TestDispatchSequencer();
-        var values = new List<int>();
-        var item = new RecordingWorkItem(values, 1);
-
+        TestDispatchSequencer sequencer = new();
+        List<int> values = [];
+        RecordingWorkItem item = new(values, 1);
         sequencer.Schedule(item);
         item.Dispose();
         sequencer.RunNextDrain();
-
-        Assert.Equal(0, values.Count);
+        await Assert.That(values.Count).IsEqualTo(0);
     }
 
     /// <summary>Verifies work scheduled from inside a drain runs in the next drain.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void DispatchSequencerBaseDefersReentrantWorkToNextDrain()
+    public async Task DispatchSequencerBaseDefersReentrantWorkToNextDrain()
     {
-        var sequencer = new TestDispatchSequencer();
-        var values = new List<int>();
-
+        TestDispatchSequencer sequencer = new();
+        List<int> values = [];
         sequencer.Schedule(new ReentrantWorkItem(sequencer, values));
         sequencer.RunNextDrain();
-
-        Assert.Equal(ExpectedReentrantValues[..1].AsEnumerable(), values);
-        Assert.Equal(ExpectedReentrantPostCount, sequencer.PostCount);
-
+        await Assert.That(values.SequenceEqual(ExpectedReentrantValues[..1])).IsTrue();
+        await Assert.That(sequencer.PostCount).IsEqualTo(ExpectedReentrantPostCount);
         sequencer.RunNextDrain();
-
-        Assert.Equal(ExpectedReentrantValues.AsEnumerable(), values);
+        await Assert.That(values.SequenceEqual(ExpectedReentrantValues)).IsTrue();
     }
 
     /// <summary>Verifies stateful schedule overloads pass state without requiring a captured closure.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void StatefulScheduleOverloadPassesState()
+    public async Task StatefulScheduleOverloadPassesState()
     {
-        var values = new List<int>();
-
-        Sequencer.Immediate.Schedule((values, value: StatefulScheduleValue), static state => state.values.Add(state.value));
-
-        Assert.Equal(StatefulScheduleValue, values[0]);
+        List<int> values = [];
+        Sequencer.Immediate.Schedule(
+            (values, value: StatefulScheduleValue),
+            static state => state.values.Add(state.value));
+        await Assert.That(values[0]).IsEqualTo(StatefulScheduleValue);
     }
 
     /// <summary>Test dispatch sequencer that records posted drains.</summary>
@@ -114,9 +109,9 @@ public sealed class DispatchSequencerBaseTests
         /// <summary>Value to record.</summary>
         private readonly int _value;
 
-        /// <summary>Initializes a new instance of the <see cref="RecordingWorkItem"/> class.</summary>
-        /// <param name="values">Recorded values.</param>
-        /// <param name="value">Value to record.</param>
+        /// <summary>Initializes a new instance of the <see cref = "RecordingWorkItem"/> class.</summary>
+        /// <param name = "values">Recorded values.</param>
+        /// <param name = "value">Value to record.</param>
         public RecordingWorkItem(List<int> values, int value)
         {
             _values = values;
@@ -142,9 +137,9 @@ public sealed class DispatchSequencerBaseTests
         /// <summary>Recorded values.</summary>
         private readonly List<int> _values;
 
-        /// <summary>Initializes a new instance of the <see cref="ReentrantWorkItem"/> class.</summary>
-        /// <param name="sequencer">Sequencer under test.</param>
-        /// <param name="values">Recorded values.</param>
+        /// <summary>Initializes a new instance of the <see cref = "ReentrantWorkItem"/> class.</summary>
+        /// <param name = "sequencer">Sequencer under test.</param>
+        /// <param name = "values">Recorded values.</param>
         public ReentrantWorkItem(ISequencer sequencer, List<int> values)
         {
             _sequencer = sequencer;

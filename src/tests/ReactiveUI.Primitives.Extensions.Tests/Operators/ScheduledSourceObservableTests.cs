@@ -24,42 +24,34 @@ public class ScheduledSourceObservableTests
     /// <summary>Exercises the intentionally-empty <c>OnError</c> body — source errors
     /// after a delayed-schedule subscribe are silently dropped, matching the original
     /// <c>Observable.Create</c> + <c>Subscribe(Action&lt;T&gt;)</c> semantics.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSourceErrors_ThenSilentlySwallowed()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var results = new List<int>();
-
-        using var sub = ((IObservable<int>)subject)
-            .Schedule(TimeSpan.FromTicks(WindowTicks), scheduler)
+        List<int> results = [];
+        using var sub = ((IObservable<int>)subject).Schedule(TimeSpan.FromTicks(WindowTicks), scheduler)
             .Subscribe(results.Add, ex => caught = ex, () => { });
-
         subject.OnError(new InvalidOperationException("dropped"));
-
         await Assert.That(caught).IsNull();
         await Assert.That(results).IsEmpty();
     }
 
     /// <summary>Exercises the intentionally-empty <c>OnCompleted</c> body — source
     /// completion after a delayed-schedule subscribe is silently dropped.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSourceCompletes_ThenSilentlySwallowed()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         var completed = false;
-        var results = new List<int>();
-
-        using var sub = ((IObservable<int>)subject)
-            .Schedule(TimeSpan.FromTicks(WindowTicks), scheduler)
+        List<int> results = [];
+        using var sub = ((IObservable<int>)subject).Schedule(TimeSpan.FromTicks(WindowTicks), scheduler)
             .Subscribe(results.Add, () => completed = true);
-
         subject.OnCompleted();
-
         await Assert.That(completed).IsFalse();
         await Assert.That(results).IsEmpty();
     }
@@ -67,46 +59,42 @@ public class ScheduledSourceObservableTests
     /// <summary>Exercises the <c>EmitState.Emit</c> catch block — when the configured
     /// side-effect throws inside the scheduled callback, the exception is forwarded to
     /// the downstream <c>OnError</c>.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScheduledActionThrows_ThenForwardsErrorToDownstream()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException("action-threw");
+        InvalidOperationException expected = new("action-threw");
         Action<int> throwing = _ => throw expected;
-
-        using var sub = ((IObservable<int>)subject)
-            .Schedule(TimeSpan.FromTicks(WindowTicks), scheduler, throwing)
-            .Subscribe(static _ => { }, ex => caught = ex);
-
+        using var sub = ((IObservable<int>)subject).Schedule(TimeSpan.FromTicks(WindowTicks), scheduler, throwing)
+            .Subscribe(
+                static _ => { },
+                ex => caught = ex);
         subject.OnNext(Sentinel);
         scheduler.AdvanceBy(AdvancePastWindowTicks);
-
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
     /// <summary>Exercises the same catch block via the transform overload — when the
     /// transform throws inside the scheduled callback, the exception flows to
     /// downstream <c>OnError</c>.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScheduledTransformThrows_ThenForwardsErrorToDownstream()
     {
-        var scheduler = new VirtualClock();
-        var subject = new Subject<int>();
+        VirtualClock scheduler = new();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException("transform-threw");
+        InvalidOperationException expected = new("transform-threw");
         Func<int, int> throwing = _ => throw expected;
-
-        using var sub = ((IObservable<int>)subject)
-            .Schedule(TimeSpan.FromTicks(WindowTicks), scheduler, throwing)
-            .Subscribe(static _ => { }, ex => caught = ex);
-
+        using var sub = ((IObservable<int>)subject).Schedule(TimeSpan.FromTicks(WindowTicks), scheduler, throwing)
+            .Subscribe(
+                static _ => { },
+                ex => caught = ex);
         subject.OnNext(Sentinel);
         scheduler.AdvanceBy(AdvancePastWindowTicks);
-
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 }

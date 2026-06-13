@@ -34,115 +34,96 @@ public class SelectManyThenObservableTests
     private const int SourceValue = 3;
 
     /// <summary>Verifies that values flow through both projections to downstream.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectManyThenTwoStages_ThenComposesProjections()
     {
-        var results = new List<int>();
-
+        List<int> results = [];
         using var sub = Observable.Return(SourceValue)
             .SelectManyThen(
-                static x => Observable.Return(x * IntermediateMultiplier),
-                static mid => Observable.Return(mid * FinalMultiplier))
-            .Subscribe(results.Add);
-
+            static x => Observable.Return(x * IntermediateMultiplier),
+            static mid => Observable.Return(mid * FinalMultiplier)).Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo([SourceValue * IntermediateMultiplier * FinalMultiplier]);
     }
 
     /// <summary>Verifies that a throwing first projection forwards the error.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectManyThenFirstThrows_ThenForwardsError()
     {
         Exception? caught = null;
-        var expected = new InvalidOperationException(FirstProjectionFailedMessage);
-
+        InvalidOperationException expected = new(FirstProjectionFailedMessage);
         using var sub = Observable.Return(SourceValue)
-            .SelectManyThen<int, int, int>(
-                _ => throw expected,
-                static _ => Observable.Return(0))
-            .Subscribe(static _ => { }, ex => caught = ex);
-
+            .SelectManyThen<int, int, int>(_ => throw expected, static _ => Observable.Return(0)).Subscribe(
+                static _ => { },
+                ex => caught = ex);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
     /// <summary>Verifies that a throwing second projection forwards the error.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectManyThenSecondThrows_ThenForwardsError()
     {
         Exception? caught = null;
-        var expected = new InvalidOperationException(SecondProjectionFailedMessage);
-
+        InvalidOperationException expected = new(SecondProjectionFailedMessage);
         using var sub = Observable.Return(SourceValue)
-            .SelectManyThen<int, int, int>(
-                static x => Observable.Return(x),
-                _ => throw expected)
-            .Subscribe(static _ => { }, ex => caught = ex);
-
+            .SelectManyThen<int, int, int>(static x => Observable.Return(x), _ => throw expected).Subscribe(
+                static _ => { },
+                ex => caught = ex);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
     /// <summary>Verifies that a source error is forwarded.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectManyThenSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
-
-        using var sub = subject.SelectManyThen(
-                static x => Observable.Return(x),
-                static x => Observable.Return(x))
-            .Subscribe(static _ => { }, ex => caught = ex);
-
+        InvalidOperationException expected = new(SourceErrorMessage);
+        using var sub = subject.SelectManyThen(static x => Observable.Return(x), static x => Observable.Return(x))
+            .Subscribe(
+                static _ => { },
+                ex => caught = ex);
         subject.OnError(expected);
-
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
     /// <summary>Verifies that a source completion is forwarded.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectManyThenSourceCompletes_ThenForwardsCompletion()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         var completed = false;
-
-        using var sub = subject.SelectManyThen(
-                static x => Observable.Return(x),
-                static x => Observable.Return(x))
-            .Subscribe(static _ => { }, () => completed = true);
-
+        using var sub = subject.SelectManyThen(static x => Observable.Return(x), static x => Observable.Return(x))
+            .Subscribe(
+                static _ => { },
+                () => completed = true);
         subject.OnCompleted();
-
         await Assert.That(completed).IsTrue();
     }
 
     /// <summary>Verifies that an inner-observable error is forwarded.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectManyThenInnerErrors_ThenForwardsError()
     {
         Exception? caught = null;
-        var expected = new InvalidOperationException(InnerErrorMessage);
-
+        InvalidOperationException expected = new(InnerErrorMessage);
         using var sub = Observable.Return(SourceValue)
             .SelectManyThen(
-                static _ => Observable.Throw<int>(new InvalidOperationException("first-inner")),
-                static x => Observable.Return(x))
-            .Subscribe(static _ => { }, ex => caught = ex);
-
+            static _ => Observable.Throw<int>(new InvalidOperationException("first-inner")),
+            static x => Observable.Return(x)).Subscribe(
+                static _ => { },
+                ex => caught = ex);
         await Assert.That(caught).IsNotNull();
-
         Exception? caughtSecond = null;
         using var sub2 = Observable.Return(SourceValue)
-            .SelectManyThen(
-                static x => Observable.Return(x),
-                _ => Observable.Throw<int>(expected))
-            .Subscribe(static _ => { }, ex => caughtSecond = ex);
-
+            .SelectManyThen(static x => Observable.Return(x), _ => Observable.Throw<int>(expected)).Subscribe(
+                static _ => { },
+                ex => caughtSecond = ex);
         await Assert.That(caughtSecond).IsSameReferenceAs(expected);
     }
 }

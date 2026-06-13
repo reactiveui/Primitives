@@ -134,16 +134,16 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     }
 
     /// <summary>Gets the ReactiveUI.Primitives scenarios.</summary>
-    public IEnumerable<ExtensionScenario> PrimitivesScenarios => PrimitivesScenarioItems;
+    public static IEnumerable<ExtensionScenario> PrimitivesScenarios => PrimitivesScenarioItems;
 
     /// <summary>Gets the ReactiveUI.Extensions scenarios.</summary>
-    public IEnumerable<ExtensionScenario> ReactiveUIExtensionsScenarios => PackageScenarioItems;
+    public static IEnumerable<ExtensionScenario> ReactiveUIExtensionsScenarios => PackageScenarioItems;
 
     /// <summary>Gets the System.Reactive comparison scenarios.</summary>
-    public IEnumerable<ExtensionScenario> SystemReactiveScenarios => SystemReactiveScenarioItems;
+    public static IEnumerable<ExtensionScenario> SystemReactiveScenarios => SystemReactiveScenarioItems;
 
     /// <summary>Gets the R3 comparison scenarios.</summary>
-    public IEnumerable<ExtensionScenario> R3Scenarios => R3ScenarioItems;
+    public static IEnumerable<ExtensionScenario> R3Scenarios => R3ScenarioItems;
 
     /// <summary>Runs a ReactiveUI.Primitives scenario.</summary>
     /// <param name="scenario">The scenario to run.</param>

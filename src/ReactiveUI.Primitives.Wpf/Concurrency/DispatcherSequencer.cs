@@ -49,7 +49,7 @@ public class DispatcherSequencer : DispatchSequencerBase
     /// <inheritdoc/>
     protected override void ScheduleDelayed(IWorkItem item, long dueTimestamp)
     {
-        var timer = new DispatcherTimer(Priority, Dispatcher) { Interval = DelayUntil(dueTimestamp) };
+        DispatcherTimer timer = new(Priority, Dispatcher) { Interval = DelayUntil(dueTimestamp) };
         timer.Tick += (_, _) =>
         {
             timer.Stop();

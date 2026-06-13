@@ -32,7 +32,7 @@ public class OperatorStatefulVariantBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesMapWith()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(1, Count).MapWith(_factor, static (factor, x) => x * factor).Subscribe(observer);
         return observer.Total;
     }
@@ -43,7 +43,7 @@ public class OperatorStatefulVariantBenchmarks
     public int SystemReactiveSelectClosure()
     {
         var factor = _factor;
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Select(RxObservable.Range(1, Count), x => x * factor).Subscribe(observer);
         return observer.Total;
     }
@@ -54,7 +54,7 @@ public class OperatorStatefulVariantBenchmarks
     public int R3SelectClosure()
     {
         var factor = _factor;
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.Select(R3.Observable.Range(1, Count), x => x * factor).Subscribe(observer);
         return observer.Total;
     }
@@ -64,7 +64,7 @@ public class OperatorStatefulVariantBenchmarks
     [Benchmark]
     public int PrimitivesKeepWith()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(1, Count).KeepWith(_threshold, static (threshold, x) => x > threshold).Subscribe(observer);
         return observer.Total;
     }
@@ -75,7 +75,7 @@ public class OperatorStatefulVariantBenchmarks
     public int SystemReactiveWhereClosure()
     {
         var threshold = _threshold;
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Where(RxObservable.Range(1, Count), x => x > threshold).Subscribe(observer);
         return observer.Total;
     }
@@ -86,7 +86,7 @@ public class OperatorStatefulVariantBenchmarks
     public int R3WhereClosure()
     {
         var threshold = _threshold;
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.Where(R3.Observable.Range(1, Count), x => x > threshold).Subscribe(observer);
         return observer.Total;
     }
@@ -96,7 +96,7 @@ public class OperatorStatefulVariantBenchmarks
     [Benchmark]
     public int PrimitivesTapWith()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(1, Count).TapWith(_factor, static (factor, x) => _ = x * factor).Subscribe(observer);
         return observer.Total;
     }
@@ -107,7 +107,7 @@ public class OperatorStatefulVariantBenchmarks
     public int SystemReactiveDoClosure()
     {
         var factor = _factor;
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Do(RxObservable.Range(1, Count), x => _ = x * factor).Subscribe(observer);
         return observer.Total;
     }
@@ -118,7 +118,7 @@ public class OperatorStatefulVariantBenchmarks
     public int R3DoClosure()
     {
         var factor = _factor;
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.Do(R3.Observable.Range(1, Count), onNext: x => _ = x * factor).Subscribe(observer);
         return observer.Total;
     }

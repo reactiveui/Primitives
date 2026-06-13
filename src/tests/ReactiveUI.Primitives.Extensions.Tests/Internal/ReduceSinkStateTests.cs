@@ -15,8 +15,8 @@ public class ReduceSinkStateTests
     public async Task WhenFreshState_ThenZeroValuesAndNotTerminal()
     {
         const int SourceCount = 3;
-        var observer = new CaptureWitness<int>();
-        var state = new ReduceSinkState<int, int>(observer, SourceCount);
+        CaptureWitness<int> observer = new();
+        ReduceSinkState<int, int> state = new(observer, SourceCount);
 
         await Assert.That(state.HasValueCount).IsEqualTo(0);
         await Assert.That(state.CompletedCount).IsEqualTo(0);
@@ -33,8 +33,8 @@ public class ReduceSinkStateTests
     {
         const int FirstSeed = 1;
         const int SecondSeed = 2;
-        var observer = new CaptureWitness<int>();
-        var state = new ReduceSinkState<int, int>(observer, count: 2);
+        CaptureWitness<int> observer = new();
+        ReduceSinkState<int, int> state = new(observer, 2);
 
         state.Values[0] = FirstSeed;
         state.HasValueCount++;
@@ -50,9 +50,9 @@ public class ReduceSinkStateTests
     [Test]
     public async Task WhenHandleError_ThenForwardsAndIsTerminal()
     {
-        var observer = new CaptureWitness<int>();
-        var state = new ReduceSinkState<int, int>(observer, count: 2);
-        var error = new InvalidOperationException("boom");
+        CaptureWitness<int> observer = new();
+        ReduceSinkState<int, int> state = new(observer, 2);
+        InvalidOperationException error = new("boom");
 
         state.HandleError(error);
         state.HandleError(new InvalidOperationException("second")); // should be no-op
@@ -70,8 +70,8 @@ public class ReduceSinkStateTests
         const int SeedValue1 = 1;
         const int SeedValue2 = 2;
         const int SeededValueCount = 2;
-        var observer = new CaptureWitness<int>();
-        var state = new ReduceSinkState<int, int>(observer, count: 2);
+        CaptureWitness<int> observer = new();
+        ReduceSinkState<int, int> state = new(observer, 2);
 
         // Seed both values so completion-without-value path isn't triggered.
         state.Values[0] = SeedValue1;
@@ -93,8 +93,8 @@ public class ReduceSinkStateTests
     public async Task WhenSourceCompletesWithoutValue_ThenDownstreamCompletesEarly()
     {
         const int FirstSeed = 1;
-        var observer = new CaptureWitness<int>();
-        var state = new ReduceSinkState<int, int>(observer, count: 2);
+        CaptureWitness<int> observer = new();
+        ReduceSinkState<int, int> state = new(observer, 2);
 
         // Source 0 emitted; source 1 completes without a value.
         state.Values[0] = FirstSeed;
@@ -111,8 +111,8 @@ public class ReduceSinkStateTests
     [Test]
     public async Task WhenSameSourceCompletesTwice_ThenSecondCallIgnored()
     {
-        var observer = new CaptureWitness<int>();
-        var state = new ReduceSinkState<int, int>(observer, count: 2);
+        CaptureWitness<int> observer = new();
+        ReduceSinkState<int, int> state = new(observer, 2);
 
         state.HandleCompleted(0);
         state.HandleCompleted(0); // same index — should be no-op

@@ -15,8 +15,8 @@ public class DisposableAsyncSlotTests
     public async Task WhenSwapReplacesOccupant_ThenPreviousDisposed()
     {
         IAsyncDisposable? slot = null;
-        var first = new RecordingAsyncDisposable();
-        var second = new RecordingAsyncDisposable();
+        RecordingAsyncDisposable first = new();
+        RecordingAsyncDisposable second = new();
 
         await DisposableAsyncSlot.SwapAsync(ref slot, first);
         await DisposableAsyncSlot.SwapAsync(ref slot, second);
@@ -34,7 +34,7 @@ public class DisposableAsyncSlotTests
         IAsyncDisposable? slot = null;
         await DisposableAsyncSlot.DisposeAsync(ref slot);
 
-        var late = new RecordingAsyncDisposable();
+        RecordingAsyncDisposable late = new();
         await DisposableAsyncSlot.SwapAsync(ref slot, late);
 
         await Assert.That(late.DisposeCount).IsEqualTo(1);
@@ -48,7 +48,7 @@ public class DisposableAsyncSlotTests
     public async Task WhenAssignedThenDisposedTwice_ThenDisposedExactlyOnce()
     {
         IAsyncDisposable? slot = null;
-        var disposable = new RecordingAsyncDisposable();
+        RecordingAsyncDisposable disposable = new();
 
         await DisposableAsyncSlot.AssignAsync(ref slot, disposable);
         await DisposableAsyncSlot.DisposeAsync(ref slot);
@@ -65,7 +65,7 @@ public class DisposableAsyncSlotTests
         IAsyncDisposable? slot = null;
         await DisposableAsyncSlot.DisposeAsync(ref slot);
 
-        var late = new RecordingAsyncDisposable();
+        RecordingAsyncDisposable late = new();
         await DisposableAsyncSlot.AssignAsync(ref slot, late);
 
         await Assert.That(late.DisposeCount).IsEqualTo(1);

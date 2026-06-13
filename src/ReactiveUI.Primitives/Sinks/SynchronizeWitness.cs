@@ -25,7 +25,7 @@ public sealed class SynchronizeWitness<T> : IObserver<T>, IDisposable
     /// <summary>Initializes a new instance of the <see cref="SynchronizeWitness{T}"/> class with a private gate.</summary>
     /// <param name="observer">The downstream observer.</param>
     public SynchronizeWitness(IObserver<T> observer)
-        : this(observer, new Lock())
+        : this(observer, new())
     {
     }
 

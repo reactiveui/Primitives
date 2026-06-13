@@ -24,7 +24,7 @@ internal sealed class ScanWithInitialObservable<TSource, TAccumulate>(
         InvalidOperationExceptionHelper.ThrowIfNull(accumulator);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new ScanWithInitialSink(observer, initial, accumulator);
+        ScanWithInitialSink sink = new(observer, initial, accumulator);
         sink.Initialize();
         return source.Subscribe(sink);
     }

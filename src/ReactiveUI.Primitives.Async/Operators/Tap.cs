@@ -106,7 +106,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var doObserver = new AsyncSideEffectWitness(observer, onNext, onErrorResume, onCompleted);
+            AsyncSideEffectWitness doObserver = new(observer, onNext, onErrorResume, onCompleted);
             return source.SubscribeAsync(doObserver, cancellationToken);
         }
 
@@ -175,7 +175,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var doObserver = new SyncSideEffectWitness(observer, onNext, onErrorResume, onCompleted);
+            SyncSideEffectWitness doObserver = new(observer, onNext, onErrorResume, onCompleted);
             return source.SubscribeAsync(doObserver, cancellationToken);
         }
 

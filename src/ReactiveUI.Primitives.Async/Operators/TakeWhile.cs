@@ -19,7 +19,7 @@ public static partial class SignalAsyncExtensions
         /// and a cancellation token.</param>
         /// <returns>An observable sequence that contains elements from the source sequence that satisfy the
         /// condition, completing as soon as the predicate returns false.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="predicate"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="predicate"/> is null.</exception>
         public IObservableAsync<T> TakeWhile(Func<T, CancellationToken, ValueTask<bool>> predicate)
         {
             ArgumentExceptionHelper.ThrowIfNull(@this);
@@ -32,7 +32,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="predicate">A function to test each element for a condition.</param>
         /// <returns>An observable sequence that contains elements from the source sequence that satisfy the
         /// condition, completing as soon as the predicate returns false.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="predicate"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="predicate"/> is null.</exception>
         public IObservableAsync<T> TakeWhile(Func<T, bool> predicate)
         {
             ArgumentExceptionHelper.ThrowIfNull(@this);
@@ -56,7 +56,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new TakeWhileSyncWitness(observer, predicate, cancellationToken);
+            TakeWhileSyncWitness sink = new(observer, predicate, cancellationToken);
 
             if (observer is WitnessAsync<T> downstreamBase)
             {
@@ -120,7 +120,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new TakeWhileAsyncWitness(observer, predicate, cancellationToken);
+            TakeWhileAsyncWitness sink = new(observer, predicate, cancellationToken);
 
             if (observer is WitnessAsync<T> downstreamBase)
             {

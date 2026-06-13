@@ -28,7 +28,7 @@ internal sealed class DebounceUntilObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(scheduler);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new DebounceUntilSink(observer, debounce, condition, scheduler);
+        DebounceUntilSink sink = new(observer, debounce, condition, scheduler);
         var subscription = source.Subscribe(sink);
         return new DisposableBag(subscription, sink);
     }

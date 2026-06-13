@@ -26,7 +26,7 @@ internal sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new Sink(observer, emitMaximum);
+        Sink sink = new(observer, emitMaximum);
         return new DisposableBag(
             _left.Subscribe(new IndexedWitness(sink, isLeft: true)),
             _right.Subscribe(new IndexedWitness(sink, isLeft: false)));

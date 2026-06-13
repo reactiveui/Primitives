@@ -18,7 +18,7 @@ internal sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IOb
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new SynchronizeAsyncSink(observer);
+        SynchronizeAsyncSink sink = new(observer);
         var sub = source.Subscribe(sink);
         return new DisposableBag(sub, sink);
     }
@@ -103,7 +103,7 @@ internal sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IOb
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         private Task ProcessAsync(T value)
         {
-            var signal = new SyncSignal();
+            SyncSignal signal = new();
             downstream.OnNext((value, signal));
             return signal.WaitForDisposeAsync();
         }
@@ -117,7 +117,7 @@ internal sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IOb
         private sealed class SyncSignal : IDisposable
         {
             /// <summary>The lazily-created completion source; only allocated on the slow path.</summary>
-            private TaskCompletionSource? _tcs;
+            private TaskCompletionSource<bool>? _tcs;
 
             /// <summary>Latches to <c>1</c> on the first dispose so signalling is idempotent.</summary>
             private int _disposed;
@@ -133,7 +133,7 @@ internal sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IOb
                     return Task.CompletedTask;
                 }
 
-                var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
                 Volatile.Write(ref _tcs, tcs);
                 CompleteIfDisposedRaced(tcs);
                 return tcs.Task;
@@ -147,7 +147,7 @@ internal sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IOb
                     return;
                 }
 
-                Volatile.Read(ref _tcs)?.TrySetResult();
+                Volatile.Read(ref _tcs)?.TrySetResult(true);
             }
 
             /// <summary>Self-completes the just-published TCS if a dispose raced ahead of the publish and could
@@ -156,14 +156,14 @@ internal sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IOb
             /// <remarks>The set-result is only taken when a concurrent dispose latches between the publish and
             /// this re-check; isolated here and excluded from coverage as race-only.</remarks>
             [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-            private void CompleteIfDisposedRaced(TaskCompletionSource tcs)
+            private void CompleteIfDisposedRaced(TaskCompletionSource<bool> tcs)
             {
                 if (Volatile.Read(ref _disposed) != 1)
                 {
                     return;
                 }
 
-                tcs.TrySetResult();
+                tcs.TrySetResult(true);
             }
         }
     }

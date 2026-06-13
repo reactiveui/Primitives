@@ -30,9 +30,9 @@ public static partial class SignalExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            var values = new List<T>();
+            List<T> values = [];
             Exception? error = null;
-            using var completed = new ManualResetEventSlim();
+            using ManualResetEventSlim completed = new();
             using var subscription = source.Subscribe(
                 values.Add,
                 ex =>

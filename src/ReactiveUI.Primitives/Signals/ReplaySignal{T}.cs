@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>ReplaySignal.</summary>
+/// <summary>A signal that replays buffered values to new subscribers.</summary>
 /// <typeparam name="T">The Type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class ReplaySignal<T> : ISignal<T>
@@ -66,15 +66,9 @@ public class ReplaySignal<T> : ISignal<T>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
     public ReplaySignal(int bufferSize, TimeSpan window, ISequencer scheduler)
     {
-        if (bufferSize < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(bufferSize));
-        }
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(bufferSize);
 
-        if (window < TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(window));
-        }
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(window, TimeSpan.Zero);
 
         _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
         _bufferSize = bufferSize;
@@ -188,11 +182,11 @@ public class ReplaySignal<T> : ISignal<T>
     }
 
     /// <summary>Called when [error].</summary>
-    /// <param name="exception">The exception.</param>
-    /// <exception cref="ArgumentExceptionHelper">exception.</exception>
-    public void OnError(Exception exception)
+    /// <param name="error">The exception.</param>
+    /// <exception cref="ArgumentExceptionHelper">error.</exception>
+    public void OnError(Exception error)
     {
-        ArgumentExceptionHelper.ThrowIfNull(exception);
+        ArgumentExceptionHelper.ThrowIfNull(error);
 
         lock (_observerLock)
         {
@@ -203,14 +197,14 @@ public class ReplaySignal<T> : ISignal<T>
             }
 
             _isStopped = true;
-            _lastError = exception;
+            _lastError = error;
             if (_queue is not null)
             {
                 Trim();
             }
         }
 
-        _broadcaster.Error(exception);
+        _broadcaster.Error(error);
         _broadcaster.Clear();
     }
 

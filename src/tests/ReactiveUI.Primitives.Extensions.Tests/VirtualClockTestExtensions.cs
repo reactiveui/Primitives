@@ -21,6 +21,6 @@ internal static class VirtualClockTestExtensions
         /// <summary>Advances a virtual clock to an absolute tick value.</summary>
         /// <param name="ticks">The absolute tick value.</param>
         public void AdvanceTo(long ticks) =>
-            clock.AdvanceTo(new DateTimeOffset(ticks, TimeSpan.Zero));
+            clock.AdvanceTo(new(ticks, TimeSpan.Zero));
     }
 }

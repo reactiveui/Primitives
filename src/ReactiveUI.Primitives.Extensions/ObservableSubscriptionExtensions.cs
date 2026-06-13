@@ -17,6 +17,53 @@ public static class ObservableSubscriptionExtensions
     /// <summary>The default timeout used by the <c>WaitFor*</c> helpers when no override is supplied.</summary>
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
 
+    /// <summary>Blocking subscribe and wait operators for a <see cref="RxVoid"/>-producing source.</summary>
+    /// <param name="source">The observable to subscribe to.</param>
+    extension(IObservable<RxVoid> source)
+    {
+        /// <summary>Subscribes to a <see cref="RxVoid"/>-producing observable, discarding the value. Safe only when the sequence terminates synchronously.</summary>
+        public void SubscribeAndComplete()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            using var subscription = source.Subscribe(NoopWitness<RxVoid>.Instance);
+        }
+
+        /// <summary>Subscribes to the source and returns any error emitted during the synchronous <see cref="IObservable{T}.Subscribe(IObserver{T})"/> call.</summary>
+        /// <returns>The captured error, or <see langword="null"/> if none.</returns>
+        public Exception? SubscribeGetError()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ErrorCaptureWitness<RxVoid> sink = new();
+            using var subscription = source.Subscribe(sink);
+            return sink.Error;
+        }
+
+        /// <summary>Blocks until the <see cref="RxVoid"/>-producing source completes (default 30s timeout); rethrows any captured error.</summary>
+        public void WaitForCompletion() =>
+            WaitForCompletionCore(source, null, DefaultTimeout);
+
+        /// <summary>Blocks until the <see cref="RxVoid"/>-producing source completes, honoring an explicit <paramref name="timeout"/>; rethrows any captured error.</summary>
+        /// <param name="timeout">The wait timeout.</param>
+        public void WaitForCompletion(TimeSpan timeout) =>
+            WaitForCompletionCore(source, null, timeout);
+
+        /// <summary>Blocks until the <see cref="RxVoid"/>-producing source completes, routing the subscribe call through <paramref name="scheduler"/>; rethrows any captured error.</summary>
+        /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
+        public void WaitForCompletion(ISequencer scheduler) =>
+            WaitForCompletionCore(source, scheduler, DefaultTimeout);
+
+        /// <summary>
+        /// Blocks until the <see cref="RxVoid"/>-producing source completes, routing the subscribe call
+        /// through <paramref name="scheduler"/> with an explicit <paramref name="timeout"/>; rethrows any captured error.
+        /// </summary>
+        /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
+        /// <param name="timeout">The wait timeout.</param>
+        public void WaitForCompletion(ISequencer scheduler, TimeSpan timeout) =>
+            WaitForCompletionCore(source, scheduler, timeout);
+    }
+
     /// <summary>Blocking subscribe and wait operators for an observable source sequence.</summary>
     /// <typeparam name="T">The element type of the source.</typeparam>
     /// <param name="source">The observable to subscribe to.</param>
@@ -28,7 +75,7 @@ public static class ObservableSubscriptionExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            var sink = new ValueCaptureWitness<T>();
+            ValueCaptureWitness<T> sink = new();
             using var subscription = source.Subscribe(sink);
             return sink.Value;
         }
@@ -39,7 +86,7 @@ public static class ObservableSubscriptionExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            var sink = new ErrorCaptureWitness<T>();
+            ErrorCaptureWitness<T> sink = new();
             using var subscription = source.Subscribe(sink);
             return sink.Error;
         }
@@ -101,53 +148,6 @@ public static class ObservableSubscriptionExtensions
             WaitForErrorCore(source, scheduler, timeout);
     }
 
-    /// <summary>Blocking subscribe and wait operators for a <see cref="RxVoid"/>-producing source.</summary>
-    /// <param name="source">The observable to subscribe to.</param>
-    extension(IObservable<RxVoid> source)
-    {
-        /// <summary>Subscribes to a <see cref="RxVoid"/>-producing observable, discarding the value. Safe only when the sequence terminates synchronously.</summary>
-        public void SubscribeAndComplete()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            using var subscription = source.Subscribe(NoopWitness<RxVoid>.Instance);
-        }
-
-        /// <summary>Subscribes to the source and returns any error emitted during the synchronous <see cref="IObservable{T}.Subscribe(IObserver{T})"/> call.</summary>
-        /// <returns>The captured error, or <see langword="null"/> if none.</returns>
-        public Exception? SubscribeGetError()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            var sink = new ErrorCaptureWitness<RxVoid>();
-            using var subscription = source.Subscribe(sink);
-            return sink.Error;
-        }
-
-        /// <summary>Blocks until the <see cref="RxVoid"/>-producing source completes (default 30s timeout); rethrows any captured error.</summary>
-        public void WaitForCompletion() =>
-            WaitForCompletionCore(source, null, DefaultTimeout);
-
-        /// <summary>Blocks until the <see cref="RxVoid"/>-producing source completes, honoring an explicit <paramref name="timeout"/>; rethrows any captured error.</summary>
-        /// <param name="timeout">The wait timeout.</param>
-        public void WaitForCompletion(TimeSpan timeout) =>
-            WaitForCompletionCore(source, null, timeout);
-
-        /// <summary>Blocks until the <see cref="RxVoid"/>-producing source completes, routing the subscribe call through <paramref name="scheduler"/>; rethrows any captured error.</summary>
-        /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
-        public void WaitForCompletion(ISequencer scheduler) =>
-            WaitForCompletionCore(source, scheduler, DefaultTimeout);
-
-        /// <summary>
-        /// Blocks until the <see cref="RxVoid"/>-producing source completes, routing the subscribe call
-        /// through <paramref name="scheduler"/> with an explicit <paramref name="timeout"/>; rethrows any captured error.
-        /// </summary>
-        /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
-        /// <param name="timeout">The wait timeout.</param>
-        public void WaitForCompletion(ISequencer scheduler, TimeSpan timeout) =>
-            WaitForCompletionCore(source, scheduler, timeout);
-    }
-
     /// <summary>Shared implementation of the <c>WaitForValue</c> operators.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The source observable.</param>
@@ -159,7 +159,7 @@ public static class ObservableSubscriptionExtensions
         ArgumentExceptionHelper.ThrowIfNull(source);
 
         using ManualResetEventSlim done = new();
-        var sink = new BlockingValueWitness<T>(done);
+        BlockingValueWitness<T> sink = new(done);
         using var subscription = ScheduledSubscribe(source, sink, scheduler);
 
         if (!done.Wait(timeout))
@@ -180,7 +180,7 @@ public static class ObservableSubscriptionExtensions
         ArgumentExceptionHelper.ThrowIfNull(source);
 
         using ManualResetEventSlim done = new();
-        var sink = new BlockingTerminalWitness<RxVoid>(done);
+        BlockingTerminalWitness<RxVoid> sink = new(done);
         using var subscription = ScheduledSubscribe(source, sink, scheduler);
 
         if (!done.Wait(timeout))
@@ -208,7 +208,7 @@ public static class ObservableSubscriptionExtensions
         ArgumentExceptionHelper.ThrowIfNull(source);
 
         using ManualResetEventSlim done = new();
-        var sink = new BlockingTerminalWitness<T>(done);
+        BlockingTerminalWitness<T> sink = new(done);
         using var subscription = ScheduledSubscribe(source, sink, scheduler);
 
         if (!done.Wait(timeout))
@@ -241,7 +241,7 @@ public static class ObservableSubscriptionExtensions
             return source.Subscribe(observer);
         }
 
-        var swap = new SwapDisposable();
+        SwapDisposable swap = new();
         var scheduled = scheduler.Schedule(() => swap.Disposable = source.Subscribe(observer));
         return new DisposableBag(scheduled, swap);
     }

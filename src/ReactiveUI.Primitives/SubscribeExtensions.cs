@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>SubscribeExtensions.</summary>
+/// <summary>Provides subscription extension methods for observables.</summary>
 public static class SubscribeExtensions
 {
     /// <summary>Error callback that rethrows with the original exception dispatch information.</summary>
@@ -16,6 +16,22 @@ public static class SubscribeExtensions
 
     /// <summary>Completion callback that does nothing.</summary>
     private static readonly Action nop = () => { };
+
+    /// <summary>Exception helpers for a nullable exception receiver.</summary>
+    /// <param name="exception">The exception.</param>
+    extension(Exception? exception)
+    {
+        /// <summary>Rethrows Exception.</summary>
+        public void Rethrow()
+        {
+            if (exception is null)
+            {
+                return;
+            }
+
+            throw exception;
+        }
+    }
 
     /// <summary>Subscription operators for an observable source sequence.</summary>
     /// <param name="source">Signals sequence to subscribe to.</param>
@@ -100,22 +116,6 @@ public static class SubscribeExtensions
             }
 
             return source.Subscribe(new EmptyWitness<T>(onNext, onError, onCompleted));
-        }
-    }
-
-    /// <summary>Exception helpers for a nullable exception receiver.</summary>
-    /// <param name="exception">The exception.</param>
-    extension(Exception? exception)
-    {
-        /// <summary>Rethrows Exception.</summary>
-        public void Rethrow()
-        {
-            if (exception is null)
-            {
-                return;
-            }
-
-            throw exception;
         }
     }
 

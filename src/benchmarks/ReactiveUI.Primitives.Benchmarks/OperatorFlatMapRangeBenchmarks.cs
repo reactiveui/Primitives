@@ -18,7 +18,7 @@ public class OperatorFlatMapRangeBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesFlatMapRange()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(1, 8).FlatMap(static x => Signal.Sequence(x * 10, 2))
             .Subscribe(observer);
         return observer.Total;
@@ -29,7 +29,7 @@ public class OperatorFlatMapRangeBenchmarks
     [Benchmark]
     public int SystemReactiveSelectManyRange()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.SelectMany(RxObservable.Range(1, 8), static x => RxObservable.Range(x * 10, 2))
             .Subscribe(observer);
         return observer.Total;
@@ -40,7 +40,7 @@ public class OperatorFlatMapRangeBenchmarks
     [Benchmark]
     public int R3SelectManyRange()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.SelectMany(
                 R3.Observable.Range(1, 8),
                 static x => R3.Observable.Range(x * 10, 2))

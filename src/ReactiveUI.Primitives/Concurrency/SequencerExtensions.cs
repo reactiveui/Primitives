@@ -25,7 +25,7 @@ public static class SequencerExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(action);
 
-            var item = new Sequencer.DelegateWorkItem<TState>(scheduler, state, action);
+            Sequencer.DelegateWorkItem<TState> item = new(scheduler, state, action);
             scheduler.Schedule(item);
             return item;
         }
@@ -42,7 +42,7 @@ public static class SequencerExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(action);
 
-            var item = new Sequencer.ActionWorkItem<TState>(state, action);
+            Sequencer.ActionWorkItem<TState> item = new(state, action);
             scheduler.Schedule(item);
             return item;
         }
@@ -61,7 +61,7 @@ public static class SequencerExtensions
             ArgumentExceptionHelper.ThrowIfNull(action);
 
             var normalized = Sequencer.Normalize(dueTime);
-            var item = new Sequencer.DelegateWorkItem<TState>(scheduler, state, action);
+            Sequencer.DelegateWorkItem<TState> item = new(scheduler, state, action);
             if (normalized == TimeSpan.Zero)
             {
                 scheduler.Schedule(item);
@@ -103,7 +103,7 @@ public static class SequencerExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(action);
 
-            var item = new Sequencer.ActionWorkItem<TState>(state, action);
+            Sequencer.ActionWorkItem<TState> item = new(state, action);
             scheduler.Schedule(item, dueTimestamp);
             return item;
         }

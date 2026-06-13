@@ -27,7 +27,7 @@ public static partial class SignalAsyncExtensions
         public async ValueTask<bool> AnyAsync(Func<T, bool>? predicate, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var observer = new AnyTaskWitness<T>(predicate, cancellationToken);
+            AnyTaskWitness<T> observer = new(predicate, cancellationToken);
             await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
@@ -50,7 +50,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if every
         /// element of the sequence passes the test in the specified predicate, or if the sequence is empty; otherwise,
         /// <see langword="false"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="predicate"/> is <see langword="null"/>.</exception>
         public ValueTask<bool> AllAsync(Func<T, bool> predicate) => @this.AllAsync(predicate, CancellationToken.None);
 
         /// <summary>Asynchronously determines whether all elements in the sequence satisfy the specified predicate.</summary>
@@ -60,13 +60,13 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if every
         /// element of the sequence passes the test in the specified predicate, or if the sequence is empty; otherwise,
         /// <see langword="false"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="predicate"/> is <see langword="null"/>.</exception>
         public async ValueTask<bool> AllAsync(Func<T, bool> predicate, CancellationToken cancellationToken)
         {
             ArgumentExceptionHelper.ThrowIfNull(predicate);
             cancellationToken.ThrowIfCancellationRequested();
 
-            var observer = new AllTaskWitness<T>(predicate, cancellationToken);
+            AllTaskWitness<T> observer = new(predicate, cancellationToken);
             await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }

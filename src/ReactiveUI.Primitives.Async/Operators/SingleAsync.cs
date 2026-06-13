@@ -86,7 +86,7 @@ public static partial class SignalAsyncExtensions
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var observer = new SingleElementWitness<T>(predicate, requireExactlyOne: true, defaultValue: default, cancellationToken);
+        SingleElementWitness<T> observer = new(predicate, requireExactlyOne: true, defaultValue: default, cancellationToken);
         await using var subscription = await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
         var result = await observer.AwaitResultAsync().ConfigureAwait(false);
         return result!;

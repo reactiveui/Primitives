@@ -22,7 +22,7 @@ public sealed class DispatcherSequencerTests
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullDispatcher() =>
-        await Assert.That(() => new DispatcherSequencer(null!)).Throws<ArgumentNullException>();
+        await Assert.That(() => new DispatcherSequencer(null!)).ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Verifies immediate work is posted to and executed on the dispatcher thread.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>

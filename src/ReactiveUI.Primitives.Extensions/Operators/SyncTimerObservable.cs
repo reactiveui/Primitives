@@ -24,7 +24,7 @@ internal static class SyncTimerObservable
 
     /// <summary>Static factory passed to <c>ConcurrentDictionary.GetOrAdd</c>; avoids a per-call delegate allocation.</summary>
     private static readonly Func<(TimeSpan TimeSpan, ISequencer Scheduler), SharedTimer> _create =
-        static key => new SharedTimer(key.TimeSpan, key.Scheduler);
+        static key => new(key.TimeSpan, key.Scheduler);
 
     /// <summary>Gets a shared timer for the specified period and scheduler.</summary>
     /// <param name="timeSpan">The period.</param>

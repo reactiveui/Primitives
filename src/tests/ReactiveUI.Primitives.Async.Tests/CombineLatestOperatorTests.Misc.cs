@@ -18,9 +18,9 @@ public partial class CombineLatestOperatorTests
     public async Task WhenCombineLatestDisposedThenErrorIgnored()
     {
         const int PostDisposeValue = 10;
-        var source1 = new DirectSource<int>();
-        var source2 = new DirectSource<int>();
-        var items = new List<int>();
+        DirectSource<int> source1 = new();
+        DirectSource<int> source2 = new();
+        List<int> items = [];
 
         var sub = await source1.CombineLatest(source2, (a, b) => a + b)
             .SubscribeAsync(
@@ -45,9 +45,9 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestSourceEmitsError_ThenErrorPropagated()
     {
-        var error = new InvalidOperationException("src-error");
-        var source1 = new DirectSource<int>();
-        var source2 = new DirectSource<int>();
+        InvalidOperationException error = new("src-error");
+        DirectSource<int> source1 = new();
+        DirectSource<int> source2 = new();
         Exception? caughtError = null;
 
         await using var sub = await source1.CombineLatest(source2, (a, b) => a + b)
@@ -94,11 +94,10 @@ public partial class CombineLatestOperatorTests
         var a = Signal.Create<int>();
         var b = Signal.Create<int>();
         IReadOnlyList<IObservableAsync<int>> sources = [a.Values, b.Values];
-        var expected = new InvalidOperationException("selector-failed");
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        InvalidOperationException expected = new("selector-failed");
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await using var sub = await sources.CombineLatest<int, int>(
-                snapshot => throw expected)
+        await using var sub = await sources.CombineLatest<int, int>(snapshot => throw expected)
             .SubscribeAsync(
                 static (_, _) => default,
                 null,

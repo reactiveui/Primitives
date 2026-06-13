@@ -77,7 +77,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var delayObserver = new DelayWitness(observer, delayInterval, timeProvider, cancellationToken);
+            DelayWitness delayObserver = new(observer, delayInterval, timeProvider, cancellationToken);
             return source.SubscribeAsync(delayObserver, cancellationToken);
         }
 

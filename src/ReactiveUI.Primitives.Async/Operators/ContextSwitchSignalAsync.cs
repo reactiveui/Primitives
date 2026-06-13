@@ -19,7 +19,7 @@ internal sealed class ContextSwitchSignalAsync<T>(
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)
     {
-        var contextSwitchObserver = new ContextSwitchWitness(observer, asyncContext, forceYielding);
+        ContextSwitchWitness contextSwitchObserver = new(observer, asyncContext, forceYielding);
         return source.SubscribeAsync(contextSwitchObserver, cancellationToken);
     }
 

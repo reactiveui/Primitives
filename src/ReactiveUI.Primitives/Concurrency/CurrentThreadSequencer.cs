@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>CurrentThreadSequencer.</summary>
+/// <summary>A sequencer that schedules work on the current thread using a trampoline queue.</summary>
 /// <seealso cref="ISequencer" />
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class CurrentThreadSequencer : ISequencer
@@ -78,7 +78,7 @@ public sealed class CurrentThreadSequencer : ISequencer
             return EmptyDisposable.Instance;
         }
 
-        var item = new ActionWorkItem(action);
+        ActionWorkItem item = new(action);
         Schedule(item);
         return item;
     }
@@ -163,7 +163,7 @@ public sealed class CurrentThreadSequencer : ISequencer
         }
 
         // queue up more work
-        var si = new CurrentThreadScheduledItem(item, dueTimestamp);
+        CurrentThreadScheduledItem si = new(item, dueTimestamp);
         queue.Enqueue(si);
     }
 

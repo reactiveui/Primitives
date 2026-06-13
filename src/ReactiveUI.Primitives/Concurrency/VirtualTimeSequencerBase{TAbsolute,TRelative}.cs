@@ -42,7 +42,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
         Comparer = comparer ?? throw new ArgumentNullException(nameof(comparer));
     }
 
-    /// <summary>Gets or sets the scheduler's absolute time clock value.</summary>
+    /// <summary>Gets the scheduler's absolute time clock value.</summary>
     public TAbsolute Clock
     {
         get;
@@ -67,7 +67,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
 
     /// <summary>Advances the scheduler's clock by the specified relative time, running all work scheduled for that timespan.</summary>
     /// <param name="time">Relative time to advance the scheduler's clock by.</param>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="time"/> is negative.</exception>
+    /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="time"/> is negative.</exception>
     /// <exception cref="InvalidOperationException">
     /// The scheduler is already running. VirtualTimeSequencer doesn't support running nested
     /// work dispatch loops. To simulate time slippage while running work on the scheduler,
@@ -100,7 +100,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
 
     /// <summary>Advances the scheduler's clock to the specified time, running all work till that point.</summary>
     /// <param name="time">Absolute time to advance the scheduler's clock to.</param>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="time"/> is in the past.</exception>
+    /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="time"/> is in the past.</exception>
     /// <exception cref="InvalidOperationException">
     /// The scheduler is already running. VirtualTimeSequencer doesn't support running nested
     /// work dispatch loops. To simulate time slippage while running work on the scheduler,
@@ -262,7 +262,7 @@ public abstract class VirtualTimeSequencerBase<TAbsolute, TRelative> : ISequence
 
     /// <summary>Advances the scheduler's clock by the specified relative time.</summary>
     /// <param name="time">Relative time to advance the scheduler's clock by.</param>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="time"/> is negative.</exception>
+    /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="time"/> is negative.</exception>
     public void Sleep(TRelative time)
     {
         var dt = Add(Clock, time);

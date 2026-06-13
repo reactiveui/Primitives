@@ -31,7 +31,7 @@ internal sealed class WhileObservable(
         InvalidOperationExceptionHelper.ThrowIfNull(action);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new WhileSink(observer, condition, action, scheduler);
+        WhileSink sink = new(observer, condition, action, scheduler);
         sink.Run();
         return sink;
     }

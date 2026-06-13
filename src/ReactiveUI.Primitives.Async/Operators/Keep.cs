@@ -55,10 +55,7 @@ public static partial class SignalAsyncExtensions
             TState state,
             Func<TState, T, bool> predicate)
         {
-            if (predicate is null)
-            {
-                throw new ArgumentNullException(nameof(predicate));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(predicate);
 
             return @this.Keep(value => predicate(state, value));
         }
@@ -99,7 +96,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new KeepAsyncWitness(observer, predicate, cancellationToken);
+            KeepAsyncWitness sink = new(observer, predicate, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
             // recognises this token without allocating a per-emission linked CTS.
@@ -158,7 +155,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new KeepSyncWitness(observer, predicate, cancellationToken);
+            KeepSyncWitness sink = new(observer, predicate, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
             // recognises this token without allocating a per-emission linked CTS.

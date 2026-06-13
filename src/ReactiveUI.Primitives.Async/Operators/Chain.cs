@@ -10,6 +10,31 @@ namespace ReactiveUI.Primitives.Async;
 /// types that implement asynchronous, push-based data streams.</remarks>
 public static partial class SignalAsyncExtensions
 {
+    /// <summary>Chain/Concat operators for a collection of observable sequences.</summary>
+    /// <param name="this">A collection of asynchronous observable sequences to concatenate. Cannot be null.</param>
+    /// <typeparam name="T">The type of the elements in the observable sequences.</typeparam>
+    extension<T>(IEnumerable<IObservableAsync<T>> @this)
+    {
+        /// <summary>
+        /// Concatenates multiple asynchronous observable sequences into a single sequence that emits items from each source
+        /// in order.
+        /// </summary>
+        /// <remarks>Each source sequence is subscribed to only after the previous one completes. If any source
+        /// sequence signals an error, concatenation stops and the error is propagated to the observer.</remarks>
+        /// <returns>An asynchronous observable sequence that emits all items from each source sequence in the order they appear in
+        /// the collection.</returns>
+        public IObservableAsync<T> Chain() =>
+            new ChainEnumerableSignal<T>(@this);
+
+        /// <summary>
+        /// Concatenates multiple asynchronous observable sequences into a single sequence that emits items from each source
+        /// in order.
+        /// </summary>
+        /// <returns>An asynchronous observable sequence that emits all items from each source sequence in order.</returns>
+        public IObservableAsync<T> Concat() =>
+            @this.Chain();
+    }
+
     /// <summary>Chain/Concat operators for an observable sequence of inner observable sequences.</summary>
     /// <param name="this">The source observable sequence whose elements are themselves observable sequences to be concatenated. Cannot be
     /// null.</param>
@@ -33,31 +58,6 @@ public static partial class SignalAsyncExtensions
         /// each inner sequence in order only after the previous one completes.
         /// </summary>
         /// <returns>An observable sequence that emits the elements of each inner observable sequence in order.</returns>
-        public IObservableAsync<T> Concat() =>
-            @this.Chain();
-    }
-
-    /// <summary>Chain/Concat operators for a collection of observable sequences.</summary>
-    /// <param name="this">A collection of asynchronous observable sequences to concatenate. Cannot be null.</param>
-    /// <typeparam name="T">The type of the elements in the observable sequences.</typeparam>
-    extension<T>(IEnumerable<IObservableAsync<T>> @this)
-    {
-        /// <summary>
-        /// Concatenates multiple asynchronous observable sequences into a single sequence that emits items from each source
-        /// in order.
-        /// </summary>
-        /// <remarks>Each source sequence is subscribed to only after the previous one completes. If any source
-        /// sequence signals an error, concatenation stops and the error is propagated to the observer.</remarks>
-        /// <returns>An asynchronous observable sequence that emits all items from each source sequence in the order they appear in
-        /// the collection.</returns>
-        public IObservableAsync<T> Chain() =>
-            new ChainEnumerableSignal<T>(@this);
-
-        /// <summary>
-        /// Concatenates multiple asynchronous observable sequences into a single sequence that emits items from each source
-        /// in order.
-        /// </summary>
-        /// <returns>An asynchronous observable sequence that emits all items from each source sequence in order.</returns>
         public IObservableAsync<T> Concat() =>
             @this.Chain();
     }

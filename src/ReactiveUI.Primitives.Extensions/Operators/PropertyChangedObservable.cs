@@ -36,7 +36,7 @@ internal sealed class PropertyChangedObservable<T, TProperty>(
 
         observer.OnNext(getter(source));
 
-        var sink = new PropertyChangedSink(observer, source, propertyName, getter);
+        PropertyChangedSink sink = new(observer, source, propertyName, getter);
         source.PropertyChanged += sink.Handler;
         return sink;
     }

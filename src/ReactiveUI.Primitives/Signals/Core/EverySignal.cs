@@ -37,13 +37,13 @@ internal sealed class EverySignal : IRequireCurrentThread<long>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var coordinator = new EveryCoordinator(observer, _scheduler, _period);
+        EveryCoordinator coordinator = new(observer, _scheduler, _period);
         if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
         {
             return coordinator.Run();
         }
 
-        var subscription = new SingleDisposable();
+        SingleDisposable subscription = new();
         Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run()));
         return subscription;
     }

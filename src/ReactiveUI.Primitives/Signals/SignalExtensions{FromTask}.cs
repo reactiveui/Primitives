@@ -7,6 +7,41 @@ namespace ReactiveUI.Primitives.Signals;
 /// <summary>Task and observable cancellation extension operators.</summary>
 public static partial class SignalExtensions
 {
+    /// <summary>Cancellation-handling operators for an observable source sequence.</summary>
+    /// <param name="asyncTask">The asynchronous task.</param>
+    /// <typeparam name="TResult">The type.</typeparam>
+    extension<TResult>(IObservable<TResult> asyncTask)
+    {
+        /// <summary>Handles the cancellation.</summary>
+        /// <param name="token">The token.</param>
+        /// <returns>
+        /// A Task.
+        /// </returns>
+        public Task<TResult?> HandleCancellation(CancellationToken token) =>
+            asyncTask.HandleCancellation(null, token);
+
+        /// <summary>Handles the cancellation.</summary>
+        /// <param name="action">The action.</param>
+        /// <param name="token">The token.</param>
+        /// <returns>
+        /// A Task.
+        /// </returns>
+        public async Task<TResult?> HandleCancellation(Action? action, CancellationToken token)
+        {
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                return await Task.Run(async () => await asyncTask, token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                action?.Invoke();
+            }
+
+            return default;
+        }
+    }
+
     /// <summary>Cancellation-handling operators for a task.</summary>
     /// <param name="asyncTask">The asynchronous task.</param>
     extension(Task asyncTask)
@@ -62,7 +97,7 @@ public static partial class SignalExtensions
         /// <returns>The result.</returns>
         internal async Task<(TResult Value, bool IsCanceled)> WhenCancelled(CancellationToken cancellationToken)
         {
-            var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource<TResult> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
             var registration = cancellationToken.Register(
                 static state => ((TaskCompletionSource<TResult>)state!).TrySetCanceled(),
                 tcs,
@@ -96,41 +131,6 @@ public static partial class SignalExtensions
                 registration.Dispose();
 #endif
             }
-        }
-    }
-
-    /// <summary>Cancellation-handling operators for an observable source sequence.</summary>
-    /// <param name="asyncTask">The asynchronous task.</param>
-    /// <typeparam name="TResult">The type.</typeparam>
-    extension<TResult>(IObservable<TResult> asyncTask)
-    {
-        /// <summary>Handles the cancellation.</summary>
-        /// <param name="token">The token.</param>
-        /// <returns>
-        /// A Task.
-        /// </returns>
-        public Task<TResult?> HandleCancellation(CancellationToken token) =>
-            asyncTask.HandleCancellation(null, token);
-
-        /// <summary>Handles the cancellation.</summary>
-        /// <param name="action">The action.</param>
-        /// <param name="token">The token.</param>
-        /// <returns>
-        /// A Task.
-        /// </returns>
-        public async Task<TResult?> HandleCancellation(Action? action, CancellationToken token)
-        {
-            try
-            {
-                token.ThrowIfCancellationRequested();
-                return await Task.Run(async () => await asyncTask, token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                action?.Invoke();
-            }
-
-            return default;
         }
     }
 }

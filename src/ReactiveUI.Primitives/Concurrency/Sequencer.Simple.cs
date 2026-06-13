@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>Sequencer.</summary>
+/// <summary>Provides built-in sequencers for scheduling work over time.</summary>
 public static partial class Sequencer
 {
     /// <summary>Determines whether a scheduled work item has been cancelled.</summary>

@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>ImmediateSequencer.</summary>
+/// <summary>A sequencer that executes work immediately on the calling thread.</summary>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class ImmediateSequencer : ISequencer
@@ -40,6 +40,10 @@ public sealed class ImmediateSequencer : ISequencer
         "Performance",
         "CA1822:Mark members as static",
         Justification = "Must remain an instance method so overload resolution selects it over the allocating ISequencer.Schedule(Action) extension, giving an allocation-free immediate path.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S2325:Methods and properties that don't access instance data should be static",
+        Justification = "Must remain an instance method so overload resolution selects it over the allocating ISequencer.Schedule(Action) extension.")]
     public IDisposable Schedule(Action action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);

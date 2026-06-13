@@ -9,6 +9,38 @@ namespace ReactiveUI.Primitives;
 /// <summary>Hot-sharing operators for Primitives connectable signals.</summary>
 public static class ConnectableSignalExtensions
 {
+    /// <summary>Reference-counting operators for a connectable signal source.</summary>
+    /// <param name="source">Connectable signal to reference count or auto-connect.</param>
+    /// <typeparam name="T">The value type.</typeparam>
+    extension<T>(ConnectableSignal<T> source)
+    {
+        /// <summary>Connects on first subscriber and disconnects when the last subscriber disposes.</summary>
+        /// <returns>A reference-counted sequence.</returns>
+        public IObservable<T> AutoShare()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return AutoShareGate<T>.For(source);
+        }
+
+        /// <summary>Connects on the first observer subscription.</summary>
+        /// <returns>A sequence that connects after the first subscription.</returns>
+        public IObservable<T> AutoConnect() =>
+            source.AutoConnect(1);
+
+        /// <summary>Connects after <paramref name="subscriberCount"/> observers have subscribed.</summary>
+        /// <param name="subscriberCount">Number of observers required before connecting.</param>
+        /// <returns>A sequence that connects after the requested number of subscriptions.</returns>
+        public IObservable<T> AutoConnect(int subscriberCount)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(subscriberCount);
+
+            return AutoConnectGate<T>.For(source, subscriberCount);
+        }
+    }
+
     /// <summary>Hot-sharing operators for an observable source sequence.</summary>
     /// <param name="source">Source sequence to multicast, share, or replay.</param>
     /// <typeparam name="T">The value type.</typeparam>
@@ -65,41 +97,6 @@ public static class ConnectableSignalExtensions
         /// <summary>Shares one live source subscription while at least one observer is subscribed.</summary>
         /// <returns>A reference-counted live sequence.</returns>
         public IObservable<T> ShareLatest() => source.ShareLive().AutoShare();
-    }
-
-    /// <summary>Reference-counting operators for a connectable signal source.</summary>
-    /// <param name="source">Connectable signal to reference count or auto-connect.</param>
-    /// <typeparam name="T">The value type.</typeparam>
-    extension<T>(ConnectableSignal<T> source)
-    {
-        /// <summary>Connects on first subscriber and disconnects when the last subscriber disposes.</summary>
-        /// <returns>A reference-counted sequence.</returns>
-        public IObservable<T> AutoShare()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return AutoShareGate<T>.For(source);
-        }
-
-        /// <summary>Connects on the first observer subscription.</summary>
-        /// <returns>A sequence that connects after the first subscription.</returns>
-        public IObservable<T> AutoConnect() =>
-            source.AutoConnect(1);
-
-        /// <summary>Connects after <paramref name="subscriberCount"/> observers have subscribed.</summary>
-        /// <param name="subscriberCount">Number of observers required before connecting.</param>
-        /// <returns>A sequence that connects after the requested number of subscriptions.</returns>
-        public IObservable<T> AutoConnect(int subscriberCount)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            if (subscriberCount < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(subscriberCount));
-            }
-
-            return AutoConnectGate<T>.For(source, subscriberCount);
-        }
     }
 
     /// <summary>Tracks reference-counted connection state.</summary>

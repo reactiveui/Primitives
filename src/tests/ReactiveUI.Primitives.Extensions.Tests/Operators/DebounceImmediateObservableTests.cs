@@ -17,64 +17,59 @@ public class DebounceImmediateObservableTests
     private const int SettleTicks = 100;
 
     /// <summary>Verifies that <c>OnNext</c> after the source has completed is silently dropped.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnNextAfterCompleted_ThenDropped()
     {
-        var scheduler = new VirtualClock();
-        var source = new SyncDirectSource<int>();
-        var values = new List<int>();
+        VirtualClock scheduler = new();
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
         var completed = false;
-
         using var sub = source.DebounceImmediate(TimeSpan.FromTicks(DebounceTicks), scheduler)
             .Subscribe(values.Add, () => completed = true);
-
         source.Observer.OnCompleted();
         scheduler.AdvanceBy(SettleTicks);
         source.Observer.OnNext(1);
         scheduler.AdvanceBy(SettleTicks);
-
         await Assert.That(completed).IsTrue();
         await Assert.That(values).IsEmpty();
     }
 
     /// <summary>Verifies that <c>OnError</c> after the source has completed is silently dropped.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnErrorAfterCompleted_ThenDropped()
     {
-        var scheduler = new VirtualClock();
-        var source = new SyncDirectSource<int>();
+        VirtualClock scheduler = new();
+        SyncDirectSource<int> source = new();
         Exception? caught = null;
         var completed = false;
-
-        using var sub = source.DebounceImmediate(TimeSpan.FromTicks(DebounceTicks), scheduler)
-            .Subscribe(static _ => { }, ex => caught = ex, () => completed = true);
-
+        using var sub = source.DebounceImmediate(TimeSpan.FromTicks(DebounceTicks), scheduler).Subscribe(
+            static _ => { },
+            ex => caught = ex,
+            () => completed = true);
         source.Observer.OnCompleted();
         source.Observer.OnError(new InvalidOperationException("late"));
-
         await Assert.That(completed).IsTrue();
         await Assert.That(caught).IsNull();
     }
 
     /// <summary>Verifies that a duplicate <c>OnCompleted</c> after an error is silently dropped.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnCompletedAfterError_ThenDropped()
     {
-        var scheduler = new VirtualClock();
-        var source = new SyncDirectSource<int>();
+        VirtualClock scheduler = new();
+        SyncDirectSource<int> source = new();
         Exception? caught = null;
         var completed = false;
-        var expected = new InvalidOperationException("first");
-
-        using var sub = source.DebounceImmediate(TimeSpan.FromTicks(DebounceTicks), scheduler)
-            .Subscribe(static _ => { }, ex => caught = ex, () => completed = true);
-
+        InvalidOperationException expected = new("first");
+        using var sub = source.DebounceImmediate(TimeSpan.FromTicks(DebounceTicks), scheduler).Subscribe(
+            static _ => { },
+            ex => caught = ex,
+            () => completed = true);
         source.Observer.OnError(expected);
         source.Observer.OnCompleted();
-
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(completed).IsFalse();
     }

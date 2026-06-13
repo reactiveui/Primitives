@@ -48,7 +48,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new TapWitness<T>(observer, _onNext, _onError, _onCompleted);
+            TapWitness<T> sink = new(observer, _onNext, _onError, _onCompleted);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -70,7 +70,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new IgnoreValuesWitness<T>(observer);
+            IgnoreValuesWitness<T> sink = new(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -92,7 +92,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new SparkWitness<T>(observer);
+            SparkWitness<T> sink = new(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -114,7 +114,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new UnsparkWitness<T>(observer);
+            UnsparkWitness<T> sink = new(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -144,7 +144,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new TimeIntervalWitness<T>(observer, _scheduler);
+            TimeIntervalWitness<T> sink = new(observer, _scheduler);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -179,7 +179,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var sink = _gate is null
-                ? new SynchronizeWitness<T>(observer)
+                ? new(observer)
                 : new SynchronizeWitness<T>(observer, _gate);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;

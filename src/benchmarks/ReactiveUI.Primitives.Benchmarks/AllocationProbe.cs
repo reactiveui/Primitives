@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
@@ -80,13 +81,13 @@ internal static class AllocationProbe
     {
         // Shared, reused observer: allocated once here, never inside a measured op, so its bytes
         // are excluded from every measurement.
-        var observer = new IntSignalWitness();
-        var sparkObserver = new CountingSignalWitness<Spark<int>>();
-        var intervalObserver = new CountingSignalWitness<TimeInterval<int>>();
-        var listObserver = new CountingSignalWitness<IList<int>>();
-        var arrayObserver = new CountingSignalWitness<int[]>();
-        var stringObserver = new CountingSignalWitness<string>();
-        var error = new InvalidOperationException("probe");
+        IntSignalWitness observer = new();
+        CountingSignalWitness<Spark<int>> sparkObserver = new();
+        CountingSignalWitness<TimeInterval<int>> intervalObserver = new();
+        CountingSignalWitness<IList<int>> listObserver = new();
+        CountingSignalWitness<int[]> arrayObserver = new();
+        CountingSignalWitness<string> stringObserver = new();
+        InvalidOperationException error = new("probe");
         var failSource = Signal.Fail<int>(error, Sequencer.Immediate);
         var handles = new IDisposable[FanOut];
 
@@ -252,7 +253,7 @@ internal static class AllocationProbe
     private static void ProbeChurn(IntSignalWitness observer, IDisposable[] handles) =>
         Row("Signal fan-out churn", () =>
         {
-            using var subject = new Signal<int>();
+            using Signal<int> subject = new();
             for (var i = 0; i < FanOut; i++)
             {
                 handles[i] = subject.Subscribe(observer);
@@ -286,6 +287,10 @@ internal static class AllocationProbe
     /// <summary>Warms up, measures, and prints the per-operation allocation for a single probe row.</summary>
     /// <param name="name">The operator label to print.</param>
     /// <param name="op">The operation to measure.</param>
+    [SuppressMessage(
+        "Major Code Smell",
+        "S1215:GC.Collect should not be called",
+        Justification = "The allocation probe forces a collection before measuring current-thread allocations.")]
     private static void Row(string name, Action op)
     {
         for (var i = 0; i < Warmup; i++)

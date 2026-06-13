@@ -48,14 +48,11 @@ public class SingleDisposable : IsDisposed
 
     /// <summary>Assigns the disposable held by this slot.</summary>
     /// <param name="disposable">The disposable.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="disposable"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="disposable"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The slot already has an assignment.</exception>
     public void Create(IDisposable disposable)
     {
-        if (disposable is null)
-        {
-            throw new ArgumentNullException(nameof(disposable));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(disposable);
 
         var current = Interlocked.CompareExchange(ref _disposable, disposable, null);
         if (current is null)
@@ -105,6 +102,7 @@ public class SingleDisposable : IsDisposed
         /// <inheritdoc/>
         public void Dispose()
         {
+            // Intentionally empty: a sentinel marking an already-disposed slot; there is nothing to release.
         }
     }
 }

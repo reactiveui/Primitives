@@ -20,7 +20,7 @@ public class ScalarSignalBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesReturnSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Emit(ScalarValue).Subscribe(observer);
         return observer.LastValue;
     }
@@ -30,7 +30,7 @@ public class ScalarSignalBenchmarks
     [Benchmark]
     public int SystemReactiveReturnSubscribe()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Return(ScalarValue).Subscribe(observer);
         return observer.LastValue;
     }
@@ -40,7 +40,7 @@ public class ScalarSignalBenchmarks
     [Benchmark]
     public int R3ReturnSubscribe()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.Observable.Return(ScalarValue).Subscribe(observer);
         return observer.Total;
     }

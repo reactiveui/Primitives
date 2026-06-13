@@ -10,62 +10,56 @@ namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 public class WaitUntilObservableTests
 {
     /// <summary>Verifies that an <c>OnNext</c> arriving after the predicate has already fired and completed the sequence is silently dropped.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnNextAfterCompleted_ThenDropped()
     {
         const int Match = 1;
-        var source = new SyncDirectSource<int>();
-        var values = new List<int>();
+        SyncDirectSource<int> source = new();
+        List<int> values = [];
         var completedCount = 0;
-
-        using var sub = source.WaitUntil(static x => x == Match)
-            .Subscribe(values.Add, () => completedCount++);
-
+        using var sub = source.WaitUntil(static x => x == Match).Subscribe(values.Add, () => completedCount++);
         source.Observer.OnNext(Match);
         source.Observer.OnNext(Match);
         source.Observer.OnCompleted();
-
         await Assert.That(completedCount).IsEqualTo(1);
         await Assert.That(values).IsCollectionEqualTo([Match]);
     }
 
     /// <summary>Verifies that an <c>OnError</c> arriving after the predicate has fired is silently dropped via the <c>_done</c> guard.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnErrorAfterCompleted_ThenDropped()
     {
         const int Match = 1;
-        var source = new SyncDirectSource<int>();
+        SyncDirectSource<int> source = new();
         Exception? caught = null;
         var completedCount = 0;
-
-        using var sub = source.WaitUntil(static x => x == Match)
-            .Subscribe(static _ => { }, ex => caught = ex, () => completedCount++);
-
+        using var sub = source.WaitUntil(static x => x == Match).Subscribe(
+            static _ => { },
+            ex => caught = ex,
+            () => completedCount++);
         source.Observer.OnNext(Match);
         source.Observer.OnError(new InvalidOperationException("late"));
-
         await Assert.That(completedCount).IsEqualTo(1);
         await Assert.That(caught).IsNull();
     }
 
     /// <summary>Verifies that a duplicate <c>OnCompleted</c> after an error is silently dropped.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnCompletedAfterError_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
+        SyncDirectSource<int> source = new();
         Exception? caught = null;
         var completedCount = 0;
-        var expected = new InvalidOperationException("first");
-
-        using var sub = source.WaitUntil(static _ => false)
-            .Subscribe(static _ => { }, ex => caught = ex, () => completedCount++);
-
+        InvalidOperationException expected = new("first");
+        using var sub = source.WaitUntil(static _ => false).Subscribe(
+            static _ => { },
+            ex => caught = ex,
+            () => completedCount++);
         source.Observer.OnError(expected);
         source.Observer.OnCompleted();
-
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(completedCount).IsEqualTo(0);
     }

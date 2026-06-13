@@ -79,16 +79,8 @@ internal sealed class UnhandledExceptionCapture : IDisposable
     {
         lock (_gate)
         {
-            foreach (var exception in _exceptions)
-            {
-                if (predicate(exception))
-                {
-                    return exception;
-                }
-            }
+            return _exceptions.FirstOrDefault(predicate);
         }
-
-        return null;
     }
 
     /// <summary>Restores the previously registered unhandled exception handler.</summary>

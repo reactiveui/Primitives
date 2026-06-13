@@ -35,7 +35,7 @@ public class OperatorStatefulFilterGcProfileBenchmarks
     [Benchmark]
     public int Skip()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
             .Skip(SkipCount)
             .Subscribe(observer);
@@ -47,7 +47,7 @@ public class OperatorStatefulFilterGcProfileBenchmarks
     [Benchmark]
     public int Unique()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
             .Unique()
             .Subscribe(observer);
@@ -59,7 +59,7 @@ public class OperatorStatefulFilterGcProfileBenchmarks
     [Benchmark]
     public int UniqueBy()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
             .UniqueBy(static x => x / KeyDivisor)
             .Subscribe(observer);
@@ -71,7 +71,7 @@ public class OperatorStatefulFilterGcProfileBenchmarks
     [Benchmark]
     public int Fold()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
             .Fold(0, static (acc, x) => acc + x)
             .Subscribe(observer);
@@ -83,7 +83,7 @@ public class OperatorStatefulFilterGcProfileBenchmarks
     [Benchmark]
     public int Reduce()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
             .Reduce(0, static (acc, x) => acc + x)
             .Subscribe(observer);
@@ -95,7 +95,7 @@ public class OperatorStatefulFilterGcProfileBenchmarks
     [Benchmark]
     public int TakeWhile()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
             .TakeWhile(static x => x < (RangeCount - SkipCount))
             .Subscribe(observer);
@@ -107,7 +107,7 @@ public class OperatorStatefulFilterGcProfileBenchmarks
     [Benchmark]
     public int SkipWhile()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
             .SkipWhile(static x => x < SkipCount)
             .Subscribe(observer);

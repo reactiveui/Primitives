@@ -27,13 +27,10 @@ public class SequencerQueue<TAbsolute>
 
     /// <summary>Initializes a new instance of the <see cref="SequencerQueue{TAbsolute}"/> class. Creates a new scheduler queue with the specified initial capacity.</summary>
     /// <param name="capacity">Initial capacity of the scheduler queue.</param>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="capacity"/> is less than zero.</exception>
+    /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="capacity"/> is less than zero.</exception>
     public SequencerQueue(int capacity)
     {
-        if (capacity < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(capacity));
-        }
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(capacity);
 
         _queue = new(capacity);
     }

@@ -44,7 +44,7 @@ public partial class CombineLatestOperatorTests
         const int SecondSignalValue = 2;
         var signal1 = Signal.Create<int>();
         var signal2 = Signal.Create<int>();
-        var items = new List<IReadOnlyList<int>>();
+        List<IReadOnlyList<int>> items = [];
 
         IObservableAsync<int>[] sources = [signal1.Values, signal2.Values];
 
@@ -74,7 +74,7 @@ public partial class CombineLatestOperatorTests
     public async Task WhenCombineLatestEnumerableOnErrorResumeAfterDispose_ThenIgnored()
     {
         var signal = Signal.Create<int>();
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
 
         IObservableAsync<int>[] sources = [signal.Values];
 
@@ -166,12 +166,12 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestEnumerableOnNextAfterDispose_ThenReturnsEarly()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
         IObservableAsync<int>[] sources = [src1, src2];
-        var items = new List<IReadOnlyList<int>>();
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<IReadOnlyList<int>> items = [];
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await sources.CombineLatest()
             .SubscribeAsync(
@@ -209,12 +209,12 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestEnumerableOnErrorResumeAfterDispose_ThenReturnsEarly()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
         IObservableAsync<int>[] sources = [src1, src2];
-        var errors = new List<Exception>();
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<Exception> errors = [];
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await sources.CombineLatest()
             .SubscribeAsync(
@@ -250,8 +250,8 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestEnumerableDoubleComplete_ThenSecondIsIgnored()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
         IObservableAsync<int>[] sources = [src1, src2];
         var completionCount = 0;
 
@@ -285,8 +285,8 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestEnumerableSourceCompletesWithoutValue_ThenCompletesImmediately()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
         IObservableAsync<int>[] sources = [src1, src2];
         Result? completionResult = null;
 
@@ -313,8 +313,7 @@ public partial class CombineLatestOperatorTests
     public async Task WhenCombineLatestEnumerableDisposedDuringSubscribeLoop_ThenReturnsEarly()
     {
         // First source triggers disposal when subscribed
-        var disposeTrigger =
-            new TaskCompletionSource<IAsyncDisposable>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<IAsyncDisposable> disposeTrigger = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var slowSource = AsyncObs.Create<int>(async (_, ct) =>
         {
             var disp = await disposeTrigger.Task.WaitAsync(ct);
@@ -322,14 +321,14 @@ public partial class CombineLatestOperatorTests
             return DisposableAsync.Empty;
         });
 
-        var normalSource = new DirectSource<int>();
+        DirectSource<int> normalSource = new();
         IObservableAsync<int>[] sources = [slowSource, normalSource];
 
         // Cancel after 1s, not WaitTimeoutSeconds (5s): this test pure-waits for cancellation
         // by design (nothing ever sets disposeTrigger) — the cancellation is the only exit,
         // so we want the shortest window that reliably lets the subscribe loop start. 1s is
         // safe even on slow CI runners.
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(1));
 
         try
         {
@@ -382,9 +381,9 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestEnumerableSameSourceCompletedTwice_ThenSecondCompletionIsIgnored()
     {
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
-        var src3 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
+        DirectSource<int> src3 = new();
         IObservableAsync<int>[] sources = [src1, src2, src3];
         var completionCount = 0;
 
@@ -431,11 +430,11 @@ public partial class CombineLatestOperatorTests
         const int Src2FirstValue = 20;
         const int Src2SecondValue = 30;
         const int ExpectedEmissions = 2;
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
         IObservableAsync<int>[] sources = [src1, src2];
         Result? completionResult = null;
-        var emissions = new List<IReadOnlyList<int>>();
+        List<IReadOnlyList<int>> emissions = [];
 
         await using var sub = await sources.CombineLatest()
             .SubscribeAsync(
@@ -489,10 +488,10 @@ public partial class CombineLatestOperatorTests
     {
         const int Src2LateValue = 5;
         const int ExpectedEmissions = 2;
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
         IObservableAsync<int>[] sources = [src1, src2];
-        var emissions = new List<IReadOnlyList<int>>();
+        List<IReadOnlyList<int>> emissions = [];
         Result? completionResult = null;
 
         await using var sub = await sources.CombineLatest()
@@ -551,11 +550,11 @@ public partial class CombineLatestOperatorTests
     {
         const int Src1Value = 10;
         const int Src3Value = 30;
-        var src1 = new DirectSource<int>();
-        var src2 = new DirectSource<int>();
-        var src3 = new DirectSource<int>();
+        DirectSource<int> src1 = new();
+        DirectSource<int> src2 = new();
+        DirectSource<int> src3 = new();
         IObservableAsync<int>[] sources = [src1, src2, src3];
-        var emissions = new List<IReadOnlyList<int>>();
+        List<IReadOnlyList<int>> emissions = [];
         Result? completionResult = null;
 
         await using var sub = await sources.CombineLatest()

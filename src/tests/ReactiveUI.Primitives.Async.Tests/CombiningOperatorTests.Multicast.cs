@@ -18,7 +18,7 @@ public partial class CombiningOperatorTests
         var source = SignalAsync.Range(1, 3);
         var connectable = source.Multicast(signal);
 
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await connectable.SubscribeAsync(
             (x, _) =>
             {
@@ -97,7 +97,7 @@ public partial class CombiningOperatorTests
         var source = SignalAsync.Range(1, 3);
         var connectable = source.Publish();
 
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await connectable.SubscribeAsync(
             (x, _) =>
             {
@@ -122,7 +122,7 @@ public partial class CombiningOperatorTests
         var source = SignalAsync.Range(1, 3);
         var connectable = source.Publish(SignalCreationOptions.Default);
 
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await connectable.SubscribeAsync(
             (x, _) =>
             {
@@ -147,7 +147,7 @@ public partial class CombiningOperatorTests
         var source = SignalAsync.Range(1, 3);
         var connectable = source.StatelessPublish();
 
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await connectable.SubscribeAsync(
             (x, _) =>
             {
@@ -172,7 +172,7 @@ public partial class CombiningOperatorTests
         var source = SignalAsync.Range(1, 2);
         var connectable = source.Publish(0);
 
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await connectable.SubscribeAsync(
             (x, _) =>
             {
@@ -199,7 +199,7 @@ public partial class CombiningOperatorTests
         var source = SignalAsync.Range(1, 2);
         var connectable = source.Publish(0, BehaviorSignalCreationOptions.Default);
 
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await connectable.SubscribeAsync(
             (x, _) =>
             {
@@ -226,7 +226,7 @@ public partial class CombiningOperatorTests
         var source = SignalAsync.Range(1, 2);
         var connectable = source.StatelessPublish(0);
 
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await connectable.SubscribeAsync(
             (x, _) =>
             {
@@ -253,7 +253,7 @@ public partial class CombiningOperatorTests
         var source = SignalAsync.Range(1, 3);
         var connectable = source.ReplayLatestPublish();
 
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await connectable.SubscribeAsync(
             (x, _) =>
             {
@@ -278,7 +278,7 @@ public partial class CombiningOperatorTests
         var source = SignalAsync.Range(1, 3);
         var connectable = source.ReplayLatestPublish(ReplayLatestSignalCreationOptions.Default);
 
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await connectable.SubscribeAsync(
             (x, _) =>
             {
@@ -303,7 +303,7 @@ public partial class CombiningOperatorTests
         var source = SignalAsync.Range(1, 3);
         var connectable = source.StatelessReplayLatestPublish();
 
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await connectable.SubscribeAsync(
             (x, _) =>
             {
@@ -342,7 +342,7 @@ public partial class CombiningOperatorTests
         var refCounted = connectable.RefCount();
 
         // Subscribe to trigger the connection.
-        var items = new List<int>();
+        List<int> items = [];
         await using var sub = await refCounted.SubscribeAsync(
             (x, _) =>
             {
@@ -399,7 +399,7 @@ public partial class CombiningOperatorTests
         var signal = Signal.Create<int>();
         var connectable = SignalAsync.Return(1).Multicast(signal);
 
-        using var cts = new CancellationTokenSource();
+        using CancellationTokenSource cts = new();
         await using var connection = await connectable.ConnectAsync(cts.Token);
 
         await Assert.That(connection).IsNotNull();

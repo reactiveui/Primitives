@@ -56,7 +56,7 @@ internal static class SequencerPeriodicExtensions
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
         ArgumentExceptionHelper.ThrowIfNull(action);
 
-        var subscription = new PeriodicSubscription<TState>(scheduler, state, Sequencer.Normalize(period), action);
+        PeriodicSubscription<TState> subscription = new(scheduler, state, Sequencer.Normalize(period), action);
         subscription.ScheduleNext(Sequencer.Normalize(dueTime));
         return subscription;
     }

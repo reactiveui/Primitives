@@ -22,7 +22,7 @@ public sealed class DispatcherQueueSequencerTests
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullDispatcherQueue() =>
-        await Assert.That(() => new DispatcherQueueSequencer(null!)).Throws<ArgumentNullException>();
+        await Assert.That(() => new DispatcherQueueSequencer(null!)).ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Verifies immediate work is enqueued to and executed on the dispatcher-queue thread.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -86,6 +86,7 @@ public sealed class DispatcherQueueSequencerTests
         public DispatcherQueue DispatcherQueue { get; }
 
         /// <inheritdoc/>
+        /// <returns>A task representing the asynchronous operation.</returns>
         public async ValueTask DisposeAsync() => await _controller.ShutdownQueueAsync().AsTask().WaitAsync(WaitTimeout);
     }
 }

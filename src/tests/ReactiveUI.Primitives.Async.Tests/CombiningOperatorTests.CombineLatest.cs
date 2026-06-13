@@ -18,7 +18,7 @@ public partial class CombiningOperatorTests
         var signal1 = Signal.Create<int>();
         var signal2 = Signal.Create<string>();
 
-        var results = new List<(int, string)>();
+        List<(int, string)> results = [];
         await using var sub = await signal1.Values
             .CombineLatest(signal2.Values, (a, b) => (a, b))
             .SubscribeAsync(
@@ -67,7 +67,7 @@ public partial class CombiningOperatorTests
         IObservableAsync<int>[] sources = [SignalAsync.Return(1), SignalAsync.Empty<int>()];
 
         Result? completionResult = null;
-        var items = new List<IReadOnlyList<int>>();
+        List<IReadOnlyList<int>> items = [];
 
         await using var sub = await sources.CombineLatest()
             .SubscribeAsync(
@@ -128,8 +128,8 @@ public partial class CombiningOperatorTests
         });
 
         IObservableAsync<int>[] sources = [inner];
-        var errors = new List<Exception>();
-        var items = new List<IReadOnlyList<int>>();
+        List<Exception> errors = [];
+        List<IReadOnlyList<int>> items = [];
 
         await using var sub = await sources.CombineLatest()
             .SubscribeAsync(
@@ -179,7 +179,7 @@ public partial class CombiningOperatorTests
         var s2 = Signal.Create<int>();
         var s3 = Signal.Create<int>();
 
-        var results = new List<int>();
+        List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
             .SubscribeAsync(

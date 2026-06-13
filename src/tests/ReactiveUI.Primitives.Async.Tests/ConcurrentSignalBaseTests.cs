@@ -40,8 +40,8 @@ public class ConcurrentSignalBaseTests
     [Test]
     public async Task WhenRelayNextAsyncSingleObserver_ThenForwardsOnce()
     {
-        var capture = new IntCapture();
-        var observers = ImmutableArray.Create<IObserverAsync<int>>(MakeSync(capture));
+        IntCapture capture = new();
+        ImmutableArray<IObserverAsync<int>> observers = [MakeSync(capture)];
 
         await Concurrent.ForwardOnNextConcurrently(observers, ForwardedValue, default);
 
@@ -53,14 +53,16 @@ public class ConcurrentSignalBaseTests
     [Test]
     public async Task WhenRelayNextAsyncMultipleSync_ThenAllReceive()
     {
-        var a = new IntCapture();
-        var b = new IntCapture();
-        var c = new IntCapture();
+        IntCapture a = new();
+        IntCapture b = new();
+        IntCapture c = new();
 
-        var observers = ImmutableArray.Create<IObserverAsync<int>>(
+        ImmutableArray<IObserverAsync<int>> observers =
+        [
             MakeSync(a),
             MakeSync(b),
-            MakeSync(c));
+            MakeSync(c)
+        ];
 
         await Concurrent.ForwardOnNextConcurrently(observers, ForwardedValue, default);
 
@@ -74,14 +76,16 @@ public class ConcurrentSignalBaseTests
     [Test]
     public async Task WhenRelayNextAsyncSlowPath_ThenWhenAllForwarded()
     {
-        var a = new IntCapture();
-        var b = new IntCapture();
-        var c = new IntCapture();
+        IntCapture a = new();
+        IntCapture b = new();
+        IntCapture c = new();
 
-        var observers = ImmutableArray.Create<IObserverAsync<int>>(
+        ImmutableArray<IObserverAsync<int>> observers =
+        [
             MakeSlow(a),
             MakeSync(b),
-            MakeSlow(c));
+            MakeSlow(c)
+        ];
 
         await Concurrent.ForwardOnNextConcurrently(observers, ForwardedValue, default);
 
@@ -96,21 +100,28 @@ public class ConcurrentSignalBaseTests
     public async Task WhenRelayErrorAsync_ThenAllBranchesForward()
     {
         var emptyObservers = ImmutableArray<IObserverAsync<int>>.Empty;
-        await Concurrent.ForwardOnErrorResumeConcurrently(emptyObservers, new InvalidOperationException("empty"), default);
+        await Concurrent.ForwardOnErrorResumeConcurrently(
+            emptyObservers,
+            new InvalidOperationException("empty"),
+            default);
 
-        var singleCaught = new ErrorCapture();
-        var single = ImmutableArray.Create<IObserverAsync<int>>(
-            new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSync(singleCaught)));
-        var singleError = new InvalidOperationException("single");
+        ErrorCapture singleCaught = new();
+        ImmutableArray<IObserverAsync<int>> single =
+        [
+            new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSync(singleCaught))
+        ];
+        InvalidOperationException singleError = new("single");
         await Concurrent.ForwardOnErrorResumeConcurrently(single, singleError, default);
         await Assert.That(singleCaught.Error).IsSameReferenceAs(singleError);
 
-        var a = new ErrorCapture();
-        var b = new ErrorCapture();
-        var multi = ImmutableArray.Create<IObserverAsync<int>>(
+        ErrorCapture a = new();
+        ErrorCapture b = new();
+        ImmutableArray<IObserverAsync<int>> multi =
+        [
             new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSlow(a)),
-            new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSync(b)));
-        var multiError = new InvalidOperationException("multi");
+            new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSync(b))
+        ];
+        InvalidOperationException multiError = new("multi");
         await Concurrent.ForwardOnErrorResumeConcurrently(multi, multiError, default);
         await Assert.That(a.Error).IsSameReferenceAs(multiError);
         await Assert.That(b.Error).IsSameReferenceAs(multiError);
@@ -124,17 +135,21 @@ public class ConcurrentSignalBaseTests
         var emptyObservers = ImmutableArray<IObserverAsync<int>>.Empty;
         await Concurrent.ForwardOnCompletedConcurrently(emptyObservers, Result.Success);
 
-        var singleResult = new ResultCapture();
-        var single = ImmutableArray.Create<IObserverAsync<int>>(
-            new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSync(singleResult)));
+        ResultCapture singleResult = new();
+        ImmutableArray<IObserverAsync<int>> single =
+        [
+            new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSync(singleResult))
+        ];
         await Concurrent.ForwardOnCompletedConcurrently(single, Result.Success);
         await Assert.That(singleResult.Result).IsEqualTo(Result.Success);
 
-        var a = new ResultCapture();
-        var b = new ResultCapture();
-        var multi = ImmutableArray.Create<IObserverAsync<int>>(
+        ResultCapture a = new();
+        ResultCapture b = new();
+        ImmutableArray<IObserverAsync<int>> multi =
+        [
             new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSlow(a)),
-            new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSync(b)));
+            new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSync(b))
+        ];
         await Concurrent.ForwardOnCompletedConcurrently(multi, Result.Success);
         await Assert.That(a.Result).IsEqualTo(Result.Success);
         await Assert.That(b.Result).IsEqualTo(Result.Success);
@@ -145,12 +160,14 @@ public class ConcurrentSignalBaseTests
     [Test]
     public async Task WhenSerialErrorBroadcastSlowPath_ThenRemainingObserversReceiveError()
     {
-        var a = new ErrorCapture();
-        var b = new ErrorCapture();
-        var observers = ImmutableArray.Create<IObserverAsync<int>>(
+        ErrorCapture a = new();
+        ErrorCapture b = new();
+        ImmutableArray<IObserverAsync<int>> observers =
+        [
             new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSlow(a)),
-            new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSync(b)));
-        var error = new InvalidOperationException("serial-error");
+            new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSync(b))
+        ];
+        InvalidOperationException error = new("serial-error");
 
         await SerialBroadcastHelpers.BroadcastOnErrorResumeAsync(observers, error, default);
 
@@ -163,11 +180,13 @@ public class ConcurrentSignalBaseTests
     [Test]
     public async Task WhenSerialCompletionBroadcastSlowPath_ThenRemainingObserversReceiveResult()
     {
-        var a = new ResultCapture();
-        var b = new ResultCapture();
-        var observers = ImmutableArray.Create<IObserverAsync<int>>(
+        ResultCapture a = new();
+        ResultCapture b = new();
+        ImmutableArray<IObserverAsync<int>> observers =
+        [
             new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSlow(a)),
-            new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSync(b)));
+            new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSync(b))
+        ];
 
         await SerialBroadcastHelpers.BroadcastOnCompletedAsync(observers, Result.Success);
 
@@ -180,33 +199,42 @@ public class ConcurrentSignalBaseTests
     [Test]
     public async Task WhenSerialBroadcastSyncValueTaskSources_ThenConsumesEachCompletedValueTask()
     {
-        var nextFirst = new CompletedValueTaskSource();
-        var nextSecond = new CompletedValueTaskSource();
-        var nextObservers = ImmutableArray.Create<IObserverAsync<int>>(
-            new ValueTaskSourceObserver(onNext: nextFirst.CreateTask),
-            new ValueTaskSourceObserver(onNext: nextSecond.CreateTask));
+        CompletedValueTaskSource nextFirst = new();
+        CompletedValueTaskSource nextSecond = new();
+        ImmutableArray<IObserverAsync<int>> nextObservers =
+        [
+            new ValueTaskSourceObserver(nextFirst.CreateTask),
+            new ValueTaskSourceObserver(nextSecond.CreateTask)
+        ];
 
         await SerialBroadcastHelpers.BroadcastOnNextAsyncMulti(nextObservers, ForwardedValue, default);
 
         await Assert.That(nextFirst.GetResultCount).IsEqualTo(1);
         await Assert.That(nextSecond.GetResultCount).IsEqualTo(1);
 
-        var errorFirst = new CompletedValueTaskSource();
-        var errorSecond = new CompletedValueTaskSource();
-        var errorObservers = ImmutableArray.Create<IObserverAsync<int>>(
+        CompletedValueTaskSource errorFirst = new();
+        CompletedValueTaskSource errorSecond = new();
+        ImmutableArray<IObserverAsync<int>> errorObservers =
+        [
             new ValueTaskSourceObserver(onError: errorFirst.CreateTask),
-            new ValueTaskSourceObserver(onError: errorSecond.CreateTask));
+            new ValueTaskSourceObserver(onError: errorSecond.CreateTask)
+        ];
 
-        await SerialBroadcastHelpers.BroadcastOnErrorResumeAsync(errorObservers, new InvalidOperationException("sync-source"), default);
+        await SerialBroadcastHelpers.BroadcastOnErrorResumeAsync(
+            errorObservers,
+            new InvalidOperationException("sync-source"),
+            default);
 
         await Assert.That(errorFirst.GetResultCount).IsEqualTo(1);
         await Assert.That(errorSecond.GetResultCount).IsEqualTo(1);
 
-        var completedFirst = new CompletedValueTaskSource();
-        var completedSecond = new CompletedValueTaskSource();
-        var completedObservers = ImmutableArray.Create<IObserverAsync<int>>(
+        CompletedValueTaskSource completedFirst = new();
+        CompletedValueTaskSource completedSecond = new();
+        ImmutableArray<IObserverAsync<int>> completedObservers =
+        [
             new ValueTaskSourceObserver(onCompleted: completedFirst.CreateTask),
-            new ValueTaskSourceObserver(onCompleted: completedSecond.CreateTask));
+            new ValueTaskSourceObserver(onCompleted: completedSecond.CreateTask)
+        ];
 
         await SerialBroadcastHelpers.BroadcastOnCompletedAsync(completedObservers, Result.Success);
 

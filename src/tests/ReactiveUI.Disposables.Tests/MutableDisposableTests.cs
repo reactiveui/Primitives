@@ -16,11 +16,11 @@ public class MutableDisposableTests
     [Test]
     public async Task WhenInnerReplaced_ThenPreviousIsNotDisposed()
     {
-        using var holder = new MutableDisposable();
+        using MutableDisposable holder = new();
         var firstDisposed = 0;
         var secondDisposed = 0;
-        var first = new ActionDisposable(() => firstDisposed++);
-        var second = new ActionDisposable(() => secondDisposed++);
+        ActionDisposable first = new(() => firstDisposed++);
+        ActionDisposable second = new(() => secondDisposed++);
 
         holder.Disposable = first;
         holder.Disposable = second;
@@ -35,7 +35,7 @@ public class MutableDisposableTests
     [Test]
     public async Task WhenSetAfterDispose_ThenIncomingIsDisposedImmediately()
     {
-        var holder = new MutableDisposable();
+        MutableDisposable holder = new();
         holder.Dispose();
         var late = 0;
 
@@ -49,7 +49,7 @@ public class MutableDisposableTests
     [Test]
     public async Task WhenSetNullAfterDispose_ThenNoThrow()
     {
-        var holder = new MutableDisposable();
+        MutableDisposable holder = new();
         holder.Dispose();
 
         holder.Disposable = null;
@@ -62,7 +62,7 @@ public class MutableDisposableTests
     [Test]
     public async Task WhenDisposedTwice_ThenInnerDisposedOnce()
     {
-        var holder = new MutableDisposable();
+        MutableDisposable holder = new();
         var disposed = 0;
         holder.Disposable = new ActionDisposable(() => disposed++);
 

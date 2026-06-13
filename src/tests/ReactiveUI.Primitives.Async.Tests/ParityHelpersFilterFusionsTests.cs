@@ -206,7 +206,7 @@ public class ParityHelpersFilterFusionsTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.Pairwise().SubscribeAsync(
             static (_, _) => default,
@@ -217,7 +217,7 @@ public class ParityHelpersFilterFusionsTests
                 return default;
             });
 
-        var expected = new InvalidOperationException("pairwise-error");
+        InvalidOperationException expected = new("pairwise-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -231,7 +231,7 @@ public class ParityHelpersFilterFusionsTests
     {
         var signal = Signal.Create<string?>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SkipWhileNull().SubscribeAsync(
             static (_, _) => default,
@@ -242,7 +242,7 @@ public class ParityHelpersFilterFusionsTests
                 return default;
             });
 
-        var expected = new InvalidOperationException("skip-while-null-error");
+        InvalidOperationException expected = new("skip-while-null-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -256,7 +256,7 @@ public class ParityHelpersFilterFusionsTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.LatestOrDefault(0).SubscribeAsync(
             static (_, _) => default,
@@ -267,7 +267,7 @@ public class ParityHelpersFilterFusionsTests
                 return default;
             });
 
-        var expected = new InvalidOperationException("latest-or-default-error");
+        InvalidOperationException expected = new("latest-or-default-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -281,7 +281,7 @@ public class ParityHelpersFilterFusionsTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.WaitUntil(static _ => false).SubscribeAsync(
             static (_, _) => default,
@@ -292,7 +292,7 @@ public class ParityHelpersFilterFusionsTests
                 return default;
             });
 
-        var expected = new InvalidOperationException("wait-until-error");
+        InvalidOperationException expected = new("wait-until-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -306,7 +306,7 @@ public class ParityHelpersFilterFusionsTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.AsSignal().SubscribeAsync(
             static (_, _) => default,
@@ -317,7 +317,7 @@ public class ParityHelpersFilterFusionsTests
                 return default;
             });
 
-        var expected = new InvalidOperationException("as-signal-error");
+        InvalidOperationException expected = new("as-signal-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -331,7 +331,7 @@ public class ParityHelpersFilterFusionsTests
     {
         var signal = Signal.Create<bool>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.Not().SubscribeAsync(
             static (_, _) => default,
@@ -342,7 +342,7 @@ public class ParityHelpersFilterFusionsTests
                 return default;
             });
 
-        var expected = new InvalidOperationException("not-error");
+        InvalidOperationException expected = new("not-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -356,7 +356,7 @@ public class ParityHelpersFilterFusionsTests
     {
         var signal = Signal.Create<bool>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.WhereTrue().SubscribeAsync(
             static (_, _) => default,
@@ -367,7 +367,7 @@ public class ParityHelpersFilterFusionsTests
                 return default;
             });
 
-        var expected = new InvalidOperationException("where-true-error");
+        InvalidOperationException expected = new("where-true-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -381,7 +381,7 @@ public class ParityHelpersFilterFusionsTests
     {
         var signal = Signal.Create<bool>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.WhereFalse().SubscribeAsync(
             static (_, _) => default,
@@ -392,7 +392,7 @@ public class ParityHelpersFilterFusionsTests
                 return default;
             });
 
-        var expected = new InvalidOperationException("where-false-error");
+        InvalidOperationException expected = new("where-false-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));

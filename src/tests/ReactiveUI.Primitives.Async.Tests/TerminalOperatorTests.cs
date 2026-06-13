@@ -38,7 +38,7 @@ public partial class TerminalOperatorTests
     private static readonly string[] SequenceHelloWorld = ["Hello", "World"];
 
     /// <summary>Tests FirstAsync returns first element.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstAsync_ThenReturnsFirstElement()
     {
@@ -48,7 +48,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests FirstAsync with predicate returns first match.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstAsyncWithPredicate_ThenReturnsFirstMatch()
     {
@@ -59,64 +59,58 @@ public partial class TerminalOperatorTests
 
     /// <summary>Tests FirstAsync on empty throws InvalidOperationException with the no-elements
     /// message — exercises the predicate-null branch of <c>FirstTaskObserver.OnCompletedAsyncCore</c>.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstAsyncOnEmpty_ThenThrowsInvalidOperation()
     {
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Empty<int>().FirstAsync());
-
+        var ex = await Assert.That(async () => await SignalAsync.Empty<int>().FirstAsync())
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(NoElementsMessage);
     }
 
     /// <summary>Tests FirstAsync with predicate when no elements match throws InvalidOperationException with matching message.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstAsyncWithPredicateNoMatch_ThenThrowsInvalidOperationWithMatchingMessage()
     {
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Range(1, 5).FirstAsync(x => x > 100));
-
+        var ex = await Assert.That(async () => await SignalAsync.Range(1, 5).FirstAsync(x => x > 100))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(NoMatchingElementsMessage);
     }
 
     /// <summary>Tests FirstAsync propagates error from OnErrorResumeAsync.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
-        var expectedError = new InvalidOperationException(ResumeErrorMessage);
+        InvalidOperationException expectedError = new(ResumeErrorMessage);
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.FirstAsync());
-
+        var ex = await Assert.That(async () => await source.FirstAsync()).ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(ResumeErrorMessage);
     }
 
     /// <summary>Tests FirstAsync propagates error when source completes with failure result.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstAsyncSourceCompletesWithFailure_ThenThrowsSourceException()
     {
-        var expectedError = new InvalidOperationException(SourceFailedMessage);
+        InvalidOperationException expectedError = new(SourceFailedMessage);
         var source = SignalAsync.Create<int>(async (observer, _) =>
         {
             await observer.OnCompletedAsync(new(expectedError));
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.FirstAsync());
-
+        var ex = await Assert.That(async () => await source.FirstAsync()).ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(SourceFailedMessage);
     }
 
     /// <summary>Tests FirstOrDefault on empty returns default.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstOrDefaultOnEmpty_ThenReturnsDefault()
     {
@@ -125,7 +119,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests FirstOrDefault with predicate match returns first.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstOrDefaultWithMatch_ThenReturnsFirst()
     {
@@ -135,7 +129,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests FirstOrDefaultAsync with predicate returns first matching element.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstOrDefaultAsyncWithPredicate_ThenReturnsFirstMatch()
     {
@@ -145,7 +139,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests FirstOrDefaultAsync with predicate and no match returns specified default value.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstOrDefaultAsyncWithPredicateNoMatch_ThenReturnsDefaultValue()
     {
@@ -154,44 +148,41 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests FirstOrDefaultAsync with predicate propagates error from OnErrorResumeAsync.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstOrDefaultAsyncWithPredicateSourceEmitsErrorResume_ThenThrows()
     {
-        var expectedError = new InvalidOperationException(ResumeErrorMessage);
+        InvalidOperationException expectedError = new(ResumeErrorMessage);
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await source.FirstOrDefaultAsync(x => x > 0, -1));
-
+        var ex = await Assert.That(async () => await source.FirstOrDefaultAsync(x => x > 0, -1))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(ResumeErrorMessage);
     }
 
     /// <summary>Tests FirstOrDefaultAsync propagates error from OnErrorResumeAsync.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstOrDefaultAsyncSourceEmitsErrorResume_ThenThrows()
     {
-        var expectedError = new InvalidOperationException(ResumeErrorMessage);
+        InvalidOperationException expectedError = new(ResumeErrorMessage);
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.FirstOrDefaultAsync());
-
+        var ex = await Assert.That(async () => await source.FirstOrDefaultAsync())
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(ResumeErrorMessage);
     }
 
     /// <summary>Tests LastAsync returns last element.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLastAsync_ThenReturnsLastElement()
     {
@@ -201,7 +192,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests LastAsync with predicate returns last match.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLastAsyncWithPredicate_ThenReturnsLastMatch()
     {
@@ -211,38 +202,37 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests LastAsync on empty throws.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void WhenLastAsyncOnEmpty_ThenThrowsInvalidOperation() =>
-        Assert.ThrowsAsync<InvalidOperationException>(async () => await SignalAsync.Empty<int>().LastAsync());
+    public async Task WhenLastAsyncOnEmpty_ThenThrowsInvalidOperation() => await Assert
+        .That(async () => await SignalAsync.Empty<int>().LastAsync()).ThrowsExactly<InvalidOperationException>();
 
     /// <summary>Tests LastAsync with predicate and no match throws with matching-elements message.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLastAsyncWithPredicateNoMatch_ThenThrowsWithMatchingMessage()
     {
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Range(1, 5).LastAsync(x => x > 100));
-
+        var ex = await Assert.That(async () => await SignalAsync.Range(1, 5).LastAsync(x => x > 100))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(NoMatchingElementsMessage);
     }
 
     /// <summary>Tests LastAsync on empty throws with no-elements message.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLastAsyncOnEmpty_ThenThrowsWithNoElementsMessage()
     {
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Empty<int>().LastAsync());
-
+        var ex = await Assert.That(async () => await SignalAsync.Empty<int>().LastAsync())
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(NoElementsMessage);
     }
 
     /// <summary>Tests LastAsync propagates error from OnErrorResumeAsync.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLastAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
-        var expectedError = new InvalidOperationException(ResumeErrorMessage);
+        InvalidOperationException expectedError = new(ResumeErrorMessage);
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
@@ -250,31 +240,27 @@ public partial class TerminalOperatorTests
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.LastAsync());
-
+        var ex = await Assert.That(async () => await source.LastAsync()).ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(ResumeErrorMessage);
     }
 
     /// <summary>Tests LastAsync propagates error when source completes with failure result.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLastAsyncSourceCompletesWithFailure_ThenThrowsSourceException()
     {
-        var expectedError = new InvalidOperationException(SourceFailedMessage);
+        InvalidOperationException expectedError = new(SourceFailedMessage);
         var source = SignalAsync.Create<int>(async (observer, _) =>
         {
             await observer.OnCompletedAsync(new(expectedError));
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.LastAsync());
-
+        var ex = await Assert.That(async () => await source.LastAsync()).ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(SourceFailedMessage);
     }
 
     /// <summary>Tests LastOrDefault on empty returns default.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLastOrDefaultOnEmpty_ThenReturnsDefault()
     {
@@ -283,7 +269,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests LastOrDefaultAsync with predicate returns the last matching element.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLastOrDefaultAsyncWithPredicate_ThenReturnsLastMatch()
     {
@@ -293,7 +279,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests LastOrDefaultAsync with predicate returns default when no elements match.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLastOrDefaultAsyncWithPredicateNoMatch_ThenReturnsDefaultValue()
     {
@@ -302,7 +288,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests LastOrDefaultAsync with predicate on empty returns default value.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLastOrDefaultAsyncWithPredicateOnEmpty_ThenReturnsDefaultValue()
     {
@@ -312,7 +298,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests LastOrDefaultAsync with custom default value on empty returns that default.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLastOrDefaultAsyncWithDefaultValueOnEmpty_ThenReturnsCustomDefault()
     {
@@ -322,11 +308,11 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests LastOrDefaultAsync propagates error from OnErrorResumeAsync.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLastOrDefaultAsyncSourceEmitsErrorResume_ThenThrows()
     {
-        var expectedError = new InvalidOperationException(ResumeErrorMessage);
+        InvalidOperationException expectedError = new(ResumeErrorMessage);
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
@@ -334,31 +320,29 @@ public partial class TerminalOperatorTests
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.LastOrDefaultAsync());
-
+        var ex = await Assert.That(async () => await source.LastOrDefaultAsync())
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(ResumeErrorMessage);
     }
 
     /// <summary>Tests LastOrDefaultAsync propagates error when source completes with failure.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLastOrDefaultAsyncSourceCompletesWithFailure_ThenThrows()
     {
-        var expectedError = new InvalidOperationException(SourceFailedMessage);
+        InvalidOperationException expectedError = new(SourceFailedMessage);
         var source = SignalAsync.Create<int>(async (observer, _) =>
         {
             await observer.OnCompletedAsync(new(expectedError));
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.LastOrDefaultAsync());
-
+        var ex = await Assert.That(async () => await source.LastOrDefaultAsync())
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(SourceFailedMessage);
     }
 
     /// <summary>Tests SingleAsync returns single element.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleAsync_ThenReturnsSingleElement()
     {
@@ -368,39 +352,39 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests SingleAsync multiple elements throws.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void WhenSingleAsyncMultipleElements_ThenThrowsInvalidOperation()
+    public async Task WhenSingleAsyncMultipleElements_ThenThrowsInvalidOperation()
     {
         const int MultipleElementCount = 3;
-        Assert.ThrowsAsync<InvalidOperationException>(async () => await SignalAsync.Range(1, MultipleElementCount).SingleAsync());
+        await Assert.That(async () => await SignalAsync.Range(1, MultipleElementCount).SingleAsync())
+            .ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Tests SingleAsync on empty throws — exercises the predicate-null branch of
     /// <c>SingleElementObserver.OnCompletedAsyncCore</c>'s message construction.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleAsyncOnEmpty_ThenThrowsInvalidOperation()
     {
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Empty<int>().SingleAsync());
-
+        var ex = await Assert.That(async () => await SignalAsync.Empty<int>().SingleAsync())
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(NoElementsMessage);
     }
 
     /// <summary>Tests SingleAsync with predicate on no-match throws — exercises the
     /// predicate-non-null branch of <c>SingleElementObserver.OnCompletedAsyncCore</c>.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleAsyncWithPredicateNoMatch_ThenThrowsInvalidOperationWithMatchingMessage()
     {
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Range(1, 5).SingleAsync(static x => x > 100));
-
+        var ex = await Assert.That(async () => await SignalAsync.Range(1, 5).SingleAsync(static x => x > 100))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(NoMatchingElementsMessage);
     }
 
     /// <summary>Tests SingleOrDefault on empty returns default.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleOrDefaultOnEmpty_ThenReturnsDefault()
     {
@@ -409,7 +393,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests SingleOrDefaultAsync with predicate returns matching element.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleOrDefaultAsyncWithPredicate_ThenReturnsMatchingElement()
     {
@@ -419,7 +403,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests SingleOrDefaultAsync with predicate and no match returns default value.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleOrDefaultAsyncWithPredicateNoMatch_ThenReturnsDefaultValue()
     {
@@ -428,26 +412,29 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests SingleOrDefaultAsync with predicate matching multiple elements throws.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void WhenSingleOrDefaultAsyncWithPredicateMultipleMatches_ThenThrowsInvalidOperation()
+    public async Task WhenSingleOrDefaultAsyncWithPredicateMultipleMatches_ThenThrowsInvalidOperation()
     {
         const int SourceCount = 5;
         const int Threshold = 2;
-        Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Range(1, SourceCount).SingleOrDefaultAsync(x => x > Threshold, -1));
+        await Assert
+            .That(async () => await SignalAsync.Range(1, SourceCount).SingleOrDefaultAsync(x => x > Threshold, -1))
+            .ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Tests SingleOrDefaultAsync with no predicate and multiple elements throws.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void WhenSingleOrDefaultAsyncMultipleElements_ThenThrowsInvalidOperation()
+    public async Task WhenSingleOrDefaultAsyncMultipleElements_ThenThrowsInvalidOperation()
     {
         const int MultipleElementCount = 3;
-        Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Range(1, MultipleElementCount).SingleOrDefaultAsync(0));
+        await Assert.That(async () => await SignalAsync.Range(1, MultipleElementCount).SingleOrDefaultAsync(0))
+            .ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Tests SingleOrDefaultAsync with custom default value on empty returns that default.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleOrDefaultAsyncWithDefaultValueOnEmpty_ThenReturnsCustomDefault()
     {
@@ -457,8 +444,9 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests SingleOrDefaultAsync propagates error from OnErrorResumeAsync.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void WhenSingleOrDefaultAsyncSourceEmitsErrorResume_ThenThrows()
+    public async Task WhenSingleOrDefaultAsyncSourceEmitsErrorResume_ThenThrows()
     {
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
@@ -466,83 +454,78 @@ public partial class TerminalOperatorTests
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        Assert.ThrowsAsync<InvalidOperationException>(async () => await source.SingleOrDefaultAsync());
+        await Assert.That(async () => await source.SingleOrDefaultAsync()).ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Tests SingleOrDefaultAsync propagates error from source completing with failure.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void WhenSingleOrDefaultAsyncSourceCompletesWithError_ThenThrows()
+    public async Task WhenSingleOrDefaultAsyncSourceCompletesWithError_ThenThrows()
     {
         var source = SignalAsync.Create<int>(async (observer, _) =>
         {
             await observer.OnCompletedAsync(Result.Failure(new InvalidOperationException("fail")));
             return DisposableAsync.Empty;
         });
-
-        Assert.ThrowsAsync<InvalidOperationException>(async () => await source.SingleOrDefaultAsync());
+        await Assert.That(async () => await source.SingleOrDefaultAsync()).ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Tests SingleOrDefaultAsync without predicate reports correct message when multiple elements exist.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleOrDefaultAsyncMultipleElementsNoPredicate_ThenMessageReportsMoreThanOneElement()
     {
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Range(1, 3).SingleOrDefaultAsync(0));
-
+        var ex = await Assert.That(async () => await SignalAsync.Range(1, 3).SingleOrDefaultAsync(0))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(MoreThanOneElementMessage);
     }
 
     /// <summary>Tests SingleOrDefaultAsync with predicate reports correct message when multiple elements match.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task
         WhenSingleOrDefaultAsyncMultipleMatchesWithPredicate_ThenMessageReportsMoreThanOneMatchingElement()
     {
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Range(1, 5).SingleOrDefaultAsync(x => x > 2, -1));
-
+        var ex = await Assert.That(async () => await SignalAsync.Range(1, 5).SingleOrDefaultAsync(x => x > 2, -1))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(MoreThanOneMatchingElementMessage);
     }
 
     /// <summary>Tests SingleOrDefaultAsync propagates error from OnErrorResumeAsync with the defaultValue overload.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleOrDefaultAsyncWithDefaultValueSourceEmitsErrorResume_ThenThrowsWithCorrectMessage()
     {
-        var expectedError = new InvalidOperationException("resume error detail");
+        InvalidOperationException expectedError = new("resume error detail");
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.SingleOrDefaultAsync(0));
-
+        var ex = await Assert.That(async () => await source.SingleOrDefaultAsync(0))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo("resume error detail");
     }
 
     /// <summary>Tests SingleOrDefaultAsync propagates failure result from OnCompletedAsync with the defaultValue overload.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleOrDefaultAsyncWithDefaultValueSourceCompletesWithFailure_ThenThrowsWithCorrectMessage()
     {
-        var expectedError = new InvalidOperationException("completion failure detail");
+        InvalidOperationException expectedError = new("completion failure detail");
         var source = SignalAsync.Create<int>(async (observer, _) =>
         {
             await observer.OnCompletedAsync(Result.Failure(expectedError));
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.SingleOrDefaultAsync(0));
-
+        var ex = await Assert.That(async () => await source.SingleOrDefaultAsync(0))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo("completion failure detail");
     }
 
     /// <summary>Tests CountAsync returns element count.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCountAsync_ThenReturnsElementCount()
     {
@@ -552,7 +535,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests CountAsync on empty returns zero.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCountAsyncOnEmpty_ThenReturnsZero()
     {
@@ -561,11 +544,11 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests CountAsync propagates error from OnErrorResumeAsync through the OnErrorResumeAsyncCore path.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCountAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
-        var expectedError = new InvalidOperationException(ResumeErrorMessage);
+        InvalidOperationException expectedError = new(ResumeErrorMessage);
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
@@ -573,14 +556,12 @@ public partial class TerminalOperatorTests
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.CountAsync());
-
+        var ex = await Assert.That(async () => await source.CountAsync()).ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(ResumeErrorMessage);
     }
 
     /// <summary>Tests LongCountAsync returns element count.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLongCountAsync_ThenReturnsElementCount()
     {
@@ -590,7 +571,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests AnyAsync on non-empty returns true.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAnyAsyncOnNonEmpty_ThenReturnsTrue()
     {
@@ -599,7 +580,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests AnyAsync on empty returns false.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAnyAsyncOnEmpty_ThenReturnsFalse()
     {
@@ -608,7 +589,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests AnyAsync with predicate checks condition.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAnyAsyncWithPredicateMatch_ThenReturnsTrue()
     {
@@ -617,7 +598,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests AnyAsync with predicate no match returns false.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAnyAsyncWithPredicateNoMatch_ThenReturnsFalse()
     {
@@ -626,7 +607,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests AllAsync checks all elements.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAllAsyncAllMatch_ThenReturnsTrue()
     {
@@ -635,7 +616,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests AllAsync with partial match returns false.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAllAsyncPartialMatch_ThenReturnsFalse()
     {
@@ -644,7 +625,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests AllAsync on empty returns true.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAllAsyncOnEmpty_ThenReturnsTrue()
     {
@@ -653,61 +634,57 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests AnyAsync propagates error from OnErrorResumeAsync.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAnyAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
-        var expectedError = new InvalidOperationException("any resume error");
+        InvalidOperationException expectedError = new("any resume error");
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.AnyAsync());
-
+        var ex = await Assert.That(async () => await source.AnyAsync()).ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo("any resume error");
     }
 
     /// <summary>Tests AnyAsync with predicate propagates error from OnErrorResumeAsync.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAnyAsyncWithPredicateSourceEmitsErrorResume_ThenThrowsSourceException()
     {
-        var expectedError = new InvalidOperationException("any predicate resume error");
+        InvalidOperationException expectedError = new("any predicate resume error");
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.AnyAsync(x => x > 0, CancellationToken.None));
-
+        var ex = await Assert.That(async () => await source.AnyAsync(x => x > 0, CancellationToken.None))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo("any predicate resume error");
     }
 
     /// <summary>Tests AllAsync propagates error from OnErrorResumeAsync.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAllAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
-        var expectedError = new InvalidOperationException("all resume error");
+        InvalidOperationException expectedError = new("all resume error");
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.AllAsync(x => x > 0));
-
+        var ex = await Assert.That(async () => await source.AllAsync(x => x > 0))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo("all resume error");
     }
 
     /// <summary>Tests ContainsAsync with match returns true.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenContainsAsyncWithMatch_ThenReturnsTrue()
     {
@@ -716,7 +693,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests ContainsAsync with no match returns false.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenContainsAsyncWithNoMatch_ThenReturnsFalse()
     {
@@ -725,25 +702,24 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests ContainsAsync propagates error from OnErrorResumeAsync.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenContainsAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
-        var expectedError = new InvalidOperationException(ResumeErrorMessage);
+        InvalidOperationException expectedError = new(ResumeErrorMessage);
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.ContainsAsync(42));
-
+        var ex = await Assert.That(async () => await source.ContainsAsync(42))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(ResumeErrorMessage);
     }
 
     /// <summary>Tests sync AggregateAsync computes final value.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAggregateAsyncSync_ThenComputesFinalValue()
     {
@@ -753,61 +729,53 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests async AggregateAsync computes final value.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAggregateAsyncAsync_ThenComputesFinalValue()
     {
-        var result = await SignalAsync.Range(1, 3).AggregateAsync(
-            string.Empty,
-            async (acc, x, _) =>
-            {
-                await Task.Yield();
-                return acc + x;
-            });
-
+        var result = await SignalAsync.Range(1, 3).AggregateAsync(string.Empty, async (acc, x, _) =>
+        {
+            await Task.Yield();
+            return acc + x;
+        });
         await Assert.That(result).IsEqualTo("123");
     }
 
     /// <summary>Tests AggregateAsync with result selector transforms final value.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAggregateAsyncWithResultSelector_ThenTransformsFinalValue()
     {
-        var result = await SignalAsync.Range(1, 4).AggregateAsync(
-            0,
-            (acc, x) => acc + x,
-            acc => $"Sum={acc}");
-
+        var result = await SignalAsync.Range(1, 4).AggregateAsync(0, (acc, x) => acc + x, acc => $"Sum={acc}");
         await Assert.That(result).IsEqualTo("Sum=10");
     }
 
     /// <summary>Tests AggregateAsync propagates error from OnErrorResumeAsync.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAggregateAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
-        var expectedError = new InvalidOperationException("aggregate resume error");
+        InvalidOperationException expectedError = new("aggregate resume error");
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await source.AggregateAsync(0, (acc, x) => acc + x));
-
+        var ex = await Assert.That(async () => await source.AggregateAsync(0, (acc, x) => acc + x))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo("aggregate resume error");
     }
 
     /// <summary>Tests AggregateAsync null accumulator throws.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void WhenAggregateAsyncNullAccumulator_ThenThrowsArgumentNull() =>
-        Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await SignalAsync.Return(1).AggregateAsync(0, (Func<int, int, int>)null!));
+    public async Task WhenAggregateAsyncNullAccumulator_ThenThrowsArgumentNull() => await Assert
+        .That(async () => await SignalAsync.Return(1).AggregateAsync(0, (Func<int, int, int>)null!))
+        .ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Tests ToListAsync collects all elements.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenToListAsync_ThenCollectsAllElements()
     {
@@ -819,11 +787,11 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests ToListAsync propagates error when source emits OnErrorResumeAsync.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenToListAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
-        var expectedError = new InvalidOperationException(ResumeErrorMessage);
+        InvalidOperationException expectedError = new(ResumeErrorMessage);
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
@@ -831,27 +799,24 @@ public partial class TerminalOperatorTests
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.ToListAsync());
-
+        var ex = await Assert.That(async () => await source.ToListAsync()).ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(ResumeErrorMessage);
     }
 
     /// <summary>Tests ToDictionaryAsync creates correct dictionary.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenToDictionaryAsync_ThenCreatesCorrectDictionary()
     {
         const int ExpectedDictionaryCount = 3;
         var source = SequenceABbCcc.ToAsyncSignal();
         var result = await source.ToDictionaryAsync(s => s.Length);
-
         await Assert.That(result).Count().IsEqualTo(ExpectedDictionaryCount);
         await Assert.That(result[1]).IsEqualTo("a");
     }
 
     /// <summary>Tests ToDictionaryAsync with key and element selectors creates correct dictionary.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenToDictionaryAsyncWithElementSelector_ThenCreatesCorrectDictionary()
     {
@@ -860,7 +825,6 @@ public partial class TerminalOperatorTests
         const int LengthThreeKey = 3;
         var source = SequenceABbCcc.ToAsyncSignal();
         var result = await source.ToDictionaryAsync(s => s.Length, s => s.ToUpperInvariant());
-
         await Assert.That(result).Count().IsEqualTo(ExpectedDictionaryCount);
         await Assert.That(result[1]).IsEqualTo("A");
         await Assert.That(result[LengthTwoKey]).IsEqualTo("BB");
@@ -868,7 +832,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests ToDictionaryAsync with key and element selectors and custom comparer uses the comparer.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenToDictionaryAsyncWithElementSelectorAndComparer_ThenUsesComparer()
     {
@@ -880,30 +844,31 @@ public partial class TerminalOperatorTests
             s => s.Length,
             StringComparer.OrdinalIgnoreCase,
             CancellationToken.None);
-
         await Assert.That(result).Count().IsEqualTo(ExpectedDictionaryCount);
         await Assert.That(result["hello"]).IsEqualTo(ExpectedWordLength);
         await Assert.That(result["WORLD"]).IsEqualTo(ExpectedWordLength);
     }
 
     /// <summary>Tests ToDictionaryAsync with element selector throws ArgumentNullException when keySelector is null.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void WhenToDictionaryAsyncWithElementSelectorNullKeySelector_ThenThrowsArgumentNull() =>
-        Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await SignalAsync.Return("a").ToDictionaryAsync((Func<string, string>)null!, s => s.Length));
+    public async Task WhenToDictionaryAsyncWithElementSelectorNullKeySelector_ThenThrowsArgumentNull() => await Assert
+        .That(async () => await SignalAsync.Return("a").ToDictionaryAsync((Func<string, string>)null!, s => s.Length))
+        .ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Tests ToDictionaryAsync with element selector throws ArgumentNullException when elementSelector is null.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void WhenToDictionaryAsyncWithNullElementSelector_ThenThrowsArgumentNull() =>
-        Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await SignalAsync.Return("a").ToDictionaryAsync(s => s.Length, (Func<string, int>)null!));
+    public async Task WhenToDictionaryAsyncWithNullElementSelector_ThenThrowsArgumentNull() => await Assert
+        .That(async () => await SignalAsync.Return("a").ToDictionaryAsync(s => s.Length, (Func<string, int>)null!))
+        .ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Tests ToDictionaryAsync propagates error from OnErrorResumeAsync.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenToDictionaryAsyncSourceEmitsErrorResume_ThenThrows()
     {
-        var expectedError = new InvalidOperationException(ResumeErrorMessage);
+        InvalidOperationException expectedError = new(ResumeErrorMessage);
         var source = SignalAsync.Create<string>(async (observer, ct) =>
         {
             await observer.OnNextAsync("a", ct);
@@ -911,46 +876,42 @@ public partial class TerminalOperatorTests
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await source.ToDictionaryAsync(s => s));
-
+        var ex = await Assert.That(async () => await source.ToDictionaryAsync(s => s))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(ResumeErrorMessage);
     }
 
     /// <summary>Tests ToDictionaryAsync propagates error when source completes with failure.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenToDictionaryAsyncSourceCompletesWithFailure_ThenThrows()
     {
-        var expectedError = new InvalidOperationException(SourceFailedMessage);
+        InvalidOperationException expectedError = new(SourceFailedMessage);
         var source = SignalAsync.Create<string>(async (observer, _) =>
         {
             await observer.OnCompletedAsync(Result.Failure(expectedError));
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await source.ToDictionaryAsync(s => s));
-
+        var ex = await Assert.That(async () => await source.ToDictionaryAsync(s => s))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(SourceFailedMessage);
     }
 
     /// <summary>Tests ForEachAsync processes all elements.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForEachAsync_ThenProcessesAllElements()
     {
         const int SourceCount = 3;
         const int Second = 2;
         const int Third = 3;
-        var items = new List<int>();
+        List<int> items = [];
         await SignalAsync.Range(1, SourceCount).ForEachAsync(items.Add);
         await Assert.That(items).IsCollectionEqualTo([1, Second, Third]);
     }
 
     /// <summary>Tests WaitCompletionAsync waits for completion.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenWaitCompletionAsync_ThenWaitsForCompletion()
     {
@@ -959,38 +920,38 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests WaitCompletionAsync on error throws.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void WhenWaitCompletionAsyncOnError_ThenThrows() =>
-        Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Throw<int>(new InvalidOperationException("err")).WaitCompletionAsync());
+    public async Task WhenWaitCompletionAsyncOnError_ThenThrows() => await Assert
+        .That(async () => await SignalAsync.Throw<int>(new InvalidOperationException("err")).WaitCompletionAsync())
+        .ThrowsExactly<InvalidOperationException>();
 
     /// <summary>Tests WaitCompletionAsync propagates error from OnErrorResumeAsync.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenWaitCompletionAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
-        var expectedError = new InvalidOperationException(ResumeErrorMessage);
+        InvalidOperationException expectedError = new(ResumeErrorMessage);
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(expectedError, ct);
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.WaitCompletionAsync());
-
+        var ex = await Assert.That(async () => await source.WaitCompletionAsync())
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(ResumeErrorMessage);
     }
 
     /// <summary>Tests ToAsyncEnumerable can be enumerated.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenToAsyncEnumerable_ThenCanBeEnumerated()
     {
         const int SourceCount = 3;
         const int Second = 2;
         const int Third = 3;
-        var items = new List<int>();
+        List<int> items = [];
         await foreach (var item in SignalAsync.Range(1, SourceCount).ToAsyncEnumerable(Channel.CreateUnbounded<int>))
         {
             items.Add(item);
@@ -1000,7 +961,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests that ToAsyncEnumerable yields all elements from the source when completed.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenToAsyncEnumerableCompletes_ThenAllElementsYielded()
     {
@@ -1010,7 +971,7 @@ public partial class TerminalOperatorTests
         const int ThirdIndex = 2;
         const int ExpectedSecond = 2;
         const int ExpectedThird = 3;
-        var items = new List<int>();
+        List<int> items = [];
         await foreach (var item in SignalAsync.Range(1, SourceCount).ToAsyncEnumerable(Channel.CreateUnbounded<int>))
         {
             items.Add(item);
@@ -1023,7 +984,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests SingleAsync with predicate returns the single matching element.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleAsyncWithPredicate_ThenReturnsSingleMatch()
     {
@@ -1033,33 +994,31 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests SingleAsync with predicate throws when multiple elements match.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleAsyncWithPredicateMultipleMatches_ThenThrowsInvalidOperation()
     {
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Range(1, 5).SingleAsync(x => x > 2));
-
+        var ex = await Assert.That(async () => await SignalAsync.Range(1, 5).SingleAsync(x => x > 2))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(MoreThanOneMatchingElementMessage);
     }
 
     /// <summary>Tests SingleAsync with predicate throws when no elements match.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleAsyncWithPredicateNoMatch_ThenThrowsInvalidOperation()
     {
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Range(1, 5).SingleAsync(x => x > 100));
-
+        var ex = await Assert.That(async () => await SignalAsync.Range(1, 5).SingleAsync(x => x > 100))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(NoMatchingElementsMessage);
     }
 
     /// <summary>Tests SingleAsync propagates error from OnErrorResumeAsync.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
-        var expectedError = new InvalidOperationException(ResumeErrorMessage);
+        InvalidOperationException expectedError = new(ResumeErrorMessage);
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
@@ -1067,35 +1026,31 @@ public partial class TerminalOperatorTests
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.SingleAsync());
-
+        var ex = await Assert.That(async () => await source.SingleAsync()).ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(ResumeErrorMessage);
     }
 
     /// <summary>Tests SingleAsync propagates error when source completes with failure result.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleAsyncSourceCompletesWithFailure_ThenThrowsSourceException()
     {
-        var expectedError = new InvalidOperationException(SourceFailedMessage);
+        InvalidOperationException expectedError = new(SourceFailedMessage);
         var source = SignalAsync.Create<int>(async (observer, _) =>
         {
             await observer.OnCompletedAsync(new(expectedError));
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.SingleAsync());
-
+        var ex = await Assert.That(async () => await source.SingleAsync()).ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(SourceFailedMessage);
     }
 
     /// <summary>Tests that ForEachAsync captures an exception sent via OnErrorResumeAsync.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForEachAsyncSourceEmitsErrorResume_ThenExceptionCaptured()
     {
-        var expectedError = new InvalidOperationException(ResumeErrorMessage);
+        InvalidOperationException expectedError = new(ResumeErrorMessage);
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
@@ -1103,57 +1058,52 @@ public partial class TerminalOperatorTests
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var items = new List<int>();
-        var caughtException =
-            await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-                await source.ForEachAsync(x => items.Add(x)));
-
+        List<int> items = [];
+        var caughtException = await Assert.That(async () => await source.ForEachAsync(x => items.Add(x)))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(caughtException!.Message).IsEqualTo(ResumeErrorMessage);
         await Assert.That(items).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Tests that the async ForEachAsync overload throws ArgumentNullException when onNextAsync is null.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void WhenAsyncForEachAsyncNullCallback_ThenThrowsArgumentNull() =>
-        Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await SignalAsync.Return(1).ForEachAsync(null!));
+    public async Task WhenAsyncForEachAsyncNullCallback_ThenThrowsArgumentNull() => await Assert
+        .That(async () => await SignalAsync.Return(1).ForEachAsync(null!)).ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Tests that the synchronous ForEachAsync overload throws ArgumentNullException when onNext action is null.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSyncForEachAsyncNullAction_ThenThrowsArgumentNull()
     {
-        var ex = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await SignalAsync.Return(1).ForEachAsync((Action<int>)null!));
-
+        var ex = await Assert.That(async () => await SignalAsync.Return(1).ForEachAsync((Action<int>)null!))
+            .ThrowsExactly<ArgumentNullException>();
         await Assert.That(ex!.ParamName).IsEqualTo("onNext");
     }
 
     /// <summary>Tests that the async ForEachAsync overload processes all elements.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsyncForEachAsync_ThenProcessesAllElements()
     {
         const int SourceCount = 3;
         const int Second = 2;
         const int Third = 3;
-        var items = new List<int>();
+        List<int> items = [];
         await SignalAsync.Range(1, SourceCount).ForEachAsync(async (x, _) =>
         {
             await Task.Yield();
             items.Add(x);
         });
-
         await Assert.That(items).IsCollectionEqualTo([1, Second, Third]);
     }
 
     /// <summary>Tests that the async ForEachAsync overload propagates errors from OnErrorResumeAsync.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsyncForEachAsyncSourceEmitsErrorResume_ThenThrows()
     {
-        var expectedError = new InvalidOperationException("async resume error");
+        InvalidOperationException expectedError = new("async resume error");
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
@@ -1161,50 +1111,44 @@ public partial class TerminalOperatorTests
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var items = new List<int>();
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await source.ForEachAsync(async (x, _) =>
-            {
-                await Task.Yield();
-                items.Add(x);
-            }));
-
+        List<int> items = [];
+        var ex = await Assert.That(async () => await source.ForEachAsync(async (x, _) =>
+        {
+            await Task.Yield();
+            items.Add(x);
+        })).ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo("async resume error");
         await Assert.That(items).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Tests that the async ForEachAsync overload propagates errors when source completes with failure.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsyncForEachAsyncSourceCompletesWithFailure_ThenThrows()
     {
-        var expectedError = new InvalidOperationException(SourceFailedMessage);
+        InvalidOperationException expectedError = new(SourceFailedMessage);
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnCompletedAsync(new(expectedError));
             return DisposableAsync.Empty;
         });
-
-        var items = new List<int>();
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await source.ForEachAsync(async (x, _) =>
-            {
-                await Task.Yield();
-                items.Add(x);
-            }));
-
+        List<int> items = [];
+        var ex = await Assert.That(async () => await source.ForEachAsync(async (x, _) =>
+        {
+            await Task.Yield();
+            items.Add(x);
+        })).ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(SourceFailedMessage);
         await Assert.That(items).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Tests LongCountAsync propagates error from OnErrorResumeAsync through the observer.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLongCountAsyncSourceEmitsErrorResume_ThenThrowsSourceException()
     {
-        var expectedError = new InvalidOperationException(ResumeErrorMessage);
+        InvalidOperationException expectedError = new(ResumeErrorMessage);
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
@@ -1212,9 +1156,8 @@ public partial class TerminalOperatorTests
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await source.LongCountAsync(null));
-
+        var ex = await Assert.That(async () => await source.LongCountAsync(null))
+            .ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo(ResumeErrorMessage);
     }
 
@@ -1222,11 +1165,11 @@ public partial class TerminalOperatorTests
     /// Tests that ToAsyncEnumerable uses the default error handler when onErrorResume is null,
     /// completing the channel with the exception so that enumeration throws.
     /// </summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenToAsyncEnumerableSourceErrorsWithoutErrorHandler_ThenEnumerationThrows()
     {
-        var expectedError = new InvalidOperationException("source error");
+        InvalidOperationException expectedError = new("source error");
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
@@ -1234,16 +1177,14 @@ public partial class TerminalOperatorTests
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-
-        var items = new List<int>();
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        List<int> items = [];
+        var ex = await Assert.That(async () =>
         {
             await foreach (var item in source.ToAsyncEnumerable(() => Channel.CreateUnbounded<int>()))
             {
                 items.Add(item);
             }
-        });
-
+        }).ThrowsExactly<InvalidOperationException>();
         await Assert.That(ex!.Message).IsEqualTo("source error");
         await Assert.That(items).IsCollectionEqualTo([1]);
     }
@@ -1252,7 +1193,7 @@ public partial class TerminalOperatorTests
     /// Tests that ToAsyncEnumerable yields each element from a multi-item source
     /// and completes enumeration when the source completes successfully.
     /// </summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenToAsyncEnumerableMultipleItems_ThenYieldsAllAndCompletes()
     {
@@ -1262,8 +1203,7 @@ public partial class TerminalOperatorTests
         const int Fourth = 40;
         const int Fifth = 50;
         var source = new[] { First, Second, Third, Fourth, Fifth }.ToAsyncSignal();
-
-        var items = new List<int>();
+        List<int> items = [];
         await foreach (var item in source.ToAsyncEnumerable(Channel.CreateUnbounded<int>))
         {
             items.Add(item);
@@ -1273,80 +1213,80 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests AggregateAsync propagates source failure.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAggregateAsyncSourceFails_ThenThrows()
     {
-        var error = new InvalidOperationException("test");
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Throw<int>(error).AggregateAsync(0, (acc, x) => acc + x));
+        InvalidOperationException error = new("test");
+        await Assert.That(async () => await SignalAsync.Throw<int>(error).AggregateAsync(0, (acc, x) => acc + x))
+            .ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Tests AnyAsync propagates source failure.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenAnyAsyncSourceFails_ThenThrows() =>
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).AnyAsync());
+    public async Task WhenAnyAsyncSourceFails_ThenThrows() => await Assert
+        .That(async () => await SignalAsync.Throw<int>(new InvalidOperationException("fail")).AnyAsync())
+        .ThrowsExactly<InvalidOperationException>();
 
     /// <summary>Tests AllAsync propagates source failure.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenAllAsyncSourceFails_ThenThrows() =>
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).AllAsync(_ => true));
+    public async Task WhenAllAsyncSourceFails_ThenThrows() => await Assert
+        .That(async () => await SignalAsync.Throw<int>(new InvalidOperationException("fail")).AllAsync(_ => true))
+        .ThrowsExactly<InvalidOperationException>();
 
     /// <summary>Tests ContainsAsync propagates source failure.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenContainsAsyncSourceFails_ThenThrows() =>
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).ContainsAsync(1));
+    public async Task WhenContainsAsyncSourceFails_ThenThrows() => await Assert
+        .That(async () => await SignalAsync.Throw<int>(new InvalidOperationException("fail")).ContainsAsync(1))
+        .ThrowsExactly<InvalidOperationException>();
 
     /// <summary>Tests CountAsync propagates source failure.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenCountAsyncSourceFails_ThenThrows() =>
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).CountAsync());
+    public async Task WhenCountAsyncSourceFails_ThenThrows() => await Assert
+        .That(async () => await SignalAsync.Throw<int>(new InvalidOperationException("fail")).CountAsync())
+        .ThrowsExactly<InvalidOperationException>();
 
     /// <summary>Tests LongCountAsync propagates source failure.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenLongCountAsyncSourceFails_ThenThrows() =>
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).LongCountAsync());
+    public async Task WhenLongCountAsyncSourceFails_ThenThrows() => await Assert
+        .That(async () => await SignalAsync.Throw<int>(new InvalidOperationException("fail")).LongCountAsync())
+        .ThrowsExactly<InvalidOperationException>();
 
     /// <summary>Tests SingleAsync propagates source failure.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenSingleAsyncSourceFails_ThenThrows() =>
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).SingleAsync());
+    public async Task WhenSingleAsyncSourceFails_ThenThrows() => await Assert
+        .That(async () => await SignalAsync.Throw<int>(new InvalidOperationException("fail")).SingleAsync())
+        .ThrowsExactly<InvalidOperationException>();
 
     /// <summary>Tests FirstAsync propagates source failure.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenFirstAsyncSourceFails_ThenThrows() =>
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).FirstAsync());
+    public async Task WhenFirstAsyncSourceFails_ThenThrows() => await Assert
+        .That(async () => await SignalAsync.Throw<int>(new InvalidOperationException("fail")).FirstAsync())
+        .ThrowsExactly<InvalidOperationException>();
 
     /// <summary>Tests FirstOrDefaultAsync propagates source failure.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenFirstOrDefaultAsyncSourceFails_ThenThrows() =>
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).FirstOrDefaultAsync());
+    public async Task WhenFirstOrDefaultAsyncSourceFails_ThenThrows() => await Assert
+        .That(async () => await SignalAsync.Throw<int>(new InvalidOperationException("fail")).FirstOrDefaultAsync())
+        .ThrowsExactly<InvalidOperationException>();
 
     /// <summary>Tests WaitCompletionAsync propagates source failure.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenWaitCompletionAsyncSourceFails_ThenThrows() =>
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await SignalAsync.Throw<int>(new InvalidOperationException("fail")).WaitCompletionAsync());
+    public async Task WhenWaitCompletionAsyncSourceFails_ThenThrows() => await Assert
+        .That(async () => await SignalAsync.Throw<int>(new InvalidOperationException("fail")).WaitCompletionAsync())
+        .ThrowsExactly<InvalidOperationException>();
 
     /// <summary>Tests ContainsAsync when value is not found returns false.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenContainsAsyncValueNotFound_ThenReturnsFalse()
     {
@@ -1355,7 +1295,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests CountAsync with predicate that filters some elements.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCountAsyncWithPredicate_ThenCountsMatchesOnly()
     {
@@ -1365,7 +1305,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests LongCountAsync with predicate that filters some elements.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLongCountAsyncWithPredicate_ThenCountsMatchesOnly()
     {
@@ -1375,7 +1315,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests WaitCompletionAsync on successful sequence completes without error.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenWaitCompletionAsyncOnSuccess_ThenCompletes()
     {

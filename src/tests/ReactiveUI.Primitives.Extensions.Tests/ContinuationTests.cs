@@ -19,8 +19,8 @@ public class ContinuationTests
     [Test]
     public async Task WhenLockValueTaskNotLocked_ThenEmitsAndCompletesOnUnlock()
     {
-        using var continuation = new Continuation();
-        var values = new List<int>();
+        using Continuation continuation = new();
+        List<int> values = [];
         var observer = Observer.Create<(int Value, IDisposable Sync)>(v => values.Add(v.Value));
 
         var lockTask = continuation.LockValueTask(1, observer);
@@ -39,8 +39,8 @@ public class ContinuationTests
     [Test]
     public async Task WhenLockValueTaskAlreadyLocked_ThenReturnsDefaultAndDropsItem()
     {
-        using var continuation = new Continuation();
-        var values = new List<int>();
+        using Continuation continuation = new();
+        List<int> values = [];
         var observer = Observer.Create<(int Value, IDisposable Sync)>(v => values.Add(v.Value));
 
         var first = continuation.LockValueTask(1, observer);
@@ -62,8 +62,8 @@ public class ContinuationTests
     [Test]
     public async Task WhenLockNotLocked_ThenEmitsAndCompletesOnUnlock()
     {
-        using var continuation = new Continuation();
-        var values = new List<int>();
+        using Continuation continuation = new();
+        List<int> values = [];
         var observer = Observer.Create<(int Value, IDisposable Sync)>(v => values.Add(v.Value));
 
         var lockTask = continuation.Lock(1, observer);
@@ -80,8 +80,8 @@ public class ContinuationTests
     [Test]
     public async Task WhenLockAlreadyLocked_ThenReturnsCompletedAndDropsItem()
     {
-        using var continuation = new Continuation();
-        var values = new List<int>();
+        using Continuation continuation = new();
+        List<int> values = [];
         var observer = Observer.Create<(int Value, IDisposable Sync)>(v => values.Add(v.Value));
 
         var first = continuation.Lock(1, observer);
@@ -101,7 +101,7 @@ public class ContinuationTests
     [Test]
     public async Task WhenUnlockNotLocked_ThenCompletesImmediately()
     {
-        using var continuation = new Continuation();
+        using Continuation continuation = new();
 
         await continuation.UnLock().WaitAsync(Timeout);
 
@@ -113,7 +113,7 @@ public class ContinuationTests
     [Test]
     public async Task WhenDisposeTwice_ThenSecondDisposeIsNoOp()
     {
-        var continuation = new Continuation();
+        Continuation continuation = new();
         Exception? caught = null;
 
         try

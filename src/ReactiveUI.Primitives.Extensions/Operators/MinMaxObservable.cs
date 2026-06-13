@@ -33,7 +33,7 @@ internal sealed class MinMaxObservable<T>(IReadOnlyList<IObservable<T>> sources,
             return EmptyDisposable.Instance;
         }
 
-        var sink = new Sink(observer, _sourceList.Count, emitMaximum);
+        Sink sink = new(observer, _sourceList.Count, emitMaximum);
         return IndexedSubscribeHelper.SubscribeIndexed(_sourceList, sink.OnNext, sink.OnError, sink.OnCompleted);
     }
 

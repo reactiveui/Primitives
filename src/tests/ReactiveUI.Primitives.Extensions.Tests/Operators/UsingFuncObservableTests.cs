@@ -20,8 +20,8 @@ public class UsingFuncObservableTests
     [Test]
     public async Task WhenFunctionSucceeds_ThenEmitsResultAndDisposesResource()
     {
-        var resource = new CountingDisposable();
-        var results = new List<int>();
+        CountingDisposable resource = new();
+        List<int> results = [];
         var completed = false;
 
         using var sub = resource.Using(static _ => Sentinel)
@@ -39,9 +39,9 @@ public class UsingFuncObservableTests
     [Test]
     public async Task WhenFunctionAndDisposeBothThrow_ThenPrimaryErrorForwardedAndDisposeSwallowed()
     {
-        var resource = new HookDisposable(static () => throw new InvalidOperationException("dispose failed"));
+        HookDisposable resource = new(static () => throw new InvalidOperationException("dispose failed"));
         Exception? caught = null;
-        var functionFailure = new InvalidOperationException("function failed");
+        InvalidOperationException functionFailure = new("function failed");
 
         using var sub = resource.Using(new Func<HookDisposable, int>(_ => throw functionFailure))
             .Subscribe(static _ => { }, ex => caught = ex);
@@ -55,11 +55,12 @@ public class UsingFuncObservableTests
     [Test]
     public async Task WhenSchedulerPathFunctionThrows_ThenForwardsErrorAndDisposes()
     {
-        var resource = new CountingDisposable();
-        var faulted = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var expected = new InvalidOperationException("scheduler function failed");
+        CountingDisposable resource = new();
+        TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        InvalidOperationException expected = new("scheduler function failed");
 
-        using var sub = resource.Using(new Func<CountingDisposable, int>(_ => throw expected), TaskPoolSequencer.Default)
+        using var sub = resource
+            .Using(new Func<CountingDisposable, int>(_ => throw expected), TaskPoolSequencer.Default)
             .Subscribe(static _ => { }, ex => faulted.TrySetResult(ex));
 
         var caught = await faulted.Task.WaitAsync(TimeSpan.FromSeconds(5));

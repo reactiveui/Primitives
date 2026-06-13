@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
+using R3;
 using ReactiveUI.Primitives.Signals;
 using RxBehaviorSubject = System.Reactive.Subjects.BehaviorSubject<int>;
 
@@ -53,8 +54,8 @@ public class StatefulSignalBenchmarks
     /// <returns>The final observed sum plus the latest value.</returns>
     private static int EmitAndReadStateSignal(int count)
     {
-        var observer = new IntSignalWitness();
-        using var subject = new StateSignal<int>(0);
+        IntSignalWitness observer = new();
+        using StateSignal<int> subject = new(0);
         using var subscription = subject.Subscribe(observer);
         for (var i = 1; i <= count; i++)
         {
@@ -69,8 +70,8 @@ public class StatefulSignalBenchmarks
     /// <returns>The final observed sum plus the latest value.</returns>
     private static int EmitAndReadSystemBehaviorSubject(int count)
     {
-        var observer = new IntSignalWitness();
-        using var subject = new RxBehaviorSubject(0);
+        IntSignalWitness observer = new();
+        using RxBehaviorSubject subject = new(0);
         using var subscription = subject.Subscribe(observer);
         for (var i = 1; i <= count; i++)
         {
@@ -85,8 +86,8 @@ public class StatefulSignalBenchmarks
     /// <returns>The final observed sum plus the latest value.</returns>
     private static int EmitAndReadR3BehaviorSubject(int count)
     {
-        var observer = new IntR3Witness();
-        using var subject = new R3.BehaviorSubject<int>(0);
+        IntR3Witness observer = new();
+        using BehaviorSubject<int> subject = new(0);
         using var subscription = subject.Subscribe(observer);
         for (var i = 1; i <= count; i++)
         {

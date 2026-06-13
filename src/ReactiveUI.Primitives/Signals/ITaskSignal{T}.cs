@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>ITaskSignal.</summary>
+/// <summary>A signal backed by a task.</summary>
 /// <typeparam name="T">The object that provides notification information.</typeparam>
 /// <seealso cref="IObservable&lt;T&gt;" />
 public interface ITaskSignal<out T> : IObservable<T>, IsDisposed

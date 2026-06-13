@@ -18,7 +18,7 @@ namespace ReactiveUI.Primitives.Async;
 /// SynchronizationContext, TaskScheduler, or ISequencer. The Default context represents the absence of a specific
 /// synchronization or scheduling context, and typically corresponds to the default task scheduler.</remarks>
 [System.Diagnostics.DebuggerDisplay("SynchronizationContext = {SynchronizationContext}, TaskScheduler = {TaskScheduler}, Sequencer = {Sequencer}")]
-public record AsyncContext
+public sealed record AsyncContext
 {
     /// <summary>Initializes a new instance of the <see cref="AsyncContext"/> class.</summary>
     private AsyncContext()
@@ -54,7 +54,7 @@ public record AsyncContext
     /// synchronization.</remarks>
     /// <param name="synchronizationContext">The SynchronizationContext to associate with the AsyncContext. Cannot be null.</param>
     /// <returns>An AsyncContext instance configured to use the provided SynchronizationContext.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if synchronizationContext is null.</exception>
+    /// <exception cref="ArgumentExceptionHelper">Thrown if synchronizationContext is null.</exception>
     public static AsyncContext From(SynchronizationContext synchronizationContext)
     {
         ArgumentExceptionHelper.ThrowIfNull(synchronizationContext);
@@ -66,7 +66,7 @@ public record AsyncContext
     /// <param name="taskScheduler">The TaskScheduler to associate with the new AsyncContext. Cannot be null.</param>
     /// <returns>An AsyncContext instance configured to use the specified TaskScheduler. The SynchronizationContext property of
     /// the returned instance is set to null.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if taskScheduler is null.</exception>
+    /// <exception cref="ArgumentExceptionHelper">Thrown if taskScheduler is null.</exception>
     public static AsyncContext From(TaskScheduler taskScheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(taskScheduler);
@@ -79,7 +79,7 @@ public record AsyncContext
     /// directly. Otherwise, continuations are scheduled as direct <see cref="IWorkItem"/> instances on the sequencer.</remarks>
     /// <param name="scheduler">The sequencer to use for configuring the AsyncContext.</param>
     /// <returns>An AsyncContext instance configured with the provided scheduler.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if scheduler is null.</exception>
+    /// <exception cref="ArgumentExceptionHelper">Thrown if scheduler is null.</exception>
     public static AsyncContext From(ISequencer scheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);

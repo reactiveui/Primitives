@@ -130,7 +130,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
             observer.OnNext(_prependValue);
-            var sink = new AppendWitness<T>(observer, _appendValue);
+            AppendWitness<T> sink = new(observer, _appendValue);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -139,7 +139,7 @@ public static partial class LinqExtensions
         public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
         {
             onNext(_prependValue);
-            var sink = new AppendDelegateWitness<T>(onNext, onError, onCompleted, _appendValue);
+            AppendDelegateWitness<T> sink = new(onNext, onError, onCompleted, _appendValue);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -169,7 +169,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new AppendWitness<T>(observer, _value);
+            AppendWitness<T> sink = new(observer, _value);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -199,7 +199,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = new DefaultIfEmptyWitness<T>(observer, _defaultValue);
+            DefaultIfEmptyWitness<T> sink = new(observer, _defaultValue);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -459,13 +459,13 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var coordinator = new ProbeCoordinator<T>(_source, _period, _sequencer, observer);
+            ProbeCoordinator<T> coordinator = new(_source, _period, _sequencer, observer);
             if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return coordinator.Run();
             }
 
-            var subscription = new SingleDisposable();
+            SingleDisposable subscription = new();
             Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run()));
             return subscription;
         }

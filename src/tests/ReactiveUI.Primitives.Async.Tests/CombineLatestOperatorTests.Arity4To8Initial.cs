@@ -84,7 +84,7 @@ public partial class CombineLatestOperatorTests
     {
         var signals = Enumerable.Range(0, FourSources).Select(_ => Signal.Create<int>()).ToList();
 
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
         await using var sub = await signals[0].Values
             .CombineLatest(
                 signals[1].Values,
@@ -99,7 +99,7 @@ public partial class CombineLatestOperatorTests
                     return default;
                 });
 
-        var expected = new InvalidOperationException(ResumeMessage);
+        InvalidOperationException expected = new(ResumeMessage);
         await signals[Source2Index].OnErrorResumeAsync(expected, CancellationToken.None);
 
         await Assert.That(errors).Count().IsEqualTo(1);
@@ -180,7 +180,7 @@ public partial class CombineLatestOperatorTests
     {
         var signals = Enumerable.Range(0, FiveSources).Select(_ => Signal.Create<int>()).ToList();
 
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
         await using var sub = await signals[0].Values
             .CombineLatest(
                 signals[1].Values,
@@ -196,7 +196,7 @@ public partial class CombineLatestOperatorTests
                     return default;
                 });
 
-        var expected = new InvalidOperationException(ResumeMessage);
+        InvalidOperationException expected = new(ResumeMessage);
         await signals[Source4Index].OnErrorResumeAsync(expected, CancellationToken.None);
 
         await Assert.That(errors).Count().IsEqualTo(1);
@@ -279,7 +279,7 @@ public partial class CombineLatestOperatorTests
     {
         var signals = Enumerable.Range(0, SixSources).Select(_ => Signal.Create<int>()).ToList();
 
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
         await using var sub = await signals[0].Values
             .CombineLatest(
                 signals[1].Values,
@@ -296,7 +296,7 @@ public partial class CombineLatestOperatorTests
                     return default;
                 });
 
-        var expected = new InvalidOperationException(ResumeMessage);
+        InvalidOperationException expected = new(ResumeMessage);
         await signals[Source3Index].OnErrorResumeAsync(expected, CancellationToken.None);
 
         await Assert.That(errors).Count().IsEqualTo(1);
@@ -381,7 +381,7 @@ public partial class CombineLatestOperatorTests
     {
         var signals = Enumerable.Range(0, SevenSources).Select(_ => Signal.Create<int>()).ToList();
 
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
         await using var sub = await signals[0].Values
             .CombineLatest(
                 signals[1].Values,
@@ -399,7 +399,7 @@ public partial class CombineLatestOperatorTests
                     return default;
                 });
 
-        var expected = new InvalidOperationException(ResumeMessage);
+        InvalidOperationException expected = new(ResumeMessage);
         await signals[0].OnErrorResumeAsync(expected, CancellationToken.None);
 
         await Assert.That(errors).Count().IsEqualTo(1);
@@ -409,7 +409,10 @@ public partial class CombineLatestOperatorTests
     /// <summary>Error propagation in 8-source variant.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Purposes")]
+    [SuppressMessage(
+        "Major Code Smell",
+        "S107:Methods should not have too many parameters",
+        Justification = "Test Purposes")]
     public async Task WhenCombineLatestEightSources_Error_ThenCompletes()
     {
         var signals = Enumerable.Range(0, EightSources).Select(_ => Signal.Create<int>()).ToList();
@@ -443,7 +446,10 @@ public partial class CombineLatestOperatorTests
     /// <summary>All eight sources complete successfully.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Test Purposes")]
+    [SuppressMessage(
+        "Major Code Smell",
+        "S107:Methods should not have too many parameters",
+        Justification = "Test Purposes")]
     public async Task WhenCombineLatestEightSources_AllComplete_ThenCombinedCompletes()
     {
         const int SourcesToCompleteFirst = 7;
@@ -484,12 +490,16 @@ public partial class CombineLatestOperatorTests
     /// <summary>Error resume forwarded in 8-source variant.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage("Major Code Smell", "S107", Justification = "Arity-8 CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
+    [SuppressMessage(
+        "Major Code Smell",
+        "S107",
+        Justification =
+            "Arity-8 CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
     public async Task WhenCombineLatestEightSources_ErrorResume_ThenForwarded()
     {
         var signals = Enumerable.Range(0, EightSources).Select(_ => Signal.Create<int>()).ToList();
 
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
         await using var sub = await signals[0].Values
             .CombineLatest(
                 signals[1].Values,
@@ -508,7 +518,7 @@ public partial class CombineLatestOperatorTests
                     return default;
                 });
 
-        var expected = new InvalidOperationException(ResumeMessage);
+        InvalidOperationException expected = new(ResumeMessage);
         await signals[Source5Index].OnErrorResumeAsync(expected, CancellationToken.None);
 
         await Assert.That(errors).Count().IsEqualTo(1);

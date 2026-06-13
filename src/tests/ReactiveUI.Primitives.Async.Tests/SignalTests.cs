@@ -23,8 +23,8 @@ public partial class SignalTests
     public async Task WhenSerialSignalPushValues_ThenAllObserversReceiveInOrder()
     {
         var signal = Signal.Create<int>();
-        var items = new List<int>();
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> items = [];
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             (x, _) =>
@@ -58,14 +58,10 @@ public partial class SignalTests
     [Test]
     public async Task WhenConcurrentSignalPushValues_ThenAllObserversReceive()
     {
-        var options = new SignalCreationOptions
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = false
-        };
+        SignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = false };
         var signal = Signal.Create<int>(options);
-        var items = new List<int>();
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> items = [];
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             (x, _) =>
@@ -102,10 +98,10 @@ public partial class SignalTests
     [Test]
     public async Task WhenSerialStatelessSignalPushValues_ThenObserversReceive()
     {
-        var options = new SignalCreationOptions { PublishingOption = PublishingOption.Serial, IsStateless = true };
+        SignalCreationOptions options = new() { PublishingOption = PublishingOption.Serial, IsStateless = true };
         var signal = Signal.Create<string>(options);
-        var items = new List<string>();
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<string> items = [];
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             (x, _) =>
@@ -134,10 +130,10 @@ public partial class SignalTests
     [Test]
     public async Task WhenConcurrentStatelessSignalPushValues_ThenObserversReceive()
     {
-        var options = new SignalCreationOptions { PublishingOption = PublishingOption.Concurrent, IsStateless = true };
+        SignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = true };
         var signal = Signal.Create<int>(options);
-        var items = new List<int>();
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> items = [];
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             (x, _) =>
@@ -172,8 +168,8 @@ public partial class SignalTests
     public async Task WhenSignalOnErrorResume_ThenObserverReceivesError()
     {
         var signal = Signal.Create<int>();
-        var errors = new List<Exception>();
-        var errorReceived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<Exception> errors = [];
+        TaskCompletionSource errorReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             (_, _) => default,
@@ -199,7 +195,7 @@ public partial class SignalTests
     {
         var signal = Signal.Create<int>();
         Result? completionResult = null;
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             (_, _) => default,
@@ -225,7 +221,7 @@ public partial class SignalTests
     {
         var signal = Signal.Create<int>();
         Result? completionResult = null;
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             (_, _) => default,
@@ -250,10 +246,10 @@ public partial class SignalTests
     public async Task WhenMultipleObservers_ThenAllReceiveValues()
     {
         var signal = Signal.Create<int>();
-        var items1 = new List<int>();
-        var items2 = new List<int>();
-        var completed1 = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var completed2 = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> items1 = [];
+        List<int> items2 = [];
+        TaskCompletionSource completed1 = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource completed2 = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub1 = await signal.Values.SubscribeAsync(
             (x, _) =>
@@ -301,8 +297,8 @@ public partial class SignalTests
     {
         var signal = Signal.Create<int>();
         var observer = signal.AsObserverAsync();
-        var items = new List<int>();
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> items = [];
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             (x, _) =>

@@ -16,22 +16,19 @@ public class ObserveOnIfObservableTests
     private const string SourceErrorMessage = "source error";
 
     /// <summary>Verifies that values dispatch on the false-scheduler before any condition arrives.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnIfNoCondition_ThenUsesFalseScheduler()
     {
         const int Value = 11;
-        var source = new Subject<int>();
-        var condition = new Subject<bool>();
-        var trueScheduler = new RecordingScheduler();
-        var falseScheduler = new RecordingScheduler();
-        var emitted = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-
+        Subject<int> source = new();
+        Subject<bool> condition = new();
+        RecordingScheduler trueScheduler = new();
+        RecordingScheduler falseScheduler = new();
+        TaskCompletionSource<int> emitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = source.ObserveOnIf(condition, trueScheduler, falseScheduler)
             .Subscribe(v => emitted.TrySetResult(v));
-
         source.OnNext(Value);
-
         var v2 = await emitted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(v2).IsEqualTo(Value);
         await Assert.That(falseScheduler.ScheduleCount).IsGreaterThanOrEqualTo(1);
@@ -39,105 +36,91 @@ public class ObserveOnIfObservableTests
     }
 
     /// <summary>Verifies that emitting after the condition becomes true dispatches on the true-scheduler.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnIfConditionTrue_ThenUsesTrueScheduler()
     {
         const int Value = 22;
-        var source = new Subject<int>();
-        var condition = new Subject<bool>();
-        var trueScheduler = new RecordingScheduler();
-        var falseScheduler = new RecordingScheduler();
-        var emitted = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-
+        Subject<int> source = new();
+        Subject<bool> condition = new();
+        RecordingScheduler trueScheduler = new();
+        RecordingScheduler falseScheduler = new();
+        TaskCompletionSource<int> emitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = source.ObserveOnIf(condition, trueScheduler, falseScheduler)
             .Subscribe(v => emitted.TrySetResult(v));
-
         condition.OnNext(true);
         source.OnNext(Value);
-
         var v2 = await emitted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(v2).IsEqualTo(Value);
         await Assert.That(trueScheduler.ScheduleCount).IsGreaterThanOrEqualTo(1);
     }
 
     /// <summary>Verifies that <c>ObserveOnIf</c> forwards source errors without scheduler dispatch.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnIfSourceErrors_ThenForwardsError()
     {
-        var source = new Subject<int>();
-        var condition = new Subject<bool>();
+        Subject<int> source = new();
+        Subject<bool> condition = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(SourceErrorMessage);
-
-        using var sub = source.ObserveOnIf(condition, TaskPoolSequencer.Default, Sequencer.Immediate)
-            .Subscribe(static _ => { }, ex => caught = ex);
-
+        InvalidOperationException expected = new(SourceErrorMessage);
+        using var sub = source.ObserveOnIf(condition, TaskPoolSequencer.Default, Sequencer.Immediate).Subscribe(
+            static _ => { },
+            ex => caught = ex);
         source.OnError(expected);
-
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
     /// <summary>Verifies that <c>ObserveOnIf</c> forwards source completion.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnIfSourceCompletes_ThenForwardsCompletion()
     {
-        var source = new Subject<int>();
-        var condition = new Subject<bool>();
+        Subject<int> source = new();
+        Subject<bool> condition = new();
         var completed = false;
-
-        using var sub = source.ObserveOnIf(condition, TaskPoolSequencer.Default, Sequencer.Immediate)
-            .Subscribe(static _ => { }, () => completed = true);
-
+        using var sub = source.ObserveOnIf(condition, TaskPoolSequencer.Default, Sequencer.Immediate).Subscribe(
+            static _ => { },
+            () => completed = true);
         source.OnCompleted();
-
         await Assert.That(completed).IsTrue();
     }
 
     /// <summary>Verifies that the single-scheduler overload defaults the false branch to
-    /// <see cref="Sequencer.Immediate"/> by emitting synchronously when the condition is false.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <see cref = "Sequencer.Immediate"/> by emitting synchronously when the condition is false.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnIfSingleSchedulerConditionFalse_ThenImmediate()
     {
         const int Value = 33;
-        var source = new Subject<int>();
-        var condition = new Subject<bool>();
-        var trueScheduler = new RecordingScheduler();
-        var results = new List<int>();
-
-        using var sub = source.ObserveOnIf(condition, trueScheduler)
-            .Subscribe(results.Add);
-
+        Subject<int> source = new();
+        Subject<bool> condition = new();
+        RecordingScheduler trueScheduler = new();
+        List<int> results = [];
+        using var sub = source.ObserveOnIf(condition, trueScheduler).Subscribe(results.Add);
         condition.OnNext(false);
         source.OnNext(Value);
-
         await Assert.That(results).IsCollectionEqualTo([Value]);
         await Assert.That(trueScheduler.ScheduleCount).IsEqualTo(0);
     }
 
     /// <summary>Verifies that an <c>OnNext</c> arriving after the source has completed is silently dropped.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenOnNextAfterCompleted_ThenDropped()
     {
-        var source = new SyncDirectSource<int>();
-        var condition = new Subject<bool>();
+        SyncDirectSource<int> source = new();
+        Subject<bool> condition = new();
         var trueScheduler = Sequencer.Immediate;
         var falseScheduler = Sequencer.Immediate;
-        var values = new List<int>();
+        List<int> values = [];
         var completedCount = 0;
-
         using var sub = source.ObserveOnIf(condition, trueScheduler, falseScheduler)
             .Subscribe(values.Add, () => completedCount++);
-
         source.Observer.OnCompleted();
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));
         source.Observer.OnCompleted();
-
         await Assert.That(completedCount).IsEqualTo(1);
         await Assert.That(values).IsEmpty();
     }
@@ -146,16 +129,15 @@ public class ObserveOnIfObservableTests
     /// when the source completes between <c>OnNext</c>'s schedule call and the scheduler firing
     /// the queued callback, the callback observes <c>_done == true</c> and returns without
     /// forwarding to downstream.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScheduledCallbackFiresAfterSourceCompleted_ThenDroppedByDoneGuard()
     {
-        var source = new SyncDirectSource<int>();
-        var condition = new Subject<bool>();
-        var scheduler = new VirtualClock();
-        var values = new List<int>();
+        SyncDirectSource<int> source = new();
+        Subject<bool> condition = new();
+        VirtualClock scheduler = new();
+        List<int> values = [];
         var completedCount = 0;
-
         using var sub = source.ObserveOnIf(condition, scheduler, scheduler)
             .Subscribe(values.Add, () => completedCount++);
 
@@ -168,33 +150,29 @@ public class ObserveOnIfObservableTests
         // Advance the scheduler so the queued callback fires; it observes _done == true and
         // returns at the in-callback guard rather than calling downstream.OnNext.
         scheduler.AdvanceBy(1);
-
         await Assert.That(completedCount).IsEqualTo(1);
         await Assert.That(values).IsEmpty();
     }
 
     /// <summary>Verifies the condition observer's duplicate-value short-circuit — emitting the
-    /// same condition value twice in a row hits the <c>_hasCondition &amp;&amp; _lastCondition == c</c>
+    /// same condition value twice in a row hits the <c>_hasCondition &amp; &amp; _lastCondition == c</c>
     /// guard and returns silently without re-assigning the current scheduler.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnIfConditionDuplicate_ThenSilentlyShortCircuits()
     {
-        var source = new Subject<int>();
-        var condition = new Subject<bool>();
-        var trueScheduler = new RecordingScheduler();
-        var falseScheduler = new RecordingScheduler();
-        var values = new List<int>();
-
-        using var sub = source.ObserveOnIf(condition, trueScheduler, falseScheduler)
-            .Subscribe(values.Add);
+        Subject<int> source = new();
+        Subject<bool> condition = new();
+        RecordingScheduler trueScheduler = new();
+        RecordingScheduler falseScheduler = new();
+        List<int> values = [];
+        using var sub = source.ObserveOnIf(condition, trueScheduler, falseScheduler).Subscribe(values.Add);
 
         // First emission seeds the gate (_hasCondition transitions from false to true).
         condition.OnNext(true);
 
         // Second identical emission hits the duplicate-value guard and returns early.
         condition.OnNext(true);
-
         source.OnNext(1);
 
         // Sanity: subsequent value still routes through the true-scheduler (the duplicate did

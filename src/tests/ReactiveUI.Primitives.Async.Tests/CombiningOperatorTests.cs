@@ -102,9 +102,6 @@ public partial class CombiningOperatorTests
         /// <summary>Gets a value indicating whether this resource has been disposed.</summary>
         public bool IsDisposed { get; private set; }
 
-        /// <summary>Gets or sets an arbitrary tag for tracking usage.</summary>
-        public string? Tag { get; set; }
-
         /// <inheritdoc/>
         public ValueTask DisposeAsync()
         {

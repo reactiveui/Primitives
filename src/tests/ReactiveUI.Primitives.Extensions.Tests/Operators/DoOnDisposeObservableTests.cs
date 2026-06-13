@@ -17,7 +17,7 @@ public class DoOnDisposeObservableTests
     public async Task WhenDisposedTwice_ThenActionFiresOnce()
     {
         var executed = 0;
-        var source = new Subject<int>();
+        Subject<int> source = new();
 
         var sub = source.DoOnDispose(() => executed++).Subscribe();
         await Assert.That(source.HasObservers).IsTrue();

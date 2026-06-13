@@ -21,7 +21,7 @@ internal sealed class RetryForeverObservable<T>(IObservable<T> source) : IObserv
     {
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        var sink = new RetrySink(source, observer);
+        RetrySink sink = new(source, observer);
         sink.Start();
         return sink;
     }

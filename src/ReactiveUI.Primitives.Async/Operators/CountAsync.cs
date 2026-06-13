@@ -32,7 +32,7 @@ public static partial class SignalAsyncExtensions
         public async ValueTask<int> CountAsync(Func<T, bool>? predicate, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var observer = new CountTaskWitness<T>(predicate, cancellationToken);
+            CountTaskWitness<T> observer = new(predicate, cancellationToken);
             await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }

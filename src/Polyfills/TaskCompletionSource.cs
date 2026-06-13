@@ -12,14 +12,7 @@ internal sealed class TaskCompletionSource
     private readonly TaskCompletionSource<bool> _inner;
 
     /// <summary>Initializes a new instance of the <see cref="TaskCompletionSource"/> class.</summary>
-    public TaskCompletionSource() => _inner = new TaskCompletionSource<bool>();
-
-    /// <summary>Initializes a new instance of the <see cref="TaskCompletionSource"/> class with the specified options.</summary>
-    /// <param name="creationOptions">Options used to customize the underlying task.</param>
-    public TaskCompletionSource(TaskCreationOptions creationOptions) => _inner = new TaskCompletionSource<bool>(creationOptions);
-
-    /// <summary>Gets the task controlled by this completion source.</summary>
-    public Task Task => _inner.Task;
+    public TaskCompletionSource() => _inner = new();
 
     /// <summary>Transitions the underlying task to the <see cref="TaskStatus.RanToCompletion"/> state.</summary>
     public void SetResult() => _inner.SetResult(true);

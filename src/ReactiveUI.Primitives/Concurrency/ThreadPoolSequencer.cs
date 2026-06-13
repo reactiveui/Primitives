@@ -9,7 +9,7 @@ using Timer = System.Threading.Timer;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>ThreadPoolSequencer.</summary>
+/// <summary>A sequencer that schedules work on the thread pool.</summary>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class ThreadPoolSequencer : ISequencer, IDisposable

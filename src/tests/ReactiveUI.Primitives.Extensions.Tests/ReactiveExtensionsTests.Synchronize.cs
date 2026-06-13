@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Extensions.Tests;
 public partial class ReactiveExtensionsTests
 {
     /// <summary>Syncronizes the asynchronous runs with asynchronous tasks in subscriptions.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SubscribeSynchronus_RunsWithAsyncTasksInSubscriptions()
     {
@@ -22,31 +22,28 @@ public partial class ReactiveExtensionsTests
         // pool, so result / itterations need Interlocked for the read-modify-write to be safe.
         var result = 0;
         var itterations = 0;
-        var subject = new Subject<bool>();
-        using var disposable = subject
-            .SubscribeSynchronous(async x =>
+        Subject<bool> subject = new();
+        using var disposable = subject.SubscribeSynchronous(async x =>
+        {
+            if (x)
             {
-                if (x)
-                {
-                    await Task.Delay(1000);
-                    Interlocked.Increment(ref result);
-                }
-                else
-                {
-                    await Task.Delay(500);
-                    Interlocked.Decrement(ref result);
-                }
+                await Task.Delay(1000);
+                Interlocked.Increment(ref result);
+            }
+            else
+            {
+                await Task.Delay(500);
+                Interlocked.Decrement(ref result);
+            }
 
-                Interlocked.Increment(ref itterations);
-            });
-
+            Interlocked.Increment(ref itterations);
+        });
         subject.OnNext(true);
         subject.OnNext(false);
         subject.OnNext(true);
         subject.OnNext(false);
         subject.OnNext(true);
         subject.OnNext(false);
-
         while (Volatile.Read(ref itterations) < SampleValue6)
         {
             Thread.Yield();
@@ -57,7 +54,7 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Syncronizes the asynchronous runs with asynchronous tasks in subscriptions.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SynchronizeSynchronous_RunsWithAsyncTasksInSubscriptions()
     {
@@ -67,11 +64,9 @@ public partial class ReactiveExtensionsTests
         // (+1, -1) sums to zero after WhenAll completes.
         var result = 0;
         var itterations = 0;
-        var subject = new Subject<bool>();
-        var tasks = new List<Task>();
-        using var disposable = subject
-            .SynchronizeSynchronous()
-            .Subscribe(x => tasks.Add(HandleAsync(x)));
+        Subject<bool> subject = new();
+        List<Task> tasks = [];
+        using var disposable = subject.SynchronizeSynchronous().Subscribe(x => tasks.Add(HandleAsync(x)));
 
         async Task HandleAsync((bool Value, IDisposable Sync) x)
         {
@@ -101,7 +96,6 @@ public partial class ReactiveExtensionsTests
         subject.OnNext(false);
         subject.OnNext(true);
         subject.OnNext(false);
-
         await Task.WhenAll(tasks);
 
         // Then
@@ -109,7 +103,7 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Syncronizes the asynchronous runs with asynchronous tasks in subscriptions.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SubscribeAsync_RunsWithAsyncTasksInSubscriptions()
     {
@@ -117,31 +111,28 @@ public partial class ReactiveExtensionsTests
         // read-modify-write needs Interlocked and the polling read needs Volatile.
         var result = 0;
         var itterations = 0;
-        var subject = new Subject<bool>();
-        using var disposable = subject
-            .SubscribeAsync(async x =>
+        Subject<bool> subject = new();
+        using var disposable = subject.SubscribeAsync(async x =>
+        {
+            if (x)
             {
-                if (x)
-                {
-                    await Task.Delay(1000);
-                    Interlocked.Increment(ref result);
-                }
-                else
-                {
-                    await Task.Delay(500);
-                    Interlocked.Decrement(ref result);
-                }
+                await Task.Delay(1000);
+                Interlocked.Increment(ref result);
+            }
+            else
+            {
+                await Task.Delay(500);
+                Interlocked.Decrement(ref result);
+            }
 
-                Interlocked.Increment(ref itterations);
-            });
-
+            Interlocked.Increment(ref itterations);
+        });
         subject.OnNext(true);
         subject.OnNext(false);
         subject.OnNext(true);
         subject.OnNext(false);
         subject.OnNext(true);
         subject.OnNext(false);
-
         while (Volatile.Read(ref itterations) < SampleValue6)
         {
             Thread.Yield();
@@ -152,7 +143,7 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Tests WithLimitedConcurrency.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous RxVoid test.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous RxVoid test.</returns>
     [Test]
     public async Task WithLimitedConcurrency_LimitsConcurrentTasks()
     {
@@ -161,7 +152,7 @@ public partial class ReactiveExtensionsTests
 
         IEnumerable<Task<int>> CreateTasks()
         {
-            for (int i = 1; i <= SampleValue10; i++)
+            for (var i = 1; i <= SampleValue10; i++)
             {
                 var value = i;
                 yield return Task.Run(async () =>
@@ -173,7 +164,6 @@ public partial class ReactiveExtensionsTests
                     }
 
                     await Task.Delay(SampleValue10);
-
                     lock (_gate)
                     {
                         currentConcurrent--;
@@ -185,7 +175,6 @@ public partial class ReactiveExtensionsTests
         }
 
         var results = await CreateTasks().WithLimitedConcurrency(3).ToList();
-
         using (Assert.Multiple())
         {
             await Assert.That(results).Count().IsEqualTo(SampleValue10);
@@ -194,27 +183,24 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Verifies an empty limited-concurrency task sequence completes immediately.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WithLimitedConcurrency_EmptyTaskSequence_Completes()
     {
         var completed = false;
-        var values = new List<int>();
-
-        using var sub = Array.Empty<Task<int>>()
-            .WithLimitedConcurrency(SampleValue3)
+        List<int> values = [];
+        using var sub = Array.Empty<Task<int>>().WithLimitedConcurrency(SampleValue3)
             .Subscribe(values.Add, () => completed = true);
-
         await Assert.That(values).IsEmpty();
         await Assert.That(completed).IsTrue();
     }
 
     /// <summary>Verifies faulted and canceled tasks stop enumeration and report the expected errors.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WithLimitedConcurrency_TaskFaultsOrCancels_ThenErrorsAndStops()
     {
-        var expected = new InvalidOperationException("limited-concurrency");
+        InvalidOperationException expected = new("limited-concurrency");
         Exception? fault = null;
         Exception? canceled = null;
         var afterFaultPulled = false;
@@ -226,99 +212,84 @@ public partial class ReactiveExtensionsTests
             yield return Task.FromResult(SampleValue2);
         }
 
-        using var faultSub = FaultingTasks()
-            .WithLimitedConcurrency(1)
-            .Subscribe(static _ => { }, ex => fault = ex);
-
-        using var canceledSub = new[] { Task.FromCanceled<int>(new CancellationToken(canceled: true)) }
-            .WithLimitedConcurrency(1)
-            .Subscribe(static _ => { }, ex => canceled = ex);
-
+        using var faultSub = FaultingTasks().WithLimitedConcurrency(1).Subscribe(
+            static _ => { },
+            ex => fault = ex);
+        using var canceledSub = new[] { Task.FromCanceled<int>(new(true)) }.WithLimitedConcurrency(1).Subscribe(
+            static _ => { },
+            ex => canceled = ex);
         await Assert.That(fault).IsSameReferenceAs(expected);
         await Assert.That(canceled).IsTypeOf<OperationCanceledException>();
         await Assert.That(afterFaultPulled).IsFalse();
     }
 
     /// <summary>Verifies disposing before a pending task completes drops later notifications.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WithLimitedConcurrency_DisposeBeforeTaskContinuation_DropsWork()
     {
-        var task = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var values = new List<int>();
+        TaskCompletionSource<int> task = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> values = [];
         Exception? caught = null;
         var completed = false;
-
-        var sub = new[] { task.Task }
-            .WithLimitedConcurrency(1)
+        var sub = new[] { task.Task }.WithLimitedConcurrency(1)
             .Subscribe(values.Add, ex => caught = ex, () => completed = true);
-
         sub.Dispose();
         task.SetResult(SampleValue10);
         await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
-
         await Assert.That(values).IsEmpty();
         await Assert.That(caught).IsNull();
         await Assert.That(completed).IsFalse();
     }
 
     /// <summary>Exercises the internal disposed pull path used after a subscription is closed.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WithLimitedConcurrency_PullAfterDisposed_ThenNoNotifications()
     {
-        var limiter = new ConcurrencyLimiter<int>([Task.FromResult(SampleValue10)], 1)
-        {
-            Disposed = true
-        };
-        var values = new List<int>();
+        ConcurrencyLimiter<int> limiter = new([Task.FromResult(SampleValue10)], 1) { Disposed = true };
+        List<int> values = [];
         var completed = false;
-
-        limiter.PullNextTask(Observer.Create<int>(values.Add, static _ => { }, () => completed = true));
-
+        limiter.PullNextTask(Observer.Create<int>(
+            values.Add,
+            static _ => { },
+            () => completed = true));
         await Assert.That(values).IsEmpty();
         await Assert.That(completed).IsFalse();
     }
 
     /// <summary>Exercises the null-current continuation path defensively tolerated by the limiter.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WithLimitedConcurrency_NullTaskEntry_ThenNoNotifications()
     {
         IEnumerable<Task<int>> tasks = [null!];
-        var values = new List<int>();
+        List<int> values = [];
         Exception? caught = null;
         var completed = false;
-
-        using var sub = tasks
-            .WithLimitedConcurrency(1)
+        using var sub = tasks.WithLimitedConcurrency(1)
             .Subscribe(values.Add, ex => caught = ex, () => completed = true);
-
         await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
-
         await Assert.That(values).IsEmpty();
         await Assert.That(caught).IsNull();
         await Assert.That(completed).IsFalse();
     }
 
     /// <summary>Tests SynchronizeSynchronous provides sync lock.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SynchronizeSynchronous_ProvidesSyncLock()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         IDisposable? lastSync = null;
-
         using var sub = subject.SynchronizeSynchronous().Subscribe(tuple =>
         {
             results.Add(tuple.Value);
             lastSync = tuple.Sync;
             tuple.Sync.Dispose(); // Must dispose sync lock to allow next item to process
         });
-
         subject.OnNext(1);
-
         using (Assert.Multiple())
         {
             await Assert.That(results).Count().IsEqualTo(1);
@@ -327,22 +298,19 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Tests SynchronizeAsync provides sync lock.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SynchronizeAsync_ProvidesSyncLock()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         IDisposable? lastSync = null;
-
         using var sub = subject.SynchronizeAsync().Subscribe(tuple =>
         {
             results.Add(tuple.Value);
             lastSync = tuple.Sync;
         });
-
         subject.OnNext(1);
-
         using (Assert.Multiple())
         {
             await Assert.That(results).Count().IsEqualTo(1);
@@ -351,30 +319,25 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Tests SubscribeAsync with onNext and onError.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous RxVoid test.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous RxVoid test.</returns>
     [Test]
     public async Task SubscribeAsync_WithOnNextAndOnError_HandlesError()
     {
-        var results = new List<int>();
+        List<int> results = [];
         Exception? caughtException = null;
-        var errorSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<bool> errorSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var source = Observable.Create<int>(observer =>
         {
             observer.OnNext(1);
             observer.OnError(new InvalidOperationException());
             return EmptyDisposable.Instance;
         });
-
-        using var sub = source.SubscribeAsync(
-            async x => results.Add(x),
-            ex =>
-            {
-                caughtException = ex;
-                errorSource.TrySetResult(true);
-            });
-
+        using var sub = source.SubscribeAsync(async x => results.Add(x), ex =>
+        {
+            caughtException = ex;
+            errorSource.TrySetResult(true);
+        });
         await errorSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
-
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1]);
@@ -383,15 +346,14 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Tests SubscribeSynchronous with full callbacks.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SubscribeSynchronous_WithFullCallbacks_ExecutesAll()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
+        Subject<int> subject = new();
+        List<int> results = [];
         var errorHandled = false;
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         subject.SubscribeSynchronous(
             async v =>
             {
@@ -400,13 +362,10 @@ public partial class ReactiveExtensionsTests
             },
             _ => errorHandled = true,
             () => completed.TrySetResult());
-
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnCompleted();
-
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
-
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1, SampleValue2]);
@@ -416,15 +375,14 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Tests SubscribeSynchronous with onNext and onError.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SubscribeSynchronous_WithOnNextAndOnError_HandlesError()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
-        var onNextCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var errorHandled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
+        Subject<int> subject = new();
+        List<int> results = [];
+        TaskCompletionSource onNextCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorHandled = new(TaskCreationOptions.RunContinuationsAsynchronously);
         subject.SubscribeSynchronous(
             async v =>
             {
@@ -433,13 +391,10 @@ public partial class ReactiveExtensionsTests
                 onNextCompleted.TrySetResult();
             },
             _ => errorHandled.TrySetResult());
-
         subject.OnNext(1);
         await onNextCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5));
-
         subject.OnError(new InvalidOperationException());
         await errorHandled.Task.WaitAsync(TimeSpan.FromSeconds(5));
-
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1]);
@@ -448,14 +403,13 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Tests SubscribeSynchronous with onNext and onCompleted.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SubscribeSynchronous_WithOnNextAndOnCompleted_CompletesCorrectly()
     {
-        var subject = new Subject<int>();
-        var results = new List<int>();
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
+        Subject<int> subject = new();
+        List<int> results = [];
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         subject.SubscribeSynchronous(
             async v =>
             {
@@ -463,13 +417,10 @@ public partial class ReactiveExtensionsTests
                 results.Add(v);
             },
             () => completed.TrySetResult());
-
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnCompleted();
-
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
-
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1, SampleValue2]);
@@ -478,40 +429,35 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Tests SubscribeSynchronous with only onNext.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SubscribeSynchronous_WithOnlyOnNext_ProcessesValues()
     {
         const int ExpectedCount = 3;
-        var subject = new Subject<int>();
-        var results = new List<int>();
-        var allReceived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        subject.SubscribeSynchronous(
-            async v =>
-            {
-                await Task.Yield();
-                results.Add(v);
-                _ = results.Count == ExpectedCount && allReceived.TrySetResult();
-            });
-
+        Subject<int> subject = new();
+        List<int> results = [];
+        TaskCompletionSource allReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        subject.SubscribeSynchronous(async v =>
+        {
+            await Task.Yield();
+            results.Add(v);
+            _ = results.Count == ExpectedCount && allReceived.TrySetResult();
+        });
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnNext(SampleValue3);
-
         await allReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
-
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2, SampleValue3]);
     }
 
     /// <summary>Tests SubscribeAsync with onNext and onCompleted.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task SubscribeAsync_WithOnNextAndOnCompleted_CompletesCorrectly()
     {
-        var results = new List<int>();
+        List<int> results = [];
         var completed = false;
-        var completionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<bool> completionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var source = Observable.Create<int>(observer =>
         {
             observer.OnNext(1);
@@ -519,7 +465,6 @@ public partial class ReactiveExtensionsTests
             observer.OnCompleted();
             return EmptyDisposable.Instance;
         });
-
         using var subscription = source.SubscribeAsync(
             async v =>
             {
@@ -531,9 +476,7 @@ public partial class ReactiveExtensionsTests
                 completed = true;
                 completionSource.TrySetResult(true);
             });
-
         await completionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
-
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1, SampleValue2]);

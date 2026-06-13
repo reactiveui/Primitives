@@ -27,7 +27,7 @@ public class OperatorZipBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesZip()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = Signal.Pair(
                 Signal.Sequence(LeftStart, Count),
                 Signal.Sequence(RightStart, Count),
@@ -41,7 +41,7 @@ public class OperatorZipBenchmarks
     [Benchmark]
     public int SystemReactiveZip()
     {
-        var observer = new IntSignalWitness();
+        IntSignalWitness observer = new();
         using var subscription = RxObservable.Zip(RxObservable.Range(LeftStart, Count), RxObservable.Range(RightStart, Count), static (left, right) => left + right)
             .Subscribe(observer);
         return observer.Total;
@@ -52,7 +52,7 @@ public class OperatorZipBenchmarks
     [Benchmark]
     public int R3Zip()
     {
-        var observer = new IntR3Witness();
+        IntR3Witness observer = new();
         using var subscription = R3.Observable.Zip(
                 R3.Observable.Range(LeftStart, Count),
                 R3.Observable.Range(RightStart, Count),

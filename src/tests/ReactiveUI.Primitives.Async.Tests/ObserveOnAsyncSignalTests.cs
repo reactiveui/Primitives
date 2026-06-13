@@ -21,7 +21,7 @@ public class ObserveOnAsyncSignalTests
     public async Task WhenForceYielding_ThenValueForwarded()
     {
         var result = await SignalAsync.Return(Sentinel)
-            .WitnessOn(AsyncContext.Default, forceYielding: true)
+            .WitnessOn(AsyncContext.Default, true)
             .FirstAsync();
 
         await Assert.That(result).IsEqualTo(Sentinel);
@@ -32,13 +32,13 @@ public class ObserveOnAsyncSignalTests
     [Test]
     public async Task WhenForceYieldingSourceErrors_ThenErrorForwarded()
     {
-        var expected = new InvalidOperationException("forced");
+        InvalidOperationException expected = new("forced");
         InvalidOperationException? caught = null;
 
         try
         {
             await SignalAsync.Throw<int>(expected)
-                .WitnessOn(AsyncContext.Default, forceYielding: true)
+                .WitnessOn(AsyncContext.Default, true)
                 .ToListAsync();
         }
         catch (InvalidOperationException ex)
@@ -55,7 +55,7 @@ public class ObserveOnAsyncSignalTests
     public async Task WhenForceYieldingSourceEmpty_ThenCompletesSuccessfully()
     {
         var result = await SignalAsync.Empty<int>()
-            .WitnessOn(AsyncContext.Default, forceYielding: true)
+            .WitnessOn(AsyncContext.Default, true)
             .ToListAsync();
 
         await Assert.That(result).IsEmpty();
@@ -69,7 +69,7 @@ public class ObserveOnAsyncSignalTests
         var ctx = SynchronizationContext.Current ?? new SynchronizationContext();
 
         var result = await SignalAsync.Return(Sentinel)
-            .WitnessOn(ctx, forceYielding: true)
+            .WitnessOn(ctx, true)
             .FirstAsync();
 
         await Assert.That(result).IsEqualTo(Sentinel);
@@ -107,14 +107,14 @@ public class ObserveOnAsyncSignalTests
     [Test]
     public async Task WhenObserveOnDifferentContextSourceErrors_ThenForwardedViaSlowPath()
     {
-        var expected = new InvalidOperationException("differing-context-error");
+        InvalidOperationException expected = new("differing-context-error");
         InvalidOperationException? caught = null;
-        var customCtx = new SynchronizationContext();
+        SynchronizationContext customCtx = new();
 
         try
         {
             await SignalAsync.Throw<int>(expected)
-                .WitnessOn(customCtx, forceYielding: false)
+                .WitnessOn(customCtx, false)
                 .ToListAsync();
         }
         catch (InvalidOperationException ex)
@@ -131,10 +131,10 @@ public class ObserveOnAsyncSignalTests
     [Test]
     public async Task WhenObserveOnDifferentContextSourceEmpty_ThenCompletesViaSlowPath()
     {
-        var customCtx = new SynchronizationContext();
+        SynchronizationContext customCtx = new();
 
         var result = await SignalAsync.Empty<int>()
-            .WitnessOn(customCtx, forceYielding: false)
+            .WitnessOn(customCtx, false)
             .ToListAsync();
 
         await Assert.That(result).IsEmpty();
@@ -149,10 +149,10 @@ public class ObserveOnAsyncSignalTests
     {
         var signal = Signal.Create<int>();
         Exception? caught = null;
-        var errorTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
-            .WitnessOn(AsyncContext.Default, forceYielding: true)
+            .WitnessOn(AsyncContext.Default, true)
             .SubscribeAsync(
                 static (_, _) => default,
                 (ex, _) =>
@@ -162,7 +162,7 @@ public class ObserveOnAsyncSignalTests
                     return default;
                 });
 
-        var expected = new InvalidOperationException("observeon-resume");
+        InvalidOperationException expected = new("observeon-resume");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -176,9 +176,9 @@ public class ObserveOnAsyncSignalTests
     [Test]
     public async Task WhenForwardAfterContextSwitchAsyncInvokedDirectly_ThenValueForwarded()
     {
-        var captured = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var downstream = new CapturingAsyncWitness<int>(captured);
-        var sut = new ContextSwitchSignalAsync<int>.ContextSwitchWitness(downstream, AsyncContext.Default, forceYielding: true);
+        TaskCompletionSource<int> captured = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        CapturingAsyncWitness<int> downstream = new(captured);
+        ContextSwitchSignalAsync<int>.ContextSwitchWitness sut = new(downstream, AsyncContext.Default, true);
 
         await sut.ForwardAfterContextSwitchAsync(Sentinel, CancellationToken.None);
 
@@ -191,10 +191,10 @@ public class ObserveOnAsyncSignalTests
     [Test]
     public async Task WhenForwardErrorAfterContextSwitchAsyncInvokedDirectly_ThenErrorForwarded()
     {
-        var captured = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var downstream = new CapturingAsyncWitness<int>(captured);
-        var sut = new ContextSwitchSignalAsync<int>.ContextSwitchWitness(downstream, AsyncContext.Default, forceYielding: true);
-        var expected = new InvalidOperationException("slow-path-error");
+        TaskCompletionSource<Exception> captured = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        CapturingAsyncWitness<int> downstream = new(captured);
+        ContextSwitchSignalAsync<int>.ContextSwitchWitness sut = new(downstream, AsyncContext.Default, true);
+        InvalidOperationException expected = new("slow-path-error");
 
         await sut.ForwardErrorAfterContextSwitchAsync(expected, CancellationToken.None);
 
@@ -207,9 +207,9 @@ public class ObserveOnAsyncSignalTests
     [Test]
     public async Task WhenForwardCompletionAfterContextSwitchAsyncInvokedDirectly_ThenCompletionForwarded()
     {
-        var captured = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var downstream = new CapturingAsyncWitness<int>(captured);
-        var sut = new ContextSwitchSignalAsync<int>.ContextSwitchWitness(downstream, AsyncContext.Default, forceYielding: true);
+        TaskCompletionSource<Result> captured = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        CapturingAsyncWitness<int> downstream = new(captured);
+        ContextSwitchSignalAsync<int>.ContextSwitchWitness sut = new(downstream, AsyncContext.Default, true);
 
         await sut.ForwardCompletionAfterContextSwitchAsync(Result.Success);
 

@@ -43,7 +43,7 @@ public static partial class SignalAsync
                     }
                     else
                     {
-                        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                        TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
                         await using var tp = timeProvider.CreateTimer(
                             x => ((TaskCompletionSource<bool>)x!).TrySetResult(true),
                             tcs,

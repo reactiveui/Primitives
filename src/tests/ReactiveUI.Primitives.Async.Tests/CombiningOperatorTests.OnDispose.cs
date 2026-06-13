@@ -16,7 +16,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenOnDisposeSyncOnNext_ThenForwardsValues()
     {
-        var items = new List<int>();
+        List<int> items = [];
         var disposed = false;
 
         var source = SignalAsync.Create<int>(async (observer, ct) =>
@@ -46,7 +46,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenOnDisposeSyncOnErrorResume_ThenForwardsError()
     {
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
 
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
@@ -123,7 +123,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenCleanupBranchAsyncOnNext_ThenForwardsValues()
     {
-        var items = new List<int>();
+        List<int> items = [];
         var disposed = false;
 
         var source = SignalAsync.Create<int>(async (observer, ct) =>
@@ -157,7 +157,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenCleanupBranchAsyncOnErrorResume_ThenForwardsError()
     {
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
 
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
@@ -238,8 +238,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenBlendCoordinatorDisposed_ThenRelayNextAsyncReturnsDirectly()
     {
-        var observer = new CallbackWitnessAsync<int>((_, _) => default);
-        var subscription = new SignalAsyncExtensions.BlendCoordinator<int>(observer);
+        CallbackWitnessAsync<int> observer = new((_, _) => default);
+        SignalAsyncExtensions.BlendCoordinator<int> subscription = new(observer);
         await subscription.DisposeAsync();
 
         await subscription.RelayNextAsync(Sentinel99, CancellationToken.None);
@@ -250,8 +250,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenBlendCoordinatorDisposed_ThenRelayErrorAsyncReturnsDirectly()
     {
-        var observer = new CallbackWitnessAsync<int>((_, _) => default);
-        var subscription = new SignalAsyncExtensions.BlendCoordinator<int>(observer);
+        CallbackWitnessAsync<int> observer = new((_, _) => default);
+        SignalAsyncExtensions.BlendCoordinator<int> subscription = new(observer);
         await subscription.DisposeAsync();
 
         await subscription.RelayErrorAsync(new InvalidOperationException("test"), CancellationToken.None);
@@ -265,11 +265,11 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenBlendCoordinatorDisposedWhileGateHeld_ThenRelayNextAsyncPostGateReturns()
     {
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var items = new List<int>();
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> items = [];
 
-        var observer = new CallbackWitnessAsync<int>(
+        CallbackWitnessAsync<int> observer = new(
             (x, _) =>
             {
                 items.Add(x);
@@ -282,7 +282,7 @@ public partial class CombiningOperatorTests
                 await allowCompletion.Task;
             });
 
-        var subscription = new SignalAsyncExtensions.BlendCoordinator<int>(observer);
+        SignalAsyncExtensions.BlendCoordinator<int> subscription = new(observer);
 
         // Trigger FinishAsync with failure - blocks on observer.OnCompletedAsync
         var failTask = Task.Run(() =>
@@ -303,11 +303,11 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenBlendCoordinatorDisposedWhileGateHeld_ThenRelayErrorAsyncPostGateReturns()
     {
-        var completionBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var allowCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var errors = new List<Exception>();
+        TaskCompletionSource completionBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<Exception> errors = [];
 
-        var observer = new CallbackWitnessAsync<int>(
+        CallbackWitnessAsync<int> observer = new(
             (_, _) => default,
             (ex, _) =>
             {
@@ -320,7 +320,7 @@ public partial class CombiningOperatorTests
                 await allowCompletion.Task;
             });
 
-        var subscription = new SignalAsyncExtensions.BlendCoordinator<int>(observer);
+        SignalAsyncExtensions.BlendCoordinator<int> subscription = new(observer);
 
         var failTask = Task.Run(() =>
             subscription.FinishAsync(Result.Failure(new InvalidOperationException("fail"))));
@@ -339,10 +339,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenBlendSequenceCoordinatorDisposed_ThenOnNextReturnsDirectly()
     {
-        var observer = new CallbackWitnessAsync<int>((_, _) => default);
+        CallbackWitnessAsync<int> observer = new((_, _) => default);
         IObservableAsync<int>[] sources = [];
-        var subscription =
-            new SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator(observer, sources);
+        SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator subscription = new(observer, sources);
         subscription.BeginSubscribing();
         await subscription.DisposeAsync();
 
@@ -354,10 +353,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenBlendSequenceCoordinatorDisposed_ThenOnErrorResumeReturnsDirectly()
     {
-        var observer = new CallbackWitnessAsync<int>((_, _) => default);
+        CallbackWitnessAsync<int> observer = new((_, _) => default);
         IObservableAsync<int>[] sources = [];
-        var subscription =
-            new SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator(observer, sources);
+        SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator subscription = new(observer, sources);
         subscription.BeginSubscribing();
         await subscription.DisposeAsync();
 

@@ -16,117 +16,107 @@ public class SyncOperatorErrorForwardingTests
     private const string ForwardedMessage = "forwarded";
 
     /// <summary>Verifies <c>TrySelectObservable</c> forwards source errors.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTrySelectSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(ForwardedMessage);
-
-        using var sub = subject.TrySelect(static x => (int?)x)
-            .Subscribe(static _ => { }, ex => caught = ex);
-
+        InvalidOperationException expected = new(ForwardedMessage);
+        using var sub = subject.TrySelect(static x => (int?)x).Subscribe(
+            static _ => { },
+            ex => caught = ex);
         subject.OnError(expected);
-
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
     /// <summary>Verifies <c>WhereTrueObservable</c> forwards source errors.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenWhereTrueSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<bool>();
+        Subject<bool> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(ForwardedMessage);
-
-        using var sub = subject.WhereTrue().Subscribe(static _ => { }, ex => caught = ex);
-
+        InvalidOperationException expected = new(ForwardedMessage);
+        using var sub = subject.WhereTrue().Subscribe(
+            static _ => { },
+            ex => caught = ex);
         subject.OnError(expected);
-
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
     /// <summary>Verifies <c>WhereFalseObservable</c> forwards source errors.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenWhereFalseSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<bool>();
+        Subject<bool> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(ForwardedMessage);
-
-        using var sub = subject.WhereFalse().Subscribe(static _ => { }, ex => caught = ex);
-
+        InvalidOperationException expected = new(ForwardedMessage);
+        using var sub = subject.WhereFalse().Subscribe(
+            static _ => { },
+            ex => caught = ex);
         subject.OnError(expected);
-
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
     /// <summary>Verifies <c>WhereIsNotNullObservable</c> forwards source errors.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenWhereIsNotNullSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<string?>();
+        Subject<string?> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(ForwardedMessage);
-
-        using var sub = subject.WhereIsNotNull().Subscribe(static _ => { }, ex => caught = ex);
-
+        InvalidOperationException expected = new(ForwardedMessage);
+        using var sub = subject.WhereIsNotNull().Subscribe(
+            static _ => { },
+            ex => caught = ex);
         subject.OnError(expected);
-
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
     /// <summary>Verifies <c>SkipWhileNullObservable</c> forwards source errors.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSkipWhileNullSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<string>();
+        Subject<string> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(ForwardedMessage);
-
-        using var sub = subject.SkipWhileNull().Subscribe(static _ => { }, ex => caught = ex);
-
+        InvalidOperationException expected = new(ForwardedMessage);
+        using var sub = subject.SkipWhileNull().Subscribe(
+            static _ => { },
+            ex => caught = ex);
         subject.OnError(expected);
-
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
     /// <summary>Verifies <c>FilterRegexObservable</c> forwards source errors.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFilterRegexSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<string>();
+        Subject<string> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(ForwardedMessage);
-
-        using var sub = subject.Filter(new Regex("x", RegexOptions.None, TimeSpan.FromSeconds(1)))
-            .Subscribe(static _ => { }, ex => caught = ex);
-
+        InvalidOperationException expected = new(ForwardedMessage);
+        using var sub = subject.Filter(new Regex("x", RegexOptions.None, TimeSpan.FromSeconds(1))).Subscribe(
+            static _ => { },
+            ex => caught = ex);
         subject.OnError(expected);
-
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
     /// <summary>Verifies <c>SelectConstantObservable</c> forwards source errors.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectConstantSourceErrors_ThenForwardsError()
     {
-        var subject = new Subject<int>();
+        Subject<int> subject = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(ForwardedMessage);
-
-        using var sub = subject.SelectConstant("constant")
-            .Subscribe(static _ => { }, ex => caught = ex);
-
+        InvalidOperationException expected = new(ForwardedMessage);
+        using var sub = subject.SelectConstant("constant").Subscribe(
+            static _ => { },
+            ex => caught = ex);
         subject.OnError(expected);
-
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 }

@@ -64,7 +64,7 @@ internal sealed class ConcurrencyLimiter<T> : IObservable<T>
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        var subscription = new Subscription(this, observer);
+        Subscription subscription = new(this, observer);
         lock (_gate)
         {
             _rator ??= _taskFunctions.GetEnumerator();

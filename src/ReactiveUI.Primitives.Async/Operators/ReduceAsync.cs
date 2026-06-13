@@ -26,7 +26,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="accumulator">An asynchronous accumulator function to invoke on each element. Receives the
         /// current accumulated value, the current element, and a cancellation token.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
         public ValueTask<TAcc> AggregateAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator) =>
@@ -42,7 +42,7 @@ public static partial class SignalAsyncExtensions
         /// current accumulated value, the current element, and a cancellation token.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
         public ValueTask<TAcc> AggregateAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator,
@@ -58,7 +58,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="accumulator">An accumulator function to invoke on each element. Receives the current
         /// accumulated value and the current element.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
         public ValueTask<TAcc> AggregateAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator) =>
@@ -74,7 +74,7 @@ public static partial class SignalAsyncExtensions
         /// accumulated value and the current element.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
         public ValueTask<TAcc> AggregateAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator,
@@ -91,7 +91,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="accumulator">An accumulator function to invoke on each element.</param>
         /// <param name="resultSelector">A function to transform the final accumulated value into the result value.</param>
         /// <returns>A task representing the asynchronous operation, containing the transformed result.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> or
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> or
         /// <paramref name="resultSelector"/> is null.</exception>
         public ValueTask<TResult> AggregateAsync<TAcc, TResult>(
             TAcc seed,
@@ -110,7 +110,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="resultSelector">A function to transform the final accumulated value into the result value.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the transformed result.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> or
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> or
         /// <paramref name="resultSelector"/> is null.</exception>
         public ValueTask<TResult> AggregateAsync<TAcc, TResult>(
             TAcc seed,
@@ -128,7 +128,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="accumulator">An asynchronous accumulator function to invoke on each element. Receives the
         /// current accumulated value, the current element, and a cancellation token.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
         public ValueTask<TAcc> ReduceAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator) =>
@@ -144,7 +144,7 @@ public static partial class SignalAsyncExtensions
         /// current accumulated value, the current element, and a cancellation token.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
         public async ValueTask<TAcc> ReduceAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator,
@@ -153,7 +153,7 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(accumulator);
             cancellationToken.ThrowIfCancellationRequested();
 
-            var observer = new ReduceAsyncTaskWitness<T, TAcc>(seed, accumulator, cancellationToken);
+            ReduceAsyncTaskWitness<T, TAcc> observer = new(seed, accumulator, cancellationToken);
             await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
@@ -167,7 +167,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="accumulator">An accumulator function to invoke on each element. Receives the current
         /// accumulated value and the current element.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
         public ValueTask<TAccumulate> ReduceAsync<TAccumulate>(
             TAccumulate seed,
             Func<TAccumulate, T, TAccumulate> accumulator) =>
@@ -183,7 +183,7 @@ public static partial class SignalAsyncExtensions
         /// accumulated value and the current element.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
         public async ValueTask<TAcc> ReduceAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator,
@@ -192,7 +192,7 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(accumulator);
             cancellationToken.ThrowIfCancellationRequested();
 
-            var observer = new ReduceSyncTaskWitness<T, TAcc>(seed, accumulator, cancellationToken);
+            ReduceSyncTaskWitness<T, TAcc> observer = new(seed, accumulator, cancellationToken);
             await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
@@ -207,7 +207,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="accumulator">An accumulator function to invoke on each element.</param>
         /// <param name="resultSelector">A function to transform the final accumulated value into the result value.</param>
         /// <returns>A task representing the asynchronous operation, containing the transformed result.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> or
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> or
         /// <paramref name="resultSelector"/> is null.</exception>
         public ValueTask<TResult> ReduceAsync<TAcc, TResult>(
             TAcc seed,
@@ -226,7 +226,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="resultSelector">A function to transform the final accumulated value into the result value.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the transformed result.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accumulator"/> or
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> or
         /// <paramref name="resultSelector"/> is null.</exception>
         public async ValueTask<TResult> ReduceAsync<TAcc, TResult>(
             TAcc seed,

@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\ReactiveUI.Primitives.Blazor\ReactiveUI.Primitives.Blazor.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Blazor\ReactiveUI.Primitives.Blazor.csproj"/>
   </ItemGroup>
 
 </Project>

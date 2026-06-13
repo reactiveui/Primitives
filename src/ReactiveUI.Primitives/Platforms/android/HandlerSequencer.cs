@@ -19,16 +19,20 @@ public sealed class HandlerSequencer : DispatchSequencerBase
     /// Cached runnable wrapping the base drain. The drain callback is invariant for the lifetime of the sequencer,
     /// so the JNI runnable bridge is built once and reused for every posted batch rather than per post.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Maintainability",
+        "SST1422:Move this field into the method that uses it",
+        Justification = "Persistent lazy cache: the JNI runnable bridge is built once and reused across every Post call, so it cannot be a method local.")]
     private Java.Lang.IRunnable? _drainRunnable;
 
     /// <summary>Initializes a new instance of the <see cref="HandlerSequencer"/> class.</summary>
     /// <param name="handler">The handler used to marshal work onto its looper thread.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="handler"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="handler"/> is <see langword="null"/>.</exception>
     public HandlerSequencer(Handler handler) =>
         Handler = handler ?? throw new ArgumentNullException(nameof(handler));
 
     /// <summary>Gets a sequencer that marshals work onto the application's main (UI) looper.</summary>
-    public static HandlerSequencer Main { get; } = new(new Handler(Looper.MainLooper!));
+    public static HandlerSequencer Main { get; } = new(new(Looper.MainLooper!));
 
     /// <summary>Gets the handler used to marshal work onto its looper thread.</summary>
     public Handler Handler { get; }

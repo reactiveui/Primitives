@@ -14,7 +14,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenSubscribeAsyncWithActionOverload_ThenReceivesItems()
     {
-        var items = new List<int>();
+        List<int> items = [];
         var source = SignalAsync.Range(1, 3);
 
         await using var sub = await source.SubscribeAsync(items.Add, CancellationToken.None);
@@ -31,13 +31,13 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenSubscribeAsyncSyncOverloadWithNullHandlers_ThenOnlyOnNextCalled()
     {
-        var items = new List<int>();
+        List<int> items = [];
         var source = SignalAsync.Range(1, 3);
 
         await using var sub = await source.SubscribeAsync(
             (Action<int>)items.Add,
-            onErrorResume: null,
-            onCompleted: null,
+            null,
+            null,
             CancellationToken.None);
 
         await AsyncTestHelpers.WaitForConditionAsync(

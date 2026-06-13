@@ -22,7 +22,7 @@ internal sealed class SampleLatestObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(trigger);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var sink = new SampleLatestSink(observer);
+        SampleLatestSink sink = new(observer);
         var sourceSub = source.Subscribe(sink.SourceWitness);
         var triggerSub = trigger.Subscribe(sink.TriggerObserver);
         return new DisposableBag(sourceSub, triggerSub, sink);

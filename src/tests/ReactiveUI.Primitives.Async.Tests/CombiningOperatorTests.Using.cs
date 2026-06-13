@@ -12,7 +12,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenUsingHappyPath_ThenResourceIsDisposedAfterCompletion()
     {
-        var trackingResource = new TrackingAsyncDisposable();
+        TrackingAsyncDisposable trackingResource = new();
 
         var result = await SignalAsync.Using(
             _ => new ValueTask<TrackingAsyncDisposable>(trackingResource),
@@ -28,7 +28,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenUsingObservableFactoryThrows_ThenResourceIsDisposed()
     {
-        var trackingResource = new TrackingAsyncDisposable();
+        TrackingAsyncDisposable trackingResource = new();
 
         var observable = SignalAsync.Using<int, TrackingAsyncDisposable>(
             _ => new(trackingResource),
@@ -67,7 +67,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenUsingWithMultipleValues_ThenAllEmittedAndResourceDisposed()
     {
-        var trackingResource = new TrackingAsyncDisposable();
+        TrackingAsyncDisposable trackingResource = new();
 
         var result = await SignalAsync.Using(
             _ => new ValueTask<TrackingAsyncDisposable>(trackingResource),

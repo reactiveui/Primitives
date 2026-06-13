@@ -15,9 +15,9 @@ public class DisposableBagTests
     [Test]
     public async Task WhenDefaultBagFilledViaAdd_ThenDisposesBoth()
     {
-        var bag = new DisposableBag();
-        var d1 = new CountedDisposable();
-        var d2 = new CountedDisposable();
+        DisposableBag bag = new();
+        CountedDisposable d1 = new();
+        CountedDisposable d2 = new();
 
         bag.Add(d1);
         bag.Add(d2);
@@ -35,7 +35,7 @@ public class DisposableBagTests
     [Test]
     public async Task WhenAddNull_ThenIgnored()
     {
-        var bag = new DisposableBag();
+        DisposableBag bag = new();
         bag.Add(null!);
         bag.Dispose();
 
@@ -48,11 +48,11 @@ public class DisposableBagTests
     public async Task WhenOverflowGrowthRequired_ThenAllEntriesDisposed()
     {
         const int Count = 8;
-        var bag = new DisposableBag();
+        DisposableBag bag = new();
         var entries = new CountedDisposable[Count];
         for (var i = 0; i < Count; i++)
         {
-            entries[i] = new CountedDisposable();
+            entries[i] = new();
             bag.Add(entries[i]);
         }
 
@@ -69,10 +69,10 @@ public class DisposableBagTests
     [Test]
     public async Task WhenThreeArgConstructor_ThenAllThreeDisposed()
     {
-        var d1 = new CountedDisposable();
-        var d2 = new CountedDisposable();
-        var d3 = new CountedDisposable();
-        var bag = new DisposableBag(d1, d2, d3);
+        CountedDisposable d1 = new();
+        CountedDisposable d2 = new();
+        CountedDisposable d3 = new();
+        DisposableBag bag = new(d1, d2, d3);
 
         bag.Dispose();
 
@@ -86,8 +86,8 @@ public class DisposableBagTests
     [Test]
     public async Task WhenDisposeCalledTwice_ThenIdempotent()
     {
-        var d1 = new CountedDisposable();
-        var bag = new DisposableBag(d1, new CountedDisposable());
+        CountedDisposable d1 = new();
+        DisposableBag bag = new(d1, new CountedDisposable());
 
         bag.Dispose();
         bag.Dispose();
@@ -100,10 +100,10 @@ public class DisposableBagTests
     [Test]
     public async Task WhenAddAfterDispose_ThenSuppliedDisposableDisposedImmediately()
     {
-        var bag = new DisposableBag();
+        DisposableBag bag = new();
         bag.Dispose();
 
-        var late = new CountedDisposable();
+        CountedDisposable late = new();
         bag.Add(late);
 
         await Assert.That(late.DisposeCount).IsEqualTo(1);

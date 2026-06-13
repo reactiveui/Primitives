@@ -9,7 +9,7 @@ using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests for <see cref="RetryForeverObservable{T}"/> — exercises the resubscribe-on-error
+/// <summary>Tests for <see cref = "RetryForeverObservable{T}"/> — exercises the resubscribe-on-error
 /// loop, the dispose-after-error short-circuit that prevents a runaway resubscribe, and the
 /// null-observer subscribe guard.</summary>
 public class RetryForeverObservableTests
@@ -24,12 +24,12 @@ public class RetryForeverObservableTests
     private const int FinalAttempt = 3;
 
     /// <summary>Verifies the resubscribe loop replays values from a fresh subscription on every error and finally forwards completion.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRetryForeverSourceErrorsThenCompletes_ThenResubscribesAndForwards()
     {
         var attempts = 0;
-        var values = new List<int>();
+        List<int> values = [];
         var completed = false;
         var source = Observable.Create<int>(observer =>
         {
@@ -46,16 +46,14 @@ public class RetryForeverObservableTests
 
             return EmptyDisposable.Instance;
         });
-
         using var sub = source.OnErrorRetry().Subscribe(values.Add, () => completed = true);
-
         await Assert.That(values).IsCollectionEqualTo([FirstAttempt, SecondAttempt, FinalAttempt]);
         await Assert.That(completed).IsTrue();
         await Assert.That(attempts).IsEqualTo(FinalAttempt);
     }
 
     /// <summary>Verifies that disposing the subscription suppresses resubscription on a subsequent error.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRetryForeverDisposedAfterError_ThenDoesNotResubscribe()
     {
@@ -67,29 +65,25 @@ public class RetryForeverObservableTests
             captured = observer;
             return EmptyDisposable.Instance;
         });
-
         var sub = source.OnErrorRetry().Subscribe(static _ => { });
         await Assert.That(subscribeCount).IsEqualTo(1);
-
         sub.Dispose();
         captured!.OnError(new InvalidOperationException("after-dispose"));
-
         await Assert.That(subscribeCount).IsEqualTo(1);
     }
 
     /// <summary>Verifies completion after disposal is ignored.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRetryForeverDisposedBeforeCompletion_ThenCompletionDropped()
     {
-        var source = new SyncDirectSource<int>();
+        SyncDirectSource<int> source = new();
         var completedCount = 0;
-
-        var sub = source.OnErrorRetry().Subscribe(static _ => { }, () => completedCount++);
-
+        var sub = source.OnErrorRetry().Subscribe(
+            static _ => { },
+            () => completedCount++);
         sub.Dispose();
         source.Observer.OnCompleted();
-
         await Assert.That(completedCount).IsEqualTo(0);
     }
 
@@ -97,8 +91,7 @@ public class RetryForeverObservableTests
     [Test]
     public void WhenRetryForeverObserverNull_ThenSubscribeThrows()
     {
-        var observable = new RetryForeverObservable<int>(new Subject<int>());
-
+        RetryForeverObservable<int> observable = new(new Subject<int>());
         Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
     }
 }

@@ -40,7 +40,6 @@ override ReactiveUI.Primitives.Async.TakeUntilOptions.Equals(object? obj) -> boo
 override ReactiveUI.Primitives.Async.TakeUntilOptions.GetHashCode() -> int
 override ReactiveUI.Primitives.Async.TakeUntilOptions.ToString() -> string!
 ReactiveUI.Primitives.Async.AsyncContext
-ReactiveUI.Primitives.Async.AsyncContext.AsyncContext(ReactiveUI.Primitives.Async.AsyncContext! original) -> void
 ReactiveUI.Primitives.Async.AsyncContext.AsyncContextSwitcherAwaitable
 ReactiveUI.Primitives.Async.AsyncContext.AsyncContextSwitcherAwaitable.AsyncContext.get -> ReactiveUI.Primitives.Async.AsyncContext!
 ReactiveUI.Primitives.Async.AsyncContext.AsyncContextSwitcherAwaitable.AsyncContext.init -> void
@@ -812,10 +811,8 @@ static ReactiveUI.Primitives.Async.TakeUntilOptions.Default.get -> ReactiveUI.Pr
 static ReactiveUI.Primitives.Async.TakeUntilOptions.operator !=(ReactiveUI.Primitives.Async.TakeUntilOptions? left, ReactiveUI.Primitives.Async.TakeUntilOptions? right) -> bool
 static ReactiveUI.Primitives.Async.TakeUntilOptions.operator ==(ReactiveUI.Primitives.Async.TakeUntilOptions? left, ReactiveUI.Primitives.Async.TakeUntilOptions? right) -> bool
 static ReactiveUI.Primitives.Async.UnhandledExceptionHandler.Register(System.Action<System.Exception!>! unhandledExceptionHandler) -> void
-virtual ReactiveUI.Primitives.Async.AsyncContext.<Clone>$() -> ReactiveUI.Primitives.Async.AsyncContext!
-virtual ReactiveUI.Primitives.Async.AsyncContext.EqualityContract.get -> System.Type!
-virtual ReactiveUI.Primitives.Async.AsyncContext.Equals(ReactiveUI.Primitives.Async.AsyncContext? other) -> bool
-virtual ReactiveUI.Primitives.Async.AsyncContext.PrintMembers(System.Text.StringBuilder! builder) -> bool
+ReactiveUI.Primitives.Async.AsyncContext.<Clone>$() -> ReactiveUI.Primitives.Async.AsyncContext!
+ReactiveUI.Primitives.Async.AsyncContext.Equals(ReactiveUI.Primitives.Async.AsyncContext? other) -> bool
 virtual ReactiveUI.Primitives.Async.CompletionSignalDelegate.Invoke(System.Action<ReactiveUI.Primitives.Result>! notifyStop) -> System.IAsyncDisposable!
 virtual ReactiveUI.Primitives.Async.WitnessAsync<T>.DisposeAsyncCore() -> System.Threading.Tasks.ValueTask
 ReactiveUI.Primitives.Async.SignalAsyncExtensions.extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<T>!).Blend(ReactiveUI.Primitives.Async.IObservableAsync<T>! other) -> ReactiveUI.Primitives.Async.IObservableAsync<T>!

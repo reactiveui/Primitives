@@ -30,7 +30,7 @@ ReactiveUI.Primitives.Disposables.EmptyDisposable.Dispose() -> void
 ReactiveUI.Primitives.Disposables.IsDisposed
 ReactiveUI.Primitives.Disposables.IsDisposed.IsDisposed.get -> bool
 ReactiveUI.Primitives.Disposables.MultipleDisposable
-ReactiveUI.Primitives.Disposables.MultipleDisposable.Add(System.IDisposable! disposable) -> void
+ReactiveUI.Primitives.Disposables.MultipleDisposable.Add(System.IDisposable! item) -> void
 ReactiveUI.Primitives.Disposables.MultipleDisposable.Dispose() -> void
 ReactiveUI.Primitives.Disposables.MultipleDisposable.IsDisposed.get -> bool
 ReactiveUI.Primitives.Disposables.MultipleDisposable.MultipleDisposable(params System.IDisposable![]! disposables) -> void

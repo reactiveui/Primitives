@@ -6,50 +6,56 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>Tests for the <see cref="SynchronizeWitness{T}"/> gate and the <c>Synchronize</c> operator.</summary>
+/// <summary>Tests for the <see cref = "SynchronizeWitness{T}"/> gate and the <c>Synchronize</c> operator.</summary>
 public class SynchronizeTests
 {
+    /// <summary>The number of producer threads used by stress tests.</summary>
     private const int Threads = 8;
 
+    /// <summary>The number of values sent by each producer thread.</summary>
     private const int PerThread = 500;
 
+    /// <summary>The number of wait spin iterations used by concurrent tests.</summary>
     private const int SpinIterations = 50;
 
+    /// <summary>The literal two.</summary>
     private const int Second = 2;
 
+    /// <summary>The literal three.</summary>
     private const int Third = 3;
 
     /// <summary>The gate forwards every notification to the downstream observer.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void ForwardsEachNotificationToTheDownstreamObserver()
+    public async Task ForwardsEachNotificationToTheDownstreamObserver()
     {
-        var recorder = new Recorder<int>();
-        var sink = new SynchronizeWitness<int>(recorder);
-        var error = new InvalidOperationException("boom");
-
+        Recorder<int> recorder = new();
+        SynchronizeWitness<int> sink = new(recorder);
+        InvalidOperationException error = new("boom");
         sink.OnNext(1);
         sink.OnNext(Second);
         sink.OnError(error);
         sink.OnCompleted();
-
-        Assert.Equal<int>([1, Second], recorder.Values);
-        Assert.Same(error, recorder.Errors[0]);
-        Assert.Equal(1, recorder.Completed);
+        await Assert.That(recorder.Values.SequenceEqual([1, Second])).IsTrue();
+        await Assert.That(recorder.Errors[0]).IsSameReferenceAs(error);
+        await Assert.That(recorder.Completed).IsEqualTo(1);
     }
 
     /// <summary>The <c>Synchronize</c> operator forwards the source sequence unchanged.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void SynchronizeOperatorForwardsTheSourceSequence()
+    public async Task SynchronizeOperatorForwardsTheSourceSequence()
     {
-        var received = new List<int>();
+        List<int> received = [];
         var completed = false;
-
         new ImmediateSource<int>(1, Second, Third)
             .Synchronize()
-            .Subscribe(new DelegateWitness<int>(received.Add, static _ => { }, () => completed = true));
-
-        Assert.Equal<int>([1, Second, Third], received);
-        Assert.True(completed);
+            .Subscribe(new DelegateWitness<int>(
+                received.Add,
+                static _ => { },
+                () => completed = true));
+        await Assert.That(received.SequenceEqual([1, Second, Third])).IsTrue();
+        await Assert.That(completed).IsTrue();
     }
 
     /// <summary>The operator validates its source argument.</summary>
@@ -67,11 +73,10 @@ public class SynchronizeTests
     [Test]
     public async Task SharedGateSerializesAcrossTwoWitnesses()
     {
-        var probe = new ConcurrencyProbe();
-        var gate = new Lock();
-        var first = new SynchronizeWitness<int>(probe, gate);
-        var second = new SynchronizeWitness<int>(probe, gate);
-
+        ConcurrencyProbe probe = new();
+        Lock gate = new();
+        SynchronizeWitness<int> first = new(probe, gate);
+        SynchronizeWitness<int> second = new(probe, gate);
         var tasks = new Task[Threads];
         for (var t = 0; t < Threads; t++)
         {
@@ -86,9 +91,8 @@ public class SynchronizeTests
         }
 
         await Task.WhenAll(tasks);
-
-        Assert.False(probe.OverlapDetected);
-        Assert.Equal(Threads * PerThread, probe.Count);
+        await Assert.That(probe.OverlapDetected).IsFalse();
+        await Assert.That(probe.Count).IsEqualTo(Threads * PerThread);
     }
 
     /// <summary>Concurrent <c>OnNext</c> calls are serialized: the downstream is never entered re-entrantly and sees every value.</summary>
@@ -96,9 +100,8 @@ public class SynchronizeTests
     [Test]
     public async Task SerializesConcurrentOnNextSoTheDownstreamNeverOverlaps()
     {
-        var probe = new ConcurrencyProbe();
-        var sink = new SynchronizeWitness<int>(probe);
-
+        ConcurrencyProbe probe = new();
+        SynchronizeWitness<int> sink = new(probe);
         var tasks = new Task[Threads];
         for (var t = 0; t < Threads; t++)
         {
@@ -112,13 +115,12 @@ public class SynchronizeTests
         }
 
         await Task.WhenAll(tasks);
-
-        Assert.False(probe.OverlapDetected);
-        Assert.Equal(Threads * PerThread, probe.Count);
+        await Assert.That(probe.OverlapDetected).IsFalse();
+        await Assert.That(probe.Count).IsEqualTo(Threads * PerThread);
     }
 
     /// <summary>An observer that records all values, errors, and completion counts.</summary>
-    /// <typeparam name="T">The type of the observed values.</typeparam>
+    /// <typeparam name = "T">The type of the observed values.</typeparam>
     private sealed class Recorder<T> : IObserver<T>
     {
         /// <summary>Gets the recorded values.</summary>
@@ -134,17 +136,17 @@ public class SynchronizeTests
         public void OnCompleted() => Completed++;
 
         /// <inheritdoc/>
-        /// <param name="error">The error to record.</param>
+        /// <param name = "error">The error to record.</param>
         public void OnError(Exception error) => Errors.Add(error);
 
         /// <inheritdoc/>
-        /// <param name="value">The value to record.</param>
+        /// <param name = "value">The value to record.</param>
         public void OnNext(T value) => Values.Add(value);
     }
 
     /// <summary>A synchronous observable that emits a fixed set of values then completes.</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    /// <param name="values">The values to emit on subscription.</param>
+    /// <typeparam name = "T">The value type.</typeparam>
+    /// <param name = "values">The values to emit on subscription.</param>
     private sealed class ImmediateSource<T>(params T[] values) : IObservable<T>, IDisposable
     {
         /// <inheritdoc/>
@@ -182,13 +184,13 @@ public class SynchronizeTests
         }
 
         /// <inheritdoc/>
-        /// <param name="error">The forwarded error (ignored).</param>
+        /// <param name = "error">The forwarded error (ignored).</param>
         public void OnError(Exception error)
         {
         }
 
         /// <inheritdoc/>
-        /// <param name="value">The forwarded value.</param>
+        /// <param name = "value">The forwarded value.</param>
         public void OnNext(int value)
         {
             if (Interlocked.Exchange(ref _inside, 1) != 0)

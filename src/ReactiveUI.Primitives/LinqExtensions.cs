@@ -9,56 +9,6 @@ namespace ReactiveUI.Primitives;
 /// <summary>Miscellaneous Primitives extensions.</summary>
 public static partial class LinqExtensions
 {
-    /// <summary>Buffering operators for an observable source sequence.</summary>
-    /// <param name="source">The source.</param>
-    /// <typeparam name="TSource">The type of the source.</typeparam>
-    extension<TSource>(IObservable<TSource> source)
-    {
-        /// <summary>Buffers the specified count.</summary>
-        /// <param name="count">The count of each buffer.</param>
-        /// <returns>An Signals sequence of buffers.</returns>
-        /// <exception cref="ArgumentExceptionHelper">source.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">count.</exception>
-        public IObservable<IList<TSource>> Buffer(int count)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            if (count <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count));
-            }
-
-            return new BufferCountSignal<TSource>(source, count, 0);
-        }
-
-        /// <summary>Buffers the specified count then skips the specified count, then repeats.</summary>
-        /// <param name="count">Length of each buffer before being skipped.</param>
-        /// <param name="skip">Number of elements to skip between creation of consecutive buffers.</param>
-        /// <returns>An Signals sequence of buffers taking the count then skipping the skipped value, the sequecnce is then repeated.</returns>
-        /// <exception cref="ArgumentExceptionHelper">source.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">
-        /// count
-        /// or
-        /// skip.
-        /// </exception>
-        public IObservable<IList<TSource>> Buffer(int count, int skip)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            if (count <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count));
-            }
-
-            if (skip <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(skip));
-            }
-
-            return new BufferCountSignal<TSource>(source, count, skip);
-        }
-    }
-
     /// <summary>Disposal-tracking operators for a disposable.</summary>
     /// <param name="disposable">The disposable.</param>
     extension(IDisposable disposable)
@@ -82,5 +32,46 @@ public static partial class LinqExtensions
         /// <returns>A SingleDisposable.</returns>
         public SingleDisposable DisposeWith(Action? action) =>
             new(disposable, action);
+    }
+
+    /// <summary>Buffering operators for an observable source sequence.</summary>
+    /// <param name="source">The source.</param>
+    /// <typeparam name="TSource">The type of the source.</typeparam>
+    extension<TSource>(IObservable<TSource> source)
+    {
+        /// <summary>Buffers the specified count.</summary>
+        /// <param name="count">The count of each buffer.</param>
+        /// <returns>An Signals sequence of buffers.</returns>
+        /// <exception cref="ArgumentExceptionHelper">source.</exception>
+        /// <exception cref="ArgumentOutOfRangeExceptionHelper">count.</exception>
+        public IObservable<IList<TSource>> Buffer(int count)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(count);
+
+            return new BufferCountSignal<TSource>(source, count, 0);
+        }
+
+        /// <summary>Buffers the specified count then skips the specified count, then repeats.</summary>
+        /// <param name="count">Length of each buffer before being skipped.</param>
+        /// <param name="skip">Number of elements to skip between creation of consecutive buffers.</param>
+        /// <returns>An Signals sequence of buffers taking the count then skipping the skipped value, the sequecnce is then repeated.</returns>
+        /// <exception cref="ArgumentExceptionHelper">source.</exception>
+        /// <exception cref="ArgumentOutOfRangeExceptionHelper">
+        /// count
+        /// or
+        /// skip.
+        /// </exception>
+        public IObservable<IList<TSource>> Buffer(int count, int skip)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(count);
+
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(skip);
+
+            return new BufferCountSignal<TSource>(source, count, skip);
+        }
     }
 }

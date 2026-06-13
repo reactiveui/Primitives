@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests for <see cref="ForEachObservable{T}"/> — null-batch ignore semantics, the
+/// <summary>Tests for <see cref = "ForEachObservable{T}"/> — null-batch ignore semantics, the
 /// scheduler-marshalled delivery path, error forwarding, and the null-observer subscribe guard.</summary>
 public class ForEachObservableTests
 {
@@ -31,51 +31,45 @@ public class ForEachObservableTests
     private const int ScheduledThirty = 30;
 
     /// <summary>Verifies that a null inner enumerable is ignored and subsequent batches continue flowing.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForEachReceivesNullBatch_ThenIgnoresNullAndProcessesNext()
     {
-        var subject = new Subject<IEnumerable<int>>();
-        var results = new List<int>();
+        Subject<IEnumerable<int>> subject = new();
+        List<int> results = [];
         using var sub = subject.ForEach().Subscribe(results.Add);
-
         subject.OnNext(null!);
         subject.OnNext([ValueOne, ValueTwo]);
         subject.OnNext([ValueThree]);
-
         await Assert.That(results).IsCollectionEqualTo([ValueOne, ValueTwo, ValueThree]);
     }
 
     /// <summary>Verifies the scheduler overload delivers every value.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForEachWithScheduler_ThenDeliversAllValues()
     {
         IEnumerable<int>[] batches = [[ScheduledTen, ScheduledTwenty], [ScheduledThirty]];
         var source = batches.ToObservable();
-        var done = new TaskCompletionSource<List<int>>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var results = new List<int>();
-
-        using var sub = source.ForEach(Sequencer.Default).Subscribe(
-            results.Add,
-            () => done.TrySetResult(results));
-
+        TaskCompletionSource<List<int>> done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> results = [];
+        using var sub = source.ForEach(Sequencer.Default).Subscribe(results.Add, () => done.TrySetResult(results));
         var output = await done.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(output).IsCollectionEqualTo([ScheduledTen, ScheduledTwenty, ScheduledThirty]);
     }
 
     /// <summary>Verifies source errors are forwarded.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForEachSourceErrors_ThenErrorForwarded()
     {
-        var subject = new Subject<IEnumerable<int>>();
+        Subject<IEnumerable<int>> subject = new();
         Exception? caught = null;
-        using var sub = subject.ForEach().Subscribe(static _ => { }, ex => caught = ex);
-        var expected = new InvalidOperationException("boom");
-
+        using var sub = subject.ForEach().Subscribe(
+            static _ => { },
+            ex => caught = ex);
+        InvalidOperationException expected = new("boom");
         subject.OnError(expected);
-
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -83,8 +77,7 @@ public class ForEachObservableTests
     [Test]
     public void WhenForEachObserverNull_ThenSubscribeThrows()
     {
-        var observable = new ForEachObservable<int>(new Subject<IEnumerable<int>>(), null);
-
+        ForEachObservable<int> observable = new(new Subject<IEnumerable<int>>(), null);
         Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
     }
 }

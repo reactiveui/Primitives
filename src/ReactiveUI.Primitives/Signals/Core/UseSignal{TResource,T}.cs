@@ -46,7 +46,7 @@ internal sealed class UseSignal<TResource, T> : IObservable<T>
             return EmptyDisposable.Instance;
         }
 
-        var sink = new UseWitness(observer, resource);
+        UseWitness sink = new(observer, resource);
         try
         {
             sink.SetSubscription(source.Subscribe(sink));

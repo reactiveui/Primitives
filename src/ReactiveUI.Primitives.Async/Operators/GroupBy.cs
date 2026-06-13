@@ -27,7 +27,7 @@ public static partial class SignalAsyncExtensions
         /// <typeparam name="TKey">The type of the key returned by the key selector function. Must be non-nullable.</typeparam>
         /// <param name="keySelector">A function to extract the key for each element in the source sequence.</param>
         /// <returns>An asynchronous observable sequence of grouped observables, each containing elements that share a common key.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="keySelector"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> is null.</exception>
         public IObservableAsync<GroupedAsyncSignal<TKey, TValue>> GroupBy<TKey>(Func<TValue, TKey> keySelector)
             where TKey : notnull
         {
@@ -54,7 +54,7 @@ public static partial class SignalAsyncExtensions
         /// within each group.</param>
         /// <returns>An asynchronous observable sequence containing grouped observables, each representing a collection of elements
         /// that share a common key.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="keySelector"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> is null.</exception>
         public IObservableAsync<GroupedAsyncSignal<TKey, TValue>> GroupBy<TKey>(
             Func<TValue, TKey> keySelector,
             Func<TKey, ISignalAsync<TValue>> groupSignalSelector)
@@ -96,7 +96,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<GroupedAsyncSignal<TKey, TValue>> observer,
             CancellationToken cancellationToken)
         {
-            var subscription = new GroupingCoordinator(this, observer);
+            GroupingCoordinator subscription = new(this, observer);
             try
             {
                 return await subscription.SubscribeSourcesAsync(cancellationToken).ConfigureAwait(false);
@@ -199,7 +199,7 @@ public static partial class SignalAsyncExtensions
                     // that token); the downstream observer (if an ObserverAsync) observes the
                     // wrap's dispose token. Together they collapse the per-emission
                     // CancellationTokenSource.CreateLinkedTokenSource allocations to zero.
-                    var wrap = new RelayWitnessAsync<TValue>(observer);
+                    RelayWitnessAsync<TValue> wrap = new(observer);
                     wrap.LinkUpstreamCancellation(parent.InternalDisposedToken);
                     if (observer is WitnessAsync<TValue> downstream)
                     {

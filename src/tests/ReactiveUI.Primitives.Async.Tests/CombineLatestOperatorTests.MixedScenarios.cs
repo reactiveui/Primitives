@@ -20,7 +20,7 @@ public partial class CombineLatestOperatorTests
         var s1 = Signal.Create<int>();
         var s2 = Signal.Create<int>();
 
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
         var sub = await s1.Values
             .CombineLatest(s2.Values, (a, b) => a + b)
             .SubscribeAsync(
@@ -75,8 +75,8 @@ public partial class CombineLatestOperatorTests
         var s1 = Signal.Create<int>();
         var s2 = Signal.Create<int>();
 
-        var results = new List<int>();
-        var errors = new List<Exception>();
+        List<int> results = [];
+        List<Exception> errors = [];
         await using var sub = await s1.Values
             .CombineLatest(s2.Values, (a, b) => a + b)
             .SubscribeAsync(
@@ -113,7 +113,7 @@ public partial class CombineLatestOperatorTests
         const int ExpectedSum = 10;
         var signals = Enumerable.Range(0, FourSources).Select(_ => Signal.Create<int>()).ToList();
 
-        var results = new List<int>();
+        List<int> results = [];
         await using var sub = await signals[0].Values
             .CombineLatest(
                 signals[1].Values,
@@ -149,7 +149,7 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
         var s3 = Signal.Create<int>();
 
-        var results = new List<int>();
+        List<int> results = [];
         var sub = await s1.Values
             .CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
             .SubscribeAsync(
@@ -180,7 +180,7 @@ public partial class CombineLatestOperatorTests
         var s1 = Signal.Create<int>();
         var s2 = Signal.Create<int>();
 
-        var results = new List<int>();
+        List<int> results = [];
         var sub = await s1.Values
             .CombineLatest(s2.Values, (a, b) => a + b)
             .SubscribeAsync(
@@ -214,7 +214,7 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
         var s3 = Signal.Create<int>();
 
-        var results = new List<int>();
+        List<int> results = [];
         var sub = await s1.Values
             .CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
             .SubscribeAsync(
@@ -248,7 +248,7 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
         var s3 = Signal.Create<int>();
 
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
         var sub = await s1.Values
             .CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
             .SubscribeAsync(
@@ -453,7 +453,7 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
         var s3 = Signal.Create<int>();
 
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
         await using var sub = await s1.Values
             .CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
             .SubscribeAsync(
@@ -464,7 +464,7 @@ public partial class CombineLatestOperatorTests
                     return default;
                 });
 
-        var expected = new InvalidOperationException("src1 resume");
+        InvalidOperationException expected = new("src1 resume");
         await s1.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await Assert.That(errors).Count().IsEqualTo(1);
@@ -480,7 +480,7 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
         var s3 = Signal.Create<int>();
 
-        var errors = new List<Exception>();
+        List<Exception> errors = [];
         await using var sub = await s1.Values
             .CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
             .SubscribeAsync(
@@ -491,7 +491,7 @@ public partial class CombineLatestOperatorTests
                     return default;
                 });
 
-        var expected = new InvalidOperationException("src2 resume");
+        InvalidOperationException expected = new("src2 resume");
         await s2.OnErrorResumeAsync(expected, CancellationToken.None);
 
         await Assert.That(errors).Count().IsEqualTo(1);
@@ -586,7 +586,7 @@ public partial class CombineLatestOperatorTests
         var s1 = Signal.Create<int>();
         var s2 = Signal.Create<int>();
 
-        var results = new List<int>();
+        List<int> results = [];
         Result? completionResult = null;
         await using var sub = await s1.Values
             .CombineLatest(s2.Values, (a, b) => a + b)
@@ -627,7 +627,7 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
         var s3 = Signal.Create<int>();
 
-        var results = new List<int>();
+        List<int> results = [];
         Result? completionResult = null;
         await using var sub = await s1.Values
             .CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
@@ -668,7 +668,7 @@ public partial class CombineLatestOperatorTests
         const int FinalSum = 14;
         var signals = Enumerable.Range(0, FiveSources).Select(_ => Signal.Create<int>()).ToList();
 
-        var results = new List<int>();
+        List<int> results = [];
         await using var sub = await signals[0].Values
             .CombineLatest(
                 signals[1].Values,

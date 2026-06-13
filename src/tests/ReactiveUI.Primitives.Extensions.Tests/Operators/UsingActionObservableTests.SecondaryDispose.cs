@@ -15,9 +15,9 @@ public partial class UsingActionObservableTests
     [Test]
     public async Task WhenActionAndDisposeBothThrow_ThenPrimaryActionErrorForwardedAndDisposeSwallowed()
     {
-        var resource = new HookDisposable(static () => throw new InvalidOperationException("dispose failed"));
+        HookDisposable resource = new(static () => throw new InvalidOperationException("dispose failed"));
         Exception? caught = null;
-        var actionFailure = new InvalidOperationException("action failed");
+        InvalidOperationException actionFailure = new("action failed");
 
         using var sub = resource.Using(_ => throw actionFailure)
             .Subscribe(static _ => { }, ex => caught = ex);
@@ -31,9 +31,9 @@ public partial class UsingActionObservableTests
     [Test]
     public async Task WhenSchedulerPathActionThrows_ThenForwardsErrorAndDisposes()
     {
-        var resource = new CountingDisposable();
-        var faulted = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var expected = new InvalidOperationException("scheduler action failed");
+        CountingDisposable resource = new();
+        TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        InvalidOperationException expected = new("scheduler action failed");
 
         using var sub = resource.Using(_ => throw expected, TaskPoolSequencer.Default)
             .Subscribe(static _ => { }, ex => faulted.TrySetResult(ex));

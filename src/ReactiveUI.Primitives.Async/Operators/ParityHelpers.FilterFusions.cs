@@ -27,7 +27,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<(T Previous, T Current)> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new PairwiseWitness(observer, cancellationToken);
+            PairwiseWitness sink = new(observer, cancellationToken);
 
             if (observer is WitnessAsync<(T Previous, T Current)> downstreamBase)
             {
@@ -62,7 +62,7 @@ public static partial class SignalAsyncExtensions
                     return default;
                 }
 
-                var pair = (_previous!, value);
+                (T, T value) pair = (_previous!, value);
                 _previous = value;
                 return downstream.OnNextAsync(pair, cancellationToken);
             }
@@ -93,7 +93,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new SkipWhileNullWitness(observer, cancellationToken);
+            SkipWhileNullWitness sink = new(observer, cancellationToken);
 
             if (observer is WitnessAsync<T> downstreamBase)
             {
@@ -157,7 +157,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new WhereIsNotNullWitness(observer, cancellationToken);
+            WhereIsNotNullWitness sink = new(observer, cancellationToken);
 
             // Wire sink's dispose token into the downstream's link chain so its hot path recognises
             // this token without allocating a per-emission linked CTS.
@@ -216,7 +216,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new LatestOrDefaultWitness(observer, defaultValue, cancellationToken);
+            LatestOrDefaultWitness sink = new(observer, defaultValue, cancellationToken);
 
             if (observer is WitnessAsync<T> downstreamBase)
             {
@@ -284,7 +284,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new WaitUntilWitness(observer, predicate, cancellationToken);
+            WaitUntilWitness sink = new(observer, predicate, cancellationToken);
 
             if (observer is WitnessAsync<T> downstreamBase)
             {
@@ -344,7 +344,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<RxVoid> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new AsSignalWitness(observer, cancellationToken);
+            AsSignalWitness sink = new(observer, cancellationToken);
 
             if (observer is WitnessAsync<RxVoid> downstreamBase)
             {
@@ -386,7 +386,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<bool> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new NotWitness(observer, cancellationToken);
+            NotWitness sink = new(observer, cancellationToken);
 
             if (observer is WitnessAsync<bool> downstreamBase)
             {
@@ -428,7 +428,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<bool> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new WhereTrueWitness(observer, cancellationToken);
+            WhereTrueWitness sink = new(observer, cancellationToken);
 
             if (observer is WitnessAsync<bool> downstreamBase)
             {
@@ -470,7 +470,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<bool> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new WhereFalseWitness(observer, cancellationToken);
+            WhereFalseWitness sink = new(observer, cancellationToken);
 
             if (observer is WitnessAsync<bool> downstreamBase)
             {

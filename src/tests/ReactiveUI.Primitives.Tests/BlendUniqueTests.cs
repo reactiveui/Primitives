@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>Tests for the fused <see cref="LinqExtensions.BlendUnique{T}(System.IObservable{T}[])"/> operator (merge + distinct-until-changed in a single sink).</summary>
+/// <summary>Tests for the fused <see cref = "LinqExtensions.BlendUnique{T}(System.IObservable{T}[])"/> operator (merge + distinct-until-changed in a single sink).</summary>
 public class BlendUniqueTests
 {
     /// <summary>The value one.</summary>
@@ -43,106 +43,96 @@ public class BlendUniqueTests
     /// Verifies that the merged stream forwards only values that differ from the previously forwarded one
     /// and completes once every source has completed.
     /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void MergesSourcesAndSuppressesConsecutiveDuplicates()
+    public async Task MergesSourcesAndSuppressesConsecutiveDuplicates()
     {
-        var values = new List<int>();
+        List<int> values = [];
         var completed = 0;
 
         // source0 emits 1,1,2 (-> 1,2) then source1 emits 2,3,3 (2 == last, dropped -> 3).
-        LinqExtensions.BlendUnique(
-                Signal.FromEnumerable(_firstDuplicatedThenSecond),
-                Signal.FromEnumerable(_secondThenThirdDuplicated))
-            .Subscribe(values.Add, ex => throw ex, () => completed++);
-
-        Assert.Equal(_distinctMerged, values);
-        Assert.Equal(Once, completed);
+        LinqExtensions
+            .BlendUnique(
+            Signal.FromEnumerable(_firstDuplicatedThenSecond),
+            Signal.FromEnumerable(_secondThenThirdDuplicated)).Subscribe(values.Add, ex => throw ex, () => completed++);
+        await Assert.That(values.SequenceEqual(_distinctMerged)).IsTrue();
+        await Assert.That(completed).IsEqualTo(Once);
     }
 
     /// <summary>Verifies that an empty source set completes immediately with no values.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void EmptySourcesCompletesImmediately()
+    public async Task EmptySourcesCompletesImmediately()
     {
-        var values = new List<int>();
+        List<int> values = [];
         var completed = 0;
-
-        LinqExtensions.BlendUnique<int>()
-            .Subscribe(values.Add, ex => throw ex, () => completed++);
-
-        Assert.Equal(0, values.Count);
-        Assert.Equal(Once, completed);
+        LinqExtensions.BlendUnique<int>().Subscribe(values.Add, ex => throw ex, () => completed++);
+        await Assert.That(values.Count).IsEqualTo(0);
+        await Assert.That(completed).IsEqualTo(Once);
     }
 
     /// <summary>Verifies that a custom comparer is used to suppress duplicates.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void UsesSuppliedComparer()
+    public async Task UsesSuppliedComparer()
     {
-        var values = new List<string>();
+        List<string> values = [];
 
         // Case-insensitive: "a","A" collapse; "B" forwarded.
-        LinqExtensions.BlendUnique(
-                [Signal.FromEnumerable(_caseVariants)],
-                StringComparer.OrdinalIgnoreCase)
+        LinqExtensions.BlendUnique([Signal.FromEnumerable(_caseVariants)], StringComparer.OrdinalIgnoreCase)
             .Subscribe(values.Add);
-
-        Assert.Equal(_distinctCaseInsensitive, values);
+        await Assert.That(values.SequenceEqual(_distinctCaseInsensitive)).IsTrue();
     }
 
     /// <summary>Verifies that the first source error terminates the merged stream.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void ForwardsFirstSourceError()
+    public async Task ForwardsFirstSourceError()
     {
-        var values = new List<int>();
+        List<int> values = [];
         Exception? error = null;
-
-        LinqExtensions.BlendUnique(
-                Signal.FromEnumerable(_single),
-                Signal.Fail<int>(new InvalidOperationException("boom")))
+        LinqExtensions
+            .BlendUnique(Signal.FromEnumerable(_single), Signal.Fail<int>(new InvalidOperationException("boom")))
             .Subscribe(values.Add, ex => error = ex, () => { });
-
-        Assert.Equal(_single, values);
-        Assert.NotNull(error);
-        Assert.True(error is InvalidOperationException);
+        await Assert.That(values.SequenceEqual(_single)).IsTrue();
+        await Assert.That(error).IsNotNull();
+        await Assert.That(error is InvalidOperationException).IsTrue();
     }
 
     /// <summary>Verifies that disposing the subscription tears down every source subscription.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void DisposeUnsubscribesFromSources()
+    public async Task DisposeUnsubscribesFromSources()
     {
-        var source = new Signal<int>();
-        var values = new List<int>();
-
+        Signal<int> source = new();
+        List<int> values = [];
         var subscription = LinqExtensions.BlendUnique(source).Subscribe(values.Add);
         source.OnNext(One);
         subscription.Dispose();
         source.OnNext(Two); // no longer subscribed -> ignored
-
-        Assert.Equal(_single, values);
+        await Assert.That(values.SequenceEqual(_single)).IsTrue();
     }
 
     /// <summary>Verifies that values, completion, and further errors are suppressed after the first terminal error.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public void SuppressesNotificationsAfterTerminalError()
+    public async Task SuppressesNotificationsAfterTerminalError()
     {
-        var first = new Signal<int>();
-        var second = new Signal<int>();
-        var third = new Signal<int>();
-        var values = new List<int>();
+        Signal<int> first = new();
+        Signal<int> second = new();
+        Signal<int> third = new();
+        List<int> values = [];
         Exception? error = null;
         var completed = 0;
-
-        LinqExtensions.BlendUnique(first, second, third)
-            .Subscribe(values.Add, ex => error = ex, () => completed++);
-
+        LinqExtensions.BlendUnique(first, second, third).Subscribe(values.Add, ex => error = ex, () => completed++);
         first.OnNext(One); // forwarded
         second.OnError(new InvalidOperationException("boom")); // terminal
         first.OnNext(Two); // value suppressed (done)
         first.OnCompleted(); // completion suppressed (done)
         third.OnError(new InvalidOperationException("again")); // error suppressed (done)
-
-        Assert.Equal(_single, values);
-        Assert.NotNull(error);
-        Assert.Equal(0, completed);
+        await Assert.That(values.SequenceEqual(_single)).IsTrue();
+        await Assert.That(error).IsNotNull();
+        await Assert.That(completed).IsEqualTo(0);
     }
 
     /// <summary>Verifies argument validation for the sources array, a null source element, and the observer.</summary>
@@ -151,6 +141,7 @@ public class BlendUniqueTests
     {
         Assert.Throws<ArgumentNullException>(() => LinqExtensions.BlendUnique<int>(null!, comparer: null));
         Assert.Throws<ArgumentNullException>(() => LinqExtensions.BlendUnique(Signal.FromEnumerable(_single), null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.BlendUnique(Signal.FromEnumerable(_single)).Subscribe(null!));
+        Assert.Throws<ArgumentNullException>(() =>
+            LinqExtensions.BlendUnique(Signal.FromEnumerable(_single)).Subscribe(null!));
     }
 }

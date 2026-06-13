@@ -22,7 +22,7 @@ public static partial class SignalAsyncExtensions
         /// and a cancellation token.</param>
         /// <returns>An observable sequence that skips elements while the predicate returns true and emits
         /// all subsequent elements.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="predicate"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="predicate"/> is null.</exception>
         public IObservableAsync<T> SkipWhile(Func<T, CancellationToken, ValueTask<bool>> predicate)
         {
             ArgumentExceptionHelper.ThrowIfNull(@this);
@@ -38,7 +38,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="predicate">A function to test each element for a condition.</param>
         /// <returns>An observable sequence that skips elements while the predicate returns true and emits
         /// all subsequent elements.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="predicate"/> is null.</exception>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="predicate"/> is null.</exception>
         public IObservableAsync<T> SkipWhile(Func<T, bool> predicate)
         {
             ArgumentExceptionHelper.ThrowIfNull(@this);
@@ -63,7 +63,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new SkipWhileSyncWitness(observer, predicate, cancellationToken);
+            SkipWhileSyncWitness sink = new(observer, predicate, cancellationToken);
 
             if (observer is WitnessAsync<T> downstreamBase)
             {
@@ -129,7 +129,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var sink = new SkipWhileAsyncWitness(observer, predicate, cancellationToken);
+            SkipWhileAsyncWitness sink = new(observer, predicate, cancellationToken);
 
             if (observer is WitnessAsync<T> downstreamBase)
             {

@@ -21,7 +21,7 @@ public sealed class UnsparkWitness<T> : IObserver<Spark<T>>, IDisposable
     public UnsparkWitness(IObserver<T> observer) => _observer = observer;
 
     /// <inheritdoc/>
-    public void OnNext(Spark<T> spark) => spark.Accept(_observer);
+    public void OnNext(Spark<T> value) => value.Accept(_observer);
 
     /// <inheritdoc/>
     public void OnError(Exception error) => SinkTerminal.Fault(_observer, error, this);

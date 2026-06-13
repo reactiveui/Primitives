@@ -19,11 +19,11 @@ public partial class UsingActionObservableTests
     [Test]
     public async Task WhenUsingNullAction_ThenEmitsUnitCompletesAndDisposes()
     {
-        var resource = new TrackedDisposable();
+        TrackedDisposable resource = new();
         var completed = false;
         var emitted = 0;
 
-        using var sub = resource.Using(action: null)
+        using var sub = resource.Using(null)
             .Subscribe(_ => emitted++, () => completed = true);
 
         await Assert.That(emitted).IsEqualTo(1);
@@ -36,7 +36,7 @@ public partial class UsingActionObservableTests
     [Test]
     public async Task WhenUsingActionInvoked_ThenActionRunsThenResourceDisposed()
     {
-        var resource = new TrackedDisposable();
+        TrackedDisposable resource = new();
         var actionRan = false;
         var completed = false;
 
@@ -56,9 +56,9 @@ public partial class UsingActionObservableTests
     [Test]
     public async Task WhenUsingActionThrows_ThenForwardsErrorAndDisposes()
     {
-        var resource = new TrackedDisposable();
+        TrackedDisposable resource = new();
         Exception? caught = null;
-        var expected = new InvalidOperationException(ActionFailedMessage);
+        InvalidOperationException expected = new(ActionFailedMessage);
 
         using var sub = resource.Using(_ => throw expected)
             .Subscribe(static _ => { }, ex => caught = ex);
@@ -73,11 +73,11 @@ public partial class UsingActionObservableTests
     [Test]
     public async Task WhenUsingWithScheduler_ThenRunsViaScheduler()
     {
-        var resource = new TrackedDisposable();
-        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TrackedDisposable resource = new();
+        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var actionRan = false;
 
-        using var sub = resource.Using(_ => actionRan = true, scheduler: TaskPoolSequencer.Default)
+        using var sub = resource.Using(_ => actionRan = true, TaskPoolSequencer.Default)
             .Subscribe(static _ => { }, () => completed.TrySetResult(true));
 
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));

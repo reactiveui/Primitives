@@ -15,7 +15,7 @@ public class ActionDisposableTests
     public async Task WhenActionDisposableDisposedTwice_ThenActionInvokedExactlyOnce()
     {
         var invocations = 0;
-        var disposable = new ActionDisposable(() => invocations++);
+        ActionDisposable disposable = new(() => invocations++);
 
         await Assert.That(disposable.IsDisposed).IsFalse();
 

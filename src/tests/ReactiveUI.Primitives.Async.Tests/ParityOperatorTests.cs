@@ -190,7 +190,7 @@ public class ParityOperatorTests
         const int Emit6 = 6;
 
         var signal = Signal.Create<int>();
-        var (trueBranch, falseBranch) = signal.Values.Partition(static value => value % EvenDivisor == 0);
+        (var trueBranch, var falseBranch) = signal.Values.Partition(static value => value % EvenDivisor == 0);
 
         var trueTask = trueBranch.ToListAsync().AsTask();
         var falseTask = falseBranch.ToListAsync().AsTask();
@@ -293,7 +293,7 @@ public class ParityOperatorTests
     [Test]
     public async Task WhenCatchIgnoreTyped_WithNonMatchingException_ThenPropagatesError()
     {
-        var error = new ArgumentException("wrong type");
+        ArgumentException error = new("wrong type");
 
         var resultTask = AsyncObs.Throw<int>(error)
             .CatchIgnore<int, InvalidOperationException>(static _ => { })
@@ -377,10 +377,10 @@ public class ParityOperatorTests
         const int DroppedValueB = 3;
         const int PassthroughValue = 4;
         var signal = Signal.Create<int>();
-        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var result = new List<int>();
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> result = [];
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
             .DropIfBusy(async (value, _) =>
@@ -483,11 +483,11 @@ public class ParityOperatorTests
         Justification = "Asserting on task results after completion.")]
     public async Task WhenLogErrors_ThenLoggerIsInvokedOnError()
     {
-        var logged = new List<Exception>();
-        var source = new DirectSource<int>();
+        List<Exception> logged = [];
+        DirectSource<int> source = new();
 
-        var items = new List<int>();
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> items = [];
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await source
             .LogErrors(logged.Add)
@@ -507,7 +507,7 @@ public class ParityOperatorTests
 
         const int SecondValue = 2;
         await source.EmitNext(1);
-        var testError = new InvalidOperationException("logged error");
+        InvalidOperationException testError = new("logged error");
         await source.EmitError(testError);
         await source.EmitNext(SecondValue);
         await source.Complete(Result.Success);
@@ -659,8 +659,8 @@ public class ParityOperatorTests
     public async Task WhenThrottleDistinct_ThenEmitsDistinctThrottledValues()
     {
         var signal = Signal.Create<int>();
-        var results = new List<int>();
-        var firstReceived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> results = [];
+        TaskCompletionSource firstReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
             .ThrottleDistinct(TimeSpan.FromMilliseconds(50))
@@ -746,7 +746,7 @@ public class ParityOperatorTests
     public async Task WhenDebounceUntil_WithConditionFalse_ThenDelaysEmission()
     {
         var signal = Signal.Create<int>();
-        var results = new List<int>();
+        List<int> results = [];
 
         await using var sub = await signal.Values
             .DebounceUntil(TimeSpan.FromMilliseconds(50), static v => v > 100)
@@ -1079,13 +1079,13 @@ public class ParityOperatorTests
     {
         const int DroppedValue = 2;
         const int PassthroughValue = 3;
-        var source = new DirectSource<int>();
-        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        DirectSource<int> source = new();
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var actionStarted = 0;
         var droppedCount = 0;
 
-        var received = new List<int>();
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> received = [];
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await source
             .DropIfBusy(async (value, _) =>

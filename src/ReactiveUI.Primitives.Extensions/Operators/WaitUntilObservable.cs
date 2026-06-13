@@ -28,8 +28,8 @@ internal sealed class WaitUntilObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(predicate);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var subscription = new OnceDisposable();
-        var sink = new WaitUntilWitness(observer, predicate, subscription);
+        OnceDisposable subscription = new();
+        WaitUntilWitness sink = new(observer, predicate, subscription);
         subscription.Disposable = source.Subscribe(sink);
         return subscription;
     }

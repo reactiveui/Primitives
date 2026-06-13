@@ -197,7 +197,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var coordinator = new ChainCoordinator<T>(observer);
+            ChainCoordinator<T> coordinator = new(observer);
             return _sources is not null ? coordinator.Run(_sources) : coordinator.Run(_first!, _second!);
         }
     }
@@ -616,13 +616,13 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var coordinator = new ExpireCoordinator<T>(_source, _dueTime, _sequencer, observer);
+            ExpireCoordinator<T> coordinator = new(_source, _dueTime, _sequencer, observer);
             if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return coordinator.Run();
             }
 
-            var subscription = new SingleDisposable();
+            SingleDisposable subscription = new();
             Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run()));
             return subscription;
         }

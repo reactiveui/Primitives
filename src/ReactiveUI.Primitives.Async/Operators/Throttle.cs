@@ -100,7 +100,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            var throttleObserver = new ThrottleWitness(observer, dueTime, timeProvider);
+            ThrottleWitness throttleObserver = new(observer, dueTime, timeProvider);
             return source.SubscribeAsync(throttleObserver, cancellationToken);
         }
 

@@ -38,10 +38,10 @@ internal sealed class ScheduledValueObservable<T> : IObservable<T>
     /// <summary>Optional side-effect invoked with the value before emission.</summary>
     private readonly Action<T>? _action;
 
-    /// <summary><c>true</c> when <see cref="_absoluteDueTime"/> is used; otherwise <see cref="_dueTime"/> is used.</summary>
+    /// <summary>Set to <c>true</c> when <see cref="_absoluteDueTime"/> is used; otherwise <see cref="_dueTime"/> is used.</summary>
     private readonly bool _useAbsolute;
 
-    /// <summary><c>true</c> when a delay is configured (relative or absolute).</summary>
+    /// <summary>Set to <c>true</c> when a delay is configured (relative or absolute).</summary>
     private readonly bool _hasDelay;
 
     /// <summary>Initializes a new instance of the <see cref="ScheduledValueObservable{T}"/> class.</summary>
@@ -83,7 +83,7 @@ internal sealed class ScheduledValueObservable<T> : IObservable<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var state = new EmitState(observer, _value, _transform, _action);
+        EmitState state = new(observer, _value, _transform, _action);
 
         if (!_hasDelay)
         {

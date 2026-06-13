@@ -20,7 +20,7 @@ public class DisposableSlotHelperTests
     {
         IDisposable? slot = null;
         var disposed = DisposableSlotHelper.DisposedSentinel;
-        var late = new CountingDisposable();
+        CountingDisposable late = new();
 
         DisposableSlotHelper.AssignWithoutDisposingPrevious(ref slot, ref disposed, late);
 
@@ -33,10 +33,10 @@ public class DisposableSlotHelperTests
     [Test]
     public async Task WhenAssignWithoutDisposingPreviousOpen_ThenStoresAndLeavesPreviousAlone()
     {
-        var first = new CountingDisposable();
+        CountingDisposable first = new();
         IDisposable? slot = first;
         var disposed = 0;
-        var second = new CountingDisposable();
+        CountingDisposable second = new();
 
         DisposableSlotHelper.AssignWithoutDisposingPrevious(ref slot, ref disposed, second);
 
@@ -49,7 +49,7 @@ public class DisposableSlotHelperTests
     [Test]
     public async Task WhenAssignWithoutDisposingPreviousNullValueOpen_ThenStoresNull()
     {
-        var first = new CountingDisposable();
+        CountingDisposable first = new();
         IDisposable? slot = first;
         var disposed = 0;
 
@@ -64,10 +64,10 @@ public class DisposableSlotHelperTests
     [Test]
     public async Task WhenSwapAndDisposePreviousOpen_ThenPreviousDisposed()
     {
-        var first = new CountingDisposable();
+        CountingDisposable first = new();
         IDisposable? slot = first;
         var disposed = 0;
-        var second = new CountingDisposable();
+        CountingDisposable second = new();
 
         DisposableSlotHelper.SwapAndDisposePrevious(ref slot, ref disposed, second);
 
@@ -83,7 +83,7 @@ public class DisposableSlotHelperTests
     {
         IDisposable? slot = null;
         var disposed = DisposableSlotHelper.DisposedSentinel;
-        var late = new CountingDisposable();
+        CountingDisposable late = new();
 
         DisposableSlotHelper.SwapAndDisposePrevious(ref slot, ref disposed, late);
 
@@ -95,7 +95,7 @@ public class DisposableSlotHelperTests
     [Test]
     public async Task WhenTryDisposeOpen_ThenLatchesAndDisposesInner()
     {
-        var inner = new CountingDisposable();
+        CountingDisposable inner = new();
         IDisposable? slot = inner;
         var disposed = 0;
 

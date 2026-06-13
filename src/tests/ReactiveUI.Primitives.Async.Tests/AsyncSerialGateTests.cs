@@ -15,7 +15,7 @@ public class AsyncSerialGateTests
     [Test]
     public async Task WhenUncontendedLock_ThenAcquiresAndReleases()
     {
-        using var gate = new AsyncSerialGate();
+        using AsyncSerialGate gate = new();
 
         using (await gate.EnterAsync())
         {
@@ -34,7 +34,7 @@ public class AsyncSerialGateTests
     [Test]
     public async Task WhenSameThreadReentry_ThenAllowedWithoutBlocking()
     {
-        using var gate = new AsyncSerialGate();
+        using AsyncSerialGate gate = new();
 
         var lease1 = await gate.EnterAsync();
         var lease2 = await gate.EnterAsync();
@@ -66,11 +66,11 @@ public class AsyncSerialGateTests
     [Test]
     public async Task WhenContendedWaiter_ThenResumesAfterRelease()
     {
-        using var gate = new AsyncSerialGate();
+        using AsyncSerialGate gate = new();
         var first = await gate.EnterAsync();
 
-        var secondAcquired = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<bool> secondAcquired = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<bool> release = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         // Wait until the contender is either parked on the slow path (WaitersCount > 0) or
         // has already acquired the gate via the same-thread reentry fast path (secondAcquired
@@ -106,7 +106,7 @@ public class AsyncSerialGateTests
     [Test]
     public async Task WhenDisposeCalledTwice_ThenIdempotent()
     {
-        var gate = new AsyncSerialGate();
+        AsyncSerialGate gate = new();
 
         gate.Dispose();
         gate.Dispose();

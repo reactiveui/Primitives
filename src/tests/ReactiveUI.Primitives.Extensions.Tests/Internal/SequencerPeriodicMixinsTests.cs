@@ -18,7 +18,7 @@ public class SequencerPeriodicMixinsTests
     [Test]
     public async Task WhenPeriodicSubscriptionDisposedTwiceAndTickRuns_ThenNoOp()
     {
-        var scheduler = new VirtualClock();
+        VirtualClock scheduler = new();
         var ticks = 0;
         var subscription = scheduler.SchedulePeriodic(Period, Period, () => ticks++);
 

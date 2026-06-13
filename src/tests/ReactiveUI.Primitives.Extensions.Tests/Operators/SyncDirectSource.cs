@@ -22,7 +22,7 @@ internal sealed class SyncDirectSource<T> : IObservable<T>
 
     /// <summary>Gets the captured observer; throws if no one has subscribed yet.</summary>
     public IObserver<T> Observer => _observer
-        ?? throw new InvalidOperationException("No observer is currently subscribed.");
+                                    ?? throw new InvalidOperationException("No observer is currently subscribed.");
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)

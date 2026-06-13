@@ -40,7 +40,7 @@ public static partial class SignalAsyncExtensions
         {
             cancellationToken.ThrowIfCancellationRequested();
             var cmp = comparer ?? EqualityComparer<T>.Default;
-            var observer = new ContainsTaskWitness<T>(value, cmp, cancellationToken);
+            ContainsTaskWitness<T> observer = new(value, cmp, cancellationToken);
             await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
@@ -63,19 +63,19 @@ public static partial class SignalAsyncExtensions
 
     /// <summary>A witness that determines whether a sequence contains a specified value.</summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <param name="value">The value to search for.</param>
+    /// <param name="target">The value to search for.</param>
     /// <param name="comparer">The equality comparer to use for comparison.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     internal sealed class ContainsTaskWitness<T>(
-        T value,
+        T target,
         IEqualityComparer<T> comparer,
         CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
     {
         /// <inheritdoc/>
-        protected override ValueTask OnNextAsyncCore(T value1, CancellationToken cancellationToken)
+        protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
-            if (!comparer.Equals(value, value1))
+            if (!comparer.Equals(target, value))
             {
                 return default;
             }

@@ -26,7 +26,7 @@ public sealed class ScheduledItem<TAbsolute, TValue> : ScheduledItem<TAbsolute>
     /// <param name="action">Scheduled action.</param>
     /// <param name="dueTime">Time at which to run the scheduled action.</param>
     /// <param name="comparer">Comparer used to compare work items based on their scheduled time.</param>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler"/> or <paramref name="action"/> or <paramref name="comparer"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> or <paramref name="comparer"/> is <c>null</c>.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
     public ScheduledItem(ISequencer scheduler, TValue state, Func<ISequencer, TValue, IDisposable> action, TAbsolute dueTime, IComparer<TAbsolute> comparer)
         : base(dueTime, comparer)

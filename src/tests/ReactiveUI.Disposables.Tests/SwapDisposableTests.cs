@@ -16,7 +16,7 @@ public class SwapDisposableTests
     [Test]
     public async Task WhenInnerReplaced_ThenPreviousIsDisposed()
     {
-        using var holder = new SwapDisposable();
+        using SwapDisposable holder = new();
         var firstDisposed = 0;
         var secondDisposed = 0;
         holder.Disposable = new ActionDisposable(() => firstDisposed++);
@@ -31,8 +31,8 @@ public class SwapDisposableTests
     [Test]
     public async Task WhenGetCurrent_ThenReturnsCurrent()
     {
-        using var holder = new SwapDisposable();
-        var current = new ActionDisposable(static () => { });
+        using SwapDisposable holder = new();
+        ActionDisposable current = new(static () => { });
 
         holder.Disposable = current;
 
@@ -44,7 +44,7 @@ public class SwapDisposableTests
     [Test]
     public async Task WhenSetAfterDispose_ThenIncomingIsDisposedImmediately()
     {
-        var holder = new SwapDisposable();
+        SwapDisposable holder = new();
         holder.Dispose();
         var late = 0;
 
@@ -58,7 +58,7 @@ public class SwapDisposableTests
     [Test]
     public async Task WhenDisposedTwice_ThenInnerDisposedOnce()
     {
-        var holder = new SwapDisposable();
+        SwapDisposable holder = new();
         var disposed = 0;
         holder.Disposable = new ActionDisposable(() => disposed++);
 

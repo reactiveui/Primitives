@@ -22,11 +22,8 @@ internal sealed class NewThreadTaskScheduler : TaskScheduler
 
     /// <inheritdoc/>
     protected override void QueueTask(Task task) =>
-        new Thread(state => TryExecuteTask((Task)state!))
-        {
-            IsBackground = true,
-            Name = "NewThreadTaskScheduler",
-        }.Start(task);
+        new Thread(state => TryExecuteTask((Task)state!)) { IsBackground = true, Name = "NewThreadTaskScheduler" }
+            .Start(task);
 
     /// <inheritdoc/>
     protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued) => false;
