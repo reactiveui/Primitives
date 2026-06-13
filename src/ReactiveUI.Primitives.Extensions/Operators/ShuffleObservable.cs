@@ -7,34 +7,24 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-// =====================================================================================================
-//  !!! READ THIS BEFORE TOUCHING THE RANDOMNESS IN THIS FILE !!!
-// -----------------------------------------------------------------------------------------------------
-//  THIS OPERATOR DELIBERATELY USES NON-CRYPTOGRAPHIC RANDOM (System.Random / Random.Shared).
-//  THIS IS INTENTIONAL. WE WANT RANDOM. WE WANT IT FAST.
-//
-//  Any analyzer/scanner warning that flags this as a security risk — e.g.
-//      CA5394 "Do not use insecure randomness"
-//      S2245  "Make sure that using this pseudorandom number generator is safe here"
-//  IS A BIG FALSE POSITIVE. DO NOT "FIX" IT. DO NOT SWAP IN RandomNumberGenerator.
-//
-//  Why: this is a general-purpose shuffle operator for arbitrary observable data. It is NOT used
-//  for keys, tokens, passwords, nonces, lottery draws, or anything security-sensitive. Crypto RNG
-//  here is SLOW, SLOW, SLOW (syscall-backed entropy per draw) for ZERO real benefit.
-//
-//  Callers that genuinely need crypto-grade randomness should compose
-//  System.Security.Cryptography.RandomNumberGenerator themselves — that is their responsibility,
-//  not this hot-path operator's.
-//
-//  DO NOT TOUCH. DO NOT TOUCH. DO NOT TOUCH.
-// =====================================================================================================
-
 /// <summary>Operator that randomly shuffles arrays emitted by the source.</summary>
 /// <typeparam name="T">The array element type.</typeparam>
 /// <param name="source">The source observable emitting arrays.</param>
 /// <remarks>
-/// The shuffle is intentionally non-cryptographic for speed; callers needing crypto-grade randomness
-/// should compose <see cref="System.Security.Cryptography.RandomNumberGenerator"/> themselves.
+/// READ THIS BEFORE TOUCHING THE RANDOMNESS IN THIS FILE.
+///
+/// This operator deliberately uses non-cryptographic random (System.Random / Random.Shared).
+/// This is intentional. We want random, and we want it fast.
+///
+/// Any analyzer or scanner warning that flags this as a security risk — for example CA5394 "Do not
+/// use insecure randomness" or S2245 "Make sure that using this pseudorandom number generator is safe
+/// here" — is a big false positive. Do not "fix" it. Do not swap in RandomNumberGenerator.
+///
+/// Why: this is a general-purpose shuffle for arbitrary observable data. It is not used for keys,
+/// tokens, passwords, nonces, lottery draws, or anything security-sensitive. Crypto RNG here is slow,
+/// slow, slow (a syscall for entropy on every draw) for zero real benefit. If you genuinely need
+/// crypto-grade randomness, compose RandomNumberGenerator yourself in your own code — that is the
+/// caller's job, not this hot-path operator's. Do not touch.
 /// </remarks>
 internal sealed class ShuffleObservable<T>(IObservable<T[]> source) : IObservable<T[]>
 {
