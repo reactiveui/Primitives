@@ -1,6 +1,21 @@
+[![Build](https://github.com/reactiveui/Primitives/actions/workflows/ci-build.yml/badge.svg)](https://github.com/reactiveui/Primitives/actions/workflows/ci-build.yml)
+[![Code Coverage](https://codecov.io/gh/reactiveui/Primitives/branch/main/graph/badge.svg)](https://codecov.io/gh/reactiveui/Primitives)
+[![#yourfirstpr](https://img.shields.io/badge/first--timers--only-friendly-blue.svg)](https://reactiveui.net/contribute)
+[![](https://img.shields.io/badge/chat-slack-blue.svg)](https://reactiveui.net/slack)
+<br>
+<a href="https://www.nuget.org/packages/ReactiveUI.Primitives">
+  <img src="https://img.shields.io/nuget/dt/ReactiveUI.Primitives.svg">
+</a>
+<br>
+<a href="https://github.com/reactiveui/Primitives">
+  <img width="160" heigth="160" src="https://github.com/reactiveui/styleguide/blob/master/logo_primitives/logo.png?raw=true">
+</a>
+<br>
+
+
 # ReactiveUI.Primitives
 
-ReactiveUI.Primitives is a compact, high-performance reactive library for .NET applications that want Rx-style composition without a runtime dependency on System.Reactive or R3. It keeps the BCL `IObservable<T>` / `IObserver<T>` contracts where they are useful, adds Primitives names for common concepts, and focuses on predictable AOT-friendly code paths with low allocation overhead.
+ReactiveUI.Primitives is a compact, high-performance reactive library for .NET applications that want Rx-style composition without a runtime dependency on System.Reactive, R3, or R3Async. It keeps the BCL `IObservable<T>` / `IObserver<T>` contracts where they are useful, adds Primitives names for common concepts, and focuses on predictable AOT-friendly code paths with low allocation overhead.
 
 ## Goals and design posture
 
@@ -8,10 +23,10 @@ ReactiveUI.Primitives is designed to:
 
 - Provide Rx-style stream creation, subscription, state, scheduling, and composition over `IObservable<T>`.
 - Use a distinct vocabulary where it improves clarity: `Signal<T>` instead of `Subject<T>`, `Map` instead of only `Select`, `Keep` instead of only `Where`, `Spark` instead of notification materialization.
-- Stay AOT-friendly: no runtime reflection, dynamic code generation, expression compilation, or hidden dependency on System.Reactive/R3 in the production package.
+- Stay AOT-friendly: no runtime reflection, dynamic code generation, expression compilation, or hidden dependency on System.Reactive/R3/R3Async in the production package.
 - Minimize allocations in hot paths, including direct single-action subscribers for `Signal<T>` and reusable immutable singleton signals for common return/empty/never cases.
 - Support broad production use across modern .NET and .NET Framework base TFMs, with separate integration projects for Windows UI and platform-focused scenarios.
-- Allow migration from System.Reactive/R3 through source-generator bridges when the consuming project already references those libraries.
+- Allow migration from System.Reactive/R3/R3Async through source-generator bridges when the consuming project already references those libraries.
 
 ## Table of contents
 
@@ -69,11 +84,11 @@ The package metadata is configured to include this README in the NuGet package v
 - `ReactiveUI.Primitives.SystemReactiveBridge.Generator.dll`
 - `ReactiveUI.Primitives.R3Bridge.Generator.dll`
 
-Those generators are analyzers. They do not add runtime System.Reactive or R3 dependencies to ReactiveUI.Primitives. They emit bridge code only when the consuming compilation already references the relevant external library symbols.
+Those generators are analyzers. They do not add runtime System.Reactive, R3, or R3Async dependencies to ReactiveUI.Primitives. They emit bridge code only when the consuming compilation already references the relevant external library symbols.
 
 ## Agent Skills
 
-The base `ReactiveUI.Primitives` NuGet package includes `Skills.md` at the package root. It is an agent-oriented guide for using ReactiveUI.Primitives, Async, Extensions, UI sequencers, bridge source generators, and migration from System.Reactive or R3 while assuming the libraries are consumed from NuGet packages.
+The base `ReactiveUI.Primitives` NuGet package includes `Skills.md` at the package root. It is an agent-oriented guide for using ReactiveUI.Primitives, Async, Extensions, UI sequencers, bridge source generators, and migration from System.Reactive, R3, or R3Async while assuming the libraries are consumed from NuGet packages.
 
 After package restore, locate the file in the local NuGet package cache:
 
@@ -108,24 +123,25 @@ The base production `ReactiveUI.Primitives` library uses `$(LibraryTargetFramewo
 - `net8.0`
 - `net9.0`
 - `net10.0`
+- `net11.0`
 - `net462`
 - `net472`
 - `net48`
 - `net481`
 
-Windows UI and platform-integration projects in this repository use their own TFM properties (for example `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, or MAUI/platform-focused TFMs where applicable). Those platform TFMs are not target frameworks of the base `ReactiveUI.Primitives` package.
+Windows UI and platform-integration projects in this repository use their own TFM properties (for example `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net11.0-windows`, or MAUI/platform-focused TFMs where applicable). Those platform TFMs are not target frameworks of the base `ReactiveUI.Primitives` package.
 
 The optional package TFMs are:
 
-- `ReactiveUI.Primitives.Wpf`: `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net462`, `net472`, `net48`, `net481`
-- `ReactiveUI.Primitives.WinForms`: `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net462`, `net472`, `net48`, `net481`
-- `ReactiveUI.Primitives.WinUI`: `net8.0-windows10.0.19041.0`, `net9.0-windows10.0.19041.0`, `net10.0-windows10.0.19041.0`
-- `ReactiveUI.Primitives.Blazor`: `net8.0`, `net9.0`, `net10.0`
-- `ReactiveUI.Primitives.Maui`: `net9.0`, `net10.0`
-- `ReactiveUI.Primitives.Async`: `net8.0`, `net9.0`, `net10.0`, `net462`, `net472`, `net48`, `net481`
-- `ReactiveUI.Primitives.Extensions`: `net8.0`, `net9.0`, `net10.0`, `net462`, `net472`, `net48`, `net481`
+- `ReactiveUI.Primitives.Wpf`: `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net11.0-windows`, `net462`, `net472`, `net48`, `net481`
+- `ReactiveUI.Primitives.WinForms`: `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net11.0-windows`, `net462`, `net472`, `net48`, `net481`
+- `ReactiveUI.Primitives.WinUI`: `net8.0-windows10.0.19041.0`, `net9.0-windows10.0.19041.0`, `net10.0-windows10.0.19041.0`, `net11.0-windows10.0.19041.0`
+- `ReactiveUI.Primitives.Blazor`: `net8.0`, `net9.0`, `net10.0`, `net11.0`
+- `ReactiveUI.Primitives.Maui`: `net9.0`, `net10.0`, `net11.0`
+- `ReactiveUI.Primitives.Async`: `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, `net481`
+- `ReactiveUI.Primitives.Extensions`: `net8.0`, `net9.0`, `net10.0`, `net11.0`, `net462`, `net472`, `net48`, `net481`
 
-Runtime package dependencies are intentionally small. The base production package does not depend on System.Reactive or R3. The only runtime package reference declared directly by `src/ReactiveUI.Primitives/ReactiveUI.Primitives.csproj` is `System.ValueTuple` for `net462`; the bridge source generators are packed as analyzers in the base package rather than shipped as separate NuGet packages. `ReactiveUI.Primitives.Async` and `ReactiveUI.Primitives.Extensions` reference `ReactiveUI.Primitives`; their additional package references are limited to .NET Framework compatibility/support packages such as `System.ValueTuple`, Polyfill, Microsoft.Bcl.TimeProvider, System.Threading.Channels, System.Runtime.CompilerServices.Unsafe, System.ComponentModel.Annotations, System.Buffers, System.Memory, and System.Collections.Immutable for `net4x` targets. `ReactiveUI.Primitives.Async` also packs the bridge source generators as analyzers so async bridge methods are generated for consumers that reference System.Reactive or R3. `ReactiveUI.Primitives.Extensions` has no production System.Reactive or R3 dependency. `ReactiveUI.Primitives.Blazor` references `Microsoft.AspNetCore.Components`, `ReactiveUI.Primitives.Maui` references `Microsoft.Maui.Core`, and `ReactiveUI.Primitives.WinUI` references `Microsoft.WindowsAppSDK`. The remaining shared package references are analyzer, SourceLink, versioning, ILLink, reference-assembly, or build-time support packages such as Blazor.Common.Analyzers, Microsoft.SourceLink.GitHub, MinVer, Roslynator.Analyzers, SonarAnalyzer.CSharp, stylecop.analyzers, Microsoft.NET.ILLink.Tasks, and Microsoft.NETFramework.ReferenceAssemblies. Benchmark projects may reference System.Reactive, R3, and ReactiveUI.Extensions as comparison baselines, but those references are not production dependencies.
+Runtime package dependencies are intentionally small. The base production package does not depend on System.Reactive, System.Reactive.Async, R3, or R3Async. The only runtime package reference declared directly by `src/ReactiveUI.Primitives/ReactiveUI.Primitives.csproj` is `System.ValueTuple` for `net462`; the bridge source generators are packed as analyzers in the base package rather than shipped as separate NuGet packages. `ReactiveUI.Primitives.Async` and `ReactiveUI.Primitives.Extensions` reference `ReactiveUI.Primitives`; their additional package references are limited to .NET Framework compatibility/support packages such as `System.ValueTuple`, Polyfill, Microsoft.Bcl.TimeProvider, System.Threading.Channels, System.Runtime.CompilerServices.Unsafe, System.ComponentModel.Annotations, System.Buffers, System.Memory, and System.Collections.Immutable for `net4x` targets. `ReactiveUI.Primitives.Async` also packs the bridge source generators as analyzers so async bridge methods are generated for consumers that reference System.Reactive, System.Reactive.Async, R3, or R3Async. `ReactiveUI.Primitives.Extensions` has no production System.Reactive or R3 dependency. `ReactiveUI.Primitives.Blazor` references `Microsoft.AspNetCore.Components`, `ReactiveUI.Primitives.Maui` references `Microsoft.Maui.Core`, and `ReactiveUI.Primitives.WinUI` references `Microsoft.WindowsAppSDK`. The remaining shared package references are analyzer, SourceLink, versioning, ILLink, reference-assembly, or build-time support packages such as Blazor.Common.Analyzers, Microsoft.SourceLink.GitHub, MinVer, Roslynator.Analyzers, SonarAnalyzer.CSharp, stylecop.analyzers, Microsoft.NET.ILLink.Tasks, and Microsoft.NETFramework.ReferenceAssemblies. Benchmark projects may reference System.Reactive, System.Reactive.Async 6.0.0-alpha.18, R3, and ReactiveUI.Extensions as comparison baselines, but those references are not production dependencies.
 
 ## Core model
 
@@ -469,7 +485,7 @@ IObservable<int> values = sparks.Unspark();
 
 ## ReactiveUI.Primitives.Async
 
-`ReactiveUI.Primitives.Async` is the async counterpart to the base `ReactiveUI.Primitives` surface. Designed with compatability with [R3Async](https://github.com/fedeAlterio/R3Async) to enable a close compatability layer through source generators, some of the APIs mirror the R3Async surface to provide compatability. It keeps the Primitives vocabulary and adds `ValueTask`/`CancellationToken`-aware observer calls for producers and consumers that need asynchronous notification, asynchronous disposal, or async stream collection.
+`ReactiveUI.Primitives.Async` is the async counterpart to the base `ReactiveUI.Primitives` surface. It is designed with source-generator compatibility for [R3Async](https://github.com/fedeAlterio/R3Async) and System.Reactive.Async, so some APIs intentionally mirror those async observable surfaces while keeping the Primitives vocabulary. It adds `ValueTask`/`CancellationToken`-aware observer calls for producers and consumers that need asynchronous notification, asynchronous disposal, or async stream collection.
 
 Core async contracts and data types:
 
@@ -477,7 +493,7 @@ Core async contracts and data types:
 |---|---|
 | `IObservableAsync<T>` | Async observable contract. `SubscribeAsync` receives an `IObserverAsync<T>` and returns an `IAsyncDisposable`. |
 | `IObserverAsync<T>` | Async observer contract with `OnNextAsync`, `OnErrorResumeAsync`, `OnCompletedAsync`, and `DisposeAsync`. |
-| `ObserverAsync<T>` | Base observer type for implementing async observers. |
+| `WitnessAsync<T>` | Base observer type for implementing async observers with disposal, cancellation linking, and concurrency checks. |
 | `ISignalAsync<T>` | Pushable async signal that combines `IObserverAsync<T>`, `IObservableAsync<T>`, and a `Values` observable. |
 | `SignalAsync<T>` | Abstract base and static factory/operator host for async observables. |
 | `ConnectableSignalAsync<T>` | Async connectable sequence returned by multicast/publish operators. |
@@ -549,11 +565,11 @@ await using IAsyncDisposable subscription = await SignalAsync.Sequence(1, 3)
     .SubscribeAsync(static value => Console.WriteLine(value));
 ```
 
-`ReactiveUI.Primitives.Async` also packs the bridge source generators as analyzers. A consumer that references System.Reactive can use generated `ToObservableAsync<T>(this System.IObservable<T>)` and `ToObservable<T>(this IObservableAsync<T>)` adapters. A consumer that references R3 can use generated `AsPrimitivesAsyncObservable<T>(this R3.Observable<T>)` and `AsR3Observable<T>(this IObservableAsync<T>)` adapters.
+`ReactiveUI.Primitives.Async` also packs the bridge source generators as analyzers. A consumer that references System.Reactive can use generated `ToObservableAsync<T>(this System.IObservable<T>)` and `ToObservable<T>(this IObservableAsync<T>)` adapters for sync Rx boundaries. A consumer that references System.Reactive.Async can use generated `AsPrimitivesAsyncObservable<T>(this System.IAsyncObservable<T>)`, `AsSystemReactiveAsyncObservable<T>(this IObservableAsync<T>)`, `AsPrimitivesAsyncObserver<T>(this System.IAsyncObserver<T>)`, and `AsSystemReactiveAsyncObserver<T>(this IObserverAsync<T>)`. A consumer that references R3 can use generated `AsPrimitivesAsyncObservable<T>(this R3.Observable<T>)` and `AsR3Observable<T>(this IObservableAsync<T>)`; a consumer that references R3Async can use `AsPrimitivesAsyncObservable<T>(this R3Async.AsyncObservable<T>)` and `AsR3AsyncObservable<T>(this IObservableAsync<T>)`.
 
 ## ReactiveUI.Primitives.Extensions
 
-`ReactiveUI.Primitives.Extensions` migrates the non-async helper surface from `ReactiveUI.Extensions` onto `ReactiveUI.Primitives`. It is still based on the BCL `IObservable<T>` contract, but it uses `ISequencer` for scheduling and production references only `ReactiveUI.Primitives` plus framework compatibility packages. It does not reference System.Reactive or R3.
+`ReactiveUI.Primitives.Extensions` migrates the non-async helper surface from `ReactiveUI.Extensions` onto `ReactiveUI.Primitives`. It is still based on the BCL `IObservable<T>` contract, but it uses `ISequencer` for scheduling and production references only `ReactiveUI.Primitives` plus framework compatibility packages. It does not reference System.Reactive, R3 or R3Async.
 
 Core utility surface:
 
@@ -734,16 +750,25 @@ ReactiveUI.Primitives follows the BCL observer contract and keeps ownership expl
 
 ## Source-generator bridge behavior
 
-The base package includes two bridge generators as analyzers:
+The base package includes two bridge generator assemblies as analyzers:
 
-- System.Reactive bridge generator.
-- R3 bridge generator.
+- `ReactiveUI.Primitives.SystemReactiveBridge.Generator.dll`
+- `ReactiveUI.Primitives.R3Bridge.Generator.dll`
+
+Those assemblies currently contain four conditional generators:
+
+- `SystemReactiveBridgeGenerator` for System.Reactive `IObservable<T>` and scheduler boundaries.
+- `SystemReactiveAsyncBridgeGenerator` for System.Reactive.Async `System.IAsyncObservable<T>` and `System.IAsyncObserver<T>` boundaries.
+- `R3BridgeGenerator` for R3 `Observable<T>` boundaries and R3-to-Primitives.Async adapters.
+- `R3AsyncBridgeGenerator` for R3Async `AsyncObservable<T>` boundaries.
 
 The generators always emit small internal marker attributes stamped with the generator contract version. They emit bridge extension methods only when the consumer project already references the relevant external library:
 
 - System.Reactive bridge checks for `System.Reactive.Linq.Observable`.
 - System.Reactive scheduler bridge checks for `System.Reactive.Concurrency.IScheduler`.
+- System.Reactive.Async bridge checks for `System.IAsyncObservable<T>` and `System.IAsyncObserver<T>`.
 - R3 bridge checks for `R3.Observable<T>`.
+- R3Async bridge checks for `R3Async.AsyncObservable<T>`, `R3Async.AsyncObserver<T>`, and `R3Async.Result`.
 
 Generated bridge namespaces:
 
@@ -756,8 +781,15 @@ Generated System.Reactive bridge methods:
 - `AsSystemObservable<T>(this System.IObservable<T> source)`
 - `AsSequencer(this System.Reactive.Concurrency.IScheduler scheduler)`
 - `AsSystemScheduler(this ReactiveUI.Primitives.Concurrency.ISequencer sequencer)`
-- `ToObservableAsync<T>(this System.IObservable<T> source)` when `ReactiveUI.Primitives.Async` is referenced
-- `ToObservable<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source)` when `ReactiveUI.Primitives.Async` is referenced
+- `ToObservableAsync<T>(this System.IObservable<T> source)` when System.Reactive and `ReactiveUI.Primitives.Async` are referenced
+- `ToObservable<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source)` when System.Reactive and `ReactiveUI.Primitives.Async` are referenced
+
+Generated System.Reactive.Async bridge methods:
+
+- `AsPrimitivesAsyncObservable<T>(this System.IAsyncObservable<T> source)` when System.Reactive.Async and `ReactiveUI.Primitives.Async` are referenced
+- `AsSystemReactiveAsyncObservable<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source)` when System.Reactive.Async and `ReactiveUI.Primitives.Async` are referenced
+- `AsPrimitivesAsyncObserver<T>(this System.IAsyncObserver<T> observer)` when System.Reactive.Async and `ReactiveUI.Primitives.Async` are referenced
+- `AsSystemReactiveAsyncObserver<T>(this ReactiveUI.Primitives.Async.IObserverAsync<T> observer)` when System.Reactive.Async and `ReactiveUI.Primitives.Async` are referenced
 
 Generated R3 bridge methods:
 
@@ -765,6 +797,11 @@ Generated R3 bridge methods:
 - `AsR3Observable<T>(this System.IObservable<T> source)`
 - `AsPrimitivesAsyncObservable<T>(this R3.Observable<T> source)` when `ReactiveUI.Primitives.Async` is referenced
 - `AsR3Observable<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source)` when `ReactiveUI.Primitives.Async` is referenced
+
+Generated R3Async bridge methods:
+
+- `AsPrimitivesAsyncObservable<T>(this R3Async.AsyncObservable<T> source)` when R3Async and `ReactiveUI.Primitives.Async` are referenced
+- `AsR3AsyncObservable<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source)` when R3Async and `ReactiveUI.Primitives.Async` are referenced
 
 System.Reactive bridge example, when the consuming project already references System.Reactive:
 
@@ -789,6 +826,21 @@ IObservable<int> rxAgain = asyncSource.ToObservable();
 ```
 
 The scheduler bridge is a compatibility boundary. Its generated adapters carry the recursive `IScheduler.Schedule` callback and `IDisposable` return shape so native `ISequencer`/`IWorkItem` paths stay on the lean core scheduler contract.
+
+System.Reactive.Async bridge example, when the consuming project references System.Reactive.Async 6.0.0-alpha.18 or another compatible version:
+
+```csharp
+using ReactiveUI.Primitives.Async;
+using ReactiveUI.Primitives.SystemReactiveBridge;
+
+// System.IAsyncObservable<int> rxAsync = ...
+IObservableAsync<int> primitivesAsync = rxAsync.AsPrimitivesAsyncObservable();
+System.IAsyncObservable<int> systemAsync = primitivesAsync.AsSystemReactiveAsyncObservable();
+
+// System.IAsyncObserver<int> rxObserver = ...
+IObserverAsync<int> primitivesObserver = rxObserver.AsPrimitivesAsyncObserver();
+System.IAsyncObserver<int> systemObserver = primitivesObserver.AsSystemReactiveAsyncObserver();
+```
 
 R3 bridge example, when the consuming project already references R3:
 
@@ -918,6 +970,55 @@ System.Reactive test code commonly uses `TestScheduler` and marble helpers. Reac
 - Dispose subscriptions explicitly.
 - Use `CollectArrayAsync`, `CollectListAsync`, or `FirstAsync` when a task-shaped assertion is clearer.
 
+## System.Reactive.Async and R3Async to ReactiveUI.Primitives.Async migration guide
+
+`ReactiveUI.Primitives.Async` is the native async-observable package. Use it when observer work is asynchronous, subscription/disposal needs `ValueTask`, or cancellation must flow through each notification. It differs from System.Reactive.Async by carrying cancellation through `OnNextAsync` and `OnErrorResumeAsync`, and it differs from R3Async by using `ReactiveUI.Primitives.Result` for completion.
+
+| System.Reactive.Async | ReactiveUI.Primitives.Async | Migration detail |
+|---|---|---|
+| `System.IAsyncObservable<T>` | `IObservableAsync<T>` | Use the generated `AsPrimitivesAsyncObservable()` bridge at boundaries, then keep native code in `IObservableAsync<T>`. |
+| `System.IAsyncObserver<T>` | `IObserverAsync<T>` | Use `AsPrimitivesAsyncObserver()` at boundaries. Primitives adds cancellation-aware `OnNextAsync` and `OnErrorResumeAsync`. |
+| `SubscribeAsync(IAsyncObserver<T>)` | `SubscribeAsync(IObserverAsync<T>, CancellationToken)` | Pass a real cancellation token when subscription startup or notification flow can be cancelled. |
+| `OnErrorAsync(Exception)` | `OnCompletedAsync(Result.Failure(error))` at terminal boundaries | System.Reactive.Async has a terminal error method; Primitives represents terminal success/failure through `Result`. |
+| `OnCompletedAsync()` | `OnCompletedAsync(Result.Success)` | Completion carries a result value. |
+| custom `AsyncObservable<T>` | `SignalAsync.Create<T>(...)` or a `SignalAsync<T>` subclass | Prefer `SignalAsync.Create` unless a reusable type needs protected overrides. |
+
+| R3Async | ReactiveUI.Primitives.Async | Migration detail |
+|---|---|---|
+| `R3Async.AsyncObservable<T>` | `IObservableAsync<T>` / `SignalAsync<T>` | Use generated `AsPrimitivesAsyncObservable()` at external boundaries. |
+| `R3Async.AsyncObserver<T>` | `IObserverAsync<T>` / `WitnessAsync<T>` | Use `WitnessAsync<T>` for custom observers that need disposal, cancellation, and concurrency checks. |
+| `R3Async.Result` | `ReactiveUI.Primitives.Result` | Both carry success/failure; bridge adapters convert between them. |
+| `OnErrorResumeAsync` | `OnErrorResumeAsync` | Same error-resume concept; Primitives passes the active `CancellationToken`. |
+| `OnCompletedAsync(R3Async.Result)` | `OnCompletedAsync(ReactiveUI.Primitives.Result)` | Completion remains result-based. |
+
+System.Reactive.Async bridge example:
+
+```csharp
+using ReactiveUI.Primitives.Async;
+using ReactiveUI.Primitives.SystemReactiveBridge;
+
+IObservableAsync<int> native = systemAsyncSource.AsPrimitivesAsyncObservable();
+
+await using IAsyncDisposable subscription = await native
+    .Keep(static value => value > 0)
+    .Map(static value => value * 2)
+    .SubscribeAsync(static value => Console.WriteLine(value));
+
+System.IAsyncObservable<int> external = native.AsSystemReactiveAsyncObservable();
+```
+
+R3Async bridge example:
+
+```csharp
+using ReactiveUI.Primitives.Async;
+using ReactiveUI.Primitives.R3Bridge;
+
+IObservableAsync<int> native = r3AsyncSource.AsPrimitivesAsyncObservable();
+R3Async.AsyncObservable<int> external = native.AsR3AsyncObservable();
+```
+
+Keep async bridge conversions at package or API edges. Inside the application or library, prefer `SignalAsync` factories, `IObservableAsync<T>` operators, and `IObserverAsync<T>` observers directly.
+
 ## R3 migration notes
 
 R3 uses its own `Observable<T>` type and observer model. ReactiveUI.Primitives stays on the BCL `IObservable<T>` shape for runtime interoperability.
@@ -949,7 +1050,7 @@ For async-native streams, prefer `ReactiveUI.Primitives.Async` and its `IObserva
 
 ## Benchmarks and performance posture
 
-Benchmarks live in `src/benchmarks/ReactiveUI.Primitives.Benchmarks`. The benchmark project may reference System.Reactive, R3, and ReactiveUI.Extensions to compare throughput and allocation behavior; the production packages must not.
+Benchmarks live in `src/benchmarks/ReactiveUI.Primitives.Benchmarks`. The benchmark project may reference System.Reactive, System.Reactive.Async 6.0.0-alpha.18, R3, and ReactiveUI.Extensions to compare throughput and allocation behavior; the production packages must not.
 
 The latest complete BenchmarkDotNet run finished on 2026-06-08 at 19:39:12 Europe/London with .NET SDK 11.0.100-preview.4.26230.115 and .NET runtime 10.0.8 on Windows 11. It executed 617 benchmarks with no failed benchmark process in 01:16:58:
 
@@ -1226,47 +1327,10 @@ BenchmarkDotNet emitted `ZeroMeasurement` warnings for several singleton or empt
 | `src/ReactiveUI.Primitives.WinUI` | Optional WinUI dispatcher queue integration library. |
 | `src/ReactiveUI.Primitives.Blazor` | Optional Blazor renderer integration library. |
 | `src/ReactiveUI.Primitives.Maui` | Optional MAUI dispatcher integration library. |
-| `src/ReactiveUI.Primitives.SystemReactiveBridge.Generator` | Source generator for System.Reactive bridge adapters. |
+| `src/ReactiveUI.Primitives.SystemReactiveBridge.Generator` | Source generators for System.Reactive and System.Reactive.Async bridge adapters. |
 | `src/ReactiveUI.Primitives.R3Bridge.Generator` | Source generator for R3 bridge adapters. |
 | `src/ReactiveUI.Primitives.Tests` | Test project using Microsoft Testing Platform/TUnit-style validation. |
 | `src/benchmarks/ReactiveUI.Primitives.Benchmarks` | BenchmarkDotNet comparison harness. |
-
-## Validation commands
-
-### Latest local validation used for this README
-
-```powershell
-# Build solution.
-dotnet build .\src\ReactiveUI.Primitives.slnx -c Release -v minimal /nr:false -p:UseSharedCompilation=false -p:BuildInParallel=false -maxcpucount:1
-
-# Full solution TUnit validation.
-dotnet test .\src\ReactiveUI.Primitives.slnx -c Debug --no-restore -- --output Detailed --report-trx --report-trx-filename solution-debug.trx
-
-# ReactiveUI.Primitives.Async per-target TUnit validation.
-dotnet test .\src\tests\ReactiveUI.Primitives.Async.Tests\ReactiveUI.Primitives.Async.Tests.csproj -f net8.0 -c Debug --no-restore -- --output Detailed --report-trx --report-trx-filename async-debug-net8-final.trx
-dotnet test .\src\tests\ReactiveUI.Primitives.Async.Tests\ReactiveUI.Primitives.Async.Tests.csproj -f net9.0 -c Debug --no-restore -- --output Detailed --report-trx --report-trx-filename async-debug-net9-final.trx
-dotnet test .\src\tests\ReactiveUI.Primitives.Async.Tests\ReactiveUI.Primitives.Async.Tests.csproj -f net10.0 -c Debug --no-restore -- --output Detailed --report-trx --report-trx-filename async-debug-net10-final.trx
-dotnet test .\src\tests\ReactiveUI.Primitives.Async.Tests\ReactiveUI.Primitives.Async.Tests.csproj -f net11.0 -c Debug --no-restore -- --output Detailed --report-trx --report-trx-filename async-debug-net11-final.trx
-
-# ReactiveUI.Primitives.Async net10.0 coverage.
-dotnet test .\src\tests\ReactiveUI.Primitives.Async.Tests\ReactiveUI.Primitives.Async.Tests.csproj -f net10.0 -c Debug --no-restore -- --config-file testconfig.json --coverage --coverage-output coverage.cobertura.xml --coverage-output-format cobertura --results-directory .\src\TestResults\async-debug-net10 --output Detailed
-
-# Focused async broadcast and complete joined comparison run.
-dotnet run --project .\src\benchmarks\ReactiveUI.Primitives.Benchmarks\ReactiveUI.Primitives.Benchmarks.csproj --framework net10.0 --configuration Release --no-restore -- --filter "*AsyncExtensionsComparisonBenchmarks.PrimitivesSignalBroadcastAsync*" --launchCount 1 --warmupCount 1 --iterationCount 3
-dotnet run --project .\src\benchmarks\ReactiveUI.Primitives.Benchmarks\ReactiveUI.Primitives.Benchmarks.csproj --framework net10.0 --configuration Release --no-restore -- --filter "*" --join --launchCount 1 --warmupCount 1 --iterationCount 3
-```
-
-Results: release solution build passed with 0 warnings/0 errors; the latest full solution TUnit validation before the final async coverage additions passed 8,751/8,751 tests; `ReactiveUI.Primitives.Async.Tests` per-target validation passed 4,844/4,844 tests across net8.0, net9.0, net10.0, and net11.0; the net10.0 coverage run passed 1,211/1,211 tests and the Mtpunittest MCP reported `ReactiveUI.Primitives.Async` at 99.78% line coverage and 97.38% branch coverage; the focused async broadcast benchmark completed; the joined BenchmarkDotNet run executed 617 benchmarks in 01:16:58.
-
-### Package verification
-
-For NuGet package verification, inspect the generated `.nupkg` and confirm:
-
-- `README.md` is present.
-- The nuspec contains `<readme>README.md</readme>`.
-- Bridge generator DLLs are present under `analyzers/dotnet/cs`.
-- Production runtime dependencies do not include System.Reactive or R3.
-- The core `ReactiveUI.Primitives` package does not reference WPF, Windows Forms, WinUI, Blazor, or MAUI assemblies; those integrations ship from `ReactiveUI.Primitives.Wpf`, `ReactiveUI.Primitives.WinForms`, `ReactiveUI.Primitives.WinUI`, `ReactiveUI.Primitives.Blazor`, and `ReactiveUI.Primitives.Maui`.
 
 ## Practical migration checklist
 

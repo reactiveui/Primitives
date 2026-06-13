@@ -7,8 +7,11 @@
         <File Path="../.gitattributes" />
         <File Path="../.github/workflows/ci-build.yml" />
         <File Path="../.gitignore" />
+        <File Path="../AGENTS.md" />
+        <File Path="../CLAUDE.md" />
         <File Path="../LICENSE" />
         <File Path="../README.md" />
+        <File Path="../Skills.md" />
         <File Path="..\codecov.yml" />
         <File Path="Directory.Build.props" />
         <File Path="Directory.Build.targets" />
@@ -18,24 +21,24 @@
     </Folder>
     <Folder Name="/tests/">
         <Project Path="tests/ReactiveUI.Disposables.Tests/ReactiveUI.Disposables.Tests.csproj" />
-        <Project Path="tests/ReactiveUI.Primitives.Tests/ReactiveUI.Primitives.Tests.csproj" />
-        <Project Path="tests/ReactiveUI.Primitives.Extensions.Tests/ReactiveUI.Primitives.Extensions.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Async.Tests/ReactiveUI.Primitives.Async.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Blazor.Tests/ReactiveUI.Primitives.Blazor.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.Extensions.Tests/ReactiveUI.Primitives.Extensions.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Maui.Tests/ReactiveUI.Primitives.Maui.Tests.csproj" />
-        <Project Path="tests/ReactiveUI.Primitives.Wpf.Tests/ReactiveUI.Primitives.Wpf.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.Tests/ReactiveUI.Primitives.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.WinForms.Tests/ReactiveUI.Primitives.WinForms.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.WinUI.Tests/ReactiveUI.Primitives.WinUI.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.Wpf.Tests/ReactiveUI.Primitives.Wpf.Tests.csproj" />
     </Folder>
+    <Project Path="ReactiveUI.Disposables/ReactiveUI.Disposables.csproj" />
+    <Project Path="ReactiveUI.Primitives.Async/ReactiveUI.Primitives.Async.csproj" />
+    <Project Path="ReactiveUI.Primitives.Blazor/ReactiveUI.Primitives.Blazor.csproj" />
+    <Project Path="ReactiveUI.Primitives.Extensions/ReactiveUI.Primitives.Extensions.csproj" />
+    <Project Path="ReactiveUI.Primitives.Maui/ReactiveUI.Primitives.Maui.csproj" />
     <Project Path="ReactiveUI.Primitives.R3Bridge.Generator/ReactiveUI.Primitives.R3Bridge.Generator.csproj" />
     <Project Path="ReactiveUI.Primitives.SystemReactiveBridge.Generator/ReactiveUI.Primitives.SystemReactiveBridge.Generator.csproj" />
-    <Project Path="ReactiveUI.Disposables/ReactiveUI.Disposables.csproj" />
-    <Project Path="ReactiveUI.Primitives/ReactiveUI.Primitives.csproj" />
-    <Project Path="ReactiveUI.Primitives.Async/ReactiveUI.Primitives.Async.csproj" />
-    <Project Path="ReactiveUI.Primitives.Extensions/ReactiveUI.Primitives.Extensions.csproj" />
-    <Project Path="ReactiveUI.Primitives.Blazor/ReactiveUI.Primitives.Blazor.csproj" />
-    <Project Path="ReactiveUI.Primitives.Maui/ReactiveUI.Primitives.Maui.csproj" />
-    <Project Path="ReactiveUI.Primitives.WinUI/ReactiveUI.Primitives.WinUI.csproj" />
     <Project Path="ReactiveUI.Primitives.WinForms/ReactiveUI.Primitives.WinForms.csproj" />
+    <Project Path="ReactiveUI.Primitives.WinUI/ReactiveUI.Primitives.WinUI.csproj" />
     <Project Path="ReactiveUI.Primitives.Wpf/ReactiveUI.Primitives.Wpf.csproj" />
+    <Project Path="ReactiveUI.Primitives/ReactiveUI.Primitives.csproj" />
 </Solution>
