@@ -90,10 +90,7 @@ public class Signal<T> : ISignal<T>
     /// <param name="error">The error.</param>
     public void OnError(Exception error)
     {
-        if (error is null)
-        {
-            throw new ArgumentNullException(nameof(error));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(error);
 
         SignalSubscription? singleObserver;
         SignalSubscription?[]? subscriptions;
@@ -157,10 +154,7 @@ public class Signal<T> : ISignal<T>
     /// </returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         Exception? ex;
         bool stopped;
@@ -210,10 +204,7 @@ public class Signal<T> : ISignal<T>
     /// <returns>The result.</returns>
     internal IDisposable SubscribeAction(Action<T> onNext)
     {
-        if (onNext is null)
-        {
-            throw new ArgumentNullException(nameof(onNext));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(onNext);
 
         Exception? ex;
         bool stopped;

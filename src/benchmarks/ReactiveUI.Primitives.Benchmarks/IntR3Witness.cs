@@ -39,7 +39,7 @@ internal sealed class IntR3Witness : Observer<int>
 
     /// <summary>Called when sequence completed.</summary>
     /// <param name="result">The completion result.</param>
-    protected override void OnCompletedCore(Result result)
+    protected override void OnCompletedCore(R3.Result result)
     {
         if (result.IsFailure)
         {

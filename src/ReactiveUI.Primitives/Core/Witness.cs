@@ -45,23 +45,14 @@ public static class Witness
     /// <param name="onError">Callback invoked for terminal errors.</param>
     /// <param name="onCompleted">Callback invoked for completion.</param>
     /// <returns>An observer backed by the supplied callbacks.</returns>
-    /// <exception cref="ArgumentNullException">Any callback is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper">Any callback is <see langword="null"/>.</exception>
     public static IObserver<T> Create<T>(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
-        if (onNext is null)
-        {
-            throw new ArgumentNullException(nameof(onNext));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(onNext);
 
-        if (onError is null)
-        {
-            throw new ArgumentNullException(nameof(onError));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(onError);
 
-        if (onCompleted is null)
-        {
-            throw new ArgumentNullException(nameof(onCompleted));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(onCompleted);
 
         return new DelegateWitness<T>(onNext, onError, onCompleted);
     }
@@ -78,18 +69,12 @@ public static class Witness
     /// <param name="observer">Observer to protect.</param>
     /// <param name="cancel">Cancellation resource disposed on terminal signals or callback exceptions.</param>
     /// <returns>A safe observer wrapper.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="observer"/> or <paramref name="cancel"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="observer"/> or <paramref name="cancel"/> is <see langword="null"/>.</exception>
     public static IObserver<T> Safe<T>(IObserver<T> observer, IDisposable cancel)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        if (cancel is null)
-        {
-            throw new ArgumentNullException(nameof(cancel));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(cancel);
 
         if (ReferenceEquals(cancel, EmptyDisposable.Instance))
         {
@@ -148,10 +133,7 @@ public static class Witness
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
-            if (error is null)
-            {
-                throw new ArgumentNullException(nameof(error));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(error);
 
             if (Interlocked.Exchange(ref _stopped, 1) != 0)
             {
@@ -242,10 +224,7 @@ public static class Witness
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
-            if (error is null)
-            {
-                throw new ArgumentNullException(nameof(error));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(error);
 
             if (Volatile.Read(ref _safe) == 0)
             {
@@ -318,10 +297,7 @@ public static class Witness
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
-            if (error is null)
-            {
-                throw new ArgumentNullException(nameof(error));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(error);
 
             if (Interlocked.Exchange(ref _stopped, 1) != 0)
             {

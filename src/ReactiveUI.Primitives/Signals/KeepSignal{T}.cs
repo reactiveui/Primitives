@@ -35,10 +35,7 @@ public sealed class KeepSignal<T> : IRequireCurrentThread<T>
     /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         return _source.Subscribe(new KeepWitness(observer, _predicate));
     }

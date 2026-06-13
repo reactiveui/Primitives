@@ -156,8 +156,8 @@ internal static class R3AsyncBridge
         protected override void OnCompletedCore(global::R3.Result result)
         {
             var asyncResult = result.IsFailure
-                ? global::ReactiveUI.Primitives.Async.Result.Failure(result.Exception)
-                : global::ReactiveUI.Primitives.Async.Result.Success;
+                ? global::ReactiveUI.Primitives.Result.Failure(result.Exception)
+                : global::ReactiveUI.Primitives.Result.Success;
             RunSynchronously(observer.OnCompletedAsync(asyncResult));
         }
     }
@@ -179,7 +179,7 @@ internal static class R3AsyncBridge
             return default;
         }
 
-        public global::System.Threading.Tasks.ValueTask OnCompletedAsync(global::ReactiveUI.Primitives.Async.Result result)
+        public global::System.Threading.Tasks.ValueTask OnCompletedAsync(global::ReactiveUI.Primitives.Result result)
         {
             observer.OnCompleted(result.IsFailure
                 ? global::R3.Result.Failure(result.Exception)

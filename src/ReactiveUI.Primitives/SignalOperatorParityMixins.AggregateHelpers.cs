@@ -57,10 +57,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var sink = new DistinctByWitness<T, TKey>(observer, _keySelector, _comparer);
             sink.SetSubscription(_source.Subscribe(sink));
@@ -70,10 +67,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable SubscribeCount(IObserver<int> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             if (_source is RangeSignal range && typeof(T) == typeof(int))
             {
@@ -90,10 +84,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable SubscribeLongCount(IObserver<long> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             if (_source is RangeSignal range && typeof(T) == typeof(int))
             {
@@ -143,10 +134,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<int> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             if (_source is RangeSignal range)
             {
@@ -192,10 +180,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<int> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             if (_source is RangeSignal range && typeof(T) == typeof(int))
             {
@@ -254,10 +239,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<long> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             if (_source is RangeSignal range)
             {
@@ -303,10 +285,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<long> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             if (_source is RangeSignal range && typeof(T) == typeof(int))
             {
@@ -365,10 +344,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<bool> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             if (_source is RangeSignal)
             {
@@ -409,10 +385,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<bool> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             if (_source is RangeSignal range && typeof(T) == typeof(int))
             {

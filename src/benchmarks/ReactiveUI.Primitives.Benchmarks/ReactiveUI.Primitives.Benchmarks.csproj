@@ -13,6 +13,7 @@
     <PackageReference Include="BenchmarkDotNet" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <PackageReference Include="System.Reactive" />
+    <PackageReference Include="System.Reactive.Async" />
     <PackageReference Include="R3" />
     <PackageReference Include="ReactiveUI.Extensions" />
   </ItemGroup>

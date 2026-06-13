@@ -46,10 +46,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var sink = new TapWitness<T>(observer, _onNext, _onError, _onCompleted);
             sink.SetSubscription(_source.Subscribe(sink));
@@ -71,10 +68,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var sink = new IgnoreValuesWitness<T>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
@@ -96,10 +90,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<Spark<T>> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var sink = new SparkWitness<T>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
@@ -121,10 +112,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var sink = new UnsparkWitness<T>(observer);
             sink.SetSubscription(_source.Subscribe(sink));
@@ -154,10 +142,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TimeInterval<T>> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var sink = new TimeIntervalWitness<T>(observer, _scheduler);
             sink.SetSubscription(_source.Subscribe(sink));
@@ -191,10 +176,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var sink = _gate is null
                 ? new SynchronizeWitness<T>(observer)

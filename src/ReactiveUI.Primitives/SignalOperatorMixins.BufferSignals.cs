@@ -38,10 +38,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<IList<T>> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var sink = new BufferWitness<T>(observer, _count, _skip);
             sink.SetSubscription(_source.Subscribe(sink));

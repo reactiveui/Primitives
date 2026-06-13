@@ -5,7 +5,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
 
-namespace ReactiveUI.Primitives.Async;
+namespace ReactiveUI.Primitives;
 
 /// <summary>Represents the outcome of an operation, indicating success or failure and providing error details when applicable.</summary>
 /// <remarks>The <see cref="Result"/> struct is used to encapsulate the result of an operation, including whether
@@ -18,7 +18,7 @@ public readonly record struct Result
 {
     /// <summary>Initializes a new instance of the <see cref="Result"/> struct. Initializes a new instance of the Result class with the specified exception.</summary>
     /// <param name="exception">The exception that represents the error condition for this result. Cannot be null.</param>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="exception"/> is null.</exception>
+    /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="exception"/> is null.</exception>
     public Result(Exception exception)
     {
         ArgumentExceptionHelper.ThrowIfNull(exception);

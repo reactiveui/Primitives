@@ -19,15 +19,9 @@ public static class ConnectableSignalExtensions
         /// <returns>A connectable signal.</returns>
         public ConnectableSignal<T> Multicast(ISignal<T> hub)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (hub is null)
-            {
-                throw new ArgumentNullException(nameof(hub));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(hub);
 
             return new(source, hub);
         }
@@ -82,10 +76,7 @@ public static class ConnectableSignalExtensions
         /// <returns>A reference-counted sequence.</returns>
         public IObservable<T> AutoShare()
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             return AutoShareGate<T>.For(source);
         }
@@ -100,10 +91,7 @@ public static class ConnectableSignalExtensions
         /// <returns>A sequence that connects after the requested number of subscriptions.</returns>
         public IObservable<T> AutoConnect(int subscriberCount)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             if (subscriberCount < 0)
             {
@@ -144,10 +132,7 @@ public static class ConnectableSignalExtensions
         /// <returns>A disposable that removes the observer and may disconnect the source.</returns>
         public IDisposable Subscribe(IObserver<TValue> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             IDisposable subscription;
             lock (_gate)
@@ -239,10 +224,7 @@ public static class ConnectableSignalExtensions
         /// <returns>A disposable that removes the observer subscription.</returns>
         public IDisposable Subscribe(IObserver<TValue> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var subscription = _source.Subscribe(observer);
 

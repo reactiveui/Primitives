@@ -74,8 +74,8 @@ public class FactoryOperatorContractTests
     /// <summary>Delay used by the async enumerable cancellation test.</summary>
     private const int AsyncEnumeratorDelayMilliseconds = 5000;
 
-    /// <summary>Settle delay used by the async enumerable cancellation test.</summary>
-    private const int AsyncEnumeratorSettleMilliseconds = 50;
+    /// <summary>Timeout used while waiting for async enumerable disposal.</summary>
+    private const int AsyncEnumeratorDisposeTimeoutSeconds = 5;
 
     /// <summary>Virtual clock due time for one-shot timers.</summary>
     private const int AfterTicks = 5;
@@ -354,6 +354,7 @@ public class FactoryOperatorContractTests
     {
         var disposed = false;
         var values = new List<int>();
+        var disposedSignal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         async IAsyncEnumerable<int> Values([EnumeratorCancellation] CancellationToken token = default)
         {
@@ -366,13 +367,14 @@ public class FactoryOperatorContractTests
             finally
             {
                 disposed = true;
+                disposedSignal.TrySetResult();
             }
         }
 
         var subscription = Signal.FromAsyncEnumerable(Values()).Subscribe(values.Add, _ => { }, () => { });
-        await Task.Delay(AsyncEnumeratorSettleMilliseconds);
+        await Task.Yield();
         subscription.Dispose();
-        await Task.Delay(AsyncEnumeratorSettleMilliseconds);
+        await disposedSignal.Task.WaitAsync(TimeSpan.FromSeconds(AsyncEnumeratorDisposeTimeoutSeconds)).ConfigureAwait(false);
 
         Assert.Equal(AsyncEnumerableBeforeDisposeExpected, values);
         Assert.True(disposed);

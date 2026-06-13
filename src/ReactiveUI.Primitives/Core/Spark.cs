@@ -23,17 +23,14 @@ public static class Spark
     /// </typeparam>
     /// <param name="error">The exception contained in the spark.</param>
     /// <returns>The OnError spark containing the exception.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="error"/> is null.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="error"/> is null.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
         Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static Spark<T> CreateOnError<T>(Exception error)
     {
-        if (error is null)
-        {
-            throw new ArgumentNullException(nameof(error));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(error);
 
         return Spark<T>.OnError(error);
     }

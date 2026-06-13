@@ -52,13 +52,10 @@ public sealed class CurrentThreadSequencer : ISequencer
     /// <summary>Schedules an action to be executed on the current-thread trampoline.</summary>
     /// <param name="action">Action to execute.</param>
     /// <returns>The disposable object used to cancel queued work, or an empty disposable when the action has already run.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="action"/> is <see langword="null"/>.</exception>
     public IDisposable Schedule(Action action)
     {
-        if (action is null)
-        {
-            throw new ArgumentNullException(nameof(action));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(action);
 
         if (!_running)
         {
@@ -88,13 +85,10 @@ public sealed class CurrentThreadSequencer : ISequencer
 
     /// <summary>Schedules a work item to be executed.</summary>
     /// <param name="item">Work item to execute.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item)
     {
-        if (item is null)
-        {
-            throw new ArgumentNullException(nameof(item));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(item);
 
         Schedule(item, Timestamp);
     }
@@ -102,13 +96,10 @@ public sealed class CurrentThreadSequencer : ISequencer
     /// <summary>Schedules a work item to be executed at the specified monotonic timestamp.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item, long dueTimestamp)
     {
-        if (item is null)
-        {
-            throw new ArgumentNullException(nameof(item));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(item);
 
         SequencerQueue<long>? queue;
 

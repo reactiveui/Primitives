@@ -104,4 +104,71 @@ public class SignalCreateTests
     public void CreateWithDisposable_Exception() =>
         Assert.Throws<InvalidOperationException>(() =>
                Signal.Create(new Func<IObserver<int>, IDisposable>(_ => throw new InvalidOperationException())).Subscribe());
+
+    /// <summary>Anonymous signals validate the subscribe delegate.</summary>
+    [Test]
+    public void AnonymousSignal_ArgumentChecking()
+    {
+        Assert.Throws<ArgumentNullException>(() => _ = new AnonymousSignal<int>(null!));
+
+        var signal = new AnonymousSignal<int>(_ => EmptyDisposable.Instance);
+        Assert.Throws<ArgumentNullException>(() => signal.Subscribe(null!));
+    }
+
+    /// <summary>Anonymous signals forward subscriptions to the supplied delegate.</summary>
+    [Test]
+    public void AnonymousSignal_ForwardsObserverAndDisposable()
+    {
+        var disposed = false;
+        IObserver<int>? seenObserver = null;
+        var expectedDisposable = new ActionDisposable(() => disposed = true);
+        var signal = new AnonymousSignal<int>(observer =>
+        {
+            seenObserver = observer;
+            observer.OnNext(CreatedValue);
+            observer.OnCompleted();
+            return expectedDisposable;
+        });
+        var observer = new Recorder<int>();
+
+        var disposable = signal.Subscribe(observer);
+        disposable.Dispose();
+
+        Assert.True(ReferenceEquals(observer, seenObserver));
+        Assert.Same(expectedDisposable, disposable);
+        Assert.True(observer.Values.SequenceEqual([CreatedValue]));
+        Assert.Equal(1, observer.Completed);
+        Assert.True(disposed);
+    }
+
+    /// <summary>Anonymous signals use the empty disposable when a delegate returns null.</summary>
+    [Test]
+    public void AnonymousSignal_ReturnsEmptyDisposableForNullDelegateResult()
+    {
+        var signal = new AnonymousSignal<int>(_ => null!);
+
+        var disposable = signal.Subscribe(new Recorder<int>());
+
+        Assert.Same(EmptyDisposable.Instance, disposable);
+    }
+
+    /// <summary>Records observer notifications.</summary>
+    /// <typeparam name="T">The observed value type.</typeparam>
+    private sealed class Recorder<T> : IObserver<T>
+    {
+        /// <summary>Gets observed values.</summary>
+        public List<T> Values { get; } = [];
+
+        /// <summary>Gets the number of completion notifications.</summary>
+        public int Completed { get; private set; }
+
+        /// <inheritdoc/>
+        public void OnCompleted() => Completed++;
+
+        /// <inheritdoc/>
+        public void OnError(Exception error) => throw error;
+
+        /// <inheritdoc/>
+        public void OnNext(T value) => Values.Add(value);
+    }
 }

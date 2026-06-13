@@ -40,10 +40,7 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
     /// <returns>The subscription.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         if (!_cancellationToken.CanBeCanceled && _values is T[] array)
         {
@@ -88,15 +85,9 @@ internal sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlin
     /// <returns>The subscription.</returns>
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
-        if (onNext is null)
-        {
-            throw new ArgumentNullException(nameof(onNext));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(onNext);
 
-        if (onCompleted is null)
-        {
-            throw new ArgumentNullException(nameof(onCompleted));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(onCompleted);
 
         if (TryDrainIndexable(onNext, onCompleted, out var fast))
         {

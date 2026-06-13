@@ -29,6 +29,21 @@ override ReactiveUI.Primitives.Core.Spark<T>.ToString() -> string!
 override ReactiveUI.Primitives.Core.TimeInterval<T>.Equals(object? obj) -> bool
 override ReactiveUI.Primitives.Core.TimeInterval<T>.GetHashCode() -> int
 override ReactiveUI.Primitives.Core.TimeInterval<T>.ToString() -> string!
+ReactiveUI.Primitives.Result
+ReactiveUI.Primitives.Result.Equals(ReactiveUI.Primitives.Result other) -> bool
+ReactiveUI.Primitives.Result.Exception.get -> System.Exception?
+ReactiveUI.Primitives.Result.IsFailure.get -> bool
+ReactiveUI.Primitives.Result.IsSuccess.get -> bool
+ReactiveUI.Primitives.Result.Result(System.Exception! exception) -> void
+ReactiveUI.Primitives.Result.Result() -> void
+ReactiveUI.Primitives.Result.TryThrow() -> void
+static ReactiveUI.Primitives.Result.Failure(System.Exception! exception) -> ReactiveUI.Primitives.Result
+static ReactiveUI.Primitives.Result.operator !=(ReactiveUI.Primitives.Result left, ReactiveUI.Primitives.Result right) -> bool
+static ReactiveUI.Primitives.Result.operator ==(ReactiveUI.Primitives.Result left, ReactiveUI.Primitives.Result right) -> bool
+static ReactiveUI.Primitives.Result.Success.get -> ReactiveUI.Primitives.Result
+~override ReactiveUI.Primitives.Result.Equals(object obj) -> bool
+override ReactiveUI.Primitives.Result.GetHashCode() -> int
+override ReactiveUI.Primitives.Result.ToString() -> string!
 override ReactiveUI.Primitives.RxVoid.Equals(object? obj) -> bool
 override ReactiveUI.Primitives.RxVoid.GetHashCode() -> int
 override ReactiveUI.Primitives.RxVoid.ToString() -> string!
@@ -1134,3 +1149,35 @@ ReactiveUI.Primitives.AggregateWitness<T, TResult, TAggregator>.SetSubscription(
 ReactiveUI.Primitives.IAggregator<T, TResult, TSelf>
 ReactiveUI.Primitives.IAggregator<T, TResult, TSelf>.Add(T value) -> TSelf
 ReactiveUI.Primitives.IAggregator<T, TResult, TSelf>.Result.get -> TResult
+~override ReactiveUI.Primitives.Optional<T>.Equals(object obj) -> bool
+~override ReactiveUI.Primitives.Optional<T>.ToString() -> string
+override ReactiveUI.Primitives.Optional<T>.GetHashCode() -> int
+ReactiveUI.Primitives.AnonymousSignal<T>
+ReactiveUI.Primitives.AnonymousSignal<T>.AnonymousSignal(System.Func<System.IObserver<T>!, System.IDisposable!>! subscribe) -> void
+ReactiveUI.Primitives.CallbackWitness<T>
+ReactiveUI.Primitives.CallbackWitness<T>.CallbackWitness(System.Action<T>! onNext, System.Action<System.Exception!>? onError, System.Action<ReactiveUI.Primitives.Result>? onCompleted) -> void
+ReactiveUI.Primitives.ForwardingWitness<T>
+ReactiveUI.Primitives.ForwardingWitness<T>.ForwardingWitness(System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Optional<T>
+ReactiveUI.Primitives.Optional<T>.Equals(ReactiveUI.Primitives.Optional<T> other) -> bool
+ReactiveUI.Primitives.Optional<T>.HasValue.get -> bool
+ReactiveUI.Primitives.Optional<T>.Optional() -> void
+ReactiveUI.Primitives.Optional<T>.Optional(T value) -> void
+ReactiveUI.Primitives.Optional<T>.Value.get -> T?
+ReactiveUI.Primitives.StatefulWitness<T, TState>
+ReactiveUI.Primitives.StatefulWitness<T, TState>.StatefulWitness(TState state, System.Action<T, TState>! onNext, System.Action<System.Exception!, TState>? onError, System.Action<ReactiveUI.Primitives.Result, TState>? onCompleted) -> void
+static ReactiveUI.Primitives.Optional<T>.Empty.get -> ReactiveUI.Primitives.Optional<T>
+static ReactiveUI.Primitives.Optional<T>.None.get -> ReactiveUI.Primitives.Optional<T>
+static ReactiveUI.Primitives.Optional<T>.operator !=(ReactiveUI.Primitives.Optional<T> left, ReactiveUI.Primitives.Optional<T> right) -> bool
+static ReactiveUI.Primitives.Optional<T>.operator ==(ReactiveUI.Primitives.Optional<T> left, ReactiveUI.Primitives.Optional<T> right) -> bool
+static ReactiveUI.Primitives.Optional<T>.Some(T value) -> ReactiveUI.Primitives.Optional<T>
+ReactiveUI.Primitives.AnonymousSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.CallbackWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.CallbackWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.CallbackWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.ForwardingWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.ForwardingWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.ForwardingWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.StatefulWitness<T, TState>.OnCompleted() -> void
+ReactiveUI.Primitives.StatefulWitness<T, TState>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.StatefulWitness<T, TState>.OnNext(T value) -> void

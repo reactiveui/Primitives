@@ -35,17 +35,14 @@ public sealed class ImmediateSequencer : ISequencer
     /// <summary>Schedules an action to run immediately.</summary>
     /// <param name="action">Action to execute.</param>
     /// <returns>An empty disposable because the action has already run.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="action"/> is <see langword="null"/>.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Performance",
         "CA1822:Mark members as static",
         Justification = "Must remain an instance method so overload resolution selects it over the allocating ISequencer.Schedule(Action) extension, giving an allocation-free immediate path.")]
     public IDisposable Schedule(Action action)
     {
-        if (action is null)
-        {
-            throw new ArgumentNullException(nameof(action));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(action);
 
         action();
         return EmptyDisposable.Instance;
@@ -53,13 +50,10 @@ public sealed class ImmediateSequencer : ISequencer
 
     /// <summary>Schedules the specified work item.</summary>
     /// <param name="item">Work item to execute.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item)
     {
-        if (item is null)
-        {
-            throw new ArgumentNullException(nameof(item));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(item);
 
         if (Sequencer.IsCancelled(item))
         {
@@ -72,13 +66,10 @@ public sealed class ImmediateSequencer : ISequencer
     /// <summary>Schedules the specified work item.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item, long dueTimestamp)
     {
-        if (item is null)
-        {
-            throw new ArgumentNullException(nameof(item));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(item);
 
         var dueTime = Sequencer.TimeUntil(dueTimestamp);
         if (dueTime.Ticks > 0)

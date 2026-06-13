@@ -20,18 +20,12 @@ public static class VirtualTimeSequencerExtensions
         /// <param name="dueTime">Relative time after which to execute the action.</param>
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
         public IDisposable ScheduleRelative(TRelative dueTime, Action action)
         {
-            if (scheduler is null)
-            {
-                throw new ArgumentNullException(nameof(scheduler));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
-            if (action is null)
-            {
-                throw new ArgumentNullException(nameof(action));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(action);
 
             // As stated in Sequencer.Simple.cs,
             // an anonymous delegate will allow delegate caching.
@@ -44,18 +38,12 @@ public static class VirtualTimeSequencerExtensions
         /// <param name="dueTime">Absolute time at which to execute the action.</param>
         /// <param name="action">Action to be executed.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
         public IDisposable ScheduleAbsolute(TAbsolute dueTime, Action action)
         {
-            if (scheduler is null)
-            {
-                throw new ArgumentNullException(nameof(scheduler));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
-            if (action is null)
-            {
-                throw new ArgumentNullException(nameof(action));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(action);
 
             return scheduler.ScheduleAbsolute(action, dueTime, static (_, a) => Invoke(a));
         }

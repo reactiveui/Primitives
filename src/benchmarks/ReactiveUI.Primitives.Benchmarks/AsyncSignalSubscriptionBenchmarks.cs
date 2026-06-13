@@ -82,7 +82,7 @@ public class AsyncSignalSubscriptionBenchmarks
         public int Total { get; private set; }
 
         /// <inheritdoc/>
-        protected override ValueTask OnCompletedAsyncCore(Async.Result result) => default;
+        protected override ValueTask OnCompletedAsyncCore(Result result) => default;
 
         /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>

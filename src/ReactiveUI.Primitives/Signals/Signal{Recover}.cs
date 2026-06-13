@@ -13,13 +13,10 @@ public static partial class Signal
     /// <typeparam name="TSource">The type of the elements in the source and handler sequences.</typeparam>
     /// <param name="sources">Observable sequences to catch exceptions for.</param>
     /// <returns>An observable sequence containing elements from consecutive source sequences until a source sequence terminates successfully.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="sources"/> is null.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="sources"/> is null.</exception>
     public static IObservable<TSource> Recover<TSource>(params IObservable<TSource>[] sources)
     {
-        if (sources is null)
-        {
-            throw new ArgumentNullException(nameof(sources));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(sources);
 
         return new CatchSignal<TSource>(sources);
     }

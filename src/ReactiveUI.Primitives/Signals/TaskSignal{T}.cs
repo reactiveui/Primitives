@@ -24,10 +24,7 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
     /// <param name="cancellationTokenSource">The cancellation token source.</param>
     public TaskSignal(Func<ITaskSignal<T>, IObservable<T>> observableFactory, ISequencer? sequencer = null, CancellationTokenSource? cancellationTokenSource = null)
     {
-        if (observableFactory is null)
-        {
-            throw new ArgumentNullException(nameof(observableFactory));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observableFactory);
 
         CancellationTokenSource = cancellationTokenSource ?? new();
         _sequencer = sequencer ?? CurrentThreadSequencer.Instance;

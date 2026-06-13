@@ -17,14 +17,11 @@ public static partial class Signal
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="subscribe">The subscribe.</param>
     /// <returns>An Signals.</returns>
-    /// <exception cref="ArgumentNullException">subscribe.</exception>
-    /// <exception cref="ArgumentNullException"><paramref name="subscribe" /> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentExceptionHelper">subscribe.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> Create<T>(Func<IObserver<T>, IDisposable> subscribe)
     {
-        if (subscribe is null)
-        {
-            throw new ArgumentNullException(nameof(subscribe));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(subscribe);
 
         return new CreateSignal<T>(subscribe);
     }
@@ -37,14 +34,11 @@ public static partial class Signal
     /// <param name="subscribe">The subscribe.</param>
     /// <param name="isRequiredSubscribeOnCurrentThread">if set to <c>true</c> [is required subscribe on current thread].</param>
     /// <returns>An Signals.</returns>
-    /// <exception cref="ArgumentNullException">subscribe.</exception>
-    /// <exception cref="ArgumentNullException"><paramref name="subscribe" /> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentExceptionHelper">subscribe.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> Create<T>(Func<IObserver<T>, IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread)
     {
-        if (subscribe is null)
-        {
-            throw new ArgumentNullException(nameof(subscribe));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(subscribe);
 
         return new CreateSignal<T>(subscribe, isRequiredSubscribeOnCurrentThread);
     }
@@ -58,14 +52,11 @@ public static partial class Signal
     /// <param name="state">The state.</param>
     /// <param name="subscribe">The subscribe.</param>
     /// <returns>An Signals.</returns>
-    /// <exception cref="ArgumentNullException">subscribe.</exception>
-    /// <exception cref="ArgumentNullException"><paramref name="subscribe" /> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentExceptionHelper">subscribe.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> CreateWithState<T, TState>(TState state, Func<TState, IObserver<T>, IDisposable> subscribe)
     {
-        if (subscribe is null)
-        {
-            throw new ArgumentNullException(nameof(subscribe));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(subscribe);
 
         return new CreateSignal<T, TState>(state, subscribe);
     }
@@ -80,14 +71,11 @@ public static partial class Signal
     /// <param name="subscribe">The subscribe.</param>
     /// <param name="isRequiredSubscribeOnCurrentThread">if set to <c>true</c> [is required subscribe on current thread].</param>
     /// <returns>An Signals.</returns>
-    /// <exception cref="ArgumentNullException">subscribe.</exception>
-    /// <exception cref="ArgumentNullException"><paramref name="subscribe" /> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentExceptionHelper">subscribe.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> CreateWithState<T, TState>(TState state, Func<TState, IObserver<T>, IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread)
     {
-        if (subscribe is null)
-        {
-            throw new ArgumentNullException(nameof(subscribe));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(subscribe);
 
         return new CreateSignal<T, TState>(state, subscribe, isRequiredSubscribeOnCurrentThread);
     }
@@ -99,14 +87,11 @@ public static partial class Signal
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="subscribe">The subscribe.</param>
     /// <returns>An Signals.</returns>
-    /// <exception cref="ArgumentNullException">subscribe.</exception>
-    /// <exception cref="ArgumentNullException"><paramref name="subscribe" /> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentExceptionHelper">subscribe.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> CreateSafe<T>(Func<IObserver<T>, IDisposable> subscribe)
     {
-        if (subscribe is null)
-        {
-            throw new ArgumentNullException(nameof(subscribe));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(subscribe);
 
         return new CreateSafeSignal<T>(subscribe);
     }
@@ -119,14 +104,11 @@ public static partial class Signal
     /// <param name="subscribe">The subscribe.</param>
     /// <param name="isRequiredSubscribeOnCurrentThread">if set to <c>true</c> [is required subscribe on current thread].</param>
     /// <returns>An Observable.</returns>
-    /// <exception cref="ArgumentNullException">subscribe.</exception>
-    /// <exception cref="ArgumentNullException"><paramref name="subscribe" /> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentExceptionHelper">subscribe.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> CreateSafe<T>(Func<IObserver<T>, IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread)
     {
-        if (subscribe is null)
-        {
-            throw new ArgumentNullException(nameof(subscribe));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(subscribe);
 
         return new CreateSafeSignal<T>(subscribe, isRequiredSubscribeOnCurrentThread);
     }
@@ -137,10 +119,7 @@ public static partial class Signal
     /// <returns>An Observable.</returns>
     public static IObservable<T> Lazy<T>(Func<IObservable<T>> observableFactory)
     {
-        if (observableFactory is null)
-        {
-            throw new ArgumentNullException(nameof(observableFactory));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observableFactory);
 
         return new DeferSignal<T>(observableFactory);
     }
@@ -149,13 +128,10 @@ public static partial class Signal
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="observableFactory">The factory that creates the source signal for a subscription.</param>
     /// <returns>A signal that subscribes to the factory-produced source for each observer.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="observableFactory"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="observableFactory"/> is <see langword="null"/>.</exception>
     public static IObservable<T> Defer<T>(Func<IObservable<T>> observableFactory)
     {
-        if (observableFactory is null)
-        {
-            throw new ArgumentNullException(nameof(observableFactory));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observableFactory);
 
         return Create<T>(observer =>
         {

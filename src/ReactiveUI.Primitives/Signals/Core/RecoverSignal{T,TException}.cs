@@ -39,10 +39,7 @@ internal sealed class RecoverSignal<T, TException> : IRequireCurrentThread<T>
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         if (!CurrentThreadSequencer.IsScheduleRequired)
         {

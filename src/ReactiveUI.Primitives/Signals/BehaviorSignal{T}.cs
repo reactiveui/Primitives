@@ -120,13 +120,10 @@ public class BehaviorSignal<T> : ISignal<T>
 
     /// <summary>Notifies all subscribed observers about the exception.</summary>
     /// <param name="error">The exception to send to all observers.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="error"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="error"/> is <c>null</c>.</exception>
     public void OnError(Exception error)
     {
-        if (error is null)
-        {
-            throw new ArgumentNullException(nameof(error));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(error);
 
         lock (_gate)
         {
@@ -164,13 +161,10 @@ public class BehaviorSignal<T> : ISignal<T>
     /// <summary>Subscribes an observer to the subject.</summary>
     /// <param name="observer">Observer to subscribe to the subject.</param>
     /// <returns>Disposable object that can be used to unsubscribe the observer from the subject.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="observer"/> is <c>null</c>.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         var ex = default(Exception);
         var v = default(T);

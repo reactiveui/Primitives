@@ -28,10 +28,7 @@ internal sealed class CreateSignal<T> : SignalsBase<T>
     /// <inheritdoc/>
     public override IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         if (IsCurrentThreadSubscriptionRequired)
         {
@@ -82,10 +79,7 @@ internal sealed class CreateSignal<T> : SignalsBase<T>
         /// <param name="cancel">Cancellation resource.</param>
         public void SetCancel(IDisposable cancel)
         {
-            if (cancel is null)
-            {
-                throw new ArgumentNullException(nameof(cancel));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(cancel);
 
             if (Interlocked.CompareExchange(ref _cancel, cancel, null) is not null)
             {

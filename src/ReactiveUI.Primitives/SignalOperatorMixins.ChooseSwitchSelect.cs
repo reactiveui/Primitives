@@ -27,15 +27,9 @@ public static partial class LinqExtensions
         /// <returns>An observable of the chosen values.</returns>
         public IObservable<TOut> Choose<TOut>(Func<TIn, (bool HasValue, TOut Value)> chooser)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (chooser is null)
-            {
-                throw new ArgumentNullException(nameof(chooser));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(chooser);
 
             return new ChooseSignal<TIn, TOut>(source, chooser);
         }
@@ -55,15 +49,9 @@ public static partial class LinqExtensions
         /// <returns>An observable that mirrors the latest projected inner observable.</returns>
         public IObservable<TResult> SwitchSelect<TResult>(Func<TSource, IObservable<TResult>> selector)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (selector is null)
-            {
-                throw new ArgumentNullException(nameof(selector));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(selector);
 
             return new SwitchSelectSignal<TSource, TResult>(source, selector);
         }
@@ -79,10 +67,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TOut> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             return source.Subscribe(new Sink(observer, chooser));
         }
@@ -132,10 +117,7 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
-            if (observer is null)
-            {
-                throw new ArgumentNullException(nameof(observer));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var sink = new Sink(selector, observer);
             sink.Run(source);

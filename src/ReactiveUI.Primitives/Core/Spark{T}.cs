@@ -120,10 +120,7 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
     /// <param name="observer">Observer to invoke the Spark on.</param>
     public void Accept(IObserver<T> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         if (Kind == SparkKind.OnNext)
         {
@@ -145,10 +142,7 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
     /// <returns>Result produced by the observation.</returns>
     public TResult Accept<TResult>(IObserver<T, TResult> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         return Kind switch
         {
@@ -164,20 +158,11 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
     /// <param name="onCompleted">Delegate to invoke for an OnCompleted Spark.</param>
     public void Accept(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
-        if (onNext is null)
-        {
-            throw new ArgumentNullException(nameof(onNext));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(onNext);
 
-        if (onError is null)
-        {
-            throw new ArgumentNullException(nameof(onError));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(onError);
 
-        if (onCompleted is null)
-        {
-            throw new ArgumentNullException(nameof(onCompleted));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(onCompleted);
 
         if (Kind == SparkKind.OnNext)
         {
@@ -201,20 +186,11 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
     /// <returns>Result produced by the observation.</returns>
     public TResult Accept<TResult>(Func<T, TResult> onNext, Func<Exception, TResult> onError, Func<TResult> onCompleted)
     {
-        if (onNext is null)
-        {
-            throw new ArgumentNullException(nameof(onNext));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(onNext);
 
-        if (onError is null)
-        {
-            throw new ArgumentNullException(nameof(onError));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(onError);
 
-        if (onCompleted is null)
-        {
-            throw new ArgumentNullException(nameof(onCompleted));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(onCompleted);
 
         return Kind switch
         {
@@ -233,10 +209,7 @@ public readonly struct Spark<T> : IEquatable<Spark<T>>
     /// <returns>The observable sequence that surfaces the behavior of the Spark upon subscription.</returns>
     public IObservable<T> ToObservable(ISequencer scheduler)
     {
-        if (scheduler is null)
-        {
-            throw new ArgumentNullException(nameof(scheduler));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
         var self = this;
         return Signal.Create<T>(observer => scheduler.Schedule(() =>

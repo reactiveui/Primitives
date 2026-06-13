@@ -19,13 +19,13 @@ public static partial class LinqExtensions
     {
         /// <summary>Converts an enumerable sequence to a Primitives signal using the System.Reactive conversion name.</summary>
         /// <returns>A signal that emits the enumerable values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> ToObservable() => Signal.FromEnumerable(values);
 
         /// <summary>Converts an enumerable sequence to a Primitives signal using the System.Reactive conversion name.</summary>
         /// <param name="cancellationToken">The token used to stop enumeration.</param>
         /// <returns>A signal that emits the enumerable values until enumeration completes or cancellation is requested.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> ToObservable(CancellationToken cancellationToken) =>
             Signal.FromEnumerable(values, cancellationToken);
     }
@@ -38,19 +38,16 @@ public static partial class LinqExtensions
         /// <summary>Prepends a value before the source sequence. Alias of <c>Prepend</c> using Primitives vocabulary.</summary>
         /// <param name="value">The value to emit before the source.</param>
         /// <returns>A sequence that emits <paramref name="value"/> before the source values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> Lead(T value) => source.Prepend(value);
 
         /// <summary>Prepends a value before the source sequence.</summary>
         /// <param name="value">The value to emit before the source.</param>
         /// <returns>A sequence that emits <paramref name="value"/> before the source values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> Prepend(T value)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             return new PrependSignal<T>(source, value);
         }
@@ -58,18 +55,12 @@ public static partial class LinqExtensions
         /// <summary>Prepends values before the source sequence.</summary>
         /// <param name="values">The values to emit before the source.</param>
         /// <returns>A sequence that emits <paramref name="values"/> before the source values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="values"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="values"/> is <see langword="null"/>.</exception>
         public IObservable<T> Prepend(params T[] values)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (values is null)
-            {
-                throw new ArgumentNullException(nameof(values));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(values);
 
             if (values.Length == 0)
             {
@@ -87,18 +78,12 @@ public static partial class LinqExtensions
         /// <summary>Prepends values before the source sequence.</summary>
         /// <param name="values">The values to emit before the source.</param>
         /// <returns>A sequence that emits <paramref name="values"/> before the source values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="values"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="values"/> is <see langword="null"/>.</exception>
         public IObservable<T> Prepend(IEnumerable<T> values)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (values is null)
-            {
-                throw new ArgumentNullException(nameof(values));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(values);
 
             return new StartWithEnumerableSignal<T>(source, values);
         }
@@ -106,13 +91,10 @@ public static partial class LinqExtensions
         /// <summary>Appends a value after the source sequence completes.</summary>
         /// <param name="value">The value to emit after the source completes.</param>
         /// <returns>A sequence that emits the source values followed by <paramref name="value"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> Append(T value)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             if (source is PrependSignal<T> prepended)
             {
@@ -125,23 +107,18 @@ public static partial class LinqExtensions
         /// <summary>Returns the source as an observable. This is an identity adapter for BCL observable sources.</summary>
         /// <returns>The supplied source sequence.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
         public IObservable<T> AsObservable() => source ?? throw new ArgumentNullException(nameof(source));
 
         /// <summary>Schedules observer notifications on the supplied scheduler using the System.Reactive operator name.</summary>
         /// <param name="scheduler">The sequencer used to deliver observer notifications.</param>
         /// <returns>The source sequence when <paramref name="scheduler"/> is immediate; otherwise a sequence observed on the sequencer.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="scheduler"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="scheduler"/> is <see langword="null"/>.</exception>
         public IObservable<T> ObserveOn(ISequencer scheduler)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (scheduler is null)
-            {
-                throw new ArgumentNullException(nameof(scheduler));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
             if (scheduler == Sequencer.Immediate)
             {
@@ -154,18 +131,12 @@ public static partial class LinqExtensions
         /// <summary>Schedules source subscription on the supplied sequencer.</summary>
         /// <param name="scheduler">The sequencer used to perform subscription.</param>
         /// <returns>A sequence that subscribes to the receiver on <paramref name="scheduler"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="scheduler"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="scheduler"/> is <see langword="null"/>.</exception>
         public IObservable<T> SubscribeOn(ISequencer scheduler)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (scheduler is null)
-            {
-                throw new ArgumentNullException(nameof(scheduler));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
             return new SubscribeOnSignal<T>(source, scheduler);
         }
@@ -173,7 +144,7 @@ public static partial class LinqExtensions
         /// <summary>Alias for <c>DelayStart</c> using the System.Reactive operator name.</summary>
         /// <param name="dueTime">The delay before subscribing to the source.</param>
         /// <returns>A sequence that subscribes to the source after <paramref name="dueTime"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> DelaySubscription(TimeSpan dueTime) =>
             source.DelayStart(dueTime, null);
 
@@ -181,7 +152,7 @@ public static partial class LinqExtensions
         /// <param name="dueTime">The delay before subscribing to the source.</param>
         /// <param name="scheduler">The sequencer used to schedule the delayed subscription.</param>
         /// <returns>A sequence that subscribes to the source after <paramref name="dueTime"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> DelaySubscription(TimeSpan dueTime, ISequencer? scheduler) =>
             source.DelayStart(dueTime, scheduler);
 
@@ -192,58 +163,40 @@ public static partial class LinqExtensions
         /// <returns>The source sequence with the side-effecting behavior applied.</returns>
         public IObservable<T> Tap(Action<T> onNext, Action<Exception> onError, Action onCompleted)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (onNext is null)
-            {
-                throw new ArgumentNullException(nameof(onNext));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(onNext);
 
-            if (onError is null)
-            {
-                throw new ArgumentNullException(nameof(onError));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(onError);
 
-            if (onCompleted is null)
-            {
-                throw new ArgumentNullException(nameof(onCompleted));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(onCompleted);
 
             return new TapSignal<T>(source, onNext, onError, onCompleted);
         }
 
         /// <summary>Ignores all source values and only forwards terminal messages.</summary>
         /// <returns>A sequence that forwards only error and completion notifications.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> IgnoreValues()
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             return new IgnoreValuesSignal<T>(source);
         }
 
         /// <summary>Emits the supplied value if the source completes without values.</summary>
         /// <returns>A sequence that emits <see langword="default"/> when the source is empty.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> DefaultIfEmpty() =>
             source.DefaultIfEmpty(default!);
 
         /// <summary>Emits the supplied value if the source completes without values.</summary>
         /// <param name="defaultValue">The value to emit when the source is empty.</param>
         /// <returns>A sequence that emits <paramref name="defaultValue"/> when the source is empty.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> DefaultIfEmpty(T defaultValue)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             if (source is ImmutableEmptySignal<T>)
             {
@@ -262,7 +215,7 @@ public static partial class LinqExtensions
         /// <typeparam name="TKey">The key type.</typeparam>
         /// <param name="keySelector">The function that selects the comparison key.</param>
         /// <returns>A sequence containing the first value for each observed key.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="keySelector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="keySelector"/> is <see langword="null"/>.</exception>
         public IObservable<T> DistinctBy<TKey>(Func<T, TKey> keySelector) =>
             source.DistinctBy(keySelector, null);
 
@@ -271,18 +224,12 @@ public static partial class LinqExtensions
         /// <param name="keySelector">The function that selects the comparison key.</param>
         /// <param name="comparer">The comparer used to identify duplicate keys.</param>
         /// <returns>A sequence containing the first value for each observed key.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="keySelector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="keySelector"/> is <see langword="null"/>.</exception>
         public IObservable<T> DistinctBy<TKey>(Func<T, TKey> keySelector, IEqualityComparer<TKey>? comparer)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (keySelector is null)
-            {
-                throw new ArgumentNullException(nameof(keySelector));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(keySelector);
 
             return new DistinctBySignal<T, TKey>(source, keySelector, comparer);
         }
@@ -291,7 +238,7 @@ public static partial class LinqExtensions
         /// <typeparam name="TKey">The key type.</typeparam>
         /// <param name="keySelector">The function that selects the comparison key.</param>
         /// <returns>A sequence with adjacent duplicate keys removed.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="keySelector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="keySelector"/> is <see langword="null"/>.</exception>
         public IObservable<T> UniqueBy<TKey>(Func<T, TKey> keySelector) =>
             source.UniqueBy(keySelector, null);
 
@@ -300,18 +247,12 @@ public static partial class LinqExtensions
         /// <param name="keySelector">The function that selects the comparison key.</param>
         /// <param name="comparer">The comparer used to compare adjacent keys.</param>
         /// <returns>A sequence with adjacent duplicate keys removed.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="keySelector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="keySelector"/> is <see langword="null"/>.</exception>
         public IObservable<T> UniqueBy<TKey>(Func<T, TKey> keySelector, IEqualityComparer<TKey>? comparer)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (keySelector is null)
-            {
-                throw new ArgumentNullException(nameof(keySelector));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(keySelector);
 
             comparer ??= EqualityComparer<TKey>.Default;
             return new UniqueBySignal<T, TKey>(source, keySelector, comparer);
@@ -320,18 +261,12 @@ public static partial class LinqExtensions
         /// <summary>Emits values while the predicate remains true, then completes.</summary>
         /// <param name="predicate">The function that determines whether to keep taking values.</param>
         /// <returns>A sequence that emits the leading values that satisfy <paramref name="predicate"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
         public IObservable<T> TakeWhile(Func<T, bool> predicate)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (predicate is null)
-            {
-                throw new ArgumentNullException(nameof(predicate));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(predicate);
 
             return new TakeWhileSignal<T>(source, predicate);
         }
@@ -339,18 +274,12 @@ public static partial class LinqExtensions
         /// <summary>Skips values while the predicate remains true, then mirrors the remaining source.</summary>
         /// <param name="predicate">The function that determines whether to keep skipping values.</param>
         /// <returns>A sequence that emits values after the leading values that satisfy <paramref name="predicate"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
         public IObservable<T> SkipWhile(Func<T, bool> predicate)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (predicate is null)
-            {
-                throw new ArgumentNullException(nameof(predicate));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(predicate);
 
             return new SkipWhileSignal<T>(source, predicate);
         }
@@ -359,25 +288,19 @@ public static partial class LinqExtensions
         /// <typeparam name="TResult">The result value type.</typeparam>
         /// <param name="selector">The function that projects each source value to an inner sequence.</param>
         /// <returns>A sequence containing the concatenated inner values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="selector"/> is <see langword="null"/>.</exception>
         public IObservable<TResult> Bind<TResult>(Func<T, IObservable<TResult>> selector) => source.FlatMap(selector);
 
         /// <summary>Projects each source value to an inner signal and concatenates all inner values.</summary>
         /// <typeparam name="TResult">The result value type.</typeparam>
         /// <param name="selector">The function that projects each source value to an inner sequence.</param>
         /// <returns>A sequence containing the concatenated inner values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="selector"/> is <see langword="null"/>.</exception>
         public IObservable<TResult> FlatMap<TResult>(Func<T, IObservable<TResult>> selector)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (selector is null)
-            {
-                throw new ArgumentNullException(nameof(selector));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(selector);
 
             return new FlatMapSignal<T, TResult>(source, selector);
         }
@@ -388,20 +311,14 @@ public static partial class LinqExtensions
         /// <param name="collectionSelector">The function that projects each source value to an inner sequence.</param>
         /// <param name="resultSelector">The function that combines source and inner values.</param>
         /// <returns>A sequence containing selected outer/inner combinations.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="collectionSelector"/> or <paramref name="resultSelector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="collectionSelector"/> or <paramref name="resultSelector"/> is <see langword="null"/>.</exception>
         public IObservable<TResult> FlatMap<TCollection, TResult>(
             Func<T, IObservable<TCollection>> collectionSelector,
             Func<T, TCollection, TResult> resultSelector)
         {
-            if (collectionSelector is null)
-            {
-                throw new ArgumentNullException(nameof(collectionSelector));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(collectionSelector);
 
-            if (resultSelector is null)
-            {
-                throw new ArgumentNullException(nameof(resultSelector));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(resultSelector);
 
             return new FlatMapResultSignal<T, TCollection, TResult>(source, collectionSelector, resultSelector);
         }
@@ -410,18 +327,12 @@ public static partial class LinqExtensions
         /// <typeparam name="TResult">The projected item type.</typeparam>
         /// <param name="selector">The projection that returns items for each source value.</param>
         /// <returns>A signal that emits every item returned by <paramref name="selector"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="selector"/> is <see langword="null"/>.</exception>
         public IObservable<TResult> FlatMapValues<TResult>(Func<T, IEnumerable<TResult>> selector)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (selector is null)
-            {
-                throw new ArgumentNullException(nameof(selector));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(selector);
 
             return Signal.Create<TResult>(observer =>
                 source.Subscribe(
@@ -438,13 +349,10 @@ public static partial class LinqExtensions
 
         /// <summary>Counts the source values as an <see cref="int"/>.</summary>
         /// <returns>A sequence that emits the number of source values when the source completes.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<int> Count()
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             return new CountSignal<T>(source);
         }
@@ -452,31 +360,22 @@ public static partial class LinqExtensions
         /// <summary>Counts source values that satisfy the predicate as an <see cref="int"/>.</summary>
         /// <param name="predicate">The function that identifies values to count.</param>
         /// <returns>A sequence that emits the matching value count when the source completes.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
         public IObservable<int> Count(Func<T, bool> predicate)
         {
-            if (predicate is null)
-            {
-                throw new ArgumentNullException(nameof(predicate));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             return new CountPredicateSignal<T>(source, predicate);
         }
 
         /// <summary>Counts the source values as an <see cref="long"/>.</summary>
         /// <returns>A sequence that emits the number of source values when the source completes.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<long> LongCount()
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             return new LongCountSignal<T>(source);
         }
@@ -484,31 +383,22 @@ public static partial class LinqExtensions
         /// <summary>Counts source values that satisfy the predicate as an <see cref="long"/>.</summary>
         /// <param name="predicate">The function that identifies values to count.</param>
         /// <returns>A sequence that emits the matching value count when the source completes.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
         public IObservable<long> LongCount(Func<T, bool> predicate)
         {
-            if (predicate is null)
-            {
-                throw new ArgumentNullException(nameof(predicate));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             return new LongCountPredicateSignal<T>(source, predicate);
         }
 
         /// <summary>Emits true when any value is present.</summary>
         /// <returns>A sequence that emits whether the source produced any values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<bool> Any()
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             return new AnySignal<T>(source);
         }
@@ -516,18 +406,12 @@ public static partial class LinqExtensions
         /// <summary>Emits true when any value satisfies the predicate.</summary>
         /// <param name="predicate">The function that tests each value.</param>
         /// <returns>A sequence that emits whether any source value satisfies <paramref name="predicate"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
         public IObservable<bool> Any(Func<T, bool> predicate)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (predicate is null)
-            {
-                throw new ArgumentNullException(nameof(predicate));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(predicate);
 
             return new AnyPredicateSignal<T>(source, predicate);
         }
@@ -535,18 +419,12 @@ public static partial class LinqExtensions
         /// <summary>Emits true when every value satisfies the predicate.</summary>
         /// <param name="predicate">The function that tests each value.</param>
         /// <returns>A sequence that emits whether every source value satisfies <paramref name="predicate"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
         public IObservable<bool> All(Func<T, bool> predicate)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (predicate is null)
-            {
-                throw new ArgumentNullException(nameof(predicate));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(predicate);
 
             return new AllPredicateSignal<T>(source, predicate);
         }
@@ -554,7 +432,7 @@ public static partial class LinqExtensions
         /// <summary>Emits true when the source contains the requested value.</summary>
         /// <param name="value">The value to locate.</param>
         /// <returns>A sequence that emits whether the source contains <paramref name="value"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<bool> Contains(T value) =>
             source.Contains(value, null);
 
@@ -562,13 +440,10 @@ public static partial class LinqExtensions
         /// <param name="value">The value to locate.</param>
         /// <param name="comparer">The comparer used to compare source values.</param>
         /// <returns>A sequence that emits whether the source contains <paramref name="value"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<bool> Contains(T value, IEqualityComparer<T>? comparer)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             comparer ??= EqualityComparer<T>.Default;
             return new ContainsSignal<T>(source, value, comparer);
@@ -576,13 +451,13 @@ public static partial class LinqExtensions
 
         /// <summary>Emits true when the source completes without values.</summary>
         /// <returns>A sequence that emits whether the source completed without values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<bool> IsEmpty() => source.Any().Map(hasValue => !hasValue);
 
         /// <summary>Emits values from source after delaying subscription by the due time.</summary>
         /// <param name="dueTime">The delay before subscribing to the source.</param>
         /// <returns>A sequence that subscribes to the source after <paramref name="dueTime"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> DelayStart(TimeSpan dueTime) =>
             source.DelayStart(dueTime, null);
 
@@ -590,13 +465,10 @@ public static partial class LinqExtensions
         /// <param name="dueTime">The delay before subscribing to the source.</param>
         /// <param name="scheduler">The sequencer used to schedule the delayed subscription.</param>
         /// <returns>A sequence that subscribes to the source after <paramref name="dueTime"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> DelayStart(TimeSpan dueTime, ISequencer? scheduler)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             scheduler ??= ThreadPoolSequencer.Instance;
             if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
@@ -610,7 +482,7 @@ public static partial class LinqExtensions
         /// <summary>Emits only the most recent value after the quiet period elapses.</summary>
         /// <param name="dueTime">The quiet period before emitting the latest value.</param>
         /// <returns>A sequence that emits the latest value after each quiet period.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> Calm(TimeSpan dueTime) =>
             source.Calm(dueTime, null);
 
@@ -618,13 +490,10 @@ public static partial class LinqExtensions
         /// <param name="dueTime">The quiet period before emitting the latest value.</param>
         /// <param name="scheduler">The sequencer used to schedule quiet-period timers.</param>
         /// <returns>A sequence that emits the latest value after each quiet period.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> Calm(TimeSpan dueTime, ISequencer? scheduler)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             scheduler ??= ThreadPoolSequencer.Instance;
             return new CalmSignal<T>(source, dueTime, scheduler);
@@ -646,7 +515,7 @@ public static partial class LinqExtensions
         /// <summary>Emits the latest source value whenever the sampling period ticks.</summary>
         /// <param name="period">The interval between sampling ticks.</param>
         /// <returns>A sequence that emits the latest source value on each sampling tick.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="period"/> is less than <see cref="TimeSpan.Zero"/>.</exception>
         public IObservable<T> Probe(TimeSpan period) =>
             source.Probe(period, null);
@@ -655,14 +524,11 @@ public static partial class LinqExtensions
         /// <param name="period">The interval between sampling ticks.</param>
         /// <param name="scheduler">The sequencer used to schedule sampling ticks.</param>
         /// <returns>A sequence that emits the latest source value on each sampling tick.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="period"/> is less than <see cref="TimeSpan.Zero"/>.</exception>
         public IObservable<T> Probe(TimeSpan period, ISequencer? scheduler)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             if (period < TimeSpan.Zero)
             {
@@ -675,20 +541,17 @@ public static partial class LinqExtensions
 
         /// <summary>Annotates values with their scheduler timestamp.</summary>
         /// <returns>A sequence containing each value with its timestamp.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<Moment<T>> Timestamp() =>
             source.Timestamp(null);
 
         /// <summary>Annotates values with their scheduler timestamp.</summary>
         /// <param name="scheduler">The sequencer that supplies timestamps.</param>
         /// <returns>A sequence containing each value with its timestamp.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<Moment<T>> Timestamp(ISequencer? scheduler)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             scheduler ??= Sequencer.Immediate;
             if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
@@ -701,20 +564,17 @@ public static partial class LinqExtensions
 
         /// <summary>Annotates each value with the elapsed scheduler time since the previous value.</summary>
         /// <returns>A sequence containing each value with its elapsed interval since the previous value.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<TimeInterval<T>> TimeInterval() =>
             source.TimeInterval(null);
 
         /// <summary>Annotates each value with the elapsed scheduler time since the previous value.</summary>
         /// <param name="scheduler">The sequencer that supplies timestamps.</param>
         /// <returns>A sequence containing each value with its elapsed interval since the previous value.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<TimeInterval<T>> TimeInterval(ISequencer? scheduler)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             scheduler ??= Sequencer.Immediate;
             if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
@@ -731,7 +591,7 @@ public static partial class LinqExtensions
         /// <param name="right">The right sequence.</param>
         /// <param name="selector">The function that combines the latest values.</param>
         /// <returns>A sequence containing selected latest-value combinations.</returns>
-        /// <exception cref="ArgumentNullException">The left sequence, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The left sequence, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
         public IObservable<TResult> PairLatest<TRight, TResult>(IObservable<TRight> right, Func<T, TRight, TResult> selector) =>
             source.SyncLatest(right, selector);
 
@@ -741,7 +601,7 @@ public static partial class LinqExtensions
         /// <param name="right">The right sequence.</param>
         /// <param name="selector">The function that combines the latest values.</param>
         /// <returns>A sequence containing selected latest-value combinations.</returns>
-        /// <exception cref="ArgumentNullException">The left sequence, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The left sequence, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
         public IObservable<TResult> FuseLatest<TRight, TResult>(IObservable<TRight> right, Func<T, TRight, TResult> selector) =>
             source.PairLatest(right, selector);
 
@@ -751,23 +611,14 @@ public static partial class LinqExtensions
         /// <param name="right">The right sequence.</param>
         /// <param name="selector">The function that combines the final values.</param>
         /// <returns>A sequence that emits one selected value after both sources complete.</returns>
-        /// <exception cref="ArgumentNullException">The left sequence, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The left sequence, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
         public IObservable<TResult> ForkJoin<TRight, TResult>(IObservable<TRight> right, Func<T, TRight, TResult> selector)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (right is null)
-            {
-                throw new ArgumentNullException(nameof(right));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(right);
 
-            if (selector is null)
-            {
-                throw new ArgumentNullException(nameof(selector));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(selector);
 
             if (typeof(T) == typeof(int) && typeof(TRight) == typeof(int) && source is RangeSignal leftRange && right is RangeSignal rightRange)
             {
@@ -779,14 +630,11 @@ public static partial class LinqExtensions
 
         /// <summary>Awaits the first source value.</summary>
         /// <returns>A task that completes with the first source value.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         /// <exception cref="InvalidOperationException">The source completes without producing a value.</exception>
         public Task<T> FirstAsync()
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
             {
@@ -798,13 +646,10 @@ public static partial class LinqExtensions
 
         /// <summary>Awaits the first source value, returning a default value when the source is empty.</summary>
         /// <returns>A task that completes with the first source value, or <see langword="default"/> when the source is empty.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public Task<T> FirstOrDefaultAsync()
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
             {
@@ -817,13 +662,10 @@ public static partial class LinqExtensions
         /// <summary>Awaits the first source value, returning a default value when the source is empty.</summary>
         /// <param name="defaultValue">The value to return when the source is empty.</param>
         /// <returns>A task that completes with the first source value, or <paramref name="defaultValue"/> when the source is empty.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public Task<T> FirstOrDefaultAsync(T defaultValue)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
             {
@@ -835,21 +677,18 @@ public static partial class LinqExtensions
 
         /// <summary>Awaits source completion and returns the last value produced by the source.</summary>
         /// <returns>A task that completes with the final source value.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         /// <exception cref="InvalidOperationException">The source completes without producing a value.</exception>
         public Task<T> ToTask() => source.ToTask(CancellationToken.None);
 
         /// <summary>Awaits source completion and returns the last value produced by the source.</summary>
         /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
         /// <returns>A task that completes with the final source value.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         /// <exception cref="InvalidOperationException">The source completes without producing a value.</exception>
         public Task<T> ToTask(CancellationToken cancellationToken)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             if (cancellationToken.IsCancellationRequested)
             {
@@ -924,71 +763,65 @@ public static partial class LinqExtensions
         /// <returns>A task that completes with the final source value, or <paramref name="defaultValue"/> when the source is empty.</returns>
         public Task<T> LastOrDefaultAsync(T defaultValue)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             return source.DefaultIfEmpty(defaultValue).ToTask();
         }
 
         /// <summary>Awaits the source count as a task.</summary>
         /// <returns>A task that completes with the number of source values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public Task<int> CountAsync() => source.Count().ToTask();
 
         /// <summary>Awaits the source count as a task.</summary>
         /// <param name="cancellationToken">The token used to cancel the task.</param>
         /// <returns>A task that completes with the number of source values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public Task<int> CountAsync(CancellationToken cancellationToken) => source.Count().ToTask(cancellationToken);
 
         /// <summary>Awaits the source predicate count as a task.</summary>
         /// <param name="predicate">The function that identifies values to count.</param>
         /// <returns>A task that completes with the matching value count.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
         public Task<int> CountAsync(Func<T, bool> predicate) => source.Count(predicate).ToTask();
 
         /// <summary>Awaits the source predicate count as a task.</summary>
         /// <param name="predicate">The function that identifies values to count.</param>
         /// <param name="cancellationToken">The token used to cancel the task.</param>
         /// <returns>A task that completes with the matching value count.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
         public Task<int> CountAsync(Func<T, bool> predicate, CancellationToken cancellationToken) => source.Count(predicate).ToTask(cancellationToken);
 
         /// <summary>Awaits whether any value is present.</summary>
         /// <returns>A task that completes with whether the source produced any values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public Task<bool> AnyAsync() => source.Any().ToTask();
 
         /// <summary>Awaits whether any value is present.</summary>
         /// <param name="cancellationToken">The token used to cancel the task.</param>
         /// <returns>A task that completes with whether the source produced any values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public Task<bool> AnyAsync(CancellationToken cancellationToken) => source.Any().ToTask(cancellationToken);
 
         /// <summary>Awaits whether any value matches a predicate.</summary>
         /// <param name="predicate">The function that tests each value.</param>
         /// <returns>A task that completes with whether any source value satisfies <paramref name="predicate"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
         public Task<bool> AnyAsync(Func<T, bool> predicate) => source.Any(predicate).ToTask();
 
         /// <summary>Awaits whether any value matches a predicate.</summary>
         /// <param name="predicate">The function that tests each value.</param>
         /// <param name="cancellationToken">The token used to cancel the task.</param>
         /// <returns>A task that completes with whether any source value satisfies <paramref name="predicate"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
         public Task<bool> AnyAsync(Func<T, bool> predicate, CancellationToken cancellationToken) => source.Any(predicate).ToTask(cancellationToken);
 
         /// <summary>Collects all values into an array task.</summary>
         /// <returns>A task that completes with all source values in an array.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public Task<T[]> CollectArrayAsync()
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
             {
@@ -1035,13 +868,10 @@ public static partial class LinqExtensions
 
         /// <summary>Collects all values into a list task.</summary>
         /// <returns>A task that completes with all source values in a list.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentExceptionHelper">The receiver sequence is <see langword="null"/>.</exception>
         public Task<IList<T>> CollectListAsync()
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
             {
@@ -1085,10 +915,7 @@ public static partial class LinqExtensions
         /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
         private Task<T> FirstOrDefaultCoreAsync(bool hasDefault, T defaultValue)
         {
-            if (source is null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             var completion = new TaskCompletionSource<T>();
             var seen = false;
@@ -1132,6 +959,7 @@ public static partial class LinqExtensions
         /// <summary>Identity helper that keeps source-compatible <c>FirstAsync().ToTask()</c> migrations compiling.</summary>
         /// <returns>The supplied task.</returns>
         /// <exception cref="ArgumentNullException">The receiver task is <see langword="null"/>.</exception>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
         public Task<T> ToTask() => task ?? throw new ArgumentNullException(nameof(task));
     }
 

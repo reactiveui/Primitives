@@ -32,10 +32,7 @@ public static partial class Signal
             throw new ArgumentOutOfRangeException(nameof(count));
         }
 
-        if (scheduler is null)
-        {
-            throw new ArgumentNullException(nameof(scheduler));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
         if (count == 0)
         {
@@ -101,20 +98,11 @@ public static partial class Signal
         Func<TState, TState> iterate,
         Func<TState, TResult> resultSelector)
     {
-        if (condition is null)
-        {
-            throw new ArgumentNullException(nameof(condition));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(condition);
 
-        if (iterate is null)
-        {
-            throw new ArgumentNullException(nameof(iterate));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(iterate);
 
-        if (resultSelector is null)
-        {
-            throw new ArgumentNullException(nameof(resultSelector));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(resultSelector);
 
         return new UnfoldSignal<TState, TResult>(initialState, condition, iterate, resultSelector);
     }
@@ -143,15 +131,9 @@ public static partial class Signal
     public static IObservable<T> Use<TResource, T>(Func<TResource> resourceFactory, Func<TResource, IObservable<T>> signalFactory)
         where TResource : IDisposable
     {
-        if (resourceFactory is null)
-        {
-            throw new ArgumentNullException(nameof(resourceFactory));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(resourceFactory);
 
-        if (signalFactory is null)
-        {
-            throw new ArgumentNullException(nameof(signalFactory));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(signalFactory);
 
         return new UseSignal<TResource, T>(resourceFactory, signalFactory);
     }
@@ -164,15 +146,9 @@ public static partial class Signal
         Action<EventHandler> addHandler,
         Action<EventHandler> removeHandler)
     {
-        if (addHandler is null)
-        {
-            throw new ArgumentNullException(nameof(addHandler));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(addHandler);
 
-        if (removeHandler is null)
-        {
-            throw new ArgumentNullException(nameof(removeHandler));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(removeHandler);
 
         return Create<EventPattern<EventArgs>>(observer =>
         {
@@ -194,15 +170,9 @@ public static partial class Signal
         Action<EventHandler<TEventArgs>> removeHandler)
         where TEventArgs : EventArgs
     {
-        if (addHandler is null)
-        {
-            throw new ArgumentNullException(nameof(addHandler));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(addHandler);
 
-        if (removeHandler is null)
-        {
-            throw new ArgumentNullException(nameof(removeHandler));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(removeHandler);
 
         return Create<EventPattern<TEventArgs>>(observer =>
         {
@@ -220,7 +190,7 @@ public static partial class Signal
     /// <param name="addHandler">The action that attaches the generated event handler.</param>
     /// <param name="removeHandler">The action that detaches the generated event handler.</param>
     /// <returns>A signal that emits event patterns for each raised event.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="addHandler"/> or <paramref name="removeHandler"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="addHandler"/> or <paramref name="removeHandler"/> is <see langword="null"/>.</exception>
     /// <exception cref="NotSupportedException"><typeparamref name="TEventHandler"/> is not a supported event delegate type.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
@@ -232,15 +202,9 @@ public static partial class Signal
         where TEventHandler : Delegate
         where TEventArgs : EventArgs
     {
-        if (addHandler is null)
-        {
-            throw new ArgumentNullException(nameof(addHandler));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(addHandler);
 
-        if (removeHandler is null)
-        {
-            throw new ArgumentNullException(nameof(removeHandler));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(removeHandler);
 
         return Create<EventPattern<TEventArgs>>(observer =>
         {
@@ -273,10 +237,7 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     public static IObservable<T> FromEnumerable<T>(IEnumerable<T> values)
     {
-        if (values is null)
-        {
-            throw new ArgumentNullException(nameof(values));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(values);
 
         return new FromEnumerableSignal<T>(values);
     }
@@ -288,10 +249,7 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     public static IObservable<T> FromEnumerable<T>(IEnumerable<T> values, CancellationToken cancellationToken)
     {
-        if (values is null)
-        {
-            throw new ArgumentNullException(nameof(values));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(values);
 
         return cancellationToken.CanBeCanceled
             ? new FromEnumerableSignal<T>(values, cancellationToken)
@@ -308,10 +266,7 @@ public static partial class Signal
         Justification = "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
     public static IObservable<T> FromTask<T>(Task<T> task)
     {
-        if (task is null)
-        {
-            throw new ArgumentNullException(nameof(task));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(task);
 
         if (task.Status == TaskStatus.RanToCompletion)
         {
@@ -365,10 +320,7 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     public static IObservable<T> FromAsync<T>(Func<Task<T>> taskFactory)
     {
-        if (taskFactory is null)
-        {
-            throw new ArgumentNullException(nameof(taskFactory));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(taskFactory);
 
         return Lazy(() => FromTask(taskFactory()));
     }
@@ -387,10 +339,7 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     public static IObservable<T> FromAsync<T>(Func<CancellationToken, Task<T>> taskFactory, CancellationToken cancellationToken)
     {
-        if (taskFactory is null)
-        {
-            throw new ArgumentNullException(nameof(taskFactory));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(taskFactory);
 
         return Lazy(() => FromTask(taskFactory(cancellationToken)));
     }
@@ -409,15 +358,9 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     public static IObservable<T> Start<T>(Func<T> function, ISequencer scheduler)
     {
-        if (function is null)
-        {
-            throw new ArgumentNullException(nameof(function));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(function);
 
-        if (scheduler is null)
-        {
-            throw new ArgumentNullException(nameof(scheduler));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
         if (scheduler == Sequencer.Immediate)
         {
@@ -466,10 +409,7 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     public static IObservable<RxVoid> Start(Action action, ISequencer scheduler)
     {
-        if (action is null)
-        {
-            throw new ArgumentNullException(nameof(action));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(action);
 
         return Start(
             () =>
@@ -495,10 +435,7 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     public static IObservable<T> FromAsyncEnumerable<T>(IAsyncEnumerable<T> values, CancellationToken cancellationToken)
     {
-        if (values is null)
-        {
-            throw new ArgumentNullException(nameof(values));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(values);
 
         return new AsyncEnumerableSignal<T>(values, cancellationToken);
     }
@@ -517,10 +454,7 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     public static IObservable<long> After(TimeSpan dueTime, ISequencer scheduler)
     {
-        if (scheduler is null)
-        {
-            throw new ArgumentNullException(nameof(scheduler));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
         return new AfterSignal(dueTime, scheduler);
     }
@@ -537,10 +471,7 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     public static IObservable<long> After(DateTimeOffset dueTime, ISequencer scheduler)
     {
-        if (scheduler is null)
-        {
-            throw new ArgumentNullException(nameof(scheduler));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
         return After(Sequencer.Normalize(dueTime - scheduler.Now), scheduler);
     }
@@ -559,10 +490,7 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     public static IObservable<long> After(TimeSpan dueTime, TimeSpan period, ISequencer scheduler)
     {
-        if (scheduler is null)
-        {
-            throw new ArgumentNullException(nameof(scheduler));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
         return CreateSafe<long>(
             observer =>
@@ -600,10 +528,7 @@ public static partial class Signal
             throw new ArgumentOutOfRangeException(nameof(period));
         }
 
-        if (scheduler is null)
-        {
-            throw new ArgumentNullException(nameof(scheduler));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
         return new EverySignal(period, scheduler);
     }
@@ -706,10 +631,7 @@ public static partial class Signal
     /// <returns>The validated source array.</returns>
     private static IObservable<T>[] ValidateSources<T>(IObservable<T>[] sources)
     {
-        if (sources is null)
-        {
-            throw new ArgumentNullException(nameof(sources));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(sources);
 
         for (var i = 0; i < sources.Length; i++)
         {

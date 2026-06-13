@@ -31,10 +31,7 @@ internal sealed class UseSignal<TResource, T> : IObservable<T>
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         TResource resource;
         IObservable<T> source;
@@ -91,10 +88,7 @@ internal sealed class UseSignal<TResource, T> : IObservable<T>
         /// <param name="subscription">Inner subscription.</param>
         public void SetSubscription(IDisposable subscription)
         {
-            if (subscription is null)
-            {
-                throw new ArgumentNullException(nameof(subscription));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(subscription);
 
             if (Interlocked.CompareExchange(ref _subscription, subscription, null) is not null)
             {
@@ -132,10 +126,7 @@ internal sealed class UseSignal<TResource, T> : IObservable<T>
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
-            if (error is null)
-            {
-                throw new ArgumentNullException(nameof(error));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(error);
 
             if (Interlocked.Exchange(ref _stopped, 1) != 0)
             {

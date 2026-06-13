@@ -47,10 +47,7 @@ internal sealed class UnfoldSignal<TState, TResult> : IRequireCurrentThread<TRes
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TResult> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         var state = _initialState;
         while (_condition(state))
@@ -66,10 +63,7 @@ internal sealed class UnfoldSignal<TState, TResult> : IRequireCurrentThread<TRes
     /// <inheritdoc/>
     public IDisposable Subscribe(Action<TResult> onNext, Action<Exception> onError, Action onCompleted)
     {
-        if (onNext is null)
-        {
-            throw new ArgumentNullException(nameof(onNext));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(onNext);
 
         var state = _initialState;
         while (_condition(state))

@@ -45,10 +45,7 @@ internal sealed class MapWithSignal<TSource, TState, TResult> : IRequireCurrentT
     /// <returns>The subscription handle.</returns>
     public IDisposable Subscribe(IObserver<TResult> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         return _source.Subscribe(new MapWithWitness(observer, _state, _selector));
     }

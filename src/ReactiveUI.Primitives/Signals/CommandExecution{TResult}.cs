@@ -35,6 +35,7 @@ public readonly record struct CommandExecution<TResult>
 
     /// <summary>Initializes a new instance of the <see cref="CommandExecution{TResult}"/> struct.</summary>
     /// <param name="task">Asynchronous execution task.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
     internal CommandExecution(Task<TResult> task)
     {
         _task = task ?? throw new ArgumentNullException(nameof(task));
@@ -45,6 +46,7 @@ public readonly record struct CommandExecution<TResult>
 
     /// <summary>Initializes a new instance of the <see cref="CommandExecution{TResult}"/> struct.</summary>
     /// <param name="exception">Synchronous exception.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
     internal CommandExecution(Exception exception)
     {
         _task = null;

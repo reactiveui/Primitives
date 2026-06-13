@@ -31,6 +31,7 @@ public abstract class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICom
     /// <param name="dueTime">The absolute time at which this item is due to run.</param>
     /// <param name="comparer">The comparer used to order due-time values.</param>
     /// <exception cref="ArgumentNullException"><paramref name="comparer"/> is <see langword="null"/>.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
     protected ScheduledItem(TAbsolute dueTime, IComparer<TAbsolute> comparer)
     {
         DueTime = dueTime;

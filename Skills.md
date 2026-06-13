@@ -232,10 +232,11 @@ subscriptions.Dispose();
 
 - `IObservableAsync<T>`
 - `IObserverAsync<T>`
-- `ObserverAsync<T>`
+- `WitnessAsync<T>`
 - `SignalAsync<T>`
 - `ISignalAsync<T>`
 - `ConnectableSignalAsync<T>`
+- `GroupedAsyncSignal<TKey,TValue>`
 - `Result`
 - `Optional<T>`
 - `AsyncContext`
@@ -295,7 +296,7 @@ Async mutable signal factories:
 
 Async operator vocabulary follows the core Primitives names where possible:
 
-- `Emit`, `None`, `Fail`, `Sequence`, `FromEnumerable`, `FromAsyncEnumerable`, `After`, `Every`, `Pulse`, `Use`
+- `Create`, `CreateAsBackgroundJob`, `Emit`, `Return`, `None`, `Empty`, `Never`, `Fail`, `Throw`, `Sequence`, `Range`, `FromEnumerable`, `FromAsyncEnumerable`, `FromAsync`, `Defer`, `After`, `Every`, `Pulse`, `Timer`, `Interval`, `Start`, `Use`, `Using`
 - `Map`, `MapWith`
 - `Keep`, `KeepWith`, `KeepNotNull`, `KeepType`
 - `CastTo`
@@ -303,11 +304,11 @@ Async operator vocabulary follows the core Primitives names where possible:
 - `Fold`, `ReduceAsync`
 - `FlatMap`, `Bind`
 - `Unique`, `UniqueBy`
-- `Chain`, `Blend`, `SwitchTo`
-- `Pair`, `SyncLatest`, `PairLatest`
-- `Reattempt`, `Recover`, `Rescue`, `Resume`
-- `Shift`, `Expire`, `Lead`
-- `CollectListAsync`, `CollectArrayAsync`
+- `Chain`, `Blend`, `SwitchTo`, `Concat`, `Merge`, `Switch`
+- `Pair`, `SyncLatest`, `PairLatest`, `Zip`, `CombineLatest`
+- `Reattempt`, `Recover`, `Rescue`, `Resume`, `Catch`, `OnErrorResumeAsFailure`
+- `Shift`, `Expire`, `Lead`, `Delay`, `Timeout`, `Throttle`, `ObserveOn`, `Yield`
+- `CollectListAsync`, `CollectArrayAsync`, `ToListAsync`, `ToDictionaryAsync`, `ToAsyncEnumerable`, `SubscribeAsync`, `WaitCompletionAsync`
 
 Async also exposes parity operators such as `AggregateAsync`, `AnyAsync`, `AllAsync`, `CountAsync`, `LongCountAsync`, `ContainsAsync`, `FirstAsync`, `FirstOrDefaultAsync`, `LastAsync`, `LastOrDefaultAsync`, `SingleAsync`, `SingleOrDefaultAsync`, `ForEachAsync`, `WaitCompletionAsync`, `ToAsyncEnumerable`, `ToDictionaryAsync`, `GroupBy`, `Merge`, `Concat`, `Zip`, `Switch`, `Retry`, `Throttle`, `Timeout`, `Delay`, `ObserveOn`, and `SubscribeAsync`.
 
@@ -364,6 +365,16 @@ System.Reactive bridge:
 - If `ReactiveUI.Primitives.Async` is referenced: `ToObservableAsync<T>(this IObservable<T>)`
 - If `ReactiveUI.Primitives.Async` is referenced: `ToObservable<T>(this IObservableAsync<T>)`
 
+System.Reactive.Async bridge:
+
+- Generated namespace: `ReactiveUI.Primitives.SystemReactiveBridge`
+- Available when `System.Reactive.Async` provides `System.IAsyncObservable<T>` and `System.IAsyncObserver<T>`.
+- Requires `ReactiveUI.Primitives.Async`.
+- `AsPrimitivesAsyncObservable<T>(this System.IAsyncObservable<T>)`
+- `AsSystemReactiveAsyncObservable<T>(this IObservableAsync<T>)`
+- `AsPrimitivesAsyncObserver<T>(this System.IAsyncObserver<T>)`
+- `AsSystemReactiveAsyncObserver<T>(this IObserverAsync<T>)`
+
 R3 bridge:
 
 - Generated namespace: `ReactiveUI.Primitives.R3Bridge`
@@ -372,6 +383,14 @@ R3 bridge:
 - `AsR3Observable<T>(this System.IObservable<T>)`
 - If `ReactiveUI.Primitives.Async` is referenced: `AsPrimitivesAsyncObservable<T>(this R3.Observable<T>)`
 - If `ReactiveUI.Primitives.Async` is referenced: `AsR3Observable<T>(this IObservableAsync<T>)`
+
+R3Async bridge:
+
+- Generated namespace: `ReactiveUI.Primitives.R3Bridge`
+- Available when `R3Async.AsyncObservable<T>`, `R3Async.AsyncObserver<T>`, and `R3Async.Result` symbols are present.
+- Requires `ReactiveUI.Primitives.Async`.
+- `AsPrimitivesAsyncObservable<T>(this R3Async.AsyncObservable<T>)`
+- `AsR3AsyncObservable<T>(this IObservableAsync<T>)`
 
 Bridge example for System.Reactive:
 
@@ -384,6 +403,16 @@ IObservable<int> primitives = rxObservable.AsPrimitivesSignal();
 using var subscription = primitives
     .Map(value => value + 1)
     .Subscribe(Console.WriteLine);
+```
+
+Bridge example for System.Reactive.Async:
+
+```csharp
+using ReactiveUI.Primitives.Async;
+using ReactiveUI.Primitives.SystemReactiveBridge;
+
+IObservableAsync<int> primitives = systemAsyncObservable.AsPrimitivesAsyncObservable();
+System.IAsyncObservable<int> systemAsync = primitives.AsSystemReactiveAsyncObservable();
 ```
 
 Bridge example for R3:
@@ -459,6 +488,42 @@ using var results = command.Results.Subscribe(Console.WriteLine);
 await command.ExecuteAsync(CancellationToken.None);
 ```
 
+## System.Reactive.Async Migration
+
+Use this migration path for projects that reference `System.Reactive.Async`:
+
+1. Add `ReactiveUI.Primitives.Async`.
+2. Keep `System.Reactive.Async` only in assemblies that still expose or consume `System.IAsyncObservable<T>` or `System.IAsyncObserver<T>`.
+3. Convert external sources with `AsPrimitivesAsyncObservable()` at the boundary.
+4. Convert external observers with `AsPrimitivesAsyncObserver()` when a Primitives pipeline must notify a System.Reactive.Async observer.
+5. Keep new pipelines in `IObservableAsync<T>` with `SignalAsync` factories and async operators.
+6. Convert back only at public boundaries with `AsSystemReactiveAsyncObservable()` or `AsSystemReactiveAsyncObserver()`.
+
+Mapping:
+
+| System.Reactive.Async | ReactiveUI.Primitives.Async |
+| --- | --- |
+| `System.IAsyncObservable<T>` | `IObservableAsync<T>` |
+| `System.IAsyncObserver<T>` | `IObserverAsync<T>` |
+| `SubscribeAsync(observer)` | `SubscribeAsync(observer, cancellationToken)` |
+| `OnNextAsync(value)` | `OnNextAsync(value, cancellationToken)` |
+| `OnErrorAsync(error)` | `OnCompletedAsync(Result.Failure(error))` at terminal boundaries |
+| `OnCompletedAsync()` | `OnCompletedAsync(Result.Success)` |
+| custom `AsyncObservable<T>` | `SignalAsync.Create<T>(...)` or `SignalAsync<T>` |
+
+Example:
+
+```csharp
+using ReactiveUI.Primitives.Async;
+using ReactiveUI.Primitives.SystemReactiveBridge;
+
+IObservableAsync<int> native = systemAsyncSource.AsPrimitivesAsyncObservable();
+
+await using var subscription = await native
+    .Keep(value => value > 0)
+    .SubscribeAsync(value => Console.WriteLine(value));
+```
+
 ## R3 Migration
 
 Use this migration path:
@@ -495,6 +560,22 @@ IObservableAsync<int> asyncSource = r3Source.AsPrimitivesAsyncObservable();
 List<int> values = await asyncSource.CollectListAsync();
 ```
 
+R3Async migration:
+
+1. Add `ReactiveUI.Primitives.Async`.
+2. Convert `R3Async.AsyncObservable<T>` to `IObservableAsync<T>` with `AsPrimitivesAsyncObservable()` at the boundary.
+3. Convert `IObservableAsync<T>` back to `R3Async.AsyncObservable<T>` only where an existing public API still requires R3Async.
+4. Map `R3Async.Result` to `ReactiveUI.Primitives.Result`; the generated bridge handles this automatically.
+5. Use `WitnessAsync<T>` for custom Primitives observers that need async disposal and cancellation-aware callbacks.
+
+```csharp
+using ReactiveUI.Primitives.Async;
+using ReactiveUI.Primitives.R3Bridge;
+
+IObservableAsync<int> native = r3AsyncSource.AsPrimitivesAsyncObservable();
+R3Async.AsyncObservable<int> external = native.AsR3AsyncObservable();
+```
+
 ## Choosing Sync Or Async
 
 Use `IObservable<T>` and the base package when:
@@ -514,6 +595,7 @@ Use `IObservableAsync<T>` and the async package when:
 
 - Do not rename `Signal<T>` back to `Subject<T>` in Primitives code.
 - Do not introduce `System.Reactive.Linq.Observable` just for basic factories; use `ReactiveUI.Primitives.Signals.Signal`.
+- Do not introduce `System.Reactive.Async` just for async factories; use `ReactiveUI.Primitives.Async.SignalAsync`.
 - Do not expose `IScheduler` in new APIs; expose `ISequencer`.
 - Do not mix `SignalAsync<T>` and `Signal<T>` in the same pipeline without an explicit bridge or conversion reason.
 - Do not keep bridge conversions in the middle of a pipeline. Convert once at the boundary.

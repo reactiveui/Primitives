@@ -36,10 +36,7 @@ internal sealed class AfterSignal : IRequireCurrentThread<long>
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<long> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
         {

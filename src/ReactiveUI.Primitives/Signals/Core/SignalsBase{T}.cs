@@ -29,10 +29,7 @@ internal abstract class SignalsBase<T> : IRequireCurrentThread<T>
     /// <returns>The result.</returns>
     public virtual IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         var subscription = new SingleDisposable();
 

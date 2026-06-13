@@ -44,10 +44,7 @@ internal sealed class KeepWithSignal<T, TState> : IRequireCurrentThread<T>
     /// <returns>The subscription handle.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(observer);
 
         return _source.Subscribe(new KeepWithWitness(observer, _state, _predicate));
     }

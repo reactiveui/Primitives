@@ -20,10 +20,7 @@ public sealed class ReadOnlyState<T> : IObservable<T>, IDisposable
     /// <param name="initialValue">The current value before source notifications arrive.</param>
     public ReadOnlyState(IObservable<T> source, T initialValue)
     {
-        if (source is null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentExceptionHelper.ThrowIfNull(source);
 
         _inner = new(initialValue);
         _subscription = source.Subscribe(_inner);
