@@ -5,3 +5,4 @@ ReactiveUI.Primitives.Concurrency.HandlerSequencer.HandlerSequencer(Android.OS.H
 ReactiveUI.Primitives.Resource
 ReactiveUI.Primitives.Resource.Resource() -> void
 static ReactiveUI.Primitives.Concurrency.HandlerSequencer.Main.get -> ReactiveUI.Primitives.Concurrency.HandlerSequencer!
+override ReactiveUI.Primitives.Concurrency.HandlerSequencer.ToString() -> string!

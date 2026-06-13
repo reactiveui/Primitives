@@ -37,6 +37,9 @@ public sealed class NSRunloopSequencer : DispatchSequencerBase
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <inheritdoc/>
+    public override string ToString() => "NSRunloopSequencer(main queue)";
+
+    /// <inheritdoc/>
     protected override bool Post(Action drain)
     {
         _drainBlock ??= new DispatchBlock(drain);

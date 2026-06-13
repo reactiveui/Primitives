@@ -38,6 +38,9 @@ public sealed class HandlerSequencer : DispatchSequencerBase
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <inheritdoc/>
+    public override string ToString() => $"HandlerSequencer({Handler})";
+
+    /// <inheritdoc/>
     protected override bool Post(Action drain)
     {
         _drainRunnable ??= new Java.Lang.Runnable(drain);
