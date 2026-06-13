@@ -116,10 +116,12 @@ internal static class SerialBroadcastHelpers
         "Performance",
         "CA1849:Call async methods when in an async method",
         Justification = "The ValueTask is already completed successfully; GetResult consumes IValueTaskSource-backed results without blocking.")]
-#pragma warning disable S5034 // Callers guard with IsCompletedSuccessfully before consuming the ValueTask.
+    [SuppressMessage(
+        "Major Code Smell",
+        "S5034:ValueTask should be consumed correctly",
+        Justification = "Callers guard with IsCompletedSuccessfully before consuming the ValueTask.")]
     private static void ConsumeCompleted(ValueTask pending) =>
         pending.GetAwaiter().GetResult();
-#pragma warning restore S5034
 
     /// <summary>Awaits the first asynchronous OnNext notification, then continues the serial broadcast.</summary>
     /// <typeparam name="T">The element type.</typeparam>
