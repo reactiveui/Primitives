@@ -186,15 +186,8 @@ public class ErrorHandlingOperatorTests
         });
         var result = await source.Catch(_ => SignalAsync.Return(99), (ex, _) =>
         {
-            try
-            {
-                errorResumes.Add(ex);
-                return ValueTask.CompletedTask;
-            }
-            catch (Exception exception)
-            {
-                return ValueTask.FromException(exception);
-            }
+            errorResumes.Add(ex);
+            return ValueTask.CompletedTask;
         }).ToListAsync();
         await Assert.That(result).Contains(FallbackValue);
     }

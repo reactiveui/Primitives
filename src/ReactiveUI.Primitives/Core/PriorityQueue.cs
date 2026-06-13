@@ -190,17 +190,37 @@ internal sealed class PriorityQueue<T>
     }
 
     /// <summary>Heap item with an insertion-order tie-breaker.</summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S1210:Equals and the comparison operators should be overridden when implementing IComparable",
-        Justification = "IndexedItem is an internal heap slot compared only through IComparable within PriorityQueue.")]
-    internal struct IndexedItem : IComparable<IndexedItem>, IEquatable<IndexedItem>
+    internal readonly record struct IndexedItem : IComparable<IndexedItem>
     {
         /// <summary>Gets or sets the insertion order id.</summary>
-        public long Id { get; set; }
+        public long Id { get; init; }
 
         /// <summary>Gets or sets the queued value.</summary>
-        public T Value { get; set; }
+        public T Value { get; init; }
+
+        /// <summary>Compares two indexed items.</summary>
+        /// <param name="left">The left item.</param>
+        /// <param name="right">The right item.</param>
+        /// <returns><see langword="true"/> when <paramref name="left"/> is lower than <paramref name="right"/>.</returns>
+        public static bool operator <(IndexedItem left, IndexedItem right) => left.CompareTo(right) < 0;
+
+        /// <summary>Compares two indexed items.</summary>
+        /// <param name="left">The left item.</param>
+        /// <param name="right">The right item.</param>
+        /// <returns><see langword="true"/> when <paramref name="left"/> is lower than or equal to <paramref name="right"/>.</returns>
+        public static bool operator <=(IndexedItem left, IndexedItem right) => left.CompareTo(right) <= 0;
+
+        /// <summary>Compares two indexed items.</summary>
+        /// <param name="left">The left item.</param>
+        /// <param name="right">The right item.</param>
+        /// <returns><see langword="true"/> when <paramref name="left"/> is greater than <paramref name="right"/>.</returns>
+        public static bool operator >(IndexedItem left, IndexedItem right) => left.CompareTo(right) > 0;
+
+        /// <summary>Compares two indexed items.</summary>
+        /// <param name="left">The left item.</param>
+        /// <param name="right">The right item.</param>
+        /// <returns><see langword="true"/> when <paramref name="left"/> is greater than or equal to <paramref name="right"/>.</returns>
+        public static bool operator >=(IndexedItem left, IndexedItem right) => left.CompareTo(right) >= 0;
 
         /// <inheritdoc/>
         public readonly int CompareTo(IndexedItem other)
@@ -212,22 +232,6 @@ internal sealed class PriorityQueue<T>
             }
 
             return c;
-        }
-
-        /// <inheritdoc/>
-        public readonly bool Equals(IndexedItem other) =>
-            Id == other.Id && EqualityComparer<T>.Default.Equals(Value, other.Value);
-
-        /// <inheritdoc/>
-        public override readonly bool Equals(object? obj) =>
-            obj is IndexedItem other && Equals(other);
-
-        /// <inheritdoc/>
-        public override readonly int GetHashCode()
-        {
-            var valueHash = Value is null ? 0 : EqualityComparer<T>.Default.GetHashCode(Value);
-
-            return unchecked((Id.GetHashCode() * 397) ^ valueHash);
         }
     }
 }

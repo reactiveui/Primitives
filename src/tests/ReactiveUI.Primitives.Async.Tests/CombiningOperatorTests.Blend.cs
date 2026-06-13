@@ -106,7 +106,7 @@ public partial class CombiningOperatorTests
             {
                 throw new InvalidOperationException("subscribe fail");
             }
-            catch (Exception exception)
+            catch (InvalidOperationException exception)
             {
                 return ValueTask.FromException<IAsyncDisposable>(exception);
             }

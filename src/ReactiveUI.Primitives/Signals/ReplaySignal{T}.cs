@@ -182,15 +182,11 @@ public class ReplaySignal<T> : ISignal<T>
     }
 
     /// <summary>Called when [error].</summary>
-    /// <param name="exception">The exception.</param>
-    /// <exception cref="ArgumentNullException">exception.</exception>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S927:Parameter names should match base declaration and other partial definitions",
-        Justification = "The shipped public API includes the historical parameter name.")]
-    public void OnError(Exception exception)
+    /// <param name="error">The exception.</param>
+    /// <exception cref="ArgumentNullException">error.</exception>
+    public void OnError(Exception error)
     {
-        ArgumentExceptionHelper.ThrowIfNull(exception);
+        ArgumentExceptionHelper.ThrowIfNull(error);
 
         lock (_observerLock)
         {
@@ -201,14 +197,14 @@ public class ReplaySignal<T> : ISignal<T>
             }
 
             _isStopped = true;
-            _lastError = exception;
+            _lastError = error;
             if (_queue is not null)
             {
                 Trim();
             }
         }
 
-        _broadcaster.Error(exception);
+        _broadcaster.Error(error);
         _broadcaster.Clear();
     }
 

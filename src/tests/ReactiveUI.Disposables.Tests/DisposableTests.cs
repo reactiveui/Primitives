@@ -251,12 +251,13 @@ public class DisposableTests
     }
 
     /// <summary>Verifies <see cref = "MultipleDisposable.CopyTo"/> validates its arguments.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public void MultipleDisposableCopyToValidatesArguments()
+    public async Task MultipleDisposableCopyToValidatesArguments()
     {
         var disposable = new MultipleDisposable();
-        Assert.Throws<ArgumentNullException>(() => disposable.CopyTo(null!, 0));
-        Assert.Throws<ArgumentOutOfRangeException>(() => disposable.CopyTo([], -1));
+        await Assert.That(() => disposable.CopyTo(null!, 0)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(() => disposable.CopyTo([], -1)).ThrowsExactly<ArgumentOutOfRangeException>();
     }
 
     /// <summary>Verifies the non-generic enumerator exposes the held disposables.</summary>

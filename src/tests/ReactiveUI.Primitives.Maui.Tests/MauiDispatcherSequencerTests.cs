@@ -23,6 +23,20 @@ public sealed class MauiDispatcherSequencerTests
     public async Task ConstructorRejectsNullDispatcher() =>
         await Assert.That(() => new MauiDispatcherSequencer(null!)).ThrowsExactly<ArgumentNullException>();
 
+    /// <summary>Verifies the dispatcher extension method validates and adapts dispatchers.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ToSequencerValidatesAndAdaptsDispatcher()
+    {
+        IDispatcher nullDispatcher = null!;
+        await Assert.That(() => nullDispatcher.ToSequencer()).ThrowsExactly<ArgumentNullException>();
+
+        var dispatcher = new FakeDispatcher();
+        var sequencer = dispatcher.ToSequencer();
+
+        await Assert.That(sequencer).IsNotNull();
+    }
+
     /// <summary>Verifies immediate work is marshalled through <see cref="IDispatcher.Dispatch(Action)"/> and executed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]

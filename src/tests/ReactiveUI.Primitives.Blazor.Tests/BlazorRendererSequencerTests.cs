@@ -2,8 +2,10 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Blazor.Components;
 using ReactiveUI.Primitives.Blazor.Concurrency;
 using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Blazor.Tests;
 
@@ -18,6 +20,34 @@ public sealed class BlazorRendererSequencerTests
     [Test]
     public async Task ConstructorRejectsNullDelegate() =>
         await Assert.That(() => new BlazorRendererSequencer(null!)).ThrowsExactly<ArgumentNullException>();
+
+    /// <summary>Verifies reactive component observation guards reject null inputs.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ReactiveComponentObserveRejectsNullArguments()
+    {
+        var component = new TestReactiveComponent();
+        var source = new PassiveObservable<int>();
+
+        await Assert.That(() => component.ObserveSource<int>(null!, static _ =>
+        {
+        })).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(() => component.ObserveSource(source, null!)).ThrowsExactly<ArgumentNullException>();
+    }
+
+    /// <summary>Verifies the default observed-error handler validates and wraps errors.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ReactiveComponentObservedErrorRejectsNullAndWrapsError()
+    {
+        var component = new TestReactiveComponent();
+        await Assert.That(() => component.NotifyObservedError(null!)).ThrowsExactly<ArgumentNullException>();
+
+        var error = new InvalidOperationException("observed");
+        var caught = await Assert.That(() => component.NotifyObservedError(error)).ThrowsExactly<InvalidOperationException>();
+
+        await Assert.That(caught!.InnerException).IsSameReferenceAs(error);
+    }
 
     /// <summary>Verifies immediate work is marshalled through the renderer delegate and executed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -81,5 +111,28 @@ public sealed class BlazorRendererSequencerTests
             action();
             return Task.CompletedTask;
         }
+    }
+
+    /// <summary>Test component that exposes protected reactive component members.</summary>
+    private sealed class TestReactiveComponent : ReactiveComponentBase
+    {
+        /// <summary>Calls the protected observe method.</summary>
+        /// <typeparam name="T">The observed value type.</typeparam>
+        /// <param name="source">The source sequence.</param>
+        /// <param name="onNext">The value callback.</param>
+        /// <returns>The tracked subscription.</returns>
+        public IDisposable ObserveSource<T>(IObservable<T> source, Action<T> onNext) => Observe(source, onNext);
+
+        /// <summary>Calls the protected observed-error handler.</summary>
+        /// <param name="error">The observed error.</param>
+        public void NotifyObservedError(Exception error) => OnObservedError(error);
+    }
+
+    /// <summary>Observable that records subscriptions without producing signals.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class PassiveObservable<T> : IObservable<T>
+    {
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer) => EmptyDisposable.Instance;
     }
 }
