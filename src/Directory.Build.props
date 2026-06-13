@@ -50,6 +50,11 @@
     <MauiTestTargetFrameworks>net9.0;net10.0;net11.0</MauiTestTargetFrameworks>
     <WinUITargetFrameworks>net8.0-windows10.0.19041.0;net9.0-windows10.0.19041.0;net10.0-windows10.0.19041.0;net11.0-windows10.0.19041.0</WinUITargetFrameworks>
     <TestTargetFrameworks>$(NetTargetFrameworks)</TestTargetFrameworks>
+    <!-- OS-platform sequencers that live in the core package: the platform SDK comes from the TFM itself
+         (unlike WPF/WinUI/MAUI which are frameworks layered on a TFM and ship as their own packages).
+         net8/net9 mobile are out of support, so only net10/net11 legs are built. -->
+    <AndroidPrimitivesTargetFrameworks>net10.0-android;net11.0-android</AndroidPrimitivesTargetFrameworks>
+    <ApplePrimitivesTargetFrameworks>net10.0-ios;net10.0-tvos;net10.0-macos;net10.0-maccatalyst;net11.0-ios;net11.0-tvos;net11.0-macos;net11.0-maccatalyst</ApplePrimitivesTargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
