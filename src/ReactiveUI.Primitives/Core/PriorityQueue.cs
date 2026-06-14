@@ -58,6 +58,45 @@ public sealed class PriorityQueue<T>
         return result;
     }
 
+    /// <summary>Removes up to <paramref name="count"/> queued items in priority order.</summary>
+    /// <param name="count">The maximum number of items to remove.</param>
+    /// <returns>The removed items in dequeue order.</returns>
+    public T[] DequeueSome(int count)
+    {
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
+
+        var result = new T[Math.Min(count, Count)];
+        for (var i = 0; i < result.Length; i++)
+        {
+            result[i] = Dequeue();
+        }
+
+        return result;
+    }
+
+    /// <summary>Removes and returns all queued items in priority order.</summary>
+    /// <returns>The queued items in dequeue order.</returns>
+    public T[] DequeueAll()
+    {
+        return DequeueSome(Count);
+    }
+
+    /// <summary>Dequeues items into a caller-provided buffer.</summary>
+    /// <param name="destination">The destination buffer.</param>
+    /// <returns>The number of items written to <paramref name="destination"/>.</returns>
+    public int DequeueRange(T[] destination)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(destination);
+
+        var count = Math.Min(destination.Length, Count);
+        for (var i = 0; i < count; i++)
+        {
+            destination[i] = Dequeue();
+        }
+
+        return count;
+    }
+
     /// <summary>Adds an item to the queue.</summary>
     /// <param name="item">Item to enqueue.</param>
     public void Enqueue(T item)
@@ -74,6 +113,18 @@ public sealed class PriorityQueue<T>
         Percolate(index);
     }
 
+    /// <summary>Adds multiple items to the queue.</summary>
+    /// <param name="items">Items to enqueue.</param>
+    public void EnqueueRange(T[] items)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(items);
+
+        for (var i = 0; i < items.Length; i++)
+        {
+            Enqueue(items[i]);
+        }
+    }
+
     /// <summary>Returns the highest-priority item without removing it.</summary>
     /// <returns>The highest-priority item.</returns>
     public T Peek()
@@ -84,6 +135,36 @@ public sealed class PriorityQueue<T>
         }
 
         return _items[0].Value;
+    }
+
+    /// <summary>Attempts to return the highest-priority item without removing it.</summary>
+    /// <param name="item">The highest-priority item, or the default value when the queue is empty.</param>
+    /// <returns><see langword="true"/> when an item was available; otherwise, <see langword="false"/>.</returns>
+    public bool TryPeek(out T? item)
+    {
+        if (Count == 0)
+        {
+            item = default;
+            return false;
+        }
+
+        item = _items[0].Value;
+        return true;
+    }
+
+    /// <summary>Attempts to remove and return the highest-priority item.</summary>
+    /// <param name="item">The removed item, or the default value when the queue is empty.</param>
+    /// <returns><see langword="true"/> when an item was available; otherwise, <see langword="false"/>.</returns>
+    public bool TryDequeue(out T? item)
+    {
+        if (Count == 0)
+        {
+            item = default;
+            return false;
+        }
+
+        item = Dequeue();
+        return true;
     }
 
     /// <summary>Removes a matching item from the queue.</summary>
@@ -101,6 +182,35 @@ public sealed class PriorityQueue<T>
         }
 
         return false;
+    }
+
+    /// <summary>Verifies that the internal heap property is currently valid.</summary>
+    /// <returns><see langword="true"/> when every parent has higher priority than its children; otherwise, <see langword="false"/>.</returns>
+    public bool VerifyHeapProperty()
+    {
+        if (Count <= 1)
+        {
+            return true;
+        }
+
+        var lastParentIndex = (Count - 2) / HeapBranchingFactor;
+        for (var i = 0; i <= lastParentIndex; i++)
+        {
+            var left = (HeapBranchingFactor * i) + LeftChildOffset;
+            var right = (HeapBranchingFactor * i) + RightChildOffset;
+
+            if (IsHigherPriority(left, i))
+            {
+                return false;
+            }
+
+            if (right < Count && IsHigherPriority(right, i))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>Restores heap order from the supplied index downward.</summary>

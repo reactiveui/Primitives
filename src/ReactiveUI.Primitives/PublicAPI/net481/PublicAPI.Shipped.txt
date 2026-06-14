@@ -236,11 +236,18 @@ ReactiveUI.Primitives.Core.Moment<T>.Value.get -> T
 ReactiveUI.Primitives.Core.PriorityQueue<T>
 ReactiveUI.Primitives.Core.PriorityQueue<T>.Count.get -> int
 ReactiveUI.Primitives.Core.PriorityQueue<T>.Dequeue() -> T
+ReactiveUI.Primitives.Core.PriorityQueue<T>.DequeueRange(T[]! destination) -> int
+ReactiveUI.Primitives.Core.PriorityQueue<T>.DequeueSome(int count) -> T[]!
+ReactiveUI.Primitives.Core.PriorityQueue<T>.DequeueAll() -> T[]!
 ReactiveUI.Primitives.Core.PriorityQueue<T>.Enqueue(T item) -> void
+ReactiveUI.Primitives.Core.PriorityQueue<T>.EnqueueRange(T[]! items) -> void
 ReactiveUI.Primitives.Core.PriorityQueue<T>.Peek() -> T
 ReactiveUI.Primitives.Core.PriorityQueue<T>.PriorityQueue() -> void
 ReactiveUI.Primitives.Core.PriorityQueue<T>.PriorityQueue(int capacity) -> void
 ReactiveUI.Primitives.Core.PriorityQueue<T>.Remove(T item) -> bool
+ReactiveUI.Primitives.Core.PriorityQueue<T>.TryDequeue(out T? item) -> bool
+ReactiveUI.Primitives.Core.PriorityQueue<T>.TryPeek(out T? item) -> bool
+ReactiveUI.Primitives.Core.PriorityQueue<T>.VerifyHeapProperty() -> bool
 ReactiveUI.Primitives.Core.Spark
 ReactiveUI.Primitives.Core.SparkKind
 ReactiveUI.Primitives.Core.SparkKind.OnCompleted = 2 -> ReactiveUI.Primitives.Core.SparkKind
@@ -325,6 +332,9 @@ ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<ReactiveUI.
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<System.IObservable<T>!>!)
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<System.IObservable<T>!>!).Amb() -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<System.IObservable<T>!>!).Blend() -> System.IObservable<T>!
+ReactiveUI.Primitives.LinqExtensions.extension<T>(System.Collections.Generic.IEnumerable<System.IObservable<T>!>!)
+ReactiveUI.Primitives.LinqExtensions.extension<T>(System.Collections.Generic.IEnumerable<System.IObservable<T>!>!).Blend() -> System.IObservable<T>!
+static ReactiveUI.Primitives.LinqExtensions.Blend<T>(this System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources) -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<System.IObservable<T>!>!).Chain() -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<System.IObservable<T>!>!).Concat() -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<System.IObservable<T>!>!).Merge() -> System.IObservable<T>!
