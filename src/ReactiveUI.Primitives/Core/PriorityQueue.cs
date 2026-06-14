@@ -199,7 +199,7 @@ public sealed class PriorityQueue<T>
             var left = (HeapBranchingFactor * i) + LeftChildOffset;
             var right = (HeapBranchingFactor * i) + RightChildOffset;
 
-            if (left < Count && IsHigherPriority(left, i))
+            if (IsHigherPriority(left, i))
             {
                 return false;
             }

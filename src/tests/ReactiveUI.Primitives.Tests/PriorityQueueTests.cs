@@ -55,6 +55,19 @@ public class PriorityQueueTests
         await Assert.That(last).IsEqualTo(ThirdValue);
         await Assert.That(queue.Count).IsEqualTo(0);
 
+        queue.Enqueue(SecondValue);
+
+        await Assert.That(queue.DequeueSome(DequeueLimit).SequenceEqual([SecondValue])).IsTrue();
+        await Assert.That(queue.Count).IsEqualTo(0);
+
+        queue.Enqueue(1);
+        queue.Enqueue(SecondValue);
+
+        await Assert.That(queue.VerifyHeapProperty()).IsTrue();
+
+        await Assert.That(queue.Dequeue()).IsEqualTo(1);
+        await Assert.That(queue.Dequeue()).IsEqualTo(SecondValue);
+
         queue.EnqueueRange([FifthValue, FourthValue, SixthValue]);
 
         await Assert.That(queue.DequeueSome(DequeueLimit).SequenceEqual([FourthValue, FifthValue])).IsTrue();
@@ -80,6 +93,22 @@ public class PriorityQueueTests
         await Assert.That(queue.DequeueRange(new int[DestinationLength])).IsEqualTo(0);
     }
 
+    /// <summary>Verifies heap verification detects invalid child priority ordering.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task VerifyHeapPropertyDetectsMutablePriorityDrift()
+    {
+        var leftQueue = CreateMutableQueue(out _, out var left, out _);
+        left.Priority = 0;
+
+        await Assert.That(leftQueue.VerifyHeapProperty()).IsFalse();
+
+        var rightQueue = CreateMutableQueue(out _, out _, out var right);
+        right.Priority = 0;
+
+        await Assert.That(rightQueue.VerifyHeapProperty()).IsFalse();
+    }
+
     /// <summary>Covers indexed-item equality, hashing, and type mismatch handling.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -87,9 +116,51 @@ public class PriorityQueueTests
     {
         PriorityQueue<int>.IndexedItem left = new() { Id = 1L, Value = 1 };
         PriorityQueue<int>.IndexedItem right = new() { Id = 1L, Value = 1 };
+        PriorityQueue<int>.IndexedItem later = new() { Id = 2L, Value = 1 };
+
         await Assert.That(left.Equals(right)).IsTrue();
         await Assert.That(left.Equals((object)right)).IsTrue();
         await Assert.That(left.Equals("not-item")).IsFalse();
         await Assert.That(left.GetHashCode()).IsNotEqualTo(0);
+        await Assert.That(left < later).IsTrue();
+        await Assert.That(left <= right).IsTrue();
+        await Assert.That(later > left).IsTrue();
+        await Assert.That(right >= left).IsTrue();
+    }
+
+    /// <summary>Creates a three-item queue whose item priorities can be mutated after enqueue.</summary>
+    /// <param name="parent">The root priority item.</param>
+    /// <param name="left">The expected left child priority item.</param>
+    /// <param name="right">The expected right child priority item.</param>
+    /// <returns>The populated priority queue.</returns>
+    private static PriorityQueue<PriorityItem> CreateMutableQueue(
+        out PriorityItem parent,
+        out PriorityItem left,
+        out PriorityItem right)
+    {
+        parent = new(1);
+        left = new(SecondValue);
+        right = new(ThirdValue);
+
+        PriorityQueue<PriorityItem> queue = new();
+        queue.Enqueue(parent);
+        queue.Enqueue(left);
+        queue.Enqueue(right);
+
+        return queue;
+    }
+
+    /// <summary>A mutable comparable item used to invalidate heap ordering after enqueue.</summary>
+    /// <param name="priority">The initial priority.</param>
+    private sealed class PriorityItem(int priority) : IComparable<PriorityItem>
+    {
+        /// <summary>Gets or sets the comparable priority.</summary>
+        public int Priority { get; set; } = priority;
+
+        /// <inheritdoc/>
+        public int CompareTo(PriorityItem? other)
+        {
+            return other is null ? 1 : Priority.CompareTo(other.Priority);
+        }
     }
 }
