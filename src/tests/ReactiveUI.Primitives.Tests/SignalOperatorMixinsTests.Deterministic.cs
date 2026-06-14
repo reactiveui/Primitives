@@ -157,7 +157,10 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(canceledTask.IsCanceled).IsTrue();
         Assert.Throws<ArgumentNullException>(() => LinqExtensions.Count<int>(null!, value => value > 0));
         Assert.Throws<ArgumentNullException>(() => LinqExtensions.LongCount<int>(null!, value => value > 0));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.Blend<int>(null!));
+        Assert.Throws<ArgumentNullException>(() =>
+            LinqExtensions.Blend<int>((IObservable<IObservable<int>>)null!));
+        Assert.Throws<ArgumentNullException>(() =>
+            LinqExtensions.Blend<int>((IEnumerable<IObservable<int>>)null!));
         Assert.Throws<ArgumentNullException>(() => LinqExtensions.Race<int>(null!));
         Assert.Throws<ArgumentNullException>(() => LinqExtensions.CollectArray<int>(null!));
         Assert.Throws<ArgumentNullException>(() => SubscribeExtensions.Subscribe<int>(null!, _ => { }));
