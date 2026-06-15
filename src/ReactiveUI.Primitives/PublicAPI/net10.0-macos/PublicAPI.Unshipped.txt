@@ -1,4 +1,1 @@
 #nullable enable
-ReactiveUI.Primitives.Concurrency.NSRunloopSequencer
-static ReactiveUI.Primitives.Concurrency.NSRunloopSequencer.Main.get -> ReactiveUI.Primitives.Concurrency.NSRunloopSequencer!
-override ReactiveUI.Primitives.Concurrency.NSRunloopSequencer.ToString() -> string!

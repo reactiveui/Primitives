@@ -3,11 +3,11 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
-using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -221,7 +221,7 @@ public partial class SignalOperatorMixinsTests
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task VerifyScheduledRangeAndTimingFactories()
     {
-        TestClock scheduledRangeClock = new(DateTimeOffset.UnixEpoch);
+        VirtualClock scheduledRangeClock = new(DateTimeOffset.UnixEpoch);
         List<int> scheduledRange = [];
         var scheduledRangeCompleted = 0;
         Signal.Sequence(Three, Three, scheduledRangeClock)
@@ -232,7 +232,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(Signal.After(TimeSpan.FromTicks(One))).IsNotNull();
         await Assert.That(Signal.Pulse(TimeSpan.FromTicks(One))).IsNotNull();
         await Assert.That(Signal.Pulse(TimeSpan.FromTicks(One))).IsNotNull();
-        await Assert.That(Signal.Pulse(TimeSpan.FromTicks(One), new TestClock(DateTimeOffset.UnixEpoch))).IsNotNull();
+        await Assert.That(Signal.Pulse(TimeSpan.FromTicks(One), new VirtualClock(DateTimeOffset.UnixEpoch))).IsNotNull();
         await Assert.That(Signal.After(TimeSpan.FromTicks(One))).IsNotNull();
         await Assert.That(Signal.After(FixedTimestamp.AddMilliseconds(1))).IsNotNull();
         await Assert.That(Signal.After(TimeSpan.FromTicks(One), TimeSpan.FromTicks(One))).IsNotNull();
@@ -436,7 +436,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(exact[Fifteen]).IsEqualTo(Fifteen);
         await Assert.That(grown.Length).IsEqualTo(Seventeen);
         await Assert.That(grown[Sixteen]).IsEqualTo(Sixteen);
-        TestClock shiftedClock = new(DateTimeOffset.UnixEpoch);
+        VirtualClock shiftedClock = new(DateTimeOffset.UnixEpoch);
         List<int> shifted = [];
         Signal.Sequence(Three, Three).Shift(TimeSpan.FromTicks(Two), shiftedClock).Subscribe(shifted.Add);
         await Assert.That(shifted.Count).IsEqualTo(0);
@@ -444,7 +444,7 @@ public partial class SignalOperatorMixinsTests
         int[] expectedShifted = [Three, Four, Five];
         await Assert.That(shifted.SequenceEqual(expectedShifted)).IsTrue();
         Assert.Throws<ArgumentNullException>(() => Signal.Silent<int>().Expire(TimeSpan.Zero).Subscribe(null!));
-        TestClock timeoutClock = new(DateTimeOffset.UnixEpoch);
+        VirtualClock timeoutClock = new(DateTimeOffset.UnixEpoch);
         RecordingWitness<int> timeout = new();
         Signal.Silent<int>().Expire(TimeSpan.FromTicks(One), timeoutClock).Subscribe(timeout);
         timeoutClock.AdvanceBy(TimeSpan.FromTicks(One));
@@ -457,14 +457,14 @@ public partial class SignalOperatorMixinsTests
             observer.OnNext(Two);
             observer.OnError(new InvalidOperationException("late-expire"));
             observer.OnCompleted();
-        }).Expire(TimeSpan.FromTicks(Ten), new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(expireCompleted);
+        }).Expire(TimeSpan.FromTicks(Ten), new VirtualClock(DateTimeOffset.UnixEpoch)).Subscribe(expireCompleted);
         int[] expectedExpireCompleted = [One];
         await Assert.That(expireCompleted.Values.SequenceEqual(expectedExpireCompleted)).IsTrue();
         await Assert.That(expireCompleted.Completed).IsEqualTo(1);
         await Assert.That(expireCompleted.Errors.Count).IsEqualTo(0);
         RecordingWitness<int> expireError = new();
         Signal.Fail<int>(new InvalidOperationException("expire-error"))
-            .Expire(TimeSpan.FromTicks(Ten), new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(expireError);
+            .Expire(TimeSpan.FromTicks(Ten), new VirtualClock(DateTimeOffset.UnixEpoch)).Subscribe(expireError);
         await Assert.That(expireError.Errors[0].Message).IsEqualTo("expire-error");
     }
 
@@ -541,10 +541,10 @@ public partial class SignalOperatorMixinsTests
         Assert.Throws<ArgumentNullException>(() => Signal.Silent<int>().Probe(TimeSpan.Zero).Subscribe(null!));
         RecordingWitness<int> probeError = new();
         Signal.Fail<int>(new InvalidOperationException("probe-error"))
-            .Probe(TimeSpan.FromTicks(One), new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(probeError);
+            .Probe(TimeSpan.FromTicks(One), new VirtualClock(DateTimeOffset.UnixEpoch)).Subscribe(probeError);
         await Assert.That(probeError.Errors[0].Message).IsEqualTo("probe-error");
         Signal<int> probeSource = new();
-        var probeSubscription = probeSource.Probe(TimeSpan.FromTicks(One), new TestClock(DateTimeOffset.UnixEpoch))
+        var probeSubscription = probeSource.Probe(TimeSpan.FromTicks(One), new VirtualClock(DateTimeOffset.UnixEpoch))
             .Subscribe(new RecordingWitness<int>());
         probeSubscription.Dispose();
         probeSubscription.Dispose();
@@ -553,7 +553,7 @@ public partial class SignalOperatorMixinsTests
         {
             observer.OnCompleted();
             observer.OnNext(One);
-        }).Probe(TimeSpan.FromTicks(One), new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(completedProbe);
+        }).Probe(TimeSpan.FromTicks(One), new VirtualClock(DateTimeOffset.UnixEpoch)).Subscribe(completedProbe);
         await Assert.That(completedProbe.Completed).IsEqualTo(1);
         await Assert.That(completedProbe.Values.Count).IsEqualTo(0);
         RecordingWitness<int> directCurrentThreadExpire = new();
@@ -585,9 +585,9 @@ public partial class SignalOperatorMixinsTests
     {
         RecordingWitness<int> calmError = new();
         Signal.Fail<int>(new InvalidOperationException("calm-error"))
-            .Calm(TimeSpan.FromTicks(One), new TestClock(DateTimeOffset.UnixEpoch)).Subscribe(calmError);
+            .Calm(TimeSpan.FromTicks(One), new VirtualClock(DateTimeOffset.UnixEpoch)).Subscribe(calmError);
         await Assert.That(calmError.Errors[0].Message).IsEqualTo("calm-error");
-        TestClock calmClock = new(DateTimeOffset.UnixEpoch);
+        VirtualClock calmClock = new(DateTimeOffset.UnixEpoch);
         Signal<int> calmSource = new();
         List<int> calmValues = [];
         calmSource.Calm(TimeSpan.FromTicks(Five), calmClock).Subscribe(calmValues.Add);
@@ -657,7 +657,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(immediateMoments.Completed).IsEqualTo(1);
         List<Moment<int>> clockMoments = [];
         var clockMomentCompleted = 0;
-        Signal.Sequence(Four, Two).Timestamp(new TestClock(DateTimeOffset.UnixEpoch))
+        Signal.Sequence(Four, Two).Timestamp(new VirtualClock(DateTimeOffset.UnixEpoch))
             .Subscribe(clockMoments.Add, ex => throw ex, () => clockMomentCompleted++);
         IEnumerable<int> expectedClockMoments = [Four, Five];
         int[] clockMomentValues = [clockMoments[0].Value, clockMoments[1].Value];
@@ -675,7 +675,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(immediateMomentCompleted).IsEqualTo(1);
         RecordingWitness<Moment<int>> clockMomentObserver = new();
         var clockTimestampSignal =
-            (IInlineSignal<Moment<int>>)Signal.Sequence(Two, Two).Timestamp(new TestClock(DateTimeOffset.UnixEpoch));
+            (IInlineSignal<Moment<int>>)Signal.Sequence(Two, Two).Timestamp(new VirtualClock(DateTimeOffset.UnixEpoch));
         clockTimestampSignal.Subscribe(clockMomentObserver).Dispose();
         IEnumerable<int> expectedClockMomentObserver = [Two, Three];
         int[] clockMomentObserverValues = [clockMomentObserver.Values[0].Value, clockMomentObserver.Values[1].Value];
@@ -704,7 +704,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(immediateIntervals.Completed).IsEqualTo(1);
         List<TimeInterval<int>> clockIntervals = [];
         var clockIntervalCompleted = 0;
-        Signal.Sequence(Four, Three).TimeInterval(new TestClock(DateTimeOffset.UnixEpoch))
+        Signal.Sequence(Four, Three).TimeInterval(new VirtualClock(DateTimeOffset.UnixEpoch))
             .Subscribe(clockIntervals.Add, ex => throw ex, () => clockIntervalCompleted++);
         IEnumerable<int> expectedClockIntervals = [Four, Five, Six];
         int[] clockIntervalValues = [clockIntervals[0].Value, clockIntervals[1].Value, clockIntervals[Two].Value];
@@ -727,7 +727,7 @@ public partial class SignalOperatorMixinsTests
         RecordingWitness<TimeInterval<int>> clockIntervalObserver = new();
         var clockIntervalSignal =
             (IInlineSignal<TimeInterval<int>>)Signal.Sequence(Two, Three)
-                .TimeInterval(new TestClock(DateTimeOffset.UnixEpoch));
+                .TimeInterval(new VirtualClock(DateTimeOffset.UnixEpoch));
         clockIntervalSignal.Subscribe(clockIntervalObserver).Dispose();
         IEnumerable<int> expectedClockIntervalObserver = [Two, Three, Four];
         int[] clockIntervalObserverValues =
@@ -782,8 +782,8 @@ public partial class SignalOperatorMixinsTests
         helper.Invoke();
         int[] expectedHelperValues = [One];
         await Assert.That(helperValues.SequenceEqual(expectedHelperValues)).IsTrue();
-        ScheduledItem<int, string> unusedScheduled =
-            new(Sequencer.Immediate, "unused", (_, _) => EmptyDisposable.Instance, One);
+        ScheduledItem<int> unusedScheduled =
+            ScheduledItem.Create(Sequencer.Immediate, "unused", (_, _) => EmptyDisposable.Instance, One);
         await Assert.That(new SequencerQueue<int>().Remove(unusedScheduled)).IsFalse();
         Assert.Throws<ArgumentOutOfRangeException>(() => _ = new PriorityQueue<int>(-1));
         PriorityQueue<int> shrink = new(ThirtyTwo);

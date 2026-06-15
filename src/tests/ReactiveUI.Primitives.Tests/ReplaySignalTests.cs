@@ -58,14 +58,14 @@ public class ReplaySignalTests
         CreateAndDispose(() => new(0, EmptySequencer.Instance));
         CreateAndDispose(() => new(TimeSpan.Zero, EmptySequencer.Instance));
         CreateAndDispose(() => new(0, TimeSpan.Zero, EmptySequencer.Instance));
-        CreateAndDispose(() => new HistorySignal<int>());
-        CreateAndDispose(() => new HistorySignal<int>(EmptySequencer.Instance));
-        CreateAndDispose(() => new HistorySignal<int>(0));
-        CreateAndDispose(() => new HistorySignal<int>(0, EmptySequencer.Instance));
-        CreateAndDispose(() => new HistorySignal<int>(TimeSpan.Zero));
-        CreateAndDispose(() => new HistorySignal<int>(TimeSpan.Zero, EmptySequencer.Instance));
-        CreateAndDispose(() => new HistorySignal<int>(0, TimeSpan.Zero));
-        CreateAndDispose(() => new HistorySignal<int>(0, TimeSpan.Zero, EmptySequencer.Instance));
+        CreateAndDispose(() => new ReplaySignal<int>());
+        CreateAndDispose(() => new ReplaySignal<int>(EmptySequencer.Instance));
+        CreateAndDispose(() => new ReplaySignal<int>(0));
+        CreateAndDispose(() => new ReplaySignal<int>(0, EmptySequencer.Instance));
+        CreateAndDispose(() => new ReplaySignal<int>(TimeSpan.Zero));
+        CreateAndDispose(() => new ReplaySignal<int>(TimeSpan.Zero, EmptySequencer.Instance));
+        CreateAndDispose(() => new ReplaySignal<int>(0, TimeSpan.Zero));
+        CreateAndDispose(() => new ReplaySignal<int>(0, TimeSpan.Zero, EmptySequencer.Instance));
     }
 
     /// <summary>Determines whether this instance has observers.</summary>
@@ -211,7 +211,7 @@ public class ReplaySignalTests
         replayError.Dispose();
         replayError.Dispose();
         Assert.Throws<ObjectDisposedException>(() => replayError.Subscribe(new RecordingWitness<int>()));
-        TestClock clock = new(DateTimeOffset.UnixEpoch);
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
         ReplaySignal<int> windowedReplay = new(Ten, TimeSpan.FromTicks(Two), clock);
         windowedReplay.OnNext(One);
         clock.AdvanceBy(TimeSpan.FromTicks(Three));

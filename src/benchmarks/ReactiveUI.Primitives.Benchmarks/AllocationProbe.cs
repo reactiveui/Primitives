@@ -229,7 +229,7 @@ internal static class AllocationProbe
     {
         Row("Signal", () => EmitOnce(new Signal<int>(), observer));
         Row("StateSignal", () => EmitOnce(new StateSignal<int>(0), observer));
-        Row("ReplaySignal", () => EmitOnce(new HistorySignal<int>(HistoryCapacity), observer));
+        Row("ReplaySignal", () => EmitOnce(new ReplaySignal<int>(HistoryCapacity), observer));
     }
 
     /// <summary>Probes connectable operator allocation.</summary>

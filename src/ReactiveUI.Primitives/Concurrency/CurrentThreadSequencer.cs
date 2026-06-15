@@ -163,7 +163,15 @@ public sealed class CurrentThreadSequencer : ISequencer
         }
 
         // queue up more work
-        CurrentThreadScheduledItem si = new(item, dueTimestamp);
+        ScheduledItem<long> si = new(dueTimestamp, Comparer<long>.Default, _ =>
+        {
+            if (!Sequencer.IsCancelled(item))
+            {
+                item.Execute();
+            }
+
+            return EmptyDisposable.Instance;
+        });
         queue.Enqueue(si);
     }
 
@@ -234,31 +242,6 @@ public sealed class CurrentThreadSequencer : ISequencer
             }
 
             _action();
-        }
-    }
-
-    /// <summary>Current-thread queued work item.</summary>
-    private sealed class CurrentThreadScheduledItem : ScheduledItem<long>
-    {
-        /// <summary>Scheduled work item.</summary>
-        private readonly IWorkItem _item;
-
-        /// <summary>Initializes a new instance of the <see cref="CurrentThreadScheduledItem"/> class.</summary>
-        /// <param name="item">Scheduled work item.</param>
-        /// <param name="dueTimestamp">Absolute monotonic due timestamp.</param>
-        public CurrentThreadScheduledItem(IWorkItem item, long dueTimestamp)
-            : base(dueTimestamp, Comparer<long>.Default) =>
-            _item = item;
-
-        /// <inheritdoc/>
-        protected override IDisposable InvokeCore()
-        {
-            if (!Sequencer.IsCancelled(_item))
-            {
-                _item.Execute();
-            }
-
-            return EmptyDisposable.Instance;
         }
     }
 }

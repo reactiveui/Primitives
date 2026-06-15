@@ -92,6 +92,30 @@
     <SolutionDir Condition="'$(SolutionDir)' == ''">$(MSBuildThisFileDirectory)</SolutionDir>
   </PropertyGroup>
 
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+    <Compile Include="..\Polyfills\NotNullWhenAttribute.cs" Link="Polyfills\NotNullWhenAttribute.cs" />
+    <Compile Include="..\Polyfills\MemberNotNullWhenAttribute.cs" Link="Polyfills\MemberNotNullWhenAttribute.cs" />
+    <Compile Include="..\Polyfills\NotNullAttribute.cs" Link="Polyfills\NotNullAttribute.cs" />
+    <Compile Include="..\Polyfills\CallerArgumentExpressionAttribute.cs" Link="Polyfills\CallerArgumentExpressionAttribute.cs" />
+    <Compile Include="..\Polyfills\IsExternalInit.cs" Link="Polyfills\IsExternalInit.cs" />
+    <Compile Include="..\Polyfills\RequiredMemberAttribute.cs" Link="Polyfills\RequiredMemberAttribute.cs" />
+    <Compile Include="..\Polyfills\CompilerFeatureRequiredAttribute.cs" Link="Polyfills\CompilerFeatureRequiredAttribute.cs" />
+    <Compile Include="..\Polyfills\TaskCompletionSource.cs" Link="Polyfills\TaskCompletionSource.cs" />
+    <Compile Include="..\Polyfills\SetsRequiredMembersAttribute.cs" Link="Polyfills\SetsRequiredMembersAttribute.cs" />
+    <Compile Include="..\Polyfills\CancellationTokenSourcePolyfillExtensions.cs" Link="Polyfills\CancellationTokenSourcePolyfillExtensions.cs" />
+    <Compile Include="..\Polyfills\CancellationTokenPolyfillExtensions.cs" Link="Polyfills\CancellationTokenPolyfillExtensions.cs" />
+    <Compile Include="..\Polyfills\TaskPolyfillExtensions.cs" Link="Polyfills\TaskPolyfillExtensions.cs" />
+    <Compile Include="..\Polyfills\ArgumentExceptionHelper.cs" Link="Polyfills\ArgumentExceptionHelper.cs" />
+    <Compile Include="..\Polyfills\ArgumentOutOfRangeExceptionHelper.cs" Link="Polyfills\ArgumentOutOfRangeExceptionHelper.cs" />
+    <Using Include="ReactiveUI.Primitives.Internal.ArgumentExceptionHelper" Alias="ArgumentExceptionHelper" />
+    <Using Include="ReactiveUI.Primitives.Internal.ArgumentOutOfRangeExceptionHelper" Alias="ArgumentOutOfRangeExceptionHelper" />
+  </ItemGroup>
+  
+  <ItemGroup Condition="!$(TargetFramework.StartsWith('net4')) and '$(IsTestProject)' != 'true'">
+    <Using Include="System.ArgumentNullException" Alias="ArgumentExceptionHelper" />
+    <Using Include="System.ArgumentOutOfRangeException" Alias="ArgumentOutOfRangeExceptionHelper" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\LICENSE" Pack="true" PackagePath="LICENSE"/>
     <None Include="$(MSBuildThisFileDirectory)..\README.md" Pack="true" PackagePath="README.md"/>
@@ -133,6 +157,20 @@
   </ItemGroup>
   <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">
     <Using Include="System.Object" Alias="Lock"/>
+  </ItemGroup>
+
+  <!-- Reactive shim leaves recompile the shared Primitives source against System.Reactive's Unit/IScheduler.
+       Gated on the project-name suffix so only *.Reactive projects pick up the alias + dependency. The shared
+       source keeps using the RxVoid/ISequencer identifiers; here they bind to the System.Reactive types, and
+       REACTIVE_SHIM flips the shared files to the .Reactive namespace. Concrete sequencers are supplied by the
+       leaf's own seam, not aliased. -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Reactive'))">
+    <DefineConstants>$(DefineConstants);REACTIVE_SHIM</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('Reactive'))">
+    <Using Include="System.Reactive.Unit" Alias="RxVoid"/>
+    <Using Include="System.Reactive.Concurrency.IScheduler" Alias="ISequencer"/>
+    <PackageReference Include="System.Reactive"/>
   </ItemGroup>
 
   <!-- Ban LINQ-to-objects (System.Linq) in shipping code so allocation-heavy LINQ cannot creep

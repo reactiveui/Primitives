@@ -28,7 +28,7 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark(Baseline = true)]
     public int PrimitivesDelayRange()
     {
-        TestClock clock = new();
+        VirtualClock clock = new();
         IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(1, Count).Shift(TimeSpan.FromTicks(1), clock).Subscribe(observer);
         clock.AdvanceBy(TimeSpan.FromTicks(1));
@@ -68,7 +68,7 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int PrimitivesDelayStartRange()
     {
-        TestClock clock = new();
+        VirtualClock clock = new();
         IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(1, Count).DelayStart(TimeSpan.FromTicks(1), clock).Subscribe(observer);
         clock.AdvanceBy(TimeSpan.FromTicks(1));
@@ -110,7 +110,7 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int PrimitivesThrottleBurst()
     {
-        TestClock clock = new();
+        VirtualClock clock = new();
         IntSignalWitness observer = new();
         using Signal<int> source = new();
         using var subscription = source.Calm(TimeSpan.FromTicks(1), clock).Subscribe(observer);
@@ -165,7 +165,7 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int PrimitivesSampleLatest()
     {
-        TestClock clock = new();
+        VirtualClock clock = new();
         IntSignalWitness observer = new();
         using Signal<int> source = new();
         using var subscription = source.Probe(TimeSpan.FromTicks(1), clock).Subscribe(observer);
@@ -270,7 +270,7 @@ public class OperatorTimeSchedulerBenchmarks
     [Benchmark]
     public int PrimitivesTimeoutIdle()
     {
-        TestClock clock = new();
+        VirtualClock clock = new();
         IntSignalWitness observer = new();
         using Signal<int> source = new();
         using var subscription = source.Expire(TimeSpan.FromTicks(1), clock).Subscribe(observer);

@@ -5,6 +5,7 @@
 using System.Reactive.Concurrency;
 using BenchmarkDotNet.Attributes;
 using R3;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;

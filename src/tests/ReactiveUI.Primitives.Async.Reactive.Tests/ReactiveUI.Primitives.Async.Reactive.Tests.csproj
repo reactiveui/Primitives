@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(TestTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Reactive"/>
+    <PackageReference Include="Microsoft.Reactive.Testing"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="System"/>
+    <Using Include="System.Collections.Generic"/>
+    <Using Include="System.Threading"/>
+    <Using Include="System.Threading.Tasks"/>
+    <Using Include="TUnit.Assertions.Extensions"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Async.Reactive\ReactiveUI.Primitives.Async.Reactive.csproj"/>
+  </ItemGroup>
+
+</Project>

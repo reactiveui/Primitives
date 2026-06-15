@@ -16,8 +16,9 @@
     <Using Include="System.Object" Alias="Lock" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
-    <PackageReference Include="System.ValueTuple" />
+  <ItemGroup>
+    <Using Include="ReactiveUI.Primitives.Concurrency" />
+    <Using Include="ReactiveUI.Primitives.Extensions.Internal" />
   </ItemGroup>
 
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
@@ -29,35 +30,19 @@
     <PackageReference Include="System.Memory" />
     <PackageReference Include="System.Collections.Immutable" />
   </ItemGroup>
-
-  <!-- Inject nullable-annotation attribute polyfills on frameworks that lack them. -->
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
-    <Compile Include="..\Polyfills\NotNullAttribute.cs" Link="Polyfills\NotNullAttribute.cs" />
-    <Compile Include="..\Polyfills\CallerArgumentExpressionAttribute.cs" Link="Polyfills\CallerArgumentExpressionAttribute.cs" />
-    <Compile Include="..\Polyfills\IsExternalInit.cs" Link="Polyfills\IsExternalInit.cs" />
-    <Compile Include="..\Polyfills\RequiredMemberAttribute.cs" Link="Polyfills\RequiredMemberAttribute.cs" />
-    <Compile Include="..\Polyfills\CompilerFeatureRequiredAttribute.cs" Link="Polyfills\CompilerFeatureRequiredAttribute.cs" />
-    <Compile Include="..\Polyfills\TaskCompletionSource.cs" Link="Polyfills\TaskCompletionSource.cs" />
-    <Compile Include="..\Polyfills\SetsRequiredMembersAttribute.cs" Link="Polyfills\SetsRequiredMembersAttribute.cs" />
-    <Compile Include="..\Polyfills\CancellationTokenSourcePolyfillExtensions.cs" Link="Polyfills\CancellationTokenSourcePolyfillExtensions.cs" />
-    <Compile Include="..\Polyfills\ArgumentExceptionHelper.cs" Link="Polyfills\ArgumentExceptionHelper.cs" />
-  </ItemGroup>
-
-  <!-- ArgumentExceptionHelper is a polyfill for ArgumentNullException.ThrowIfNull: it is compiled only on
-       net462-net481 (above). On net8.0+ the BCL has the method, so alias the identifier straight to it. -->
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
-    <Using Include="ReactiveUI.Primitives.Internal.ArgumentExceptionHelper" Alias="ArgumentExceptionHelper" />
-  </ItemGroup>
-  <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
-    <Using Include="System.ArgumentNullException" Alias="ArgumentExceptionHelper" />
-  </ItemGroup>
-
+  
   <ItemGroup>
     <InternalsVisibleTo Include="$(AssemblyName).Tests" />
   </ItemGroup>
 
+  <!-- The RxVoid/ISequencer-aware shared source, compiled here under the lean namespace (no REACTIVE_SHIM). -->
+  <ItemGroup>
+    <Compile Include="..\Primitives.Extensions.Shared\**\*.cs" Link="Primitives.Extensions.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj" />
+    <ProjectReference Include="..\ReactiveUI.Primitives.Extensions.Core\ReactiveUI.Primitives.Extensions.Core.csproj" />
   </ItemGroup>
 
 </Project>

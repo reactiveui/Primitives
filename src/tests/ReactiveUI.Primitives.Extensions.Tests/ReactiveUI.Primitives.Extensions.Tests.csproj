@@ -35,12 +35,10 @@
     <ProjectReference Include="..\..\ReactiveUI.Primitives.Async\ReactiveUI.Primitives.Async.csproj"/>
     <ProjectReference Include="..\..\ReactiveUI.Primitives.Extensions\ReactiveUI.Primitives.Extensions.csproj"/>
     <ProjectReference Include="..\..\ReactiveUI.Primitives.R3Bridge.Generator\ReactiveUI.Primitives.R3Bridge.Generator.csproj"/>
-    <ProjectReference Include="..\..\ReactiveUI.Primitives.SystemReactiveBridge.Generator\ReactiveUI.Primitives.SystemReactiveBridge.Generator.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
     <Analyzer Include="..\..\ReactiveUI.Primitives.R3Bridge.Generator\bin\$(Configuration)\netstandard2.0\ReactiveUI.Primitives.R3Bridge.Generator.dll"/>
-    <Analyzer Include="..\..\ReactiveUI.Primitives.SystemReactiveBridge.Generator\bin\$(Configuration)\netstandard2.0\ReactiveUI.Primitives.SystemReactiveBridge.Generator.dll"/>
   </ItemGroup>
 
 </Project>

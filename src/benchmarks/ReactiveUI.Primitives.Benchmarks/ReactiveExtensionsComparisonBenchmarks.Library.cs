@@ -190,7 +190,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     {
         if (library == ExtensionsLibrary.Primitives)
         {
-            TestClock clock = new();
+            VirtualClock clock = new();
             CountingSignalWitness<Stale<int>> observer = new();
             using var subscription = PrimitivesExtensions.DetectStale(Signal.Silent<int>(), Tick, clock).Subscribe(observer);
             clock.AdvanceBy(Tick);
@@ -324,7 +324,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     {
         if (library == ExtensionsLibrary.Primitives)
         {
-            TestClock clock = new();
+            VirtualClock clock = new();
             CountingSignalWitness<Heartbeat<int>> observer = new();
             using var subscription = PrimitivesExtensions.Heartbeat(Signal.Silent<int>(), Tick, clock).Subscribe(observer);
             clock.AdvanceBy(Tick);

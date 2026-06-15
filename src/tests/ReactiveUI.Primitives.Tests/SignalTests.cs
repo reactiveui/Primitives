@@ -2,11 +2,11 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
-using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
-using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -569,22 +569,31 @@ public class SignalTests
         Assert.Throws<ObjectDisposedException>(() => disposedSubject.OnNext(1));
     }
 
-    /// <summary>A minimal <see cref="SignalsBase{T}"/> probe used to exercise base class behavior.</summary>
+    /// <summary>A minimal <see cref="IRequireCurrentThread{T}"/> probe used to exercise the subscription routing.</summary>
     /// <typeparam name="T">The type of the signal sequence elements.</typeparam>
-    private sealed class SignalsBaseProbe<T> : SignalsBase<T>
+    private sealed class SignalsBaseProbe<T> : IRequireCurrentThread<T>
     {
+        private readonly bool _currentThreadRequired;
+
         /// <summary>Initializes a new instance of the <see cref="SignalsBaseProbe{T}"/> class.</summary>
         /// <param name="required">Whether subscription must occur on the current thread.</param>
-        public SignalsBaseProbe(bool required)
-            : base(required)
-        {
-        }
+        public SignalsBaseProbe(bool required) => _currentThreadRequired = required;
+
+        /// <summary>Returns whether subscription must occur on the current thread.</summary>
+        /// <returns>The configured flag.</returns>
+        public bool IsRequiredSubscribeOnCurrentThread() => _currentThreadRequired;
+
+        /// <summary>Subscribes via the shared routing helper.</summary>
+        /// <param name="observer">The observer to subscribe.</param>
+        /// <returns>The subscription.</returns>
+        public IDisposable Subscribe(IObserver<T> observer) =>
+            SignalSubscription.Subscribe(observer, _currentThreadRequired, SubscribeCore);
 
         /// <summary>Performs the core subscription by returning an empty disposable.</summary>
         /// <param name="observer">The observer to subscribe.</param>
         /// <param name="cancel">The disposable used to cancel the subscription.</param>
         /// <returns>An empty disposable.</returns>
-        protected override IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
+        private static IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
             EmptyDisposable.Instance;
     }
 

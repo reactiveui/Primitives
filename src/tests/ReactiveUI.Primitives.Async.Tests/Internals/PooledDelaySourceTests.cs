@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.Async.Internals;
-
 namespace ReactiveUI.Primitives.Async.Tests.Internals;
 
 /// <summary>Tests for <see cref = "PooledDelaySource"/>, the pooled <c>IValueTaskSource</c> backing <c>DelayAsync</c> on non-System <see cref = "TimeProvider"/> implementations.</summary>

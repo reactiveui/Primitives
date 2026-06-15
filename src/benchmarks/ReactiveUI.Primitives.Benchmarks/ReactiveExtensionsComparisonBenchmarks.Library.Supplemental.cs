@@ -308,7 +308,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     {
         if (library == ExtensionsLibrary.Primitives)
         {
-            TestClock clock = new();
+            VirtualClock clock = new();
             CountingSignalWitness<DateTime> observer = new();
             using var subscription = PrimitivesExtensions.SyncTimer(Tick, clock).Subscribe(observer);
             clock.AdvanceBy(Tick);

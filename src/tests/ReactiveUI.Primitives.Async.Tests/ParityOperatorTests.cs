@@ -892,7 +892,7 @@ public class ParityOperatorTests
     {
         var executed = false;
 
-        var result = await AsyncObs.Start(Run).FirstAsync();
+        var result = await SignalAsyncReactiveExtensions.Start(Run).FirstAsync();
 
         await Assert.That(executed).IsTrue();
         await Assert.That(result.Equals(RxVoid.Default)).IsTrue();
@@ -911,7 +911,7 @@ public class ParityOperatorTests
     {
         var executed = false;
 
-        var result = await AsyncObs.Start(Run, TaskScheduler.Default).FirstAsync();
+        var result = await SignalAsyncReactiveExtensions.Start(Run, TaskScheduler.Default).FirstAsync();
 
         await Assert.That(executed).IsTrue();
         await Assert.That(result.Equals(RxVoid.Default)).IsTrue();

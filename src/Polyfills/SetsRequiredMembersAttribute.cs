@@ -4,8 +4,6 @@
 
 // Polyfill implementation adapted from SimonCropp/Polyfill (https://github.com/SimonCropp/Polyfill).
 #if !NET7_0_OR_GREATER
-using System.Diagnostics;
-
 namespace System.Diagnostics.CodeAnalysis;
 
 /// <summary>Specifies that a constructor sets all required members, satisfying the compiler's required-member checks.</summary>

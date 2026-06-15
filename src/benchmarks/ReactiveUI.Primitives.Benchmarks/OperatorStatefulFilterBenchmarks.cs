@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 
 /// <summary>
 /// Subscribe-and-drain benchmarks for the stateful single-source operators that were converted
-/// from per-subscription closures to dedicated SingleSourceWitness sinks (Skip, Unique, Fold,
+/// from per-subscription closures to dedicated single-source sinks (Skip, Unique, Fold,
 /// Reduce, TakeWhile, SkipWhile, UniqueBy). The Allocated column reflects the closure-to-sink
 /// reduction; System.Reactive is the comparison baseline.
 /// </summary>

@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 
 /// <summary>
 /// GC-verbose allocation profile for the stateful single-source operators converted to dedicated
-/// SingleSourceWitness sinks. Pairs with <see cref="OperatorStatefulFilterBenchmarks"/>; the
+/// single-source sinks. Pairs with <see cref="OperatorStatefulFilterBenchmarks"/>; the
 /// EventPipe trace captures per-subscription allocations on the subscribe-and-drain path.
 /// </summary>
 [ShortRunJob]

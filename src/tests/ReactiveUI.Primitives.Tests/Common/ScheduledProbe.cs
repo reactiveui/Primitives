@@ -6,19 +6,13 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>A scheduled item probe that delegates invocation to a supplied factory.</summary>
-internal sealed class ScheduledProbe : ScheduledItem<int>
+/// <summary>Creates <see cref="ScheduledItem{TAbsolute}"/> probes that delegate invocation to a supplied factory.</summary>
+internal static class ScheduledProbe
 {
-    /// <summary>The factory invoked when the item runs.</summary>
-    private readonly Func<IDisposable> _invoke;
-
-    /// <summary>Initializes a new instance of the <see cref="ScheduledProbe"/> class.</summary>
+    /// <summary>Creates a scheduled item whose invocation calls the supplied factory.</summary>
     /// <param name="dueTime">The due time for the scheduled item.</param>
     /// <param name="invoke">The factory invoked when the item runs.</param>
-    public ScheduledProbe(int dueTime, Func<IDisposable> invoke)
-        : base(dueTime, Comparer<int>.Default) => _invoke = invoke;
-
-    /// <summary>Invokes the supplied factory.</summary>
-    /// <returns>The disposable returned by the factory.</returns>
-    protected override IDisposable InvokeCore() => _invoke();
+    /// <returns>The scheduled item.</returns>
+    public static ScheduledItem<int> Create(int dueTime, Func<IDisposable> invoke) =>
+        new(dueTime, Comparer<int>.Default, _ => invoke());
 }
