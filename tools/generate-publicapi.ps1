@@ -132,7 +132,8 @@ $skipped = 0
 
 foreach ($projItem in $projects) {
     $proj = $projItem.FullName
-    if ($Filter -and ($proj -notlike "*$Filter*")) { continue }
+    # Match the filter against a slash-normalized path so a forward-slash filter works on Windows too.
+    if ($Filter -and (($proj -replace '\\', '/') -notlike "*$($Filter -replace '\\', '/')*")) { continue }
 
     $track = Get-MsBuildProperty -Project $proj -Name 'TrackPublicApi'
     if ($track -ne 'true') {
