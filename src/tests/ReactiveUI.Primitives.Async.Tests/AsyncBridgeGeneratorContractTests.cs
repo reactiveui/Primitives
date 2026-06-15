@@ -8,19 +8,12 @@ using Microsoft.CodeAnalysis.CSharp;
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.R3Bridge.Generator;
 using ReactiveUI.Primitives.Signals;
-using ReactiveUI.Primitives.SystemReactiveBridge.Generator;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>Contract tests for bridge source generators that conditionally emit async adapter APIs.</summary>
+/// <summary>Contract tests for the R3 bridge source generators that conditionally emit async adapter APIs.</summary>
 public sealed class AsyncBridgeGeneratorContractTests
 {
-    /// <summary>The generated System.Reactive async bridge type name.</summary>
-    private const string SystemReactiveAsyncBridgeName = "SystemReactiveAsyncBridge";
-
-    /// <summary>The generated System.Reactive.Async package bridge type name.</summary>
-    private const string SystemReactiveAsyncObservableBridgeName = "SystemReactiveAsyncObservableBridge";
-
     /// <summary>The generated R3-to-async bridge type name.</summary>
     private const string R3AsyncBridgeName = "R3AsyncBridge";
 
@@ -38,42 +31,18 @@ public sealed class AsyncBridgeGeneratorContractTests
     /// <summary>Imports needed when the smoke compilation includes async primitives.</summary>
     private const string AsyncBridgeSmokeUsings = """
                                                   using ReactiveUI.Primitives.Async;
-                                                  using ReactiveUI.Primitives.SystemReactiveBridge;
                                                   using ReactiveUI.Primitives.R3Bridge;
 
                                                   """;
 
     /// <summary>Imports needed when the smoke compilation intentionally omits async primitives.</summary>
     private const string CoreBridgeSmokeUsings = """
-                                                 using ReactiveUI.Primitives.SystemReactiveBridge;
                                                  using ReactiveUI.Primitives.R3Bridge;
 
                                                  """;
 
-    /// <summary>Minimal System.Reactive, R3, and R3Async contract shapes consumed by the generated bridge source.</summary>
+    /// <summary>Minimal R3 and R3Async contract shapes consumed by the generated bridge source.</summary>
     private const string BridgeShapeSource = """
-                                             namespace System.Reactive.Linq
-                                             {
-                                                 public static class Observable { }
-                                             }
-
-                                             namespace System
-                                             {
-                                                 public interface IAsyncObservable<out T>
-                                                 {
-                                                     ValueTask<IAsyncDisposable> SubscribeAsync(IAsyncObserver<T> observer);
-                                                 }
-
-                                                 public interface IAsyncObserver<in T>
-                                                 {
-                                                     ValueTask OnNextAsync(T value);
-
-                                                     ValueTask OnErrorAsync(Exception error);
-
-                                                     ValueTask OnCompletedAsync();
-                                                 }
-                                             }
-
                                              namespace R3
                                              {
                                                  public readonly struct Result
@@ -171,25 +140,15 @@ public sealed class AsyncBridgeGeneratorContractTests
 
                                              """;
 
-    /// <summary>Smoke code that compiles only when async bridge adapters are emitted.</summary>
+    /// <summary>Smoke code that compiles only when async R3 bridge adapters are emitted.</summary>
     private const string AsyncBridgeSmokeSource = """
                                                   public static class AsyncBridgeSmoke
                                                   {
                                                       public static void Use(
-                                                          IObservable<int> source,
                                                           IObservableAsync<int> asyncSource,
-                                                          System.IAsyncObservable<int> systemAsync,
-                                                          System.IAsyncObserver<int> systemAsyncObserver,
-                                                          ReactiveUI.Primitives.Async.IObserverAsync<int> primitivesAsyncObserver,
                                                           R3.Observable<int> r3,
                                                           R3Async.AsyncObservable<int> r3Async)
                                                       {
-                                                          IObservableAsync<int> fromSystem = source.ToObservableAsync();
-                                                          IObservable<int> toSystem = asyncSource.ToObservable();
-                                                          IObservableAsync<int> fromSystemAsync = systemAsync.AsPrimitivesAsyncObservable();
-                                                          System.IAsyncObservable<int> toSystemAsync = asyncSource.AsSystemReactiveAsyncObservable();
-                                                          ReactiveUI.Primitives.Async.IObserverAsync<int> primitivesObserver = systemAsyncObserver.AsPrimitivesAsyncObserver();
-                                                          System.IAsyncObserver<int> systemObserver = primitivesAsyncObserver.AsSystemReactiveAsyncObserver();
                                                           IObservable<int> fromR3 = r3.AsPrimitivesSignal();
                                                           R3.Observable<int> toR3 = fromR3.AsR3Observable();
                                                           IObservableAsync<int> asyncFromR3 = r3.AsPrimitivesAsyncObservable();
@@ -204,8 +163,8 @@ public sealed class AsyncBridgeGeneratorContractTests
     private const string CoreOnlySmokeSource = """
                                                public static class CoreOnlySmoke
                                                {
-                                                   public static (IObservable<int> System, IObservable<int> R3) Use(IObservable<int> source, R3.Observable<int> r3) =>
-                                                       (source.AsSystemObservable(), r3.AsPrimitivesSignal());
+                                                   public static IObservable<int> Use(R3.Observable<int> r3) =>
+                                                       r3.AsPrimitivesSignal();
                                                }
                                                """;
 
@@ -216,7 +175,7 @@ public sealed class AsyncBridgeGeneratorContractTests
         "System.Runtime.Extensions.dll", "System.Threading.dll", "System.Threading.Tasks.dll"
     ];
 
-    /// <summary>Verifies bridge generators emit async adapter extensions when async primitives are referenced.</summary>
+    /// <summary>Verifies the R3 bridge generators emit async adapter extensions when async primitives are referenced.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [RequiresAssemblyFiles]
@@ -225,14 +184,11 @@ public sealed class AsyncBridgeGeneratorContractTests
         const string Source = BaseSmokeUsings + AsyncBridgeSmokeUsings + BridgeShapeSource + AsyncBridgeSmokeSource;
         (var diagnostics, var generatedSources) = RunGenerators(Source, true);
         await Assert.That(diagnostics.Length).IsEqualTo(0);
-        await Assert.That(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncBridgeName)).IsTrue();
-        await Assert.That(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncObservableBridgeName))
-            .IsTrue();
         await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncBridgeName)).IsTrue();
         await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncObservableBridgeName)).IsTrue();
     }
 
-    /// <summary>Verifies bridge generators skip async adapter extensions when async primitives are absent.</summary>
+    /// <summary>Verifies the R3 bridge generators skip async adapter extensions when async primitives are absent.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [RequiresAssemblyFiles]
@@ -241,9 +197,6 @@ public sealed class AsyncBridgeGeneratorContractTests
         const string Source = BaseSmokeUsings + CoreBridgeSmokeUsings + BridgeShapeSource + CoreOnlySmokeSource;
         (var diagnostics, var generatedSources) = RunGenerators(Source, false);
         await Assert.That(diagnostics.Length).IsEqualTo(0);
-        await Assert.That(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncBridgeName)).IsFalse();
-        await Assert.That(GeneratedBridgeTypeExists(generatedSources, SystemReactiveAsyncObservableBridgeName))
-            .IsFalse();
         await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncBridgeName)).IsFalse();
         await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncObservableBridgeName)).IsFalse();
     }
@@ -256,7 +209,7 @@ public sealed class AsyncBridgeGeneratorContractTests
         generatedSources,
         text => text.Contains($"internal static class {typeName}", StringComparison.Ordinal));
 
-    /// <summary>Runs the System.Reactive and R3 bridge generators against an in-memory compilation.</summary>
+    /// <summary>Runs the R3 bridge generators against an in-memory compilation.</summary>
     /// <param name = "source">The source text to compile.</param>
     /// <param name = "includeAsyncReference">Whether to include the async primitives assembly reference.</param>
     /// <returns>The diagnostics and generated source texts produced by the generator run.</returns>
@@ -273,11 +226,8 @@ public sealed class AsyncBridgeGeneratorContractTests
             references,
             new(OutputKind.DynamicallyLinkedLibrary));
         var driver = CSharpGeneratorDriver.Create(
-        [
-            new SystemReactiveBridgeGenerator().AsSourceGenerator(),
-            new SystemReactiveAsyncBridgeGenerator().AsSourceGenerator(), new R3BridgeGenerator().AsSourceGenerator(),
-            new R3AsyncBridgeGenerator().AsSourceGenerator()
-        ], parseOptions: parseOptions);
+            [new R3BridgeGenerator().AsSourceGenerator(), new R3AsyncBridgeGenerator().AsSourceGenerator()],
+            parseOptions: parseOptions);
         driver = (CSharpGeneratorDriver)driver.RunGeneratorsAndUpdateCompilation(
             compilation,
             out var updatedCompilation,
@@ -318,6 +268,7 @@ public sealed class AsyncBridgeGeneratorContractTests
         }
 
         references.Add(MetadataReference.CreateFromFile(typeof(Signal).Assembly.Location));
+        references.Add(MetadataReference.CreateFromFile(typeof(StateSignal<>).Assembly.Location));
         if (includeAsyncReference)
         {
             references.Add(MetadataReference.CreateFromFile(typeof(IObservableAsync<>).Assembly.Location));

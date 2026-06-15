@@ -149,7 +149,7 @@ public class SequencerTests
             int state,
             Func<ISequencer, int, IDisposable> action) =>
             GC.KeepAlive(
-                new ScheduledItem<DateTimeOffset, int>(scheduler, state, action, DateTimeOffset.UnixEpoch));
+                ScheduledItem.Create(scheduler, state, action, DateTimeOffset.UnixEpoch));
     }
 
     /// <summary>Covers priority-queue ordering, shrink, peek, and removal branches.</summary>
@@ -189,7 +189,7 @@ public class SequencerTests
     {
         List<string> invoked = [];
         var disposed = 0;
-        ScheduledItem<int, string> first = new(
+        ScheduledItem<int> first = ScheduledItem.Create(
             Sequencer.Immediate,
             "first",
             (_, state) =>
@@ -198,12 +198,12 @@ public class SequencerTests
                 return new ActionDisposable(() => disposed++);
             },
             One);
-        ScheduledItem<int, string> second = new(
+        ScheduledItem<int> second = ScheduledItem.Create(
             Sequencer.Immediate,
             "second",
             (_, _) => EmptyDisposable.Instance,
             Two);
-        ScheduledItem<int, string> equalDue = new(
+        ScheduledItem<int> equalDue = ScheduledItem.Create(
             Sequencer.Immediate,
             "equal",
             (_, _) => EmptyDisposable.Instance,
@@ -229,7 +229,7 @@ public class SequencerTests
         first.Dispose();
         await Assert.That(invoked.SequenceEqual(ExpectedRepeatedScheduledItemInvocations)).IsTrue();
         await Assert.That(disposed).IsEqualTo(Two);
-        ScheduledItem<int, string> cancelled = new(
+        ScheduledItem<int> cancelled = ScheduledItem.Create(
             Sequencer.Immediate,
             "cancelled",
             (_, state) =>
@@ -244,8 +244,8 @@ public class SequencerTests
         Assert.Throws<ArgumentNullException>(CreateScheduledItemWithoutSequencer);
         Assert.Throws<ArgumentNullException>(CreateScheduledItemWithoutAction);
         Assert.Throws<ArgumentNullException>(CreateScheduledItemWithoutComparer);
-        TestClock defaultClock = new();
-        TestClock initialClock = new(DateTimeOffset.UnixEpoch);
+        VirtualClock defaultClock = new();
+        VirtualClock initialClock = new(DateTimeOffset.UnixEpoch);
         await Assert.That(defaultClock.Now).IsEqualTo(DateTimeOffset.MinValue);
         await Assert.That(initialClock.Now).IsEqualTo(DateTimeOffset.UnixEpoch);
     }
@@ -342,7 +342,7 @@ public class SequencerTests
     [Test]
     public async Task VirtualTimeSequencerExtensionsValidateAndRunActions()
     {
-        TestClock clock = new(DateTimeOffset.UnixEpoch);
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
         var invoked = 0;
         Assert.Throws<ArgumentNullException>(() =>
             VirtualTimeSequencerExtensions.ScheduleRelative<DateTimeOffset, TimeSpan>(
@@ -430,7 +430,7 @@ public class SequencerTests
     [Test]
     public async Task VirtualTimeSequencerBaseCoversServicesStopwatchAndRunGuards()
     {
-        TestClock clock = new(DateTimeOffset.UnixEpoch);
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
         var provider = (IServiceProvider)clock;
         await Assert.That(provider.GetService(typeof(IStopwatchProvider))!).IsSameReferenceAs(clock);
         await Assert.That(provider.GetService(typeof(string))).IsNull();
@@ -478,9 +478,9 @@ public class SequencerTests
     public async Task ScheduledProbeComparisonAndInvocationCoverContracts()
     {
         var scheduledDisposed = false;
-        ScheduledProbe scheduled = new(One, () => new ActionDisposable(() => scheduledDisposed = true));
+        ScheduledItem<int> scheduled = ScheduledProbe.Create(One, () => new ActionDisposable(() => scheduledDisposed = true));
         await Assert.That(scheduled.CompareTo(null)).IsEqualTo(1);
-        await Assert.That(scheduled.CompareTo(new ScheduledProbe(One, () => EmptyDisposable.Instance))).IsEqualTo(0);
+        await Assert.That(scheduled.CompareTo(ScheduledProbe.Create(One, () => EmptyDisposable.Instance))).IsEqualTo(0);
         Assert.Throws<ArgumentException>(() => scheduled.CompareTo("not-scheduled"));
         await Assert.That(scheduled.Equals((object)scheduled)).IsTrue();
         await Assert.That(scheduled.Equals(new())).IsFalse();
@@ -510,15 +510,15 @@ public class SequencerTests
 
     /// <summary>Creates a scheduled item without a sequencer.</summary>
     private static void CreateScheduledItemWithoutSequencer() =>
-        _ = new ScheduledItem<int, string>(null!, "x", (_, _) => EmptyDisposable.Instance, One);
+        _ = ScheduledItem.Create(null!, "x", (_, _) => EmptyDisposable.Instance, One);
 
     /// <summary>Creates a scheduled item without an action.</summary>
     private static void CreateScheduledItemWithoutAction() =>
-        _ = new ScheduledItem<int, string>(Sequencer.Immediate, "x", null!, One);
+        _ = ScheduledItem.Create(Sequencer.Immediate, "x", null!, One);
 
     /// <summary>Creates a scheduled item without a comparer.</summary>
     private static void CreateScheduledItemWithoutComparer() =>
-        _ = new ScheduledItem<int, string>(
+        _ = ScheduledItem.Create(
             Sequencer.Immediate,
             "x",
             (_, _) => EmptyDisposable.Instance,
@@ -531,7 +531,7 @@ public class SequencerTests
 
     /// <summary>Compares a scheduled item through the non-generic comparable interface.</summary>
     /// <param name="item">The scheduled item.</param>
-    private static void CompareScheduledItemWithInvalidObject(ScheduledItem<int, string> item) =>
+    private static void CompareScheduledItemWithInvalidObject(ScheduledItem<int> item) =>
         item.CompareTo("bad");
 
     /// <summary>Synchronization context that runs posted work immediately.</summary>

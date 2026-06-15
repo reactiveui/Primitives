@@ -666,7 +666,7 @@ public class TransformationOperatorTests
     /// <summary>Verifies that Yield with a null source throws <see cref = "ArgumentNullException"/>.</summary>
     [Test]
     public void WhenYieldNullSource_ThenThrowsArgumentNull() =>
-        Assert.Throws<ArgumentNullException>(() => SignalAsyncExtensions.Yield<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => SignalAsyncReactiveExtensions.Yield<int>(null!));
 
     /// <summary>Verifies that Yield forwards all elements from the source sequence.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>

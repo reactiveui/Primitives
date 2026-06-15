@@ -4,7 +4,6 @@
 
 using System.Collections.Immutable;
 using System.Threading.Tasks.Sources;
-using ReactiveUI.Primitives.Async.Internals;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;

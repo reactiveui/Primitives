@@ -76,13 +76,13 @@ public class SubjectHotPathGcProfileBenchmarks
         return observer.Total;
     }
 
-    /// <summary>Steady-state emission through a bounded <see cref="HistorySignal{T}"/> replay buffer.</summary>
+    /// <summary>Steady-state emission through a bounded <see cref="ReplaySignal{T}"/> replay buffer.</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
     public int ReplayEmit()
     {
         IntSignalWitness observer = new();
-        using HistorySignal<int> subject = new(16);
+        using ReplaySignal<int> subject = new(16);
         using var subscription = subject.Subscribe(observer);
         for (var i = 0; i < EmitCount; i++)
         {

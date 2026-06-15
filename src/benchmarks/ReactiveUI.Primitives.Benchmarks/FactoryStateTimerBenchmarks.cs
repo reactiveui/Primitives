@@ -115,7 +115,7 @@ public class FactoryStateTimerBenchmarks
     [Benchmark]
     public int PrimitivesEvery()
     {
-        TestClock clock = new();
+        VirtualClock clock = new();
         CountingSignalWitness<long> observer = new();
         using var subscription = Signal.Every(TimeSpan.FromTicks(1), clock).Subscribe(observer);
         clock.AdvanceBy(TimeSpan.FromTicks(Ticks));
@@ -151,7 +151,7 @@ public class FactoryStateTimerBenchmarks
     [Benchmark]
     public int PrimitivesAfter()
     {
-        TestClock clock = new();
+        VirtualClock clock = new();
         CountingSignalWitness<long> observer = new();
         using var subscription = Signal.After(TimeSpan.FromTicks(1), clock).Subscribe(observer);
         clock.AdvanceBy(TimeSpan.FromTicks(1));

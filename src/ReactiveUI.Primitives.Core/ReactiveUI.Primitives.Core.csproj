@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Type-agnostic shared layer: no RxVoid / ISequencer, so no platform-specific sequencers and no
+         per-leaf aliasing. Compiled once and referenced by both the lean and the Reactive leaf. -->
+    <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
+    <!-- Keep the default namespace ReactiveUI.Primitives (not ...Core) so split-out types share the root. -->
+    <RootNamespace>ReactiveUI.Primitives</RootNamespace>
+    <PackageDescription>Type-agnostic core primitives shared by ReactiveUI.Primitives and ReactiveUI.Primitives.Reactive.</PackageDescription>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Core.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Extensions.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Async.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReactiveUI.Disposables\ReactiveUI.Disposables.csproj" />
+  </ItemGroup>
+
+</Project>

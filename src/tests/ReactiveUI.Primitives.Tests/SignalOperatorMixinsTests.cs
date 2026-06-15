@@ -2,8 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
-using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
@@ -169,7 +170,7 @@ public partial class SignalOperatorMixinsTests
         List<int> delayed = [];
         List<string> delayErrors = [];
         List<string> timeoutErrors = [];
-        TestClock clock = new(DateTimeOffset.UnixEpoch);
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
         source.Prepend(Two).Subscribe(startOne.Add);
         source.Prepend((IEnumerable<int>)[One, Two]).Subscribe(startMany.Add);
         await Assert.That(source.ObserveOn(Sequencer.Immediate)).IsSameReferenceAs(source);
@@ -223,9 +224,9 @@ public partial class SignalOperatorMixinsTests
     [Test]
     public async Task MinimalVirtualClockSchedulingCoversGuardsAndDispatch()
     {
-        MinimalVirtualClock virtualClock = new();
+        var virtualClock = MinimalVirtualClock.Create();
         List<int> scheduled = [];
-        Assert.Throws<ArgumentNullException>(() => _ = new MinimalVirtualClock(null!));
+        Assert.Throws<ArgumentNullException>(() => _ = MinimalVirtualClock.Create(null!));
         Assert.Throws<ArgumentOutOfRangeException>(() => virtualClock.AdvanceBy(-1));
         virtualClock.AdvanceBy(0);
         Assert.Throws<ArgumentOutOfRangeException>(() => virtualClock.AdvanceTo(-1));

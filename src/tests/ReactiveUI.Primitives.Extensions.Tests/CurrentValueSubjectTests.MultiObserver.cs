@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.Extensions.Internal;
-
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
 /// <summary>Multi-observer and post-terminal coverage for <see cref = "CurrentValueSubject{T}"/>

@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Type-agnostic core of the Extensions: no RxVoid / ISequencer, compiled once and referenced by
+         both the lean ReactiveUI.Primitives.Extensions and the Reactive leaf. -->
+    <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <!-- Keep the default namespace so split-out extension types share the Extensions root. -->
+    <RootNamespace>ReactiveUI.Primitives.Extensions</RootNamespace>
+    <PackageDescription>Type-agnostic core of ReactiveUI.Primitives.Extensions, shared by the lean and Reactive leaves.</PackageDescription>
+  </PropertyGroup>
+
+  <!-- Alias Lock to the dedicated System.Threading.Lock on .NET 9+, and to a plain object elsewhere. -->
+  <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">
+    <Using Include="System.Threading.Lock" Alias="Lock" />
+  </ItemGroup>
+  <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">
+    <Using Include="System.Object" Alias="Lock" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" />
+    <PackageReference Include="System.Threading.Channels" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" />
+    <PackageReference Include="System.ComponentModel.Annotations" />
+    <PackageReference Include="System.Buffers" />
+    <PackageReference Include="System.Memory" />
+    <PackageReference Include="System.Collections.Immutable" />
+  </ItemGroup>
+
+  <!-- Shared internal throw-helper: each assembly (core + both leaves) compiles its own internal copy,
+       so it needs no cross-assembly visibility. The leaves pick it up via the Primitives.Extensions.Shared glob. -->
+  <ItemGroup>
+    <Compile Include="..\Primitives.Extensions.Shared\Internal\InvalidOperationExceptionHelper.cs" Link="InvalidOperationExceptionHelper.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Extensions.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Extensions.Reactive.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReactiveUI.Primitives.Core\ReactiveUI.Primitives.Core.csproj" />
+  </ItemGroup>
+
+</Project>

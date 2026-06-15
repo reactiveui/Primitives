@@ -3,11 +3,11 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
-using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -712,7 +712,7 @@ public class RxNamesTests
         Func<IObservable<int>, ISequencer, IObservable<int>> op,
         Func<IObservable<int>> source)
     {
-        TestClock clock = new(DateTimeOffset.UnixEpoch);
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
         List<int> values = [];
         Exception? error = null;
         using var subscription = op(source(), clock).Subscribe(values.Add, captured => error = captured, () => { });
@@ -766,7 +766,7 @@ public class RxNamesTests
     /// <returns>The sampled values.</returns>
     private static List<int> RunSampling(Func<IObservable<int>, ISequencer, IObservable<int>> op)
     {
-        TestClock clock = new(DateTimeOffset.UnixEpoch);
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
         Signal<int> source = new();
         List<int> values = [];
         using var subscription = op(source, clock).Subscribe(values.Add);

@@ -163,7 +163,7 @@ public sealed class AsyncPrimitiveContractTests
         const int ThirdValue = 3;
         const int FourthValue = 4;
         var period = TimeSpan.FromMilliseconds(1);
-        var unit = await AsyncObs.EmitRxVoid().FirstAsync();
+        var unit = await SignalAsyncReactiveExtensions.EmitRxVoid().FirstAsync();
         var enumerable = await AsyncObs.FromEnumerable(FourFive).ToListAsync();
         var asyncEnumerable = await AsyncObs.FromAsyncEnumerable(ReadValuesAsync()).ToListAsync();
         var after = await AsyncObs.After(TimeSpan.Zero).ToListAsync();

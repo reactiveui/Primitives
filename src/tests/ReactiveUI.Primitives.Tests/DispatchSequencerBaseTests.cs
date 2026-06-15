@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
 
@@ -80,24 +81,47 @@ public sealed class DispatchSequencerBaseTests
     }
 
     /// <summary>Test dispatch sequencer that records posted drains.</summary>
-    private sealed class TestDispatchSequencer : DispatchSequencerBase
+    private sealed class TestDispatchSequencer : ISequencer
     {
         /// <summary>Posted drains.</summary>
         private readonly Queue<Action> _drains = new();
 
+        /// <summary>Coalescing dispatch engine.</summary>
+        private DispatchSequencerState _state;
+
+        /// <summary>Initializes a new instance of the <see cref="TestDispatchSequencer"/> class.</summary>
+        public TestDispatchSequencer() => _state = new(this, Post, RunDrain);
+
         /// <summary>Gets the number of posted drains.</summary>
         public int PostCount { get; private set; }
+
+        /// <inheritdoc/>
+        public DateTimeOffset Now => DispatchSequencerState.Now;
+
+        /// <inheritdoc/>
+        public long Timestamp => DispatchSequencerState.Timestamp;
 
         /// <summary>Runs the next posted drain.</summary>
         public void RunNextDrain() => _drains.Dequeue()();
 
         /// <inheritdoc/>
-        protected override bool Post(Action drain)
+        public void Schedule(IWorkItem item) => _state.Schedule(item);
+
+        /// <inheritdoc/>
+        public void Schedule(IWorkItem item, long dueTimestamp) => _state.Schedule(item, dueTimestamp);
+
+        /// <summary>Records and stores a posted drain.</summary>
+        /// <param name="drain">The drain callback.</param>
+        /// <returns><see langword="true"/> always, since the drain is recorded.</returns>
+        private bool Post(Action drain)
         {
             PostCount++;
             _drains.Enqueue(drain);
             return true;
         }
+
+        /// <summary>Forwards the cached drain callback to the engine.</summary>
+        private void RunDrain() => _state.RunDrain();
     }
 
     /// <summary>Work item that records one value.</summary>

@@ -4,11 +4,11 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
-using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -415,7 +415,7 @@ public partial class SignalFactoriesTests
     [Test]
     public async Task TimeFactoriesUseInjectedScheduler()
     {
-        TestClock clock = new();
+        VirtualClock clock = new();
         List<long> after = [];
         List<long> absoluteTimer = [];
         List<long> every = [];
@@ -453,7 +453,7 @@ public partial class SignalFactoriesTests
         List<int> sideEffects = [];
         List<int> recovered = [];
         List<int> observed = [];
-        TestClock clock = new();
+        VirtualClock clock = new();
         Signal<int> source = new();
         Signal.FromEnumerable([SecondValue, RetrySuccessAttempt]).Prepend(0, FirstValue).Tap(sideEffects.Add)
             .AsObservable().Subscribe(values.Add);
@@ -475,7 +475,7 @@ public partial class SignalFactoriesTests
     [Test]
     public async Task BoundaryAndLatestOperatorsUseVirtualTimeAndCompletionSemantics()
     {
-        TestClock clock = new();
+        VirtualClock clock = new();
         Signal<int> source = new();
         List<int> throttled = [];
         List<int> sampled = [];
