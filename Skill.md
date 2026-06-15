@@ -1,25 +1,36 @@
 ---
 name: reactiveui-primitives
-description: Use when working with ReactiveUI.Primitives NuGet packages, migrating from System.Reactive or R3, choosing Signal/Sequencer/Async/Extensions APIs, or using the generated bridge adapters without adding runtime Rx or R3 dependencies.
+description: Use when working with ReactiveUI.Primitives NuGet packages, choosing the correct Primitives/Disposables/Async/Extensions/UI package, migrating from System.Reactive or R3, or using generated bridge adapters without adding runtime Rx or R3 dependencies.
 ---
 
 # ReactiveUI.Primitives
 
-Use this skill when a .NET project consumes ReactiveUI.Primitives from NuGet and needs reactive streams, state, scheduling, async observables, migrated ReactiveUI.Extensions helpers, UI sequencer adapters, or migration guidance from System.Reactive or R3.
+Use this skill when a .NET project consumes ReactiveUI.Primitives packages from NuGet and needs reactive streams, state, scheduling, disposable lifetime helpers, async observables, migrated ReactiveUI.Extensions helpers, UI sequencer adapters, or migration guidance from System.Reactive, System.Reactive.Async, R3, or R3Async.
 
 Assume package consumption from NuGet. Do not assume repository source paths, local project references, or repository-only workflows.
 
 ## Package Setup
 
-Install the packages that match the target application surface:
+For core reactive APIs, start with the base package:
 
 ```bash
 dotnet add package ReactiveUI.Primitives
+```
+
+For disposable lifetime utilities without reactive streams, add the standalone disposables package:
+
+```bash
+dotnet add package ReactiveUI.Disposables
+```
+
+Add optional packages only when their surface is needed:
+
+```bash
 dotnet add package ReactiveUI.Primitives.Async
 dotnet add package ReactiveUI.Primitives.Extensions
 ```
 
-Add UI adapter packages only when the application needs that UI thread integration:
+Add UI adapter packages only when the application needs that specific UI thread integration:
 
 ```bash
 dotnet add package ReactiveUI.Primitives.Wpf
@@ -28,6 +39,22 @@ dotnet add package ReactiveUI.Primitives.WinUI
 dotnet add package ReactiveUI.Primitives.Blazor
 dotnet add package ReactiveUI.Primitives.Maui
 ```
+
+Package selection:
+
+| Package | Use when | Do not use for |
+| --- | --- | --- |
+| `ReactiveUI.Primitives` | Core BCL `IObservable<T>` APIs: `Signal`, state signals, operators, `ISequencer`, virtual time, commands, and generated System.Reactive/R3 sync bridges. | Async-native observer work by itself; add `ReactiveUI.Primitives.Async`. |
+| `ReactiveUI.Disposables` | Standalone disposable lifetime helpers such as `MultipleDisposable`, `Pocket`, `Slot`, `AssignmentSlot`, and `DisposableBag`. Add directly when a project only needs lifetime utilities. | Projects already referencing `ReactiveUI.Primitives` only for reactive APIs; the core package already depends on it. |
+| `ReactiveUI.Primitives.Async` | Async-native streams and observers: `IObservableAsync<T>`, `IObserverAsync<T>`, `SignalAsync`, async operators, async disposables, System.Reactive.Async bridges, and R3Async bridges. | Synchronous `IObservable<T>` pipelines where observer work does not need awaiting or cancellation. |
+| `ReactiveUI.Primitives.Extensions` | Migrated convenience operators and helpers from ReactiveUI.Extensions-style code over BCL `IObservable<T>`, including retry, throttling, buffering, null/boolean helpers, and subscription helpers. | Core primitives that already exist in `ReactiveUI.Primitives`, or async-native `IObservableAsync<T>` pipelines. |
+| `ReactiveUI.Primitives.Wpf` | WPF apps that need `DispatcherSequencer` for WPF `Dispatcher` marshalling. | WinForms, WinUI, MAUI, Blazor, or non-UI scheduling. |
+| `ReactiveUI.Primitives.WinForms` | Windows Forms apps that need `ControlSequencer` for `Control` thread marshalling. | WPF, WinUI, MAUI, Blazor, or non-UI scheduling. |
+| `ReactiveUI.Primitives.WinUI` | WinUI apps that need `DispatcherQueueSequencer` and `ToSequencer` for `Microsoft.UI.Dispatching.DispatcherQueue`. | WPF, WinForms, MAUI, Blazor, or non-WinUI Windows apps. |
+| `ReactiveUI.Primitives.Blazor` | Blazor components that need `ReactiveComponentBase`, `BlazorRendererSequencer`, `Observe`, and tracked subscription lifetimes tied to component rendering. | Desktop/mobile UI dispatchers or plain server-side pipelines. |
+| `ReactiveUI.Primitives.Maui` | .NET MAUI apps that need `MauiDispatcherSequencer` and `ToSequencer` for MAUI `IDispatcher`. | WPF, WinForms, WinUI, Blazor, or base Android/iOS platform sequencers. |
+
+Do not add `ReactiveUI.Primitives.R3Bridge.Generator` or `ReactiveUI.Primitives.SystemReactiveBridge.Generator` as packages. They are internal source-generator projects packed as analyzers by `ReactiveUI.Primitives` and `ReactiveUI.Primitives.Async`.
 
 Common imports:
 
@@ -54,10 +81,27 @@ using ReactiveUI.Primitives.Async.Signals;
 - Use `ISequencer` for scheduling and UI marshalling. Do not design new code around `IScheduler`.
 - Use `IDisposable` and `IAsyncDisposable` lifetimes explicitly. Store subscriptions in `MultipleDisposable`, `Pocket`, `Slot`, or async disposable containers as appropriate.
 - Keep async pipelines in `IObservableAsync<T>` when the observer work is asynchronous or cancellation-aware.
+- Add exactly one UI adapter package for the UI framework in use; do not install every UI package by default.
+- Do not install bridge generator projects directly. Let the base and async packages pack and run them as analyzers.
+
+## Disposables Package
+
+`ReactiveUI.Disposables` is the standalone disposable lifetime package. Use it directly when a project needs lifetime containers and assignment helpers without the full reactive stream surface.
+
+The namespace is still `ReactiveUI.Primitives.Disposables`.
+
+Use it for:
+
+- Grouping subscriptions or resources with `MultipleDisposable`, `CompositeDisposable`, and `Pocket`.
+- Replacing the current subscription with `SingleReplaceableDisposable`, `Slot`, `MutableDisposable`, or `SwapDisposable`.
+- Single-assignment ownership with `SingleDisposable` or `AssignmentSlot`.
+- Cancellation-bound lifetimes with `CancellationDisposable`.
+
+If a project already references `ReactiveUI.Primitives`, add `ReactiveUI.Disposables` only when an explicit direct dependency is useful for package boundaries.
 
 ## Core Package
 
-`ReactiveUI.Primitives` is the base package. It uses BCL `IObservable<T>` and `IObserver<T>` contracts and has no runtime System.Reactive or R3 dependency.
+`ReactiveUI.Primitives` is the base reactive package. It uses BCL `IObservable<T>` and `IObserver<T>` contracts, depends on `ReactiveUI.Disposables`, and has no runtime System.Reactive or R3 dependency.
 
 Important public types:
 
@@ -176,6 +220,8 @@ Common sequencers:
 - `ThreadPoolSequencer`
 - `SynchronizationContextSequencer`
 - `VirtualClock`, `TestClock`, and `VirtualTimeSequencer<TAbsolute,TRelative>` for deterministic virtual time
+- Android `HandlerSequencer` on Android target frameworks
+- Apple `NSRunloopSequencer` on iOS, tvOS, macOS, and Mac Catalyst target frameworks
 
 Example:
 
@@ -191,7 +237,7 @@ using var subscription = Signal
     .Subscribe(_ => RefreshView());
 ```
 
-UI adapter packages provide UI-specific sequencers:
+UI adapter packages provide framework-specific sequencers:
 
 - WPF: `DispatcherSequencer`
 - WinForms: `ControlSequencer`
@@ -323,7 +369,7 @@ Async disposable helpers:
 
 ## Extensions Package
 
-`ReactiveUI.Primitives.Extensions` contains migrated convenience operators that reference ReactiveUI.Primitives and avoid production System.Reactive/R3 dependencies.
+`ReactiveUI.Primitives.Extensions` contains migrated convenience operators that reference ReactiveUI.Primitives and avoid production System.Reactive/R3 dependencies. Use it when porting ReactiveUI.Extensions-style helper code or when a project needs these higher-level helpers instead of only the core operator set.
 
 High-value extension areas:
 
@@ -350,7 +396,7 @@ IObservable<string> nonEmpty = names
 
 ## Source Generator Bridges
 
-The base package packs source generators as analyzers. The async package also packs them so async bridge methods can be generated.
+The base package packs source generators as analyzers. The async package also packs them so async bridge methods can be generated. The generator projects are not packages to install directly.
 
 The generators do not add runtime System.Reactive or R3 dependencies to ReactiveUI.Primitives. They emit bridge code only when the consuming project already references the relevant external package.
 
@@ -431,7 +477,7 @@ Generated bridge classes are internal to the consuming assembly. The extension m
 Use this migration path:
 
 1. Add `ReactiveUI.Primitives`.
-2. Add `ReactiveUI.Primitives.Async`, `ReactiveUI.Primitives.Extensions`, or UI adapter packages only where needed.
+2. Add `ReactiveUI.Primitives.Async`, `ReactiveUI.Primitives.Extensions`, `ReactiveUI.Disposables`, or UI adapter packages only where needed.
 3. Keep System.Reactive package references temporarily only in assemblies that still consume Rx APIs or need bridge adapters.
 4. Convert hot sources first: `Subject<T>` to `Signal<T>`, `BehaviorSubject<T>` to `StateSignal<T>` or `BehaviorSignal<T>`, and `ReplaySubject<T>` to `ReplaySignal<T>` or `HistorySignal<T>`.
 5. Replace operators with Primitives vocabulary at the same time as touching code.
@@ -600,3 +646,4 @@ Use `IObservableAsync<T>` and the async package when:
 - Do not mix `SignalAsync<T>` and `Signal<T>` in the same pipeline without an explicit bridge or conversion reason.
 - Do not keep bridge conversions in the middle of a pipeline. Convert once at the boundary.
 - Do not use UI sequencers from the base package; install the matching UI adapter package.
+- Do not add `ReactiveUI.Primitives.R3Bridge.Generator` or `ReactiveUI.Primitives.SystemReactiveBridge.Generator` directly.

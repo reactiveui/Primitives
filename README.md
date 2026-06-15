@@ -99,26 +99,27 @@ external library symbols.
 
 ## Agent Skills
 
-The base `ReactiveUI.Primitives` NuGet package includes `Skills.md` at the package root. It is an agent-oriented guide
-for using ReactiveUI.Primitives, Async, Extensions, UI sequencers, bridge source generators, and migration from
-System.Reactive, R3, or R3Async while assuming the libraries are consumed from NuGet packages.
+The base `ReactiveUI.Primitives` NuGet package includes `Skill.md` at the package root and a Codex-ready copy at
+`.agents/skills/reactiveui-primitives/SKILL.md`. It is an agent-oriented guide for choosing the correct
+ReactiveUI.Primitives package, using Async, Extensions, UI sequencers, bridge source generators, and migration from
+System.Reactive, System.Reactive.Async, R3, or R3Async while assuming the libraries are consumed from NuGet packages.
 
 After package restore, locate the file in the local NuGet package cache:
 
 ```powershell
 $version = "<version>"
-$skill = "$env:USERPROFILE\.nuget\packages\reactiveui.primitives\$version\Skills.md"
+$skill = "$env:USERPROFILE\.nuget\packages\reactiveui.primitives\$version\.agents\skills\reactiveui-primitives\SKILL.md"
 ```
 
 On macOS or Linux:
 
 ```bash
 version="<version>"
-skill="$HOME/.nuget/packages/reactiveui.primitives/$version/Skills.md"
+skill="$HOME/.nuget/packages/reactiveui.primitives/$version/.agents/skills/reactiveui-primitives/SKILL.md"
 ```
 
-Install the skill by copying the contents of `Skills.md` into the instruction location supported by the agent. Agents
-that expect a `SKILL.md` file should use a `reactiveui-primitives` directory and rename the copied file to `SKILL.md`.
+Install or link the packaged `SKILL.md` into the instruction location supported by the agent. `Skill.md` remains at the
+package root for agents or tools that expect a singular markdown guide rather than a skill folder.
 
 | Agent                                                                                          | Recommended project-local install                            | Notes                                                                                                                                                            |
 |------------------------------------------------------------------------------------------------|--------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|

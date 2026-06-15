@@ -11,7 +11,7 @@
         <File Path="../CLAUDE.md" />
         <File Path="../LICENSE" />
         <File Path="../README.md" />
-        <File Path="../Skills.md" />
+        <File Path="../Skill.md" />
         <File Path="..\codecov.yml" />
         <File Path="Directory.Build.props" />
         <File Path="Directory.Build.targets" />
