@@ -12,5 +12,5 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 public static class CachedObservables
 {
     /// <summary>Gets a cached observable that synchronously emits a single <see cref="RxVoid.Default"/> and completes.</summary>
-    public static IObservable<RxVoid> UnitDefault { get; } = new SingleValueObservable<RxVoid>(RxVoid.Default);
+    public static IObservable<RxVoid> UnitDefault { get; } = new SingleValueSignal<RxVoid>(RxVoid.Default);
 }

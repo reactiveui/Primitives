@@ -169,9 +169,9 @@ ReactiveUI.Primitives.Extensions.Operators.WhereTrueObservable.WhereTrueObservab
 ReactiveUI.Primitives.Extensions.ScanWithInitialObservable<TSource, TAccumulate>
 ReactiveUI.Primitives.Extensions.ScanWithInitialObservable<TSource, TAccumulate>.ScanWithInitialObservable(System.IObservable<TSource>! source, TAccumulate initial, System.Func<TAccumulate, TSource, TAccumulate>! accumulator) -> void
 ReactiveUI.Primitives.Extensions.ScanWithInitialObservable<TSource, TAccumulate>.Subscribe(System.IObserver<TAccumulate>! observer) -> System.IDisposable!
-ReactiveUI.Primitives.Extensions.SingleValueObservable<T>
-ReactiveUI.Primitives.Extensions.SingleValueObservable<T>.SingleValueObservable(T value) -> void
-ReactiveUI.Primitives.Extensions.SingleValueObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.SingleValueSignal<T>
+ReactiveUI.Primitives.Extensions.SingleValueSignal<T>.SingleValueSignal(T value) -> void
+ReactiveUI.Primitives.Extensions.SingleValueSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Extensions.Stale<T>
 ReactiveUI.Primitives.Extensions.Stale<T>.Equals(ReactiveUI.Primitives.Extensions.Stale<T> other) -> bool
 ReactiveUI.Primitives.Extensions.Stale<T>.IsStale.get -> bool

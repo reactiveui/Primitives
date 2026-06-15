@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
-/// <summary>Tests for <see cref = "CurrentValueSubject{T}"/>, <see cref = "SingleValueObservable{T}"/>, and the <see cref = "CachedObservables"/> singletons.</summary>
+/// <summary>Tests for <see cref = "CurrentValueSubject{T}"/>, <see cref = "SingleValueSignal{T}"/>, and the <see cref = "CachedObservables"/> singletons.</summary>
 public partial class CurrentValueSubjectTests
 {
     /// <summary>Initial value used by subject tests so the replay value is unambiguous.</summary>
@@ -166,12 +166,12 @@ public partial class CurrentValueSubjectTests
         await Assert.That(view).IsNotTypeOf<CurrentValueSubject<int>>();
     }
 
-    /// <summary>Verifies that <see cref = "SingleValueObservable{T}"/> emits exactly one value and completes.</summary>
+    /// <summary>Verifies that <see cref = "SingleValueSignal{T}"/> emits exactly one value and completes.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenSingleValueObservableSubscribed_ThenEmitsOnceAndCompletes()
+    public async Task WhenSingleValueSignalSubscribed_ThenEmitsOnceAndCompletes()
     {
-        SingleValueObservable<int> observable = new(SecondValue);
+        SingleValueSignal<int> observable = new(SecondValue);
         List<int> results = [];
         var completed = false;
         using var sub = observable.Subscribe(results.Add, () => completed = true);

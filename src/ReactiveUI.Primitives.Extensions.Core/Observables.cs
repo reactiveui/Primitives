@@ -15,5 +15,5 @@ public static class Observables
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="value">The value emitted to every subscriber.</param>
     /// <returns>An observable that emits <paramref name="value"/> and completes on subscribe.</returns>
-    public static IObservable<T> Return<T>(T value) => new SingleValueObservable<T>(value);
+    public static IObservable<T> Return<T>(T value) => new SingleValueSignal<T>(value);
 }

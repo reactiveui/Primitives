@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Extensions;
 /// </summary>
 /// <typeparam name="T">The element type.</typeparam>
 /// <param name="value">The value emitted to every subscriber.</param>
-public sealed class SingleValueObservable<T>(T value) : IObservable<T>
+public sealed class SingleValueSignal<T>(T value) : IObservable<T>
 {
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
