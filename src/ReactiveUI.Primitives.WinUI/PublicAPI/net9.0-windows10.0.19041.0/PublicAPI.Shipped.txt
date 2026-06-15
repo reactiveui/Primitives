@@ -1,12 +1,12 @@
 #nullable enable
 ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencer
 ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencer.DispatcherQueue.get -> Microsoft.UI.Dispatching.DispatcherQueue!
-ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencer.DispatcherQueueSequencer(Microsoft.UI.Dispatching.DispatcherQueue! dispatcherQueue) -> void
 ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencer.DispatcherQueueSequencer(Microsoft.UI.Dispatching.DispatcherQueue! dispatcherQueue, Microsoft.UI.Dispatching.DispatcherQueuePriority priority) -> void
+ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencer.DispatcherQueueSequencer(Microsoft.UI.Dispatching.DispatcherQueue! dispatcherQueue) -> void
 ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencer.Now.get -> System.DateTimeOffset
 ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencer.Priority.get -> Microsoft.UI.Dispatching.DispatcherQueuePriority
-ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencer.Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem! item) -> void
 ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencer.Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem! item, long dueTimestamp) -> void
+ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencer.Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem! item) -> void
 ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencer.Timestamp.get -> long
 ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencerExtensions
 ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencerExtensions.extension(Microsoft.UI.Dispatching.DispatcherQueue!)
