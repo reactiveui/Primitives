@@ -6,18 +6,18 @@ namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>Subscription handle that removes its observer from the owning signal exactly once when disposed.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-internal sealed class BehaviorObserverHandler<T> : IDisposable
+internal sealed class BehaviorWitnessHandler<T> : IDisposable
 {
     /// <summary>The owning signal, cleared after the first disposal.</summary>
-    private IObserverRemovable<T>? _owner;
+    private IWitnessRemovable<T>? _owner;
 
     /// <summary>The subscribed observer, cleared after the first disposal.</summary>
     private IObserver<T>? _observer;
 
-    /// <summary>Initializes a new instance of the <see cref="BehaviorObserverHandler{T}"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="BehaviorWitnessHandler{T}"/> class.</summary>
     /// <param name="owner">The owning signal.</param>
     /// <param name="observer">The subscribed observer.</param>
-    public BehaviorObserverHandler(IObserverRemovable<T> owner, IObserver<T> observer)
+    public BehaviorWitnessHandler(IWitnessRemovable<T> owner, IObserver<T> observer)
     {
         _owner = owner;
         _observer = observer;

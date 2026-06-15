@@ -7,7 +7,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <summary>Mutable latest-value signal with a ReactiveUI.Primitives name for reactive-property parity.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class StateSignal<T> : ISignal<T>, IObserverRemovable<T>
+public sealed class StateSignal<T> : ISignal<T>, IWitnessRemovable<T>
 {
     /// <summary>The latest-value signal state and mechanics; see <see cref="BehaviorSignalState{T}"/>.</summary>
     private BehaviorSignalState<T> _state;
@@ -75,5 +75,5 @@ public sealed class StateSignal<T> : ISignal<T>, IObserverRemovable<T>
     }
 
     /// <inheritdoc/>
-    void IObserverRemovable<T>.RemoveObserver(IObserver<T> observer) => _state.RemoveObserver(observer);
+    void IWitnessRemovable<T>.RemoveObserver(IObserver<T> observer) => _state.RemoveObserver(observer);
 }

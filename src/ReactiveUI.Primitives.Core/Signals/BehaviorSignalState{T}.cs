@@ -146,13 +146,13 @@ internal record struct BehaviorSignalState<T>
     /// <param name="owner">The owning signal used to remove the observer on disposal.</param>
     /// <param name="observer">The observer to subscribe.</param>
     /// <returns>A handle that unsubscribes the observer when disposed.</returns>
-    public IDisposable Subscribe(IObserverRemovable<T> owner, IObserver<T> observer)
+    public IDisposable Subscribe(IWitnessRemovable<T> owner, IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         var ex = default(Exception);
         var v = default(T);
-        BehaviorObserverHandler<T>? subscription = null;
+        BehaviorWitnessHandler<T>? subscription = null;
 
         lock (_gate)
         {

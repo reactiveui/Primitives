@@ -7,7 +7,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <summary>A signal that replays its most recent value to new subscribers.</summary>
 /// <typeparam name="T">The Type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class BehaviorSignal<T> : ISignal<T>, IObserverRemovable<T>
+public sealed class BehaviorSignal<T> : ISignal<T>, IWitnessRemovable<T>
 {
     /// <summary>The latest-value signal state and mechanics; see <see cref="BehaviorSignalState{T}"/>.</summary>
     private BehaviorSignalState<T> _state;
@@ -80,5 +80,5 @@ public sealed class BehaviorSignal<T> : ISignal<T>, IObserverRemovable<T>
     public void Dispose() => _state.Release();
 
     /// <inheritdoc/>
-    void IObserverRemovable<T>.RemoveObserver(IObserver<T> observer) => _state.RemoveObserver(observer);
+    void IWitnessRemovable<T>.RemoveObserver(IObserver<T> observer) => _state.RemoveObserver(observer);
 }
