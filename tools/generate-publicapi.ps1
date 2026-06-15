@@ -89,27 +89,31 @@ function Invoke-PublicApiOne {
     param($Item, [string[]]$Diags)
     $proj = $Item.Proj
     $tfm = $Item.Tfm
+    $lf = "`n"
+    $header = '#nullable enable'
+    # Write LF-only so the baselines match the bash sibling's output byte-for-byte.
+    $writeLf = { param($p, $lines) [IO.File]::WriteAllText($p, (($lines -join $lf) + $lf)) }
     # Back up any existing baseline so a build failure (a TFM whose workload this platform
     # lacks) restores it instead of wiping it.
-    $shippedBak = if (Test-Path $Item.Shipped) { Get-Content -Raw $Item.Shipped } else { $null }
-    $unshippedBak = if (Test-Path $Item.Unshipped) { Get-Content -Raw $Item.Unshipped } else { $null }
+    $shippedBak = if (Test-Path $Item.Shipped) { (Get-Content -Raw $Item.Shipped) -replace "`r`n", "`n" } else { $null }
+    $unshippedBak = if (Test-Path $Item.Unshipped) { (Get-Content -Raw $Item.Unshipped) -replace "`r`n", "`n" } else { $null }
     # Empty both to the bare header so the analyzer reports the entire current surface.
-    '#nullable enable' | Set-Content -Path $Item.Shipped
-    '#nullable enable' | Set-Content -Path $Item.Unshipped
+    & $writeLf $Item.Shipped @($header)
+    & $writeLf $Item.Unshipped @($header)
     & dotnet format analyzers $proj -f $tfm --diagnostics $Diags --severity info -v quiet
     if ($LASTEXITCODE -eq 0) {
         # `dotnet format` records the surface in Unshipped; fold it into Shipped (ordinally
-        # sorted+deduped) and reset Unshipped to the bare header default.
-        $surface = @(Get-Content $Item.Unshipped | Where-Object { $_ -ne '#nullable enable' -and $_.Trim() -ne '' } | Select-Object -Unique)
+        # sorted+deduped, matching `LC_ALL=C sort -u`) and reset Unshipped to the bare header.
+        $surface = [string[]]@(Get-Content $Item.Unshipped | Where-Object { $_ -ne $header -and $_.Trim() -ne '' } | Select-Object -Unique)
         [Array]::Sort($surface, [System.StringComparer]::Ordinal)
-        @('#nullable enable') + $surface | Set-Content -Path $Item.Shipped
-        '#nullable enable' | Set-Content -Path $Item.Unshipped
+        & $writeLf $Item.Shipped (@($header) + $surface)
+        & $writeLf $Item.Unshipped @($header)
         Write-Host "OK   [$tfm] $proj"
         return [pscustomobject]@{ Ok = $true }
     }
     # Restore the prior baseline (if any) so nothing is wiped for a TFM we can't build here.
-    if ($null -ne $shippedBak) { Set-Content -Path $Item.Shipped -Value $shippedBak -NoNewline }
-    if ($null -ne $unshippedBak) { Set-Content -Path $Item.Unshipped -Value $unshippedBak -NoNewline }
+    if ($null -ne $shippedBak) { [IO.File]::WriteAllText($Item.Shipped, $shippedBak) }
+    if ($null -ne $unshippedBak) { [IO.File]::WriteAllText($Item.Unshipped, $unshippedBak) }
     Write-Host "FAIL [$tfm] $proj (missing workload/SDK for this platform?)"
     return [pscustomobject]@{ Ok = $false }
 }
@@ -121,8 +125,7 @@ $projects = Get-ChildItem -Path . -Recurse -Filter '*.csproj' |
     } |
     Sort-Object FullName
 
-# Collect (project, TFM) work items, seeding each TFM's baseline pair to the bare header
-# up front so the analyzer reports the entire current surface as unshipped.
+# Collect (project, TFM) work items; the worker seeds, generates, and folds each pair.
 $items = [System.Collections.Generic.List[object]]::new()
 $restoreSet = [System.Collections.Generic.List[string]]::new()
 $skipped = 0
@@ -160,9 +163,6 @@ foreach ($projItem in $projects) {
 
         $shipped = Join-Path $apiDir 'PublicAPI.Shipped.txt'
         $unshipped = Join-Path $apiDir 'PublicAPI.Unshipped.txt'
-        '#nullable enable' | Set-Content -Path $shipped
-        '#nullable enable' | Set-Content -Path $unshipped
-
         $items.Add([pscustomobject]@{ Proj = $proj; Tfm = $tfm; Shipped = $shipped; Unshipped = $unshipped })
     }
 }
