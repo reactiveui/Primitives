@@ -89,10 +89,17 @@ function Invoke-PublicApiOne {
     param($Item, [string[]]$Diags)
     $proj = $Item.Proj
     $tfm = $Item.Tfm
+    # Back up any existing baseline so a build failure (a TFM whose workload this platform
+    # lacks) restores it instead of wiping it.
+    $shippedBak = if (Test-Path $Item.Shipped) { Get-Content -Raw $Item.Shipped } else { $null }
+    $unshippedBak = if (Test-Path $Item.Unshipped) { Get-Content -Raw $Item.Unshipped } else { $null }
+    # Empty both to the bare header so the analyzer reports the entire current surface.
+    '#nullable enable' | Set-Content -Path $Item.Shipped
+    '#nullable enable' | Set-Content -Path $Item.Unshipped
     & dotnet format analyzers $proj -f $tfm --diagnostics $Diags --severity info -v quiet
     if ($LASTEXITCODE -eq 0) {
         # `dotnet format` records the surface in Unshipped; fold it into Shipped (ordinally
-        # sorted+deduped) and reset Unshipped to the bare header.
+        # sorted+deduped) and reset Unshipped to the bare header default.
         $surface = @(Get-Content $Item.Unshipped | Where-Object { $_ -ne '#nullable enable' -and $_.Trim() -ne '' } | Select-Object -Unique)
         [Array]::Sort($surface, [System.StringComparer]::Ordinal)
         @('#nullable enable') + $surface | Set-Content -Path $Item.Shipped
@@ -100,6 +107,9 @@ function Invoke-PublicApiOne {
         Write-Host "OK   [$tfm] $proj"
         return [pscustomobject]@{ Ok = $true }
     }
+    # Restore the prior baseline (if any) so nothing is wiped for a TFM we can't build here.
+    if ($null -ne $shippedBak) { Set-Content -Path $Item.Shipped -Value $shippedBak -NoNewline }
+    if ($null -ne $unshippedBak) { Set-Content -Path $Item.Unshipped -Value $unshippedBak -NoNewline }
     Write-Host "FAIL [$tfm] $proj (missing workload/SDK for this platform?)"
     return [pscustomobject]@{ Ok = $false }
 }

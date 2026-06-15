@@ -101,10 +101,7 @@ for proj in "${projects[@]}"; do
   IFS=';' read -ra tfm_arr <<<"$tfms"
   for tfm in "${tfm_arr[@]}"; do
     [ -z "$tfm" ] && continue
-    apidir="$projdir/PublicAPI/$tfm"
-    mkdir -p "$apidir"
-    printf '#nullable enable\n' >"$apidir/PublicAPI.Shipped.txt"
-    printf '#nullable enable\n' >"$apidir/PublicAPI.Unshipped.txt"
+    mkdir -p "$projdir/PublicAPI/$tfm"
     items+=("$proj|$tfm")
   done
 done
@@ -134,9 +131,18 @@ generate_one() {
   shipped="$apidir/PublicAPI.Shipped.txt"
   unshipped="$apidir/PublicAPI.Unshipped.txt"
   tag="$(printf '%s' "$item" | tr '/|.' '___')"
+  local bsh="$RESULTS_DIR/$tag.shipped.bak"
+  local bun="$RESULTS_DIR/$tag.unshipped.bak"
+  # Back up any existing baseline so a build failure (e.g. a TFM that needs a workload
+  # this platform lacks) restores it instead of wiping it.
+  [ -f "$shipped" ] && cp "$shipped" "$bsh"
+  [ -f "$unshipped" ] && cp "$unshipped" "$bun"
+  # Empty both to the bare header so the analyzer reports the entire current surface.
+  printf '#nullable enable\n' >"$shipped"
+  printf '#nullable enable\n' >"$unshipped"
   if dotnet format analyzers "$proj" -f "$tfm" --diagnostics $DIAGS --severity info -v quiet; then
     # `dotnet format` records the surface in Unshipped; fold it into Shipped (ordinally
-    # sorted+deduped, as the analyzer emits) and reset Unshipped to the bare header.
+    # sorted+deduped, as the analyzer emits) and reset Unshipped to the bare header default.
     {
       printf '#nullable enable\n'
       grep -vxF '#nullable enable' "$unshipped" | grep -v '^[[:space:]]*$' | LC_ALL=C sort -u
@@ -145,6 +151,9 @@ generate_one() {
     printf 'OK   [%s] %s\n' "$tfm" "$proj"
     : >"$RESULTS_DIR/$tag.ok"
   else
+    # Restore the prior baseline (if any) so nothing is wiped for a TFM we can't build here.
+    [ -f "$bsh" ] && cp "$bsh" "$shipped"
+    [ -f "$bun" ] && cp "$bun" "$unshipped"
     printf 'FAIL [%s] %s (missing workload/SDK for this platform?)\n' "$tfm" "$proj"
     : >"$RESULTS_DIR/$tag.fail"
   fi
