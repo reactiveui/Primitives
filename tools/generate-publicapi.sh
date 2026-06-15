@@ -69,8 +69,7 @@ while IFS= read -r p; do projects+=("$p"); done < <(
     | sort
 )
 
-# Collect (project|tfm) work items, seeding each TFM's baseline pair to the bare header
-# up front so the analyzer reports the entire current surface as unshipped.
+# Collect (project|tfm) work items; the worker seeds, generates, and folds each pair.
 items=()
 restore_set=()
 skipped=0
