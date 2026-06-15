@@ -44,12 +44,14 @@ path, so you can scope a run to a single library while iterating.
 
 ### What it does per TFM
 
-1. Ensures `PublicAPI/<tfm>/PublicAPI.Shipped.txt` exists (seeded with `#nullable
-   enable` if absent — existing shipped surface is preserved).
-2. Resets `PublicAPI/<tfm>/PublicAPI.Unshipped.txt` to just `#nullable enable` so the
-   regenerated surface is deterministic.
-3. Runs `dotnet format analyzers <proj> -f <tfm> --diagnostics RS0016 RS0017 RS0037
+1. Resets both `PublicAPI/<tfm>/PublicAPI.Shipped.txt` and `PublicAPI.Unshipped.txt`
+   to just `#nullable enable`, so the analyzer reports the *entire* current surface.
+2. Runs `dotnet format analyzers <proj> -f <tfm> --diagnostics RS0016 RS0017 RS0037
    --severity info`, which fills `PublicAPI.Unshipped.txt` with the current public API.
+3. Folds that surface into `PublicAPI.Shipped.txt` (ordinally sorted, deduped) and
+   resets `PublicAPI.Unshipped.txt` back to the bare header. This repo keeps the full
+   surface in **Shipped** with **Unshipped empty**, so a later API change shows up as
+   new Unshipped lines.
 
 ### Platform notes
 

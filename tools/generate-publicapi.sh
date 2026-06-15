@@ -9,12 +9,17 @@
 #     <Project>/PublicAPI/<tfm>/PublicAPI.Shipped.txt
 #     <Project>/PublicAPI/<tfm>/PublicAPI.Unshipped.txt
 #
-# This script seeds those files and uses `dotnet format analyzers` to populate the
-# Unshipped file with the project's current public surface (RS0016), drop stale
-# entries (RS0017), and record nullability (RS0037).
+# This script seeds those files and uses `dotnet format analyzers` to capture the
+# project's current public surface (RS0016), drop stale entries (RS0017), and record
+# nullability (RS0037), then folds the surface into Shipped (this repo keeps the full
+# surface in Shipped with Unshipped empty).
 #
 # Only projects with MSBuild property TrackPublicApi=true are processed; the
 # tests/ and benchmarks/ trees opt out centrally in src/Directory.Build.props.
+#
+# Each (project, TFM) pair is independent — `dotnet format` builds an in-memory
+# MSBuildWorkspace and only writes its own PublicAPI/<tfm>/ files — so the pairs run
+# in parallel through a bounded pool (override the width with JOBS=<n>).
 #
 # Usage:
 #   tools/generate-publicapi.sh [project-name-filter]
@@ -22,15 +27,16 @@
 # Examples:
 #   tools/generate-publicapi.sh                 # all tracked libraries, all buildable TFMs
 #   tools/generate-publicapi.sh Async           # only projects whose path contains 'Async'
-#   tools/generate-publicapi.sh ReactiveUI.Primitives.Core
+#   JOBS=4 tools/generate-publicapi.sh          # cap parallelism at 4
 #
 # Notes:
 #   * Run on the OS that can build the target frameworks you need. Apple TFMs
 #     (net*-ios / -maccatalyst / -tvos / -macos) build only on macOS or Windows;
 #     Windows-desktop TFMs build cross-platform here via EnableWindowsTargeting.
 #     Use the PowerShell sibling (generate-publicapi.ps1) on Windows.
-#   * A TFM whose workload/SDK is missing is skipped with a warning (its seed files
-#     are left in place) rather than aborting the whole run.
+#   * A TFM whose workload/SDK is missing is reported as failed (its seed files are
+#     left in place) rather than aborting the whole run; the exit code is non-zero so
+#     CI can detect an incomplete run.
 #
 set -uo pipefail
 
@@ -44,13 +50,16 @@ export CheckEolTargetFramework=false
 export MinVerVersionOverride="${MinVerVersionOverride:-255.255.255-dev}"
 
 FILTER="${1:-}"
-DIAGS="RS0016 RS0017 RS0037"
+export DIAGS="RS0016 RS0017 RS0037"
+JOBS="${JOBS:-$(nproc 2>/dev/null || echo 4)}"
+[ "$JOBS" -gt 8 ] && JOBS=8
 
 echo "PublicAPI baseline generation"
 echo "  src        : $SRC_DIR"
 echo "  filter     : ${FILTER:-<none>}"
 echo "  diagnostics: $DIAGS"
 echo "  MinVer     : $MinVerVersionOverride"
+echo "  jobs       : $JOBS"
 echo
 
 projects=()
@@ -60,8 +69,10 @@ while IFS= read -r p; do projects+=("$p"); done < <(
     | sort
 )
 
-generated=0
-failed=0
+# Collect (project|tfm) work items, seeding each TFM's baseline pair to the bare header
+# up front so the analyzer reports the entire current surface as unshipped.
+items=()
+restore_set=()
 skipped=0
 for proj in "${projects[@]}"; do
   if [ -n "$FILTER" ] && [[ "$proj" != *"$FILTER"* ]]; then continue; fi
@@ -84,27 +95,72 @@ for proj in "${projects[@]}"; do
   fi
 
   projdir="$(dirname "$proj")"
-  echo "=== $proj"
+  echo "queue $proj"
   echo "    TFMs: $tfms"
+  restore_set+=("$proj")
   IFS=';' read -ra tfm_arr <<<"$tfms"
   for tfm in "${tfm_arr[@]}"; do
     [ -z "$tfm" ] && continue
     apidir="$projdir/PublicAPI/$tfm"
     mkdir -p "$apidir"
-    # Seed Shipped only if absent (preserve any genuinely shipped surface); always
-    # reset Unshipped to the bare header so the regenerated surface is deterministic.
-    [ -f "$apidir/PublicAPI.Shipped.txt" ] || printf '#nullable enable\n' >"$apidir/PublicAPI.Shipped.txt"
+    printf '#nullable enable\n' >"$apidir/PublicAPI.Shipped.txt"
     printf '#nullable enable\n' >"$apidir/PublicAPI.Unshipped.txt"
-    echo "    --> [$tfm]"
-    if dotnet format analyzers "$proj" -f "$tfm" --diagnostics $DIAGS --severity info -v quiet; then
-      generated=$((generated + 1))
-    else
-      echo "    WARN: generation failed for [$tfm] (missing workload/SDK for this platform?)"
-      failed=$((failed + 1))
-    fi
+    items+=("$proj|$tfm")
   done
-  echo
 done
+echo
+
+if [ "${#items[@]}" -eq 0 ]; then
+  echo "Nothing to generate. projects skipped: $skipped"
+  exit 0
+fi
+
+# Restore once per project so the parallel `dotnet format` workers never race on restore
+# (they each load a read-only workspace afterwards).
+echo "Restoring ${#restore_set[@]} project(s)..."
+for proj in "${restore_set[@]}"; do
+  dotnet restore "$proj" -v quiet || echo "    WARN: restore reported issues for $proj"
+done
+echo
+
+# Worker: regenerate one (project, TFM) pair and fold the surface into Shipped.
+generate_one() {
+  local item="$1"
+  local proj="${item%%|*}"
+  local tfm="${item##*|}"
+  local projdir apidir shipped unshipped tag
+  projdir="$(dirname "$proj")"
+  apidir="$projdir/PublicAPI/$tfm"
+  shipped="$apidir/PublicAPI.Shipped.txt"
+  unshipped="$apidir/PublicAPI.Unshipped.txt"
+  tag="$(printf '%s' "$item" | tr '/|.' '___')"
+  if dotnet format analyzers "$proj" -f "$tfm" --diagnostics $DIAGS --severity info -v quiet; then
+    # `dotnet format` records the surface in Unshipped; fold it into Shipped (ordinally
+    # sorted+deduped, as the analyzer emits) and reset Unshipped to the bare header.
+    {
+      printf '#nullable enable\n'
+      grep -vxF '#nullable enable' "$unshipped" | grep -v '^[[:space:]]*$' | LC_ALL=C sort -u
+    } >"$shipped"
+    printf '#nullable enable\n' >"$unshipped"
+    printf 'OK   [%s] %s\n' "$tfm" "$proj"
+    : >"$RESULTS_DIR/$tag.ok"
+  else
+    printf 'FAIL [%s] %s (missing workload/SDK for this platform?)\n' "$tfm" "$proj"
+    : >"$RESULTS_DIR/$tag.fail"
+  fi
+}
+export -f generate_one
+
+RESULTS_DIR="$(mktemp -d)"
+export RESULTS_DIR
+trap 'rm -rf "$RESULTS_DIR"' EXIT
+
+echo "Generating ${#items[@]} (project, TFM) baseline(s) across $JOBS job(s)..."
+printf '%s\n' "${items[@]}" | xargs -P "$JOBS" -I{} bash -c 'generate_one "$1"' _ {}
+echo
+
+generated="$(find "$RESULTS_DIR" -name '*.ok' | wc -l | tr -d '[:space:]')"
+failed="$(find "$RESULTS_DIR" -name '*.fail' | wc -l | tr -d '[:space:]')"
 
 echo "Done. generated: $generated TFM baseline(s), failed: $failed, projects skipped: $skipped"
 [ "$failed" -eq 0 ]

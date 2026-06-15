@@ -1,0 +1,206 @@
+#nullable enable
+ReactiveUI.Primitives.Extensions.ConcurrencyLimiter<T>
+ReactiveUI.Primitives.Extensions.ConcurrencyLimiter<T>.ConcurrencyLimiter(System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task<T>!>! taskFunctions, int maxConcurrency) -> void
+ReactiveUI.Primitives.Extensions.ConcurrencyLimiter<T>.Observable.get -> System.IObservable<T>!
+ReactiveUI.Primitives.Extensions.ConcurrencyLimiter<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Continuation
+ReactiveUI.Primitives.Extensions.Continuation.CompletedPhases.get -> long
+ReactiveUI.Primitives.Extensions.Continuation.Continuation() -> void
+ReactiveUI.Primitives.Extensions.Continuation.Dispose() -> void
+ReactiveUI.Primitives.Extensions.Continuation.Lock<T>(T item, System.IObserver<(T value, System.IDisposable! Sync)>? observer) -> System.Threading.Tasks.Task!
+ReactiveUI.Primitives.Extensions.Continuation.LockValueTask<T>(T item, System.IObserver<(T value, System.IDisposable! Sync)>? observer) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Extensions.CurrentValueSubject<T>
+ReactiveUI.Primitives.Extensions.CurrentValueSubject<T>.AsObservable() -> System.IObservable<T>!
+ReactiveUI.Primitives.Extensions.CurrentValueSubject<T>.CurrentValueSubject(T initialValue) -> void
+ReactiveUI.Primitives.Extensions.CurrentValueSubject<T>.Dispose() -> void
+ReactiveUI.Primitives.Extensions.CurrentValueSubject<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Extensions.CurrentValueSubject<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Extensions.CurrentValueSubject<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Extensions.CurrentValueSubject<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.CurrentValueSubject<T>.Value.get -> T
+ReactiveUI.Primitives.Extensions.DrainNotificationKind
+ReactiveUI.Primitives.Extensions.DrainNotificationKind.Completed = 2 -> ReactiveUI.Primitives.Extensions.DrainNotificationKind
+ReactiveUI.Primitives.Extensions.DrainNotificationKind.Error = 1 -> ReactiveUI.Primitives.Extensions.DrainNotificationKind
+ReactiveUI.Primitives.Extensions.DrainNotificationKind.Next = 0 -> ReactiveUI.Primitives.Extensions.DrainNotificationKind
+ReactiveUI.Primitives.Extensions.FirstAsTaskHelper
+ReactiveUI.Primitives.Extensions.FirstAsValueTaskHelper<T>
+ReactiveUI.Primitives.Extensions.Heartbeat<T>
+ReactiveUI.Primitives.Extensions.Heartbeat<T>.Equals(ReactiveUI.Primitives.Extensions.Heartbeat<T> other) -> bool
+ReactiveUI.Primitives.Extensions.Heartbeat<T>.Heartbeat() -> void
+ReactiveUI.Primitives.Extensions.Heartbeat<T>.Heartbeat(T? update) -> void
+ReactiveUI.Primitives.Extensions.Heartbeat<T>.IsHeartbeat.get -> bool
+ReactiveUI.Primitives.Extensions.Heartbeat<T>.Update.get -> T?
+ReactiveUI.Primitives.Extensions.IDrainTarget
+ReactiveUI.Primitives.Extensions.IDrainTarget.Drain() -> void
+ReactiveUI.Primitives.Extensions.IHeartbeat<T>
+ReactiveUI.Primitives.Extensions.IHeartbeat<T>.IsHeartbeat.get -> bool
+ReactiveUI.Primitives.Extensions.IHeartbeat<T>.Update.get -> T?
+ReactiveUI.Primitives.Extensions.IStale<T>
+ReactiveUI.Primitives.Extensions.IStale<T>.IsStale.get -> bool
+ReactiveUI.Primitives.Extensions.IStale<T>.Update.get -> T?
+ReactiveUI.Primitives.Extensions.Observables
+ReactiveUI.Primitives.Extensions.ObserverArrayHelpers
+ReactiveUI.Primitives.Extensions.ObserverExtensions
+ReactiveUI.Primitives.Extensions.ObserverExtensions.extension<T>(System.IObserver<T>!)
+ReactiveUI.Primitives.Extensions.ObserverExtensions.extension<T>(System.IObserver<T>!).FastForEach(System.Collections.Generic.IEnumerable<T>! source) -> void
+ReactiveUI.Primitives.Extensions.Operators.BinaryMinMaxObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.BinaryMinMaxObservable<T>.BinaryMinMaxObservable(System.IObservable<T>! left, System.IObservable<T>! right, bool emitMaximum) -> void
+ReactiveUI.Primitives.Extensions.Operators.BinaryMinMaxObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.BooleanReduceObservable
+ReactiveUI.Primitives.Extensions.Operators.BooleanReduceObservable.BooleanReduceObservable(System.Collections.Generic.IEnumerable<System.IObservable<bool>!>! sources, bool target) -> void
+ReactiveUI.Primitives.Extensions.Operators.BooleanReduceObservable.Subscribe(System.IObserver<bool>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.BufferUntilObservable
+ReactiveUI.Primitives.Extensions.Operators.BufferUntilObservable.BufferUntilObservable(System.IObservable<char>! source, char startsWith, char endsWith) -> void
+ReactiveUI.Primitives.Extensions.Operators.BufferUntilObservable.Subscribe(System.IObserver<string!>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.CatchAndReturnWithFactoryObservable<T, TException>
+ReactiveUI.Primitives.Extensions.Operators.CatchAndReturnWithFactoryObservable<T, TException>.CatchAndReturnWithFactoryObservable(System.IObservable<T>! source, System.Func<TException!, T>! fallbackFactory) -> void
+ReactiveUI.Primitives.Extensions.Operators.CatchAndReturnWithFactoryObservable<T, TException>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.CatchIgnoreEmptyObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.CatchIgnoreEmptyObservable<T>.CatchIgnoreEmptyObservable(System.IObservable<T>! source) -> void
+ReactiveUI.Primitives.Extensions.Operators.CatchIgnoreEmptyObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.CatchIgnoreObservable<TSource, TException>
+ReactiveUI.Primitives.Extensions.Operators.CatchIgnoreObservable<TSource, TException>.CatchIgnoreObservable(System.IObservable<TSource>! source, System.Action<TException!>! errorAction) -> void
+ReactiveUI.Primitives.Extensions.Operators.CatchIgnoreObservable<TSource, TException>.Subscribe(System.IObserver<TSource>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.CatchReturnObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.CatchReturnObservable<T>.CatchReturnObservable(System.IObservable<T>! source, T fallback) -> void
+ReactiveUI.Primitives.Extensions.Operators.CatchReturnObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.DoOnDisposeObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.DoOnDisposeObservable<T>.DoOnDisposeObservable(System.IObservable<T>! source, System.Action! disposeAction) -> void
+ReactiveUI.Primitives.Extensions.Operators.DoOnDisposeObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.DoOnSubscribeObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.DoOnSubscribeObservable<T>.DoOnSubscribeObservable(System.IObservable<T>! source, System.Action! action) -> void
+ReactiveUI.Primitives.Extensions.Operators.DoOnSubscribeObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.DropIfBusyObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.DropIfBusyObservable<T>.DropIfBusyObservable(System.IObservable<T>! source, System.Func<T, System.Threading.Tasks.ValueTask>! asyncAction) -> void
+ReactiveUI.Primitives.Extensions.Operators.DropIfBusyObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.FilterRegexObservable
+ReactiveUI.Primitives.Extensions.Operators.FilterRegexObservable.FilterRegexObservable(System.IObservable<string!>! source, System.Text.RegularExpressions.Regex! regex) -> void
+ReactiveUI.Primitives.Extensions.Operators.FilterRegexObservable.Subscribe(System.IObserver<string!>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>
+ReactiveUI.Primitives.Extensions.Operators.FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>.FirstMatchFromCandidatesObservable(System.Collections.Generic.IReadOnlyList<TKey>! candidates, System.Func<TKey, System.IObservable<TRaw>!>! project, System.Func<TRaw, TResult>! transform, System.Func<TResult, bool>! predicate, TResult fallback) -> void
+ReactiveUI.Primitives.Extensions.Operators.FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>.SyncProbe
+ReactiveUI.Primitives.Extensions.Operators.FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>.SyncProbe.OnCompleted() -> void
+ReactiveUI.Primitives.Extensions.Operators.FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>.SyncProbe.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Extensions.Operators.FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>.SyncProbe.OnNext(TRaw value) -> void
+ReactiveUI.Primitives.Extensions.Operators.FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>.SyncProbe.SyncProbe() -> void
+ReactiveUI.Primitives.Extensions.Operators.LatestOrDefaultObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.LatestOrDefaultObservable<T>.LatestOrDefaultObservable(System.IObservable<T>! source, T defaultValue) -> void
+ReactiveUI.Primitives.Extensions.Operators.LatestOrDefaultObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.LogErrorsObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.LogErrorsObservable<T>.LogErrorsObservable(System.IObservable<T>! source, System.Action<System.Exception!>! logger) -> void
+ReactiveUI.Primitives.Extensions.Operators.LogErrorsObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.MinMaxObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.MinMaxObservable<T>.MinMaxObservable(System.Collections.Generic.IReadOnlyList<System.IObservable<T>!>! sources, bool emitMaximum) -> void
+ReactiveUI.Primitives.Extensions.Operators.MinMaxObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.NotObservable
+ReactiveUI.Primitives.Extensions.Operators.NotObservable.NotObservable(System.IObservable<bool>! source) -> void
+ReactiveUI.Primitives.Extensions.Operators.NotObservable.Subscribe(System.IObserver<bool>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.PairwiseObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.PairwiseObservable<T>.PairwiseObservable(System.IObservable<T>! source) -> void
+ReactiveUI.Primitives.Extensions.Operators.PairwiseObservable<T>.Subscribe(System.IObserver<(T Previous, T Current)>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.PartitionObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.PartitionObservable<T>.False.get -> System.IObservable<T>!
+ReactiveUI.Primitives.Extensions.Operators.PartitionObservable<T>.PartitionObservable(System.IObservable<T>! source, System.Func<T, bool>! predicate) -> void
+ReactiveUI.Primitives.Extensions.Operators.PartitionObservable<T>.True.get -> System.IObservable<T>!
+ReactiveUI.Primitives.Extensions.Operators.PropertyChangedObservable<T, TProperty>
+ReactiveUI.Primitives.Extensions.Operators.PropertyChangedObservable<T, TProperty>.PropertyChangedObservable(T source, string! propertyName, System.Func<T, TProperty>! getter) -> void
+ReactiveUI.Primitives.Extensions.Operators.PropertyChangedObservable<T, TProperty>.Subscribe(System.IObserver<TProperty>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.ReplayLastOnSubscribeObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.ReplayLastOnSubscribeObservable<T>.ReplayLastOnSubscribeObservable(System.IObservable<T>! source, T initialValue) -> void
+ReactiveUI.Primitives.Extensions.Operators.ReplayLastOnSubscribeObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.RetryForeverObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.RetryForeverObservable<T>.RetryForeverObservable(System.IObservable<T>! source) -> void
+ReactiveUI.Primitives.Extensions.Operators.RetryForeverObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.SampleLatestObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.SampleLatestObservable<T>.SampleLatestObservable(System.IObservable<T>! source, System.IObservable<object!>! trigger) -> void
+ReactiveUI.Primitives.Extensions.Operators.SampleLatestObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.SelectAsyncConcurrentObservable<TSource, TResult>
+ReactiveUI.Primitives.Extensions.Operators.SelectAsyncConcurrentObservable<TSource, TResult>.SelectAsyncConcurrentObservable(System.IObservable<TSource>! source, System.Func<TSource, System.Threading.Tasks.Task<TResult>!>! selector, int maxConcurrency) -> void
+ReactiveUI.Primitives.Extensions.Operators.SelectAsyncConcurrentObservable<TSource, TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.SelectAsyncSequentialObservable<TSource, TResult>
+ReactiveUI.Primitives.Extensions.Operators.SelectAsyncSequentialObservable<TSource, TResult>.SelectAsyncSequentialObservable(System.IObservable<TSource>! source, System.Func<TSource, System.Threading.Tasks.Task<TResult>!>! selector) -> void
+ReactiveUI.Primitives.Extensions.Operators.SelectAsyncSequentialObservable<TSource, TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.SelectConstantObservable<TSource, TResult>
+ReactiveUI.Primitives.Extensions.Operators.SelectConstantObservable<TSource, TResult>.SelectConstantObservable(System.IObservable<TSource>! source, TResult constant) -> void
+ReactiveUI.Primitives.Extensions.Operators.SelectConstantObservable<TSource, TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.SelectLatestAsyncObservable<TSource, TResult>
+ReactiveUI.Primitives.Extensions.Operators.SelectLatestAsyncObservable<TSource, TResult>.SelectLatestAsyncObservable(System.IObservable<TSource>! source, System.Func<TSource, System.Threading.Tasks.Task<TResult>!>! selector) -> void
+ReactiveUI.Primitives.Extensions.Operators.SelectLatestAsyncObservable<TSource, TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.SelectManyThenObservable<TSource, TMid, TResult>
+ReactiveUI.Primitives.Extensions.Operators.SelectManyThenObservable<TSource, TMid, TResult>.SelectManyThenObservable(System.IObservable<TSource>! source, System.Func<TSource, System.IObservable<TMid>!>! first, System.Func<TMid, System.IObservable<TResult>!>! second) -> void
+ReactiveUI.Primitives.Extensions.Operators.SelectManyThenObservable<TSource, TMid, TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.ShuffleObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.ShuffleObservable<T>.ShuffleObservable(System.IObservable<T[]!>! source) -> void
+ReactiveUI.Primitives.Extensions.Operators.ShuffleObservable<T>.Subscribe(System.IObserver<T[]!>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.SkipWhileNullObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.SkipWhileNullObservable<T>.SkipWhileNullObservable(System.IObservable<T!>! source) -> void
+ReactiveUI.Primitives.Extensions.Operators.SkipWhileNullObservable<T>.Subscribe(System.IObserver<T!>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.SubscribeAsyncObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.SubscribeAsyncObservable<T>.Dispose() -> void
+ReactiveUI.Primitives.Extensions.Operators.SubscribeAsyncObservable<T>.SubscribeAsyncObservable(System.IObservable<T>! source, System.Func<T, System.Threading.Tasks.ValueTask>! onNext, System.Action<System.Exception!>? onError, System.Action? onCompleted) -> void
+ReactiveUI.Primitives.Extensions.Operators.SwitchIfEmptyObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.SwitchIfEmptyObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.SwitchIfEmptyObservable<T>.SwitchIfEmptyObservable(System.IObservable<T>! source, System.IObservable<T>! fallback) -> void
+ReactiveUI.Primitives.Extensions.Operators.SynchronizeAsyncObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.SynchronizeAsyncObservable<T>.Subscribe(System.IObserver<(T Value, System.IDisposable! Sync)>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.SynchronizeAsyncObservable<T>.SynchronizeAsyncObservable(System.IObservable<T>! source) -> void
+ReactiveUI.Primitives.Extensions.Operators.TakeUntilInclusiveObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.TakeUntilInclusiveObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.TakeUntilInclusiveObservable<T>.TakeUntilInclusiveObservable(System.IObservable<T>! source, System.Func<T, bool>! predicate) -> void
+ReactiveUI.Primitives.Extensions.Operators.TrySelectObservable<TIn, TOut>
+ReactiveUI.Primitives.Extensions.Operators.TrySelectObservable<TIn, TOut>.Subscribe(System.IObserver<TOut>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.TrySelectObservable<TIn, TOut>.TrySelectObservable(System.IObservable<TIn>! source, System.Func<TIn, TOut?>! selector) -> void
+ReactiveUI.Primitives.Extensions.Operators.WaitUntilObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.WaitUntilObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.WaitUntilObservable<T>.WaitUntilObservable(System.IObservable<T>! source, System.Func<T, bool>! predicate) -> void
+ReactiveUI.Primitives.Extensions.Operators.WhereFalseObservable
+ReactiveUI.Primitives.Extensions.Operators.WhereFalseObservable.Subscribe(System.IObserver<bool>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.WhereFalseObservable.WhereFalseObservable(System.IObservable<bool>! source) -> void
+ReactiveUI.Primitives.Extensions.Operators.WhereIsNotNullObservable<T>
+ReactiveUI.Primitives.Extensions.Operators.WhereIsNotNullObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.WhereIsNotNullObservable<T>.WhereIsNotNullObservable(System.IObservable<T>! source) -> void
+ReactiveUI.Primitives.Extensions.Operators.WhereSelectObservable<TIn, TOut>
+ReactiveUI.Primitives.Extensions.Operators.WhereSelectObservable<TIn, TOut>.Subscribe(System.IObserver<TOut>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.WhereSelectObservable<TIn, TOut>.WhereSelectObservable(System.IObservable<TIn>! source, System.Func<TIn, bool>! predicate, System.Func<TIn, TOut>! selector) -> void
+ReactiveUI.Primitives.Extensions.Operators.WhereTrueObservable
+ReactiveUI.Primitives.Extensions.Operators.WhereTrueObservable.Subscribe(System.IObserver<bool>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Operators.WhereTrueObservable.WhereTrueObservable(System.IObservable<bool>! source) -> void
+ReactiveUI.Primitives.Extensions.ScanWithInitialObservable<TSource, TAccumulate>
+ReactiveUI.Primitives.Extensions.ScanWithInitialObservable<TSource, TAccumulate>.ScanWithInitialObservable(System.IObservable<TSource>! source, TAccumulate initial, System.Func<TAccumulate, TSource, TAccumulate>! accumulator) -> void
+ReactiveUI.Primitives.Extensions.ScanWithInitialObservable<TSource, TAccumulate>.Subscribe(System.IObserver<TAccumulate>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.SingleValueObservable<T>
+ReactiveUI.Primitives.Extensions.SingleValueObservable<T>.SingleValueObservable(T value) -> void
+ReactiveUI.Primitives.Extensions.SingleValueObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Extensions.Stale<T>
+ReactiveUI.Primitives.Extensions.Stale<T>.Equals(ReactiveUI.Primitives.Extensions.Stale<T> other) -> bool
+ReactiveUI.Primitives.Extensions.Stale<T>.IsStale.get -> bool
+ReactiveUI.Primitives.Extensions.Stale<T>.Stale() -> void
+ReactiveUI.Primitives.Extensions.Stale<T>.Stale(T? update) -> void
+ReactiveUI.Primitives.Extensions.Stale<T>.Update.get -> T?
+ReactiveUI.Primitives.Extensions.TimerSinkState<T>
+ReactiveUI.Primitives.Extensions.TimerSinkState<T>.Done.get -> bool
+ReactiveUI.Primitives.Extensions.TimerSinkState<T>.HandleCompletedLocked() -> void
+ReactiveUI.Primitives.Extensions.TimerSinkState<T>.HandleDisposeLocked() -> void
+ReactiveUI.Primitives.Extensions.TimerSinkState<T>.HandleErrorLocked(System.Exception! error) -> void
+ReactiveUI.Primitives.Extensions.TimerSinkState<T>.Timer.get -> ReactiveUI.Primitives.Disposables.SwapDisposable!
+ReactiveUI.Primitives.Extensions.TimerSinkState<T>.TimerSinkState(System.IObserver<T>! downstream) -> void
+override ReactiveUI.Primitives.Extensions.Heartbeat<T>.GetHashCode() -> int
+override ReactiveUI.Primitives.Extensions.Stale<T>.GetHashCode() -> int
+static ReactiveUI.Primitives.Extensions.FirstAsTaskHelper.FirstAsTask<T>(System.IObservable<T>! source) -> System.Threading.Tasks.Task<T>!
+static ReactiveUI.Primitives.Extensions.FirstAsValueTaskHelper<T>.FirstAsValueTask(System.IObservable<T>! source) -> System.Threading.Tasks.ValueTask<T>
+static ReactiveUI.Primitives.Extensions.Heartbeat<T>.operator !=(ReactiveUI.Primitives.Extensions.Heartbeat<T> left, ReactiveUI.Primitives.Extensions.Heartbeat<T> right) -> bool
+static ReactiveUI.Primitives.Extensions.Heartbeat<T>.operator ==(ReactiveUI.Primitives.Extensions.Heartbeat<T> left, ReactiveUI.Primitives.Extensions.Heartbeat<T> right) -> bool
+static ReactiveUI.Primitives.Extensions.Observables.Return<T>(T value) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Extensions.ObserverArrayHelpers.Broadcast<T>(System.IObserver<T>![]! observers, T value) -> void
+static ReactiveUI.Primitives.Extensions.ObserverArrayHelpers.RemoveOrNull<T>(System.IObserver<T>![]! current, System.IObserver<T>! observer, System.IObserver<T>![]! empty) -> System.IObserver<T>![]?
+static ReactiveUI.Primitives.Extensions.ObserverExtensions.FastForEach<T>(this System.IObserver<T>! observer, System.Collections.Generic.IEnumerable<T>! source) -> void
+static ReactiveUI.Primitives.Extensions.Operators.FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>.SyncProbe.RentForCurrentThread() -> ReactiveUI.Primitives.Extensions.Operators.FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>.SyncProbe!
+static ReactiveUI.Primitives.Extensions.Operators.FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>.SyncProbe.ReturnToCurrentThread(ReactiveUI.Primitives.Extensions.Operators.FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>.SyncProbe! probe) -> void
+static ReactiveUI.Primitives.Extensions.Stale<T>.operator !=(ReactiveUI.Primitives.Extensions.Stale<T> left, ReactiveUI.Primitives.Extensions.Stale<T> right) -> bool
+static ReactiveUI.Primitives.Extensions.Stale<T>.operator ==(ReactiveUI.Primitives.Extensions.Stale<T> left, ReactiveUI.Primitives.Extensions.Stale<T> right) -> bool
+virtual ReactiveUI.Primitives.Extensions.Continuation.Dispose(bool disposing) -> void
+~override ReactiveUI.Primitives.Extensions.Heartbeat<T>.Equals(object obj) -> bool
+~override ReactiveUI.Primitives.Extensions.Heartbeat<T>.ToString() -> string
+~override ReactiveUI.Primitives.Extensions.Stale<T>.Equals(object obj) -> bool
+~override ReactiveUI.Primitives.Extensions.Stale<T>.ToString() -> string

@@ -1,8 +1,1 @@
 #nullable enable
-ReactiveUI.Primitives.Concurrency.HandlerSequencer
-ReactiveUI.Primitives.Concurrency.HandlerSequencer.Handler.get -> Android.OS.Handler!
-ReactiveUI.Primitives.Concurrency.HandlerSequencer.HandlerSequencer(Android.OS.Handler! handler) -> void
-ReactiveUI.Primitives.Resource
-ReactiveUI.Primitives.Resource.Resource() -> void
-static ReactiveUI.Primitives.Concurrency.HandlerSequencer.Main.get -> ReactiveUI.Primitives.Concurrency.HandlerSequencer!
-override ReactiveUI.Primitives.Concurrency.HandlerSequencer.ToString() -> string!
