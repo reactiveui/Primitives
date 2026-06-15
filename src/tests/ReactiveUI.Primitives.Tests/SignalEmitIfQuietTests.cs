@@ -21,7 +21,7 @@ public sealed class SignalEmitIfQuietTests
         List<int> immediateValues = [];
         Signal.FromEnumerable([First, Second]).EmitIfQuiet(TimeSpan.Zero).Subscribe(immediateValues.Add);
         await Assert.That(immediateValues.SequenceEqual([First, Second])).IsTrue();
-        TestClock clock = new();
+        VirtualClock clock = new();
         Signal<int> source = new();
         List<int> delayedValues = [];
         var completed = 0;
@@ -39,11 +39,11 @@ public sealed class SignalEmitIfQuietTests
         await Assert.That(completed).IsEqualTo(1);
         var emptyCompletion = 0;
         Signal<int> emptySource = new();
-        emptySource.EmitIfQuiet(TimeSpan.FromTicks(First), new TestClock())
+        emptySource.EmitIfQuiet(TimeSpan.FromTicks(First), new VirtualClock())
             .Subscribe(_ => { }, ex => throw ex, () => emptyCompletion++);
         emptySource.OnCompleted();
         await Assert.That(emptyCompletion).IsEqualTo(1);
-        TestClock errorClock = new();
+        VirtualClock errorClock = new();
         Signal<int> errorSource = new();
         InvalidOperationException expected = new("quiet");
         Exception? observed = null;
@@ -59,7 +59,7 @@ public sealed class SignalEmitIfQuietTests
             {
                 observer.OnCompleted();
                 observer.OnNext(First);
-            }).EmitIfQuiet(TimeSpan.FromTicks(First), new TestClock())
+            }).EmitIfQuiet(TimeSpan.FromTicks(First), new VirtualClock())
             .Subscribe(_ => { }, ex => throw ex, () => stoppedGuardCompleted++);
         await Assert.That(stoppedGuardCompleted).IsEqualTo(1);
     }

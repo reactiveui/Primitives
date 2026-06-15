@@ -4,7 +4,6 @@
 
 using System.Threading.Channels;
 using ReactiveUI.Primitives.Async.Disposables;
-using ReactiveUI.Primitives.Async.Internals;
 using ReactiveUI.Primitives.Async.Signals;
 using ReactiveUI.Primitives.Internal;
 

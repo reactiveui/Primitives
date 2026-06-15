@@ -22,8 +22,8 @@ public class ReplaySignalBenchmarks
     public int PrimitivesHistorySubscribe()
     {
         IntSignalWitness observer = new();
-        using HistorySignal<int> subject = new(BufferSize);
-        PopulateHistorySignal(subject);
+        using ReplaySignal<int> subject = new(BufferSize);
+        PopulateReplaySignal(subject);
         using var subscription = subject.Subscribe(observer);
         return observer.Total;
     }
@@ -54,7 +54,7 @@ public class ReplaySignalBenchmarks
 
     /// <summary>Populates the bounded primitives history signal with the buffered values.</summary>
     /// <param name="subject">The history signal to populate.</param>
-    private static void PopulateHistorySignal(HistorySignal<int> subject)
+    private static void PopulateReplaySignal(ReplaySignal<int> subject)
     {
         for (var i = 0; i < BufferSize; i++)
         {

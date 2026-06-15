@@ -4,134 +4,119 @@
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>Base class for virtual time schedulers using a priority queue for scheduled items.</summary>
+/// <summary>
+/// Virtual time scheduler that runs scheduled work against a controllable clock. Per-clock arithmetic is supplied
+/// as delegates at construction, so a single sealed type serves every <typeparamref name="TAbsolute"/>/
+/// <typeparamref name="TRelative"/> pairing without an inheritance hierarchy.
+/// </summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 /// <typeparam name="TRelative">Relative time representation type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public abstract class VirtualTimeSequencer<TAbsolute, TRelative> : VirtualTimeSequencerBase<TAbsolute, TRelative>
+public sealed class VirtualTimeSequencer<TAbsolute, TRelative> : ISequencer, IServiceProvider, IStopwatchProvider
     where TAbsolute : IComparable<TAbsolute>
 {
-    /// <summary>Queue of scheduled virtual-time work.</summary>
-    private readonly SequencerQueue<TAbsolute> _queue = new();
+    /// <summary>The virtual-time state and mechanics; see <see cref="VirtualTimeState{TAbsolute, TRelative}"/>.</summary>
+    private VirtualTimeState<TAbsolute, TRelative> _state;
 
-    /// <summary>Synchronization gate guarding the scheduled-work queue.</summary>
-    private readonly Lock _gate = new();
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="VirtualTimeSequencer{TAbsolute, TRelative}"/> class.
-    /// Creates a new virtual time scheduler with the default value of TAbsolute as the initial clock value.
-    /// </summary>
-    protected VirtualTimeSequencer()
-    {
-    }
-
-    /// <summary>Initializes a new instance of the <see cref="VirtualTimeSequencer{TAbsolute, TRelative}"/> class. Creates a new virtual time scheduler.</summary>
+    /// <summary>Initializes a new instance of the <see cref="VirtualTimeSequencer{TAbsolute, TRelative}"/> class.</summary>
     /// <param name="initialClock">Initial value for the clock.</param>
     /// <param name="comparer">Comparer to determine causality of events based on absolute time.</param>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="comparer"/> is <c>null</c>.</exception>
-    protected VirtualTimeSequencer(TAbsolute initialClock, IComparer<TAbsolute> comparer)
-        : base(initialClock, comparer)
-    {
-    }
+    /// <param name="add">Adds a relative time value to an absolute time value.</param>
+    /// <param name="toDateTimeOffset">Converts an absolute time value to a <see cref="DateTimeOffset"/>.</param>
+    /// <param name="toRelative">Converts a <see cref="TimeSpan"/> to a relative time value.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="comparer"/>, <paramref name="add"/>, <paramref name="toDateTimeOffset"/>, or <paramref name="toRelative"/> is <c>null</c>.</exception>
+    public VirtualTimeSequencer(
+        TAbsolute initialClock,
+        IComparer<TAbsolute> comparer,
+        Func<TAbsolute, TRelative, TAbsolute> add,
+        Func<TAbsolute, DateTimeOffset> toDateTimeOffset,
+        Func<TimeSpan, TRelative> toRelative) =>
+        _state = new(initialClock, comparer, add, toDateTimeOffset, toRelative);
+
+    /// <summary>Gets the scheduler's absolute time clock value.</summary>
+    public TAbsolute Clock => _state.Clock;
+
+    /// <summary>Gets a value indicating whether the scheduler is enabled to run work.</summary>
+    public bool IsEnabled => _state.IsEnabled;
+
+    /// <inheritdoc/>
+    public DateTimeOffset Now => _state.Now;
+
+    /// <inheritdoc/>
+    public long Timestamp => _state.Timestamp;
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>Schedules an action to be executed at dueTime.</summary>
+    /// <summary>Advances the scheduler's clock by the specified relative time, running all work scheduled for that timespan.</summary>
+    /// <param name="time">Relative time to advance the scheduler's clock by.</param>
+    public void AdvanceBy(TRelative time) => _state.AdvanceBy(time);
+
+    /// <summary>Advances the scheduler's clock to the specified time, running all work till that point.</summary>
+    /// <param name="time">Absolute time to advance the scheduler's clock to.</param>
+    public void AdvanceTo(TAbsolute time) => _state.AdvanceTo(time);
+
+    /// <summary>Advances the scheduler's clock by the specified relative time without running work.</summary>
+    /// <param name="time">Relative time to advance the scheduler's clock by.</param>
+    public void Sleep(TRelative time) => _state.Sleep(time);
+
+    /// <summary>Starts the virtual time scheduler.</summary>
+    public void Start() => _state.Start();
+
+    /// <summary>Stops the virtual time scheduler.</summary>
+    public void Stop() => _state.Stop();
+
+    /// <inheritdoc/>
+    public void Schedule(IWorkItem item) => _state.Schedule(this, item);
+
+    /// <inheritdoc/>
+    public void Schedule(IWorkItem item, long dueTimestamp) => _state.Schedule(this, item, dueTimestamp);
+
+    /// <summary>Schedules an action to be executed at the current clock.</summary>
+    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
+    /// <param name="state">State passed to the action to be executed.</param>
+    /// <param name="action">Action to be executed.</param>
+    /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
+    public IDisposable Schedule<TState>(TState state, Func<ISequencer, TState, IDisposable> action) => _state.Schedule(this, state, action);
+
+    /// <summary>Schedules an action to be executed after a relative due time.</summary>
+    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
+    /// <param name="state">State passed to the action to be executed.</param>
+    /// <param name="dueTime">Relative time after which to execute the action.</param>
+    /// <param name="action">Action to be executed.</param>
+    /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
+    public IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<ISequencer, TState, IDisposable> action) => _state.Schedule(this, state, dueTime, action);
+
+    /// <summary>Schedules an action to be executed at an absolute date-time.</summary>
+    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
+    /// <param name="state">State passed to the action to be executed.</param>
+    /// <param name="dueTime">Absolute date-time at which to execute the action.</param>
+    /// <param name="action">Action to be executed.</param>
+    /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
+    public IDisposable Schedule<TState>(TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action) => _state.Schedule(this, state, dueTime, action);
+
+    /// <summary>Schedules an action to be executed at an absolute due time.</summary>
     /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
     /// <param name="state">State passed to the action to be executed.</param>
     /// <param name="dueTime">Absolute time at which to execute the action.</param>
     /// <param name="action">Action to be executed.</param>
-    /// <returns>
-    /// The disposable object used to cancel the scheduled action (best effort).
-    /// </returns>
-    /// <exception cref="ArgumentExceptionHelper">action.</exception>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="action" /> is <c>null</c>.</exception>
-    public override IDisposable ScheduleAbsolute<TState>(TState state, TAbsolute dueTime, Func<ISequencer, TState, IDisposable> action)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(action);
+    /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
+    public IDisposable ScheduleAbsolute<TState>(TState state, TAbsolute dueTime, Func<ISequencer, TState, IDisposable> action) => _state.ScheduleAbsolute(this, state, dueTime, action);
 
-        VirtualScheduledItem<TState> si = new(this, state, action, dueTime, Comparer);
+    /// <summary>Schedules an action to be executed after a relative due time.</summary>
+    /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
+    /// <param name="state">State passed to the action to be executed.</param>
+    /// <param name="dueTime">Relative time after which to execute the action.</param>
+    /// <param name="action">Action to be executed.</param>
+    /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
+    public IDisposable ScheduleRelative<TState>(TState state, TRelative dueTime, Func<ISequencer, TState, IDisposable> action) => _state.ScheduleRelative(this, state, dueTime, action);
 
-        lock (_gate)
-        {
-            _queue.Enqueue(si);
-        }
+    /// <summary>Starts a new stopwatch object.</summary>
+    /// <returns>New stopwatch object; started at the time of the request.</returns>
+    public IStopwatch StartStopwatch() => new VirtualTimeStopwatch(() => Now, Now);
 
-        return si;
-    }
-
-    /// <summary>Gets the next scheduled item to be executed.</summary>
-    /// <returns>The next scheduled item.</returns>
-    protected override IScheduledItem<TAbsolute>? GetNext()
-    {
-        lock (_gate)
-        {
-            while (_queue.Count > 0)
-            {
-                var next = _queue.Peek();
-                if (next.IsDisposed)
-                {
-                    _queue.Dequeue();
-                }
-                else
-                {
-                    return next;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>Removes an invoked scheduled item from the queue.</summary>
-    /// <param name="scheduledItem">The item to remove.</param>
-    private void Remove(ScheduledItem<TAbsolute> scheduledItem)
-    {
-        lock (_gate)
-        {
-            _queue.Remove(scheduledItem);
-        }
-    }
-
-    /// <summary>Virtual-time scheduled item that removes itself without a per-schedule wrapper closure.</summary>
-    /// <typeparam name="TState">The scheduled state type.</typeparam>
-    private sealed class VirtualScheduledItem<TState> : ScheduledItem<TAbsolute>
-    {
-        /// <summary>The scheduler that owns the item.</summary>
-        private readonly VirtualTimeSequencer<TAbsolute, TRelative> _owner;
-
-        /// <summary>The scheduled state.</summary>
-        private readonly TState _state;
-
-        /// <summary>The scheduled action.</summary>
-        private readonly Func<ISequencer, TState, IDisposable> _action;
-
-        /// <summary>Initializes a new instance of the <see cref="VirtualScheduledItem{TState}"/> class.</summary>
-        /// <param name="owner">The scheduler that owns the item.</param>
-        /// <param name="state">The scheduled state.</param>
-        /// <param name="action">The scheduled action.</param>
-        /// <param name="dueTime">The absolute due time.</param>
-        /// <param name="comparer">The due-time comparer.</param>
-        internal VirtualScheduledItem(
-            VirtualTimeSequencer<TAbsolute, TRelative> owner,
-            TState state,
-            Func<ISequencer, TState, IDisposable> action,
-            TAbsolute dueTime,
-            IComparer<TAbsolute> comparer)
-            : base(dueTime, comparer)
-        {
-            _owner = owner;
-            _state = state;
-            _action = action;
-        }
-
-        /// <inheritdoc/>
-        protected override IDisposable InvokeCore()
-        {
-            _owner.Remove(this);
-            return _action(_owner, _state);
-        }
-    }
+    /// <inheritdoc/>
+    object? IServiceProvider.GetService(Type serviceType) =>
+        serviceType == typeof(IStopwatchProvider) ? this : null;
 }

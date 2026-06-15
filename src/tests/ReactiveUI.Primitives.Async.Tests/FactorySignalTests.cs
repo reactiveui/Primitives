@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using ReactiveUI.Primitives.Async.Disposables;
-using ReactiveUI.Primitives.Async.Internals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
@@ -153,7 +152,7 @@ public class FactorySignalTests
     public async Task WhenFromAsyncVoid_ThenEmitsUnit()
     {
         var executed = false;
-        var source = SignalAsync.FromAsync(async _ =>
+        var source = SignalAsyncReactiveExtensions.FromAsync(async _ =>
         {
             await Task.Yield();
             executed = true;
@@ -530,6 +529,6 @@ public class FactorySignalTests
     public void WhenFromAsyncWithNullFactory_ThenThrowsArgumentNull()
     {
         const Func<CancellationToken, ValueTask> Factory = null!;
-        Assert.Throws<ArgumentNullException>(() => SignalAsync.FromAsync(Factory));
+        Assert.Throws<ArgumentNullException>(() => SignalAsyncReactiveExtensions.FromAsync(Factory));
     }
 }

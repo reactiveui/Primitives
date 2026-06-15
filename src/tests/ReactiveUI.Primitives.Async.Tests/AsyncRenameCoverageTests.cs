@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using ReactiveUI.Primitives.Async.Internals;
 using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Async.Tests;

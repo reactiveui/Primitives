@@ -1,7 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
@@ -18,41 +19,30 @@
     <PackageReference Include="System.Collections.Immutable" />
   </ItemGroup>
 
-  <!-- Inject nullable-annotation attribute polyfills on frameworks that lack them. -->
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
-    <Compile Include="..\Polyfills\NotNullWhenAttribute.cs" Link="Polyfills\NotNullWhenAttribute.cs" />
-    <Compile Include="..\Polyfills\MemberNotNullWhenAttribute.cs" Link="Polyfills\MemberNotNullWhenAttribute.cs" />
-    <Compile Include="..\Polyfills\NotNullAttribute.cs" Link="Polyfills\NotNullAttribute.cs" />
-    <Compile Include="..\Polyfills\CallerArgumentExpressionAttribute.cs" Link="Polyfills\CallerArgumentExpressionAttribute.cs" />
-    <Compile Include="..\Polyfills\IsExternalInit.cs" Link="Polyfills\IsExternalInit.cs" />
-    <Compile Include="..\Polyfills\RequiredMemberAttribute.cs" Link="Polyfills\RequiredMemberAttribute.cs" />
-    <Compile Include="..\Polyfills\CompilerFeatureRequiredAttribute.cs" Link="Polyfills\CompilerFeatureRequiredAttribute.cs" />
-    <Compile Include="..\Polyfills\TaskCompletionSource.cs" Link="Polyfills\TaskCompletionSource.cs" />
-    <Compile Include="..\Polyfills\SetsRequiredMembersAttribute.cs" Link="Polyfills\SetsRequiredMembersAttribute.cs" />
-    <Compile Include="..\Polyfills\CancellationTokenSourcePolyfillExtensions.cs" Link="Polyfills\CancellationTokenSourcePolyfillExtensions.cs" />
-    <Compile Include="..\Polyfills\CancellationTokenPolyfillExtensions.cs" Link="Polyfills\CancellationTokenPolyfillExtensions.cs" />
-    <Compile Include="..\Polyfills\TaskPolyfillExtensions.cs" Link="Polyfills\TaskPolyfillExtensions.cs" />
-    <Compile Include="..\Polyfills\ArgumentExceptionHelper.cs" Link="Polyfills\ArgumentExceptionHelper.cs" />
+  <ItemGroup>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Tests" />
+    <InternalsVisibleTo Include="$(AssemblyName).Tests" />
   </ItemGroup>
 
-  <!-- ArgumentExceptionHelper is a polyfill for ArgumentNullException.ThrowIfNull: it is compiled only on
-       net462-net481 (above). On net8.0+ the BCL has the method, so alias the identifier straight to it. -->
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
-    <Using Include="ReactiveUI.Primitives.Internal.ArgumentExceptionHelper" Alias="ArgumentExceptionHelper" />
+  <ItemGroup>
+    <Using Include="ReactiveUI.Primitives.Concurrency" />
+    <Using Include="ReactiveUI.Primitives.Async.Advanced" />
+    <Using Include="ReactiveUI.Primitives.Async.Helpers" />
   </ItemGroup>
-  <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
-    <Using Include="System.ArgumentNullException" Alias="ArgumentExceptionHelper" />
+
+  <!-- The RxVoid/ISequencer-aware shared async source, compiled here under the lean namespace (no REACTIVE_SHIM). -->
+  <ItemGroup>
+    <Compile Include="..\Primitives.Async.Shared\**\*.cs" Link="Primitives.Async.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj" />
+    <ProjectReference Include="..\ReactiveUI.Primitives.Async.Core\ReactiveUI.Primitives.Async.Core.csproj" />
     <ProjectReference Include="..\ReactiveUI.Primitives.R3Bridge.Generator\ReactiveUI.Primitives.R3Bridge.Generator.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
-    <ProjectReference Include="..\ReactiveUI.Primitives.SystemReactiveBridge.Generator\ReactiveUI.Primitives.SystemReactiveBridge.Generator.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="..\ReactiveUI.Primitives.R3Bridge.Generator\bin\$(Configuration)\netstandard2.0\ReactiveUI.Primitives.R3Bridge.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-    <None Include="..\ReactiveUI.Primitives.SystemReactiveBridge.Generator\bin\$(Configuration)\netstandard2.0\ReactiveUI.Primitives.SystemReactiveBridge.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
 </Project>

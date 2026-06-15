@@ -1,0 +1,26 @@
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// ReactiveUI Association Incorporated licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
+
+using System.Reactive.Concurrency;
+using RxScheduler = System.Reactive.Concurrency.Scheduler;
+
+namespace ReactiveUI.Primitives.Reactive.Concurrency;
+
+/// <summary>Maps the shared source's built-in sequencers onto the matching System.Reactive schedulers.</summary>
+internal static class Sequencer
+{
+    /// <summary>Gets a scheduler that schedules work as soon as possible on the current thread.</summary>
+    public static IScheduler CurrentThread => CurrentThreadScheduler.Instance;
+
+    /// <summary>Gets a scheduler that schedules work immediately on the current thread.</summary>
+    public static IScheduler Immediate => ImmediateScheduler.Instance;
+
+    /// <summary>Gets the default queueing scheduler for background work.</summary>
+    public static IScheduler Default => TaskPoolScheduler.Default;
+
+    /// <summary>Normalizes the specified <see cref="TimeSpan"/> value to a positive value.</summary>
+    /// <param name="timeSpan">The value to normalize.</param>
+    /// <returns><paramref name="timeSpan"/> when zero or positive; otherwise <see cref="TimeSpan.Zero"/>.</returns>
+    public static TimeSpan Normalize(TimeSpan timeSpan) => RxScheduler.Normalize(timeSpan);
+}

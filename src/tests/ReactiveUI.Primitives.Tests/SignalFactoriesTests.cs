@@ -2,10 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
-using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Signals;
-using ReactiveUI.Primitives.Signals.Core;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -122,7 +121,7 @@ public partial class SignalFactoriesTests
         List<long> everyValues = [];
         List<long> timerDateValues = [];
         List<long> timerPeriodicValues = [];
-        TestClock clock = new(DateTimeOffset.UnixEpoch);
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
         Signal.Sequence(Three, Three, Sequencer.CurrentThread).Subscribe(rangeValues.Add);
         Signal.Loop("r").Take(Three).Subscribe(repeatValues.Add);
         Signal.Loop(Five, Two).Subscribe(repeatCountValues.Add);
@@ -184,7 +183,7 @@ public partial class SignalFactoriesTests
     {
         List<int> emptyScheduled = [];
         var emptyCompleted = 0;
-        TestClock emptyClock = new(DateTimeOffset.UnixEpoch);
+        VirtualClock emptyClock = new(DateTimeOffset.UnixEpoch);
         Signal.None<int>(emptyClock).Subscribe(emptyScheduled.Add, ex => throw ex, () => emptyCompleted++);
         await Assert.That(emptyCompleted).IsEqualTo(0);
         emptyClock.Start();
@@ -211,7 +210,7 @@ public partial class SignalFactoriesTests
         await Assert.That(zippedCompleted).IsEqualTo(1);
         List<string> returned = [];
         var returnCompleted = 0;
-        TestClock returnClock = new(DateTimeOffset.UnixEpoch);
+        VirtualClock returnClock = new(DateTimeOffset.UnixEpoch);
         Signal.Emit("scheduled", returnClock).Subscribe(returned.Add, ex => throw ex, () => returnCompleted++);
         await Assert.That(returnCompleted).IsEqualTo(0);
         returnClock.AdvanceBy(TimeSpan.FromTicks(One));

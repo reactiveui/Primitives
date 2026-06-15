@@ -25,7 +25,7 @@ public sealed class SignalCollectTests
         await Assert.That(immediateBatches.Count).IsEqualTo(ExpectedBatchCount);
         await Assert.That(immediateBatches[0].SequenceEqual([First])).IsTrue();
         await Assert.That(immediateBatches[1].SequenceEqual([Second])).IsTrue();
-        TestClock clock = new();
+        VirtualClock clock = new();
         Signal<int> source = new();
         List<int[]> scheduledBatches = [];
         var completed = 0;
@@ -42,7 +42,7 @@ public sealed class SignalCollectTests
         await Assert.That(scheduledBatches[0].SequenceEqual([First, Second])).IsTrue();
         await Assert.That(scheduledBatches[1].SequenceEqual([Third])).IsTrue();
         await Assert.That(completed).IsEqualTo(1);
-        TestClock errorClock = new();
+        VirtualClock errorClock = new();
         Signal<int> errorSource = new();
         InvalidOperationException expected = new("collect");
         Exception? observed = null;
@@ -58,7 +58,7 @@ public sealed class SignalCollectTests
             {
                 observer.OnCompleted();
                 observer.OnNext(First);
-            }).Collect(TimeSpan.FromTicks(First), new TestClock())
+            }).Collect(TimeSpan.FromTicks(First), new VirtualClock())
             .Subscribe(_ => { }, ex => throw ex, () => stoppedGuardCompleted++);
         await Assert.That(stoppedGuardCompleted).IsEqualTo(1);
     }
