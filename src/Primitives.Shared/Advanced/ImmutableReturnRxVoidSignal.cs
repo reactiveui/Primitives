@@ -8,12 +8,11 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Represents the ImmutableReturnRxVoidSignal class.</summary>
-internal sealed class ImmutableReturnRxVoidSignal : IRequireCurrentThread<RxVoid>, IInlineSignal<RxVoid>
+/// <summary>An allocation-free observable that emits a single value and then completes; the concrete singleton backing for the RxVoid emit path.</summary>
+public sealed class ImmutableReturnRxVoidSignal : IRequireCurrentThread<RxVoid>, IInlineSignal<RxVoid>
 {
-    /// <summary>Executes the new operation.</summary>
-    /// <returns>The result.</returns>
-    internal static readonly ImmutableReturnRxVoidSignal Instance = new();
+    /// <summary>The shared singleton instance.</summary>
+    public static readonly ImmutableReturnRxVoidSignal Instance = new();
 
     /// <summary>Initializes a new instance of the <see cref="ImmutableReturnRxVoidSignal"/> class.</summary>
     private ImmutableReturnRxVoidSignal()

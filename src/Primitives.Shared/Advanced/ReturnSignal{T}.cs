@@ -8,9 +8,9 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Represents the ReturnSignal class.</summary>
-/// <typeparam name="T">The T type.</typeparam>
-internal sealed class ReturnSignal<T> : IRequireCurrentThread<T>
+/// <summary>An observable that emits a single value then completes on the supplied scheduler; the concrete backing for the scheduled emit path.</summary>
+/// <typeparam name="T">The emitted value type.</typeparam>
+public sealed class ReturnSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>Stores state for the signal implementation.</summary>
     private readonly T _value;
