@@ -56,50 +56,106 @@ ReactiveUI.Primitives is designed to:
 
 ## Install
 
-When the package is available on your configured NuGet feed:
+All packages are published on [NuGet.org](https://www.nuget.org/packages?q=ReactiveUI.Primitives). Install the base package:
 
 ```bash
 dotnet add package ReactiveUI.Primitives
 ```
 
-Packages are split so consumers can choose the smallest surface that matches the integration point:
+The library is split into a layered set of packages so consumers can pull only the surface that matches their
+integration point. Every package below ships at the same version and targets the same `net8.0`–`net11.0` plus
+`net462`–`net481` matrix (the platform packages add their OS-specific TFMs).
 
-| Package                                      | Use when                                                                                                 |
-|----------------------------------------------|----------------------------------------------------------------------------------------------------------|
-| `ReactiveUI.Disposables`                     | You only need the disposable primitives such as `Disposable`, `MultipleDisposable`, `Slot`, or `Pocket`. |
-| `ReactiveUI.Primitives.Core`                 | You need the type-agnostic core shared by the lean and System.Reactive-flavoured leaves.                 |
-| `ReactiveUI.Primitives`                      | You want the default lean signal/operator/sequencer package and optional generated R3/R3Async bridges.   |
-| `ReactiveUI.Primitives.Reactive`             | You need the Primitives API compiled against System.Reactive `Unit` and `IScheduler`.                    |
-| `ReactiveUI.Primitives.Async.Core`           | You need the type-agnostic async core shared by async leaf packages.                                     |
-| `ReactiveUI.Primitives.Async`                | You need native `IObservableAsync<T>` / `IObserverAsync<T>` signals and generated R3/R3Async bridges.    |
-| `ReactiveUI.Primitives.Async.Reactive`       | You need async Primitives compiled against System.Reactive `Unit` and `IScheduler`.                      |
-| `ReactiveUI.Primitives.Extensions.Core`      | You need the type-agnostic core for migrated `ReactiveUI.Extensions` helpers.                            |
-| `ReactiveUI.Primitives.Extensions`           | You need the migrated non-async `ReactiveUI.Extensions` helper operators on lean Primitives.             |
-| `ReactiveUI.Primitives.Extensions.Reactive`  | You need migrated extension helpers compiled against System.Reactive `Unit` and `IScheduler`.            |
-| `ReactiveUI.Primitives.Wpf`                  | You need WPF dispatcher sequencer integration.                                                           |
-| `ReactiveUI.Primitives.WinForms`             | You need Windows Forms control sequencer integration.                                                    |
-| `ReactiveUI.Primitives.WinUI`                | You need WinUI dispatcher queue sequencer integration.                                                   |
-| `ReactiveUI.Primitives.Blazor`               | You need Blazor renderer sequencer integration.                                                          |
-| `ReactiveUI.Primitives.Maui`                 | You need MAUI dispatcher sequencer integration.                                                          |
+| Package | NuGet | Use when |
+|---------|-------|----------|
+| [ReactiveUI.Disposables][Disp] | [![DispB]][Disp] | You only need the disposable primitives such as `Disposable`, `MultipleDisposable`, `Slot`, or `Pocket`. |
+| [ReactiveUI.Primitives.Core][Core] | [![CoreB]][Core] | The type-agnostic core shared by the lean and System.Reactive-flavoured leaves (usually a transitive dependency). |
+| [ReactiveUI.Primitives][Prim] | [![PrimB]][Prim] | The default lean signal/operator/sequencer package, with optional generated R3/R3Async bridges. |
+| [ReactiveUI.Primitives.Reactive][Rx] | [![RxB]][Rx] | The Primitives API compiled against System.Reactive `Unit` and `IScheduler`. |
+| [ReactiveUI.Primitives.Async.Core][AsyncCore] | [![AsyncCoreB]][AsyncCore] | The type-agnostic async core shared by the async leaves. |
+| [ReactiveUI.Primitives.Async][Async] | [![AsyncB]][Async] | Native `IObservableAsync<T>` / `IObserverAsync<T>` signals and generated R3/R3Async bridges. |
+| [ReactiveUI.Primitives.Async.Reactive][AsyncRx] | [![AsyncRxB]][AsyncRx] | Async Primitives compiled against System.Reactive `Unit` and `IScheduler`. |
+| [ReactiveUI.Primitives.Extensions.Core][ExtCore] | [![ExtCoreB]][ExtCore] | The type-agnostic core for the migrated `ReactiveUI.Extensions` helpers. |
+| [ReactiveUI.Primitives.Extensions][Ext] | [![ExtB]][Ext] | The migrated non-async `ReactiveUI.Extensions` helper operators on lean Primitives. |
+| [ReactiveUI.Primitives.Extensions.Reactive][ExtRx] | [![ExtRxB]][ExtRx] | Migrated extension helpers compiled against System.Reactive `Unit` and `IScheduler`. |
+| [ReactiveUI.Primitives.Wpf][Wpf] | [![WpfB]][Wpf] | WPF dispatcher sequencer integration. |
+| [ReactiveUI.Primitives.WinForms][WinForms] | [![WinFormsB]][WinForms] | Windows Forms control sequencer integration. |
+| [ReactiveUI.Primitives.WinUI][WinUI] | [![WinUIB]][WinUI] | WinUI dispatcher-queue sequencer integration. |
+| [ReactiveUI.Primitives.Blazor][Blazor] | [![BlazorB]][Blazor] | Blazor renderer sequencer integration. |
+| [ReactiveUI.Primitives.Maui][Maui] | [![MauiB]][Maui] | MAUI dispatcher sequencer integration. |
 
-Add only the packages you use:
+[Disp]: https://www.nuget.org/packages/ReactiveUI.Disposables/
+[DispB]: https://img.shields.io/nuget/v/ReactiveUI.Disposables.svg
+[Core]: https://www.nuget.org/packages/ReactiveUI.Primitives.Core/
+[CoreB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Core.svg
+[Prim]: https://www.nuget.org/packages/ReactiveUI.Primitives/
+[PrimB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.svg
+[Rx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Reactive/
+[RxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Reactive.svg
+[AsyncCore]: https://www.nuget.org/packages/ReactiveUI.Primitives.Async.Core/
+[AsyncCoreB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Async.Core.svg
+[Async]: https://www.nuget.org/packages/ReactiveUI.Primitives.Async/
+[AsyncB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Async.svg
+[AsyncRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Async.Reactive/
+[AsyncRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Async.Reactive.svg
+[ExtCore]: https://www.nuget.org/packages/ReactiveUI.Primitives.Extensions.Core/
+[ExtCoreB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Extensions.Core.svg
+[Ext]: https://www.nuget.org/packages/ReactiveUI.Primitives.Extensions/
+[ExtB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Extensions.svg
+[ExtRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Extensions.Reactive/
+[ExtRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Extensions.Reactive.svg
+[Wpf]: https://www.nuget.org/packages/ReactiveUI.Primitives.Wpf/
+[WpfB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Wpf.svg
+[WinForms]: https://www.nuget.org/packages/ReactiveUI.Primitives.WinForms/
+[WinFormsB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.WinForms.svg
+[WinUI]: https://www.nuget.org/packages/ReactiveUI.Primitives.WinUI/
+[WinUIB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.WinUI.svg
+[Blazor]: https://www.nuget.org/packages/ReactiveUI.Primitives.Blazor/
+[BlazorB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Blazor.svg
+[Maui]: https://www.nuget.org/packages/ReactiveUI.Primitives.Maui/
+[MauiB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Maui.svg
 
-```bash
-dotnet add package ReactiveUI.Disposables
-dotnet add package ReactiveUI.Primitives.Core
-dotnet add package ReactiveUI.Primitives.Reactive
-dotnet add package ReactiveUI.Primitives.Async.Core
-dotnet add package ReactiveUI.Primitives.Async
-dotnet add package ReactiveUI.Primitives.Async.Reactive
-dotnet add package ReactiveUI.Primitives.Extensions.Core
-dotnet add package ReactiveUI.Primitives.Extensions
-dotnet add package ReactiveUI.Primitives.Extensions.Reactive
-dotnet add package ReactiveUI.Primitives.Wpf
-dotnet add package ReactiveUI.Primitives.WinForms
-dotnet add package ReactiveUI.Primitives.WinUI
-dotnet add package ReactiveUI.Primitives.Blazor
-dotnet add package ReactiveUI.Primitives.Maui
+### How the packages layer
+
+Each family (base, async, extensions) follows the same shape: a type-agnostic `.Core` is compiled once, then a
+**lean** leaf binds the abstract `RxVoid`/`ISequencer` types to its own lightweight implementations, while the
+`.Reactive` leaf recompiles the same source against System.Reactive's `Unit`/`IScheduler`. Pick the lean leaf for a
+dependency-free build, or the `.Reactive` leaf to interoperate with an existing System.Reactive codebase. The platform
+packages build on the lean base. (Arrows point from a package to what it depends on.)
+
+```mermaid
+graph TD
+    SR["System.Reactive"]
+    Disp["ReactiveUI.Disposables"]
+    Core["ReactiveUI.Primitives.Core"]
+    Prim["ReactiveUI.Primitives<br/>(lean)"]
+    Rx["ReactiveUI.Primitives.Reactive"]
+    AsyncCore["...Async.Core"]
+    Async["...Async (lean)"]
+    AsyncRx["...Async.Reactive"]
+    ExtCore["...Extensions.Core"]
+    Ext["...Extensions (lean)"]
+    ExtRx["...Extensions.Reactive"]
+    Plat["Wpf / WinForms / WinUI<br/>Blazor / Maui"]
+
+    Core --> Disp
+    Prim --> Core
+    Prim --> Disp
+    Rx --> Core
+    Rx --> SR
+    AsyncCore --> Core
+    Async --> Prim
+    Async --> AsyncCore
+    AsyncRx --> Rx
+    AsyncRx --> AsyncCore
+    ExtCore --> Core
+    Ext --> Prim
+    Ext --> ExtCore
+    ExtRx --> Rx
+    ExtRx --> ExtCore
+    Plat --> Prim
 ```
+
 
 Then import the namespaces you need:
 
