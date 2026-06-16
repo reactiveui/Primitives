@@ -573,6 +573,7 @@ public class SignalTests
     /// <typeparam name="T">The type of the signal sequence elements.</typeparam>
     private sealed class SignalsBaseProbe<T> : IRequireCurrentThread<T>
     {
+        /// <summary>Whether subscription must occur on the current thread.</summary>
         private readonly bool _currentThreadRequired;
 
         /// <summary>Initializes a new instance of the <see cref="SignalsBaseProbe{T}"/> class.</summary>

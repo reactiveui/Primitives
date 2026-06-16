@@ -171,6 +171,7 @@ public class SynchronizeTests
     /// <summary>A downstream observer that flags any re-entrant (overlapping) notification and counts deliveries.</summary>
     private sealed class ConcurrencyProbe : IObserver<int>
     {
+        /// <summary>Non-zero while a notification is in flight, used to detect re-entrancy.</summary>
         private int _inside;
 
         /// <summary>Gets the number of values delivered.</summary>

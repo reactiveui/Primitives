@@ -12,6 +12,7 @@ namespace System.Threading.Tasks;
 [SuppressMessage("Performance", "CA1812", Justification = "Broadcast polyfill; not instantiated in every consuming leaf.")]
 internal sealed class TaskCompletionSource
 {
+    /// <summary>The underlying generic completion source that backs this non-generic facade.</summary>
     private readonly TaskCompletionSource<bool> _inner;
 
     /// <summary>Initializes a new instance of the <see cref="TaskCompletionSource"/> class.</summary>

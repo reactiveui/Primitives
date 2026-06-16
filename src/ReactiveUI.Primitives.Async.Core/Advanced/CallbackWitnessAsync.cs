@@ -14,9 +14,11 @@ public sealed class CallbackWitnessAsync<T>(
     Func<Exception, CancellationToken, ValueTask>? onErrorResumeAsync = null,
     Func<Result, ValueTask>? onCompletedAsync = null) : WitnessAsync<T>
 {
+    /// <summary>The asynchronous function invoked when a resumable error occurs.</summary>
     private readonly Func<Exception, CancellationToken, ValueTask> _onErrorResumeAsync =
         onErrorResumeAsync ?? ReportUnhandledError;
 
+    /// <summary>The asynchronous function invoked when the sequence completes.</summary>
     private readonly Func<Result, ValueTask> _onCompletedAsync =
         onCompletedAsync ?? ReportUnhandledCompletion;
 

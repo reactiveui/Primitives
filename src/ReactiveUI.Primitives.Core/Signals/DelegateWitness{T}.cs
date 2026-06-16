@@ -20,6 +20,7 @@ public sealed class DelegateWitness<T>(
     Action<Exception>? onError = null,
     Action? onCompleted = null) : IObserver<T>
 {
+    /// <summary>The delegate invoked for each observed value.</summary>
     private readonly Action<T> _onNext = onNext ?? throw new ArgumentNullException(nameof(onNext));
 
     /// <inheritdoc/>

@@ -8,6 +8,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The observed value type.</typeparam>
 public readonly record struct CountPredicateAggregator<T> : IAggregator<T, int, CountPredicateAggregator<T>>
 {
+    /// <summary>The predicate selecting which values to count.</summary>
     private readonly Func<T, bool> _predicate;
 
     /// <summary>Initializes a new instance of the <see cref="CountPredicateAggregator{T}"/> struct.</summary>

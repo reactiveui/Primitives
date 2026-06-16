@@ -9,6 +9,7 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Direct tests for the <see cref = "SinkTerminal"/> terminal-forwarding helper.</summary>
 public class SinkTerminalTests
 {
+    /// <summary>The value pushed through the sink under test.</summary>
     private const int Value = 7;
 
     /// <summary>Verifies <see cref = "SinkTerminal.Fault{TResult}(IObserver{TResult}, Exception, IDisposable)"/> forwards the error downstream and disposes the sink.</summary>
