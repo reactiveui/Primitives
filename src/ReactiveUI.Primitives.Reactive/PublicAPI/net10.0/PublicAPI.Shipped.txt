@@ -1,4 +1,12 @@
 #nullable enable
+ReactiveUI.Primitives.Reactive.Advanced.ImmutableReturnRxVoidSignal
+ReactiveUI.Primitives.Reactive.Advanced.ImmutableReturnRxVoidSignal.IsRequiredSubscribeOnCurrentThread() -> bool
+ReactiveUI.Primitives.Reactive.Advanced.ImmutableReturnRxVoidSignal.Subscribe(System.Action<System.Reactive.Unit>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.ImmutableReturnRxVoidSignal.Subscribe(System.IObserver<System.Reactive.Unit>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.ReturnSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.ReturnSignal<T>.IsRequiredSubscribeOnCurrentThread() -> bool
+ReactiveUI.Primitives.Reactive.Advanced.ReturnSignal<T>.ReturnSignal(T value, System.Reactive.Concurrency.IScheduler! scheduler) -> void
+ReactiveUI.Primitives.Reactive.Advanced.ReturnSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Reactive.Advanced.SignalSubscription
 ReactiveUI.Primitives.Reactive.Advanced.SparkWitness<T>
 ReactiveUI.Primitives.Reactive.Advanced.SparkWitness<T>.Dispose() -> void
@@ -562,5 +570,6 @@ static ReactiveUI.Primitives.Reactive.Signals.StateSignalExtensions.ToReadOnlySt
 static ReactiveUI.Primitives.Reactive.Signals.TaskSignal.Create<TResult>(System.Func<ReactiveUI.Primitives.Signals.ITaskSignal<TResult>!, System.IObservable<TResult>!>! observableFactory) -> ReactiveUI.Primitives.Signals.ITaskSignal<TResult>!
 static ReactiveUI.Primitives.Reactive.Signals.TaskSignal.Create<TResult>(System.Func<ReactiveUI.Primitives.Signals.ITaskSignal<TResult>!, System.IObservable<TResult>!>! observableFactory, System.Reactive.Concurrency.IScheduler? scheduler) -> ReactiveUI.Primitives.Signals.ITaskSignal<TResult>!
 static ReactiveUI.Primitives.Reactive.Signals.TaskSignal.Create<TResult>(System.Func<ReactiveUI.Primitives.Signals.ITaskSignal<TResult>!, System.IObservable<TResult>!>! observableFactory, System.Reactive.Concurrency.IScheduler? scheduler, System.Threading.CancellationTokenSource? cancellationTokenSource) -> ReactiveUI.Primitives.Signals.ITaskSignal<TResult>!
+static readonly ReactiveUI.Primitives.Reactive.Advanced.ImmutableReturnRxVoidSignal.Instance -> ReactiveUI.Primitives.Reactive.Advanced.ImmutableReturnRxVoidSignal!
 virtual ReactiveUI.Primitives.Reactive.Signals.ScheduledSignal<T>.Dispose(bool disposing) -> void
 ~override ReactiveUI.Primitives.Reactive.Core.Spark<T>.Equals(object obj) -> bool

@@ -1,10 +1,1 @@
 #nullable enable
-ReactiveUI.Primitives.Advanced.ImmutableReturnRxVoidSignal
-ReactiveUI.Primitives.Advanced.ImmutableReturnRxVoidSignal.IsRequiredSubscribeOnCurrentThread() -> bool
-ReactiveUI.Primitives.Advanced.ImmutableReturnRxVoidSignal.Subscribe(System.Action<ReactiveUI.Primitives.RxVoid>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted) -> System.IDisposable!
-ReactiveUI.Primitives.Advanced.ImmutableReturnRxVoidSignal.Subscribe(System.IObserver<ReactiveUI.Primitives.RxVoid>! observer) -> System.IDisposable!
-ReactiveUI.Primitives.Advanced.ReturnSignal<T>
-ReactiveUI.Primitives.Advanced.ReturnSignal<T>.IsRequiredSubscribeOnCurrentThread() -> bool
-ReactiveUI.Primitives.Advanced.ReturnSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
-static readonly ReactiveUI.Primitives.Advanced.ImmutableReturnRxVoidSignal.Instance -> ReactiveUI.Primitives.Advanced.ImmutableReturnRxVoidSignal!
-ReactiveUI.Primitives.Advanced.ReturnSignal<T>.ReturnSignal(T value, ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> void

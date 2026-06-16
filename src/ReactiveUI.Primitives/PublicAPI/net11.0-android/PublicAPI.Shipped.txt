@@ -8,6 +8,14 @@ ReactiveUI.Primitives.Advanced.DispatchSequencerState.PostDrain() -> void
 ReactiveUI.Primitives.Advanced.DispatchSequencerState.RunDrain() -> void
 ReactiveUI.Primitives.Advanced.DispatchSequencerState.Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem! item) -> void
 ReactiveUI.Primitives.Advanced.DispatchSequencerState.Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem! item, long dueTimestamp) -> void
+ReactiveUI.Primitives.Advanced.ImmutableReturnRxVoidSignal
+ReactiveUI.Primitives.Advanced.ImmutableReturnRxVoidSignal.IsRequiredSubscribeOnCurrentThread() -> bool
+ReactiveUI.Primitives.Advanced.ImmutableReturnRxVoidSignal.Subscribe(System.Action<ReactiveUI.Primitives.RxVoid>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted) -> System.IDisposable!
+ReactiveUI.Primitives.Advanced.ImmutableReturnRxVoidSignal.Subscribe(System.IObserver<ReactiveUI.Primitives.RxVoid>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Advanced.ReturnSignal<T>
+ReactiveUI.Primitives.Advanced.ReturnSignal<T>.IsRequiredSubscribeOnCurrentThread() -> bool
+ReactiveUI.Primitives.Advanced.ReturnSignal<T>.ReturnSignal(T value, ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> void
+ReactiveUI.Primitives.Advanced.ReturnSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Advanced.SignalSubscription
 ReactiveUI.Primitives.Advanced.SparkWitness<T>
 ReactiveUI.Primitives.Advanced.SparkWitness<T>.Dispose() -> void
@@ -336,8 +344,6 @@ ReactiveUI.Primitives.LinqExtensions.extension<TSource>(System.IObservable<TSour
 ReactiveUI.Primitives.LinqExtensions.extension<TSource>(System.IObservable<TSource>!).WhereWith<TState>(TState state, System.Func<TState, TSource, bool>! predicate) -> System.IObservable<TSource>!
 ReactiveUI.Primitives.LinqExtensions.extension<TSource>(System.IObservable<TSource?>!)
 ReactiveUI.Primitives.LinqExtensions.extension<TSource>(System.IObservable<TSource?>!).SwitchSelect<TResult>(System.Func<TSource, System.IObservable<TResult>!>! selector) -> System.IObservable<TResult>!
-ReactiveUI.Primitives.Resource
-ReactiveUI.Primitives.Resource.Resource() -> void
 ReactiveUI.Primitives.RxVoid
 ReactiveUI.Primitives.RxVoid.Equals(ReactiveUI.Primitives.RxVoid other) -> bool
 ReactiveUI.Primitives.RxVoid.RxVoid() -> void
@@ -721,6 +727,7 @@ static ReactiveUI.Primitives.Signals.StateSignalExtensions.ToReadOnlyState<TSour
 static ReactiveUI.Primitives.Signals.TaskSignal.Create<TResult>(System.Func<ReactiveUI.Primitives.Signals.ITaskSignal<TResult>!, System.IObservable<TResult>!>! observableFactory) -> ReactiveUI.Primitives.Signals.ITaskSignal<TResult>!
 static ReactiveUI.Primitives.Signals.TaskSignal.Create<TResult>(System.Func<ReactiveUI.Primitives.Signals.ITaskSignal<TResult>!, System.IObservable<TResult>!>! observableFactory, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) -> ReactiveUI.Primitives.Signals.ITaskSignal<TResult>!
 static ReactiveUI.Primitives.Signals.TaskSignal.Create<TResult>(System.Func<ReactiveUI.Primitives.Signals.ITaskSignal<TResult>!, System.IObservable<TResult>!>! observableFactory, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler, System.Threading.CancellationTokenSource? cancellationTokenSource) -> ReactiveUI.Primitives.Signals.ITaskSignal<TResult>!
+static readonly ReactiveUI.Primitives.Advanced.ImmutableReturnRxVoidSignal.Instance -> ReactiveUI.Primitives.Advanced.ImmutableReturnRxVoidSignal!
 static readonly ReactiveUI.Primitives.Concurrency.ThreadPoolSequencer.Instance -> ReactiveUI.Primitives.Concurrency.ThreadPoolSequencer!
 virtual ReactiveUI.Primitives.Signals.ScheduledSignal<T>.Dispose(bool disposing) -> void
 ~override ReactiveUI.Primitives.Advanced.DispatchSequencerState.Equals(object obj) -> bool
