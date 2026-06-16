@@ -56,7 +56,7 @@ ReactiveUI.Primitives is designed to:
 
 ## Install
 
-ReactiveUI.Primitives `5.0.0` is published on [NuGet.org](https://www.nuget.org/packages?q=ReactiveUI.Primitives). Install the base package:
+All packages are published on [NuGet.org](https://www.nuget.org/packages?q=ReactiveUI.Primitives). Install the base package:
 
 ```bash
 dotnet add package ReactiveUI.Primitives
