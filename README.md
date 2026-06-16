@@ -46,6 +46,25 @@ ReactiveUI.Primitives aims to:
 - Support migration. The `.Reactive` package variants match System.Reactive's public surface, and source-generator
   bridges connect to R3 or R3Async when your project already uses them.
 
+## Why not System.Reactive or R3?
+
+System.Reactive is the original Rx library for .NET, and the reason `IObservable<T>` exists. It is mature and widely
+used. Its weak point is performance: a typical operator chain allocates several objects per operator and per value, and
+that grows under heavy load.
+
+R3 is a newer library aimed at that weak point. It is fast. It reaches that speed partly by replacing `IObservable<T>`
+with its own `Observable<T>` type. That swap means existing code, and the wider ecosystem built on `IObservable<T>`,
+does not carry over without adaptation.
+
+We wanted the speed without the break, so we kept `IObservable<T>`, the interface .NET already ships and most C# code
+already knows. Our benchmarks pointed at the cause: the interface was not the bottleneck. The cost lived in how the
+operators were implemented, not in the abstraction. So we kept the familiar contract and rebuilt the operators as
+low-allocation sinks (see [Why the operators are built this way](#why-the-operators-are-built-this-way)).
+
+This keeps the change small for anyone already on `IObservable<T>`. You keep the contract and the mental model, and you
+gain the lower allocation profile. When you do need full System.Reactive or R3 behaviour, the `.Reactive` package
+variants and the R3/R3Async source-generator bridges cover those boundaries.
+
 ## Table of contents
 
 1. [Install](#install)
