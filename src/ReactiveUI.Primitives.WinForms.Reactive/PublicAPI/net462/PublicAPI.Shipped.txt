@@ -1,0 +1,11 @@
+#nullable enable
+ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler
+ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.CoalescingDispatchScheduler() -> void
+ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.RequestDrain() -> void
+ReactiveUI.Primitives.Reactive.Concurrency.ControlSequencer
+ReactiveUI.Primitives.Reactive.Concurrency.ControlSequencer.Control.get -> System.Windows.Forms.Control!
+ReactiveUI.Primitives.Reactive.Concurrency.ControlSequencer.ControlSequencer(System.Windows.Forms.Control! control) -> void
+abstract ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.Post(System.Action! drain) -> bool
+override ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler!, TState, System.IDisposable!>! action) -> System.IDisposable!
+override ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler!, TState, System.IDisposable!>! action) -> System.IDisposable!
+virtual ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.ScheduleOnDispatcher(System.Action! work, System.TimeSpan dueTime) -> System.IDisposable!

@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- DispatcherQueueSequencer wraps the concrete WinUI Microsoft.UI.Dispatching.DispatcherQueue as an
+       IScheduler. The project targets plain .NET everywhere and adds the WinUI TFMs only on Windows. The WinUI
+       TFM (via the Choose below) turns on UseWinUI, references the WinUI .Reactive library, and compiles the
+       real dispatcher tests (self-contained so DispatcherQueueController activation works without a machine-wide
+       runtime); the cross-platform build compiles only the placeholder so the host reports a discovered test. -->
+  <PropertyGroup>
+    <TargetFrameworks>$(NetTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(WinUITargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Reactive"/>
+  </ItemGroup>
+
+  <!-- The dispatcher tests need WinUI types; include them only on the WinUI TFM (see the Choose). -->
+  <ItemGroup>
+    <Compile Remove="DispatcherQueueSequencerTests.cs"/>
+  </ItemGroup>
+
+  <Choose>
+    <When Condition="$(TargetFramework.EndsWith('-windows10.0.19041.0'))">
+      <PropertyGroup>
+        <UseWinUI>true</UseWinUI>
+        <WindowsPackageType>None</WindowsPackageType>
+        <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+      </PropertyGroup>
+      <ItemGroup>
+        <ProjectReference Include="..\..\ReactiveUI.Primitives.WinUI.Reactive\ReactiveUI.Primitives.WinUI.Reactive.csproj"/>
+        <Compile Include="DispatcherQueueSequencerTests.cs"/>
+        <Compile Remove="CrossPlatformPlaceholderTests.cs"/>
+      </ItemGroup>
+    </When>
+  </Choose>
+
+</Project>

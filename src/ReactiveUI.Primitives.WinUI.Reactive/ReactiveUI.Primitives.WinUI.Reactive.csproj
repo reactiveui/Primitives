@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- System.Reactive-flavoured WinUI leaf: a coalescing IScheduler over a DispatcherQueue.
+         REACTIVE_SHIM + the System.Reactive dependency come from Directory.Build.props via the name suffix. -->
+    <TargetFrameworks>$(WinUITargetFrameworks)</TargetFrameworks>
+    <UseWinUI>true</UseWinUI>
+    <AppxGeneratePriEnabled Condition="'$(OS)' != 'Windows_NT'">false</AppxGeneratePriEnabled>
+    <IncludePriFilesOutputGroup Condition="'$(OS)' != 'Windows_NT'">false</IncludePriFilesOutputGroup>
+    <IncludeProjectPriFile Condition="'$(OS)' != 'Windows_NT'">false</IncludeProjectPriFile>
+    <PackageDescription>WinUI dispatcher queue scheduler for ReactiveUI.Primitives, recompiled against System.Reactive's IScheduler.</PackageDescription>
+    <PackageTags>system.reactive;rx;reactive;primitives;winui;dispatcher-queue;scheduler</PackageTags>
+  </PropertyGroup>
+
+  <!-- The coalescing IScheduler base shared by every platform .Reactive package. -->
+  <ItemGroup>
+    <Compile Include="..\Primitives.Platform.Reactive.Shared\**\*.cs" Link="Primitives.Platform.Reactive.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <ProjectReference Include="..\ReactiveUI.Primitives.Reactive\ReactiveUI.Primitives.Reactive.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.WinUI.Reactive.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -3,11 +3,12 @@
 // See the LICENSE file in the project root for full license information.
 
 using Microsoft.AspNetCore.Components;
-using ReactiveUI.Primitives.Blazor.Concurrency;
-using ReactiveUI.Primitives.Concurrency;
-using ReactiveUI.Primitives.Disposables;
 
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.Blazor.Reactive.Components;
+#else
 namespace ReactiveUI.Primitives.Blazor.Components;
+#endif
 
 /// <summary>Base component that tracks reactive subscriptions and refreshes through Blazor's renderer dispatcher.</summary>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
