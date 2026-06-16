@@ -378,6 +378,7 @@ ReactiveUI.Primitives.Signals.ScheduledSignal<T>.OnError(System.Exception! error
 ReactiveUI.Primitives.Signals.ScheduledSignal<T>.OnNext(T value) -> void
 ReactiveUI.Primitives.Signals.ScheduledSignal<T>.ScheduledSignal(ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> void
 ReactiveUI.Primitives.Signals.ScheduledSignal<T>.ScheduledSignal(ReactiveUI.Primitives.Concurrency.ISequencer! scheduler, System.IObserver<T>? defaultObserver) -> void
+ReactiveUI.Primitives.Signals.ScheduledSignal<T>.ScheduledSignal(ReactiveUI.Primitives.Concurrency.ISequencer! scheduler, System.IObserver<T>? defaultObserver, ReactiveUI.Primitives.Signals.ISignal<T>? defaultSubject) -> void
 ReactiveUI.Primitives.Signals.ScheduledSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Signals.Signal
 ReactiveUI.Primitives.Signals.SignalExtensions
@@ -642,6 +643,7 @@ static ReactiveUI.Primitives.Signals.Signal.CreateSafe<T>(System.Func<System.IOb
 static ReactiveUI.Primitives.Signals.Signal.CreateWithState<T, TState>(TState state, System.Func<TState, System.IObserver<T>!, System.IDisposable!>! subscribe) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Signals.Signal.CreateWithState<T, TState>(TState state, System.Func<TState, System.IObserver<T>!, System.IDisposable!>! subscribe, bool isRequiredSubscribeOnCurrentThread) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Signals.Signal.Defer<T>(System.Func<System.IObservable<T>!>! observableFactory) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Signals.Signal.Delayable<T>(System.Func<bool>! isDelayed, System.Func<System.Collections.Generic.IList<T>!, System.Collections.Generic.IEnumerable<T>!>! flushDistinct) -> ReactiveUI.Primitives.Signals.DelayableNotificationSignal<T>!
 static ReactiveUI.Primitives.Signals.Signal.Emit(ReactiveUI.Primitives.RxVoid value) -> System.IObservable<ReactiveUI.Primitives.RxVoid>!
 static ReactiveUI.Primitives.Signals.Signal.Emit(bool value) -> System.IObservable<bool>!
 static ReactiveUI.Primitives.Signals.Signal.Emit(int value) -> System.IObservable<int>!
@@ -684,6 +686,8 @@ static ReactiveUI.Primitives.Signals.Signal.Pulse(System.TimeSpan period) -> Sys
 static ReactiveUI.Primitives.Signals.Signal.Pulse(System.TimeSpan period, ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> System.IObservable<long>!
 static ReactiveUI.Primitives.Signals.Signal.Race<T>(params System.IObservable<T>![]! sources) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Signals.Signal.Recover<TSource>(params System.IObservable<TSource>![]! sources) -> System.IObservable<TSource>!
+static ReactiveUI.Primitives.Signals.Signal.Scheduled<T>(ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> ReactiveUI.Primitives.Signals.ScheduledSignal<T>!
+static ReactiveUI.Primitives.Signals.Signal.Scheduled<T>(ReactiveUI.Primitives.Concurrency.ISequencer! scheduler, System.IObserver<T>? defaultObserver) -> ReactiveUI.Primitives.Signals.ScheduledSignal<T>!
 static ReactiveUI.Primitives.Signals.Signal.Sequence(int start, int count) -> System.IObservable<int>!
 static ReactiveUI.Primitives.Signals.Signal.Sequence(int start, int count, ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> System.IObservable<int>!
 static ReactiveUI.Primitives.Signals.Signal.Silent<T>() -> System.IObservable<T>!

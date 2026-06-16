@@ -514,6 +514,16 @@ ReactiveUI.Primitives.Signals.CommandSignal<TResult>.Faults.get -> System.IObser
 ReactiveUI.Primitives.Signals.CommandSignal<TResult>.IsRunning.get -> ReactiveUI.Primitives.Signals.StateSignal<bool>!
 ReactiveUI.Primitives.Signals.CommandSignal<TResult>.Results.get -> System.IObservable<TResult>!
 ReactiveUI.Primitives.Signals.CommandSignal<TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Signals.DelayableNotificationSignal<T>
+ReactiveUI.Primitives.Signals.DelayableNotificationSignal<T>.DelayableNotificationSignal(System.Func<bool>! isDelayed, System.Func<System.Collections.Generic.IList<T>!, System.Collections.Generic.IEnumerable<T>!>! flushDistinct) -> void
+ReactiveUI.Primitives.Signals.DelayableNotificationSignal<T>.Dispose() -> void
+ReactiveUI.Primitives.Signals.DelayableNotificationSignal<T>.Flush() -> void
+ReactiveUI.Primitives.Signals.DelayableNotificationSignal<T>.HasObservers.get -> bool
+ReactiveUI.Primitives.Signals.DelayableNotificationSignal<T>.IsDisposed.get -> bool
+ReactiveUI.Primitives.Signals.DelayableNotificationSignal<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Signals.DelayableNotificationSignal<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Signals.DelayableNotificationSignal<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Signals.DelayableNotificationSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Signals.DelegateWitness<T>
 ReactiveUI.Primitives.Signals.DelegateWitness<T>.DelegateWitness(System.Action<T>! onNext, System.Action<System.Exception!>? onError = null, System.Action? onCompleted = null) -> void
 ReactiveUI.Primitives.Signals.DelegateWitness<T>.OnCompleted() -> void

@@ -9,8 +9,10 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TKey">The key type.</typeparam>
 public readonly record struct DistinctByCountAggregator<T, TKey> : IAggregator<T, int, DistinctByCountAggregator<T, TKey>>
 {
+    /// <summary>The selector that projects each value to its distinctness key.</summary>
     private readonly Func<T, TKey> _keySelector;
 
+    /// <summary>The set of keys that have already been observed.</summary>
     private readonly HashSet<TKey> _seen;
 
     /// <summary>Initializes a new instance of the <see cref="DistinctByCountAggregator{T,TKey}"/> struct.</summary>

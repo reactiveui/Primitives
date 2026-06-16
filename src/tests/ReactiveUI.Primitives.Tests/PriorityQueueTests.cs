@@ -9,22 +9,31 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Verifies <see cref="PriorityQueue{T}"/> indexed-item equality contracts.</summary>
 public class PriorityQueueTests
 {
+    /// <summary>The second test value enqueued.</summary>
     private const int SecondValue = 2;
 
+    /// <summary>The third test value enqueued.</summary>
     private const int ThirdValue = 3;
 
+    /// <summary>The fourth test value enqueued.</summary>
     private const int FourthValue = 4;
 
+    /// <summary>The fifth test value enqueued.</summary>
     private const int FifthValue = 5;
 
+    /// <summary>The sixth test value enqueued.</summary>
     private const int SixthValue = 6;
 
+    /// <summary>The seventh test value enqueued.</summary>
     private const int SeventhValue = 7;
 
+    /// <summary>The eighth test value enqueued.</summary>
     private const int EighthValue = 8;
 
+    /// <summary>The length of the destination buffer used when copying.</summary>
     private const int DestinationLength = 2;
 
+    /// <summary>The number of items to dequeue in the test.</summary>
     private const int DequeueLimit = 2;
 
     /// <summary>Verifies public helper methods preserve priority order.</summary>

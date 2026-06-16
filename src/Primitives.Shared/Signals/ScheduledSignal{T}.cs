@@ -22,7 +22,7 @@ public class ScheduledSignal<T> : ISignal<T>
     private readonly ISequencer _scheduler;
 
     /// <summary>Stores the underlying signal implementation.</summary>
-    private readonly Signal<T> _subject = new();
+    private readonly ISignal<T> _subject;
 
     /// <summary>Stores the active non-default observer count.</summary>
     private int _observerRefCount;
@@ -44,11 +44,21 @@ public class ScheduledSignal<T> : ISignal<T>
     /// <param name="scheduler">The sequencer to emit items on.</param>
     /// <param name="defaultObserver">A default observer which will receive values when no other subscribers are active.</param>
     public ScheduledSignal(ISequencer scheduler, IObserver<T>? defaultObserver)
+        : this(scheduler, defaultObserver, null)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="ScheduledSignal{T}"/> class.</summary>
+    /// <param name="scheduler">The sequencer to emit items on.</param>
+    /// <param name="defaultObserver">A default observer which will receive values when no other subscribers are active.</param>
+    /// <param name="defaultSubject">An optional backing signal this instance wraps; a new <see cref="Signal{T}"/> is used when null.</param>
+    public ScheduledSignal(ISequencer scheduler, IObserver<T>? defaultObserver, ISignal<T>? defaultSubject)
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
         _scheduler = scheduler;
         _defaultObserver = defaultObserver;
+        _subject = defaultSubject ?? new Signal<T>();
         _defaultObserverSub = defaultObserver is null ? null : SubscribeDefaultObserver(defaultObserver);
     }
 
