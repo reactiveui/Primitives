@@ -65,6 +65,24 @@ This keeps the change small for anyone already on `IObservable<T>`. You keep the
 gain the lower allocation profile. When you do need full System.Reactive or R3 behaviour, the `.Reactive` package
 variants and the R3/R3Async source-generator bridges cover those boundaries.
 
+### Where we could not stay on the standard types
+
+Keeping `IObservable<T>` and `IObserver<T>` was easy, because both ship in .NET itself. Two related types do not, so we
+had to make a call.
+
+The first is the scheduler. A scheduler decides when and on which thread work runs. .NET has no scheduler type of its
+own. The standard one, `IScheduler`, lives in System.Reactive, so using it would pull System.Reactive back in as a
+runtime dependency. That is the dependency we set out to avoid. So the lean library defines its own small scheduling
+contract, `ISequencer`.
+
+The second is `Unit`. `Unit` is the type that means "a value carrying no information", used for streams that report that
+something happened but carry no data. .NET has no such type either, and the common `Unit` also lives in System.Reactive.
+So the lean library defines its own, `RxVoid`.
+
+These two types are the only places the lean surface departs from the System.Reactive shape. The `.Reactive` package
+variants close the gap: they recompile the same source with `ISequencer` mapped to `IScheduler` and `RxVoid` mapped to
+`System.Reactive.Unit`, so code that already speaks System.Reactive sees the types it expects.
+
 ## Table of contents
 
 1. [Install](#install)
