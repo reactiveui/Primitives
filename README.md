@@ -445,6 +445,8 @@ Creation APIs live on `ReactiveUI.Primitives.Signals.Signal`.
 | `Signal.After(...)`                                                                            | One-shot and periodic timer overloads.                                                     |
 | `Signal.Chain(...)`, `Signal.Blend(...)`, `Signal.Race(...)`                                   | Compose multiple sources.                                                                  |
 | `Signal.Pair(...)`, `Signal.SyncLatest(...)`, `Signal.PairLatest(...)`, `Signal.ForkJoin(...)` | Pairwise combination helpers.                                                              |
+| `Signal.Scheduled<T>(ISequencer)` / `Signal.Scheduled<T>(ISequencer, IObserver<T>?)`           | Multicast signal that dispatches notifications on a sequencer, with an optional default observer active while no other subscribers are present. |
+| `Signal.Delayable<T>(Func<bool>, Func<IList<T>, IEnumerable<T>>)`                               | Multicast signal that buffers notifications while delayed and emits a de-duplicated batch when `Flush` is called. |
 
 Example:
 
@@ -873,6 +875,8 @@ ReactiveUI.Primitives uses explicit names instead of cloning every System.Reacti
 | `ReplaySubject<T>`                   | `ReplaySignal<T>`                        | Replays buffered values by size and/or time window.                                      |
 | `AsyncSubject<T>`                    | `FinalSignal<T>`                         | Awaitable subject-like signal; also implements `IAwaitSignal<T>`.                        |
 | `ReactiveProperty<T>` / state holder | `StateSignal<T>` plus `ReadOnlyState<T>` | Mutable state and read-only projected state.                                             |
+| `Subject<T>.ObserveOn(scheduler)`    | `ScheduledSignal<T>`                     | Multicast signal that dispatches its notifications on an `ISequencer`, with an optional default observer active while no other subscribers are present. |
+| `Buffer(boundary).SelectMany(distinct)` pipeline | `DelayableNotificationSignal<T>`     | Passes notifications through immediately while not delayed, buffers them while delayed, and emits a de-duplicated batch on `Flush`. |
 
 State example:
 
@@ -902,6 +906,22 @@ history.OnNext("B");
 history.OnNext("C");
 
 using var subscription = history.Subscribe(Console.WriteLine); // replays B, C
+```
+
+Delayable example:
+
+```csharp
+using ReactiveUI.Primitives.Signals;
+
+var delayed = true;
+var notifications = Signal.Delayable<string>(() => delayed, items => items.Distinct());
+
+using var subscription = notifications.Subscribe(Console.WriteLine);
+
+notifications.OnNext("A");
+notifications.OnNext("A"); // buffered while delayed
+delayed = false;
+notifications.Flush();     // emits the de-duplicated batch: A
 ```
 
 Error and completion example:
