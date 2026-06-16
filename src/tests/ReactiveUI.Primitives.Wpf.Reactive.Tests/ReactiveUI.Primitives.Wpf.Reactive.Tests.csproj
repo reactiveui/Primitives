@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- DispatcherSequencer wraps the concrete WPF System.Windows.Threading.Dispatcher as an IScheduler. The
+       project targets plain .NET everywhere and adds the -windows TFMs only on Windows. The windows TFM (via
+       the Choose below) turns on UseWPF, references the WPF .Reactive library, and compiles the real dispatcher
+       tests; the cross-platform build compiles only the skipped placeholder so the host reports a discovered test. -->
+  <PropertyGroup>
+    <TargetFrameworks>$(NetTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(WindowsNetTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Reactive"/>
+  </ItemGroup>
+
+  <!-- The dispatcher tests need WPF types; include them only on the windows TFM (see the Choose). -->
+  <ItemGroup>
+    <Compile Remove="DispatcherSequencerTests.cs"/>
+  </ItemGroup>
+
+  <Choose>
+    <When Condition="$(TargetFramework.EndsWith('-windows'))">
+      <PropertyGroup>
+        <UseWPF>true</UseWPF>
+        <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+      </PropertyGroup>
+      <ItemGroup>
+        <ProjectReference Include="..\..\ReactiveUI.Primitives.Wpf.Reactive\ReactiveUI.Primitives.Wpf.Reactive.csproj"/>
+        <Compile Include="DispatcherSequencerTests.cs"/>
+        <Compile Remove="CrossPlatformPlaceholderTests.cs"/>
+      </ItemGroup>
+    </When>
+  </Choose>
+
+</Project>

@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ControlSequencer wraps a real Windows Forms Control as an IScheduler. The project targets plain .NET
+       everywhere and adds the -windows TFMs only on Windows. The windows TFM (via the Choose below) turns on
+       UseWindowsForms, references the WinForms .Reactive library, and compiles the real control tests; the
+       cross-platform build compiles only the skipped placeholder so the host reports a discovered test. -->
+  <PropertyGroup>
+    <TargetFrameworks>$(NetTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(WindowsNetTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Reactive"/>
+  </ItemGroup>
+
+  <!-- The control tests need WinForms types; include them only on the windows TFM (see the Choose). -->
+  <ItemGroup>
+    <Compile Remove="ControlSequencerTests.cs"/>
+  </ItemGroup>
+
+  <Choose>
+    <When Condition="$(TargetFramework.EndsWith('-windows'))">
+      <PropertyGroup>
+        <UseWindowsForms>true</UseWindowsForms>
+        <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+      </PropertyGroup>
+      <ItemGroup>
+        <ProjectReference Include="..\..\ReactiveUI.Primitives.WinForms.Reactive\ReactiveUI.Primitives.WinForms.Reactive.csproj"/>
+        <Compile Include="ControlSequencerTests.cs"/>
+        <Compile Remove="CrossPlatformPlaceholderTests.cs"/>
+      </ItemGroup>
+    </When>
+  </Choose>
+
+</Project>

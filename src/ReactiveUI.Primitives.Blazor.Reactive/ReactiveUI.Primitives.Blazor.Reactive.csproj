@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- System.Reactive-flavoured Blazor leaf: a coalescing IScheduler over the renderer dispatcher plus the
+         shared ReactiveComponentBase. REACTIVE_SHIM + the System.Reactive dependency come from
+         Directory.Build.props via the name suffix. -->
+    <TargetFrameworks>$(BlazorTargetFrameworks)</TargetFrameworks>
+    <PackageDescription>Blazor integration helpers for ReactiveUI.Primitives, recompiled against System.Reactive's IScheduler.</PackageDescription>
+    <PackageTags>system.reactive;rx;reactive;primitives;blazor;components;subscriptions</PackageTags>
+  </PropertyGroup>
+
+  <!-- The coalescing IScheduler base shared by every platform .Reactive package, plus the shared component. -->
+  <ItemGroup>
+    <Compile Include="..\Primitives.Platform.Reactive.Shared\**\*.cs" Link="Primitives.Platform.Reactive.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Primitives.Blazor.Shared\**\*.cs" Link="Primitives.Blazor.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- The shared ReactiveComponentBase shifts to ReactiveUI.Primitives.Blazor.Reactive.* under REACTIVE_SHIM; these
+       imports let it resolve its renderer sequencer, disposables, and shifted operators without per-file usings. -->
+  <ItemGroup>
+    <Using Include="ReactiveUI.Primitives.Reactive" />
+    <Using Include="ReactiveUI.Primitives.Blazor.Reactive.Concurrency" />
+    <Using Include="ReactiveUI.Primitives.Concurrency" />
+    <Using Include="ReactiveUI.Primitives.Disposables" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components" />
+    <ProjectReference Include="..\ReactiveUI.Primitives.Reactive\ReactiveUI.Primitives.Reactive.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor.Reactive.Tests" />
+  </ItemGroup>
+
+</Project>

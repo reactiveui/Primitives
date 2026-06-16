@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- System.Reactive-flavoured WPF leaf: a coalescing IScheduler over the WPF dispatcher.
+         REACTIVE_SHIM + the System.Reactive dependency come from Directory.Build.props via the name suffix. -->
+    <TargetFrameworks>$(WindowsLibraryTargetFrameworks)</TargetFrameworks>
+    <UseWPF>true</UseWPF>
+    <PackageDescription>WPF dispatcher scheduler for ReactiveUI.Primitives, recompiled against System.Reactive's IScheduler.</PackageDescription>
+    <PackageTags>system.reactive;rx;reactive;primitives;wpf;dispatcher;scheduler</PackageTags>
+  </PropertyGroup>
+
+  <!-- The coalescing IScheduler base shared by every platform .Reactive package. -->
+  <ItemGroup>
+    <Compile Include="..\Primitives.Platform.Reactive.Shared\**\*.cs" Link="Primitives.Platform.Reactive.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReactiveUI.Primitives.Reactive\ReactiveUI.Primitives.Reactive.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Wpf.Reactive.Tests" />
+  </ItemGroup>
+
+</Project>

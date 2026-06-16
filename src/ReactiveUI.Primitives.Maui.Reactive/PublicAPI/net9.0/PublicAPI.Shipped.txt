@@ -1,0 +1,15 @@
+#nullable enable
+ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler
+ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.CoalescingDispatchScheduler() -> void
+ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.RequestDrain() -> void
+ReactiveUI.Primitives.Reactive.Concurrency.MauiDispatcherSequencer
+ReactiveUI.Primitives.Reactive.Concurrency.MauiDispatcherSequencer.Dispatcher.get -> Microsoft.Maui.Dispatching.IDispatcher!
+ReactiveUI.Primitives.Reactive.Concurrency.MauiDispatcherSequencer.MauiDispatcherSequencer(Microsoft.Maui.Dispatching.IDispatcher! dispatcher) -> void
+ReactiveUI.Primitives.Reactive.Concurrency.MauiDispatcherSequencerExtensions
+ReactiveUI.Primitives.Reactive.Concurrency.MauiDispatcherSequencerExtensions.extension(Microsoft.Maui.Dispatching.IDispatcher!)
+ReactiveUI.Primitives.Reactive.Concurrency.MauiDispatcherSequencerExtensions.extension(Microsoft.Maui.Dispatching.IDispatcher!).ToSequencer() -> ReactiveUI.Primitives.Reactive.Concurrency.MauiDispatcherSequencer!
+abstract ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.Post(System.Action! drain) -> bool
+override ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler!, TState, System.IDisposable!>! action) -> System.IDisposable!
+override ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler!, TState, System.IDisposable!>! action) -> System.IDisposable!
+static ReactiveUI.Primitives.Reactive.Concurrency.MauiDispatcherSequencerExtensions.ToSequencer(this Microsoft.Maui.Dispatching.IDispatcher! dispatcher) -> ReactiveUI.Primitives.Reactive.Concurrency.MauiDispatcherSequencer!
+virtual ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.ScheduleOnDispatcher(System.Action! work, System.TimeSpan dueTime) -> System.IDisposable!
