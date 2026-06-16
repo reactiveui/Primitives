@@ -1,39 +1,50 @@
-[![Build](https://github.com/reactiveui/Primitives/actions/workflows/ci-build.yml/badge.svg)](https://github.com/reactiveui/Primitives/actions/workflows/ci-build.yml)
-[![Code Coverage](https://codecov.io/gh/reactiveui/Primitives/branch/main/graph/badge.svg)](https://codecov.io/gh/reactiveui/Primitives)
-[![#yourfirstpr](https://img.shields.io/badge/first--timers--only-friendly-blue.svg)](https://reactiveui.net/contribute)
-[![](https://img.shields.io/badge/chat-slack-blue.svg)](https://reactiveui.net/slack)
+[![NuGet Stats](https://img.shields.io/nuget/v/ReactiveUI.Primitives.svg)](https://www.nuget.org/packages/ReactiveUI.Primitives) [![Build](https://github.com/reactiveui/Primitives/actions/workflows/ci-build.yml/badge.svg)](https://github.com/reactiveui/Primitives/actions/workflows/ci-build.yml) [![Code Coverage](https://codecov.io/gh/reactiveui/Primitives/branch/main/graph/badge.svg)](https://codecov.io/gh/reactiveui/Primitives) [![#yourfirstpr](https://img.shields.io/badge/first--timers--only-friendly-blue.svg)](https://reactiveui.net/contribute)
 <br>
 <a href="https://www.nuget.org/packages/ReactiveUI.Primitives">
-<img src="https://img.shields.io/nuget/dt/ReactiveUI.Primitives.svg">
+        <img src="https://img.shields.io/nuget/dt/ReactiveUI.Primitives.svg">
 </a>
-<br>
-<a href="https://github.com/reactiveui/Primitives">
-<img width="160" heigth="160" src="https://github.com/reactiveui/styleguide/blob/master/logo_primitives/logo.png?raw=true">
+<a href="https://reactiveui.net/slack">
+        <img src="https://img.shields.io/badge/chat-slack-blue.svg">
 </a>
-<br>
+
+<img alt="ReactiveUI.Primitives" width="160" height="160" src="https://github.com/reactiveui/styleguide/blob/master/logo_primitives/logo.png?raw=true">
 
 # ReactiveUI.Primitives
 
-ReactiveUI.Primitives is a compact, high-performance reactive library for .NET applications that want Rx-style
-composition without a runtime dependency on System.Reactive, R3, or R3Async. It keeps the BCL `IObservable<T>` /
-`IObserver<T>` contracts where they are useful, adds Primitives names for common concepts, and focuses on predictable
-AOT-friendly code paths with low allocation overhead.
+ReactiveUI.Primitives is a small, fast library for reactive programming in .NET. Reactive programming means working
+with values that arrive over time, such as button clicks, timer ticks, or network replies, rather than values you
+already hold.
+
+If you know LINQ, you already know the shape. LINQ queries a collection you already hold and pulls values out of an
+`IEnumerable<T>`. Reactive programming queries values that arrive over time: an `IObservable<T>` pushes each value to
+you as it happens. The operators carry over, so `Select`, `Where`, and `Aggregate` keep their meaning here. This library
+also gives them the names `Map`, `Keep`, and `Fold`.
+
+It gives you that model without a runtime dependency on System.Reactive, R3, or R3Async. Those are the established
+reactive libraries for .NET, and this package stands in for them in the common cases.
+
+It builds on two interfaces that .NET already ships. `IObservable<T>` is a source you subscribe to. `IObserver<T>` is
+the subscriber that receives each value. The library renames a few common concepts for clarity. It also favours code
+paths that allocate little memory and run under ahead-of-time (AOT) compilation. AOT compiles the app to native code
+before it runs, so the app cannot generate new code while running.
 
 ## Goals and design posture
 
-ReactiveUI.Primitives is designed to:
+ReactiveUI.Primitives aims to:
 
-- Provide Rx-style stream creation, subscription, state, scheduling, and composition over `IObservable<T>`.
-- Use a distinct vocabulary where it improves clarity: `Signal<T>` instead of `Subject<T>`, `Map` instead of only
-  `Select`, `Keep` instead of only `Where`, `Spark` instead of notification materialization.
-- Stay AOT-friendly: no runtime reflection, dynamic code generation, expression compilation, or hidden dependency on
-  System.Reactive/R3/R3Async in the production package.
-- Minimize allocations in hot paths, including direct single-action subscribers for `Signal<T>` and reusable immutable
-  singleton signals for common return/empty/never cases.
-- Support broad production use across modern .NET and .NET Framework base TFMs, with separate integration projects for
-  Windows UI and platform-focused scenarios.
-- Allow migration from System.Reactive through dedicated `.Reactive` package variants, and from R3/R3Async through
-  source-generator bridges when the consuming project already references those libraries.
+- Cover the Rx model over `IObservable<T>`: creating streams, subscribing, holding state, scheduling work, and
+  composing operators. A stream is a sequence of values delivered over time.
+- Rename a few concepts where a clearer name helps. A `Signal<T>` is a source you can both push values into and
+  subscribe to (Rx calls this a `Subject<T>`). `Map` transforms each value (Rx `Select`); `Keep` filters values
+  (Rx `Where`); `Spark` turns each notification into a value you can inspect.
+- Stay AOT-friendly. The production package uses no runtime reflection, no generated code, no expression compilation,
+  and no hidden dependency on System.Reactive, R3, or R3Async.
+- Allocate as little as possible on hot paths. For example, `Signal<T>` subscribes a single delegate directly, and the
+  common return, empty, and never sources reuse one shared instance.
+- Run in production across modern .NET and .NET Framework, with separate integration packages for Windows UI and other
+  platforms. A target framework (TFM) is the .NET version and platform a build targets, such as `net8.0`.
+- Support migration. The `.Reactive` package variants match System.Reactive's public surface, and source-generator
+  bridges connect to R3 or R3Async when your project already uses them.
 
 ## Table of contents
 
@@ -62,9 +73,9 @@ All packages are published on [NuGet.org](https://www.nuget.org/packages?q=React
 dotnet add package ReactiveUI.Primitives
 ```
 
-The library is split into a layered set of packages so consumers can pull only the surface that matches their
-integration point. Every package below ships at the same version and targets the same `net8.0`–`net11.0` plus
-`net462`–`net481` matrix (the platform packages add their OS-specific TFMs).
+The library is split into a layered set of packages, so you can pull only the surface that matches your
+integration point. Every package below ships at the same version and targets the same `net8.0` to `net11.0` plus
+`net462` to `net481` matrix. The platform packages add their OS-specific TFMs.
 
 | Package | NuGet | Use when |
 |---------|-------|----------|
@@ -279,8 +290,8 @@ production dependencies.
 
 ### `Signal<T>`
 
-`Signal<T>` is the basic subject-like primitive. It implements `ISignal<T>`, which combines `IObserver<T>`,
-`IObservable<T>`, and `IsDisposed`.
+`Signal<T>` is the basic signal type: a source you can both push values into and subscribe to. It implements
+`ISignal<T>`, which combines `IObserver<T>`, `IObservable<T>`, and `IsDisposed`.
 
 Use it when code needs to push values into a stream and let observers subscribe:
 
@@ -428,15 +439,31 @@ IObservable<string> source = Signal.CreateSafe<string>(observer =>
 
 ## Operators
 
-Operators are extension methods over `IObservable<T>`. ReactiveUI.Primitives has a distinct vocabulary (`Map`, `Keep`,
-`Fold`, `Blend`, `SwitchTo`, …) that avoids ambiguous-call collisions with System.Reactive or R3 — but the familiar
-System.Reactive / LINQ names are also available (see below), so you can write whichever reads best.
+Operators are extension methods over `IObservable<T>`. Like a LINQ query over `IEnumerable<T>`, an operator takes a
+stream and returns a new stream, so you can chain them into a pipeline. ReactiveUI.Primitives ships its own names
+(`Map`, `Keep`, `Fold`, `Blend`, `SwitchTo`, and more). These names avoid call-resolution clashes with System.Reactive
+or R3. The familiar System.Reactive and LINQ names also work (see below), so you can write whichever reads best.
+
+### Why the operators are built this way
+
+Each operator is a purpose-built sink, not a wrapper around another observable. A wrapper chain allocates an observable
+and an observer for every operator, on every subscription, and each value then hops through the whole stack. A sink does
+the operator's work in one object and hands the result straight to the next stage. Fewer objects and fewer hops mean
+fewer allocations per value.
+
+That difference matters most under high throughput. Reactive pipelines often run where events never stop and volume is
+large: device and sensor telemetry (IoT), market data and payment flows in banking, and log or metric ingestion. At
+millions of events per second, per-value allocations create work for the garbage collector, and that work shows up as
+pauses. Keeping allocations low gives steadier latency and higher sustained throughput. This is why the library favours
+direct subscription and shared singletons, and why the dedicated names bind the compiler straight to these sink-based
+operators with no ambiguity against the System.Reactive or LINQ overloads.
 
 ### System.Reactive / LINQ name layer
 
-The everyday System.Reactive / LINQ names are first-class operators that build the **same sink** as their
-Primitives-named counterpart — identical behavior and allocation profile, not wrappers. Both name sets are fully
-supported and interchangeable; pick whichever reads best for your code.
+The everyday System.Reactive and LINQ names are first-class operators. Each builds the **same sink** as its
+Primitives-named counterpart, with identical behaviour and allocation profile. A sink is the small object that receives
+each value and does the operator's work. These names are not wrappers. Both name sets are fully supported and
+interchangeable, so pick whichever reads best.
 
 | LINQ / System.Reactive name | Primitives name | | LINQ / System.Reactive name | Primitives name |
 |-----------------------------|-----------------|-|-----------------------------|-----------------|
@@ -458,7 +485,7 @@ supported and interchangeable; pick whichever reads best for your code.
 using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
 
-// Reads exactly like System.Reactive — and builds the identical sinks as Map/Keep/Fold.
+// Reads exactly like System.Reactive, and builds the identical sinks as Map/Keep/Fold.
 using var subscription = Signal.Sequence(1, 10)
     .Where(value => value % 2 == 0)
     .Select(value => value * value)
@@ -628,10 +655,10 @@ IObservable<int> values = sparks.Unspark();
 
 ## ReactiveUI.Primitives.Async
 
-`ReactiveUI.Primitives.Async` is the async counterpart to the base `ReactiveUI.Primitives` surface. It is designed with
-native R3/R3Async bridge generation and System.Reactive-flavoured `.Reactive` package variants in mind, while keeping
-the Primitives vocabulary. It adds `ValueTask`/`CancellationToken`-aware observer calls for producers and consumers that
-need asynchronous notification, asynchronous disposal, or async stream collection.
+`ReactiveUI.Primitives.Async` is the async counterpart to the base `ReactiveUI.Primitives` surface. Its observers
+deliver each notification through a `ValueTask` and accept a `CancellationToken`, so a producer can await the consumer.
+Use it when notification, disposal, or stream collection must run asynchronously. It keeps the Primitives vocabulary,
+generates the R3 and R3Async bridges, and offers System.Reactive-flavoured `.Reactive` variants.
 
 Core async contracts and data types:
 
@@ -856,9 +883,10 @@ using var subscription = failed.Subscribe(
 
 ## Sequencers
 
-Sequencers live in `ReactiveUI.Primitives.Concurrency` and implement `ISequencer`. The core `ReactiveUI.Primitives`
-package does not reference WPF, Windows Forms, WinUI, Blazor, or MAUI; UI-thread sequencers are provided by optional
-integration packages.
+A sequencer decides when and on which thread scheduled work runs. Rx calls this a scheduler. Sequencers live in
+`ReactiveUI.Primitives.Concurrency` and implement `ISequencer`. The core `ReactiveUI.Primitives` package does not
+reference WPF, Windows Forms, WinUI, Blazor, or MAUI. The optional integration packages supply the UI-thread
+sequencers.
 
 | Sequencer                                                     | Purpose                                                                                |
 |---------------------------------------------------------------|----------------------------------------------------------------------------------------|
@@ -922,8 +950,9 @@ ReactiveUI.Primitives follows the BCL observer contract and keeps ownership expl
 
 ## Source-generator bridge behavior
 
-The base `ReactiveUI.Primitives` package and the `ReactiveUI.Primitives.Async` package embed one bridge generator assembly
-as an analyzer:
+A source generator is a compiler component that writes extra C# code into your project at build time. The base
+`ReactiveUI.Primitives` package and the `ReactiveUI.Primitives.Async` package embed one bridge generator as an
+analyzer:
 
 - `ReactiveUI.Primitives.R3Bridge.Generator.dll`
 
@@ -1511,6 +1540,21 @@ duration is indistinguishable from empty method overhead; the benchmark run stil
    for System.Reactive public-surface compatibility and generated bridge methods for R3/R3Async boundaries.
 6. Run build, tests, pack, and `git diff --check` before publishing or merging.
 
+## Contribute
+
+ReactiveUI.Primitives is developed under an OSI-approved open source license, making it freely usable and distributable, even for commercial use. We ❤ the people who are involved in this project, and we'd love to have you on board, especially if you are just getting started or have never contributed to open-source before.
+
+So here's to you, lovely person who wants to join us. This is how you can support us:
+
+- [Answering questions on GitHub Discussions](https://github.com/reactiveui/Primitives/discussions)
+- [Passing on knowledge and teaching the next generation of developers](https://ericsink.com/entries/dont_use_rxui.html)
+- Submitting documentation updates where you see fit or lacking.
+- Making contributions to the code base.
+
+## Code of Conduct
+
+We are dedicated to providing a welcoming and inclusive community. Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## License
 
-ReactiveUI.Primitives is licensed under the MIT license. See `LICENSE` for details.
+ReactiveUI.Primitives is licensed under the [MIT License](LICENSE).
