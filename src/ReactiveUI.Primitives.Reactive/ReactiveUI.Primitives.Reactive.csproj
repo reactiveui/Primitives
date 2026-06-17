@@ -3,12 +3,39 @@
   <PropertyGroup>
     <!-- System.Reactive-flavoured leaf: recompiles the shared Primitives source with RxVoid->Unit and
          ISequencer->IScheduler (aliases + REACTIVE_SHIM come from Directory.Build.props via the name suffix). -->
-    <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks>$(LibraryTargetFrameworks);$(AndroidPrimitivesTargetFrameworks)</TargetFrameworks>
+    <!-- Apple legs need the iOS/macOS workloads, which only restore on Windows/macOS; build them there (or in the dockur guest). -->
+    <TargetFrameworks Condition="$([MSBuild]::IsOsPlatform('Windows')) or $([MSBuild]::IsOsPlatform('OSX'))">$(TargetFrameworks);$(ApplePrimitivesTargetFrameworks)</TargetFrameworks>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tvos'">15.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'macos'">12.0</SupportedOSPlatformVersion>
     <PackageDescription>ReactiveUI.Primitives recompiled against System.Reactive's Unit and IScheduler for seamless interop with System.Reactive consumers.</PackageDescription>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ReactiveUI.Primitives.Core\ReactiveUI.Primitives.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Platform sequencers compile only on their matching OS-platform TFM (the coalescing IScheduler base below
+       is included on the same TFMs). The library/windows TFMs never see this code, so the windows-only platform
+       .Reactive packages (Wpf/WinForms/...) carry no duplicate of the shared base type. -->
+  <ItemGroup>
+    <Compile Remove="Platforms\**\*.cs" />
+    <None Include="Platforms\**\*.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <Compile Include="Platforms\android\**\*.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tvos' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'macos'">
+    <Compile Include="Platforms\apple\**\*.cs" />
+  </ItemGroup>
+
+  <!-- The coalescing IScheduler base shared by every platform .Reactive package, included here only on the
+       apple/android TFMs that carry a concrete sequencer (CoalescingDispatchScheduler). -->
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tvos' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'macos'">
+    <Compile Include="..\Primitives.Platform.Reactive.Shared\**\*.cs" Link="Primitives.Platform.Reactive.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!-- The RxVoid/ISequencer-aware shared source, compiled here under the .Reactive namespace (REACTIVE_SHIM). -->
