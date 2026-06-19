@@ -100,6 +100,38 @@ public static partial class LinqExtensions
             return new TapSignal<T>(source, onNext, static _ => { }, static () => { });
         }
 
+        /// <summary>Invokes actions for each value and error while preserving the sequence. System.Reactive name for <c>Tap</c>.</summary>
+        /// <param name="onNext">The action to invoke for each value.</param>
+        /// <param name="onError">The action to invoke for an error.</param>
+        /// <returns>The source values after the actions have run.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/>, <paramref name="onNext"/>, or <paramref name="onError"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Do(Action<T> onNext, Action<Exception> onError)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(onNext);
+
+            ArgumentExceptionHelper.ThrowIfNull(onError);
+
+            return new TapSignal<T>(source, onNext, onError, static () => { });
+        }
+
+        /// <summary>Invokes actions for each value and completion while preserving the sequence. System.Reactive name for <c>Tap</c>.</summary>
+        /// <param name="onNext">The action to invoke for each value.</param>
+        /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
+        /// <returns>The source values after the actions have run.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/>, <paramref name="onNext"/>, or <paramref name="onCompleted"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Do(Action<T> onNext, Action onCompleted)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(onNext);
+
+            ArgumentExceptionHelper.ThrowIfNull(onCompleted);
+
+            return new TapSignal<T>(source, onNext, static _ => { }, onCompleted);
+        }
+
         /// <summary>
         /// Serializes notifications behind a gate so downstream operators observe the single-threaded
         /// <c>OnNext*</c> then <c>OnError</c>|<c>OnCompleted</c> grammar even when the source delivers
