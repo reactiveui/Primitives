@@ -30,4 +30,32 @@ public class OptionalTests
         await Assert.That(some.HasValue).IsTrue();
         await Assert.That(some.Value).IsEqualTo(Second);
     }
+
+    /// <summary>Covers optional conversion helpers and operators.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task OptionalSupportsConversionHelpers()
+    {
+        var created = Optional<int>.Create(First);
+        var converted = Optional<int>.ToOptional(Second);
+        Optional<int> implicitOptional = First;
+        var explicitValue = (int?)converted;
+
+        await Assert.That(created.HasValue).IsTrue();
+        await Assert.That(created.Value).IsEqualTo(First);
+        await Assert.That(Optional<int>.FromOptional(created)).IsEqualTo(First);
+        await Assert.That(converted.HasValue).IsTrue();
+        await Assert.That(explicitValue).IsEqualTo(Second);
+        await Assert.That(implicitOptional.Value).IsEqualTo(First);
+    }
+
+    /// <summary>Covers optional string formatting for values and empty values.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task OptionalToStringFormatsValueAndNone()
+    {
+        await Assert.That(Optional<int>.Some(First).ToString()).IsEqualTo("1");
+        await Assert.That(Optional<int>.None.ToString()).IsEqualTo("<None>");
+        await Assert.That(Optional<string?>.Some(null).ToString()).IsEqualTo("<None>");
+    }
 }
