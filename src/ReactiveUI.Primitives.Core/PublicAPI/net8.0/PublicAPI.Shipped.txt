@@ -628,6 +628,7 @@ override ReactiveUI.Primitives.Core.TimeInterval<T>.Equals(object? obj) -> bool
 override ReactiveUI.Primitives.Core.TimeInterval<T>.GetHashCode() -> int
 override ReactiveUI.Primitives.Core.TimeInterval<T>.ToString() -> string!
 override ReactiveUI.Primitives.Optional<T>.GetHashCode() -> int
+override ReactiveUI.Primitives.Optional<T>.ToString() -> string?
 override ReactiveUI.Primitives.Result.GetHashCode() -> int
 override ReactiveUI.Primitives.Result.ToString() -> string!
 override ReactiveUI.Primitives.Signals.Broadcaster<T>.Equals(object? obj) -> bool
@@ -677,9 +678,14 @@ static ReactiveUI.Primitives.Core.Moment<T>.operator ==(ReactiveUI.Primitives.Co
 static ReactiveUI.Primitives.Core.TimeInterval<T>.operator !=(ReactiveUI.Primitives.Core.TimeInterval<T> first, ReactiveUI.Primitives.Core.TimeInterval<T> second) -> bool
 static ReactiveUI.Primitives.Core.TimeInterval<T>.operator ==(ReactiveUI.Primitives.Core.TimeInterval<T> first, ReactiveUI.Primitives.Core.TimeInterval<T> second) -> bool
 static ReactiveUI.Primitives.ExceptionExtensions.Throw(this System.Exception! exception) -> void
+static ReactiveUI.Primitives.Optional<T>.Create(T value) -> ReactiveUI.Primitives.Optional<T>
 static ReactiveUI.Primitives.Optional<T>.Empty.get -> ReactiveUI.Primitives.Optional<T>
+static ReactiveUI.Primitives.Optional<T>.FromOptional(in ReactiveUI.Primitives.Optional<T> value) -> T?
 static ReactiveUI.Primitives.Optional<T>.None.get -> ReactiveUI.Primitives.Optional<T>
 static ReactiveUI.Primitives.Optional<T>.Some(T value) -> ReactiveUI.Primitives.Optional<T>
+static ReactiveUI.Primitives.Optional<T>.ToOptional(T value) -> ReactiveUI.Primitives.Optional<T>
+static ReactiveUI.Primitives.Optional<T>.explicit operator T?(in ReactiveUI.Primitives.Optional<T> value) -> T?
+static ReactiveUI.Primitives.Optional<T>.implicit operator ReactiveUI.Primitives.Optional<T>(T value) -> ReactiveUI.Primitives.Optional<T>
 static ReactiveUI.Primitives.Optional<T>.operator !=(ReactiveUI.Primitives.Optional<T> left, ReactiveUI.Primitives.Optional<T> right) -> bool
 static ReactiveUI.Primitives.Optional<T>.operator ==(ReactiveUI.Primitives.Optional<T> left, ReactiveUI.Primitives.Optional<T> right) -> bool
 static ReactiveUI.Primitives.Result.Failure(System.Exception! exception) -> ReactiveUI.Primitives.Result
@@ -731,7 +737,6 @@ virtual ReactiveUI.Primitives.Signals.Signal<T>.IsDisposed.get -> bool
 ~override ReactiveUI.Primitives.Advanced.LongCountPredicateAggregator<T>.Equals(object obj) -> bool
 ~override ReactiveUI.Primitives.Advanced.LongCountPredicateAggregator<T>.ToString() -> string
 ~override ReactiveUI.Primitives.Optional<T>.Equals(object obj) -> bool
-~override ReactiveUI.Primitives.Optional<T>.ToString() -> string
 ~override ReactiveUI.Primitives.Result.Equals(object obj) -> bool
 ~override ReactiveUI.Primitives.Signals.CommandExecution<TResult>.Awaiter.Equals(object obj) -> bool
 ~override ReactiveUI.Primitives.Signals.CommandExecution<TResult>.Awaiter.ToString() -> string
