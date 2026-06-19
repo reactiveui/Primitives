@@ -54,4 +54,40 @@ public readonly record struct Optional<T>
     /// <param name="value">The contained value.</param>
     /// <returns>The optional value.</returns>
     public static Optional<T> Some(T value) => new(value, hasValue: true);
+
+    /// <summary>Implicit cast from the value to the optional.</summary>
+    /// <param name="value">The value.</param>
+    /// <returns>The optional value.</returns>
+    public static implicit operator Optional<T>(T value) => ToOptional(value);
+
+    /// <summary>Explicit cast from option to value.</summary>
+    /// <param name="value">The value.</param>
+    /// <returns>The optional value.</returns>
+    public static explicit operator T?(in Optional<T> value) => FromOptional(value);
+
+    /// <summary>Creates the specified value.</summary>
+    /// <param name="value">The value.</param>
+    /// <returns>The optional value.</returns>
+    public static Optional<T> Create(T value) => new(value);
+
+    /// <summary>Gets the value from the optional value.</summary>
+    /// <param name="value">The optional value.</param>
+    /// <returns>The value.</returns>
+    public static T? FromOptional(in Optional<T> value) => value.Value;
+
+    /// <summary>Gets the optional from a value.</summary>
+    /// <param name="value">The value to get the optional for.</param>
+    /// <returns>The optional.</returns>
+    public static Optional<T> ToOptional(T value) => new(value);
+
+    /// <inheritdoc />
+    public override string? ToString()
+    {
+        if (_value is null)
+        {
+            return "<None>";
+        }
+
+        return !HasValue ? "<None>" : _value.ToString();
+    }
 }
