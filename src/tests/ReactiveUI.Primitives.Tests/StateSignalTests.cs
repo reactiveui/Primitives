@@ -109,6 +109,36 @@ public class StateSignalTests
         await Assert.That(readonlyValues.SequenceEqual(ExpectedReadOnlyValues)).IsTrue();
     }
 
+    /// <summary>Verifies mutable state reports observer state, value availability, terminal errors, and disposal.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task StatefulSignalsReportObserverValueErrorAndDisposalState()
+    {
+        StateSignal<int> state = new(InitialStateValue);
+        await Assert.That(state.HasObservers).IsFalse();
+        await Assert.That(state.IsDisposed).IsFalse();
+        await Assert.That(state.TryGetValue(out var current)).IsTrue();
+        await Assert.That(current).IsEqualTo(InitialStateValue);
+
+        Recorder<int> observer = new();
+        using var subscription = state.Subscribe(observer);
+        await Assert.That(state.HasObservers).IsTrue();
+        state.OnNext(UpdatedStateValue);
+        await Assert.That(observer.Values.SequenceEqual([InitialStateValue, UpdatedStateValue])).IsTrue();
+
+        subscription.Dispose();
+        await Assert.That(state.HasObservers).IsFalse();
+
+        var error = new InvalidOperationException("state-error");
+        state.OnError(error);
+        Recorder<int> lateObserver = new();
+        state.Subscribe(lateObserver);
+        await Assert.That(lateObserver.Errors.Single()).IsSameReferenceAs(error);
+
+        state.Dispose();
+        await Assert.That(state.IsDisposed).IsTrue();
+    }
+
     /// <summary>Records observer notifications.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
     private sealed class Recorder<T> : IObserver<T>
