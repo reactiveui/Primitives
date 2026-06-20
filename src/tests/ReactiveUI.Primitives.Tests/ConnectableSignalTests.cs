@@ -193,31 +193,4 @@ public sealed class ConnectableSignalTests
         await Assert.That(completions).IsEqualTo(ExpectedCompletions);
         await Assert.That(sourceSubscriptions).IsEqualTo(1);
     }
-
-    /// <summary>Verifies disposing a connectable signal disconnects the active source and prevents reconnects.</summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    [Test]
-    public async Task DisposeDisconnectsActiveSourceAndPreventsReconnect()
-    {
-        var sourceSubscriptions = 0;
-        var sourceDisposals = 0;
-        var cold = Signal.Create<int>(_ =>
-        {
-            sourceSubscriptions++;
-            return Scope.Create(() => sourceDisposals++);
-        });
-        ConnectableSignal<int> connectable = new(cold, new Signal<int>());
-
-        var connection = connectable.Connect();
-        await Assert.That(sourceSubscriptions).IsEqualTo(1);
-
-        connectable.Dispose();
-        connectable.Dispose();
-        connection.Dispose();
-
-        connectable.Connect().Dispose();
-
-        await Assert.That(sourceDisposals).IsEqualTo(1);
-        await Assert.That(sourceSubscriptions).IsEqualTo(1);
-    }
 }

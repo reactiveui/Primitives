@@ -10,7 +10,15 @@ namespace ReactiveUI.Primitives;
 /// <summary>Connectable hot signal that subscribes to its source only when connected.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class ConnectableSignal<T> : IObservable<T>, IDisposable
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Design",
+    "CA1001:Types that own disposable fields should be disposable",
+    Justification = "The active connection lifetime is returned from Connect and owned by the caller.")]
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Major Code Smell",
+    "S2931:Classes with IDisposable members should implement IDisposable",
+    Justification = "The active connection lifetime is returned from Connect and owned by the caller.")]
+public sealed class ConnectableSignal<T> : IObservable<T>
 {
     /// <summary>Synchronizes connection state.</summary>
     private readonly Lock _gate = new();
@@ -23,9 +31,6 @@ public sealed class ConnectableSignal<T> : IObservable<T>, IDisposable
 
     /// <summary>Active source connection.</summary>
     private IDisposable? _connection;
-
-    /// <summary>Set after this connectable signal has been disposed.</summary>
-    private bool _disposed;
 
     /// <summary>Set after the source sends a terminal notification to the hub.</summary>
     private bool _terminated;
@@ -55,11 +60,6 @@ public sealed class ConnectableSignal<T> : IObservable<T>, IDisposable
                 return Scope.Empty;
             }
 
-            if (_disposed)
-            {
-                return Scope.Empty;
-            }
-
             // Allocate the connection only on the first connect. A dedicated disposable type
             // avoids the closure (and extra anonymous-disposable wrapper) that Scope.Create
             // would allocate.
@@ -82,26 +82,6 @@ public sealed class ConnectableSignal<T> : IObservable<T>, IDisposable
 
     /// <inheritdoc />
     public IDisposable Subscribe(IObserver<T> observer) => _hub.Subscribe(observer);
-
-    /// <summary>Disconnects any active source subscription and prevents future source connections.</summary>
-    public void Dispose()
-    {
-        IDisposable? connection;
-        lock (_gate)
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            _disposed = true;
-            _terminated = true;
-            connection = _connection;
-            _connection = null;
-        }
-
-        connection?.Dispose();
-    }
 
     /// <summary>Forwards source notifications to the hub and latches terminal state.</summary>
     private sealed class ConnectionObserver : IObserver<T>

@@ -1,4 +1,3 @@
 #nullable enable
-ReactiveUI.Primitives.ConnectableSignal<T>.Dispose() -> void
 ReactiveUI.Primitives.Optional
 static ReactiveUI.Primitives.Optional.Some<T>(T value) -> ReactiveUI.Primitives.Optional<T>
