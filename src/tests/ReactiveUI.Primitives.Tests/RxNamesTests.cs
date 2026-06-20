@@ -39,6 +39,15 @@ public class RxNamesTests
     /// <summary>The value thirty, pushed by the binary drive scripts.</summary>
     private const int Thirty = 30;
 
+    /// <summary>The value one hundred, pushed by the multi-source CombineLatest tests.</summary>
+    private const int OneHundred = 100;
+
+    /// <summary>The value two hundred, pushed by the multi-source CombineLatest tests.</summary>
+    private const int TwoHundred = 200;
+
+    /// <summary>The number of sources in the widest CombineLatest overload.</summary>
+    private const int Sixteen = 16;
+
     /// <summary>An invalid negative count/interval used by the out-of-range tests.</summary>
     private const int NegativeOne = -1;
 
@@ -196,6 +205,16 @@ public class RxNamesTests
             _latched);
     }
 
+    /// <summary>Provides the generated multi-source CombineLatest arities not covered by the dedicated edge tests.</summary>
+    /// <returns>The CombineLatest arities from 4 through 15.</returns>
+    public static IEnumerable<int> MultiSourceCombineLatestArities()
+    {
+        for (var arity = 4; arity < Sixteen; arity++)
+        {
+            yield return arity;
+        }
+    }
+
     /// <summary>Provides the time-based parity cases, driven by a virtual clock.</summary>
     /// <returns>The time-based parity cases.</returns>
     public static IEnumerable<TimeCase> TimeCases()
@@ -297,6 +316,138 @@ public class RxNamesTests
         Signal.FromEnumerable(_oneToThree).Chain(Signal.FromEnumerable(_oneToThree)).Subscribe(chain.Add);
         Signal.FromEnumerable(_oneToThree).Concat(Signal.FromEnumerable(_oneToThree)).Subscribe(concat.Add);
         await Assert.That(concat).IsEquivalentTo(chain, EqualityComparer<int>.Default);
+    }
+
+    /// <summary>Verifies the three-source CombineLatest overload keeps SyncLatest latest-value semantics.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CombineLatestThreeSourcesUsesLatestValues()
+    {
+        Signal<int> source = new();
+        Signal<int> source2 = new();
+        Signal<int> source3 = new();
+        List<int> values = [];
+        var completed = 0;
+        using var subscription = source.CombineLatest(
+            source2,
+            source3,
+            static (first, second, third) => first + second + third)
+            .Subscribe(values.Add, static _ => { }, () => completed++);
+
+        source.OnNext(One);
+        source2.OnNext(Ten);
+        await Assert.That(values.Count).IsEqualTo(0);
+
+        source3.OnNext(OneHundred);
+        source.OnNext(Two);
+        source2.OnNext(Twenty);
+        source3.OnNext(TwoHundred);
+
+        await Assert.That(values.SequenceEqual([
+            One + Ten + OneHundred,
+            Two + Ten + OneHundred,
+            Two + Twenty + OneHundred,
+            Two + Twenty + TwoHundred])).IsTrue();
+
+        source.OnCompleted();
+        source2.OnCompleted();
+        await Assert.That(completed).IsEqualTo(0);
+
+        source3.OnCompleted();
+        await Assert.That(completed).IsEqualTo(One);
+    }
+
+    /// <summary>Verifies the widest CombineLatest overload preserves source ordering.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CombineLatestSixteenSourcesPreservesSourceOrdering()
+    {
+        var sources = Enumerable.Range(0, Sixteen).Select(_ => new Signal<int>()).ToArray();
+        List<int> values = [];
+        var expectedInitial = Enumerable.Range(One, Sixteen).Sum();
+        using var subscription = sources[0].CombineLatest(
+            sources[1],
+            sources[2],
+            sources[3],
+            sources[4],
+            sources[5],
+            sources[6],
+            sources[7],
+            sources[8],
+            sources[9],
+            sources[10],
+            sources[11],
+            sources[12],
+            sources[13],
+            sources[14],
+            sources[15],
+            SumSixteen)
+            .Subscribe(values.Add);
+
+        for (var i = 0; i < sources.Length; i++)
+        {
+            sources[i].OnNext(i + One);
+        }
+
+        await Assert.That(values.SequenceEqual([expectedInitial])).IsTrue();
+
+        sources[0].OnNext(OneHundred);
+
+        await Assert.That(values.SequenceEqual([expectedInitial, expectedInitial - One + OneHundred])).IsTrue();
+    }
+
+    /// <summary>Verifies every generated multi-source CombineLatest arity is wired to SyncLatest semantics.</summary>
+    /// <param name="arity">The overload arity under test.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    [MethodDataSource(nameof(MultiSourceCombineLatestArities))]
+    public async Task CombineLatestMultiSourceAritiesUseLatestValues(int arity)
+    {
+        var sources = Enumerable.Range(0, arity).Select(_ => new Signal<int>()).ToArray();
+        List<int> values = [];
+        var expectedInitial = Enumerable.Range(One, arity).Sum();
+        using var subscription = CreateCombineLatest(arity, sources).Subscribe(values.Add);
+
+        for (var i = 0; i < sources.Length; i++)
+        {
+            sources[i].OnNext(i + One);
+        }
+
+        await Assert.That(values.SequenceEqual([expectedInitial])).IsTrue();
+
+        sources[^1].OnNext(OneHundred);
+
+        await Assert.That(values.SequenceEqual([expectedInitial, expectedInitial - arity + OneHundred])).IsTrue();
+    }
+
+    /// <summary>Verifies multi-source CombineLatest forwards source errors and stops.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CombineLatestMultiSourceForwardsSourceErrors()
+    {
+        Signal<int> source = new();
+        Signal<int> source2 = new();
+        Signal<int> source3 = new();
+        Signal<int> source4 = new();
+        List<int> values = [];
+        InvalidOperationException expected = new(Boom);
+        Exception? observed = null;
+        var completed = 0;
+        using var subscription = source.CombineLatest(
+            source2,
+            source3,
+            source4,
+            static (first, second, third, fourth) => first + second + third + fourth)
+            .Subscribe(values.Add, error => observed = error, () => completed++);
+
+        source.OnNext(One);
+        source2.OnError(expected);
+        source3.OnNext(Three);
+        source4.OnNext(Ten);
+
+        await Assert.That(values.Count).IsEqualTo(0);
+        await Assert.That(observed).IsSameReferenceAs(expected);
+        await Assert.That(completed).IsEqualTo(0);
     }
 
     /// <summary>Verifies every Rx name throws <see cref = "ArgumentNullException"/> for a null source.</summary>
@@ -782,6 +933,285 @@ public class RxNamesTests
     /// <param name = "inner">The inner value.</param>
     /// <returns>The combined value.</returns>
     private static int AddPair(int source, int inner) => source + inner;
+
+    /// <summary>Creates the requested multi-source CombineLatest overload.</summary>
+    /// <param name="arity">The arity to create.</param>
+    /// <param name="sources">The source signals.</param>
+    /// <returns>The combined observable.</returns>
+    [SuppressMessage(
+        "Style",
+        "S1541:Methods and properties should not be too complex",
+        Justification = "Compile-time overload coverage intentionally invokes each generated arity.")]
+    [SuppressMessage(
+        "Major Code Smell",
+        "S107:Methods should not have too many parameters",
+        Justification = "Compile-time overload coverage intentionally invokes high-arity selector lambdas.")]
+    [SuppressMessage(
+        "Major Code Smell",
+        "S109:Magic numbers should not be used",
+        Justification = "Compile-time overload coverage indexes each source slot by arity.")]
+    [SuppressMessage(
+        "Major Code Smell",
+        "S138:Functions should not have too many lines of code",
+        Justification = "Compile-time overload coverage keeps the arity switch in one audited helper.")]
+    private static IObservable<int> CreateCombineLatest(int arity, Signal<int>[] sources) =>
+        arity switch
+        {
+            4 => sources[0].CombineLatest(
+                sources[1],
+                sources[2],
+                sources[3],
+                static (value1, value2, value3, value4) =>
+                    value1 + value2 + value3 + value4),
+            5 => sources[0].CombineLatest(
+                sources[1],
+                sources[2],
+                sources[3],
+                sources[4],
+                static (value1, value2, value3, value4, value5) =>
+                    value1 + value2 + value3 + value4 + value5),
+            6 => sources[0].CombineLatest(
+                sources[1],
+                sources[2],
+                sources[3],
+                sources[4],
+                sources[5],
+                static (value1, value2, value3, value4, value5, value6) =>
+                    value1 + value2 + value3 + value4 + value5 + value6),
+            7 => sources[0].CombineLatest(
+                sources[1],
+                sources[2],
+                sources[3],
+                sources[4],
+                sources[5],
+                sources[6],
+                static (value1, value2, value3, value4, value5, value6, value7) =>
+                    value1 + value2 + value3 + value4 + value5 + value6 + value7),
+            8 => sources[0].CombineLatest(
+                sources[1],
+                sources[2],
+                sources[3],
+                sources[4],
+                sources[5],
+                sources[6],
+                sources[7],
+                static (value1, value2, value3, value4, value5, value6, value7, value8) =>
+                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8),
+            9 => sources[0].CombineLatest(
+                sources[1],
+                sources[2],
+                sources[3],
+                sources[4],
+                sources[5],
+                sources[6],
+                sources[7],
+                sources[8],
+                static (value1, value2, value3, value4, value5, value6, value7, value8, value9) =>
+                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9),
+            10 => sources[0].CombineLatest(
+                sources[1],
+                sources[2],
+                sources[3],
+                sources[4],
+                sources[5],
+                sources[6],
+                sources[7],
+                sources[8],
+                sources[9],
+                static (value1, value2, value3, value4, value5, value6, value7, value8, value9, value10) =>
+                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10),
+            11 => sources[0].CombineLatest(
+                sources[1],
+                sources[2],
+                sources[3],
+                sources[4],
+                sources[5],
+                sources[6],
+                sources[7],
+                sources[8],
+                sources[9],
+                sources[10],
+                static (value1, value2, value3, value4, value5, value6, value7, value8, value9, value10, value11) =>
+                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
+                    value11),
+            12 => sources[0].CombineLatest(
+                sources[1],
+                sources[2],
+                sources[3],
+                sources[4],
+                sources[5],
+                sources[6],
+                sources[7],
+                sources[8],
+                sources[9],
+                sources[10],
+                sources[11],
+                static (
+                    value1,
+                    value2,
+                    value3,
+                    value4,
+                    value5,
+                    value6,
+                    value7,
+                    value8,
+                    value9,
+                    value10,
+                    value11,
+                    value12) =>
+                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
+                    value11 + value12),
+            13 => sources[0].CombineLatest(
+                sources[1],
+                sources[2],
+                sources[3],
+                sources[4],
+                sources[5],
+                sources[6],
+                sources[7],
+                sources[8],
+                sources[9],
+                sources[10],
+                sources[11],
+                sources[12],
+                static (
+                    value1,
+                    value2,
+                    value3,
+                    value4,
+                    value5,
+                    value6,
+                    value7,
+                    value8,
+                    value9,
+                    value10,
+                    value11,
+                    value12,
+                    value13) =>
+                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
+                    value11 + value12 + value13),
+            14 => sources[0].CombineLatest(
+                sources[1],
+                sources[2],
+                sources[3],
+                sources[4],
+                sources[5],
+                sources[6],
+                sources[7],
+                sources[8],
+                sources[9],
+                sources[10],
+                sources[11],
+                sources[12],
+                sources[13],
+                static (
+                    value1,
+                    value2,
+                    value3,
+                    value4,
+                    value5,
+                    value6,
+                    value7,
+                    value8,
+                    value9,
+                    value10,
+                    value11,
+                    value12,
+                    value13,
+                    value14) =>
+                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
+                    value11 + value12 + value13 + value14),
+            15 => sources[0].CombineLatest(
+                sources[1],
+                sources[2],
+                sources[3],
+                sources[4],
+                sources[5],
+                sources[6],
+                sources[7],
+                sources[8],
+                sources[9],
+                sources[10],
+                sources[11],
+                sources[12],
+                sources[13],
+                sources[14],
+                static (
+                    value1,
+                    value2,
+                    value3,
+                    value4,
+                    value5,
+                    value6,
+                    value7,
+                    value8,
+                    value9,
+                    value10,
+                    value11,
+                    value12,
+                    value13,
+                    value14,
+                    value15) =>
+                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
+                    value11 + value12 + value13 + value14 + value15),
+            _ => throw new ArgumentOutOfRangeException(nameof(arity), arity, null)
+        };
+
+    /// <summary>Sums sixteen values for the widest CombineLatest overload.</summary>
+    /// <param name="value1">Value 1.</param>
+    /// <param name="value2">Value 2.</param>
+    /// <param name="value3">Value 3.</param>
+    /// <param name="value4">Value 4.</param>
+    /// <param name="value5">Value 5.</param>
+    /// <param name="value6">Value 6.</param>
+    /// <param name="value7">Value 7.</param>
+    /// <param name="value8">Value 8.</param>
+    /// <param name="value9">Value 9.</param>
+    /// <param name="value10">Value 10.</param>
+    /// <param name="value11">Value 11.</param>
+    /// <param name="value12">Value 12.</param>
+    /// <param name="value13">Value 13.</param>
+    /// <param name="value14">Value 14.</param>
+    /// <param name="value15">Value 15.</param>
+    /// <param name="value16">Value 16.</param>
+    /// <returns>The sum of all values.</returns>
+    [SuppressMessage(
+        "Major Code Smell",
+        "S107:Methods should not have too many parameters",
+        Justification = "Has more than 7 parameters - required to exercise the arity-16 CombineLatest selector.")]
+    private static int SumSixteen(
+        int value1,
+        int value2,
+        int value3,
+        int value4,
+        int value5,
+        int value6,
+        int value7,
+        int value8,
+        int value9,
+        int value10,
+        int value11,
+        int value12,
+        int value13,
+        int value14,
+        int value15,
+        int value16) =>
+        value1 +
+        value2 +
+        value3 +
+        value4 +
+        value5 +
+        value6 +
+        value7 +
+        value8 +
+        value9 +
+        value10 +
+        value11 +
+        value12 +
+        value13 +
+        value14 +
+        value15 +
+        value16;
 
     /// <summary>Subscribes to a source and collects its forwarded values.</summary>
     /// <param name = "source">The source sequence.</param>
