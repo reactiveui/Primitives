@@ -85,7 +85,7 @@ public static partial class LinqExtensions
                 {
                     result = _selector(value, _index++);
                 }
-                catch (Exception error)
+                catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
                 {
                     OnError(error);
                     return;

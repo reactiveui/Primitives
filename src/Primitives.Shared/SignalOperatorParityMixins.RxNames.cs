@@ -865,7 +865,7 @@ public static partial class LinqExtensions
             {
                 _observer.OnNext(value);
             }
-            catch (Exception error)
+            catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
             {
                 StopWithError(error);
             }
@@ -1016,7 +1016,7 @@ public static partial class LinqExtensions
                     _observer.OnNext(result);
                 }
             }
-            catch (Exception error)
+            catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
             {
                 StopWithError(error);
             }

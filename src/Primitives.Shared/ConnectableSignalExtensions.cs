@@ -99,7 +99,7 @@ public static class ConnectableSignalExtensions
                 {
                     selected = selector(connectable);
                 }
-                catch (Exception error)
+                catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
                 {
                     observer.OnError(error);
                     return EmptyDisposable.Instance;

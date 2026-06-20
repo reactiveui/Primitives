@@ -188,7 +188,7 @@ public static partial class LinqExtensions
                         return null;
                     }
                 }
-                catch (Exception error)
+                catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
                 {
                     FailCore(error);
                     failed = true;
