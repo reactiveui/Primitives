@@ -804,7 +804,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(sources);
 
-            return new ChainSignal<T>(sources.Map(static task => Signal.FromTask(task)));
+            return new TaskChainSignal<T>(sources);
         }
     }
 

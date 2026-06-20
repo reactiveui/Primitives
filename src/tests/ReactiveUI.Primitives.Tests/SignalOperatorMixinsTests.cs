@@ -475,6 +475,88 @@ public partial class SignalOperatorMixinsTests
         Assert.Throws<ArgumentNullException>(() => ((IObservable<Task<int>>)null!).Chain());
     }
 
+    /// <summary>Verifies direct task-chain sequencing without the map adapter.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TaskChainDirectSignalKeepsPendingTasksInSourceOrder()
+    {
+        TaskCompletionSource<int> first = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<int> second = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Signal<Task<int>> source = new();
+        RecordingWitness<int> chained = new();
+
+        using var subscription = source.Chain().Subscribe(chained);
+        source.OnNext(first.Task);
+        source.OnNext(second.Task);
+        source.OnCompleted();
+
+        second.SetResult(Two);
+        await Task.Yield();
+        await Assert.That(chained.Values.Count).IsEqualTo(0);
+
+        first.SetResult(One);
+        await TestPolling.SpinUntil(() => chained.Values.Count == Two && chained.Completed == One, TimeSpan.FromSeconds(One));
+
+        await Assert.That(chained.Values.SequenceEqual(ExpectedOneTwo)).IsTrue();
+        await Assert.That(chained.Errors.Count).IsEqualTo(0);
+        await Assert.That(chained.Completed).IsEqualTo(One);
+    }
+
+    /// <summary>Verifies direct task-chain terminal and disposal paths.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TaskChainDirectSignalHandlesErrorsAndDisposal()
+    {
+        InvalidOperationException sourceError = new("task-source");
+        RecordingWitness<int> sourceFailure = new();
+        new ScriptedObservable<Task<int>>(observer =>
+        {
+            observer.OnError(sourceError);
+            observer.OnNext(Task.FromResult(One));
+            observer.OnCompleted();
+        }).Chain().Subscribe(sourceFailure);
+
+        await Assert.That(sourceFailure.Errors.Count).IsEqualTo(One);
+        await Assert.That(sourceFailure.Errors[0]).IsSameReferenceAs(sourceError);
+        await Assert.That(sourceFailure.Values.Count).IsEqualTo(0);
+        await Assert.That(sourceFailure.Completed).IsEqualTo(0);
+
+        RecordingWitness<int> nullTaskFailure = new();
+        new ScriptedObservable<Task<int>>(observer =>
+        {
+            observer.OnNext(null!);
+            observer.OnCompleted();
+        }).Chain().Subscribe(nullTaskFailure);
+
+        await Assert.That(nullTaskFailure.Errors.Count).IsEqualTo(One);
+        await Assert.That(nullTaskFailure.Errors[0]).IsTypeOf<ArgumentNullException>();
+        await Assert.That(nullTaskFailure.Completed).IsEqualTo(0);
+
+        InvalidOperationException taskError = new("task");
+        RecordingWitness<int> taskFailure = new();
+        Signal.FromEnumerable([Task.FromException<int>(taskError), Task.FromResult(One)]).Chain().Subscribe(taskFailure);
+
+        await Assert.That(taskFailure.Errors.Count).IsEqualTo(One);
+        await Assert.That(taskFailure.Errors[0]).IsSameReferenceAs(taskError);
+        await Assert.That(taskFailure.Values.Count).IsEqualTo(0);
+        await Assert.That(taskFailure.Completed).IsEqualTo(0);
+
+        TaskCompletionSource<int> pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Signal<Task<int>> disposableSource = new();
+        RecordingWitness<int> disposed = new();
+        using (var disposable = disposableSource.Chain().Subscribe(disposed))
+        {
+            disposableSource.OnNext(pending.Task);
+            disposable.Dispose();
+            pending.SetResult(Five);
+        }
+
+        await Task.Delay(TimeSpan.FromMilliseconds(50));
+        await Assert.That(disposed.Values.Count).IsEqualTo(0);
+        await Assert.That(disposed.Errors.Count).IsEqualTo(0);
+        await Assert.That(disposed.Completed).IsEqualTo(0);
+    }
+
     /// <summary>Covers default-if-empty behavior over hot sources for empty, non-empty, error, and observer-guard branches.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
