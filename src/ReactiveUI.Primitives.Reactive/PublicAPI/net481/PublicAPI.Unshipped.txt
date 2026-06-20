@@ -1,5 +1,12 @@
 #nullable enable
 
+ReactiveUI.Primitives.Reactive.Advanced.AsyncSubscriptionLifetime
+ReactiveUI.Primitives.Reactive.Advanced.AsyncSubscriptionLifetime.AsyncSubscriptionLifetime() -> void
+ReactiveUI.Primitives.Reactive.Advanced.AsyncSubscriptionLifetime.Complete() -> void
+ReactiveUI.Primitives.Reactive.Advanced.AsyncSubscriptionLifetime.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.AsyncSubscriptionLifetime.IsCancellationRequested.get -> bool
+ReactiveUI.Primitives.Reactive.Advanced.AsyncSubscriptionLifetime.SetSubscription(System.IDisposable? disposable) -> void
+ReactiveUI.Primitives.Reactive.Advanced.AsyncSubscriptionLifetime.Token.get -> System.Threading.CancellationToken
 ReactiveUI.Primitives.Reactive.Advanced.MapIndexedSignal<TSource, TResult>
 ReactiveUI.Primitives.Reactive.Advanced.MapIndexedSignal<TSource, TResult>.IsRequiredSubscribeOnCurrentThread() -> bool
 ReactiveUI.Primitives.Reactive.Advanced.MapIndexedSignal<TSource, TResult>.MapIndexedSignal(System.IObservable<TSource>! source, System.Func<TSource, int, TResult>! selector) -> void
