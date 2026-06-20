@@ -409,6 +409,8 @@ ReactiveUI.Primitives.LinqExtensions.extension<TSource>(System.IObservable<TSour
 ReactiveUI.Primitives.LinqExtensions.extension<TSource>(System.IObservable<TSource>!).WhereWith<TState>(TState state, System.Func<TState, TSource, bool>! predicate) -> System.IObservable<TSource>!
 ReactiveUI.Primitives.LinqExtensions.extension<TSource>(System.IObservable<TSource?>!)
 ReactiveUI.Primitives.LinqExtensions.extension<TSource>(System.IObservable<TSource?>!).SwitchSelect<TResult>(System.Func<TSource, System.IObservable<TResult>!>! selector) -> System.IObservable<TResult>!
+ReactiveUI.Primitives.Resource
+ReactiveUI.Primitives.Resource.Resource() -> void
 ReactiveUI.Primitives.RxVoid
 ReactiveUI.Primitives.RxVoid.Equals(ReactiveUI.Primitives.RxVoid other) -> bool
 ReactiveUI.Primitives.RxVoid.RxVoid() -> void

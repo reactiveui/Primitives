@@ -301,6 +301,8 @@ ReactiveUI.Primitives.Reactive.LinqExtensions.extension<TSource>(System.IObserva
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<TSource>(System.IObservable<TSource>!).WhereWith<TState>(TState state, System.Func<TState, TSource, bool>! predicate) -> System.IObservable<TSource>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<TSource>(System.IObservable<TSource?>!)
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<TSource>(System.IObservable<TSource?>!).SwitchSelect<TResult>(System.Func<TSource, System.IObservable<TResult>!>! selector) -> System.IObservable<TResult>!
+ReactiveUI.Primitives.Reactive.Resource
+ReactiveUI.Primitives.Reactive.Resource.Resource() -> void
 ReactiveUI.Primitives.Reactive.Signals.PrioritySemaphoreSignal<T>
 ReactiveUI.Primitives.Reactive.Signals.PrioritySemaphoreSignal<T>.Dispose() -> void
 ReactiveUI.Primitives.Reactive.Signals.PrioritySemaphoreSignal<T>.HasObservers.get -> bool
