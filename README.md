@@ -100,7 +100,6 @@ variants close the gap: they recompile the same source with `ISequencer` mapped 
 13. [Migration guides](#systemreactive-to-reactiveuiprimitives-migration-guide)
 14. [Benchmarks and performance posture](#benchmarks-and-performance-posture)
 15. [Repository layout](#repository-layout)
-16. [Validation commands](#validation-commands)
 
 ## Install
 
@@ -127,10 +126,15 @@ integration point. Every package below ships at the same version and targets the
 | [ReactiveUI.Primitives.Extensions][Ext] | [![ExtB]][Ext] | The migrated non-async `ReactiveUI.Extensions` helper operators on lean Primitives. |
 | [ReactiveUI.Primitives.Extensions.Reactive][ExtRx] | [![ExtRxB]][ExtRx] | Migrated extension helpers compiled against System.Reactive `Unit` and `IScheduler`. |
 | [ReactiveUI.Primitives.Wpf][Wpf] | [![WpfB]][Wpf] | WPF dispatcher sequencer integration. |
+| [ReactiveUI.Primitives.Wpf.Reactive][WpfRx] | [![WpfRxB]][WpfRx] | WPF dispatcher scheduler integration for System.Reactive-first projects. |
 | [ReactiveUI.Primitives.WinForms][WinForms] | [![WinFormsB]][WinForms] | Windows Forms control sequencer integration. |
+| [ReactiveUI.Primitives.WinForms.Reactive][WinFormsRx] | [![WinFormsRxB]][WinFormsRx] | Windows Forms control scheduler integration for System.Reactive-first projects. |
 | [ReactiveUI.Primitives.WinUI][WinUI] | [![WinUIB]][WinUI] | WinUI dispatcher-queue sequencer integration. |
+| [ReactiveUI.Primitives.WinUI.Reactive][WinUIRx] | [![WinUIRxB]][WinUIRx] | WinUI dispatcher-queue scheduler integration for System.Reactive-first projects. |
 | [ReactiveUI.Primitives.Blazor][Blazor] | [![BlazorB]][Blazor] | Blazor renderer sequencer integration. |
+| [ReactiveUI.Primitives.Blazor.Reactive][BlazorRx] | [![BlazorRxB]][BlazorRx] | Blazor renderer scheduler integration for System.Reactive-first projects. |
 | [ReactiveUI.Primitives.Maui][Maui] | [![MauiB]][Maui] | MAUI dispatcher sequencer integration. |
+| [ReactiveUI.Primitives.Maui.Reactive][MauiRx] | [![MauiRxB]][MauiRx] | MAUI dispatcher scheduler integration for System.Reactive-first projects. |
 
 [Disp]: https://www.nuget.org/packages/ReactiveUI.Disposables/
 [DispB]: https://img.shields.io/nuget/v/ReactiveUI.Disposables.svg
@@ -154,14 +158,24 @@ integration point. Every package below ships at the same version and targets the
 [ExtRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Extensions.Reactive.svg
 [Wpf]: https://www.nuget.org/packages/ReactiveUI.Primitives.Wpf/
 [WpfB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Wpf.svg
+[WpfRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Wpf.Reactive/
+[WpfRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Wpf.Reactive.svg
 [WinForms]: https://www.nuget.org/packages/ReactiveUI.Primitives.WinForms/
 [WinFormsB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.WinForms.svg
+[WinFormsRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.WinForms.Reactive/
+[WinFormsRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.WinForms.Reactive.svg
 [WinUI]: https://www.nuget.org/packages/ReactiveUI.Primitives.WinUI/
 [WinUIB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.WinUI.svg
+[WinUIRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.WinUI.Reactive/
+[WinUIRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.WinUI.Reactive.svg
 [Blazor]: https://www.nuget.org/packages/ReactiveUI.Primitives.Blazor/
 [BlazorB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Blazor.svg
+[BlazorRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Blazor.Reactive/
+[BlazorRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Blazor.Reactive.svg
 [Maui]: https://www.nuget.org/packages/ReactiveUI.Primitives.Maui/
 [MauiB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Maui.svg
+[MauiRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Maui.Reactive/
+[MauiRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Maui.Reactive.svg
 
 ### How the packages layer
 
@@ -169,7 +183,7 @@ Each family (base, async, extensions) follows the same shape: a type-agnostic `.
 **lean** leaf binds the abstract `RxVoid`/`ISequencer` types to its own lightweight implementations, while the
 `.Reactive` leaf recompiles the same source against System.Reactive's `Unit`/`IScheduler`. Pick the lean leaf for a
 dependency-free build, or the `.Reactive` leaf to interoperate with an existing System.Reactive codebase. The platform
-packages build on the lean base. (Arrows point from a package to what it depends on.)
+packages also come in lean and `.Reactive` leaves. (Arrows point from a package to what it depends on.)
 
 ```mermaid
 graph TD
@@ -185,6 +199,7 @@ graph TD
     Ext["...Extensions (lean)"]
     ExtRx["...Extensions.Reactive"]
     Plat["Wpf / WinForms / WinUI<br/>Blazor / Maui"]
+    PlatRx["Wpf.Reactive / WinForms.Reactive<br/>WinUI.Reactive / Blazor.Reactive / Maui.Reactive"]
 
     Core --> Disp
     Prim --> Core
@@ -202,6 +217,7 @@ graph TD
     ExtRx --> Rx
     ExtRx --> ExtCore
     Plat --> Prim
+    PlatRx --> Rx
 ```
 
 
@@ -287,14 +303,17 @@ Package TFM groups are:
 - `ReactiveUI.Primitives`: `$(LibraryTargetFrameworks)` plus `net10.0-android`, `net11.0-android`, and Apple platform
   TFMs (`net10.0-ios`, `net11.0-ios`, `net10.0-tvos`, `net11.0-tvos`, `net10.0-macos`, `net11.0-macos`,
   `net10.0-maccatalyst`, `net11.0-maccatalyst`) when the build OS supports restoring those workloads.
-- `ReactiveUI.Primitives.Wpf`: `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net11.0-windows`, `net462`,
-  `net472`, `net48`, `net481`.
-- `ReactiveUI.Primitives.WinForms`: `net8.0-windows`, `net9.0-windows`, `net10.0-windows`, `net11.0-windows`, `net462`,
-  `net472`, `net48`, `net481`.
-- `ReactiveUI.Primitives.WinUI`: `net8.0-windows10.0.19041.0`, `net9.0-windows10.0.19041.0`,
-  `net10.0-windows10.0.19041.0`, `net11.0-windows10.0.19041.0`.
-- `ReactiveUI.Primitives.Blazor`: `net8.0`, `net9.0`, `net10.0`, `net11.0`.
-- `ReactiveUI.Primitives.Maui`: `net9.0`, `net10.0`, `net11.0`.
+- `ReactiveUI.Primitives.Reactive`: the same matrix as `ReactiveUI.Primitives`, compiled with System.Reactive `Unit` and
+  `IScheduler` aliases.
+- `ReactiveUI.Primitives.Wpf` and `ReactiveUI.Primitives.Wpf.Reactive`: `net8.0-windows`, `net9.0-windows`,
+  `net10.0-windows`, `net11.0-windows`, `net462`, `net472`, `net48`, `net481`.
+- `ReactiveUI.Primitives.WinForms` and `ReactiveUI.Primitives.WinForms.Reactive`: `net8.0-windows`,
+  `net9.0-windows`, `net10.0-windows`, `net11.0-windows`, `net462`, `net472`, `net48`, `net481`.
+- `ReactiveUI.Primitives.WinUI` and `ReactiveUI.Primitives.WinUI.Reactive`: `net8.0-windows10.0.19041.0`,
+  `net9.0-windows10.0.19041.0`, `net10.0-windows10.0.19041.0`, `net11.0-windows10.0.19041.0`.
+- `ReactiveUI.Primitives.Blazor` and `ReactiveUI.Primitives.Blazor.Reactive`: `net8.0`, `net9.0`, `net10.0`,
+  `net11.0`.
+- `ReactiveUI.Primitives.Maui` and `ReactiveUI.Primitives.Maui.Reactive`: `net9.0`, `net10.0`, `net11.0`.
 
 Runtime package dependencies are intentionally small. The default production packages do not depend on System.Reactive,
 R3, or R3Async. `ReactiveUI.Primitives` references `ReactiveUI.Disposables`, `ReactiveUI.Primitives.Core`, and the
@@ -314,9 +333,10 @@ System.ComponentModel.Annotations, System.Buffers, System.Memory, and System.Col
 package also embeds `ReactiveUI.Primitives.R3Bridge.Generator.dll` so R3/R3Async bridge methods can be generated in
 consuming projects that already reference those external libraries.
 
-`ReactiveUI.Primitives.Blazor` references `Microsoft.AspNetCore.Components`, `ReactiveUI.Primitives.Maui` references
-`Microsoft.Maui.Core` and Microsoft.Extensions infrastructure packages, and `ReactiveUI.Primitives.WinUI` references
-`Microsoft.WindowsAppSDK`. The remaining shared package references are analyzer, SourceLink, versioning, ILLink,
+`ReactiveUI.Primitives.Blazor` and `ReactiveUI.Primitives.Blazor.Reactive` reference `Microsoft.AspNetCore.Components`.
+`ReactiveUI.Primitives.Maui` and `ReactiveUI.Primitives.Maui.Reactive` reference `Microsoft.Maui.Core` and
+Microsoft.Extensions infrastructure packages. `ReactiveUI.Primitives.WinUI` and `ReactiveUI.Primitives.WinUI.Reactive`
+reference `Microsoft.WindowsAppSDK`. The remaining shared package references are analyzer, SourceLink, versioning, ILLink,
 reference-assembly, or build-time support packages such as Blazor.Common.Analyzers, Microsoft.SourceLink.GitHub, MinVer,
 Roslynator.Analyzers, SonarAnalyzer.CSharp, StyleSharp.Analyzers, Microsoft.NET.ILLink.Tasks, and
 Microsoft.NETFramework.ReferenceAssemblies. Benchmark projects may reference System.Reactive,
@@ -584,6 +604,7 @@ using var subscription = labels.Subscribe(Console.WriteLine);
 | filter-null + project + switch to latest inner | `SwitchSelect`                                  |
 | pairwise zip                                   | `Pair`                                          |
 | latest-value combination                       | `SyncLatest`                                    |
+| System.Reactive-named latest combination       | `CombineLatest`                                 |
 | combine left emission with latest right value  | `Latch`                                         |
 | latest-fusion alias                            | `PairLatest`, `FuseLatest`                      |
 | last values after both complete                | `ForkJoin`                                      |
@@ -619,6 +640,31 @@ using var area = Signal.SyncLatest(width, height, (w, h) => w * h)
 width.Value = 800;
 height.Value = 600;
 ```
+
+`SyncLatest` and the System.Reactive-named `CombineLatest` overloads support multi-source projections up to 16 total
+sources. The `.Reactive` package variants expose the same overloads with `System.Reactive.Unit` and `IScheduler`
+conventions, which keeps migrated Rx code using familiar `CombineLatest` names while running on the Primitives
+implementation.
+
+Multi-source latest example:
+
+```csharp
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
+
+var first = new StateSignal<int>(1);
+var second = new StateSignal<int>(2);
+var third = new StateSignal<int>(3);
+
+using var total = first
+    .SyncLatest(second, third, static (a, b, c) => a + b + c)
+    .Subscribe(value => Console.WriteLine($"total={value}"));
+
+third.Value = 10;
+```
+
+The Rx-name `SelectMany` observable overloads keep concurrent merge semantics. Use `FlatMap` or `Bind` when you want the
+Primitives name, and use `SelectMany` when porting existing Rx code or keeping LINQ query syntax.
 
 Fused projection example (`Choose` and `SwitchSelect`):
 
@@ -863,6 +909,9 @@ using IDisposable subscription = names.Subscribe(Console.WriteLine);
 
 The Extensions project is intended for applications that already use the helper operators from `ReactiveUI.Extensions`
 and want the same shapes without pulling System.Reactive or R3 into the production dependency graph.
+`Filter(string pattern)` creates a regex with a 30-second match timeout so ordinary filters remain stable under
+instrumented CI runs while still protecting against runaway patterns. Use `Filter(Regex regex)` when a caller-specified
+regex timeout or options set must be preserved exactly.
 
 ## Stateful signals and subject-like types
 
@@ -1100,6 +1149,101 @@ When a project must keep System.Reactive `Unit` or `IScheduler` in its public su
 `ReactiveUI.Primitives.Extensions.Reactive`. When the goal is to migrate away from those public System.Reactive types,
 use the lean packages and the mappings below.
 
+### Migration track: existing `xyz` project
+
+Use this track when the project should eventually stop exposing System.Reactive types and use the lean
+ReactiveUI.Primitives package family.
+
+1. Inventory references and public API. Mark each project that exposes `System.Reactive.Unit`, `IScheduler`,
+   `IObservable<T>` extension methods, UI schedulers, `Subject<T>` types, or ReactiveUI.Extensions helpers.
+2. Add the lean packages needed by the existing project:
+
+```bash
+dotnet add xyz/xyz.csproj package ReactiveUI.Primitives
+dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Extensions
+dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Async
+```
+
+3. Add only the matching UI integration package when the project owns UI-thread dispatch:
+
+```bash
+dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Wpf
+dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.WinForms
+dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.WinUI
+dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Blazor
+dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Maui
+```
+
+4. Convert boundary types deliberately: `System.Reactive.Unit` to `RxVoid`, `IScheduler` to `ISequencer`, Rx subjects to
+   `Signal<T>`, `StateSignal<T>`, `ReplaySignal<T>`, or `FinalSignal<T>`, and composite disposable types to
+   `MultipleDisposable`, `Pocket`, `Slot`, or `AssignmentSlot`.
+5. Keep code compiling during the first pass by using the Rx-name compatibility layer (`Select`, `Where`, `Aggregate`,
+   `Scan`, `Merge`, `Concat`, `CombineLatest`, `SelectMany`, and related aliases). Then move hot paths to Primitives
+   names (`Map`, `Keep`, `Reduce`, `Fold`, `Blend`, `Chain`, `SyncLatest`, `FlatMap`) where that makes the code clearer.
+6. Replace scheduler construction and tests: use `Sequencer.Immediate`, `Sequencer.CurrentThread`,
+   `ThreadPoolSequencer.Instance`, `TaskPoolSequencer.Instance`, UI sequencers, and `VirtualClock`.
+7. Remove `System.Reactive` and `ReactiveUI.Extensions` package references only after the project builds without
+   `System.Reactive.Linq`, `System.Reactive.Subjects`, `System.Reactive.Disposables`, or
+   `System.Reactive.Concurrency` imports.
+8. Run tests and package/API approval checks. For time-sensitive tests, use virtual time rather than real sleeps.
+
+### Migration track: new `xyz.Reactive` project
+
+Use this track when an existing Rx-based source base must remain source-compatible for consumers while the repository
+moves implementation work onto ReactiveUI.Primitives. The pattern is to keep or create a `xyz` lean package and add a
+new `xyz.Reactive` package that references the `.Reactive` Primitives range.
+
+1. Move shared implementation files into a shared source folder that can be linked by both projects.
+2. In shared source, use the neutral identifiers `RxVoid` and `ISequencer`. In the lean project they bind to
+   ReactiveUI.Primitives types; in the `.Reactive` project they bind to `System.Reactive.Unit` and
+   `System.Reactive.Concurrency.IScheduler`.
+3. Gate namespaces when the public namespace must differ:
+
+```csharp
+#if REACTIVE_SHIM
+namespace xyz.Reactive;
+#else
+namespace xyz;
+#endif
+```
+
+4. Reference the `.Reactive` packages from `xyz.Reactive`:
+
+```bash
+dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Reactive
+dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Extensions.Reactive
+dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Async.Reactive
+```
+
+5. Add the matching reactive UI package only when the project exposes UI scheduling:
+
+```bash
+dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Wpf.Reactive
+dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.WinForms.Reactive
+dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.WinUI.Reactive
+dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Blazor.Reactive
+dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Maui.Reactive
+```
+
+6. Configure the reactive project to define `REACTIVE_SHIM` and alias the System.Reactive types if your repository does
+   not already centralize this in `Directory.Build.props`:
+
+```xml
+<PropertyGroup>
+  <DefineConstants>$(DefineConstants);REACTIVE_SHIM</DefineConstants>
+</PropertyGroup>
+<ItemGroup>
+  <Using Include="System.Reactive.Unit" Alias="RxVoid" />
+  <Using Include="System.Reactive.Concurrency.IScheduler" Alias="ISequencer" />
+</ItemGroup>
+```
+
+7. Prefer zero source changes in the first `xyz.Reactive` pass: keep Rx names such as `Select`, `Where`, `SelectMany`,
+   `CombineLatest`, `Merge`, `Concat`, `Throttle`, and `WithLatestFrom` where compatibility matters. The `.Reactive`
+   Primitives packages supply those names over the Primitives implementation.
+8. Build both packages side by side. `xyz` should have no System.Reactive runtime dependency; `xyz.Reactive` should keep
+   System.Reactive-facing APIs for existing consumers.
+
 ### Factory mapping
 
 | System.Reactive                     | ReactiveUI.Primitives                                                            | Notes                                                          |
@@ -1139,7 +1283,7 @@ use the lean packages and the mappings below.
 |----------------------------------|--------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
 | `Select`                         | `Map`                                                  | Prefer `Map` for distinct Primitives style.                                                         |
 | `Where`                          | `Keep`                                                 | Predicate filtering.                                                                                |
-| `SelectMany`                     | `FlatMap` or `Bind`                                    | `Bind` is a Primitives alias for flat mapping.                                                      |
+| `SelectMany`                     | `FlatMap`, `Bind`, or Rx-name `SelectMany`             | Observable overloads preserve concurrent merge semantics; enumerable overloads flatten inline.      |
 | `Aggregate`                      | `Reduce`                                               | Emits final accumulated value on completion.                                                        |
 | `Scan`                           | `Fold`                                                 | Emits every accumulated value.                                                                      |
 | `Do`                             | `Tap`                                                  | Side effect while preserving values.                                                                |
@@ -1158,7 +1302,7 @@ use the lean packages and the mappings below.
 | `Switch`                         | `SwitchTo`                                             | Latest inner observable wins.                                                                       |
 | `Select` + `Switch`              | `SwitchSelect`                                         | Filters null source values, projects each to an inner observable, and mirrors only the latest.      |
 | `Zip`                            | `Pair` or `Signal.Pair`                                | Pair values by index.                                                                               |
-| `CombineLatest`                  | `SyncLatest` or `Signal.SyncLatest`                    | Latest values after both sources have emitted.                                                      |
+| `CombineLatest`                  | `SyncLatest`, Rx-name `CombineLatest`, or `Signal.SyncLatest` | Latest values after all sources have emitted; overloads support up to 16 total sources.       |
 | `WithLatestFrom`                 | `Latch`                                                | Left emission paired with latest right value.                                                       |
 | `ForkJoin`                       | `ForkJoin`                                             | Last values after completion.                                                                       |
 | `Throttle`                       | `Calm` / `Stabilize`                                   | Quiet-period emission.                                                                              |
@@ -1575,10 +1719,15 @@ duration is indistinguishable from empty method overhead; the benchmark run stil
 | `src/ReactiveUI.Primitives.Extensions`                 | Migrated non-async ReactiveUI.Extensions helper operators backed by lean Primitives.        |
 | `src/ReactiveUI.Primitives.Extensions.Reactive`        | System.Reactive-flavoured Extensions helper leaf.                                          |
 | `src/ReactiveUI.Primitives.Wpf`                        | Optional WPF dispatcher integration library.                                               |
+| `src/ReactiveUI.Primitives.Wpf.Reactive`               | Optional WPF dispatcher scheduler integration library for System.Reactive consumers.        |
 | `src/ReactiveUI.Primitives.WinForms`                   | Optional Windows Forms control integration library.                                        |
+| `src/ReactiveUI.Primitives.WinForms.Reactive`          | Optional Windows Forms control scheduler integration library for System.Reactive consumers. |
 | `src/ReactiveUI.Primitives.WinUI`                      | Optional WinUI dispatcher queue integration library.                                       |
+| `src/ReactiveUI.Primitives.WinUI.Reactive`             | Optional WinUI dispatcher queue scheduler integration library for System.Reactive consumers. |
 | `src/ReactiveUI.Primitives.Blazor`                     | Optional Blazor renderer integration library.                                              |
+| `src/ReactiveUI.Primitives.Blazor.Reactive`            | Optional Blazor renderer scheduler integration library for System.Reactive consumers.       |
 | `src/ReactiveUI.Primitives.Maui`                       | Optional MAUI dispatcher integration library.                                              |
+| `src/ReactiveUI.Primitives.Maui.Reactive`              | Optional MAUI dispatcher scheduler integration library for System.Reactive consumers.       |
 | `src/ReactiveUI.Primitives.R3Bridge.Generator`         | Non-packable analyzer project embedded by the lean base and async packages for R3 bridges. |
 | `src/Primitives.Shared`                                | Linked lean/Reactive synchronous source.                                                   |
 | `src/Primitives.Async.Shared`                          | Linked lean/Reactive async source.                                                         |
