@@ -15,6 +15,36 @@ namespace ReactiveUI.Primitives;
 /// </summary>
 public static partial class LinqExtensions
 {
+    /// <summary>System.Reactive-named combining operators for enumerable observable sources.</summary>
+    /// <param name="sources">The observable sources.</param>
+    /// <typeparam name="T">The value type.</typeparam>
+    extension<T>(IEnumerable<IObservable<T>> sources)
+    {
+        /// <summary>Concurrently merges the supplied observable sources. System.Reactive name for <c>Blend</c>.</summary>
+        /// <returns>An observable that forwards values from every source.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Merge()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(sources);
+
+            return sources.Blend();
+        }
+
+        /// <summary>Concurrently merges observable sources with a maximum number of active subscriptions.</summary>
+        /// <param name="maxConcurrent">The maximum number of sources to subscribe to at the same time.</param>
+        /// <returns>An observable that forwards values from every source.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="maxConcurrent"/> is less than or equal to zero.</exception>
+        public IObservable<T> Merge(int maxConcurrent)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(sources);
+
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(maxConcurrent);
+
+            return sources.Blend(maxConcurrent);
+        }
+    }
+
     /// <summary>System.Reactive-named combining operators for an observable source of inner observable sequences.</summary>
     /// <param name="sources">The outer sequence of inner sequences.</param>
     /// <typeparam name="T">The value type.</typeparam>
@@ -87,6 +117,53 @@ public static partial class LinqExtensions
     /// <typeparam name="T">The value type.</typeparam>
     extension<T>(IObservable<T> source)
     {
+        /// <summary>Subscribes an observer with downstream exception protection.</summary>
+        /// <param name="observer">The observer to subscribe.</param>
+        /// <returns>A disposable that cancels the subscription.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
+        public IDisposable SubscribeSafe(IObserver<T> observer)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(observer);
+
+            SubscribeSafeObserver<T> safe = new(observer);
+            safe.SetSubscription(source.Subscribe(safe));
+            return safe;
+        }
+
+        /// <summary>Subscribes callbacks with downstream exception protection.</summary>
+        /// <param name="onNext">The action to invoke for each value.</param>
+        /// <param name="onError">The action to invoke for an error.</param>
+        /// <returns>A disposable that cancels the subscription.</returns>
+        /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+        public IDisposable SubscribeSafe(Action<T> onNext, Action<Exception> onError) =>
+            source.SubscribeSafe(Witness.Create(onNext, onError));
+
+        /// <summary>Subscribes callbacks with downstream exception protection.</summary>
+        /// <param name="onNext">The action to invoke for each value.</param>
+        /// <param name="onError">The action to invoke for an error.</param>
+        /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
+        /// <returns>A disposable that cancels the subscription.</returns>
+        /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+        public IDisposable SubscribeSafe(Action<T> onNext, Action<Exception> onError, Action onCompleted) =>
+            source.SubscribeSafe(Witness.Create(onNext, onError, onCompleted));
+
+        /// <summary>Subscribes terminal callbacks with downstream exception protection.</summary>
+        /// <param name="onError">The action to invoke for an error.</param>
+        /// <returns>A disposable that cancels the subscription.</returns>
+        /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+        public IDisposable SubscribeSafe(Action<Exception> onError) =>
+            source.SubscribeSafe(Witness.Create<T>(static _ => { }, onError));
+
+        /// <summary>Subscribes terminal callbacks with downstream exception protection.</summary>
+        /// <param name="onError">The action to invoke for an error.</param>
+        /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
+        /// <returns>A disposable that cancels the subscription.</returns>
+        /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+        public IDisposable SubscribeSafe(Action<Exception> onError, Action onCompleted) =>
+            source.SubscribeSafe(Witness.Create<T>(static _ => { }, onError, onCompleted));
+
         /// <summary>Invokes an action for each value while preserving the sequence. System.Reactive name for <c>Tap</c>.</summary>
         /// <param name="onNext">The action to invoke for each value.</param>
         /// <returns>The source values after the action has run.</returns>
@@ -317,6 +394,66 @@ public static partial class LinqExtensions
             return new IgnoreValuesSignal<T>(source);
         }
 
+        /// <summary>Prepends values before the source sequence. System.Reactive name for <c>Prepend</c>.</summary>
+        /// <param name="values">The values to emit before the source.</param>
+        /// <returns>A sequence that emits <paramref name="values"/> before the source values.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="values"/> is <see langword="null"/>.</exception>
+        public IObservable<T> StartWith(params T[] values) =>
+            source.Prepend(values);
+
+        /// <summary>Prepends values before the source sequence. System.Reactive name for <c>Prepend</c>.</summary>
+        /// <param name="values">The values to emit before the source.</param>
+        /// <returns>A sequence that emits <paramref name="values"/> before the source values.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="values"/> is <see langword="null"/>.</exception>
+        public IObservable<T> StartWith(IEnumerable<T> values) =>
+            source.Prepend(values);
+
+        /// <summary>Collects values into time-windowed batches. System.Reactive name for <c>Collect</c>.</summary>
+        /// <param name="timeSpan">The duration of each buffer window.</param>
+        /// <returns>A sequence that emits non-empty batches of source values.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+        public IObservable<IList<T>> Buffer(TimeSpan timeSpan) =>
+            source.Collect(timeSpan);
+
+        /// <summary>Collects values into time-windowed batches on the supplied scheduler.</summary>
+        /// <param name="timeSpan">The duration of each buffer window.</param>
+        /// <param name="scheduler">The scheduler used to schedule buffer flushes.</param>
+        /// <returns>A sequence that emits non-empty batches of source values.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="scheduler"/> is <see langword="null"/>.</exception>
+        public IObservable<IList<T>> Buffer(TimeSpan timeSpan, ISequencer scheduler) =>
+            source.Collect(timeSpan, scheduler);
+
+        /// <summary>Invokes an action when the subscription terminates or is disposed. System.Reactive name for <c>OnCleanup</c>.</summary>
+        /// <param name="finallyAction">The action to invoke exactly once.</param>
+        /// <returns>A sequence that mirrors the source and invokes <paramref name="finallyAction"/> on cleanup.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="finallyAction"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Finally(Action finallyAction) =>
+            source.OnCleanup(finallyAction);
+
+        /// <summary>Emits a value only after no newer value arrives within the quiet period. System.Reactive name for <c>Calm</c>.</summary>
+        /// <param name="dueTime">The quiet period.</param>
+        /// <returns>A sequence that emits the latest value after each quiet period.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Throttle(TimeSpan dueTime) =>
+            source.Calm(dueTime);
+
+        /// <summary>Emits a value only after no newer value arrives within the scheduler quiet period. System.Reactive name for <c>Calm</c>.</summary>
+        /// <param name="dueTime">The quiet period.</param>
+        /// <param name="scheduler">The scheduler used to schedule quiet-period timers.</param>
+        /// <returns>A sequence that emits the latest value after each quiet period.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="scheduler"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Throttle(TimeSpan dueTime, ISequencer scheduler) =>
+            source.Calm(dueTime, scheduler);
+
+        /// <summary>Handles errors of the specified type by switching to a replacement sequence.</summary>
+        /// <typeparam name="TException">The exception type to handle.</typeparam>
+        /// <param name="handler">The function that produces a replacement sequence for handled errors.</param>
+        /// <returns>A sequence that switches to the handler result for matching errors.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="handler"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Catch<TException>(Func<TException, IObservable<T>> handler)
+            where TException : Exception =>
+            source.Recover(handler);
+
         /// <summary>Projects each value to an inner sequence and merges the results. LINQ name for <c>FlatMap</c>.</summary>
         /// <typeparam name="TResult">The inner value type.</typeparam>
         /// <param name="selector">The function that projects each source value to an inner sequence.</param>
@@ -329,6 +466,34 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
             return new FlatMapSignal<T, TResult>(source, selector);
+        }
+
+        /// <summary>Projects each value to the same inner sequence and merges the results.</summary>
+        /// <typeparam name="TResult">The inner value type.</typeparam>
+        /// <param name="other">The inner sequence used for each source value.</param>
+        /// <returns>A sequence containing the merged values of every inner sequence.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="other"/> is <see langword="null"/>.</exception>
+        public IObservable<TResult> SelectMany<TResult>(IObservable<TResult> other)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(other);
+
+            return new FlatMapSignal<T, TResult>(source, _ => other);
+        }
+
+        /// <summary>Projects each value to an enumerable sequence and emits the projected values.</summary>
+        /// <typeparam name="TResult">The projected value type.</typeparam>
+        /// <param name="selector">The function that projects each source value to enumerable values.</param>
+        /// <returns>A sequence containing the projected enumerable values.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        public IObservable<TResult> SelectMany<TResult>(Func<T, IEnumerable<TResult>> selector)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(selector);
+
+            return new SelectManyEnumerableSignal<T, TResult>(source, selector);
         }
 
         /// <summary>Projects each value to an inner sequence and combines each pair with a result selector. LINQ name for <c>FlatMap</c>.</summary>
@@ -347,6 +512,19 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(resultSelector);
 
             return new FlatMapResultSignal<T, TCollection, TResult>(source, collectionSelector, resultSelector);
+        }
+
+        /// <summary>Merges this sequence with another observable sequence. System.Reactive name for <c>Blend</c>.</summary>
+        /// <param name="second">The second sequence to merge.</param>
+        /// <returns>A sequence containing values from both sources as they arrive.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="second"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Merge(IObservable<T> second)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(second);
+
+            return new[] { source, second }.Blend();
         }
 
         /// <summary>Concatenates two sequences. System.Reactive name for <c>Chain</c>.</summary>
@@ -627,6 +805,253 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(sources);
 
             return new ChainSignal<T>(sources.Map(static task => Signal.FromTask(task)));
+        }
+    }
+
+    /// <summary>Observer that turns downstream <c>OnNext</c> exceptions into a terminal error and upstream disposal.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class SubscribeSafeObserver<T> : IObserver<T>, IDisposable
+    {
+        /// <summary>The wrapped observer.</summary>
+        private readonly IObserver<T> _observer;
+
+        /// <summary>The upstream subscription.</summary>
+        private readonly SingleReplaceableDisposable _subscription = new();
+
+        /// <summary>Non-zero after terminal notification or disposal.</summary>
+        private int _stopped;
+
+        /// <summary>Initializes a new instance of the <see cref="SubscribeSafeObserver{T}"/> class.</summary>
+        /// <param name="observer">The wrapped observer.</param>
+        internal SubscribeSafeObserver(IObserver<T> observer) => _observer = observer;
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            Interlocked.Exchange(ref _stopped, 1);
+            _subscription.Dispose();
+        }
+
+        /// <inheritdoc/>
+        public void OnCompleted()
+        {
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _observer.OnCompleted();
+            }
+            finally
+            {
+                _subscription.Dispose();
+            }
+        }
+
+        /// <inheritdoc/>
+        public void OnError(Exception error) => StopWithError(error);
+
+        /// <inheritdoc/>
+        public void OnNext(T value)
+        {
+            if (Volatile.Read(ref _stopped) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _observer.OnNext(value);
+            }
+            catch (Exception error)
+            {
+                StopWithError(error);
+            }
+        }
+
+        /// <summary>Assigns the upstream subscription.</summary>
+        /// <param name="subscription">The upstream subscription.</param>
+        internal void SetSubscription(IDisposable subscription)
+        {
+            _subscription.Create(subscription);
+            if (Volatile.Read(ref _stopped) == 0)
+            {
+                return;
+            }
+
+            _subscription.Dispose();
+        }
+
+        /// <summary>Forwards an error exactly once and disposes the upstream subscription.</summary>
+        /// <param name="error">The terminal error.</param>
+        private void StopWithError(Exception error)
+        {
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _observer.OnError(error);
+            }
+            finally
+            {
+                _subscription.Dispose();
+            }
+        }
+    }
+
+    /// <summary>Signal that projects each value to an enumerable sequence and emits the enumerable values.</summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    private sealed class SelectManyEnumerableSignal<TSource, TResult> : IObservable<TResult>
+    {
+        /// <summary>The source observable.</summary>
+        private readonly IObservable<TSource> _source;
+
+        /// <summary>The enumerable projection.</summary>
+        private readonly Func<TSource, IEnumerable<TResult>> _selector;
+
+        /// <summary>Initializes a new instance of the <see cref="SelectManyEnumerableSignal{TSource, TResult}"/> class.</summary>
+        /// <param name="source">The source observable.</param>
+        /// <param name="selector">The enumerable projection.</param>
+        internal SelectManyEnumerableSignal(IObservable<TSource> source, Func<TSource, IEnumerable<TResult>> selector)
+        {
+            _source = source;
+            _selector = selector;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<TResult> observer)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(observer);
+
+            SelectManyEnumerableObserver<TSource, TResult> sink = new(observer, _selector);
+            sink.SetSubscription(_source.Subscribe(sink));
+            return sink;
+        }
+    }
+
+    /// <summary>Observer for enumerable <c>SelectMany</c>.</summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <typeparam name="TResult">The result value type.</typeparam>
+    private sealed class SelectManyEnumerableObserver<TSource, TResult> : IObserver<TSource>, IDisposable
+    {
+        /// <summary>The downstream observer.</summary>
+        private readonly IObserver<TResult> _observer;
+
+        /// <summary>The enumerable projection.</summary>
+        private readonly Func<TSource, IEnumerable<TResult>> _selector;
+
+        /// <summary>The upstream subscription.</summary>
+        private readonly SingleReplaceableDisposable _subscription = new();
+
+        /// <summary>Non-zero after terminal notification or disposal.</summary>
+        private int _stopped;
+
+        /// <summary>Initializes a new instance of the <see cref="SelectManyEnumerableObserver{TSource, TResult}"/> class.</summary>
+        /// <param name="observer">The downstream observer.</param>
+        /// <param name="selector">The enumerable projection.</param>
+        internal SelectManyEnumerableObserver(IObserver<TResult> observer, Func<TSource, IEnumerable<TResult>> selector)
+        {
+            _observer = observer;
+            _selector = selector;
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            Interlocked.Exchange(ref _stopped, 1);
+            _subscription.Dispose();
+        }
+
+        /// <inheritdoc/>
+        public void OnCompleted()
+        {
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _observer.OnCompleted();
+            }
+            finally
+            {
+                _subscription.Dispose();
+            }
+        }
+
+        /// <inheritdoc/>
+        public void OnError(Exception error) => StopWithError(error);
+
+        /// <inheritdoc/>
+        public void OnNext(TSource value)
+        {
+            if (Volatile.Read(ref _stopped) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                var values = _selector(value);
+                if (values is null)
+                {
+                    StopWithError(new InvalidOperationException("SelectMany selector returned null."));
+                    return;
+                }
+
+                foreach (var result in values)
+                {
+                    if (Volatile.Read(ref _stopped) != 0)
+                    {
+                        return;
+                    }
+
+                    _observer.OnNext(result);
+                }
+            }
+            catch (Exception error)
+            {
+                StopWithError(error);
+            }
+        }
+
+        /// <summary>Assigns the upstream subscription.</summary>
+        /// <param name="subscription">The upstream subscription.</param>
+        internal void SetSubscription(IDisposable subscription)
+        {
+            _subscription.Create(subscription);
+            if (Volatile.Read(ref _stopped) == 0)
+            {
+                return;
+            }
+
+            _subscription.Dispose();
+        }
+
+        /// <summary>Forwards an error exactly once and disposes the upstream subscription.</summary>
+        /// <param name="error">The terminal error.</param>
+        private void StopWithError(Exception error)
+        {
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _observer.OnError(error);
+            }
+            finally
+            {
+                _subscription.Dispose();
+            }
         }
     }
 }

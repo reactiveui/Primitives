@@ -35,10 +35,15 @@ ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(Reactive
 ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(ReactiveUI.Primitives.ConnectableSignal<T>!).AutoConnect() -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(ReactiveUI.Primitives.ConnectableSignal<T>!).AutoConnect(int subscriberCount) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(ReactiveUI.Primitives.ConnectableSignal<T>!).AutoShare() -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(ReactiveUI.Primitives.ConnectableSignal<T>!).RefCount() -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!)
 ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).Multicast(ReactiveUI.Primitives.Signals.ISignal<T>! hub) -> ReactiveUI.Primitives.ConnectableSignal<T>!
+ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).Publish() -> ReactiveUI.Primitives.ConnectableSignal<T>!
+ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).Publish<TResult>(System.Func<System.IObservable<T>!, System.IObservable<TResult>!>! selector) -> System.IObservable<TResult>!
+ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).Replay() -> ReactiveUI.Primitives.ConnectableSignal<T>!
 ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).Replay(int bufferSize) -> ReactiveUI.Primitives.ConnectableSignal<T>!
 ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).Replay(int bufferSize, System.TimeSpan window) -> ReactiveUI.Primitives.ConnectableSignal<T>!
+ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).ReplayLive() -> ReactiveUI.Primitives.ConnectableSignal<T>!
 ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).ReplayLive(int bufferSize) -> ReactiveUI.Primitives.ConnectableSignal<T>!
 ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).ReplayLive(int bufferSize, System.TimeSpan window) -> ReactiveUI.Primitives.ConnectableSignal<T>!
 ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).Share() -> ReactiveUI.Primitives.ConnectableSignal<T>!
@@ -68,6 +73,9 @@ ReactiveUI.Primitives.Reactive.LinqExtensions.extension(System.IObservable<objec
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension(System.IObservable<object?>!).KeepType<TResult>() -> System.IObservable<TResult>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.Collections.Generic.IEnumerable<System.IObservable<T>!>!)
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.Collections.Generic.IEnumerable<System.IObservable<T>!>!).Blend() -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.Collections.Generic.IEnumerable<System.IObservable<T>!>!).Blend(int maxConcurrent) -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.Collections.Generic.IEnumerable<System.IObservable<T>!>!).Merge() -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.Collections.Generic.IEnumerable<System.IObservable<T>!>!).Merge(int maxConcurrent) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.Collections.Generic.IEnumerable<T>!)
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.Collections.Generic.IEnumerable<T>!).ToObservable() -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.Collections.Generic.IEnumerable<T>!).ToObservable(System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<T>!
@@ -101,8 +109,11 @@ ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Append(T value) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).AsObservable() -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Bind<TResult>(System.Func<T, System.IObservable<TResult>!>! selector) -> System.IObservable<TResult>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Buffer(System.TimeSpan timeSpan) -> System.IObservable<System.Collections.Generic.IList<T>!>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Buffer(System.TimeSpan timeSpan, System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<System.Collections.Generic.IList<T>!>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Calm(System.TimeSpan dueTime) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Calm(System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Catch<TException>(System.Func<TException!, System.IObservable<T>!>! handler) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Chain(System.IObservable<T>! second) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).CollectArray() -> System.IObservable<T[]!>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).CollectArrayAsync() -> System.Threading.Tasks.Task<T[]!>!
@@ -152,6 +163,7 @@ ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).DoWith<TState>(TState state, System.Action<TState, T>! onNext) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Expire(System.TimeSpan dueTime) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Expire(System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Finally(System.Action! finallyAction) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).FirstAsync() -> System.Threading.Tasks.Task<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).FirstOrDefaultAsync() -> System.Threading.Tasks.Task<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).FirstOrDefaultAsync(T defaultValue) -> System.Threading.Tasks.Task<T>!
@@ -176,6 +188,7 @@ ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Map<TResult>(System.Func<T, TResult>! selector) -> System.IObservable<TResult>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).MapIndexed<TResult>(System.Func<T, int, TResult>! selector) -> System.IObservable<TResult>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).MapWith<TState, TResult>(TState state, System.Func<TState, T, TResult>! selector) -> System.IObservable<TResult>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Merge(System.IObservable<T>! second) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).ObserveOn(System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Pair<TRight, TResult>(System.IObservable<TRight>! right, System.Func<T, TRight, TResult>! selector) -> System.IObservable<TResult>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).PairLatest<TRight, TResult>(System.IObservable<TRight>! right, System.Func<T, TRight, TResult>! selector) -> System.IObservable<TResult>!
@@ -191,7 +204,9 @@ ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Resume(System.IObservable<T>! fallback) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Scan<TAccumulate>(TAccumulate seed, System.Func<TAccumulate, T, TAccumulate>! accumulator) -> System.IObservable<TAccumulate>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).SelectMany<TCollection, TResult>(System.Func<T, System.IObservable<TCollection>!>! collectionSelector, System.Func<T, TCollection, TResult>! resultSelector) -> System.IObservable<TResult>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).SelectMany<TResult>(System.Func<T, System.Collections.Generic.IEnumerable<TResult>!>! selector) -> System.IObservable<TResult>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).SelectMany<TResult>(System.Func<T, System.IObservable<TResult>!>! selector) -> System.IObservable<TResult>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).SelectMany<TResult>(System.IObservable<TResult>! other) -> System.IObservable<TResult>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Shift(System.TimeSpan dueTime) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Shift(System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Skip(int count) -> System.IObservable<T>!
@@ -199,7 +214,14 @@ ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Spark() -> System.IObservable<ReactiveUI.Primitives.Reactive.Core.Spark<T>>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Stabilize(System.TimeSpan dueTime) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Stabilize(System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).StartWith(System.Collections.Generic.IEnumerable<T>! values) -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).StartWith(params T[]! values) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).SubscribeOn(System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).SubscribeSafe(System.Action<System.Exception!>! onError) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).SubscribeSafe(System.Action<System.Exception!>! onError, System.Action! onCompleted) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).SubscribeSafe(System.Action<T>! onNext, System.Action<System.Exception!>! onError) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).SubscribeSafe(System.Action<T>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).SubscribeSafe(System.IObserver<T>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>(System.IObservable<T2>! source2, System.IObservable<T3>! source3, System.IObservable<T4>! source4, System.IObservable<T5>! source5, System.IObservable<T6>! source6, System.IObservable<T7>! source7, System.IObservable<T8>! source8, System.IObservable<T9>! source9, System.IObservable<T10>! source10, System.IObservable<T11>! source11, System.IObservable<T12>! source12, System.IObservable<T13>! source13, System.IObservable<T14>! source14, System.IObservable<T15>! source15, System.IObservable<T16>! source16, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>! selector) -> System.IObservable<TResult>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>(System.IObservable<T2>! source2, System.IObservable<T3>! source3, System.IObservable<T4>! source4, System.IObservable<T5>! source5, System.IObservable<T6>! source6, System.IObservable<T7>! source7, System.IObservable<T8>! source8, System.IObservable<T9>! source9, System.IObservable<T10>! source10, System.IObservable<T11>! source11, System.IObservable<T12>! source12, System.IObservable<T13>! source13, System.IObservable<T14>! source14, System.IObservable<T15>! source15, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>! selector) -> System.IObservable<TResult>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(System.IObservable<T2>! source2, System.IObservable<T3>! source3, System.IObservable<T4>! source4, System.IObservable<T5>! source5, System.IObservable<T6>! source6, System.IObservable<T7>! source7, System.IObservable<T8>! source8, System.IObservable<T9>! source9, System.IObservable<T10>! source10, System.IObservable<T11>! source11, System.IObservable<T12>! source12, System.IObservable<T13>! source13, System.IObservable<T14>! source14, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>! selector) -> System.IObservable<TResult>!
@@ -224,6 +246,8 @@ ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Tap(System.Action<T>! onNext) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Tap(System.Action<T>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).TapWith<TState>(TState state, System.Action<TState, T>! onNext) -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Throttle(System.TimeSpan dueTime) -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Throttle(System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).TimeInterval() -> System.IObservable<ReactiveUI.Primitives.Core.TimeInterval<T>>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).TimeInterval(System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<ReactiveUI.Primitives.Core.TimeInterval<T>>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Timestamp() -> System.IObservable<ReactiveUI.Primitives.Core.Moment<T>>!
@@ -348,8 +372,13 @@ static ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.AutoConnect<T>
 static ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.AutoConnect<T>(this ReactiveUI.Primitives.ConnectableSignal<T>! source, int subscriberCount) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.AutoShare<T>(this ReactiveUI.Primitives.ConnectableSignal<T>! source) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.Multicast<T>(this System.IObservable<T>! source, ReactiveUI.Primitives.Signals.ISignal<T>! hub) -> ReactiveUI.Primitives.ConnectableSignal<T>!
+static ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.Publish<T, TResult>(this System.IObservable<T>! source, System.Func<System.IObservable<T>!, System.IObservable<TResult>!>! selector) -> System.IObservable<TResult>!
+static ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.Publish<T>(this System.IObservable<T>! source) -> ReactiveUI.Primitives.ConnectableSignal<T>!
+static ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.RefCount<T>(this ReactiveUI.Primitives.ConnectableSignal<T>! source) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.Replay<T>(this System.IObservable<T>! source) -> ReactiveUI.Primitives.ConnectableSignal<T>!
 static ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.Replay<T>(this System.IObservable<T>! source, int bufferSize) -> ReactiveUI.Primitives.ConnectableSignal<T>!
 static ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.Replay<T>(this System.IObservable<T>! source, int bufferSize, System.TimeSpan window) -> ReactiveUI.Primitives.ConnectableSignal<T>!
+static ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.ReplayLive<T>(this System.IObservable<T>! source) -> ReactiveUI.Primitives.ConnectableSignal<T>!
 static ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.ReplayLive<T>(this System.IObservable<T>! source, int bufferSize) -> ReactiveUI.Primitives.ConnectableSignal<T>!
 static ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.ReplayLive<T>(this System.IObservable<T>! source, int bufferSize, System.TimeSpan window) -> ReactiveUI.Primitives.ConnectableSignal<T>!
 static ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.Share<T>(this System.IObservable<T>! source) -> ReactiveUI.Primitives.ConnectableSignal<T>!
@@ -373,14 +402,18 @@ static ReactiveUI.Primitives.Reactive.LinqExtensions.Append<T>(this System.IObse
 static ReactiveUI.Primitives.Reactive.LinqExtensions.AsObservable<T>(this System.IObservable<T>! source) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Bind<T, TResult>(this System.IObservable<T>! source, System.Func<T, System.IObservable<TResult>!>! selector) -> System.IObservable<TResult>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Blend<T>(this System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.Blend<T>(this System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources, int maxConcurrent) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Blend<T>(this System.IObservable<System.IObservable<T>!>! sources) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.BlendUnique<T>(System.IObservable<T>![]! sources, System.Collections.Generic.IEqualityComparer<T>? comparer) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.BlendUnique<T>(params System.IObservable<T>![]! sources) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.Buffer<T>(this System.IObservable<T>! source, System.TimeSpan timeSpan) -> System.IObservable<System.Collections.Generic.IList<T>!>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.Buffer<T>(this System.IObservable<T>! source, System.TimeSpan timeSpan, System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<System.Collections.Generic.IList<T>!>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Buffer<TSource>(this System.IObservable<TSource>! source, int count) -> System.IObservable<System.Collections.Generic.IList<TSource>!>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Buffer<TSource>(this System.IObservable<TSource>! source, int count, int skip) -> System.IObservable<System.Collections.Generic.IList<TSource>!>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Calm<T>(this System.IObservable<T>! source, System.TimeSpan dueTime) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Calm<T>(this System.IObservable<T>! source, System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.CastTo<TResult>(this System.IObservable<object?>! source) -> System.IObservable<TResult>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.Catch<T, TException>(this System.IObservable<T>! source, System.Func<TException!, System.IObservable<T>!>! handler) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Chain<T>(this System.IObservable<System.IObservable<T>!>! sources) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Chain<T>(this System.IObservable<System.Threading.Tasks.Task<T>!>! sources) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Chain<T>(this System.IObservable<T>! source, System.IObservable<T>! second) -> System.IObservable<T>!
@@ -442,6 +475,7 @@ static ReactiveUI.Primitives.Reactive.LinqExtensions.Do<T>(this System.IObservab
 static ReactiveUI.Primitives.Reactive.LinqExtensions.DoWith<T, TState>(this System.IObservable<T>! source, TState state, System.Action<TState, T>! onNext) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Expire<T>(this System.IObservable<T>! source, System.TimeSpan dueTime) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Expire<T>(this System.IObservable<T>! source, System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.Finally<T>(this System.IObservable<T>! source, System.Action! finallyAction) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.FirstAsync<T>(this System.IObservable<T>! source) -> System.Threading.Tasks.Task<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.FirstOrDefaultAsync<T>(this System.IObservable<T>! source) -> System.Threading.Tasks.Task<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.FirstOrDefaultAsync<T>(this System.IObservable<T>! source, T defaultValue) -> System.Threading.Tasks.Task<T>!
@@ -469,7 +503,10 @@ static ReactiveUI.Primitives.Reactive.LinqExtensions.Map<T, TResult>(this System
 static ReactiveUI.Primitives.Reactive.LinqExtensions.MapIndexed<T, TResult>(this System.IObservable<T>! source, System.Func<T, int, TResult>! selector) -> System.IObservable<TResult>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.MapWith<T, TState, TResult>(this System.IObservable<T>! source, TState state, System.Func<TState, T, TResult>! selector) -> System.IObservable<TResult>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Materialize<TLeft>(this System.IObservable<TLeft>! left) -> System.IObservable<ReactiveUI.Primitives.Reactive.Core.Spark<TLeft>>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.Merge<T>(this System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.Merge<T>(this System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources, int maxConcurrent) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Merge<T>(this System.IObservable<System.IObservable<T>!>! sources) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.Merge<T>(this System.IObservable<T>! source, System.IObservable<T>! second) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.ObserveOn<T>(this System.IObservable<T>! source, System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Pair<T, TRight, TResult>(this System.IObservable<T>! source, System.IObservable<TRight>! right, System.Func<T, TRight, TResult>! selector) -> System.IObservable<TResult>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.PairLatest<T, TRight, TResult>(this System.IObservable<T>! source, System.IObservable<TRight>! right, System.Func<T, TRight, TResult>! selector) -> System.IObservable<TResult>!
@@ -491,7 +528,9 @@ static ReactiveUI.Primitives.Reactive.LinqExtensions.Scan<T, TAccumulate>(this S
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Select<TSource, TResult>(this System.IObservable<TSource>! source, System.Func<TSource, TResult>! selector) -> System.IObservable<TResult>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Select<TSource, TResult>(this System.IObservable<TSource>! source, System.Func<TSource, int, TResult>! selector) -> System.IObservable<TResult>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.SelectMany<T, TCollection, TResult>(this System.IObservable<T>! source, System.Func<T, System.IObservable<TCollection>!>! collectionSelector, System.Func<T, TCollection, TResult>! resultSelector) -> System.IObservable<TResult>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.SelectMany<T, TResult>(this System.IObservable<T>! source, System.Func<T, System.Collections.Generic.IEnumerable<TResult>!>! selector) -> System.IObservable<TResult>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.SelectMany<T, TResult>(this System.IObservable<T>! source, System.Func<T, System.IObservable<TResult>!>! selector) -> System.IObservable<TResult>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.SelectMany<T, TResult>(this System.IObservable<T>! source, System.IObservable<TResult>! other) -> System.IObservable<TResult>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.SelectWith<TSource, TState, TResult>(this System.IObservable<TSource>! source, TState state, System.Func<TState, TSource, TResult>! selector) -> System.IObservable<TResult>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Shift<T>(this System.IObservable<T>! source, System.TimeSpan dueTime) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Shift<T>(this System.IObservable<T>! source, System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<T>!
@@ -500,7 +539,14 @@ static ReactiveUI.Primitives.Reactive.LinqExtensions.SkipWhile<T>(this System.IO
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Spark<T>(this System.IObservable<T>! source) -> System.IObservable<ReactiveUI.Primitives.Reactive.Core.Spark<T>>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Stabilize<T>(this System.IObservable<T>! source, System.TimeSpan dueTime) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Stabilize<T>(this System.IObservable<T>! source, System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.StartWith<T>(this System.IObservable<T>! source, System.Collections.Generic.IEnumerable<T>! values) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.StartWith<T>(this System.IObservable<T>! source, params T[]! values) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeOn<T>(this System.IObservable<T>! source, System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(this System.IObservable<T>! source, System.Action<System.Exception!>! onError) -> System.IDisposable!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(this System.IObservable<T>! source, System.Action<System.Exception!>! onError, System.Action! onCompleted) -> System.IDisposable!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(this System.IObservable<T>! source, System.Action<T>! onNext, System.Action<System.Exception!>! onError) -> System.IDisposable!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(this System.IObservable<T>! source, System.Action<T>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted) -> System.IDisposable!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(this System.IObservable<T>! source, System.IObserver<T>! observer) -> System.IDisposable!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Switch<T>(this System.IObservable<System.IObservable<T>!>! sources) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.SwitchSelect<TSource, TResult>(this System.IObservable<TSource?>! source, System.Func<TSource, System.IObservable<TResult>!>! selector) -> System.IObservable<TResult>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.SwitchTo<T>(this System.IObservable<System.IObservable<T>!>! sources) -> System.IObservable<T>!
@@ -528,6 +574,8 @@ static ReactiveUI.Primitives.Reactive.LinqExtensions.TakeWhile<T>(this System.IO
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Tap<T>(this System.IObservable<T>! source, System.Action<T>! onNext) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Tap<T>(this System.IObservable<T>! source, System.Action<T>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.TapWith<T, TState>(this System.IObservable<T>! source, TState state, System.Action<TState, T>! onNext) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.Throttle<T>(this System.IObservable<T>! source, System.TimeSpan dueTime) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.Throttle<T>(this System.IObservable<T>! source, System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.TimeInterval<T>(this System.IObservable<T>! source) -> System.IObservable<ReactiveUI.Primitives.Core.TimeInterval<T>>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.TimeInterval<T>(this System.IObservable<T>! source, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<ReactiveUI.Primitives.Core.TimeInterval<T>>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Timeout<TLeft>(this System.IObservable<TLeft>! left, System.TimeSpan dueTime) -> System.IObservable<TLeft>!

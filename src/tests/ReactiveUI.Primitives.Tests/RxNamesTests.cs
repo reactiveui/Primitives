@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Tests;
 /// Primitives-named counterpart. Each operator pair is one data-source row consumed by a single test body, so the
 /// behavior is asserted once and checked for both names (and for identity between them).
 /// </summary>
-public class RxNamesTests
+public partial class RxNamesTests
 {
     /// <summary>The multiplier/state used by projection cases.</summary>
     private const int Ten = 10;
@@ -502,7 +502,7 @@ public class RxNamesTests
         Assert.Throws<ArgumentNullException>(() => source.Scan(Seed, null!));
         Assert.Throws<ArgumentNullException>(() => source.Aggregate(Seed, null!));
         Assert.Throws<ArgumentNullException>(() => source.DistinctUntilChangedBy<int, int>(null!));
-        Assert.Throws<ArgumentNullException>(() => source.SelectMany<int, int>(null!));
+        Assert.Throws<ArgumentNullException>(() => source.SelectMany((Func<int, IObservable<int>>)null!));
         Assert.Throws<ArgumentNullException>(() => source.Zip<int, int, int>(source, null!));
         Assert.Throws<ArgumentNullException>(() => source.CombineLatest<int, int, int>(source, null!));
         Assert.Throws<ArgumentNullException>(() => source.WithLatestFrom<int, int, int>(source, null!));
