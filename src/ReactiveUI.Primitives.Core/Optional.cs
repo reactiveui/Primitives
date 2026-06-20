@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace ReactiveUI.Primitives;
 
 /// <summary>Represents an optional value that may or may not be present.</summary>
@@ -24,12 +26,12 @@ public readonly record struct Optional<T>
 
     /// <summary>Initializes a new instance of the <see cref="Optional{T}"/> struct.</summary>
     /// <param name="value">The value to be contained in the <see cref="Optional{T}"/>  instance.</param>
-    public Optional(T value) => (_value, HasValue) = (value, true);
+    public Optional([AllowNull] T value) => (_value, HasValue) = value is null ? (default, false) : (value, true);
 
     /// <summary>Initializes a new instance of the <see cref="Optional{T}"/> struct.</summary>
     /// <param name="value">The value.</param>
     /// <param name="hasValue">A value indicating whether a value is present.</param>
-    private Optional(T value, bool hasValue) => (_value, HasValue) = (value, hasValue);
+    private Optional([AllowNull] T value, bool hasValue) => (_value, HasValue) = hasValue && value is not null ? (value, true) : (default, false);
 
     /// <summary>Gets an empty instance of the <see cref="Optional{T}"/> type that contains no value.</summary>
     /// <remarks>Use this property to represent the absence of a value in a type-safe manner. The returned
@@ -46,19 +48,20 @@ public readonly record struct Optional<T>
     /// <remarks>Accessing this property when the optional object does not have a value will throw an
     /// exception. Use the HasValue property to determine whether a value is present before accessing this
     /// property.</remarks>
+    [NotNull]
     public T? Value => HasValue
-        ? _value
+        ? _value!
         : throw new InvalidOperationException("Impossible retrieve a value for an empty optional");
 
     /// <summary>Creates an optional value containing a value.</summary>
     /// <param name="value">The contained value.</param>
     /// <returns>The optional value.</returns>
-    public static Optional<T> Some(T value) => new(value, hasValue: true);
+    public static Optional<T> Some([AllowNull] T value) => new(value, hasValue: true);
 
     /// <summary>Implicit cast from the value to the optional.</summary>
     /// <param name="value">The value.</param>
     /// <returns>The optional value.</returns>
-    public static implicit operator Optional<T>(T value) => ToOptional(value);
+    public static implicit operator Optional<T>([AllowNull] T value) => ToOptional(value);
 
     /// <summary>Explicit cast from option to value.</summary>
     /// <param name="value">The value.</param>
@@ -68,7 +71,7 @@ public readonly record struct Optional<T>
     /// <summary>Creates the specified value.</summary>
     /// <param name="value">The value.</param>
     /// <returns>The optional value.</returns>
-    public static Optional<T> Create(T value) => new(value);
+    public static Optional<T> Create([AllowNull] T value) => new(value);
 
     /// <summary>Gets the value from the optional value.</summary>
     /// <param name="value">The optional value.</param>
@@ -78,7 +81,7 @@ public readonly record struct Optional<T>
     /// <summary>Gets the optional from a value.</summary>
     /// <param name="value">The value to get the optional for.</param>
     /// <returns>The optional.</returns>
-    public static Optional<T> ToOptional(T value) => new(value);
+    public static Optional<T> ToOptional([AllowNull] T value) => new(value);
 
     /// <inheritdoc />
     public override string? ToString()

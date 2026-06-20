@@ -50,9 +50,8 @@ public static partial class Signal
 
         return Create<T>(observer =>
         {
-            CancellationTokenSource cts = new();
-            SingleDisposable subscription = new(cts.Cancel);
-            _ = RunAsyncSubscription(subscribe, observer, cts, subscription);
+            AsyncSubscriptionLifetime subscription = new();
+            _ = RunAsyncSubscription(subscribe, observer, subscription);
             return subscription;
         });
     }
@@ -239,32 +238,101 @@ public static partial class Signal
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="subscribe">The asynchronous subscription function.</param>
     /// <param name="observer">The downstream observer.</param>
-    /// <param name="cts">The cancellation token source owned by the subscription.</param>
     /// <param name="subscription">The subscription slot.</param>
     /// <returns>A task that completes when the asynchronous subscription has assigned its disposable.</returns>
     private static async Task RunAsyncSubscription<T>(
         Func<IObserver<T>, CancellationToken, Task<IDisposable>> subscribe,
         IObserver<T> observer,
-        CancellationTokenSource cts,
-        SingleDisposable subscription)
+        AsyncSubscriptionLifetime subscription)
     {
         try
         {
-            var disposable = await subscribe(observer, cts.Token).ConfigureAwait(false);
-            subscription.Create(disposable ?? EmptyDisposable.Instance);
+            var disposable = await subscribe(observer, subscription.Token).ConfigureAwait(false);
+            subscription.SetSubscription(disposable);
         }
-        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        catch (OperationCanceledException) when (subscription.IsCancellationRequested)
         {
-            subscription.Create(EmptyDisposable.Instance);
+            subscription.SetSubscription(EmptyDisposable.Instance);
         }
         catch (Exception error)
         {
             observer.OnError(error);
-            subscription.Create(EmptyDisposable.Instance);
+            subscription.SetSubscription(EmptyDisposable.Instance);
         }
         finally
         {
-            cts.Dispose();
+            subscription.Complete();
+        }
+    }
+
+    /// <summary>Owns the cancellation and eventual inner disposable for asynchronous create subscriptions.</summary>
+    private sealed class AsyncSubscriptionLifetime : IDisposable
+    {
+        /// <summary>The cancellation source passed to the asynchronous subscription.</summary>
+        private readonly CancellationTokenSource _cts = new();
+
+        /// <summary>The inner disposable returned by the asynchronous subscription.</summary>
+        private readonly SingleDisposable _subscription = new();
+
+        /// <summary>Non-zero once the outer subscription has been disposed.</summary>
+        private int _disposed;
+
+        /// <summary>Non-zero when disposal requested cancellation before the asynchronous subscription completed.</summary>
+        private int _canceled;
+
+        /// <summary>Non-zero once the asynchronous subscription task has completed.</summary>
+        private int _completed;
+
+        /// <summary>Gets the token supplied to the asynchronous subscription.</summary>
+        public CancellationToken Token => _cts.Token;
+
+        /// <summary>Gets a value indicating whether disposal requested cancellation.</summary>
+        public bool IsCancellationRequested => Volatile.Read(ref _canceled) != 0;
+
+        /// <summary>Assigns the disposable returned by the asynchronous subscription.</summary>
+        /// <param name="disposable">The returned disposable, or <see langword="null"/> for an empty lifetime.</param>
+        public void SetSubscription(IDisposable? disposable) =>
+            _subscription.Create(disposable ?? EmptyDisposable.Instance);
+
+        /// <summary>Marks asynchronous setup complete and releases the cancellation source when still owned here.</summary>
+        public void Complete()
+        {
+            Volatile.Write(ref _completed, 1);
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                return;
+            }
+
+            _cts.Dispose();
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+
+            if (Volatile.Read(ref _completed) != 0)
+            {
+                _subscription.Dispose();
+                _cts.Dispose();
+                return;
+            }
+
+            Volatile.Write(ref _canceled, 1);
+            try
+            {
+                _cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Completion can release the CTS concurrently; disposal still continues with the inner subscription.
+            }
+
+            _subscription.Dispose();
+            _cts.Dispose();
         }
     }
 }

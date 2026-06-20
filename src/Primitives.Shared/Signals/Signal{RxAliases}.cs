@@ -73,6 +73,19 @@ public static partial class Signal
         Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Throw<T>(Exception error, ISequencer scheduler) => Fail<T>(error, scheduler);
 
+    /// <summary>Returns an observable sequence that emits a range of integral values.</summary>
+    /// <param name="start">The first value to emit.</param>
+    /// <param name="count">The number of values to emit.</param>
+    /// <returns>An observable sequence that emits the requested range and completes.</returns>
+    public static IObservable<int> Range(int start, int count) => Sequence(start, count);
+
+    /// <summary>Returns an observable sequence that emits a scheduled range of integral values.</summary>
+    /// <param name="start">The first value to emit.</param>
+    /// <param name="count">The number of values to emit.</param>
+    /// <param name="scheduler">The scheduler used to emit the values.</param>
+    /// <returns>An observable sequence that emits the requested range and completes.</returns>
+    public static IObservable<int> Range(int start, int count, ISequencer scheduler) => Sequence(start, count, scheduler);
+
     /// <summary>Returns an observable sequence that emits a single tick after the due time.</summary>
     /// <param name="dueTime">The relative time after which to emit the tick.</param>
     /// <returns>An observable sequence that emits one tick and completes.</returns>
@@ -107,6 +120,34 @@ public static partial class Signal
     /// <param name="scheduler">The scheduler used to emit ticks.</param>
     /// <returns>An observable sequence that emits periodic ticks.</returns>
     public static IObservable<long> Timer(TimeSpan dueTime, TimeSpan period, ISequencer scheduler) => After(dueTime, period, scheduler);
+
+    /// <summary>Returns an observable sequence that emits monotonically increasing ticks at the specified interval.</summary>
+    /// <param name="period">The period between ticks.</param>
+    /// <returns>An observable sequence that emits periodic ticks.</returns>
+    public static IObservable<long> Interval(TimeSpan period) => Every(period);
+
+    /// <summary>Returns an observable sequence that emits scheduled, monotonically increasing ticks at the specified interval.</summary>
+    /// <param name="period">The period between ticks.</param>
+    /// <param name="scheduler">The scheduler used to emit ticks.</param>
+    /// <returns>An observable sequence that emits periodic ticks.</returns>
+    public static IObservable<long> Interval(TimeSpan period, ISequencer scheduler) => Every(period, scheduler);
+
+    /// <summary>Concatenates the supplied observable sources.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="sources">The sources to concatenate.</param>
+    /// <returns>An observable sequence that subscribes to each source after the previous one completes.</returns>
+    public static IObservable<T> Concat<T>(params IObservable<T>[] sources) => Chain(sources);
+
+    /// <summary>Concatenates the supplied observable sources.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="sources">The sources to concatenate.</param>
+    /// <returns>An observable sequence that subscribes to each source after the previous one completes.</returns>
+    public static IObservable<T> Concat<T>(IEnumerable<IObservable<T>> sources)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(sources);
+
+        return FromEnumerable(sources).Chain();
+    }
 
     /// <summary>Merges the supplied observable sources.</summary>
     /// <typeparam name="T">The value type.</typeparam>

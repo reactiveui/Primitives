@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using ReactiveUI.Primitives.Core;
@@ -63,6 +64,39 @@ public class EventPatternTests
             Signal.FromEventPattern<EventHandler<TestEventArgs>, TestEventArgs>(_ => { }, null!));
         Assert.Throws<NotSupportedException>(() =>
             Signal.FromEventPattern<Action, EventArgs>(_ => { }, _ => { }).Subscribe(_ => { }));
+    }
+
+    /// <summary>Verifies generic event factories support collection and list event handlers used by binding sources.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task GenericFromEventPatternSupportsCollectionAndListHandlers()
+    {
+        CollectionChangedEventSource collectionSource = new();
+        List<NotifyCollectionChangedAction> collectionActions = [];
+        var collectionSubscription =
+            Signal.FromEventPattern<NotifyCollectionChangedEventHandler, NotifyCollectionChangedEventArgs>(
+                    handler => collectionSource.CollectionChanged += handler,
+                    handler => collectionSource.CollectionChanged -= handler)
+                .Subscribe(pattern => collectionActions.Add(pattern.EventArgs.Action));
+
+        collectionSource.RaiseAdd();
+        collectionSubscription.Dispose();
+        collectionSource.RaiseAdd();
+
+        await Assert.That(collectionActions.SequenceEqual([NotifyCollectionChangedAction.Add])).IsTrue();
+
+        ListChangedEventSource listSource = new();
+        List<ListChangedType> listChangeTypes = [];
+        var listSubscription = Signal.FromEventPattern<ListChangedEventHandler, ListChangedEventArgs>(
+                handler => listSource.ListChanged += handler,
+                handler => listSource.ListChanged -= handler)
+            .Subscribe(pattern => listChangeTypes.Add(pattern.EventArgs.ListChangedType));
+
+        listSource.RaiseAdd();
+        listSubscription.Dispose();
+        listSource.RaiseAdd();
+
+        await Assert.That(listChangeTypes.SequenceEqual([ListChangedType.ItemAdded])).IsTrue();
     }
 
     /// <summary>Verifies event-pattern bridges preserve sender/arguments and detach handlers on disposal.</summary>
@@ -132,6 +166,47 @@ public class EventPatternTests
         /// <summary>Raises <see cref="PropertyChanged"/> with the supplied property name.</summary>
         /// <param name="propertyName">The property name supplied to the event arguments.</param>
         public void Raise(string propertyName) => PropertyChanged?.Invoke(this, new(propertyName));
+    }
+
+    /// <summary>Source used to exercise <see cref="NotifyCollectionChangedEventHandler"/> event conversion.</summary>
+    private sealed class CollectionChangedEventSource
+    {
+        /// <summary>Raised by the test source.</summary>
+        [SuppressMessage(
+            "Roslynator",
+            "RCS1159:Use EventHandler<T>",
+            Justification =
+                "This test deliberately covers the NotifyCollectionChangedEventHandler branch of the factory overload.")]
+        [SuppressMessage(
+            "Major Code Smell",
+            "S3908:Refactor this delegate to use 'System.EventHandler<TEventArgs>'.",
+            Justification =
+                "This test deliberately covers the NotifyCollectionChangedEventHandler branch of the factory overload.")]
+        public event NotifyCollectionChangedEventHandler? CollectionChanged;
+
+        /// <summary>Raises <see cref="CollectionChanged"/> with an add action.</summary>
+        public void RaiseAdd() =>
+            CollectionChanged?.Invoke(this, new(NotifyCollectionChangedAction.Add, "value"));
+    }
+
+    /// <summary>Source used to exercise <see cref="ListChangedEventHandler"/> event conversion.</summary>
+    private sealed class ListChangedEventSource
+    {
+        /// <summary>Raised by the test source.</summary>
+        [SuppressMessage(
+            "Roslynator",
+            "RCS1159:Use EventHandler<T>",
+            Justification =
+                "This test deliberately covers the ListChangedEventHandler branch of the factory overload.")]
+        [SuppressMessage(
+            "Major Code Smell",
+            "S3908:Refactor this delegate to use 'System.EventHandler<TEventArgs>'.",
+            Justification =
+                "This test deliberately covers the ListChangedEventHandler branch of the factory overload.")]
+        public event ListChangedEventHandler? ListChanged;
+
+        /// <summary>Raises <see cref="ListChanged"/> with an item-added action.</summary>
+        public void RaiseAdd() => ListChanged?.Invoke(this, new(ListChangedType.ItemAdded, 0));
     }
 
     /// <summary>Event arguments for fake click events.</summary>

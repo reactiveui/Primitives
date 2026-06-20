@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
@@ -15,6 +16,9 @@ public class SignalCreateTests
 
     /// <summary>The first expected value.</summary>
     private const int First = 1;
+
+    /// <summary>The second expected value.</summary>
+    private const int Second = 2;
 
     /// <summary>The third expected value.</summary>
     private const int Third = 3;
@@ -186,6 +190,160 @@ public class SignalCreateTests
         Assert.Throws<ArgumentNullException>(() => Signal.CreateWithState<int, int>(First, null!));
         Assert.Throws<ArgumentNullException>(() => Signal.CreateWithState<int, int>(First, null!, true));
         Assert.Throws<ArgumentNullException>(() => Signal.Lazy<int>(null!));
+    }
+
+    /// <summary>Verifies asynchronous create overloads assign lifetimes, forward failures, and honor cancellation.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AsyncCreateFactoriesAssignDisposablesAndForwardFailures()
+    {
+        var disposed = 0;
+        List<int> values = [];
+        var created = Signal.Create<int>(observer =>
+        {
+            observer.OnNext(CreatedValue);
+            return Task.FromResult<IDisposable>(new ActionDisposable(() => disposed++));
+        });
+
+        var subscription = created.Subscribe(values.Add);
+        await Task.Yield();
+        subscription.Dispose();
+
+        await Assert.That(values.SequenceEqual([CreatedValue])).IsTrue();
+        await Assert.That(disposed).IsEqualTo(1);
+
+        Exception? observed = null;
+        InvalidOperationException expected = new("async-create");
+        Signal.Create<int>((_, _) => Task.FromException<IDisposable>(expected))
+            .Subscribe(_ => { }, error => observed = error);
+        await Task.Yield();
+
+        await Assert.That(observed).IsSameReferenceAs(expected);
+
+        TaskCompletionSource canceled = new();
+        var cancellable = Signal.Create<int>(async (_, cancellationToken) =>
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                canceled.SetResult();
+                throw;
+            }
+
+            return EmptyDisposable.Instance;
+        });
+
+        var cancellableSubscription = cancellable.Subscribe(_ => { });
+        cancellableSubscription.Dispose();
+        await canceled.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+
+        var nullDisposable = Signal.Create<int>((_, _) => Task.FromResult<IDisposable>(null!));
+        var nullSubscription = nullDisposable.Subscribe(_ => { });
+        await Task.Yield();
+        nullSubscription.Dispose();
+
+        Assert.Throws<ArgumentNullException>(() => Signal.Create<int>((Func<IObserver<int>, Task<IDisposable>>)null!));
+        Assert.Throws<ArgumentNullException>(() =>
+            Signal.Create<int>((Func<IObserver<int>, CancellationToken, Task<IDisposable>>)null!));
+    }
+
+    /// <summary>Verifies asynchronous defer overloads emit, fail, and skip subscription after cancellation.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AsyncDeferFactoriesEmitFailAndHonorCancellation()
+    {
+        List<int> values = [];
+        Signal.Defer(() => Task.FromResult<IObservable<int>>(Signal.Emit(CreatedValue))).Subscribe(values.Add);
+        Signal.Defer(_ => Task.FromResult<IObservable<int>>(Signal.Emit(First))).Subscribe(values.Add);
+        await Task.Yield();
+
+        await Assert.That(values.SequenceEqual([CreatedValue, First])).IsTrue();
+
+        Exception? observed = null;
+        InvalidOperationException expected = new("defer");
+        Signal.Defer<int>(() => Task.FromException<IObservable<int>>(expected))
+            .Subscribe(_ => { }, error => observed = error);
+        await Task.Yield();
+
+        await Assert.That(observed).IsSameReferenceAs(expected);
+
+        TaskCompletionSource<IObservable<int>> delayedFactory = new();
+        List<int> canceledValues = [];
+        var deferred = Signal.Defer(_ => delayedFactory.Task);
+        var subscription = deferred.Subscribe(canceledValues.Add);
+        subscription.Dispose();
+        delayedFactory.SetResult(Signal.Emit(Fourth));
+        await Task.Yield();
+
+        await Assert.That(canceledValues.Count).IsEqualTo(0);
+
+        Assert.Throws<ArgumentNullException>(() => Signal.Defer<int>((Func<Task<IObservable<int>>>)null!));
+        Assert.Throws<ArgumentNullException>(() =>
+            Signal.Defer<int>((Func<CancellationToken, Task<IObservable<int>>>)null!));
+    }
+
+    /// <summary>Verifies Rx-named signal factories route to the corresponding Primitives factories.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RxSignalFactoryAliasesRouteToPrimitiveFactories()
+    {
+        List<int> values = [];
+        Signal.Return(CreatedValue, Sequencer.Immediate).Subscribe(values.Add);
+        Signal.Merge(Signal.Return(First), Signal.Return(Third)).Subscribe(values.Add);
+        Signal.Merge((IEnumerable<IObservable<int>>)[Signal.Return(Fourth)]).Subscribe(values.Add);
+        Signal.Switch(Signal.Return(Signal.Return(First))).Subscribe(values.Add);
+        Signal.Range(Second, Second).Subscribe(values.Add);
+        Signal.Range(Second, Second, Sequencer.Immediate).Subscribe(values.Add);
+        Signal.Concat(Signal.Return(Fourth), Signal.Return(First)).Subscribe(values.Add);
+        Signal.Concat((IEnumerable<IObservable<int>>)[Signal.Return(Second)]).Subscribe(values.Add);
+
+        await Assert.That(values.SequenceEqual([
+            CreatedValue,
+            First,
+            Third,
+            Fourth,
+            First,
+            Second,
+            Third,
+            Second,
+            Third,
+            Fourth,
+            First,
+            Second])).IsTrue();
+
+        var completions = 0;
+        Signal.Empty<int>().Subscribe(_ => { }, ex => throw ex, () => completions++);
+        Signal.Empty<int>(Sequencer.Immediate).Subscribe(_ => { }, ex => throw ex, () => completions++);
+
+        await Assert.That(completions).IsEqualTo(Second);
+
+        List<Exception> errors = [];
+        InvalidOperationException expected = new("throw");
+        Signal.Throw<int>(expected, Sequencer.Immediate).Subscribe(_ => { }, errors.Add);
+
+        await Assert.That(errors.Count).IsEqualTo(1);
+        await Assert.That(errors[0]).IsSameReferenceAs(expected);
+
+        await Assert.That(Signal.Never<int>()).IsNotNull();
+        await Assert.That(Signal.Timer(TimeSpan.FromTicks(1))).IsNotNull();
+        await Assert.That(Signal.Timer(TimeSpan.FromTicks(1), Sequencer.Immediate)).IsNotNull();
+        await Assert.That(Signal.Timer(DateTimeOffset.UnixEpoch.AddTicks(1))).IsNotNull();
+        await Assert.That(Signal.Timer(DateTimeOffset.UnixEpoch.AddTicks(1), Sequencer.Immediate)).IsNotNull();
+        await Assert.That(Signal.Timer(TimeSpan.FromTicks(1), TimeSpan.FromTicks(1))).IsNotNull();
+        await Assert.That(Signal.Timer(TimeSpan.FromTicks(1), TimeSpan.FromTicks(1), Sequencer.Immediate))
+            .IsNotNull();
+        await Assert.That(Signal.Interval(TimeSpan.FromTicks(1))).IsNotNull();
+
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        List<long> intervalValues = [];
+        using var interval = Signal.Interval(TimeSpan.FromTicks(1), clock).Take(Third).Subscribe(intervalValues.Add);
+        clock.AdvanceBy(TimeSpan.FromTicks(Third));
+
+        long[] expectedIntervalValues = [0L, First, Second];
+        await Assert.That(intervalValues.SequenceEqual(expectedIntervalValues)).IsTrue();
     }
 
     /// <summary>Records observer notifications.</summary>

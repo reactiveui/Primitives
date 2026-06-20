@@ -763,6 +763,8 @@ static ReactiveUI.Primitives.Signals.Signal.After(System.TimeSpan dueTime, Syste
 static ReactiveUI.Primitives.Signals.Signal.After(System.TimeSpan dueTime, System.TimeSpan period, ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> System.IObservable<long>!
 static ReactiveUI.Primitives.Signals.Signal.Blend<T>(params System.IObservable<T>![]! sources) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Signals.Signal.Chain<T>(params System.IObservable<T>![]! sources) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Signals.Signal.Concat<T>(System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Signals.Signal.Concat<T>(params System.IObservable<T>![]! sources) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Signals.Signal.Create<T>(System.Func<System.IObserver<T>!, System.IDisposable!>! subscribe) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Signals.Signal.Create<T>(System.Func<System.IObserver<T>!, System.IDisposable!>! subscribe, bool isRequiredSubscribeOnCurrentThread) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Signals.Signal.Create<T>(System.Func<System.IObserver<T>!, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.IDisposable!>!>! subscribe) -> System.IObservable<T>!
@@ -805,6 +807,8 @@ static ReactiveUI.Primitives.Signals.Signal.FromTask<T>(System.Threading.Tasks.T
 static ReactiveUI.Primitives.Signals.Signal.FromTask<TResult>(System.Func<System.Threading.CancellationTokenSource!, System.Threading.Tasks.Task<TResult>!>! actionAsync) -> ReactiveUI.Primitives.Signals.ITaskSignal<TResult>!
 static ReactiveUI.Primitives.Signals.Signal.FromTask<TResult>(System.Func<System.Threading.CancellationTokenSource!, System.Threading.Tasks.Task<TResult>!>! actionAsync, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) -> ReactiveUI.Primitives.Signals.ITaskSignal<TResult>!
 static ReactiveUI.Primitives.Signals.Signal.FromTask<TResult>(System.Func<System.Threading.CancellationTokenSource!, System.Threading.Tasks.Task<TResult>!>! actionAsync, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler, System.Threading.CancellationTokenSource? cancellationTokenSource) -> ReactiveUI.Primitives.Signals.ITaskSignal<TResult>!
+static ReactiveUI.Primitives.Signals.Signal.Interval(System.TimeSpan period) -> System.IObservable<long>!
+static ReactiveUI.Primitives.Signals.Signal.Interval(System.TimeSpan period, ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> System.IObservable<long>!
 static ReactiveUI.Primitives.Signals.Signal.Iterate<TState, TResult>(TState initialState, System.Func<TState, bool>! condition, System.Func<TState, TState>! iterator, System.Func<TState, TResult>! resultSelector) -> System.IObservable<TResult>!
 static ReactiveUI.Primitives.Signals.Signal.Lazy<T>(System.Func<System.IObservable<T>!>! observableFactory) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Signals.Signal.Loop<T>(T value) -> System.IObservable<T>!
@@ -821,6 +825,8 @@ static ReactiveUI.Primitives.Signals.Signal.PairLatest<TLeft, TRight, TResult>(S
 static ReactiveUI.Primitives.Signals.Signal.Pulse(System.TimeSpan period) -> System.IObservable<long>!
 static ReactiveUI.Primitives.Signals.Signal.Pulse(System.TimeSpan period, ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> System.IObservable<long>!
 static ReactiveUI.Primitives.Signals.Signal.Race<T>(params System.IObservable<T>![]! sources) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Signals.Signal.Range(int start, int count) -> System.IObservable<int>!
+static ReactiveUI.Primitives.Signals.Signal.Range(int start, int count, ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> System.IObservable<int>!
 static ReactiveUI.Primitives.Signals.Signal.Recover<TSource>(params System.IObservable<TSource>![]! sources) -> System.IObservable<TSource>!
 static ReactiveUI.Primitives.Signals.Signal.Return<T>(T value) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Signals.Signal.Return<T>(T value, ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> System.IObservable<T>!

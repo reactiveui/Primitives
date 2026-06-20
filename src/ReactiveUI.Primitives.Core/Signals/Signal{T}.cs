@@ -124,21 +124,36 @@ public class Signal<T> : ISignal<T>
     /// <param name="value">The value.</param>
     public void OnNext(T value)
     {
-        var singleObserver = Volatile.Read(ref _singleObserverSubscription);
+        SignalSubscription? singleObserver;
+        SignalSubscription? singleAction;
+        SignalSubscription?[]? subscriptions;
+
+        lock (_observerLock)
+        {
+            ThrowIfDisposed();
+            if (_isStopped)
+            {
+                return;
+            }
+
+            singleObserver = _singleObserverSubscription;
+            singleAction = _singleActionSubscription;
+            subscriptions = _subscriptions;
+        }
+
         if (singleObserver is not null)
         {
             singleObserver.Observer.OnNext(value);
             return;
         }
 
-        var singleAction = Volatile.Read(ref _singleActionSubscription);
         if (singleAction is not null)
         {
             singleAction.Action(value);
             return;
         }
 
-        DispatchSubscriptions(value);
+        DispatchSubscriptions(subscriptions, value);
         if (!Volatile.Read(ref _isDisposed))
         {
             return;
@@ -350,6 +365,28 @@ public class Signal<T> : ISignal<T>
         }
     }
 
+    /// <summary>Executes the DispatchSubscriptions operation.</summary>
+    /// <param name="subscriptions">The subscription snapshot.</param>
+    /// <param name="value">The value.</param>
+    private static void DispatchSubscriptions(SignalSubscription?[]? subscriptions, T value)
+    {
+        if (subscriptions is null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < subscriptions.Length; i++)
+        {
+            var subscription = Volatile.Read(ref subscriptions[i]);
+            if (subscription is null)
+            {
+                continue;
+            }
+
+            subscription.OnNext(value);
+        }
+    }
+
     /// <summary>Executes the ThrowIfDisposed operation.</summary>
     private void ThrowIfDisposed()
     {
@@ -497,28 +534,6 @@ public class Signal<T> : ISignal<T>
 
             _subscriptionTail = 0;
             return;
-        }
-    }
-
-    /// <summary>Executes the DispatchSubscriptions operation.</summary>
-    /// <param name="value">The value.</param>
-    private void DispatchSubscriptions(T value)
-    {
-        var subscriptions = Volatile.Read(ref _subscriptions);
-        if (subscriptions is null)
-        {
-            return;
-        }
-
-        for (var i = 0; i < subscriptions.Length; i++)
-        {
-            var subscription = Volatile.Read(ref subscriptions[i]);
-            if (subscription is null)
-            {
-                continue;
-            }
-
-            subscription.OnNext(value);
         }
     }
 

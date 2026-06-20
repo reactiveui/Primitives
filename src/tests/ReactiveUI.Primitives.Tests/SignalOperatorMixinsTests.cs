@@ -399,6 +399,82 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(emptyPrependValues.SequenceEqual([One, Two, Three, Four, Four])).IsTrue();
     }
 
+    /// <summary>Verifies indexed mapping, task chaining, and task conversion compatibility aliases.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task IndexedMappingTaskChainAndTaskSignalAliasesCoverCompatibilityPaths()
+    {
+        Signal<int> source = new();
+        RecordingWitness<int> mapped = new();
+        using var subscription = LinqExtensions.MapIndexed(source, static (value, index) => value + index)
+            .Subscribe(mapped);
+
+        source.OnNext(One);
+        source.OnNext(Three);
+        source.OnCompleted();
+        source.OnNext(Five);
+        source.OnError(new InvalidOperationException("late"));
+
+        await Assert.That(mapped.Values.SequenceEqual([One, Four])).IsTrue();
+        await Assert.That(mapped.Completed).IsEqualTo(1);
+        await Assert.That(mapped.Errors.Count).IsEqualTo(0);
+
+        RecordingWitness<int> failed = new();
+        Signal<int> failing = new();
+        using var failingSubscription = LinqExtensions
+            .MapIndexed<int, int>(failing, static (_, _) => throw new InvalidOperationException("indexed"))
+            .Subscribe(failed);
+        failing.OnNext(One);
+        failing.OnNext(Two);
+
+        await Assert.That(failed.Values.Count).IsEqualTo(0);
+        await Assert.That(failed.Errors.Count).IsEqualTo(1);
+        await Assert.That(failed.Errors[0].Message).IsEqualTo("indexed");
+
+        RecordingWitness<int> duplicateTerminal = new();
+        LinqExtensions.MapIndexed(
+            new ScriptedObservable<int>(observer =>
+            {
+                observer.OnNext(One);
+                observer.OnError(new InvalidOperationException("first"));
+                observer.OnError(new InvalidOperationException("late"));
+                observer.OnCompleted();
+            }),
+            static (value, index) => value + index).Subscribe(duplicateTerminal);
+
+        await Assert.That(duplicateTerminal.Values.SequenceEqual([One])).IsTrue();
+        await Assert.That(duplicateTerminal.Errors.Count).IsEqualTo(1);
+        await Assert.That(duplicateTerminal.Errors[0].Message).IsEqualTo("first");
+
+        RecordingWitness<int> duplicateCompletion = new();
+        LinqExtensions.MapIndexed(
+            new ScriptedObservable<int>(observer =>
+            {
+                observer.OnCompleted();
+                observer.OnCompleted();
+            }),
+            static (value, index) => value + index).Subscribe(duplicateCompletion);
+
+        await Assert.That(duplicateCompletion.Completed).IsEqualTo(1);
+
+        var currentThread = (IRequireCurrentThread<int>)LinqExtensions
+            .MapIndexed(new CurrentThreadObservable<int>(), static (value, index) => value + index);
+        await Assert.That(currentThread.IsRequiredSubscribeOnCurrentThread()).IsTrue();
+
+        List<int> chained = [];
+        Signal.FromEnumerable([Task.FromResult(One), Task.FromResult(Two)]).Chain().Subscribe(chained.Add);
+        await Task.Yield();
+
+        await Assert.That(chained.SequenceEqual(ExpectedOneTwo)).IsTrue();
+
+        var taskValue = await Task.FromResult(Three).ToSignal().FirstAsync().ConfigureAwait(false);
+        await Assert.That(taskValue).IsEqualTo(Three);
+
+        Assert.Throws<ArgumentNullException>(() => LinqExtensions.MapIndexed<int, int>(null!, static (value, _) => value));
+        Assert.Throws<ArgumentNullException>(() => LinqExtensions.MapIndexed<int, int>(source, null!));
+        Assert.Throws<ArgumentNullException>(() => ((IObservable<Task<int>>)null!).Chain());
+    }
+
     /// <summary>Covers default-if-empty behavior over hot sources for empty, non-empty, error, and observer-guard branches.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -595,4 +671,15 @@ public partial class SignalOperatorMixinsTests
     /// <param name="Value">The metric value.</param>
     /// <param name="IsCritical">A value indicating whether the metric is critical.</param>
     private readonly record struct Metric(long Sequence, double Value, bool IsCritical);
+
+    /// <summary>A source that reports current-thread subscription requirements.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class CurrentThreadObservable<T> : IRequireCurrentThread<T>
+    {
+        /// <inheritdoc/>
+        public bool IsRequiredSubscribeOnCurrentThread() => true;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer) => EmptyDisposable.Instance;
+    }
 }

@@ -26,6 +26,8 @@ public class OptionalTests
         Optional<int> constructed = new(First);
         await Assert.That(constructed.HasValue).IsTrue();
         await Assert.That(constructed.Value).IsEqualTo(First);
+        Optional<string?> nullOptional = new(null);
+        await Assert.That(nullOptional.HasValue).IsFalse();
         var some = Optional<int>.Some(Second);
         await Assert.That(some.HasValue).IsTrue();
         await Assert.That(some.Value).IsEqualTo(Second);
@@ -40,6 +42,8 @@ public class OptionalTests
         var converted = Optional<int>.ToOptional(Second);
         Optional<int> implicitOptional = First;
         var explicitValue = (int?)converted;
+        var none = Optional<int>.None;
+        var some = Optional.Some(Second);
 
         await Assert.That(created.HasValue).IsTrue();
         await Assert.That(created.Value).IsEqualTo(First);
@@ -47,6 +51,8 @@ public class OptionalTests
         await Assert.That(converted.HasValue).IsTrue();
         await Assert.That(explicitValue).IsEqualTo(Second);
         await Assert.That(implicitOptional.Value).IsEqualTo(First);
+        await Assert.That(none.HasValue).IsFalse();
+        await Assert.That(some.Value).IsEqualTo(Second);
     }
 
     /// <summary>Covers optional string formatting for values and empty values.</summary>
@@ -56,6 +62,7 @@ public class OptionalTests
     {
         await Assert.That(Optional<int>.Some(First).ToString()).IsEqualTo("1");
         await Assert.That(Optional<int>.None.ToString()).IsEqualTo("<None>");
+        await Assert.That(Optional<string?>.Some(null).HasValue).IsFalse();
         await Assert.That(Optional<string?>.Some(null).ToString()).IsEqualTo("<None>");
     }
 }

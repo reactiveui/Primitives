@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Collections.Specialized;
 using System.ComponentModel;
 
 #if REACTIVE_SHIM
@@ -206,6 +207,18 @@ public static partial class Signal
             if (typeof(TEventHandler) == typeof(PropertyChangedEventHandler))
             {
                 PropertyChangedEventHandler typed = (sender, args) =>
+                    observer.OnNext(new(sender, (TEventArgs)(EventArgs)args));
+                handler = (TEventHandler)(object)typed;
+            }
+            else if (typeof(TEventHandler) == typeof(NotifyCollectionChangedEventHandler))
+            {
+                NotifyCollectionChangedEventHandler typed = (sender, args) =>
+                    observer.OnNext(new(sender, (TEventArgs)(EventArgs)args));
+                handler = (TEventHandler)(object)typed;
+            }
+            else if (typeof(TEventHandler) == typeof(ListChangedEventHandler))
+            {
+                ListChangedEventHandler typed = (sender, args) =>
                     observer.OnNext(new(sender, (TEventArgs)(EventArgs)args));
                 handler = (TEventHandler)(object)typed;
             }
