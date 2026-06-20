@@ -27,6 +27,36 @@ public static partial class Signal
         return new CreateSignal<T>(subscribe);
     }
 
+    /// <summary>Creates an observable from an asynchronous subscription function.</summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="subscribe">The asynchronous subscription function.</param>
+    /// <returns>An observable sequence backed by the asynchronous subscription.</returns>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Create<T>(Func<IObserver<T>, Task<IDisposable>> subscribe)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(subscribe);
+
+        return Create<T>((observer, _) => subscribe(observer));
+    }
+
+    /// <summary>Creates an observable from a cancellable asynchronous subscription function.</summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <param name="subscribe">The asynchronous subscription function.</param>
+    /// <returns>An observable sequence backed by the asynchronous subscription.</returns>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Create<T>(Func<IObserver<T>, CancellationToken, Task<IDisposable>> subscribe)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(subscribe);
+
+        return Create<T>(observer =>
+        {
+            CancellationTokenSource cts = new();
+            SingleDisposable subscription = new(cts.Cancel);
+            _ = RunAsyncSubscription(subscribe, observer, cts, subscription);
+            return subscription;
+        });
+    }
+
     /// <summary>
     /// Create anonymous Signals. Observer has exception durability.
     /// This is recommended for make operator and event, generating a HotSignals.
@@ -149,5 +179,92 @@ public static partial class Signal
 
             return source.Subscribe(observer);
         });
+    }
+
+    /// <summary>Creates a signal whose source is produced asynchronously for each subscription.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="observableFactory">The asynchronous factory that creates the source signal for a subscription.</param>
+    /// <returns>A signal that subscribes to the factory-produced source for each observer.</returns>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="observableFactory"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Defer<T>(Func<Task<IObservable<T>>> observableFactory)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(observableFactory);
+
+        return Create<T>(
+            async (observer, cancellationToken) =>
+            {
+                IObservable<T> source;
+                try
+                {
+                    source = await observableFactory().ConfigureAwait(false);
+                }
+                catch (Exception error)
+                {
+                    observer.OnError(error);
+                    return EmptyDisposable.Instance;
+                }
+
+                return cancellationToken.IsCancellationRequested ? EmptyDisposable.Instance : source.Subscribe(observer);
+            });
+    }
+
+    /// <summary>Creates a signal whose source is produced asynchronously for each subscription.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="observableFactory">The asynchronous factory that creates the source signal for a subscription.</param>
+    /// <returns>A signal that subscribes to the factory-produced source for each observer.</returns>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="observableFactory"/> is <see langword="null"/>.</exception>
+    public static IObservable<T> Defer<T>(Func<CancellationToken, Task<IObservable<T>>> observableFactory)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(observableFactory);
+
+        return Create<T>(
+            async (observer, cancellationToken) =>
+            {
+                IObservable<T> source;
+                try
+                {
+                    source = await observableFactory(cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception error)
+                {
+                    observer.OnError(error);
+                    return EmptyDisposable.Instance;
+                }
+
+                return cancellationToken.IsCancellationRequested ? EmptyDisposable.Instance : source.Subscribe(observer);
+            });
+    }
+
+    /// <summary>Completes an asynchronous subscription and assigns its disposable lifetime.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="subscribe">The asynchronous subscription function.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="cts">The cancellation token source owned by the subscription.</param>
+    /// <param name="subscription">The subscription slot.</param>
+    /// <returns>A task that completes when the asynchronous subscription has assigned its disposable.</returns>
+    private static async Task RunAsyncSubscription<T>(
+        Func<IObserver<T>, CancellationToken, Task<IDisposable>> subscribe,
+        IObserver<T> observer,
+        CancellationTokenSource cts,
+        SingleDisposable subscription)
+    {
+        try
+        {
+            var disposable = await subscribe(observer, cts.Token).ConfigureAwait(false);
+            subscription.Create(disposable ?? EmptyDisposable.Instance);
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+            subscription.Create(EmptyDisposable.Instance);
+        }
+        catch (Exception error)
+        {
+            observer.OnError(error);
+            subscription.Create(EmptyDisposable.Instance);
+        }
+        finally
+        {
+            cts.Dispose();
+        }
     }
 }

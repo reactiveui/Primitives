@@ -30,7 +30,7 @@ public class SignalCreateTests
     public void Create_ArgumentChecking()
     {
         Assert.Throws<ArgumentNullException>(() => Signal.Create(default(Func<IObserver<int>, IDisposable>)!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(null!).Subscribe(null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Create((Func<IObserver<int>, IDisposable>)null!).Subscribe(null!));
     }
 
     /// <summary>Creates the null coalescing action.</summary>

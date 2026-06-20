@@ -132,6 +132,28 @@ public static partial class LinqExtensions
             return new TapSignal<T>(source, onNext, static _ => { }, onCompleted);
         }
 
+        /// <summary>Invokes actions for each value, error, and completion while preserving the sequence. System.Reactive name for <c>Tap</c>.</summary>
+        /// <param name="onNext">The action to invoke for each value.</param>
+        /// <param name="onError">The action to invoke for an error.</param>
+        /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
+        /// <returns>The source values after the actions have run.</returns>
+        /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+        public IObservable<T> Do(
+            Action<T> onNext,
+            Action<Exception> onError,
+            Action onCompleted)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(onNext);
+
+            ArgumentExceptionHelper.ThrowIfNull(onError);
+
+            ArgumentExceptionHelper.ThrowIfNull(onCompleted);
+
+            return new TapSignal<T>(source, onNext, onError, onCompleted);
+        }
+
         /// <summary>
         /// Serializes notifications behind a gate so downstream operators observe the single-threaded
         /// <c>OnNext*</c> then <c>OnError</c>|<c>OnCompleted</c> grammar even when the source delivers
@@ -154,8 +176,6 @@ public static partial class LinqExtensions
         /// <param name="gate">The gate shared with other synchronized sequences.</param>
         /// <returns>A sequence that forwards the source notifications one at a time under the shared gate.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="gate"/> is <see langword="null"/>.</exception>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Modernization", "SST2000:Use ArgumentNullException.ThrowIfNull", Justification = "Uses variable types")]
         public IObservable<T> Synchronize(Lock gate)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -166,6 +186,38 @@ public static partial class LinqExtensions
             }
 
             return new SynchronizeSignal<T>(source, gate);
+        }
+
+#if NET9_0_OR_GREATER
+        /// <summary>Serializes notifications behind an object gate. System.Reactive name for object-gated synchronization.</summary>
+        /// <param name="gate">The gate shared with other synchronized sequences.</param>
+        /// <returns>A sequence that forwards the source notifications one at a time under the shared gate.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="gate"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Synchronize(object gate)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(gate);
+
+            return new SynchronizeObjectSignal<T>(source, gate);
+        }
+#endif
+
+        /// <summary>Serializes notifications behind an object gate when a caller cannot provide a dedicated lock gate.</summary>
+        /// <param name="gate">The gate shared with other synchronized sequences.</param>
+        /// <returns>A sequence that forwards the source notifications one at a time under the shared gate.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="gate"/> is <see langword="null"/>.</exception>
+        public IObservable<T> SynchronizeObject(object gate)
+        {
+#if NET9_0_OR_GREATER
+            return LinqExtensions.Synchronize<T>(source, gate);
+#else
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(gate);
+
+            return new SynchronizeObjectSignal<T>(source, gate);
+#endif
         }
 
         /// <summary>Invokes a stateful action for each value while preserving the sequence. State-carrying name for <c>TapWith</c>.</summary>
@@ -509,6 +561,14 @@ public static partial class LinqExtensions
             return new MapSignal<TSource, TResult>(source, selector);
         }
 
+        /// <summary>Projects each element and its zero-based index into a new form. LINQ name for <c>MapIndexed</c>.</summary>
+        /// <typeparam name="TResult">The type of the elements in the result sequence.</typeparam>
+        /// <param name="selector">A transform function to apply to each element and its index.</param>
+        /// <returns>An observable sequence whose elements are the result of invoking the transform on each source element and index.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        public IObservable<TResult> Select<TResult>(Func<TSource, int, TResult> selector) =>
+            source.MapIndexed(selector);
+
         /// <summary>Projects each element into a new form using external state passed to the selector. State-carrying name for <c>MapWith</c>.</summary>
         /// <typeparam name="TState">The type of the state used in the selector function.</typeparam>
         /// <typeparam name="TResult">The type of the elements in the result sequence.</typeparam>
@@ -551,6 +611,22 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(predicate);
 
             return new KeepWithSignal<TSource, TState>(source, state, predicate);
+        }
+    }
+
+    /// <summary>System.Reactive-named combining operators for an observable source of tasks.</summary>
+    /// <param name="sources">The outer sequence of task sources.</param>
+    /// <typeparam name="T">The task result type.</typeparam>
+    extension<T>(IObservable<Task<T>> sources)
+    {
+        /// <summary>Subscribes to task results one at a time in source order. System.Reactive name for <c>Chain</c>.</summary>
+        /// <returns>A sequence that emits each task result after the previous task signal completes.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Concat()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(sources);
+
+            return new ChainSignal<T>(sources.Map(static task => Signal.FromTask(task)));
         }
     }
 }

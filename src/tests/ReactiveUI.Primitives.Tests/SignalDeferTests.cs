@@ -32,11 +32,11 @@ public sealed class SignalDeferTests
             .IsTrue();
         InvalidOperationException factoryError = new("defer-factory");
         Exception? observedFactoryError = null;
-        Signal.Defer<int>(() => throw factoryError).Subscribe(_ => { }, ex => observedFactoryError = ex);
+        Signal.Defer((Func<IObservable<int>>)(() => throw factoryError)).Subscribe(_ => { }, ex => observedFactoryError = ex);
         await Assert.That(observedFactoryError!).IsSameReferenceAs(factoryError);
         Assert.Throws<InvalidOperationException>(() =>
             Signal.Fail<int>(new InvalidOperationException("enumerable")).ToEnumerable());
-        Assert.Throws<ArgumentNullException>(() => Signal.Defer<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Defer((Func<IObservable<int>>)null!));
         Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).ToEnumerable());
     }
 }

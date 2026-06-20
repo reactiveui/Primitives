@@ -16,6 +16,110 @@ namespace ReactiveUI.Primitives;
 /// </summary>
 public static partial class LinqExtensions
 {
+    /// <summary>Dedicated signal for <c>MapIndexed</c>.</summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <typeparam name="TResult">The projected value type.</typeparam>
+    private sealed class MapIndexedSignal<TSource, TResult> : IRequireCurrentThread<TResult>
+    {
+        /// <summary>The source observable.</summary>
+        private readonly IObservable<TSource> _source;
+
+        /// <summary>The indexed selector.</summary>
+        private readonly Func<TSource, int, TResult> _selector;
+
+        /// <summary>Initializes a new instance of the <see cref="MapIndexedSignal{TSource, TResult}"/> class.</summary>
+        /// <param name="source">The source observable.</param>
+        /// <param name="selector">The indexed selector.</param>
+        internal MapIndexedSignal(IObservable<TSource> source, Func<TSource, int, TResult> selector)
+        {
+            _source = source;
+            _selector = selector;
+        }
+
+        /// <inheritdoc/>
+        public bool IsRequiredSubscribeOnCurrentThread() =>
+            _source is IRequireCurrentThread<TSource> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread();
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<TResult> observer)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(observer);
+
+            return _source.Subscribe(new MapIndexedWitness(observer, _selector));
+        }
+
+        /// <summary>Applies the indexed selector to source values.</summary>
+        private sealed class MapIndexedWitness : IObserver<TSource>
+        {
+            /// <summary>The downstream observer.</summary>
+            private readonly IObserver<TResult> _observer;
+
+            /// <summary>The indexed selector.</summary>
+            private readonly Func<TSource, int, TResult> _selector;
+
+            /// <summary>The next zero-based index.</summary>
+            private int _index;
+
+            /// <summary>Whether a terminal notification has been forwarded.</summary>
+            private bool _stopped;
+
+            /// <summary>Initializes a new instance of the <see cref="MapIndexedWitness"/> class.</summary>
+            /// <param name="observer">The downstream observer.</param>
+            /// <param name="selector">The indexed selector.</param>
+            internal MapIndexedWitness(IObserver<TResult> observer, Func<TSource, int, TResult> selector)
+            {
+                _observer = observer;
+                _selector = selector;
+            }
+
+            /// <inheritdoc/>
+            public void OnNext(TSource value)
+            {
+                if (_stopped)
+                {
+                    return;
+                }
+
+                TResult result;
+                try
+                {
+                    result = _selector(value, _index++);
+                }
+                catch (Exception error)
+                {
+                    OnError(error);
+                    return;
+                }
+
+                _observer.OnNext(result);
+            }
+
+            /// <inheritdoc/>
+            public void OnError(Exception error)
+            {
+                if (_stopped)
+                {
+                    return;
+                }
+
+                _stopped = true;
+                _observer.OnError(error);
+            }
+
+            /// <inheritdoc/>
+            public void OnCompleted()
+            {
+                if (_stopped)
+                {
+                    return;
+                }
+
+                _stopped = true;
+                _observer.OnCompleted();
+            }
+        }
+    }
+
     /// <summary>Dedicated signal for <c>Take</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     private sealed class TakeSignal<T> : IObservable<T>

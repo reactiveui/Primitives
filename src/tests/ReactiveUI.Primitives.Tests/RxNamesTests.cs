@@ -493,7 +493,7 @@ public class RxNamesTests
     public void RxNamesThrowOnNullSelector()
     {
         var source = Signal.FromEnumerable(_oneToFive);
-        Assert.Throws<ArgumentNullException>(() => source.Select<int, int>(null!));
+        Assert.Throws<ArgumentNullException>(() => source.Select((Func<int, int>)null!));
         Assert.Throws<ArgumentNullException>(() => source.SelectWith<int, int, int>(Ten, null!));
         Assert.Throws<ArgumentNullException>(() => source.Where(null!));
         Assert.Throws<ArgumentNullException>(() => source.WhereWith(Two, null!));

@@ -21,6 +21,30 @@ public static partial class LinqExtensions
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> ToObservable() => Signal.FromEnumerable(values);
 
+        /// <summary>Converts an enumerable sequence to a Primitives signal on the supplied scheduler.</summary>
+        /// <param name="scheduler">The scheduler used to enumerate and emit the values.</param>
+        /// <returns>A signal that emits the enumerable values on the supplied scheduler.</returns>
+        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="scheduler"/> is <see langword="null"/>.</exception>
+        public IObservable<T> ToObservable(ISequencer scheduler)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(values);
+
+            ArgumentExceptionHelper.ThrowIfNull(scheduler);
+
+            if (scheduler == Sequencer.Immediate || scheduler == Sequencer.CurrentThread)
+            {
+                return Signal.FromEnumerable(values);
+            }
+
+            return Signal.Create<T>(observer =>
+            {
+                CancellationDisposable cancel = new();
+                var scheduled = scheduler.Schedule(() => EmitEnumerable(values, observer, cancel));
+
+                return new MultipleDisposable(cancel, scheduled);
+            });
+        }
+
         /// <summary>Converts an enumerable sequence to a Primitives signal using the System.Reactive conversion name.</summary>
         /// <param name="cancellationToken">The token used to stop enumeration.</param>
         /// <returns>A signal that emits the enumerable values until enumeration completes or cancellation is requested.</returns>
@@ -952,11 +976,44 @@ public static partial class LinqExtensions
     /// <typeparam name="T">The task result type.</typeparam>
     extension<T>(Task<T> task)
     {
+        /// <summary>Converts a task to an observable sequence that emits the task result.</summary>
+        /// <returns>An observable sequence that emits the completed task result or faults with the task error.</returns>
+        /// <exception cref="ArgumentNullException">The receiver task is <see langword="null"/>.</exception>
+        public IObservable<T> ToObservable() => Signal.FromTask(task);
+
         /// <summary>Identity helper that keeps source-compatible <c>FirstAsync().ToTask()</c> migrations compiling.</summary>
         /// <returns>The supplied task.</returns>
         /// <exception cref="ArgumentNullException">The receiver task is <see langword="null"/>.</exception>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
         public Task<T> ToTask() => task ?? throw new ArgumentNullException(nameof(task));
+    }
+
+    /// <summary>Emits enumerable values while honoring a scheduled subscription cancellation.</summary>
+    /// <param name="values">The values to emit.</param>
+    /// <param name="observer">The destination observer.</param>
+    /// <param name="cancel">The subscription cancellation.</param>
+    /// <typeparam name="T">The value type.</typeparam>
+    private static void EmitEnumerable<T>(
+        IEnumerable<T> values,
+        IObserver<T> observer,
+        CancellationDisposable cancel)
+    {
+        foreach (var value in values)
+        {
+            if (cancel.IsDisposed)
+            {
+                return;
+            }
+
+            observer.OnNext(value);
+        }
+
+        if (cancel.IsDisposed)
+        {
+            return;
+        }
+
+        observer.OnCompleted();
     }
 
     /// <summary>Returns the final value as a completed task when the source is a readable range, avoiding a subscription.</summary>
