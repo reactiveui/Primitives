@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
@@ -10,14 +11,6 @@ namespace ReactiveUI.Primitives;
 /// <summary>Connectable hot signal that subscribes to its source only when connected.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-[System.Diagnostics.CodeAnalysis.SuppressMessage(
-    "Design",
-    "CA1001:Types that own disposable fields should be disposable",
-    Justification = "The active connection lifetime is returned from Connect and owned by the caller.")]
-[System.Diagnostics.CodeAnalysis.SuppressMessage(
-    "Major Code Smell",
-    "S2931:Classes with IDisposable members should implement IDisposable",
-    Justification = "The active connection lifetime is returned from Connect and owned by the caller.")]
 public sealed class ConnectableSignal<T> : IObservable<T>
 {
     /// <summary>Synchronizes connection state.</summary>
@@ -29,8 +22,8 @@ public sealed class ConnectableSignal<T> : IObservable<T>
     /// <summary>Multicast hub that receives source values.</summary>
     private readonly ISignal<T> _hub;
 
-    /// <summary>Active source connection.</summary>
-    private IDisposable? _connection;
+    /// <summary>Active source connection slot. The returned connection handle owns disposal.</summary>
+    private StrongBox<Connection>? _connection;
 
     /// <summary>Set after the source sends a terminal notification to the hub.</summary>
     private bool _terminated;
@@ -63,9 +56,9 @@ public sealed class ConnectableSignal<T> : IObservable<T>
             // Allocate the connection only on the first connect. A dedicated disposable type
             // avoids the closure (and extra anonymous-disposable wrapper) that Scope.Create
             // would allocate.
-            if (_connection is not null)
+            if (_connection?.Value is { } activeConnection)
             {
-                return _connection;
+                return activeConnection;
             }
 
             var sourceSubscription = _source.Subscribe(new ConnectionObserver(this));
@@ -75,8 +68,9 @@ public sealed class ConnectableSignal<T> : IObservable<T>
                 return Scope.Empty;
             }
 
-            _connection = new Connection(this, sourceSubscription);
-            return _connection;
+            var connection = new Connection(this, sourceSubscription);
+            _connection = new StrongBox<Connection>(connection);
+            return connection;
         }
     }
 
@@ -141,7 +135,7 @@ public sealed class ConnectableSignal<T> : IObservable<T>
             lock (_parent._gate)
             {
                 sourceSubscription.Dispose();
-                if (ReferenceEquals(_parent._connection, this))
+                if (_parent._connection is { Value: var activeConnection } && ReferenceEquals(activeConnection, this))
                 {
                     _parent._connection = null;
                 }
