@@ -170,4 +170,54 @@ public sealed class ConnectableSignalTests
             ConnectableSignalExtensions.Publish<int, int>(null!, static source => source));
         Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.Publish<int, int>(cold, null!));
     }
+
+    /// <summary>Verifies <c>RefCount</c> does not reconnect a published source after its hub has completed.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RefCountDoesNotReconnectAfterPublishedSourceCompletes()
+    {
+        const int ExpectedCompletions = 2;
+        var sourceSubscriptions = 0;
+        var completions = 0;
+        var cold = Signal.Create<int>(observer =>
+        {
+            sourceSubscriptions++;
+            observer.OnCompleted();
+            return Scope.Empty;
+        });
+        var shared = cold.Publish().RefCount();
+
+        shared.Subscribe(static _ => { }, () => completions++).Dispose();
+        shared.Subscribe(static _ => { }, () => completions++).Dispose();
+
+        await Assert.That(completions).IsEqualTo(ExpectedCompletions);
+        await Assert.That(sourceSubscriptions).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies disposing a connectable signal disconnects the active source and prevents reconnects.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposeDisconnectsActiveSourceAndPreventsReconnect()
+    {
+        var sourceSubscriptions = 0;
+        var sourceDisposals = 0;
+        var cold = Signal.Create<int>(_ =>
+        {
+            sourceSubscriptions++;
+            return Scope.Create(() => sourceDisposals++);
+        });
+        ConnectableSignal<int> connectable = new(cold, new Signal<int>());
+
+        var connection = connectable.Connect();
+        await Assert.That(sourceSubscriptions).IsEqualTo(1);
+
+        connectable.Dispose();
+        connectable.Dispose();
+        connection.Dispose();
+
+        connectable.Connect().Dispose();
+
+        await Assert.That(sourceDisposals).IsEqualTo(1);
+        await Assert.That(sourceSubscriptions).IsEqualTo(1);
+    }
 }

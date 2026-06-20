@@ -454,7 +454,7 @@ public static partial class LinqExtensions
             where TException : Exception =>
             source.Recover(handler);
 
-        /// <summary>Projects each value to an inner sequence and merges the results. LINQ name for <c>FlatMap</c>.</summary>
+        /// <summary>Projects each value to an inner sequence and merges the results. LINQ name for concurrent flattening.</summary>
         /// <typeparam name="TResult">The inner value type.</typeparam>
         /// <param name="selector">The function that projects each source value to an inner sequence.</param>
         /// <returns>A sequence containing the merged values of every inner sequence.</returns>
@@ -465,7 +465,7 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            return new FlatMapSignal<T, TResult>(source, selector);
+            return source.Map(selector).Merge();
         }
 
         /// <summary>Projects each value to the same inner sequence and merges the results.</summary>
@@ -479,7 +479,7 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(other);
 
-            return new FlatMapSignal<T, TResult>(source, _ => other);
+            return source.Map(_ => other).Merge();
         }
 
         /// <summary>Projects each value to an enumerable sequence and emits the projected values.</summary>
@@ -496,7 +496,7 @@ public static partial class LinqExtensions
             return new SelectManyEnumerableSignal<T, TResult>(source, selector);
         }
 
-        /// <summary>Projects each value to an inner sequence and combines each pair with a result selector. LINQ name for <c>FlatMap</c>.</summary>
+        /// <summary>Projects each value to an inner sequence and concurrently combines each pair with a result selector.</summary>
         /// <typeparam name="TCollection">The inner value type.</typeparam>
         /// <typeparam name="TResult">The result value type.</typeparam>
         /// <param name="collectionSelector">The function that projects each source value to an inner sequence.</param>
@@ -511,7 +511,7 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(resultSelector);
 
-            return new FlatMapResultSignal<T, TCollection, TResult>(source, collectionSelector, resultSelector);
+            return source.Map(value => collectionSelector(value).Map(inner => resultSelector(value, inner))).Merge();
         }
 
         /// <summary>Merges this sequence with another observable sequence. System.Reactive name for <c>Blend</c>.</summary>

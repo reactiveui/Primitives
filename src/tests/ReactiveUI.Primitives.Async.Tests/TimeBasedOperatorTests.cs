@@ -667,11 +667,12 @@ public class TimeBasedOperatorTests
     {
         const int SecondValue = 2;
         const int LastValue = 3;
+        ManualTimeProvider manualProvider = new();
         DirectSource<int> source = new();
         List<int> items = [];
         TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource lastEmitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await source.Throttle(TimeSpan.FromMilliseconds(50)).SubscribeAsync(
+        await using var sub = await source.Throttle(TimeSpan.FromMilliseconds(50), manualProvider).SubscribeAsync(
             (x, ct) =>
             {
                 _ = ct;
@@ -689,9 +690,8 @@ public class TimeBasedOperatorTests
         await source.EmitNext(SecondValue);
         await source.EmitNext(LastValue);
 
-        // Wait for the throttle window to actually fire the latest value rather than relying on a
-        // wall-clock delay — Task.Delay drifts on slow CI runners (macOS arm64 saw the throttle
-        // fail to fire inside the 200ms window).
+        await Assert.That(manualProvider.TimerCount).IsEqualTo(LastValue);
+        manualProvider.FireAll();
         await lastEmitted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await source.Complete(Result.Success);
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -768,6 +768,108 @@ public class TimeBasedOperatorTests
         /// <exception cref = "InvalidOperationException">Always thrown.</exception>
         public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) =>
             throw new InvalidOperationException("timer creation failed");
+    }
+
+    /// <summary>A <see cref = "TimeProvider"/> that records one-shot timers and exposes an explicit fire point for deterministic debounce supersession tests.</summary>
+    private sealed class ManualTimeProvider : TimeProvider
+    {
+        /// <summary>Protects timer collection access.</summary>
+        private readonly Lock _gate = new();
+
+        /// <summary>The timers created by this provider.</summary>
+        private readonly List<ManualTimer> _timers = [];
+
+        /// <summary>Gets the number of timers created by this provider.</summary>
+        internal int TimerCount
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _timers.Count;
+                }
+            }
+        }
+
+        /// <summary>Creates a manual timer and stores it until <see cref = "FireAll"/> is invoked.</summary>
+        /// <param name = "callback">The callback to invoke when the timer is fired.</param>
+        /// <param name = "state">The state object passed to the callback.</param>
+        /// <param name = "dueTime">The initial delay (recorded by caller behavior, not elapsed by this provider).</param>
+        /// <param name = "period">The interval (ignored; timers are one-shot in these tests).</param>
+        /// <returns>A manual <see cref = "ITimer"/> instance.</returns>
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            _ = dueTime;
+            _ = period;
+            ManualTimer timer = new(callback, state);
+            lock (_gate)
+            {
+                _timers.Add(timer);
+            }
+
+            return timer;
+        }
+
+        /// <summary>Fires every timer that has been created so far.</summary>
+        internal void FireAll()
+        {
+            ManualTimer[] timers;
+            lock (_gate)
+            {
+                timers = [.. _timers];
+            }
+
+            foreach (var timer in timers)
+            {
+                timer.Fire();
+            }
+        }
+
+        /// <summary>Manual one-shot timer used by <see cref = "ManualTimeProvider"/>.</summary>
+        /// <param name = "callback">The callback to invoke.</param>
+        /// <param name = "state">The state object passed to the callback.</param>
+        private sealed class ManualTimer(TimerCallback callback, object? state) : ITimer
+        {
+            /// <summary>Non-zero once the timer has been disposed.</summary>
+            private int _disposed;
+
+            /// <summary>Non-zero once the timer has fired.</summary>
+            private int _fired;
+
+            /// <summary>No-op change; returns whether the timer is still active.</summary>
+            /// <param name = "dueTime">The due time (ignored).</param>
+            /// <param name = "period">The period (ignored).</param>
+            /// <returns><see langword = "true"/> when the timer is still active.</returns>
+            public bool Change(TimeSpan dueTime, TimeSpan period)
+            {
+                _ = dueTime;
+                _ = period;
+                return Volatile.Read(ref _disposed) == 0;
+            }
+
+            /// <summary>Marks the timer as disposed.</summary>
+            public void Dispose() => Interlocked.Exchange(ref _disposed, 1);
+
+            /// <summary>Marks the timer as disposed.</summary>
+            /// <returns>A completed <see cref = "ValueTask"/>.</returns>
+            public ValueTask DisposeAsync()
+            {
+                Dispose();
+                return default;
+            }
+
+            /// <summary>Invokes the callback once if the timer has not been disposed.</summary>
+            internal void Fire()
+            {
+                if (Volatile.Read(ref _disposed) != 0 ||
+                    Interlocked.Exchange(ref _fired, 1) != 0)
+                {
+                    return;
+                }
+
+                callback(state);
+            }
+        }
     }
 
     /// <summary>

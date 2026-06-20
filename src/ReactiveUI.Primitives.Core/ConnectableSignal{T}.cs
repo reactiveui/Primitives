@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives;
@@ -9,7 +10,7 @@ namespace ReactiveUI.Primitives;
 /// <summary>Connectable hot signal that subscribes to its source only when connected.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class ConnectableSignal<T> : IObservable<T>
+public sealed class ConnectableSignal<T> : IObservable<T>, IDisposable
 {
     /// <summary>Synchronizes connection state.</summary>
     private readonly Lock _gate = new();
@@ -22,6 +23,12 @@ public sealed class ConnectableSignal<T> : IObservable<T>
 
     /// <summary>Active source connection.</summary>
     private IDisposable? _connection;
+
+    /// <summary>Set after this connectable signal has been disposed.</summary>
+    private bool _disposed;
+
+    /// <summary>Set after the source sends a terminal notification to the hub.</summary>
+    private bool _terminated;
 
     /// <summary>Initializes a new instance of the <see cref="ConnectableSignal{T}"/> class.</summary>
     /// <param name="source">The cold or hot source sequence.</param>
@@ -43,16 +50,86 @@ public sealed class ConnectableSignal<T> : IObservable<T>
     {
         lock (_gate)
         {
+            if (Volatile.Read(ref _terminated))
+            {
+                return Scope.Empty;
+            }
+
+            if (_disposed)
+            {
+                return Scope.Empty;
+            }
+
             // Allocate the connection only on the first connect. A dedicated disposable type
             // avoids the closure (and extra anonymous-disposable wrapper) that Scope.Create
             // would allocate.
-            _connection ??= new Connection(this, _source.Subscribe(_hub));
+            if (_connection is not null)
+            {
+                return _connection;
+            }
+
+            var sourceSubscription = _source.Subscribe(new ConnectionObserver(this));
+            if (Volatile.Read(ref _terminated))
+            {
+                sourceSubscription.Dispose();
+                return Scope.Empty;
+            }
+
+            _connection = new Connection(this, sourceSubscription);
             return _connection;
         }
     }
 
     /// <inheritdoc />
     public IDisposable Subscribe(IObserver<T> observer) => _hub.Subscribe(observer);
+
+    /// <summary>Disconnects any active source subscription and prevents future source connections.</summary>
+    public void Dispose()
+    {
+        IDisposable? connection;
+        lock (_gate)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            _terminated = true;
+            connection = _connection;
+            _connection = null;
+        }
+
+        connection?.Dispose();
+    }
+
+    /// <summary>Forwards source notifications to the hub and latches terminal state.</summary>
+    private sealed class ConnectionObserver : IObserver<T>
+    {
+        /// <summary>The owning connectable signal.</summary>
+        private readonly ConnectableSignal<T> _parent;
+
+        /// <summary>Initializes a new instance of the <see cref="ConnectionObserver"/> class.</summary>
+        /// <param name="parent">The owning connectable signal.</param>
+        public ConnectionObserver(ConnectableSignal<T> parent) => _parent = parent;
+
+        /// <inheritdoc/>
+        public void OnCompleted()
+        {
+            Volatile.Write(ref _parent._terminated, true);
+            _parent._hub.OnCompleted();
+        }
+
+        /// <inheritdoc/>
+        public void OnError(Exception error)
+        {
+            Volatile.Write(ref _parent._terminated, true);
+            _parent._hub.OnError(error);
+        }
+
+        /// <inheritdoc/>
+        public void OnNext(T value) => _parent._hub.OnNext(value);
+    }
 
     /// <summary>Disconnect handle for an active source connection.</summary>
     private sealed class Connection : IDisposable

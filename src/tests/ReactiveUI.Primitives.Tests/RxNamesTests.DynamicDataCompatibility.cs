@@ -60,6 +60,30 @@ public partial class RxNamesTests
         await Assert.That(values.SequenceEqual([One, Two])).IsTrue();
     }
 
+    /// <summary>Verifies <c>SelectMany</c> subscribes to later inner sources before earlier inner sources complete.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SelectManyMergesInnerSourcesConcurrently()
+    {
+        Signal<int> outer = new();
+        Signal<int> first = new();
+        Signal<int> second = new();
+        List<int> values = [];
+
+        using var subscription = outer.SelectMany(value => value == One ? first : second).Subscribe(values.Add);
+
+        outer.OnNext(One);
+        outer.OnNext(Two);
+        second.OnNext(Two);
+        first.OnNext(One);
+
+        await Assert.That(values.SequenceEqual([Two, One])).IsTrue();
+
+        first.OnCompleted();
+        second.OnCompleted();
+        outer.OnCompleted();
+    }
+
     /// <summary>Verifies the Rx migration aliases used by DynamicData produce expected values.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
