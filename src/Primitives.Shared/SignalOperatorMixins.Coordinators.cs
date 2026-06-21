@@ -386,20 +386,6 @@ public static partial class LinqExtensions
             return this;
         }
 
-        /// <summary>Subscribes directly to enumerable sources.</summary>
-        /// <param name="sources">The sources to merge.</param>
-        /// <returns>The subscription cleanup.</returns>
-        internal BlendCoordinator<T> Run(IEnumerable<IObservable<T>> sources)
-        {
-            foreach (var source in sources)
-            {
-                OnSource(source);
-            }
-
-            OnOuterCompleted();
-            return this;
-        }
-
         /// <summary>Subscribes a new inner source concurrently.</summary>
         /// <param name="source">The inner source.</param>
         private void OnSource(IObservable<T> source)

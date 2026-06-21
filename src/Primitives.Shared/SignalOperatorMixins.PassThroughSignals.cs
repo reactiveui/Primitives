@@ -158,13 +158,16 @@ public static partial class LinqExtensions
         /// <summary>The source observable.</summary>
         private readonly IObservable<T> _source;
 
-        /// <summary>The shared gate, or <see langword="null"/> to give each subscription its own private gate.</summary>
+#if NET9_0_OR_GREATER
+        /// <summary>The shared gate.</summary>
         private readonly Lock? _gate;
+#endif
 
         /// <summary>Initializes a new instance of the <see cref="SynchronizeSignal{T}"/> class with a per-subscription gate.</summary>
         /// <param name="source">The source observable.</param>
         internal SynchronizeSignal(IObservable<T> source) => _source = source;
 
+#if NET9_0_OR_GREATER
         /// <summary>Initializes a new instance of the <see cref="SynchronizeSignal{T}"/> class sharing the supplied gate.</summary>
         /// <param name="source">The source observable.</param>
         /// <param name="gate">The gate shared across subscriptions and other synchronized sequences.</param>
@@ -173,15 +176,18 @@ public static partial class LinqExtensions
             _source = source;
             _gate = gate;
         }
+#endif
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var sink = _gate is null
-                ? new(observer)
-                : new SynchronizeWitness<T>(observer, _gate);
+#if NET9_0_OR_GREATER
+            var sink = _gate is null ? new(observer) : new SynchronizeWitness<T>(observer, _gate);
+#else
+            SynchronizeWitness<T> sink = new(observer);
+#endif
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
