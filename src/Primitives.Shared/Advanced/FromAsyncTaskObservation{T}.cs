@@ -121,7 +121,7 @@ internal sealed class FromAsyncTaskObservation<T>
     /// <param name="error">The observed task error.</param>
     private void OnError(Exception error)
     {
-        if (ExternalCancellation.TryForwardCancellation() || !Lifetime.TryComplete())
+        if (Lifetime.IsCancellationRequested || ExternalCancellation.TryForwardCancellation() || !Lifetime.TryComplete())
         {
             return;
         }

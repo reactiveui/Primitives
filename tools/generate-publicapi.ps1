@@ -61,9 +61,13 @@ Set-Location $srcDir
 $env:EnableWindowsTargeting = 'true'
 $env:CheckEolTargetFramework = 'false'
 if (-not $env:MinVerVersionOverride) { $env:MinVerVersionOverride = '255.255.255-dev' }
-# The generator must not inherit an environment/MSBuild opt-out. Directory.Build.props
-# still disables tests, benchmarks, and source generators by project path/name.
-Remove-Item Env:TrackPublicApi -ErrorAction SilentlyContinue
+$env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
+$env:DOTNET_NOLOGO = 'true'
+$env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = '1'
+# The generator must not inherit an environment/MSBuild opt-out. Force API tracking on
+# for normal library projects; Directory.Build.props still disables tests, benchmarks,
+# and source generators by project path/name.
+$env:TrackPublicApi = 'true'
 Remove-Item Env:TRACKPUBLICAPI -ErrorAction SilentlyContinue
 Remove-Item Env:trackpublicapi -ErrorAction SilentlyContinue
 
@@ -85,7 +89,9 @@ function Get-MsBuildProperty {
     param([string]$Project, [string]$Name)
     $value = & dotnet msbuild $Project "-getProperty:$Name" -nologo 2>$null
     if ($LASTEXITCODE -ne 0 -or $null -eq $value) { return '' }
-    return ($value | Out-String).Trim()
+    $lines = @($value | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($lines.Count -eq 0) { return '' }
+    return [string]$lines[$lines.Count - 1].Trim()
 }
 
 # Regenerate one (project, TFM) pair and fold the surface into Shipped. Returns a result
@@ -132,7 +138,9 @@ function Invoke-PublicApiOne {
 $projects = Get-ChildItem -Path . -Recurse -Filter '*.csproj' |
     Where-Object {
         $p = $_.FullName -replace '\\', '/'
-        $p -notmatch '/tests/' -and $p -notmatch '/benchmarks/'
+        $p -notmatch '/tests/' -and
+            $p -notmatch '/benchmarks/' -and
+            $_.BaseName -notlike '*.Generator'
     } |
     Sort-Object FullName
 
@@ -145,13 +153,6 @@ foreach ($projItem in $projects) {
     $proj = $projItem.FullName
     # Match the filter against a slash-normalized path so a forward-slash filter works on Windows too.
     if ($Filter -and (($proj -replace '\\', '/') -notlike "*$($Filter -replace '\\', '/')*")) { continue }
-
-    $track = Get-MsBuildProperty -Project $proj -Name 'TrackPublicApi'
-    if ($track -ne 'true') {
-        Write-Host "skip  (TrackPublicApi != true): $proj"
-        $skipped++
-        continue
-    }
 
     $tfms = Get-MsBuildProperty -Project $proj -Name 'TargetFrameworks'
     if (-not $tfms) { $tfms = Get-MsBuildProperty -Project $proj -Name 'TargetFramework' }

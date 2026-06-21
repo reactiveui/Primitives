@@ -48,9 +48,14 @@ cd "$SRC_DIR"
 export EnableWindowsTargeting=true
 export CheckEolTargetFramework=false
 export MinVerVersionOverride="${MinVerVersionOverride:-255.255.255-dev}"
-# The generator must not inherit a shell/MSBuild opt-out. Directory.Build.props
-# will still disable tests, benchmarks, and source generators by project path/name.
-unset TrackPublicApi TRACKPUBLICAPI trackpublicapi
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+export DOTNET_NOLOGO=true
+export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+# The generator must not inherit a shell/MSBuild opt-out. Force API tracking on for
+# normal library projects; Directory.Build.props still disables tests, benchmarks,
+# and source generators by project path/name.
+export TrackPublicApi=true
+unset TRACKPUBLICAPI trackpublicapi
 
 FILTER="${1:-}"
 export DIAGS="RS0016 RS0017 RS0037"
@@ -65,10 +70,16 @@ echo "  MinVer     : $MinVerVersionOverride"
 echo "  jobs       : $JOBS"
 echo
 
+get_msbuild_property() {
+  dotnet msbuild "$1" "-getProperty:$2" -nologo 2>/dev/null \
+    | awk 'NF { value = $0 } END { print value }'
+}
+
 projects=()
 while IFS= read -r p; do projects+=("$p"); done < <(
   find . -name '*.csproj' \
     -not -path '*/tests/*' -not -path '*/benchmarks/*' \
+    -not -name '*.Generator.csproj' \
     | sort
 )
 
@@ -79,16 +90,9 @@ skipped=0
 for proj in "${projects[@]}"; do
   if [ -n "$FILTER" ] && [[ "$proj" != *"$FILTER"* ]]; then continue; fi
 
-  track="$(dotnet msbuild "$proj" -getProperty:TrackPublicApi -nologo 2>/dev/null | tr -d '[:space:]')"
-  if [ "$track" != "true" ]; then
-    echo "skip  (TrackPublicApi != true): $proj"
-    skipped=$((skipped + 1))
-    continue
-  fi
-
-  tfms="$(dotnet msbuild "$proj" -getProperty:TargetFrameworks -nologo 2>/dev/null | tr -d '[:space:]')"
+  tfms="$(get_msbuild_property "$proj" TargetFrameworks | tr -d '[:space:]')"
   if [ -z "$tfms" ]; then
-    tfms="$(dotnet msbuild "$proj" -getProperty:TargetFramework -nologo 2>/dev/null | tr -d '[:space:]')"
+    tfms="$(get_msbuild_property "$proj" TargetFramework | tr -d '[:space:]')"
   fi
   if [ -z "$tfms" ]; then
     echo "skip  (no TargetFramework(s)): $proj"
@@ -97,9 +101,9 @@ for proj in "${projects[@]}"; do
   fi
 
   projdir="$(dirname "$proj")"
-  api_namespace="$(dotnet msbuild "$proj" -getProperty:RootNamespace -nologo 2>/dev/null | tr -d '[:space:]')"
+  api_namespace="$(get_msbuild_property "$proj" RootNamespace | tr -d '[:space:]')"
   if [ -z "$api_namespace" ]; then
-    api_namespace="$(dotnet msbuild "$proj" -getProperty:AssemblyName -nologo 2>/dev/null | tr -d '[:space:]')"
+    api_namespace="$(get_msbuild_property "$proj" AssemblyName | tr -d '[:space:]')"
   fi
   echo "queue $proj"
   echo "    TFMs: $tfms"

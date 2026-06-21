@@ -113,7 +113,7 @@ public class OperatorAfterTerminalGuardTests
             o.OnError(new InvalidOperationException("retry-after-dispose"));
             return EmptyDisposable.Instance;
         });
-        var sub = source.OnErrorRetry<InvalidOperationException>(
+        var sub = source.OnErrorRetry<int, InvalidOperationException>(
             static _ => { },
             10,
             TimeSpan.FromMilliseconds(LongDelayMs),
