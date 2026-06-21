@@ -15,6 +15,36 @@ namespace ReactiveUI.Primitives;
 /// </summary>
 public static partial class LinqExtensions
 {
+    /// <summary>System.Reactive-named combining operators for enumerable observable sources.</summary>
+    /// <param name="sources">The observable sources.</param>
+    /// <typeparam name="T">The value type.</typeparam>
+    extension<T>(IEnumerable<IObservable<T>> sources)
+    {
+        /// <summary>Concurrently merges the supplied observable sources. System.Reactive name for <c>Blend</c>.</summary>
+        /// <returns>An observable that forwards values from every source.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Merge()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(sources);
+
+            return sources.Blend();
+        }
+
+        /// <summary>Concurrently merges observable sources with a maximum number of active subscriptions.</summary>
+        /// <param name="maxConcurrent">The maximum number of sources to subscribe to at the same time.</param>
+        /// <returns>An observable that forwards values from every source.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="maxConcurrent"/> is less than or equal to zero.</exception>
+        public IObservable<T> Merge(int maxConcurrent)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(sources);
+
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(maxConcurrent);
+
+            return sources.Blend(maxConcurrent);
+        }
+    }
+
     /// <summary>System.Reactive-named combining operators for an observable source of inner observable sequences.</summary>
     /// <param name="sources">The outer sequence of inner sequences.</param>
     /// <typeparam name="T">The value type.</typeparam>
@@ -87,6 +117,53 @@ public static partial class LinqExtensions
     /// <typeparam name="T">The value type.</typeparam>
     extension<T>(IObservable<T> source)
     {
+        /// <summary>Subscribes an observer with downstream exception protection.</summary>
+        /// <param name="observer">The observer to subscribe.</param>
+        /// <returns>A disposable that cancels the subscription.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
+        public IDisposable SubscribeSafe(IObserver<T> observer)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(observer);
+
+            SubscribeSafeObserver<T> safe = new(observer);
+            safe.SetSubscription(source.Subscribe(safe));
+            return safe;
+        }
+
+        /// <summary>Subscribes callbacks with downstream exception protection.</summary>
+        /// <param name="onNext">The action to invoke for each value.</param>
+        /// <param name="onError">The action to invoke for an error.</param>
+        /// <returns>A disposable that cancels the subscription.</returns>
+        /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+        public IDisposable SubscribeSafe(Action<T> onNext, Action<Exception> onError) =>
+            source.SubscribeSafe(Witness.Create(onNext, onError));
+
+        /// <summary>Subscribes callbacks with downstream exception protection.</summary>
+        /// <param name="onNext">The action to invoke for each value.</param>
+        /// <param name="onError">The action to invoke for an error.</param>
+        /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
+        /// <returns>A disposable that cancels the subscription.</returns>
+        /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+        public IDisposable SubscribeSafe(Action<T> onNext, Action<Exception> onError, Action onCompleted) =>
+            source.SubscribeSafe(Witness.Create(onNext, onError, onCompleted));
+
+        /// <summary>Subscribes terminal callbacks with downstream exception protection.</summary>
+        /// <param name="onError">The action to invoke for an error.</param>
+        /// <returns>A disposable that cancels the subscription.</returns>
+        /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+        public IDisposable SubscribeSafe(Action<Exception> onError) =>
+            source.SubscribeSafe(Witness.Create<T>(static _ => { }, onError));
+
+        /// <summary>Subscribes terminal callbacks with downstream exception protection.</summary>
+        /// <param name="onError">The action to invoke for an error.</param>
+        /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
+        /// <returns>A disposable that cancels the subscription.</returns>
+        /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+        public IDisposable SubscribeSafe(Action<Exception> onError, Action onCompleted) =>
+            source.SubscribeSafe(Witness.Create<T>(static _ => { }, onError, onCompleted));
+
         /// <summary>Invokes an action for each value while preserving the sequence. System.Reactive name for <c>Tap</c>.</summary>
         /// <param name="onNext">The action to invoke for each value.</param>
         /// <returns>The source values after the action has run.</returns>
@@ -132,6 +209,28 @@ public static partial class LinqExtensions
             return new TapSignal<T>(source, onNext, static _ => { }, onCompleted);
         }
 
+        /// <summary>Invokes actions for each value, error, and completion while preserving the sequence. System.Reactive name for <c>Tap</c>.</summary>
+        /// <param name="onNext">The action to invoke for each value.</param>
+        /// <param name="onError">The action to invoke for an error.</param>
+        /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
+        /// <returns>The source values after the actions have run.</returns>
+        /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+        public IObservable<T> Do(
+            Action<T> onNext,
+            Action<Exception> onError,
+            Action onCompleted)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(onNext);
+
+            ArgumentExceptionHelper.ThrowIfNull(onError);
+
+            ArgumentExceptionHelper.ThrowIfNull(onCompleted);
+
+            return new TapSignal<T>(source, onNext, onError, onCompleted);
+        }
+
         /// <summary>
         /// Serializes notifications behind a gate so downstream operators observe the single-threaded
         /// <c>OnNext*</c> then <c>OnError</c>|<c>OnCompleted</c> grammar even when the source delivers
@@ -154,8 +253,6 @@ public static partial class LinqExtensions
         /// <param name="gate">The gate shared with other synchronized sequences.</param>
         /// <returns>A sequence that forwards the source notifications one at a time under the shared gate.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="gate"/> is <see langword="null"/>.</exception>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Modernization", "SST2000:Use ArgumentNullException.ThrowIfNull", Justification = "Uses variable types")]
         public IObservable<T> Synchronize(Lock gate)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -166,6 +263,38 @@ public static partial class LinqExtensions
             }
 
             return new SynchronizeSignal<T>(source, gate);
+        }
+
+#if NET9_0_OR_GREATER
+        /// <summary>Serializes notifications behind an object gate. System.Reactive name for object-gated synchronization.</summary>
+        /// <param name="gate">The gate shared with other synchronized sequences.</param>
+        /// <returns>A sequence that forwards the source notifications one at a time under the shared gate.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="gate"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Synchronize(object gate)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(gate);
+
+            return new SynchronizeObjectSignal<T>(source, gate);
+        }
+#endif
+
+        /// <summary>Serializes notifications behind an object gate when a caller cannot provide a dedicated lock gate.</summary>
+        /// <param name="gate">The gate shared with other synchronized sequences.</param>
+        /// <returns>A sequence that forwards the source notifications one at a time under the shared gate.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="gate"/> is <see langword="null"/>.</exception>
+        public IObservable<T> SynchronizeObject(object gate)
+        {
+#if NET9_0_OR_GREATER
+            return LinqExtensions.Synchronize<T>(source, gate);
+#else
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(gate);
+
+            return new SynchronizeObjectSignal<T>(source, gate);
+#endif
         }
 
         /// <summary>Invokes a stateful action for each value while preserving the sequence. State-carrying name for <c>TapWith</c>.</summary>
@@ -265,7 +394,67 @@ public static partial class LinqExtensions
             return new IgnoreValuesSignal<T>(source);
         }
 
-        /// <summary>Projects each value to an inner sequence and merges the results. LINQ name for <c>FlatMap</c>.</summary>
+        /// <summary>Prepends values before the source sequence. System.Reactive name for <c>Prepend</c>.</summary>
+        /// <param name="values">The values to emit before the source.</param>
+        /// <returns>A sequence that emits <paramref name="values"/> before the source values.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="values"/> is <see langword="null"/>.</exception>
+        public IObservable<T> StartWith(params T[] values) =>
+            source.Prepend(values);
+
+        /// <summary>Prepends values before the source sequence. System.Reactive name for <c>Prepend</c>.</summary>
+        /// <param name="values">The values to emit before the source.</param>
+        /// <returns>A sequence that emits <paramref name="values"/> before the source values.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="values"/> is <see langword="null"/>.</exception>
+        public IObservable<T> StartWith(IEnumerable<T> values) =>
+            source.Prepend(values);
+
+        /// <summary>Collects values into time-windowed batches. System.Reactive name for <c>Collect</c>.</summary>
+        /// <param name="timeSpan">The duration of each buffer window.</param>
+        /// <returns>A sequence that emits non-empty batches of source values.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+        public IObservable<IList<T>> Buffer(TimeSpan timeSpan) =>
+            source.Collect(timeSpan);
+
+        /// <summary>Collects values into time-windowed batches on the supplied scheduler.</summary>
+        /// <param name="timeSpan">The duration of each buffer window.</param>
+        /// <param name="scheduler">The scheduler used to schedule buffer flushes.</param>
+        /// <returns>A sequence that emits non-empty batches of source values.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="scheduler"/> is <see langword="null"/>.</exception>
+        public IObservable<IList<T>> Buffer(TimeSpan timeSpan, ISequencer scheduler) =>
+            source.Collect(timeSpan, scheduler);
+
+        /// <summary>Invokes an action when the subscription terminates or is disposed. System.Reactive name for <c>OnCleanup</c>.</summary>
+        /// <param name="finallyAction">The action to invoke exactly once.</param>
+        /// <returns>A sequence that mirrors the source and invokes <paramref name="finallyAction"/> on cleanup.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="finallyAction"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Finally(Action finallyAction) =>
+            source.OnCleanup(finallyAction);
+
+        /// <summary>Emits a value only after no newer value arrives within the quiet period. System.Reactive name for <c>Calm</c>.</summary>
+        /// <param name="dueTime">The quiet period.</param>
+        /// <returns>A sequence that emits the latest value after each quiet period.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Throttle(TimeSpan dueTime) =>
+            source.Calm(dueTime);
+
+        /// <summary>Emits a value only after no newer value arrives within the scheduler quiet period. System.Reactive name for <c>Calm</c>.</summary>
+        /// <param name="dueTime">The quiet period.</param>
+        /// <param name="scheduler">The scheduler used to schedule quiet-period timers.</param>
+        /// <returns>A sequence that emits the latest value after each quiet period.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="scheduler"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Throttle(TimeSpan dueTime, ISequencer scheduler) =>
+            source.Calm(dueTime, scheduler);
+
+        /// <summary>Handles errors of the specified type by switching to a replacement sequence.</summary>
+        /// <typeparam name="TException">The exception type to handle.</typeparam>
+        /// <param name="handler">The function that produces a replacement sequence for handled errors.</param>
+        /// <returns>A sequence that switches to the handler result for matching errors.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="handler"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Catch<TException>(Func<TException, IObservable<T>> handler)
+            where TException : Exception =>
+            source.Recover(handler);
+
+        /// <summary>Projects each value to an inner sequence and merges the results. LINQ name for concurrent flattening.</summary>
         /// <typeparam name="TResult">The inner value type.</typeparam>
         /// <param name="selector">The function that projects each source value to an inner sequence.</param>
         /// <returns>A sequence containing the merged values of every inner sequence.</returns>
@@ -276,10 +465,38 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            return new FlatMapSignal<T, TResult>(source, selector);
+            return source.Map(selector).Merge();
         }
 
-        /// <summary>Projects each value to an inner sequence and combines each pair with a result selector. LINQ name for <c>FlatMap</c>.</summary>
+        /// <summary>Projects each value to the same inner sequence and merges the results.</summary>
+        /// <typeparam name="TResult">The inner value type.</typeparam>
+        /// <param name="other">The inner sequence used for each source value.</param>
+        /// <returns>A sequence containing the merged values of every inner sequence.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="other"/> is <see langword="null"/>.</exception>
+        public IObservable<TResult> SelectMany<TResult>(IObservable<TResult> other)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(other);
+
+            return source.Map(_ => other).Merge();
+        }
+
+        /// <summary>Projects each value to an enumerable sequence and emits the projected values.</summary>
+        /// <typeparam name="TResult">The projected value type.</typeparam>
+        /// <param name="selector">The function that projects each source value to enumerable values.</param>
+        /// <returns>A sequence containing the projected enumerable values.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        public IObservable<TResult> SelectMany<TResult>(Func<T, IEnumerable<TResult>> selector)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(selector);
+
+            return new SelectManyEnumerableSignal<T, TResult>(source, selector);
+        }
+
+        /// <summary>Projects each value to an inner sequence and concurrently combines each pair with a result selector.</summary>
         /// <typeparam name="TCollection">The inner value type.</typeparam>
         /// <typeparam name="TResult">The result value type.</typeparam>
         /// <param name="collectionSelector">The function that projects each source value to an inner sequence.</param>
@@ -294,7 +511,20 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(resultSelector);
 
-            return new FlatMapResultSignal<T, TCollection, TResult>(source, collectionSelector, resultSelector);
+            return source.Map(value => collectionSelector(value).Map(inner => resultSelector(value, inner))).Merge();
+        }
+
+        /// <summary>Merges this sequence with another observable sequence. System.Reactive name for <c>Blend</c>.</summary>
+        /// <param name="second">The second sequence to merge.</param>
+        /// <returns>A sequence containing values from both sources as they arrive.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="second"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Merge(IObservable<T> second)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(second);
+
+            return new[] { source, second }.Blend();
         }
 
         /// <summary>Concatenates two sequences. System.Reactive name for <c>Chain</c>.</summary>
@@ -509,6 +739,14 @@ public static partial class LinqExtensions
             return new MapSignal<TSource, TResult>(source, selector);
         }
 
+        /// <summary>Projects each element and its zero-based index into a new form. LINQ name for <c>MapIndexed</c>.</summary>
+        /// <typeparam name="TResult">The type of the elements in the result sequence.</typeparam>
+        /// <param name="selector">A transform function to apply to each element and its index.</param>
+        /// <returns>An observable sequence whose elements are the result of invoking the transform on each source element and index.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        public IObservable<TResult> Select<TResult>(Func<TSource, int, TResult> selector) =>
+            source.MapIndexed(selector);
+
         /// <summary>Projects each element into a new form using external state passed to the selector. State-carrying name for <c>MapWith</c>.</summary>
         /// <typeparam name="TState">The type of the state used in the selector function.</typeparam>
         /// <typeparam name="TResult">The type of the elements in the result sequence.</typeparam>
@@ -551,6 +789,22 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(predicate);
 
             return new KeepWithSignal<TSource, TState>(source, state, predicate);
+        }
+    }
+
+    /// <summary>System.Reactive-named combining operators for an observable source of tasks.</summary>
+    /// <param name="sources">The outer sequence of task sources.</param>
+    /// <typeparam name="T">The task result type.</typeparam>
+    extension<T>(IObservable<Task<T>> sources)
+    {
+        /// <summary>Subscribes to task results one at a time in source order. System.Reactive name for <c>Chain</c>.</summary>
+        /// <returns>A sequence that emits each task result after the previous task signal completes.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Concat()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(sources);
+
+            return new TaskChainSignal<T>(sources);
         }
     }
 }

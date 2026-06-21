@@ -54,7 +54,13 @@ public static partial class SignalExtensions
         /// <summary>Finallies the specified finally action.</summary>
         /// <param name="finallyAction">The finally action.</param>
         /// <returns>An observable sequence containing elements from consecutive source sequences until a source sequence terminates successfully.</returns>
-        public IObservable<TSource> OnCleanup(Action finallyAction) =>
-            new FinallySignal<TSource>(source, finallyAction);
+        public IObservable<TSource> OnCleanup(Action finallyAction)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(finallyAction);
+
+            return new FinallySignal<TSource>(source, finallyAction);
+        }
     }
 }

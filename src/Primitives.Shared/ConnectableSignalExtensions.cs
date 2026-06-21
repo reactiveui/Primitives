@@ -25,6 +25,11 @@ public static class ConnectableSignalExtensions
             return AutoShareGate<T>.For(source);
         }
 
+        /// <summary>Shares a single subscription while observers are present. System.Reactive name for <c>AutoShare</c>.</summary>
+        /// <returns>A reference-counted sequence.</returns>
+        public IObservable<T> RefCount() =>
+            source.AutoShare();
+
         /// <summary>Connects on the first observer subscription.</summary>
         /// <returns>A sequence that connects after the first subscription.</returns>
         public IObservable<T> AutoConnect() =>
@@ -70,6 +75,53 @@ public static class ConnectableSignalExtensions
         public ConnectableSignal<T> Share() =>
             source.ShareLive();
 
+        /// <summary>Creates a connectable live signal. System.Reactive name for <c>ShareLive</c>.</summary>
+        /// <returns>A connectable live signal.</returns>
+        public ConnectableSignal<T> Publish() =>
+            source.ShareLive();
+
+        /// <summary>Multicasts source values through a live hub and applies a selector.</summary>
+        /// <typeparam name="TResult">The selected value type.</typeparam>
+        /// <param name="selector">The selector applied to the connectable signal before it is connected.</param>
+        /// <returns>A sequence returned by <paramref name="selector"/> while the source is connected.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        public IObservable<TResult> Publish<TResult>(Func<IObservable<T>, IObservable<TResult>> selector)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(selector);
+
+            return Signal.Create<TResult>(observer =>
+            {
+                var connectable = source.Publish();
+                IObservable<TResult> selected;
+                try
+                {
+                    selected = selector(connectable);
+                }
+                catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
+                {
+                    observer.OnError(error);
+                    return EmptyDisposable.Instance;
+                }
+
+                if (selected is null)
+                {
+                    observer.OnError(new InvalidOperationException("Publish selector returned null."));
+                    return EmptyDisposable.Instance;
+                }
+
+                var subscription = selected.Subscribe(observer);
+                var connection = connectable.Connect();
+                return new MultipleDisposable(subscription, connection);
+            });
+        }
+
+        /// <summary>Replays all source values through an unbounded replay hub.</summary>
+        /// <returns>A connectable replay signal.</returns>
+        public ConnectableSignal<T> ReplayLive() =>
+            source.Multicast(new ReplaySignal<T>());
+
         /// <summary>Replays source values through a bounded replay hub.</summary>
         /// <param name="bufferSize">Maximum number of values to replay.</param>
         /// <returns>A connectable replay signal.</returns>
@@ -82,6 +134,11 @@ public static class ConnectableSignalExtensions
         /// <returns>A connectable replay signal.</returns>
         public ConnectableSignal<T> ReplayLive(int bufferSize, TimeSpan window) =>
             source.Multicast(new ReplaySignal<T>(bufferSize, window));
+
+        /// <summary>Replays all source values through an unbounded replay hub.</summary>
+        /// <returns>A connectable replay signal.</returns>
+        public ConnectableSignal<T> Replay() =>
+            source.ReplayLive();
 
         /// <summary>Replays source values through a bounded replay hub.</summary>
         /// <param name="bufferSize">Maximum number of values to replay.</param>

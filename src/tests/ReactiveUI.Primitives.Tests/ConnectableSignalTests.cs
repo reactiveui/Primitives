@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -104,5 +105,134 @@ public sealed class ConnectableSignalTests
         List<int> replayValues = [];
         replayed.Subscribe(replayValues.Add);
         await Assert.That(replayValues.SequenceEqual(ExpectedReplayValues[..1])).IsTrue();
+    }
+
+    /// <summary>Verifies direct connect handles reuse, terminate, and dispose idempotently.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ConnectableSignalDirectConnectReusesConnectionAndForwardsTerminalError()
+    {
+        Assert.Throws<ArgumentNullException>(() => _ = new ConnectableSignal<int>(null!, new Signal<int>()));
+        Assert.Throws<ArgumentNullException>(() => _ = new ConnectableSignal<int>(Signal.Silent<int>(), null!));
+
+        Signal<int> source = new();
+        var sourceSubscriptions = 0;
+        var sourceDisposals = 0;
+        var cold = Signal.Create<int>(observer =>
+        {
+            sourceSubscriptions++;
+            var inner = source.Subscribe(observer);
+            return new ActionDisposable(() =>
+            {
+                sourceDisposals++;
+                inner.Dispose();
+            });
+        });
+
+        ConnectableSignal<int> connectable = new(cold, new Signal<int>());
+        RecordingWitness<int> recorded = new();
+        using var recordedSubscription = connectable.Subscribe(recorded);
+
+        var firstConnection = connectable.Connect();
+        var secondConnection = connectable.Connect();
+        await Assert.That(secondConnection).IsSameReferenceAs(firstConnection);
+        await Assert.That(sourceSubscriptions).IsEqualTo(1);
+
+        InvalidOperationException expected = new("connectable");
+        source.OnError(expected);
+        await Assert.That(recorded.Errors.Count).IsEqualTo(1);
+        await Assert.That(recorded.Errors[0]).IsSameReferenceAs(expected);
+
+        firstConnection.Dispose();
+        firstConnection.Dispose();
+        await Assert.That(sourceDisposals).IsEqualTo(1);
+        await Assert.That(connectable.Connect()).IsSameReferenceAs(Scope.Empty);
+    }
+
+    /// <summary>Verifies Rx connectable aliases share, replay, and route selector failures.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ConnectableRxAliasesShareReplayAndRouteSelectorFailures()
+    {
+        Signal<int> source = new();
+        var sourceSubscriptions = 0;
+        var sourceDisposals = 0;
+        var cold = Signal.Create<int>(observer =>
+        {
+            sourceSubscriptions++;
+            var inner = source.Subscribe(observer);
+            return new ActionDisposable(() =>
+            {
+                sourceDisposals++;
+                inner.Dispose();
+            });
+        });
+
+        List<int> refCountValues = [];
+        var refCountSubscription = cold.Publish().RefCount().Subscribe(refCountValues.Add);
+        source.OnNext(FirstSharedValue);
+        refCountSubscription.Dispose();
+        source.OnNext(SecondSharedValue);
+
+        await Assert.That(refCountValues.SequenceEqual(ExpectedFirstSharedValues)).IsTrue();
+        await Assert.That(sourceSubscriptions).IsEqualTo(1);
+        await Assert.That(sourceDisposals).IsEqualTo(1);
+
+        List<int> selectedValues = [];
+        using var selectedSubscription = ConnectableSignalExtensions
+            .Publish<int, int>(cold, shared => shared.Map(static value => value + SecondSharedValue))
+            .Subscribe(selectedValues.Add);
+        source.OnNext(FirstSharedValue);
+
+        await Assert.That(selectedValues.SequenceEqual([FirstSharedValue + SecondSharedValue])).IsTrue();
+
+        Exception? selectorError = null;
+        InvalidOperationException expectedSelectorError = new("selector");
+        ConnectableSignalExtensions.Publish<int, int>(cold, _ => throw expectedSelectorError)
+            .Subscribe(_ => { }, error => selectorError = error);
+
+        Exception? nullSelectorError = null;
+        ConnectableSignalExtensions.Publish<int, int>(cold, _ => null!)
+            .Subscribe(_ => { }, error => nullSelectorError = error);
+
+        await Assert.That(selectorError).IsSameReferenceAs(expectedSelectorError);
+        await Assert.That(nullSelectorError is InvalidOperationException).IsTrue();
+
+        var replay = cold.Replay();
+        using var replayConnection = replay.Connect();
+        source.OnNext(FirstReplayValue);
+        List<int> replayValues = [];
+        replay.Subscribe(replayValues.Add);
+        source.OnNext(SecondReplayValue);
+
+        await Assert.That(replayValues.SequenceEqual(ExpectedReplayValues)).IsTrue();
+
+        Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.RefCount<int>(null!));
+        Assert.Throws<ArgumentNullException>(() =>
+            ConnectableSignalExtensions.Publish<int, int>(null!, static source => source));
+        Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.Publish<int, int>(cold, null!));
+    }
+
+    /// <summary>Verifies <c>RefCount</c> does not reconnect a published source after its hub has completed.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RefCountDoesNotReconnectAfterPublishedSourceCompletes()
+    {
+        const int ExpectedCompletions = 2;
+        var sourceSubscriptions = 0;
+        var completions = 0;
+        var cold = Signal.Create<int>(observer =>
+        {
+            sourceSubscriptions++;
+            observer.OnCompleted();
+            return Scope.Empty;
+        });
+        var shared = cold.Publish().RefCount();
+
+        shared.Subscribe(static _ => { }, () => completions++).Dispose();
+        shared.Subscribe(static _ => { }, () => completions++).Dispose();
+
+        await Assert.That(completions).IsEqualTo(ExpectedCompletions);
+        await Assert.That(sourceSubscriptions).IsEqualTo(1);
     }
 }

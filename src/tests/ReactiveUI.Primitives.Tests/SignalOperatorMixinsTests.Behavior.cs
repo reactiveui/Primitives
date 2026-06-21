@@ -451,7 +451,7 @@ public partial class SignalOperatorMixinsTests
     /// <param name="objects">The non-null object source used for null argument checks.</param>
     private static void CoverFactoryAndObserverNullGuards(IObservable<object?> objects)
     {
-        Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(null!));
+        Assert.Throws<ArgumentNullException>(() => Signal.Create((Func<IObserver<int>, IDisposable>)null!));
         Assert.Throws<ArgumentNullException>(() => Signal.Lazy<int>(null!));
         Assert.Throws<ArgumentNullException>(() => Signal.FromEnumerable<int>(null!));
         Assert.Throws<ArgumentNullException>(() => Signal.FromTask((Task<int>)null!));

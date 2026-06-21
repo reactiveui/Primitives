@@ -53,7 +53,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$srcDir = (Resolve-Path (Join-Path $scriptDir '..' 'src')).Path
+$srcDir = (Resolve-Path (Join-Path (Join-Path $scriptDir '..') 'src')).Path
 Set-Location $srcDir
 
 # MSBuild properties that `dotnet format` cannot accept via -p:; pass through the env

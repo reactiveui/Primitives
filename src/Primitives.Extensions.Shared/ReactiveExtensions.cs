@@ -22,6 +22,9 @@ public static class ReactiveExtensions
     /// <summary>Default backoff factor for <see cref="RetryWithBackoff{T}(IObservable{T}, int, TimeSpan)"/>: each retry doubles the previous delay.</summary>
     private const double DefaultBackoffFactor = 2.0;
 
+    /// <summary>Default match timeout for regex filters created from string patterns.</summary>
+    private static readonly TimeSpan DefaultRegexMatchTimeout = TimeSpan.FromSeconds(30);
+
     /// <summary>Boolean reduction operators for a set of boolean observable sources.</summary>
     /// <param name="sources">The sources.</param>
     extension(IEnumerable<IObservable<bool>> sources)
@@ -906,7 +909,7 @@ public static class ReactiveExtensions
         /// <param name="regexPattern">Regex pattern.</param>
         /// <returns>Filtered sequence.</returns>
         public IObservable<string> Filter(string regexPattern) =>
-            source.Filter(new Regex(regexPattern, RegexOptions.None, TimeSpan.FromSeconds(1)));
+            source.Filter(new Regex(regexPattern, RegexOptions.None, DefaultRegexMatchTimeout));
 
         /// <summary>Filters strings by regex.</summary>
         /// <param name="regex">Regex.</param>

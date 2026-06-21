@@ -96,6 +96,7 @@
     <Compile Include="..\Polyfills\NotNullWhenAttribute.cs" Link="Polyfills\NotNullWhenAttribute.cs" />
     <Compile Include="..\Polyfills\MemberNotNullWhenAttribute.cs" Link="Polyfills\MemberNotNullWhenAttribute.cs" />
     <Compile Include="..\Polyfills\NotNullAttribute.cs" Link="Polyfills\NotNullAttribute.cs" />
+    <Compile Include="..\Polyfills\AllowNullAttribute.cs" Link="Polyfills\AllowNullAttribute.cs" />
     <Compile Include="..\Polyfills\CallerArgumentExpressionAttribute.cs" Link="Polyfills\CallerArgumentExpressionAttribute.cs" />
     <Compile Include="..\Polyfills\IsExternalInit.cs" Link="Polyfills\IsExternalInit.cs" />
     <Compile Include="..\Polyfills\RequiredMemberAttribute.cs" Link="Polyfills\RequiredMemberAttribute.cs" />

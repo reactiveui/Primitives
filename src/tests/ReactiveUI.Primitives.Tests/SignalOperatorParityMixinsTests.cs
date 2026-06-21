@@ -4,6 +4,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -214,5 +215,63 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(values).Contains(1);
         await Assert.That(values).Contains(1L);
         await Assert.That(values).Contains(true);
+    }
+
+    /// <summary>Verifies scheduler-based ToObservable conversion and task conversion aliases.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ToObservableSchedulerAndTaskAliasesEmitAndHonorCancellation()
+    {
+        List<int> immediate = [];
+        new[] { One, Two }.ToObservable(Sequencer.Immediate).Subscribe(immediate.Add);
+
+        await Assert.That(immediate.SequenceEqual(ExpectedOneTwo)).IsTrue();
+
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        List<int> scheduled = [];
+        var completed = 0;
+        new[] { One, Two }.ToObservable(clock).Subscribe(scheduled.Add, ex => throw ex, () => completed++);
+        clock.Start();
+
+        await Assert.That(scheduled.SequenceEqual(ExpectedOneTwo)).IsTrue();
+        await Assert.That(completed).IsEqualTo(1);
+
+        VirtualClock cancelDuringLoopClock = new(DateTimeOffset.UnixEpoch);
+        List<int> cancelledDuringLoop = [];
+        IDisposable? cancelDuringLoopSubscription = null;
+        cancelDuringLoopSubscription = new[] { One, Two }.ToObservable(cancelDuringLoopClock)
+            .Subscribe(value =>
+            {
+                cancelledDuringLoop.Add(value);
+                cancelDuringLoopSubscription?.Dispose();
+            });
+        cancelDuringLoopClock.Start();
+
+        await Assert.That(cancelledDuringLoop.SequenceEqual([One])).IsTrue();
+
+        VirtualClock cancelBeforeCompletionClock = new(DateTimeOffset.UnixEpoch);
+        List<int> cancelledBeforeCompletion = [];
+        var cancelBeforeCompletionCompleted = 0;
+        IDisposable? cancelBeforeCompletionSubscription = null;
+        cancelBeforeCompletionSubscription = new[] { One }.ToObservable(cancelBeforeCompletionClock)
+            .Subscribe(
+                value =>
+                {
+                    cancelledBeforeCompletion.Add(value);
+                    cancelBeforeCompletionSubscription?.Dispose();
+                },
+                ex => throw ex,
+                () => cancelBeforeCompletionCompleted++);
+        cancelBeforeCompletionClock.Start();
+
+        await Assert.That(cancelledBeforeCompletion.SequenceEqual([One])).IsTrue();
+        await Assert.That(cancelBeforeCompletionCompleted).IsEqualTo(0);
+
+        var taskValue = await Task.FromResult(Three).ToObservable().FirstAsync().ConfigureAwait(false);
+        await Assert.That(taskValue).IsEqualTo(Three);
+
+        Assert.Throws<ArgumentNullException>(() => ((IEnumerable<int>)null!).ToObservable(Sequencer.Immediate));
+        Assert.Throws<ArgumentNullException>(() => new[] { One }.ToObservable(null!));
+        Assert.Throws<ArgumentNullException>(() => ((Task<int>)null!).ToObservable());
     }
 }

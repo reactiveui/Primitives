@@ -114,6 +114,20 @@ public static partial class LinqExtensions
             return new MapSignal<T, TResult>(source, selector);
         }
 
+        /// <summary>Projects each element and its zero-based index into a new form.</summary>
+        /// <typeparam name="TResult">The type of the elements in the result sequence.</typeparam>
+        /// <param name="selector">A transform function to apply to each source element and its index.</param>
+        /// <returns>An observable sequence whose elements are the result of invoking the transform on each source element and index.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        public IObservable<TResult> MapIndexed<TResult>(Func<T, int, TResult> selector)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(selector);
+
+            return new MapIndexedSignal<T, TResult>(source, selector);
+        }
+
         /// <summary>
         /// Projects each element of an observable sequence into a new form by incorporating state that is passed to the
         /// selector function.
@@ -530,6 +544,22 @@ public static partial class LinqExtensions
         }
     }
 
+    /// <summary>Combining operators for an observable source of tasks.</summary>
+    /// <param name="sources">The outer sequence of task sources.</param>
+    /// <typeparam name="T">The task result type.</typeparam>
+    extension<T>(IObservable<Task<T>> sources)
+    {
+        /// <summary>Subscribes to task results one at a time in source order.</summary>
+        /// <returns>A sequence that emits each task result after the previous task signal completes.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="sources"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Chain()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(sources);
+
+            return new TaskChainSignal<T>(sources);
+        }
+    }
+
     /// <summary>Type-filtering and casting operators for an untyped observable source.</summary>
     /// <param name="source">The source sequence.</param>
     extension(IObservable<object?> source)
@@ -563,6 +593,17 @@ public static partial class LinqExtensions
 
             return source.Map(value => (TResult)value!);
         }
+    }
+
+    /// <summary>Signal-conversion operators for a task source.</summary>
+    /// <param name="task">The task to convert.</param>
+    /// <typeparam name="T">The task result type.</typeparam>
+    extension<T>(Task<T> task)
+    {
+        /// <summary>Converts a task to a signal that emits the task result.</summary>
+        /// <returns>A signal that emits the completed task result or faults with the task error.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="task"/> is <see langword="null"/>.</exception>
+        public IObservable<T> ToSignal() => Signal.FromTask(task);
     }
 
     /// <summary>Creates the optimized range-backed combine-latest sequence.</summary>

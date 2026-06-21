@@ -24,6 +24,18 @@ public static partial class LinqExtensions
 
             return new EnumerableBlendSignal<T>(sources);
         }
+
+        /// <summary>Concurrently merges the supplied observable sources with a maximum number of active subscriptions.</summary>
+        /// <param name="maxConcurrent">The maximum number of sources to subscribe to at the same time.</param>
+        /// <returns>An observable that forwards values from every source.</returns>
+        public IObservable<T> Blend(int maxConcurrent)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(sources);
+
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(maxConcurrent);
+
+            return maxConcurrent == int.MaxValue ? sources.Blend() : new MaxConcurrentEnumerableBlendSignal<T>(sources, maxConcurrent);
+        }
     }
 
     /// <summary>Dedicated signal for enumerable <c>Blend</c> sources.</summary>
