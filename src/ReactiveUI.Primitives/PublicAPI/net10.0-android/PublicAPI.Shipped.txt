@@ -1081,6 +1081,7 @@ static ReactiveUI.Primitives.LinqExtensions.Tap<T>(this System.IObservable<T>! s
 static ReactiveUI.Primitives.LinqExtensions.TapWith<T, TState>(this System.IObservable<T>! source, TState state, System.Action<TState, T>! onNext) -> System.IObservable<T>!
 static ReactiveUI.Primitives.LinqExtensions.Throttle<T>(this System.IObservable<T>! source, System.TimeSpan dueTime) -> System.IObservable<T>!
 static ReactiveUI.Primitives.LinqExtensions.Throttle<T>(this System.IObservable<T>! source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> System.IObservable<T>!
+static ReactiveUI.Primitives.LinqExtensions.Throttle<T>(this System.IObservable<T>! source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) -> System.IObservable<T>!
 static ReactiveUI.Primitives.LinqExtensions.TimeInterval<T>(this System.IObservable<T>! source) -> System.IObservable<ReactiveUI.Primitives.Core.TimeInterval<T>>!
 static ReactiveUI.Primitives.LinqExtensions.TimeInterval<T>(this System.IObservable<T>! source, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) -> System.IObservable<ReactiveUI.Primitives.Core.TimeInterval<T>>!
 static ReactiveUI.Primitives.LinqExtensions.Timeout<TLeft>(this System.IObservable<TLeft>! left, System.TimeSpan dueTime) -> System.IObservable<TLeft>!
