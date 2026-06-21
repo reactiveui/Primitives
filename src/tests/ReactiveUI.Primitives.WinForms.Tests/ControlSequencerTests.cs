@@ -61,9 +61,9 @@ public sealed class ControlSequencerTests
         public ControlHarness()
         {
             using var ready = new ManualResetEventSlim(false);
-            _thread = new Thread(() =>
+            _thread = new(() =>
             {
-                Control = new Control();
+                Control = new();
                 _ = Control.Handle; // Force handle creation so BeginInvoke can marshal work.
                 ThreadId = Environment.CurrentManagedThreadId;
                 ready.Set();
