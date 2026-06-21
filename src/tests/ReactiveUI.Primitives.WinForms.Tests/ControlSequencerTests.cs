@@ -31,7 +31,7 @@ public sealed class ControlSequencerTests
         var sequencer = new ControlSequencer(harness.Control);
         var completion = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        sequencer.Schedule(new DelegateWorkItem(() => completion.TrySetResult(Environment.CurrentManagedThreadId)));
+        _ = sequencer.Schedule(new DelegateWorkItem(() => completion.TrySetResult(Environment.CurrentManagedThreadId)));
 
         var ranOnThreadId = await completion.Task.WaitAsync(WaitTimeout);
         await Assert.That(ranOnThreadId).IsEqualTo(harness.ThreadId);
