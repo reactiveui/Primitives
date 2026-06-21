@@ -82,13 +82,7 @@ internal static class ObserverSinkLifetime
             return;
         }
 
-        try
-        {
-            observer.OnError(terminalError);
-        }
-        finally
-        {
-            subscription.Dispose();
-        }
+        using var _ = subscription;
+        observer.OnError(terminalError);
     }
 }
