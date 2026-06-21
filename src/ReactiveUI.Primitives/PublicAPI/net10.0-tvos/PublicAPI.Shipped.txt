@@ -684,7 +684,7 @@ ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Tap(Sy
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Tap(System.Action<T>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted) -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).TapWith<TState>(TState state, System.Action<TState, T>! onNext) -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Throttle(System.TimeSpan dueTime) -> System.IObservable<T>!
-ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Throttle(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> System.IObservable<T>!
+ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Throttle(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).TimeInterval() -> System.IObservable<ReactiveUI.Primitives.Core.TimeInterval<T>>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).TimeInterval(ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) -> System.IObservable<ReactiveUI.Primitives.Core.TimeInterval<T>>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Timestamp() -> System.IObservable<ReactiveUI.Primitives.Core.Moment<T>>!

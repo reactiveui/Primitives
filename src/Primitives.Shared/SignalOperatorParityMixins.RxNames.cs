@@ -2,10 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-#if NET9_0_OR_GREATER
-using System.Diagnostics.CodeAnalysis;
-#endif
-
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
 #else
@@ -256,7 +252,10 @@ public static partial class LinqExtensions
         /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="gate"/> is <see langword="null"/>.</exception>
         public IObservable<T> Synchronize(Lock gate)
         {
-            ArgumentExceptionHelper.ThrowIfNull(gate);
+            if (gate is null)
+            {
+                throw new ArgumentNullException(nameof(gate));
+            }
 
             ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -478,8 +477,8 @@ public static partial class LinqExtensions
         /// <param name="dueTime">The quiet period.</param>
         /// <param name="scheduler">The scheduler used to schedule quiet-period timers.</param>
         /// <returns>A sequence that emits the latest value after each quiet period.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="scheduler"/> is <see langword="null"/>.</exception>
-        public IObservable<T> Throttle(TimeSpan dueTime, ISequencer scheduler)
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+        public IObservable<T> Throttle(TimeSpan dueTime, ISequencer? scheduler)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
