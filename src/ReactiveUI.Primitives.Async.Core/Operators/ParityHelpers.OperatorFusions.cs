@@ -27,10 +27,10 @@ public static partial class SignalAsyncExtensions
     internal sealed class ScanWithInitialSignal<TSource, TAccumulate>(
         IObservableAsync<TSource> source,
         TAccumulate initial,
-        Func<TAccumulate, TSource, TAccumulate> accumulator) : SignalAsync<TAccumulate>
+        Func<TAccumulate, TSource, TAccumulate> accumulator) : IObservableAsync<TAccumulate>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<TAccumulate>.SubscribeAsync(
             IObserverAsync<TAccumulate> observer,
             CancellationToken cancellationToken)
         {
@@ -50,7 +50,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Per-subscription accumulator observer.</summary>
         /// <param name="downstream">The downstream observer.</param>
-        /// <param name="seed">The seed accumulator value already emitted from <see cref="SubscribeAsyncCore"/>.</param>
+        /// <param name="seed">The seed accumulator value already emitted during subscription.</param>
         /// <param name="accumulator">The synchronous accumulator.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
         internal sealed class ScanWithInitialWitness(
@@ -88,10 +88,10 @@ public static partial class SignalAsyncExtensions
     internal sealed class ScanWithInitialAsyncSignal<TSource, TAccumulate>(
         IObservableAsync<TSource> source,
         TAccumulate initial,
-        Func<TAccumulate, TSource, CancellationToken, ValueTask<TAccumulate>> accumulator) : SignalAsync<TAccumulate>
+        Func<TAccumulate, TSource, CancellationToken, ValueTask<TAccumulate>> accumulator) : IObservableAsync<TAccumulate>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<TAccumulate>.SubscribeAsync(
             IObserverAsync<TAccumulate> observer,
             CancellationToken cancellationToken)
         {
@@ -111,7 +111,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Per-subscription async accumulator observer.</summary>
         /// <param name="downstream">The downstream observer.</param>
-        /// <param name="seed">The seed accumulator value already emitted from <see cref="SubscribeAsyncCore"/>.</param>
+        /// <param name="seed">The seed accumulator value already emitted during subscription.</param>
         /// <param name="accumulator">The asynchronous accumulator.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
         internal sealed class ScanWithInitialAsyncWitness(
@@ -169,10 +169,10 @@ public static partial class SignalAsyncExtensions
     internal sealed class ThrottleDistinctSignal<T>(
         IObservableAsync<T> source,
         TimeSpan dueTime,
-        TimeProvider timeProvider) : SignalAsync<T>
+        TimeProvider timeProvider) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -342,10 +342,10 @@ public static partial class SignalAsyncExtensions
     /// <param name="asyncAction">The async side-effect invoked for accepted values.</param>
     internal sealed class DropIfBusySignal<T>(
         IObservableAsync<T> source,
-        Func<T, CancellationToken, ValueTask> asyncAction) : SignalAsync<T>
+        Func<T, CancellationToken, ValueTask> asyncAction) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -683,13 +683,13 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Observable view of one branch.</summary>
         /// <param name="isTrueBranch"><see langword="true"/> for the truthy branch.</param>
-        internal sealed class PartitionBranchSignal(bool isTrueBranch) : SignalAsync<T>
+        internal sealed class PartitionBranchSignal(bool isTrueBranch) : IObservableAsync<T>
         {
             /// <summary>Gets or sets the back-pointer to the owning coordinator.</summary>
             internal PartitionCoordinator<T> Coordinator { get; set; } = null!;
 
             /// <inheritdoc/>
-            protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+            ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
                 IObserverAsync<T> observer,
                 CancellationToken cancellationToken) =>
 
@@ -730,10 +730,10 @@ public static partial class SignalAsyncExtensions
         IObservableAsync<T> source,
         TimeSpan debounce,
         Func<T, bool> condition,
-        TimeProvider timeProvider) : SignalAsync<T>
+        TimeProvider timeProvider) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -879,10 +879,10 @@ public static partial class SignalAsyncExtensions
     /// </summary>
     /// <typeparam name="T">The flattened element type.</typeparam>
     /// <param name="source">The upstream observable of <see cref="IEnumerable{T}"/> snapshots.</param>
-    internal sealed class ForEachEnumerableSignal<T>(IObservableAsync<IEnumerable<T>> source) : SignalAsync<T>
+    internal sealed class ForEachEnumerableSignal<T>(IObservableAsync<IEnumerable<T>> source) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

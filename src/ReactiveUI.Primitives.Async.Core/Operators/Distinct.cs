@@ -86,10 +86,10 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="comparer">The equality comparer used to detect duplicates.</param>
-    internal sealed class DistinctSignal<T>(IObservableAsync<T> source, IEqualityComparer<T> comparer) : SignalAsync<T>
+    internal sealed class DistinctSignal<T>(IObservableAsync<T> source, IEqualityComparer<T> comparer) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -140,10 +140,10 @@ public static partial class SignalAsyncExtensions
     internal sealed class DistinctBySignal<T, TKey>(
         IObservableAsync<T> source,
         Func<T, TKey> keySelector,
-        IEqualityComparer<TKey> comparer) : SignalAsync<T>
+        IEqualityComparer<TKey> comparer) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

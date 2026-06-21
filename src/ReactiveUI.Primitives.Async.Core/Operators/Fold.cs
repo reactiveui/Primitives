@@ -87,10 +87,10 @@ public static partial class SignalAsyncExtensions
     internal sealed class FoldAsyncSignal<T, TAcc>(
         IObservableAsync<T> source,
         TAcc seed,
-        Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator) : SignalAsync<TAcc>
+        Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator) : IObservableAsync<TAcc>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<TAcc>.SubscribeAsync(
             IObserverAsync<TAcc> observer,
             CancellationToken cancellationToken)
         {
@@ -169,10 +169,10 @@ public static partial class SignalAsyncExtensions
     internal sealed class FoldSyncSignal<T, TAcc>(
         IObservableAsync<T> source,
         TAcc seed,
-        Func<TAcc, T, TAcc> accumulator) : SignalAsync<TAcc>
+        Func<TAcc, T, TAcc> accumulator) : IObservableAsync<TAcc>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<TAcc>.SubscribeAsync(
             IObserverAsync<TAcc> observer,
             CancellationToken cancellationToken)
         {

@@ -479,7 +479,7 @@ public static partial class LinqExtensions
         /// <param name="dueTime">The timeout duration.</param>
         /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
         public IObservable<T> Expire(TimeSpan dueTime) =>
-            source.Expire(dueTime, null);
+            Signal.Expire(source, dueTime);
 
         /// <summary>Fails the sequence if it does not terminate before the sequencer timeout.</summary>
         /// <param name="dueTime">The timeout duration.</param>
@@ -489,8 +489,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            scheduler ??= ThreadPoolSequencer.Instance;
-            return new ExpireSignal<T>(source, dueTime, scheduler);
+            return Signal.Expire(source, dueTime, scheduler);
         }
 
         /// <summary>Collects all values into a list when the source completes.</summary>

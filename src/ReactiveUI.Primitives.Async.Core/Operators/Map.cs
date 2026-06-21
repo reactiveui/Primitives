@@ -83,10 +83,10 @@ public static partial class SignalAsyncExtensions
     /// <param name="selector">The asynchronous selector.</param>
     internal sealed class MapAsyncSignal<T, TDest>(
         IObservableAsync<T> source,
-        Func<T, CancellationToken, ValueTask<TDest>> selector) : SignalAsync<TDest>
+        Func<T, CancellationToken, ValueTask<TDest>> selector) : IObservableAsync<TDest>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<TDest>.SubscribeAsync(
             IObserverAsync<TDest> observer,
             CancellationToken cancellationToken)
         {
@@ -141,10 +141,10 @@ public static partial class SignalAsyncExtensions
     /// <param name="selector">The synchronous selector.</param>
     internal sealed class MapSyncSignal<T, TDest>(
         IObservableAsync<T> source,
-        Func<T, TDest> selector) : SignalAsync<TDest>
+        Func<T, TDest> selector) : IObservableAsync<TDest>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<TDest>.SubscribeAsync(
             IObserverAsync<TDest> observer,
             CancellationToken cancellationToken)
         {

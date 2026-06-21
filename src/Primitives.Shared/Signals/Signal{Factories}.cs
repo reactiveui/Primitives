@@ -348,8 +348,47 @@ public static partial class Signal
     {
         ArgumentExceptionHelper.ThrowIfNull(taskFactory);
 
-        return Lazy(() => FromTask(taskFactory(cancellationToken)));
+        return new FromAsyncSignal<T>(taskFactory, cancellationToken);
     }
+
+    /// <summary>Fails the sequence if it does not terminate before the timeout.</summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="dueTime">The timeout duration.</param>
+    /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
+    public static IObservable<T> Expire<T>(IObservable<T> source, TimeSpan dueTime) =>
+        Expire(source, dueTime, null);
+
+    /// <summary>Fails the sequence if it does not terminate before the sequencer timeout.</summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="dueTime">The timeout duration.</param>
+    /// <param name="scheduler">The sequencer used to schedule the timeout.</param>
+    /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
+    public static IObservable<T> Expire<T>(IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        scheduler ??= ThreadPoolSequencer.Instance;
+        return new ExpireSignal<T>(source, dueTime, scheduler);
+    }
+
+    /// <summary>Fails the sequence if it does not terminate before the timeout.</summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="dueTime">The timeout duration.</param>
+    /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
+    public static IObservable<T> Timeout<T>(IObservable<T> source, TimeSpan dueTime) =>
+        Expire(source, dueTime);
+
+    /// <summary>Fails the sequence if it does not terminate before the sequencer timeout.</summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="dueTime">The timeout duration.</param>
+    /// <param name="scheduler">The sequencer used to schedule the timeout.</param>
+    /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
+    public static IObservable<T> Timeout<T>(IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler) =>
+        Expire(source, dueTime, scheduler);
 
     /// <summary>Runs a function on the supplied scheduler and emits its result.</summary>
     /// <typeparam name="T">The type.</typeparam>

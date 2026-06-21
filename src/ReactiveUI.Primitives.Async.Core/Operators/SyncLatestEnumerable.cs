@@ -90,14 +90,14 @@ public static partial class SignalAsyncExtensions
     internal sealed class SyncLatestEnumerableSignal<TSource, TResult>(
         IEnumerable<IObservableAsync<TSource>> sources,
         Func<IReadOnlyList<TSource>, TResult> resultSelector)
-        : SignalAsync<TResult>
+        : IObservableAsync<TResult>
     {
         /// <summary>The source sequences.</summary>
         private readonly IObservableAsync<TSource>[] _sources =
             (sources as IObservableAsync<TSource>[]) ?? [.. sources ?? throw new ArgumentNullException(nameof(sources))];
 
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<TResult>.SubscribeAsync(
             IObserverAsync<TResult> observer,
             CancellationToken cancellationToken)
         {

@@ -114,13 +114,13 @@ public static partial class SignalAsyncExtensions
     /// <param name="dueTime">The maximum allowed inter-element interval.</param>
     /// <param name="timeProvider">The time provider used for scheduling the dueTime.</param>
     internal sealed class TimeoutSignal<T>(IObservableAsync<T> source, TimeSpan dueTime, TimeProvider timeProvider)
-        : SignalAsync<T>
+        : IObservableAsync<T>
     {
         /// <summary>Subscribes the specified observer and starts the dueTime timer.</summary>
         /// <param name="observer">The observer to receive elements from the source.</param>
         /// <param name="cancellationToken">A token to cancel the subscription.</param>
         /// <returns>An async disposable that tears down the subscription when disposed.</returns>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -295,13 +295,13 @@ public static partial class SignalAsyncExtensions
         IObservableAsync<T> source,
         TimeSpan dueTime,
         IObservableAsync<T> fallback,
-        TimeProvider timeProvider) : SignalAsync<T>
+        TimeProvider timeProvider) : IObservableAsync<T>
     {
         /// <summary>Subscribes the specified observer by wrapping the source with a dueTime and a catch-to-fallback.</summary>
         /// <param name="observer">The observer to receive elements.</param>
         /// <param name="cancellationToken">A token to cancel the subscription.</param>
         /// <returns>An async disposable that tears down the subscription when disposed.</returns>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

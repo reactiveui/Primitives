@@ -45,10 +45,10 @@ public static partial class SignalAsyncExtensions
 
     /// <summary><c>Take(0)</c> short-circuit: synthesizes an immediate-completion observable without ever subscribing to the upstream.</summary>
     /// <typeparam name="T">The element type.</typeparam>
-    internal sealed class TakeZeroSignal<T> : SignalAsync<T>
+    internal sealed class TakeZeroSignal<T> : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -61,10 +61,10 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="count">The maximum number of values to forward (must be &gt; 0; the zero case uses <see cref="TakeZeroSignal{T}"/>).</param>
-    internal sealed class TakeSignal<T>(IObservableAsync<T> source, int count) : SignalAsync<T>
+    internal sealed class TakeSignal<T>(IObservableAsync<T> source, int count) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

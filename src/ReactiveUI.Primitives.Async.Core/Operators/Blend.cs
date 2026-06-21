@@ -101,10 +101,10 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The type of the elements emitted by the inner observable sequences.</typeparam>
     /// <param name="sources">The source observable whose inner observable sequences will be merged.</param>
     internal sealed class BlendSignalSourcesSignal<T>(IObservableAsync<IObservableAsync<T>> sources)
-        : SignalAsync<T>
+        : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -122,10 +122,10 @@ public static partial class SignalAsyncExtensions
     /// <param name="maxConcurrent">The maximum number of inner observable sequences to subscribe to concurrently.</param>
     internal sealed class BlendSignalSourcesSignalWithMaxConcurrency<T>(
         IObservableAsync<IObservableAsync<T>> sources,
-        int maxConcurrent) : SignalAsync<T>
+        int maxConcurrent) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -479,10 +479,10 @@ public static partial class SignalAsyncExtensions
     /// <summary>Async observable that merges items from an enumerable collection of observables into a single stream.</summary>
     /// <typeparam name="T">The type of the elements emitted by the observable sequences.</typeparam>
     /// <param name="sources">The collection of source observables to merge.</param>
-    internal sealed class BlendEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> sources) : SignalAsync<T>
+    internal sealed class BlendEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> sources) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

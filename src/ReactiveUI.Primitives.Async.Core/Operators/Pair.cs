@@ -72,13 +72,13 @@ public static partial class SignalAsyncExtensions
     internal sealed class ZipSignal<T1, T2, TResult>(
         IObservableAsync<T1> first,
         IObservableAsync<T2> second,
-        Func<T1, T2, TResult> resultSelector) : SignalAsync<TResult>
+        Func<T1, T2, TResult> resultSelector) : IObservableAsync<TResult>
     {
         /// <summary>Subscribes the specified observer by creating a shared <see cref="ZipState"/> and subscribing to both source sequences.</summary>
         /// <param name="observer">The observer to receive zipped result elements.</param>
         /// <param name="cancellationToken">A token to cancel the subscription.</param>
         /// <returns>An async disposable that tears down both subscriptions when disposed.</returns>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<TResult>.SubscribeAsync(
             IObserverAsync<TResult> observer,
             CancellationToken cancellationToken)
         {

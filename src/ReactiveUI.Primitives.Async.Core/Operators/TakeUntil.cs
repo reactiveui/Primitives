@@ -242,7 +242,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     /// <param name="predicate">The predicate that signals when to stop emitting items.</param>
     internal sealed class PredicateStopSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate)
-        : SignalAsync<T>
+        : IObservableAsync<T>
     {
         /// <summary>The predicate that signals when to stop emitting items.</summary>
         private readonly Func<T, bool> _predicate = predicate;
@@ -251,7 +251,7 @@ public static partial class SignalAsyncExtensions
         private readonly IObservableAsync<T> _source = source;
 
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -312,7 +312,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     /// <param name="cancellationToken">The cancellation token that triggers completion.</param>
     internal sealed class CancellationStopSignal<T>(IObservableAsync<T> source, CancellationToken cancellationToken)
-        : SignalAsync<T>
+        : IObservableAsync<T>
     {
         /// <summary>The source observable sequence.</summary>
         private readonly IObservableAsync<T> _source = source;
@@ -321,7 +321,7 @@ public static partial class SignalAsyncExtensions
         private readonly CancellationToken _cancellationToken = cancellationToken;
 
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -412,7 +412,7 @@ public static partial class SignalAsyncExtensions
     internal sealed class DelegateStopSignal<T>(
         IObservableAsync<T> source,
         CompletionSignalDelegate stopSignal,
-        TakeUntilOptions options) : SignalAsync<T>
+        TakeUntilOptions options) : IObservableAsync<T>
     {
         /// <summary>The source observable sequence.</summary>
         private readonly IObservableAsync<T> _source = source;
@@ -424,7 +424,7 @@ public static partial class SignalAsyncExtensions
         private readonly TakeUntilOptions _options = options;
 
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -547,7 +547,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="task">The task whose completion triggers the end of the sequence.</param>
     /// <param name="options">Options controlling the take-until behavior.</param>
     internal sealed class TaskStopSignal<T>(IObservableAsync<T> source, Task task, TakeUntilOptions options)
-        : SignalAsync<T>
+        : IObservableAsync<T>
     {
         /// <summary>The source observable sequence.</summary>
         private readonly IObservableAsync<T> _source = source;
@@ -559,7 +559,7 @@ public static partial class SignalAsyncExtensions
         private readonly TakeUntilOptions _options = options;
 
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -651,7 +651,7 @@ public static partial class SignalAsyncExtensions
     internal sealed class TakeUntilAsyncSignal<T, TOther>(
         IObservableAsync<T> source,
         IObservableAsync<TOther> other,
-        TakeUntilOptions options) : SignalAsync<T>
+        TakeUntilOptions options) : IObservableAsync<T>
     {
         /// <summary>The source observable sequence.</summary>
         private readonly IObservableAsync<T> _source = source;
@@ -663,7 +663,7 @@ public static partial class SignalAsyncExtensions
         private readonly TakeUntilOptions _options = options;
 
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -775,7 +775,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="asyncPredicate">Predicate that signals when to stop.</param>
     internal sealed class AsyncPredicateStopSignal<T>(
         IObservableAsync<T> source,
-        Func<T, CancellationToken, ValueTask<bool>> asyncPredicate) : SignalAsync<T>
+        Func<T, CancellationToken, ValueTask<bool>> asyncPredicate) : IObservableAsync<T>
     {
         /// <summary>The async predicate that signals when to stop emitting items.</summary>
         private readonly Func<T, CancellationToken, ValueTask<bool>> _asyncPredicate = asyncPredicate;
@@ -784,7 +784,7 @@ public static partial class SignalAsyncExtensions
         private readonly IObservableAsync<T> _source = source;
 
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

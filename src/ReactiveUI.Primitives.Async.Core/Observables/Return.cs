@@ -32,10 +32,10 @@ public static partial class SignalAsync
     /// </summary>
     /// <typeparam name="T">The element type emitted.</typeparam>
     /// <param name="value">The captured value emitted on each subscribe.</param>
-    internal sealed class ReturnSignalAsync<T>(T value) : SignalAsync<T>
+    internal sealed class ReturnSignalAsync<T>(T value) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

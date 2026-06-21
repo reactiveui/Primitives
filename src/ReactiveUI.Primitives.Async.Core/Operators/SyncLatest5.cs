@@ -85,10 +85,10 @@ public static partial class SignalAsyncExtensions
     /// <param name="selector">The selector that projects the latest values.</param>
     internal sealed class SyncLatest5SignalAsync<T1, T2, T3, T4, T5, TResult>(
         SyncLatest5SignalAsync<T1, T2, T3, T4, T5, TResult>.Sources sources,
-        Func<T1, T2, T3, T4, T5, TResult> selector) : SignalAsync<TResult>
+        Func<T1, T2, T3, T4, T5, TResult> selector) : IObservableAsync<TResult>
     {
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<TResult>.SubscribeAsync(
             IObserverAsync<TResult> observer,
             CancellationToken cancellationToken)
         {

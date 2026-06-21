@@ -88,13 +88,13 @@ public static partial class SignalAsyncExtensions
     /// <param name="dueTime">The quiet period that must elapse before an element is forwarded.</param>
     /// <param name="timeProvider">The time provider used for scheduling the debounce timer.</param>
     internal sealed class ThrottleSignal<T>(IObservableAsync<T> source, TimeSpan dueTime, TimeProvider timeProvider)
-        : SignalAsync<T>
+        : IObservableAsync<T>
     {
         /// <summary>Subscribes the specified observer with throttle behavior applied.</summary>
         /// <param name="observer">The observer to receive throttled elements.</param>
         /// <param name="cancellationToken">A token to cancel the subscription.</param>
         /// <returns>An async disposable that tears down the subscription when disposed.</returns>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

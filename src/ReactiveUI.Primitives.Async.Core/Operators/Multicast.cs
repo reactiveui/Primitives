@@ -45,7 +45,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="signal">The signal used to multicast the elements of the source sequence to multiple observers. Cannot be null.</param>
         /// <returns>A connectable observable sequence that multicasts the source sequence through the specified signal.</returns>
         public ConnectableSignalAsync<T> Multicast(ISignalAsync<T> signal) =>
-            new MulticastSignalAsync<T>(source, signal);
+            new(source, signal);
 
         /// <summary>
         /// Returns a connectable observable sequence that shares a single subscription to the underlying asynchronous

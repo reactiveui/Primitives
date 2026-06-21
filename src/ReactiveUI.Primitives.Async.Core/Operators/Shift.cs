@@ -70,10 +70,10 @@ public static partial class SignalAsyncExtensions
     /// <param name="delayInterval">The time span by which to delay each element notification.</param>
     /// <param name="timeProvider">The time provider used to control timing.</param>
     internal sealed class DelaySignal<T>(IObservableAsync<T> source, TimeSpan delayInterval, TimeProvider timeProvider)
-        : SignalAsync<T>
+        : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

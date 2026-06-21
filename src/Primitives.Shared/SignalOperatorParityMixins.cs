@@ -699,7 +699,7 @@ public static partial class LinqExtensions
         /// <returns>A task that completes with the final source value.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
         /// <exception cref="InvalidOperationException">The source completes without producing a value.</exception>
-        public Task<T> ToTask() => source.ToTask(CancellationToken.None);
+        public Task<T> ToTask() => Signal.ToTask(source);
 
         /// <summary>Awaits source completion and returns the last value produced by the source.</summary>
         /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
@@ -710,68 +710,12 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return Task.FromCanceled<T>(cancellationToken);
-            }
-
-            var rangeTask = TryCompleteFromRange(source);
-            if (rangeTask is not null)
-            {
-                return rangeTask;
-            }
-
-            TaskCompletionSource<T> completion = new();
-            var seen = false;
-            var last = default(T);
-            var subscription = default(IDisposable);
-            CancellationTokenRegistration cancellationRegistration = default;
-            if (cancellationToken.CanBeCanceled)
-            {
-                cancellationRegistration = cancellationToken.Register(() =>
-                {
-                    subscription?.Dispose();
-                    completion.TrySetCanceled(cancellationToken);
-                });
-            }
-
-            subscription = source.Subscribe(
-                value =>
-                {
-                    seen = true;
-                    last = value;
-                },
-                error =>
-                {
-                    cancellationRegistration.Dispose();
-                    subscription?.Dispose();
-                    completion.TrySetException(error);
-                },
-                () =>
-                {
-                    cancellationRegistration.Dispose();
-                    subscription?.Dispose();
-                    if (seen)
-                    {
-                        completion.TrySetResult(last!);
-                    }
-                    else
-                    {
-                        completion.TrySetException(new InvalidOperationException("The source completed without producing a value."));
-                    }
-                });
-
-            if (completion.Task.IsCompleted)
-            {
-                subscription.Dispose();
-            }
-
-            return completion.Task;
+            return Signal.ToTask(source, cancellationToken);
         }
 
         /// <summary>Awaits source completion and returns the last value produced by the source.</summary>
         /// <returns>A task that completes with the final source value.</returns>
-        public Task<T> LastAsync() => source.ToTask();
+        public Task<T> LastAsync() => Signal.ToTask(source);
 
         /// <summary>Awaits source completion and returns the last value produced by the source, or <see langword="default"/> when the source is empty.</summary>
         /// <returns>A task that completes with the final source value, or <see langword="default"/> when the source is empty.</returns>
@@ -791,50 +735,50 @@ public static partial class LinqExtensions
         /// <summary>Awaits the source count as a task.</summary>
         /// <returns>A task that completes with the number of source values.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        public Task<int> CountAsync() => source.Count().ToTask();
+        public Task<int> CountAsync() => CountTaskAsync(source, CancellationToken.None);
 
         /// <summary>Awaits the source count as a task.</summary>
         /// <param name="cancellationToken">The token used to cancel the task.</param>
         /// <returns>A task that completes with the number of source values.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        public Task<int> CountAsync(CancellationToken cancellationToken) => source.Count().ToTask(cancellationToken);
+        public Task<int> CountAsync(CancellationToken cancellationToken) => CountTaskAsync(source, cancellationToken);
 
         /// <summary>Awaits the source predicate count as a task.</summary>
         /// <param name="predicate">The function that identifies values to count.</param>
         /// <returns>A task that completes with the matching value count.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
-        public Task<int> CountAsync(Func<T, bool> predicate) => source.Count(predicate).ToTask();
+        public Task<int> CountAsync(Func<T, bool> predicate) => CountTaskAsync(source, predicate, CancellationToken.None);
 
         /// <summary>Awaits the source predicate count as a task.</summary>
         /// <param name="predicate">The function that identifies values to count.</param>
         /// <param name="cancellationToken">The token used to cancel the task.</param>
         /// <returns>A task that completes with the matching value count.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
-        public Task<int> CountAsync(Func<T, bool> predicate, CancellationToken cancellationToken) => source.Count(predicate).ToTask(cancellationToken);
+        public Task<int> CountAsync(Func<T, bool> predicate, CancellationToken cancellationToken) => CountTaskAsync(source, predicate, cancellationToken);
 
         /// <summary>Awaits whether any value is present.</summary>
         /// <returns>A task that completes with whether the source produced any values.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        public Task<bool> AnyAsync() => source.Any().ToTask();
+        public Task<bool> AnyAsync() => AnyTaskAsync(source, CancellationToken.None);
 
         /// <summary>Awaits whether any value is present.</summary>
         /// <param name="cancellationToken">The token used to cancel the task.</param>
         /// <returns>A task that completes with whether the source produced any values.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        public Task<bool> AnyAsync(CancellationToken cancellationToken) => source.Any().ToTask(cancellationToken);
+        public Task<bool> AnyAsync(CancellationToken cancellationToken) => AnyTaskAsync(source, cancellationToken);
 
         /// <summary>Awaits whether any value matches a predicate.</summary>
         /// <param name="predicate">The function that tests each value.</param>
         /// <returns>A task that completes with whether any source value satisfies <paramref name="predicate"/>.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
-        public Task<bool> AnyAsync(Func<T, bool> predicate) => source.Any(predicate).ToTask();
+        public Task<bool> AnyAsync(Func<T, bool> predicate) => AnyTaskAsync(source, predicate, CancellationToken.None);
 
         /// <summary>Awaits whether any value matches a predicate.</summary>
         /// <param name="predicate">The function that tests each value.</param>
         /// <param name="cancellationToken">The token used to cancel the task.</param>
         /// <returns>A task that completes with whether any source value satisfies <paramref name="predicate"/>.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
-        public Task<bool> AnyAsync(Func<T, bool> predicate, CancellationToken cancellationToken) => source.Any(predicate).ToTask(cancellationToken);
+        public Task<bool> AnyAsync(Func<T, bool> predicate, CancellationToken cancellationToken) => AnyTaskAsync(source, predicate, cancellationToken);
 
         /// <summary>Collects all values into an array task.</summary>
         /// <returns>A task that completes with all source values in an array.</returns>
@@ -1015,15 +959,6 @@ public static partial class LinqExtensions
 
         observer.OnCompleted();
     }
-
-    /// <summary>Returns the final value as a completed task when the source is a readable range, avoiding a subscription.</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    /// <param name="source">The source sequence.</param>
-    /// <returns>A completed task with the final range value, or <see langword="null"/> when not applicable.</returns>
-    private static Task<T>? TryCompleteFromRange<T>(IObservable<T> source) =>
-        source is RangeSignal range && CanReadRangeAs(typeof(T))
-            ? Task.FromResult((T)(object)(range.Start + range.Count - 1))
-            : null;
 
     /// <summary>Stamps a value with the supplied scheduler's current time. A non-capturing selector reused by <c>Timestamp</c> via <c>MapWith</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>

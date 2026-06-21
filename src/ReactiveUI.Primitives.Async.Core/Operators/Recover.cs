@@ -119,10 +119,10 @@ public static partial class SignalAsyncExtensions
     internal sealed class CatchSignal<T>(
         IObservableAsync<T> source,
         Func<Exception, IObservableAsync<T>> handler,
-        Func<Exception, CancellationToken, ValueTask>? onErrorResume) : SignalAsync<T>
+        Func<Exception, CancellationToken, ValueTask>? onErrorResume) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

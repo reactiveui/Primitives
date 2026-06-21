@@ -40,10 +40,10 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="count">The number of leading emissions to drop (must be &gt; 0; the zero case bypasses this observable entirely).</param>
-    internal sealed class SkipSignal<T>(IObservableAsync<T> source, int count) : SignalAsync<T>
+    internal sealed class SkipSignal<T>(IObservableAsync<T> source, int count) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

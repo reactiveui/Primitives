@@ -162,7 +162,7 @@ public class TimeBasedOperatorTests
     /// <summary>Tests Timeout with null fallback throws.</summary>
     [Test]
     public void WhenTimeoutWithFallbackNull_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(() =>
-        SignalAsync.Return(1).Timeout(TimeSpan.FromSeconds(1), (SignalAsync<int>)null!));
+        SignalAsync.Return(1).Timeout(TimeSpan.FromSeconds(1), (IObservableAsync<int>)null!));
 
     /// <summary>
     /// Verifies that when the downstream observer throws a non-cancellation exception

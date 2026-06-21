@@ -14,10 +14,19 @@ public static partial class Signal
     /// <summary>Executes the RunAsync operation.</summary>
     /// <typeparam name="TSource">The TSource type.</typeparam>
     /// <param name="source">The source value.</param>
+    /// <returns>The result.</returns>
+    public static IAwaitSignal<TSource> RunAsync<TSource>(IObservable<TSource> source) =>
+        RunAsync(source, CancellationToken.None);
+
+    /// <summary>Executes the RunAsync operation.</summary>
+    /// <typeparam name="TSource">The TSource type.</typeparam>
+    /// <param name="source">The source value.</param>
     /// <param name="cancellationToken">The cancellationToken value.</param>
     /// <returns>The result.</returns>
-    internal static IAwaitSignal<TSource> RunAsync<TSource>(IObservable<TSource> source, CancellationToken cancellationToken)
+    public static IAwaitSignal<TSource> RunAsync<TSource>(IObservable<TSource> source, CancellationToken cancellationToken)
     {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
         AsyncSignal<TSource> s = new();
 
         if (cancellationToken.IsCancellationRequested)
@@ -33,6 +42,80 @@ public static partial class Signal
         }
 
         return s;
+    }
+
+    /// <summary>Awaits source completion and returns the last value produced by the source.</summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <returns>A task that completes with the final source value.</returns>
+    public static Task<TSource> ToTask<TSource>(IObservable<TSource> source) =>
+        ToTask(source, CancellationToken.None);
+
+    /// <summary>Awaits source completion and returns the last value produced by the source.</summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
+    /// <returns>A task that completes with the final source value.</returns>
+    public static Task<TSource> ToTask<TSource>(IObservable<TSource> source, CancellationToken cancellationToken)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return Task.FromCanceled<TSource>(cancellationToken);
+        }
+
+        if (TryCompleteTaskFromRange(source, out var rangeTask))
+        {
+            return rangeTask;
+        }
+
+        TaskCompletionSource<TSource> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var seen = false;
+        var last = default(TSource);
+        var subscription = default(IDisposable);
+        CancellationTokenRegistration cancellationRegistration = default;
+        if (cancellationToken.CanBeCanceled)
+        {
+            cancellationRegistration = cancellationToken.Register(() =>
+            {
+                subscription?.Dispose();
+                completion.TrySetCanceled(cancellationToken);
+            });
+        }
+
+        subscription = source.Subscribe(
+            value =>
+            {
+                seen = true;
+                last = value;
+            },
+            error =>
+            {
+                cancellationRegistration.Dispose();
+                subscription?.Dispose();
+                completion.TrySetException(error);
+            },
+            () =>
+            {
+                cancellationRegistration.Dispose();
+                subscription?.Dispose();
+                if (seen)
+                {
+                    completion.TrySetResult(last!);
+                }
+                else
+                {
+                    completion.TrySetException(new InvalidOperationException("The source completed without producing a value."));
+                }
+            });
+
+        if (completion.Task.IsCompleted)
+        {
+            subscription.Dispose();
+        }
+
+        return completion.Task;
     }
 
     /// <summary>Executes the Cancel operation.</summary>
@@ -60,5 +143,22 @@ public static partial class Signal
         });
 
         subject.Subscribe(Handle<T>.Ignore, _ => ctr.Dispose(), ctr.Dispose);
+    }
+
+    /// <summary>Completes a task directly from a range signal when the source type can represent integers.</summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="task">The completed task when the fast path applies.</param>
+    /// <returns><see langword="true"/> when the range fast path applies.</returns>
+    private static bool TryCompleteTaskFromRange<T>(IObservable<T> source, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Task<T>? task)
+    {
+        if (source is RangeSignal range && typeof(T).IsAssignableFrom(typeof(int)))
+        {
+            task = Task.FromResult((T)(object)(range.Start + range.Count - 1));
+            return true;
+        }
+
+        task = null;
+        return false;
     }
 }

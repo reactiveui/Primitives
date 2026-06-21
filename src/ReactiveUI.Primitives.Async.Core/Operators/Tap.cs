@@ -97,10 +97,10 @@ public static partial class SignalAsyncExtensions
         IObservableAsync<T> source,
         Func<T, CancellationToken, ValueTask>? onNext,
         Func<Exception, CancellationToken, ValueTask>? onErrorResume,
-        Func<Result, ValueTask>? onCompleted) : SignalAsync<T>
+        Func<Result, ValueTask>? onCompleted) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -166,10 +166,10 @@ public static partial class SignalAsyncExtensions
         IObservableAsync<T> source,
         Action<T>? onNext,
         Action<Exception>? onErrorResume,
-        Action<Result>? onCompleted) : SignalAsync<T>
+        Action<Result>? onCompleted) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

@@ -28,7 +28,7 @@ public static partial class SignalAsyncExtensions
         /// observable among multiple subscribers. When the last observer unsubscribes, the connection to the source is
         /// automatically disposed.</remarks>
         /// <returns>An observable sequence that stays connected to the source as long as there is at least one subscription.</returns>
-        public SignalAsync<T> RefCount() =>
+        public IObservableAsync<T> RefCount() =>
             new RefCountSignal<T>(source);
     }
 
@@ -38,7 +38,7 @@ public static partial class SignalAsyncExtensions
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="source">The connectable observable to manage with reference counting.</param>
-    internal sealed class RefCountSignal<T>(ConnectableSignalAsync<T> source) : SignalAsync<T>, IDisposable
+    internal sealed class RefCountSignal<T>(ConnectableSignalAsync<T> source) : IObservableAsync<T>, IDisposable
     {
         /// <summary>The asynchronous gate used to serialize subscribe and dispose operations.</summary>
         private readonly AsyncSerialGate _gate = new();
@@ -85,7 +85,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">A token to cancel the subscription.</param>
         /// <returns>An async disposable that decrements the reference count on disposal.</returns>
         [DebuggerStepThrough]
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -95,12 +95,16 @@ public static partial class SignalAsyncExtensions
                 ++_refCount;
                 var needConnect = _refCount == 1;
                 RefCountWitness refCountWitness = new(this, observer);
-                var subcription = await source.SubscribeAsync(refCountWitness, cancellationToken).ConfigureAwait(false);
+                var subcription = await ((IObservableAsync<T>)source)
+                    .SubscribeAsync(refCountWitness, cancellationToken)
+                    .ConfigureAwait(false);
                 if (needConnect && !refCountWitness.HasDisposed)
                 {
                     SingleAssignmentDisposableAsync connection = new();
                     _connection = connection;
-                    await connection.SetDisposableAsync(await source.ConnectAsync(cancellationToken).ConfigureAwait(false)).ConfigureAwait(false);
+                    await connection
+                        .SetDisposableAsync(await source.ConnectAsync(cancellationToken).ConfigureAwait(false))
+                        .ConfigureAwait(false);
                 }
 
                 return subcription;

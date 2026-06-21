@@ -97,7 +97,7 @@ public class TransformationOperatorTests
     [Test]
     public void WhenSelectManyNullSelector_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(() =>
-            SignalAsync.Return(1).SelectMany((Func<int, SignalAsync<int>>)null!));
+            SignalAsync.Return(1).SelectMany((Func<int, IObservableAsync<int>>)null!));
 
     /// <summary>Tests sync Scan emits running accumulation.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>

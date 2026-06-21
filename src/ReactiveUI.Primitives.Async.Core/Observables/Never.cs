@@ -28,13 +28,13 @@ public static partial class SignalAsync
 
     /// <summary>An observable sequence that never produces any values and never completes.</summary>
     /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
-    internal sealed class NeverSignalAsync<T> : SignalAsync<T>
+    internal sealed class NeverSignalAsync<T> : IObservableAsync<T>
     {
         /// <summary>Gets the singleton instance of <see cref="NeverSignalAsync{T}"/>.</summary>
         public static NeverSignalAsync<T> Instance { get; } = new();
 
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken) =>
             new(DisposableAsync.Empty);

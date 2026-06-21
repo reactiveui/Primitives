@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
-
 namespace ReactiveUI.Primitives.Async.Signals;
 
 /// <summary>
@@ -18,42 +16,36 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// <param name="startValue">An optional initial value to be replayed to new observers. If not specified, no value is replayed until the first
 /// value is published.</param>
 public sealed class ConcurrentStatelessReplayLatestSignalAsync<T>(Optional<T> startValue)
-    : BaseStatelessReplayLatestSignalAsync<T>(startValue)
+    : ISignalAsync<T>
 {
-    /// <summary>Asynchronously notifies all observers in the collection with the specified value.</summary>
-    /// <remarks>Notifications are forwarded to all observers concurrently. If the operation is canceled, not
-    /// all observers may receive the notification.</remarks>
-    /// <param name="observers">A read-only list of observers to be notified. Cannot be null.</param>
-    /// <param name="value">The value to send to each observer.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the notification operation.</param>
-    /// <returns>A ValueTask that represents the asynchronous notification operation.</returns>
-    protected override ValueTask OnNextAsyncCore(
-        ImmutableArray<IObserverAsync<T>> observers,
+    /// <inheritdoc/>
+    IObservableAsync<T> ISignalAsync<T>.Values => this;
+
+    /// <summary>The mutable signal state.</summary>
+    private readonly StatelessReplayLatestSignalAsyncState<T> _state = new(startValue);
+
+    /// <inheritdoc/>
+    public ValueTask OnNextAsync(
         T value,
         CancellationToken cancellationToken) =>
-        Concurrent.ForwardOnNextConcurrently(observers, value, cancellationToken);
+        StatelessReplayLatestSignalAsyncStateHelper.OnNextAsync(_state, SignalBroadcastKind.Concurrent, value, cancellationToken);
 
-    /// <summary>Asynchronously notifies all observers of an error and resumes processing, if possible.</summary>
-    /// <param name="observers">A read-only list of observers to be notified of the error.</param>
-    /// <param name="error">The exception that occurred and is to be forwarded to the observers. Cannot be null.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-    /// <returns>A ValueTask that represents the asynchronous notification operation.</returns>
-    protected override ValueTask OnErrorResumeAsyncCore(
-        ImmutableArray<IObserverAsync<T>> observers,
+    /// <inheritdoc/>
+    public ValueTask OnErrorResumeAsync(
         Exception error,
         CancellationToken cancellationToken) =>
-        Concurrent.ForwardOnErrorResumeConcurrently(observers, error, cancellationToken);
+        StatelessReplayLatestSignalAsyncStateHelper.OnErrorResumeAsync(_state, SignalBroadcastKind.Concurrent, error, cancellationToken);
 
-    /// <summary>
-    /// Asynchronously notifies all observers that the sequence has completed, forwarding the completion signal to each
-    /// observer.
-    /// </summary>
-    /// <remarks>Observers are notified concurrently. If any observer throws an exception during notification,
-    /// the exception may be propagated according to the implementation of the forwarding mechanism.</remarks>
-    /// <param name="observers">A read-only list of observers to be notified of the completion event. Cannot be null.</param>
-    /// <param name="result">The result information to be passed to each observer upon completion.</param>
-    /// <returns>A ValueTask that represents the asynchronous notification operation. The task completes when all observers have
-    /// been notified.</returns>
-    protected override ValueTask OnCompletedAsyncCore(ImmutableArray<IObserverAsync<T>> observers, Result result) =>
-        Concurrent.ForwardOnCompletedConcurrently(observers, result);
+    /// <inheritdoc/>
+    public ValueTask OnCompletedAsync(Result result) =>
+        StatelessReplayLatestSignalAsyncStateHelper.OnCompletedAsync(_state, SignalBroadcastKind.Concurrent, result);
+
+    /// <inheritdoc/>
+    public ValueTask DisposeAsync() => StatelessReplayLatestSignalAsyncStateHelper.DisposeAsync(_state);
+
+    /// <inheritdoc/>
+    public ValueTask<IAsyncDisposable> SubscribeAsync(
+        IObserverAsync<T> observer,
+        CancellationToken cancellationToken) =>
+        StatelessReplayLatestSignalAsyncStateHelper.SubscribeAsync(_state, observer, cancellationToken);
 }

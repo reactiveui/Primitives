@@ -89,10 +89,10 @@ public static partial class SignalAsyncExtensions
     /// <param name="predicate">The asynchronous predicate.</param>
     internal sealed class KeepAsyncSignal<T>(
         IObservableAsync<T> source,
-        Func<T, CancellationToken, ValueTask<bool>> predicate) : SignalAsync<T>
+        Func<T, CancellationToken, ValueTask<bool>> predicate) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -148,10 +148,10 @@ public static partial class SignalAsyncExtensions
     /// <param name="predicate">The synchronous predicate.</param>
     internal sealed class KeepSyncSignal<T>(
         IObservableAsync<T> source,
-        Func<T, bool> predicate) : SignalAsync<T>
+        Func<T, bool> predicate) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

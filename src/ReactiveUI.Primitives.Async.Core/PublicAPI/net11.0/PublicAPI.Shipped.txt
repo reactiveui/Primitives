@@ -9,8 +9,6 @@ ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate.Lease.Dispose() -> void
 ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate.Lease.Equals(ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate.Lease other) -> bool
 ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate.Lease.Lease() -> void
 ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate.Lease.Lease(ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate! parent) -> void
-ReactiveUI.Primitives.Async.Advanced.CallbackSignalAsync<T>
-ReactiveUI.Primitives.Async.Advanced.CallbackSignalAsync<T>.CallbackSignalAsync(System.Func<ReactiveUI.Primitives.Async.IObserverAsync<T>!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>>! subscribeAsync) -> void
 ReactiveUI.Primitives.Async.Advanced.CallbackWitnessAsync<T>
 ReactiveUI.Primitives.Async.Advanced.CallbackWitnessAsync<T>.CallbackWitnessAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>! onNextAsync, System.Func<System.Exception!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResumeAsync = null, System.Func<ReactiveUI.Primitives.Result, System.Threading.Tasks.ValueTask>? onCompletedAsync = null) -> void
 ReactiveUI.Primitives.Async.Advanced.ForwardingWitnessAsync<T>
@@ -18,9 +16,6 @@ ReactiveUI.Primitives.Async.Advanced.ForwardingWitnessAsync<T>.Downstream.get ->
 ReactiveUI.Primitives.Async.Advanced.ForwardingWitnessAsync<T>.ForwardingWitnessAsync(ReactiveUI.Primitives.Async.IObserverAsync<T>! downstream) -> void
 ReactiveUI.Primitives.Async.Advanced.IReentrantAsyncDisposable
 ReactiveUI.Primitives.Async.Advanced.IReentrantAsyncDisposable.DisposeFromNotificationAsync() -> System.Threading.Tasks.ValueTask
-ReactiveUI.Primitives.Async.Advanced.MulticastSignalAsync<T>
-ReactiveUI.Primitives.Async.Advanced.MulticastSignalAsync<T>.Dispose() -> void
-ReactiveUI.Primitives.Async.Advanced.MulticastSignalAsync<T>.MulticastSignalAsync(ReactiveUI.Primitives.Async.IObservableAsync<T>! source, ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>! signal) -> void
 ReactiveUI.Primitives.Async.Advanced.PooledDelaySource
 ReactiveUI.Primitives.Async.Advanced.PooledDelaySource.BeginAsync(System.TimeSpan delay, System.TimeProvider! timeProvider, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
 ReactiveUI.Primitives.Async.Advanced.PooledDelaySource.GetResult(short token) -> void
@@ -82,7 +77,9 @@ ReactiveUI.Primitives.Async.ConcurrentWitnessCallsException.ConcurrentWitnessCal
 ReactiveUI.Primitives.Async.ConcurrentWitnessCallsException.ConcurrentWitnessCallsException(string! message) -> void
 ReactiveUI.Primitives.Async.ConcurrentWitnessCallsException.ConcurrentWitnessCallsException(string! message, System.Exception! innerException) -> void
 ReactiveUI.Primitives.Async.ConnectableSignalAsync<T>
-ReactiveUI.Primitives.Async.ConnectableSignalAsync<T>.ConnectableSignalAsync() -> void
+ReactiveUI.Primitives.Async.ConnectableSignalAsync<T>.ConnectAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
+ReactiveUI.Primitives.Async.ConnectableSignalAsync<T>.ConnectableSignalAsync(ReactiveUI.Primitives.Async.IObservableAsync<T>! source, ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>! signal) -> void
+ReactiveUI.Primitives.Async.ConnectableSignalAsync<T>.Dispose() -> void
 ReactiveUI.Primitives.Async.DisposableAsyncExtensions
 ReactiveUI.Primitives.Async.DisposableAsyncExtensions.extension(System.IDisposable!)
 ReactiveUI.Primitives.Async.DisposableAsyncExtensions.extension(System.IDisposable!).ToDisposableAsync() -> System.IAsyncDisposable!
@@ -113,7 +110,7 @@ ReactiveUI.Primitives.Async.Disposables.SingleReplaceableDisposableAsync.Dispose
 ReactiveUI.Primitives.Async.Disposables.SingleReplaceableDisposableAsync.SetDisposableAsync(System.IAsyncDisposable? value) -> System.Threading.Tasks.ValueTask
 ReactiveUI.Primitives.Async.Disposables.SingleReplaceableDisposableAsync.SingleReplaceableDisposableAsync() -> void
 ReactiveUI.Primitives.Async.GroupedAsyncSignal<TKey, TValue>
-ReactiveUI.Primitives.Async.GroupedAsyncSignal<TKey, TValue>.GroupedAsyncSignal() -> void
+ReactiveUI.Primitives.Async.GroupedAsyncSignal<TKey, TValue>.Key.get -> TKey
 ReactiveUI.Primitives.Async.Helpers.DisposalHelper
 ReactiveUI.Primitives.Async.Helpers.FireAndForgetHelper
 ReactiveUI.Primitives.Async.Helpers.SubscriptionHelper
@@ -127,9 +124,6 @@ ReactiveUI.Primitives.Async.OptionalExtensions
 ReactiveUI.Primitives.Async.OptionalExtensions.extension<T>(ReactiveUI.Primitives.Optional<T>)
 ReactiveUI.Primitives.Async.OptionalExtensions.extension<T>(ReactiveUI.Primitives.Optional<T>).TryGetValue(out T? value) -> bool
 ReactiveUI.Primitives.Async.SignalAsync
-ReactiveUI.Primitives.Async.SignalAsync<T>
-ReactiveUI.Primitives.Async.SignalAsync<T>.SignalAsync() -> void
-ReactiveUI.Primitives.Async.SignalAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T>! observer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
 ReactiveUI.Primitives.Async.SignalAsyncExtensions
 ReactiveUI.Primitives.Async.SignalAsyncExtensions.extension(ReactiveUI.Primitives.Async.IObservableAsync<bool>!)
 ReactiveUI.Primitives.Async.SignalAsyncExtensions.extension(ReactiveUI.Primitives.Async.IObservableAsync<bool>!).Not() -> ReactiveUI.Primitives.Async.IObservableAsync<bool>!
@@ -177,7 +171,7 @@ ReactiveUI.Primitives.Async.SignalAsyncExtensions.extension<T1>(ReactiveUI.Primi
 ReactiveUI.Primitives.Async.SignalAsyncExtensions.extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1>!).Zip<T2, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<T2>! second, System.Func<T1, T2, TResult>! resultSelector) -> ReactiveUI.Primitives.Async.IObservableAsync<TResult>!
 ReactiveUI.Primitives.Async.SignalAsyncExtensions.extension<T1>(ReactiveUI.Primitives.Async.IObservableAsync<T1>!).Zip<T2>(ReactiveUI.Primitives.Async.IObservableAsync<T2>! second) -> ReactiveUI.Primitives.Async.IObservableAsync<(T1 First, T2 Second)>!
 ReactiveUI.Primitives.Async.SignalAsyncExtensions.extension<T>(ReactiveUI.Primitives.Async.ConnectableSignalAsync<T>!)
-ReactiveUI.Primitives.Async.SignalAsyncExtensions.extension<T>(ReactiveUI.Primitives.Async.ConnectableSignalAsync<T>!).RefCount() -> ReactiveUI.Primitives.Async.SignalAsync<T>!
+ReactiveUI.Primitives.Async.SignalAsyncExtensions.extension<T>(ReactiveUI.Primitives.Async.ConnectableSignalAsync<T>!).RefCount() -> ReactiveUI.Primitives.Async.IObservableAsync<T>!
 ReactiveUI.Primitives.Async.SignalAsyncExtensions.extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.Async.IObservableAsync<T>!>!)
 ReactiveUI.Primitives.Async.SignalAsyncExtensions.extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.Async.IObservableAsync<T>!>!).Blend() -> ReactiveUI.Primitives.Async.IObservableAsync<T>!
 ReactiveUI.Primitives.Async.SignalAsyncExtensions.extension<T>(ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.Async.IObservableAsync<T>!>!).Chain() -> ReactiveUI.Primitives.Async.IObservableAsync<T>!
@@ -430,30 +424,6 @@ ReactiveUI.Primitives.Async.SignalExtensions
 ReactiveUI.Primitives.Async.SignalExtensions.extension<T>(ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>!)
 ReactiveUI.Primitives.Async.SignalExtensions.extension<T>(ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>!).AsObserverAsync() -> ReactiveUI.Primitives.Async.IObserverAsync<T>!
 ReactiveUI.Primitives.Async.SignalExtensions.extension<T>(ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>!).MapValues(System.Func<ReactiveUI.Primitives.Async.IObservableAsync<T>!, ReactiveUI.Primitives.Async.IObservableAsync<T>!>! mapper) -> ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>!
-ReactiveUI.Primitives.Async.Signals.BaseReplayLatestSignalAsync<T>
-ReactiveUI.Primitives.Async.Signals.BaseReplayLatestSignalAsync<T>.BaseReplayLatestSignalAsync(ReactiveUI.Primitives.Optional<T> startValue) -> void
-ReactiveUI.Primitives.Async.Signals.BaseReplayLatestSignalAsync<T>.DisposeAsync() -> System.Threading.Tasks.ValueTask
-ReactiveUI.Primitives.Async.Signals.BaseReplayLatestSignalAsync<T>.OnCompletedAsync(ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
-ReactiveUI.Primitives.Async.Signals.BaseReplayLatestSignalAsync<T>.OnErrorResumeAsync(System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-ReactiveUI.Primitives.Async.Signals.BaseReplayLatestSignalAsync<T>.OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-ReactiveUI.Primitives.Async.Signals.BaseSignalAsync<T>
-ReactiveUI.Primitives.Async.Signals.BaseSignalAsync<T>.BaseSignalAsync() -> void
-ReactiveUI.Primitives.Async.Signals.BaseSignalAsync<T>.DisposeAsync() -> System.Threading.Tasks.ValueTask
-ReactiveUI.Primitives.Async.Signals.BaseSignalAsync<T>.OnCompletedAsync(ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
-ReactiveUI.Primitives.Async.Signals.BaseSignalAsync<T>.OnErrorResumeAsync(System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-ReactiveUI.Primitives.Async.Signals.BaseSignalAsync<T>.OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-ReactiveUI.Primitives.Async.Signals.BaseStatelessReplayLatestSignalAsync<T>
-ReactiveUI.Primitives.Async.Signals.BaseStatelessReplayLatestSignalAsync<T>.BaseStatelessReplayLatestSignalAsync(ReactiveUI.Primitives.Optional<T> startValue) -> void
-ReactiveUI.Primitives.Async.Signals.BaseStatelessReplayLatestSignalAsync<T>.DisposeAsync() -> System.Threading.Tasks.ValueTask
-ReactiveUI.Primitives.Async.Signals.BaseStatelessReplayLatestSignalAsync<T>.OnCompletedAsync(ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
-ReactiveUI.Primitives.Async.Signals.BaseStatelessReplayLatestSignalAsync<T>.OnErrorResumeAsync(System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-ReactiveUI.Primitives.Async.Signals.BaseStatelessReplayLatestSignalAsync<T>.OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-ReactiveUI.Primitives.Async.Signals.BaseStatelessSignalAsync<T>
-ReactiveUI.Primitives.Async.Signals.BaseStatelessSignalAsync<T>.BaseStatelessSignalAsync() -> void
-ReactiveUI.Primitives.Async.Signals.BaseStatelessSignalAsync<T>.DisposeAsync() -> System.Threading.Tasks.ValueTask
-ReactiveUI.Primitives.Async.Signals.BaseStatelessSignalAsync<T>.OnCompletedAsync(ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
-ReactiveUI.Primitives.Async.Signals.BaseStatelessSignalAsync<T>.OnErrorResumeAsync(System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-ReactiveUI.Primitives.Async.Signals.BaseStatelessSignalAsync<T>.OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
 ReactiveUI.Primitives.Async.Signals.BehaviorSignalCreationOptions
 ReactiveUI.Primitives.Async.Signals.BehaviorSignalCreationOptions.<Clone>$() -> ReactiveUI.Primitives.Async.Signals.BehaviorSignalCreationOptions!
 ReactiveUI.Primitives.Async.Signals.BehaviorSignalCreationOptions.BehaviorSignalCreationOptions() -> void
@@ -465,12 +435,32 @@ ReactiveUI.Primitives.Async.Signals.BehaviorSignalCreationOptions.PublishingOpti
 ReactiveUI.Primitives.Async.Signals.Concurrent
 ReactiveUI.Primitives.Async.Signals.ConcurrentReplayLatestSignalAsync<T>
 ReactiveUI.Primitives.Async.Signals.ConcurrentReplayLatestSignalAsync<T>.ConcurrentReplayLatestSignalAsync(ReactiveUI.Primitives.Optional<T> startValue) -> void
+ReactiveUI.Primitives.Async.Signals.ConcurrentReplayLatestSignalAsync<T>.DisposeAsync() -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.ConcurrentReplayLatestSignalAsync<T>.OnCompletedAsync(ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.ConcurrentReplayLatestSignalAsync<T>.OnErrorResumeAsync(System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.ConcurrentReplayLatestSignalAsync<T>.OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.ConcurrentReplayLatestSignalAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T>! observer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
 ReactiveUI.Primitives.Async.Signals.ConcurrentSignalAsync<T>
 ReactiveUI.Primitives.Async.Signals.ConcurrentSignalAsync<T>.ConcurrentSignalAsync() -> void
+ReactiveUI.Primitives.Async.Signals.ConcurrentSignalAsync<T>.DisposeAsync() -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.ConcurrentSignalAsync<T>.OnCompletedAsync(ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.ConcurrentSignalAsync<T>.OnErrorResumeAsync(System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.ConcurrentSignalAsync<T>.OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.ConcurrentSignalAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T>! observer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
 ReactiveUI.Primitives.Async.Signals.ConcurrentStatelessReplayLatestSignalAsync<T>
 ReactiveUI.Primitives.Async.Signals.ConcurrentStatelessReplayLatestSignalAsync<T>.ConcurrentStatelessReplayLatestSignalAsync(ReactiveUI.Primitives.Optional<T> startValue) -> void
+ReactiveUI.Primitives.Async.Signals.ConcurrentStatelessReplayLatestSignalAsync<T>.DisposeAsync() -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.ConcurrentStatelessReplayLatestSignalAsync<T>.OnCompletedAsync(ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.ConcurrentStatelessReplayLatestSignalAsync<T>.OnErrorResumeAsync(System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.ConcurrentStatelessReplayLatestSignalAsync<T>.OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.ConcurrentStatelessReplayLatestSignalAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T>! observer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
 ReactiveUI.Primitives.Async.Signals.ConcurrentStatelessSignalAsync<T>
 ReactiveUI.Primitives.Async.Signals.ConcurrentStatelessSignalAsync<T>.ConcurrentStatelessSignalAsync() -> void
+ReactiveUI.Primitives.Async.Signals.ConcurrentStatelessSignalAsync<T>.DisposeAsync() -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.ConcurrentStatelessSignalAsync<T>.OnCompletedAsync(ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.ConcurrentStatelessSignalAsync<T>.OnErrorResumeAsync(System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.ConcurrentStatelessSignalAsync<T>.OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.ConcurrentStatelessSignalAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T>! observer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
 ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>
 ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>.Values.get -> ReactiveUI.Primitives.Async.IObservableAsync<T>!
 ReactiveUI.Primitives.Async.Signals.PublishingOption
@@ -485,13 +475,33 @@ ReactiveUI.Primitives.Async.Signals.ReplayLatestSignalCreationOptions.Publishing
 ReactiveUI.Primitives.Async.Signals.ReplayLatestSignalCreationOptions.PublishingOption.init -> void
 ReactiveUI.Primitives.Async.Signals.ReplayLatestSignalCreationOptions.ReplayLatestSignalCreationOptions() -> void
 ReactiveUI.Primitives.Async.Signals.SerialReplayLatestSignalAsync<T>
+ReactiveUI.Primitives.Async.Signals.SerialReplayLatestSignalAsync<T>.DisposeAsync() -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.SerialReplayLatestSignalAsync<T>.OnCompletedAsync(ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.SerialReplayLatestSignalAsync<T>.OnErrorResumeAsync(System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.SerialReplayLatestSignalAsync<T>.OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
 ReactiveUI.Primitives.Async.Signals.SerialReplayLatestSignalAsync<T>.SerialReplayLatestSignalAsync(ReactiveUI.Primitives.Optional<T> startValue) -> void
+ReactiveUI.Primitives.Async.Signals.SerialReplayLatestSignalAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T>! observer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
 ReactiveUI.Primitives.Async.Signals.SerialSignalAsync<T>
+ReactiveUI.Primitives.Async.Signals.SerialSignalAsync<T>.DisposeAsync() -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.SerialSignalAsync<T>.OnCompletedAsync(ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.SerialSignalAsync<T>.OnErrorResumeAsync(System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.SerialSignalAsync<T>.OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
 ReactiveUI.Primitives.Async.Signals.SerialSignalAsync<T>.SerialSignalAsync() -> void
+ReactiveUI.Primitives.Async.Signals.SerialSignalAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T>! observer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
 ReactiveUI.Primitives.Async.Signals.SerialStatelessReplayLatestSignalAsync<T>
+ReactiveUI.Primitives.Async.Signals.SerialStatelessReplayLatestSignalAsync<T>.DisposeAsync() -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.SerialStatelessReplayLatestSignalAsync<T>.OnCompletedAsync(ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.SerialStatelessReplayLatestSignalAsync<T>.OnErrorResumeAsync(System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.SerialStatelessReplayLatestSignalAsync<T>.OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
 ReactiveUI.Primitives.Async.Signals.SerialStatelessReplayLatestSignalAsync<T>.SerialStatelessReplayLatestSignalAsync(ReactiveUI.Primitives.Optional<T> startValue) -> void
+ReactiveUI.Primitives.Async.Signals.SerialStatelessReplayLatestSignalAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T>! observer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
 ReactiveUI.Primitives.Async.Signals.SerialStatelessSignalAsync<T>
+ReactiveUI.Primitives.Async.Signals.SerialStatelessSignalAsync<T>.DisposeAsync() -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.SerialStatelessSignalAsync<T>.OnCompletedAsync(ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.SerialStatelessSignalAsync<T>.OnErrorResumeAsync(System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+ReactiveUI.Primitives.Async.Signals.SerialStatelessSignalAsync<T>.OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
 ReactiveUI.Primitives.Async.Signals.SerialStatelessSignalAsync<T>.SerialStatelessSignalAsync() -> void
+ReactiveUI.Primitives.Async.Signals.SerialStatelessSignalAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T>! observer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
 ReactiveUI.Primitives.Async.Signals.Signal
 ReactiveUI.Primitives.Async.Signals.SignalCreationOptions
 ReactiveUI.Primitives.Async.Signals.SignalCreationOptions.<Clone>$() -> ReactiveUI.Primitives.Async.Signals.SignalCreationOptions!
@@ -523,21 +533,6 @@ ReactiveUI.Primitives.Async.WitnessAsync<T>.WitnessAsync() -> void
 ReactiveUI.Primitives.Async.WitnessAsync<T>.WitnessAsync(System.Threading.CancellationToken externalLink) -> void
 abstract ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>.SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
 abstract ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<T>.ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T>! observer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-abstract ReactiveUI.Primitives.Async.ConnectableSignalAsync<T>.ConnectAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
-abstract ReactiveUI.Primitives.Async.GroupedAsyncSignal<TKey, TValue>.Key.get -> TKey
-abstract ReactiveUI.Primitives.Async.SignalAsync<T>.SubscribeAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T>! observer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
-abstract ReactiveUI.Primitives.Async.Signals.BaseReplayLatestSignalAsync<T>.OnCompletedAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>!> observers, ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
-abstract ReactiveUI.Primitives.Async.Signals.BaseReplayLatestSignalAsync<T>.OnErrorResumeAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>!> observers, System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-abstract ReactiveUI.Primitives.Async.Signals.BaseReplayLatestSignalAsync<T>.OnNextAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>!> observers, T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-abstract ReactiveUI.Primitives.Async.Signals.BaseSignalAsync<T>.OnCompletedAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>!> observers, ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
-abstract ReactiveUI.Primitives.Async.Signals.BaseSignalAsync<T>.OnErrorResumeAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>!> observers, System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-abstract ReactiveUI.Primitives.Async.Signals.BaseSignalAsync<T>.OnNextAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>!> observers, T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-abstract ReactiveUI.Primitives.Async.Signals.BaseStatelessReplayLatestSignalAsync<T>.OnCompletedAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>!> observers, ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
-abstract ReactiveUI.Primitives.Async.Signals.BaseStatelessReplayLatestSignalAsync<T>.OnErrorResumeAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>!> observers, System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-abstract ReactiveUI.Primitives.Async.Signals.BaseStatelessReplayLatestSignalAsync<T>.OnNextAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>!> observers, T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-abstract ReactiveUI.Primitives.Async.Signals.BaseStatelessSignalAsync<T>.OnCompletedAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>!> observers, ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
-abstract ReactiveUI.Primitives.Async.Signals.BaseStatelessSignalAsync<T>.OnErrorResumeAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>!> observers, System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-abstract ReactiveUI.Primitives.Async.Signals.BaseStatelessSignalAsync<T>.OnNextAsyncCore(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>!> observers, T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
 abstract ReactiveUI.Primitives.Async.WitnessAsync<T>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
 abstract ReactiveUI.Primitives.Async.WitnessAsync<T>.OnErrorResumeAsyncCore(System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
 abstract ReactiveUI.Primitives.Async.WitnessAsync<T>.OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
@@ -545,11 +540,6 @@ override ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate.Lease.GetHashCode(
 override ReactiveUI.Primitives.Async.Advanced.ForwardingWitnessAsync<T>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) -> System.Threading.Tasks.ValueTask
 override ReactiveUI.Primitives.Async.Advanced.ForwardingWitnessAsync<T>.OnErrorResumeAsyncCore(System.Exception! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
 override ReactiveUI.Primitives.Async.Advanced.ForwardingWitnessAsync<T>.OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-override ReactiveUI.Primitives.Async.Advanced.MulticastSignalAsync<T>.ConnectAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
-override ReactiveUI.Primitives.Async.Signals.BaseReplayLatestSignalAsync<T>.SubscribeAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T>! observer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
-override ReactiveUI.Primitives.Async.Signals.BaseSignalAsync<T>.SubscribeAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T>! observer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
-override ReactiveUI.Primitives.Async.Signals.BaseStatelessReplayLatestSignalAsync<T>.SubscribeAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T>! observer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
-override ReactiveUI.Primitives.Async.Signals.BaseStatelessSignalAsync<T>.SubscribeAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T>! observer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.IAsyncDisposable!>
 override ReactiveUI.Primitives.Async.Signals.BehaviorSignalCreationOptions.Equals(object? obj) -> bool
 override ReactiveUI.Primitives.Async.Signals.BehaviorSignalCreationOptions.GetHashCode() -> int
 override ReactiveUI.Primitives.Async.Signals.BehaviorSignalCreationOptions.ToString() -> string!
@@ -765,7 +755,7 @@ static ReactiveUI.Primitives.Async.SignalAsyncExtensions.ReduceAsync<T, TAcc>(th
 static ReactiveUI.Primitives.Async.SignalAsyncExtensions.ReduceAsync<T, TAcc>(this ReactiveUI.Primitives.Async.IObservableAsync<T>! this, TAcc seed, System.Func<TAcc, T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TAcc>>! accumulator, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<TAcc>
 static ReactiveUI.Primitives.Async.SignalAsyncExtensions.ReduceAsync<T, TAcc>(this ReactiveUI.Primitives.Async.IObservableAsync<T>! this, TAcc seed, System.Func<TAcc, T, TAcc>! accumulator, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<TAcc>
 static ReactiveUI.Primitives.Async.SignalAsyncExtensions.ReduceAsync<T, TAccumulate>(this ReactiveUI.Primitives.Async.IObservableAsync<T>! this, TAccumulate seed, System.Func<TAccumulate, T, TAccumulate>! accumulator) -> System.Threading.Tasks.ValueTask<TAccumulate>
-static ReactiveUI.Primitives.Async.SignalAsyncExtensions.RefCount<T>(this ReactiveUI.Primitives.Async.ConnectableSignalAsync<T>! source) -> ReactiveUI.Primitives.Async.SignalAsync<T>!
+static ReactiveUI.Primitives.Async.SignalAsyncExtensions.RefCount<T>(this ReactiveUI.Primitives.Async.ConnectableSignalAsync<T>! source) -> ReactiveUI.Primitives.Async.IObservableAsync<T>!
 static ReactiveUI.Primitives.Async.SignalAsyncExtensions.ReplayLastOnSubscribe<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T>! source, T initialValue) -> ReactiveUI.Primitives.Async.IObservableAsync<T>!
 static ReactiveUI.Primitives.Async.SignalAsyncExtensions.ReplayLatestPublish<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T>! source) -> ReactiveUI.Primitives.Async.ConnectableSignalAsync<T>!
 static ReactiveUI.Primitives.Async.SignalAsyncExtensions.ReplayLatestPublish<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T>! source, ReactiveUI.Primitives.Async.Signals.ReplayLatestSignalCreationOptions! options) -> ReactiveUI.Primitives.Async.ConnectableSignalAsync<T>!

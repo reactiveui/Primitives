@@ -48,15 +48,15 @@ public sealed class R3AsyncBridgeGenerator : IIncrementalGenerator
                 }
         
                 return new PrimitivesToR3AsyncObservable<T>(source);
-            }
+        }
         
-            private sealed class R3AsyncToPrimitivesObservable<T>(global::R3Async.AsyncObservable<T> source)
-                : global::ReactiveUI.Primitives.Async.SignalAsync<T>
+        private sealed class R3AsyncToPrimitivesObservable<T>(global::R3Async.AsyncObservable<T> source)
+            : global::ReactiveUI.Primitives.Async.IObservableAsync<T>
+        {
+            global::System.Threading.Tasks.ValueTask<global::System.IAsyncDisposable> global::ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(
+                global::ReactiveUI.Primitives.Async.IObserverAsync<T> observer,
+                global::System.Threading.CancellationToken cancellationToken)
             {
-                protected override global::System.Threading.Tasks.ValueTask<global::System.IAsyncDisposable> SubscribeAsyncCore(
-                    global::ReactiveUI.Primitives.Async.IObserverAsync<T> observer,
-                    global::System.Threading.CancellationToken cancellationToken)
-                {
                     if (observer == null)
                     {
                         throw new global::System.ArgumentNullException(nameof(observer));

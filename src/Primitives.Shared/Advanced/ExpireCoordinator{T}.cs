@@ -1,0 +1,153 @@
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// ReactiveUI Association Incorporated licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
+
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.Reactive.Advanced;
+#else
+namespace ReactiveUI.Primitives.Advanced;
+#endif
+
+/// <summary>Coordinates timeout delivery with one active timer.</summary>
+/// <typeparam name="T">The source value type.</typeparam>
+public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
+{
+    /// <summary>The source observable.</summary>
+    private readonly IObservable<T> _source;
+
+    /// <summary>The timeout period.</summary>
+    private readonly TimeSpan _dueTime;
+
+    /// <summary>The sequencer used to schedule the timeout.</summary>
+    private readonly ISequencer _sequencer;
+
+    /// <summary>The downstream observer.</summary>
+    private readonly IObserver<T> _observer;
+
+    /// <summary>The active source subscription.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Usage",
+        "CA2213:Disposable fields should be disposed",
+        Justification = "Disposed via the thread-safe Interlocked.Exchange teardown in Dispose; CA2213 does not recognize disposal of a field through Interlocked.Exchange.")]
+    private IDisposable? _subscription;
+
+    /// <summary>The active timeout timer.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Usage",
+        "CA2213:Disposable fields should be disposed",
+        Justification = "Disposed via the thread-safe Interlocked.Exchange teardown in Dispose; CA2213 does not recognize disposal of a field through Interlocked.Exchange.")]
+    private IDisposable? _timer;
+
+    /// <summary>A value indicating whether the timeout or source has terminated.</summary>
+    private int _done;
+
+    /// <summary>Initializes a new instance of the <see cref="ExpireCoordinator{T}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="dueTime">The timeout period.</param>
+    /// <param name="sequencer">The sequencer used to schedule the timeout.</param>
+    /// <param name="observer">The downstream observer.</param>
+    public ExpireCoordinator(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer, IObserver<T> observer)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        ArgumentExceptionHelper.ThrowIfNull(sequencer);
+
+        ArgumentExceptionHelper.ThrowIfNull(observer);
+
+        _source = source;
+        _dueTime = dueTime;
+        _sequencer = sequencer;
+        _observer = observer;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        Interlocked.Exchange(ref _timer, null)?.Dispose();
+
+        Interlocked.Exchange(ref _subscription, null)?.Dispose();
+    }
+
+    /// <inheritdoc/>
+    public void OnCompleted()
+    {
+        if (Interlocked.Exchange(ref _done, 1) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            _observer.OnCompleted();
+        }
+        finally
+        {
+            Dispose();
+        }
+    }
+
+    /// <inheritdoc/>
+    public void OnError(Exception error)
+    {
+        if (Interlocked.Exchange(ref _done, 1) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            _observer.OnError(error);
+        }
+        finally
+        {
+            Dispose();
+        }
+    }
+
+    /// <inheritdoc/>
+    public void OnNext(T value)
+    {
+        if (Volatile.Read(ref _done) != 0)
+        {
+            return;
+        }
+
+        _observer.OnNext(value);
+    }
+
+    /// <summary>Starts observing the source and timeout timer.</summary>
+    /// <returns>The coordinator that owns the subscription cleanup.</returns>
+    public ExpireCoordinator<T> Run()
+    {
+        _timer = _sequencer.Schedule(this, _dueTime, static (_, coordinator) => coordinator.EmitTimeout());
+        _subscription = _source.Subscribe(this);
+        if (Volatile.Read(ref _done) == 0)
+        {
+            return this;
+        }
+
+        Dispose();
+        return this;
+    }
+
+    /// <summary>Emits the timeout error.</summary>
+    /// <returns>An empty disposable.</returns>
+    private EmptyDisposable EmitTimeout()
+    {
+        if (Interlocked.Exchange(ref _done, 1) != 0)
+        {
+            return EmptyDisposable.Instance;
+        }
+
+        try
+        {
+            _observer.OnError(new TimeoutException());
+        }
+        finally
+        {
+            Dispose();
+        }
+
+        return EmptyDisposable.Instance;
+    }
+}

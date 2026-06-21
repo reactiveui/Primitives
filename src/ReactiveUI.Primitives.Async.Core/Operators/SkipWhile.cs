@@ -56,10 +56,10 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="predicate">The skip-while predicate.</param>
-    internal sealed class SkipWhileSyncSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate) : SignalAsync<T>
+    internal sealed class SkipWhileSyncSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -122,10 +122,10 @@ public static partial class SignalAsyncExtensions
     /// <param name="predicate">The async skip-while predicate.</param>
     internal sealed class SkipWhileAsyncSignal<T>(
         IObservableAsync<T> source,
-        Func<T, CancellationToken, ValueTask<bool>> predicate) : SignalAsync<T>
+        Func<T, CancellationToken, ValueTask<bool>> predicate) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

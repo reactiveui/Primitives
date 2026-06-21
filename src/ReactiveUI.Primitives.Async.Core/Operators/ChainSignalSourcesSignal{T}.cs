@@ -13,13 +13,13 @@ namespace ReactiveUI.Primitives.Async;
 /// </summary>
 /// <typeparam name="T">The type of elements produced by the inner observable sequences.</typeparam>
 /// <param name="source">The outer observable sequence that emits inner observable sequences to concatenate.</param>
-public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsync<T>> source) : SignalAsync<T>
+public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsync<T>> source) : IObservableAsync<T>
 {
     /// <summary>Subscribes the specified observer by creating a <see cref="ChainCoordinator"/> that manages sequential subscription to inner observables.</summary>
     /// <param name="observer">The observer to receive elements from the concatenated sequences.</param>
     /// <param name="cancellationToken">A token to cancel the subscription.</param>
     /// <returns>An async disposable that tears down the subscription when disposed.</returns>
-    protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+    ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)
     {

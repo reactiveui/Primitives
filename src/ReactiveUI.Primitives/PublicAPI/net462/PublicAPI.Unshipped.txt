@@ -7,6 +7,21 @@ ReactiveUI.Primitives.Advanced.AsyncSubscriptionLifetime.Dispose() -> void
 ReactiveUI.Primitives.Advanced.AsyncSubscriptionLifetime.IsCancellationRequested.get -> bool
 ReactiveUI.Primitives.Advanced.AsyncSubscriptionLifetime.SetSubscription(System.IDisposable? disposable) -> void
 ReactiveUI.Primitives.Advanced.AsyncSubscriptionLifetime.Token.get -> System.Threading.CancellationToken
+ReactiveUI.Primitives.Advanced.ExpireCoordinator<T>
+ReactiveUI.Primitives.Advanced.ExpireCoordinator<T>.Dispose() -> void
+ReactiveUI.Primitives.Advanced.ExpireCoordinator<T>.ExpireCoordinator(System.IObservable<T>! source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer! sequencer, System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Advanced.ExpireCoordinator<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Advanced.ExpireCoordinator<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Advanced.ExpireCoordinator<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Advanced.ExpireCoordinator<T>.Run() -> ReactiveUI.Primitives.Advanced.ExpireCoordinator<T>!
+ReactiveUI.Primitives.Advanced.ExpireSignal<T>
+ReactiveUI.Primitives.Advanced.ExpireSignal<T>.ExpireSignal(System.IObservable<T>! source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer! sequencer) -> void
+ReactiveUI.Primitives.Advanced.ExpireSignal<T>.IsRequiredSubscribeOnCurrentThread() -> bool
+ReactiveUI.Primitives.Advanced.ExpireSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Advanced.FromAsyncSignal<T>
+ReactiveUI.Primitives.Advanced.FromAsyncSignal<T>.FromAsyncSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>!>! taskFactory) -> void
+ReactiveUI.Primitives.Advanced.FromAsyncSignal<T>.FromAsyncSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>!>! taskFactory, System.Threading.CancellationToken cancellationToken) -> void
+ReactiveUI.Primitives.Advanced.FromAsyncSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Advanced.MapIndexedSignal<TSource, TResult>
 ReactiveUI.Primitives.Advanced.MapIndexedSignal<TSource, TResult>.IsRequiredSubscribeOnCurrentThread() -> bool
 ReactiveUI.Primitives.Advanced.MapIndexedSignal<TSource, TResult>.MapIndexedSignal(System.IObservable<TSource>! source, System.Func<TSource, int, TResult>! selector) -> void
@@ -50,6 +65,26 @@ ReactiveUI.Primitives.Advanced.SynchronizeObjectWitness<T>.OnError(System.Except
 ReactiveUI.Primitives.Advanced.SynchronizeObjectWitness<T>.OnNext(T value) -> void
 ReactiveUI.Primitives.Advanced.SynchronizeObjectWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
 ReactiveUI.Primitives.Advanced.SynchronizeObjectWitness<T>.SynchronizeObjectWitness(System.IObserver<T>! observer, object! gate) -> void
+ReactiveUI.Primitives.Advanced.TaskAnySink<T>
+ReactiveUI.Primitives.Advanced.TaskAnySink<T>.Dispose() -> void
+ReactiveUI.Primitives.Advanced.TaskAnySink<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Advanced.TaskAnySink<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Advanced.TaskAnySink<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Advanced.TaskAnySink<T>.RegisterCancellation() -> void
+ReactiveUI.Primitives.Advanced.TaskAnySink<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.Advanced.TaskAnySink<T>.Task.get -> System.Threading.Tasks.Task<bool>!
+ReactiveUI.Primitives.Advanced.TaskAnySink<T>.TaskAnySink(System.Func<T, bool>! predicate, System.Threading.CancellationToken cancellationToken) -> void
+ReactiveUI.Primitives.Advanced.TaskAnySink<T>.TaskAnySink(System.Threading.CancellationToken cancellationToken) -> void
+ReactiveUI.Primitives.Advanced.TaskCountSink<T>
+ReactiveUI.Primitives.Advanced.TaskCountSink<T>.Dispose() -> void
+ReactiveUI.Primitives.Advanced.TaskCountSink<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Advanced.TaskCountSink<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Advanced.TaskCountSink<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Advanced.TaskCountSink<T>.RegisterCancellation() -> void
+ReactiveUI.Primitives.Advanced.TaskCountSink<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.Advanced.TaskCountSink<T>.Task.get -> System.Threading.Tasks.Task<int>!
+ReactiveUI.Primitives.Advanced.TaskCountSink<T>.TaskCountSink(System.Func<T, bool>! predicate, System.Threading.CancellationToken cancellationToken) -> void
+ReactiveUI.Primitives.Advanced.TaskCountSink<T>.TaskCountSink(System.Threading.CancellationToken cancellationToken) -> void
 ReactiveUI.Primitives.Advanced.TaskChainCoordinator<T>
 ReactiveUI.Primitives.Advanced.TaskChainCoordinator<T>.Dispose() -> void
 ReactiveUI.Primitives.Advanced.TaskChainCoordinator<T>.Run(System.IObservable<System.Threading.Tasks.Task<T>!>! sources) -> ReactiveUI.Primitives.Advanced.TaskChainCoordinator<T>!
@@ -57,3 +92,11 @@ ReactiveUI.Primitives.Advanced.TaskChainCoordinator<T>.TaskChainCoordinator(Syst
 ReactiveUI.Primitives.Advanced.TaskChainSignal<T>
 ReactiveUI.Primitives.Advanced.TaskChainSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Advanced.TaskChainSignal<T>.TaskChainSignal(System.IObservable<System.Threading.Tasks.Task<T>!>! sources) -> void
+static ReactiveUI.Primitives.Signals.Signal.Expire<T>(System.IObservable<T>! source, System.TimeSpan dueTime) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Signals.Signal.Expire<T>(System.IObservable<T>! source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Signals.Signal.RunAsync<TSource>(System.IObservable<TSource>! source) -> ReactiveUI.Primitives.Signals.IAwaitSignal<TSource>!
+static ReactiveUI.Primitives.Signals.Signal.RunAsync<TSource>(System.IObservable<TSource>! source, System.Threading.CancellationToken cancellationToken) -> ReactiveUI.Primitives.Signals.IAwaitSignal<TSource>!
+static ReactiveUI.Primitives.Signals.Signal.Timeout<T>(System.IObservable<T>! source, System.TimeSpan dueTime) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Signals.Signal.Timeout<T>(System.IObservable<T>! source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Signals.Signal.ToTask<TSource>(System.IObservable<TSource>! source) -> System.Threading.Tasks.Task<TSource>!
+static ReactiveUI.Primitives.Signals.Signal.ToTask<TSource>(System.IObservable<TSource>! source, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<TSource>!
