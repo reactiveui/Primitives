@@ -180,7 +180,7 @@ public sealed record AsyncContext
             var ts = AsyncContext.TaskScheduler;
             if (ts is not null && ts != TaskScheduler.Default)
             {
-                Task.Factory.StartNew(continuation, CancellationToken.None, TaskCreationOptions.DenyChildAttach, ts);
+                _ = Task.Factory.StartNew(continuation, CancellationToken.None, TaskCreationOptions.DenyChildAttach, ts);
                 return;
             }
 
@@ -196,7 +196,7 @@ public sealed record AsyncContext
             // path Yield takes by default, so the saving lands on the operator's hot path.
             if (ts is null || ts == TaskScheduler.Default)
             {
-                ThreadPool.UnsafeQueueUserWorkItem(static c => ((Action)c!).Invoke(), continuation);
+                _ = ThreadPool.UnsafeQueueUserWorkItem(static c => ((Action)c!).Invoke(), continuation);
             }
         }
 
@@ -240,9 +240,10 @@ public sealed record AsyncContext
 
         /// <inheritdoc/>
         protected override void QueueTask(Task task) =>
-            scheduler.Schedule(task, (_, t) =>
+            scheduler.Schedule(task, (sequencer, t) =>
             {
-                TryExecuteTask(t);
+                _ = sequencer;
+                _ = TryExecuteTask(t);
                 return EmptyDisposable.Instance;
             });
 

@@ -41,10 +41,7 @@ public static partial class LinqExtensions
 
         for (var i = 0; i < sources.Length; i++)
         {
-            if (sources[i] is null)
-            {
-                throw new ArgumentNullException(nameof(sources));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(sources[i]);
         }
 
         return new BlendUniqueSignal<T>(sources, comparer ?? EqualityComparer<T>.Default);

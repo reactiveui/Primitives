@@ -113,8 +113,8 @@ public class OperatorAfterTerminalGuardTests
             o.OnError(new InvalidOperationException("retry-after-dispose"));
             return EmptyDisposable.Instance;
         });
-        var sub = source.OnErrorRetry(
-            (Exception _) => { },
+        var sub = source.OnErrorRetry<int, InvalidOperationException>(
+            static _ => { },
             10,
             TimeSpan.FromMilliseconds(LongDelayMs),
             TaskPoolSequencer.Default).Subscribe(static _ => { });
@@ -458,9 +458,9 @@ public class OperatorAfterTerminalGuardTests
     {
         Subject<int> subject = new();
         TaskCompletionSource processed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = subject.SubscribeSynchronous(_ =>
+        using var sub = subject.SubscribeSynchronous(value =>
         {
-            processed.TrySetResult();
+            _ = processed.TrySetResult();
             return default;
         });
         subject.OnNext(1);

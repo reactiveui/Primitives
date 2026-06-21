@@ -35,21 +35,21 @@ public class ReplaySignalTests
     [Test]
     public void Constructor_ArgumentChecking()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1)));
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1, EmptySequencer.Instance)));
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1, TimeSpan.Zero)));
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1)));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1, EmptySequencer.Instance)));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(-1, TimeSpan.Zero)));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() =>
             CreateAndDispose(() => new(-1, TimeSpan.Zero, EmptySequencer.Instance)));
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(TimeSpan.FromTicks(-1))));
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(TimeSpan.FromTicks(-1))));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() =>
             CreateAndDispose(() => new(TimeSpan.FromTicks(-1), EmptySequencer.Instance)));
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(0, TimeSpan.FromTicks(-1))));
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => CreateAndDispose(() => new(0, TimeSpan.FromTicks(-1))));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() =>
             CreateAndDispose(() => new(0, TimeSpan.FromTicks(-1), EmptySequencer.Instance)));
-        Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(null!)));
-        Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(0, null!)));
-        Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(TimeSpan.Zero, null!)));
-        Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(0, TimeSpan.Zero, null!)));
+        _ = Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(null!)));
+        _ = Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(0, null!)));
+        _ = Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(TimeSpan.Zero, null!)));
+        _ = Assert.Throws<ArgumentNullException>(() => CreateAndDispose(() => new(0, TimeSpan.Zero, null!)));
 
         // zero allowed
         CreateAndDispose(() => new(0));
@@ -138,20 +138,20 @@ public class ReplaySignalTests
     [Test]
     public void OnError_ArgumentChecking()
     {
-        Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>().OnError(null!));
-        Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(1).OnError(null!));
-        Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(Two).OnError(null!));
-        Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(EmptySequencer.Instance).OnError(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>().OnError(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(1).OnError(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(Two).OnError(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(EmptySequencer.Instance).OnError(null!));
     }
 
     /// <summary>Subscribes the argument checking.</summary>
     [Test]
     public void Subscribe_ArgumentChecking()
     {
-        Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>().Subscribe(null!));
-        Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(1).Subscribe(null!));
-        Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(Two).Subscribe(null!));
-        Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(EmptySequencer.Instance).Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>().Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(1).Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(Two).Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => new ReplaySignal<int>(EmptySequencer.Instance).Subscribe(null!));
     }
 
     /// <summary>Verifies subjects, replay, behavior, state, and connectable aliases cover late terminal branches.</summary>
@@ -160,7 +160,7 @@ public class ReplaySignalTests
     public async Task SubjectsReplayBehaviorStateAndConnectableAliasesCoverLateTerminalBranches()
     {
         BehaviorSignal<int> behavior = new(One);
-        await Assert.That(behavior.ToString()!.Contains(nameof(BehaviorSignal<int>), StringComparison.Ordinal))
+        await Assert.That(behavior.ToString()!.Contains(nameof(BehaviorSignal<>), StringComparison.Ordinal))
             .IsTrue();
         RecordingWitness<int> initial = new();
         using var behaviorSubscription = behavior.Subscribe(initial);
@@ -210,7 +210,7 @@ public class ReplaySignalTests
         await Assert.That(replayLateError.Errors[0].Message).IsEqualTo("replay");
         replayError.Dispose();
         replayError.Dispose();
-        Assert.Throws<ObjectDisposedException>(() => replayError.Subscribe(new RecordingWitness<int>()));
+        _ = Assert.Throws<ObjectDisposedException>(() => replayError.Subscribe(new RecordingWitness<int>()));
         VirtualClock clock = new(DateTimeOffset.UnixEpoch);
         ReplaySignal<int> windowedReplay = new(Ten, TimeSpan.FromTicks(Two), clock);
         windowedReplay.OnNext(One);

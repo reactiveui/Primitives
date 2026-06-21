@@ -1,0 +1,83 @@
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// ReactiveUI Association Incorporated licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
+
+using System.Collections.Specialized;
+using System.ComponentModel;
+
+#if REACTIVE_SHIM
+namespace ReactiveUI.Primitives.Reactive.Advanced;
+#else
+namespace ReactiveUI.Primitives.Advanced;
+#endif
+
+/// <summary>Converts an event add/remove pair into event-pattern notifications.</summary>
+/// <typeparam name="TEventHandler">The event delegate type.</typeparam>
+/// <typeparam name="TEventArgs">The event argument type.</typeparam>
+public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : IObservable<EventPattern<TEventArgs>>
+    where TEventHandler : Delegate
+    where TEventArgs : EventArgs
+{
+    /// <summary>Initializes a new instance of the <see cref="FromEventPatternSignal{TEventHandler, TEventArgs}"/> class.</summary>
+    /// <param name="addHandler">The action that attaches the generated handler.</param>
+    /// <param name="removeHandler">The action that detaches the generated handler.</param>
+    public FromEventPatternSignal(Action<TEventHandler> addHandler, Action<TEventHandler> removeHandler)
+    {
+        AddHandler = addHandler;
+        RemoveHandler = removeHandler;
+    }
+
+    /// <summary>Gets the action that attaches the generated handler.</summary>
+    private Action<TEventHandler> AddHandler { get; }
+
+    /// <summary>Gets the action that detaches the generated handler.</summary>
+    private Action<TEventHandler> RemoveHandler { get; }
+
+    /// <inheritdoc/>
+    public IDisposable Subscribe(IObserver<EventPattern<TEventArgs>> observer)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(observer);
+
+        var handler = CreateHandler(observer);
+        AddHandler(handler);
+        return Scope.Create(() => RemoveHandler(handler));
+    }
+
+    /// <summary>Creates a supported event delegate for the observer.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <returns>The generated event handler.</returns>
+    private static TEventHandler CreateHandler(IObserver<EventPattern<TEventArgs>> observer)
+    {
+        if (typeof(TEventHandler) == typeof(EventHandler))
+        {
+            EventHandler typed = (sender, args) => observer.OnNext(new(sender, (TEventArgs)args));
+            return (TEventHandler)(object)typed;
+        }
+
+        if (typeof(TEventHandler) == typeof(PropertyChangedEventHandler))
+        {
+            PropertyChangedEventHandler typed = (sender, args) => observer.OnNext(new(sender, (TEventArgs)(EventArgs)args));
+            return (TEventHandler)(object)typed;
+        }
+
+        if (typeof(TEventHandler) == typeof(NotifyCollectionChangedEventHandler))
+        {
+            NotifyCollectionChangedEventHandler typed = (sender, args) => observer.OnNext(new(sender, (TEventArgs)(EventArgs)args));
+            return (TEventHandler)(object)typed;
+        }
+
+        if (typeof(TEventHandler) == typeof(ListChangedEventHandler))
+        {
+            ListChangedEventHandler typed = (sender, args) => observer.OnNext(new(sender, (TEventArgs)(EventArgs)args));
+            return (TEventHandler)(object)typed;
+        }
+
+        if (typeof(TEventHandler) == typeof(EventHandler<TEventArgs>))
+        {
+            EventHandler<TEventArgs> typed = (sender, args) => observer.OnNext(new(sender, args));
+            return (TEventHandler)(object)typed;
+        }
+
+        throw new NotSupportedException($"Event handler type '{typeof(TEventHandler)}' is not supported.");
+    }
+}

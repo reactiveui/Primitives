@@ -35,7 +35,7 @@ internal sealed class SynchronizedSequencerQueue<TAbsolute>
     {
         lock (_gate)
         {
-            _queue.Remove(item);
+            _ = _queue.Remove(item);
         }
     }
 
@@ -50,7 +50,7 @@ internal sealed class SynchronizedSequencerQueue<TAbsolute>
                 var next = _queue.Peek();
                 if (next.IsDisposed)
                 {
-                    _queue.Dequeue();
+                    _ = _queue.Dequeue();
                 }
                 else
                 {

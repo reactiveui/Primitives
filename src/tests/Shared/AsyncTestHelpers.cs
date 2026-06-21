@@ -13,7 +13,7 @@ internal static class AsyncTestHelpers
     /// <param name="cancellationToken">Optional cancellation token.</param>
     /// <returns>A tuple containing the collected items and the completion result.</returns>
     internal static Task<(List<T> Items, Result? Completion)> CollectAsync<T>(
-        SignalAsync<T> source,
+        IObservableAsync<T> source,
         CancellationToken cancellationToken = default) =>
         CollectAsync(source, TimeProvider.System, cancellationToken);
 
@@ -27,7 +27,7 @@ internal static class AsyncTestHelpers
     /// <param name="cancellationToken">Optional cancellation token.</param>
     /// <returns>A tuple containing the collected items and the completion result.</returns>
     internal static async Task<(List<T> Items, Result? Completion)> CollectAsync<T>(
-        SignalAsync<T> source,
+        IObservableAsync<T> source,
         TimeProvider timeProvider,
         CancellationToken cancellationToken = default)
     {
@@ -67,7 +67,7 @@ internal static class AsyncTestHelpers
     /// <param name="timeoutMs">The timeout in milliseconds before the operation is cancelled.</param>
     /// <returns>A list of all collected items.</returns>
     internal static async Task<List<T>> ToListWithTimeoutAsync<T>(
-        SignalAsync<T> source,
+        IObservableAsync<T> source,
         int timeoutMs = 5_000)
     {
         using var cts = new CancellationTokenSource(timeoutMs);

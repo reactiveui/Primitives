@@ -27,15 +27,15 @@ public partial class ReactiveExtensionsTests
             if (x)
             {
                 await Task.Delay(1000);
-                Interlocked.Increment(ref result);
+                _ = Interlocked.Increment(ref result);
             }
             else
             {
                 await Task.Delay(500);
-                Interlocked.Decrement(ref result);
+                _ = Interlocked.Decrement(ref result);
             }
 
-            Interlocked.Increment(ref itterations);
+            _ = Interlocked.Increment(ref itterations);
         });
         subject.OnNext(true);
         subject.OnNext(false);
@@ -45,7 +45,7 @@ public partial class ReactiveExtensionsTests
         subject.OnNext(false);
         while (Volatile.Read(ref itterations) < SampleValue6)
         {
-            Thread.Yield();
+            _ = Thread.Yield();
         }
 
         // Then
@@ -74,18 +74,18 @@ public partial class ReactiveExtensionsTests
                 if (x.Value)
                 {
                     await Task.Delay(LongDelayMilliseconds);
-                    Interlocked.Increment(ref result);
+                    _ = Interlocked.Increment(ref result);
                 }
                 else
                 {
                     await Task.Delay(ShortDelayMilliseconds);
-                    Interlocked.Decrement(ref result);
+                    _ = Interlocked.Decrement(ref result);
                 }
             }
             finally
             {
                 x.Sync.Dispose();
-                Interlocked.Increment(ref itterations);
+                _ = Interlocked.Increment(ref itterations);
             }
         }
 
@@ -116,15 +116,15 @@ public partial class ReactiveExtensionsTests
             if (x)
             {
                 await Task.Delay(1000);
-                Interlocked.Increment(ref result);
+                _ = Interlocked.Increment(ref result);
             }
             else
             {
                 await Task.Delay(500);
-                Interlocked.Decrement(ref result);
+                _ = Interlocked.Decrement(ref result);
             }
 
-            Interlocked.Increment(ref itterations);
+            _ = Interlocked.Increment(ref itterations);
         });
         subject.OnNext(true);
         subject.OnNext(false);
@@ -134,7 +134,7 @@ public partial class ReactiveExtensionsTests
         subject.OnNext(false);
         while (Volatile.Read(ref itterations) < SampleValue6)
         {
-            Thread.Yield();
+            _ = Thread.Yield();
         }
 
         // Then
@@ -334,7 +334,7 @@ public partial class ReactiveExtensionsTests
         using var sub = source.SubscribeAsync(async x => results.Add(x), ex =>
         {
             caughtException = ex;
-            errorSource.TrySetResult(true);
+            _ = errorSource.TrySetResult(true);
         });
         await errorSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
         using (Assert.Multiple())
@@ -353,7 +353,7 @@ public partial class ReactiveExtensionsTests
         List<int> results = [];
         var errorHandled = false;
         TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        subject.SubscribeSynchronous(
+        _ = subject.SubscribeSynchronous(
             async v =>
             {
                 await Task.Yield();
@@ -382,12 +382,12 @@ public partial class ReactiveExtensionsTests
         List<int> results = [];
         TaskCompletionSource onNextCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource errorHandled = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        subject.SubscribeSynchronous(
+        _ = subject.SubscribeSynchronous(
             async v =>
             {
                 await Task.Yield();
                 results.Add(v);
-                onNextCompleted.TrySetResult();
+                onNextCompleted.SetResult();
             },
             _ => errorHandled.TrySetResult());
         subject.OnNext(1);
@@ -409,7 +409,7 @@ public partial class ReactiveExtensionsTests
         Subject<int> subject = new();
         List<int> results = [];
         TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        subject.SubscribeSynchronous(
+        _ = subject.SubscribeSynchronous(
             async v =>
             {
                 await Task.Yield();
@@ -436,7 +436,7 @@ public partial class ReactiveExtensionsTests
         Subject<int> subject = new();
         List<int> results = [];
         TaskCompletionSource allReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        subject.SubscribeSynchronous(async v =>
+        _ = subject.SubscribeSynchronous(async v =>
         {
             await Task.Yield();
             results.Add(v);
@@ -473,7 +473,7 @@ public partial class ReactiveExtensionsTests
             () =>
             {
                 completed = true;
-                completionSource.TrySetResult(true);
+                _ = completionSource.TrySetResult(true);
             });
         await completionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
         using (Assert.Multiple())

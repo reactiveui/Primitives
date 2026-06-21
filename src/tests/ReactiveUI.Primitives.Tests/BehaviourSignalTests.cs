@@ -215,8 +215,8 @@ public class BehaviourSignalTests
         BehaviorSignal<int> s = new(InitialValue);
         await Assert.That(s.Value).IsEqualTo(InitialValue);
         s.OnError(new InvalidOperationException());
-        Assert.Throws<InvalidOperationException>(() => _ = s.Value);
-        Assert.Throws<InvalidOperationException>(() => s.TryGetValue(out _));
+        _ = Assert.Throws<InvalidOperationException>(() => _ = s.Value);
+        _ = Assert.Throws<InvalidOperationException>(() => s.TryGetValue(out _));
     }
 
     /// <summary>Values the throws on dispose.</summary>
@@ -227,7 +227,7 @@ public class BehaviourSignalTests
         BehaviorSignal<int> s = new(InitialValue);
         await Assert.That(s.Value).IsEqualTo(InitialValue);
         s.Dispose();
-        Assert.Throws<ObjectDisposedException>(() => _ = s.Value);
+        _ = Assert.Throws<ObjectDisposedException>(() => _ = s.Value);
         await Assert.That(s.TryGetValue(out _)).IsFalse();
     }
 }

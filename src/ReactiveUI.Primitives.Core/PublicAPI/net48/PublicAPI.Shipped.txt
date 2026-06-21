@@ -422,6 +422,7 @@ ReactiveUI.Primitives.ExceptionExtensions.extension(System.Exception!).Throw() -
 ReactiveUI.Primitives.Handle<T1, T2, T3>
 ReactiveUI.Primitives.Handle<T1, T2>
 ReactiveUI.Primitives.Handle<T>
+ReactiveUI.Primitives.Optional
 ReactiveUI.Primitives.Optional<T>
 ReactiveUI.Primitives.Optional<T>.Equals(ReactiveUI.Primitives.Optional<T> other) -> bool
 ReactiveUI.Primitives.Optional<T>.HasValue.get -> bool
@@ -670,6 +671,7 @@ static ReactiveUI.Primitives.Core.Moment<T>.operator ==(ReactiveUI.Primitives.Co
 static ReactiveUI.Primitives.Core.TimeInterval<T>.operator !=(ReactiveUI.Primitives.Core.TimeInterval<T> first, ReactiveUI.Primitives.Core.TimeInterval<T> second) -> bool
 static ReactiveUI.Primitives.Core.TimeInterval<T>.operator ==(ReactiveUI.Primitives.Core.TimeInterval<T> first, ReactiveUI.Primitives.Core.TimeInterval<T> second) -> bool
 static ReactiveUI.Primitives.ExceptionExtensions.Throw(this System.Exception! exception) -> void
+static ReactiveUI.Primitives.Optional.Some<T>(T value) -> ReactiveUI.Primitives.Optional<T>
 static ReactiveUI.Primitives.Optional<T>.Create(T value) -> ReactiveUI.Primitives.Optional<T>
 static ReactiveUI.Primitives.Optional<T>.Empty.get -> ReactiveUI.Primitives.Optional<T>
 static ReactiveUI.Primitives.Optional<T>.FromOptional(in ReactiveUI.Primitives.Optional<T> value) -> T?

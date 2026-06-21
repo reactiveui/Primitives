@@ -111,7 +111,7 @@
     <Using Include="ReactiveUI.Primitives.Internal.ArgumentExceptionHelper" Alias="ArgumentExceptionHelper" />
     <Using Include="ReactiveUI.Primitives.Internal.ArgumentOutOfRangeExceptionHelper" Alias="ArgumentOutOfRangeExceptionHelper" />
   </ItemGroup>
-  
+
   <ItemGroup Condition="!$(TargetFramework.StartsWith('net4')) and '$(IsTestProject)' != 'true'">
     <Using Include="System.ArgumentNullException" Alias="ArgumentExceptionHelper" />
     <Using Include="System.ArgumentOutOfRangeException" Alias="ArgumentOutOfRangeExceptionHelper" />

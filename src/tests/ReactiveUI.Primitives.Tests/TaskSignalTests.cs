@@ -26,6 +26,10 @@ public class TaskSignalTests
         await Assert.That(taskSignal.IsDisposed).IsTrue();
         await Assert.That(taskSignal.IsCancellationRequested).IsTrue();
         await Assert.That(canceled.Count).IsEqualTo(1);
-        Assert.Throws<ArgumentNullException>(() => _ = new TaskSignal<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            TaskSignal<int> invalid = new(null!);
+            GC.KeepAlive(invalid);
+        });
     }
 }

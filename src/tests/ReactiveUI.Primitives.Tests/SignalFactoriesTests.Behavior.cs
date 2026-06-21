@@ -32,9 +32,9 @@ public partial class SignalFactoriesTests
         List<string> taskErrors = [];
         List<int> asyncValues = [];
         List<string> asyncErrors = [];
-        Signal.Use(() => EmptyDisposable.Instance, _ => (IObservable<int>)null!)
+        _ = Signal.Use(() => EmptyDisposable.Instance, _ => (IObservable<int>)null!)
             .Subscribe(_ => { }, ex => useErrors.Add(ex.Message));
-        Signal.Use<IDisposable, int>(() => throw new InvalidOperationException("resource"), _ => Signal.Emit(1))
+        _ = Signal.Use<IDisposable, int>(() => throw new InvalidOperationException("resource"), _ => Signal.Emit(1))
             .Subscribe(_ => { }, ex => useErrors.Add(ex.Message));
         await ObserveTaskError(Task.FromCanceled<int>(new(true)), taskErrors);
         await ObserveTaskError(Task.FromException<int>(new InvalidOperationException("faulted")), taskErrors);
@@ -46,7 +46,7 @@ public partial class SignalFactoriesTests
             throw new InvalidOperationException("async");
         }
 
-        Signal.FromAsyncEnumerable(ThrowingAsyncEnumerable())
+        _ = Signal.FromAsyncEnumerable(ThrowingAsyncEnumerable())
             .Subscribe(asyncValues.Add, ex => asyncErrors.Add(ex.Message));
         await TestPolling.SpinUntil(() => asyncErrors.Count == 1, TimeSpan.FromSeconds(2));
         var firstFailure = await AssertTaskFault(
@@ -73,7 +73,7 @@ public partial class SignalFactoriesTests
     /// <returns>A task that completes when the error has been observed.</returns>
     private static async Task ObserveTaskError(Task<int> task, List<string> errors)
     {
-        Signal.FromTask(task).Subscribe(_ => { }, ex => errors.Add(ex.GetType().Name));
+        _ = Signal.FromTask(task).Subscribe(_ => { }, ex => errors.Add(ex.GetType().Name));
         await TestPolling.SpinUntil(() => errors.Count > 0, TimeSpan.FromSeconds(2));
     }
 

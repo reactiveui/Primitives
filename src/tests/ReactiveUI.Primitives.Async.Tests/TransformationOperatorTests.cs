@@ -11,6 +11,12 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests for transformation operators: Select, SelectMany, Scan, Do, Cast, OfType.</summary>
 public class TransformationOperatorTests
 {
+    /// <summary>Sample integer value one.</summary>
+    private const int One = 1;
+
+    /// <summary>Sample integer value two.</summary>
+    private const int Two = 2;
+
     /// <summary>Number of inputs fed into the async-accumulator <c>Scan</c> sync-result test.</summary>
     private const int ScanInputCount = 3;
 
@@ -93,11 +99,109 @@ public class TransformationOperatorTests
         await Assert.That(result).Contains("2:20");
     }
 
+    /// <summary>Verifies SelectMany waits for active inner sequences after the outer sequence completes.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectManyOuterCompletesBeforeInner_ThenWaitsForInnerCompletion()
+    {
+        DirectSource<int> outer = new();
+        DirectSource<int> inner = new();
+        List<int> values = [];
+        Result? completion = null;
+
+        await using var subscription = await outer
+            .SelectMany(_ => inner)
+            .SubscribeAsync(
+                (value, _) =>
+                {
+                    values.Add(value);
+                    return default;
+                },
+                null,
+                result =>
+                {
+                    completion = result;
+                    return default;
+                });
+
+        await outer.EmitNext(One);
+        await inner.EmitNext(Two);
+        await outer.Complete(Result.Success);
+        await Assert.That(completion.HasValue).IsFalse();
+
+        await inner.Complete(Result.Success);
+        await AsyncTestHelpers.WaitForConditionAsync(
+            () => completion.HasValue,
+            TimeSpan.FromSeconds(5));
+
+        await Assert.That(values).Contains(Two);
+        await Assert.That(completion!.Value.IsSuccess).IsTrue();
+    }
+
+    /// <summary>Verifies SelectMany forwards inner completion failures to the downstream observer.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectManyInnerFails_ThenCompletesWithFailure()
+    {
+        DirectSource<int> outer = new();
+        DirectSource<int> inner = new();
+        InvalidOperationException expected = new("select-many-inner");
+        Result? completion = null;
+
+        await using var subscription = await outer
+            .SelectMany(_ => inner)
+            .SubscribeAsync(
+                (_, _) => default,
+                null,
+                result =>
+                {
+                    completion = result;
+                    return default;
+                });
+
+        await outer.EmitNext(One);
+        await inner.Complete(Result.Failure(expected));
+        await AsyncTestHelpers.WaitForConditionAsync(
+            () => completion.HasValue,
+            TimeSpan.FromSeconds(5));
+
+        await Assert.That(completion!.Value.IsFailure).IsTrue();
+        await Assert.That(completion.Value.Exception).IsSameReferenceAs(expected);
+    }
+
+    /// <summary>Verifies SelectMany forwards inner subscription failures to the downstream observer.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectManyInnerSubscribeThrows_ThenCompletesWithFailure()
+    {
+        InvalidOperationException expected = new("select-many-subscribe");
+        Result? completion = null;
+
+        await using var subscription = await SignalAsync
+            .Return(One)
+            .SelectMany(_ => SignalAsync.Create<int>((_, _) => throw expected))
+            .SubscribeAsync(
+                (_, _) => default,
+                null,
+                result =>
+                {
+                    completion = result;
+                    return default;
+                });
+
+        await AsyncTestHelpers.WaitForConditionAsync(
+            () => completion.HasValue,
+            TimeSpan.FromSeconds(5));
+
+        await Assert.That(completion!.Value.IsFailure).IsTrue();
+        await Assert.That(completion.Value.Exception).IsSameReferenceAs(expected);
+    }
+
     /// <summary>Tests SelectMany null selector throws.</summary>
     [Test]
     public void WhenSelectManyNullSelector_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(() =>
-            SignalAsync.Return(1).SelectMany((Func<int, SignalAsync<int>>)null!));
+            SignalAsync.Return(1).SelectMany((Func<int, IObservableAsync<int>>)null!));
 
     /// <summary>Tests sync Scan emits running accumulation.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -167,12 +271,12 @@ public class TransformationOperatorTests
             exception =>
             {
                 errors.Add(exception);
-                errored.TrySetResult();
+                _ = errored.TrySetResult();
             },
             result =>
             {
                 completions.Add(result);
-                completed.TrySetResult();
+                _ = completed.TrySetResult();
             }).SubscribeAsync(static (_, _) => default);
         await Task.WhenAll(errored.Task, completed.Task).WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(nextValues).IsCollectionEqualTo([ExpectedFirst, ExpectedSecond]);
@@ -204,7 +308,7 @@ public class TransformationOperatorTests
                 },
                 _ =>
                 {
-                    done.TrySetResult();
+                    IgnoredResult.Of(done.TrySetResult());
                     return default;
                 });
         await done.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -250,13 +354,13 @@ public class TransformationOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             },
             _ =>
             {
                 completed = true;
-                completionTcs.TrySetResult();
+                IgnoredResult.Of(completionTcs.TrySetResult());
                 return default;
             });
         await Task.WhenAll(errorTcs.Task, completionTcs.Task).WaitAsync(TimeSpan.FromSeconds(5));
@@ -336,7 +440,7 @@ public class TransformationOperatorTests
         await using var sub = await source.Cast<object, string>().SubscribeAsync((_, _) => default, null, result =>
         {
             completionResult = result;
-            tcs.TrySetResult();
+            _ = tcs.TrySetResult();
             return default;
         });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -468,7 +572,7 @@ public class TransformationOperatorTests
             },
             _ =>
             {
-                tcs.TrySetResult();
+                IgnoredResult.Of(tcs.TrySetResult());
                 return default;
             });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -496,7 +600,7 @@ public class TransformationOperatorTests
             capturedResult = result;
         }).SubscribeAsync((_, _) => default, null, _ =>
         {
-            tcs.TrySetResult();
+            IgnoredResult.Of(tcs.TrySetResult());
             return default;
         });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -533,7 +637,7 @@ public class TransformationOperatorTests
                 },
                 _ =>
                 {
-                    tcs.TrySetResult();
+                    IgnoredResult.Of(tcs.TrySetResult());
                     return default;
                 });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -587,7 +691,7 @@ public class TransformationOperatorTests
             },
             _ =>
             {
-                tcs.TrySetResult();
+                IgnoredResult.Of(tcs.TrySetResult());
                 return default;
             });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -691,7 +795,7 @@ public class TransformationOperatorTests
         await using var sub = await SignalAsync.Return(42).Yield().SubscribeAsync((_, _) => default, null, result =>
         {
             capturedResult = result;
-            tcs.TrySetResult();
+            _ = tcs.TrySetResult();
             return default;
         });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -715,7 +819,7 @@ public class TransformationOperatorTests
         await using var sub = await source.Yield().SubscribeAsync((_, _) => default, null, result =>
         {
             capturedResult = result;
-            tcs.TrySetResult();
+            _ = tcs.TrySetResult();
             return default;
         });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -770,7 +874,7 @@ public class TransformationOperatorTests
             null,
             _ =>
             {
-                tcs.TrySetResult();
+                IgnoredResult.Of(tcs.TrySetResult());
                 return default;
             });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -803,7 +907,7 @@ public class TransformationOperatorTests
             },
             _ =>
             {
-                tcs.TrySetResult();
+                IgnoredResult.Of(tcs.TrySetResult());
                 return default;
             });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -926,7 +1030,7 @@ public class TransformationOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("scan-sync-error");
@@ -948,7 +1052,7 @@ public class TransformationOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("scan-async-error");

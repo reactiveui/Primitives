@@ -86,11 +86,6 @@ public readonly record struct Optional<T>
     /// <inheritdoc />
     public override string? ToString()
     {
-        if (_value is null)
-        {
-            return "<None>";
-        }
-
-        return !HasValue ? "<None>" : _value.ToString();
+        return _value is null || !HasValue ? "<None>" : _value.ToString();
     }
 }

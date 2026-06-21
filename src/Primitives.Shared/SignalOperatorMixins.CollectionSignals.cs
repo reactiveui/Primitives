@@ -142,44 +142,4 @@ public static partial class LinqExtensions
             return EmptyDisposable.Instance;
         }
     }
-
-    /// <summary>Eager range-backed signal for the with-latest combine fast path.</summary>
-    /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class RangeCombineLatestSignal<TResult> : IObservable<TResult>
-    {
-        /// <summary>The left range source.</summary>
-        private readonly RangeSignal _left;
-
-        /// <summary>The right range source.</summary>
-        private readonly RangeSignal _right;
-
-        /// <summary>The function that combines range values.</summary>
-        private readonly Func<int, int, TResult> _selector;
-
-        /// <summary>Initializes a new instance of the <see cref="RangeCombineLatestSignal{TResult}"/> class.</summary>
-        /// <param name="left">The left range source.</param>
-        /// <param name="right">The right range source.</param>
-        /// <param name="selector">The function that combines range values.</param>
-        internal RangeCombineLatestSignal(RangeSignal left, RangeSignal right, Func<int, int, TResult> selector)
-        {
-            _left = left;
-            _right = right;
-            _selector = selector;
-        }
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<TResult> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            var leftValue = _left.Start + _left.Count - 1;
-            for (var i = 0; i < _right.Count; i++)
-            {
-                observer.OnNext(_selector(leftValue, _right.Start + i));
-            }
-
-            observer.OnCompleted();
-            return EmptyDisposable.Instance;
-        }
-    }
 }

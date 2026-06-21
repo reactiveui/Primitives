@@ -44,7 +44,7 @@ internal sealed class EverySignal : IRequireCurrentThread<long>
         }
 
         SingleDisposable subscription = new();
-        Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run()));
+        _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run()));
         return subscription;
     }
 

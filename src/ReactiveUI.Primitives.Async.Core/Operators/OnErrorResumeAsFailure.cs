@@ -40,10 +40,10 @@ public static partial class SignalAsyncExtensions
     /// <summary>An observable that converts resumable errors from the source into failure completion results.</summary>
     /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
     /// <param name="source">The source observable to monitor for errors.</param>
-    internal sealed class OnErrorResumeAsFailureSignal<T>(IObservableAsync<T> source) : SignalAsync<T>
+    internal sealed class OnErrorResumeAsFailureSignal<T>(IObservableAsync<T> source) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken) =>
             source.SubscribeAsync(new OnErrorResumeAsFailureWitness(observer), cancellationToken);

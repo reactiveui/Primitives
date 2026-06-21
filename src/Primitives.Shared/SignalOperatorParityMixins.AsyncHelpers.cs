@@ -19,7 +19,7 @@ public static partial class LinqExtensions
     /// <param name="source">The observable source to inspect.</param>
     /// <param name="task">The collection task when the source is async-enumerable-backed.</param>
     /// <returns><see langword="true"/> when an async enumerable fast path is available; otherwise, <see langword="false"/>.</returns>
-    private static bool TryCollectArrayFromAsyncEnumerable<T>(IObservable<T> source, [NotNullWhen(true)] out Task<T[]>? task)
+    internal static bool TryCollectArrayFromAsyncEnumerable<T>(IObservable<T> source, [NotNullWhen(true)] out Task<T[]>? task)
     {
         if (source is IAsyncEnumerableBackedSignal<T> asyncEnumerable)
         {

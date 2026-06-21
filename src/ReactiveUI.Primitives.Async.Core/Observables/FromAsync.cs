@@ -20,7 +20,7 @@ public static partial class SignalAsync
     /// <typeparam name="T">The type of the value produced by the factory and emitted by the observable sequence.</typeparam>
     /// <param name="factory">A function that asynchronously produces a value of type <typeparamref name="T"/> when invoked with a <see
     /// cref="CancellationToken"/>. Cannot be null.</param>
-    /// <returns>An <see cref="SignalAsync{T}"/> that emits the value returned by the factory function and then completes.</returns>
+    /// <returns>An observable that emits the value returned by the factory function and then completes.</returns>
     /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="factory"/> is null.</exception>
     [SuppressMessage(
         "Roslynator",
@@ -30,13 +30,6 @@ public static partial class SignalAsync
     {
         ArgumentExceptionHelper.ThrowIfNull(factory);
 
-        return CreateAsBackgroundJob<T>(
-            async (obs, token) =>
-            {
-                var result = await factory(token).ConfigureAwait(false);
-                await obs.OnNextAsync(result, token).ConfigureAwait(false);
-                await obs.OnCompletedAsync(Result.Success).ConfigureAwait(false);
-            },
-            true);
+        return new FromAsyncSignal<T>(factory);
     }
 }

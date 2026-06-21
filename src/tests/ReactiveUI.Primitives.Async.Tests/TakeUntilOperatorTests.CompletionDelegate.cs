@@ -198,7 +198,7 @@ public partial class TakeUntilOperatorTests
             null,
             result =>
             {
-                completed.TrySetResult(result);
+                _ = completed.TrySetResult(result);
                 return default;
             });
         await source.OnNextAsync(1, CancellationToken.None);

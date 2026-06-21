@@ -35,7 +35,7 @@ public partial class SignalTests
             null,
             _ =>
             {
-                completed.TrySetResult();
+                IgnoredResult.Of(completed.TrySetResult());
                 return default;
             });
 
@@ -76,7 +76,7 @@ public partial class SignalTests
             null,
             _ =>
             {
-                completed.TrySetResult();
+                IgnoredResult.Of(completed.TrySetResult());
                 return default;
             });
 
@@ -112,7 +112,7 @@ public partial class SignalTests
             null,
             _ =>
             {
-                completed.TrySetResult();
+                IgnoredResult.Of(completed.TrySetResult());
                 return default;
             });
 
@@ -148,7 +148,7 @@ public partial class SignalTests
             null,
             _ =>
             {
-                completed.TrySetResult();
+                IgnoredResult.Of(completed.TrySetResult());
                 return default;
             });
 
@@ -176,7 +176,7 @@ public partial class SignalTests
             (ex, _) =>
             {
                 errors.Add(ex);
-                errorReceived.TrySetResult();
+                IgnoredResult.Of(errorReceived.TrySetResult());
                 return default;
             });
 
@@ -203,7 +203,7 @@ public partial class SignalTests
             result =>
             {
                 completionResult = result;
-                completed.TrySetResult();
+                _ = completed.TrySetResult();
                 return default;
             });
 
@@ -229,7 +229,7 @@ public partial class SignalTests
             result =>
             {
                 completionResult = result;
-                completed.TrySetResult();
+                _ = completed.TrySetResult();
                 return default;
             });
 
@@ -260,7 +260,7 @@ public partial class SignalTests
             null,
             _ =>
             {
-                completed1.TrySetResult();
+                IgnoredResult.Of(completed1.TrySetResult());
                 return default;
             });
 
@@ -273,7 +273,7 @@ public partial class SignalTests
             null,
             _ =>
             {
-                completed2.TrySetResult();
+                IgnoredResult.Of(completed2.TrySetResult());
                 return default;
             });
 
@@ -309,7 +309,7 @@ public partial class SignalTests
             null,
             _ =>
             {
-                completed.TrySetResult();
+                IgnoredResult.Of(completed.TrySetResult());
                 return default;
             });
 

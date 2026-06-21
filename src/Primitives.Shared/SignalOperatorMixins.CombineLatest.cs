@@ -85,7 +85,7 @@ public static partial class LinqExtensions
         /// <summary>Initializes a new instance of the <see cref="CombineLatestSignal{TResult}"/> class.</summary>
         /// <param name="selector">The array-based selector wrapper.</param>
         /// <param name="sources">The typed source adapters.</param>
-        private CombineLatestSignal(Func<object?[], TResult> selector, ICombineLatestSource<TResult>[] sources)
+        internal CombineLatestSignal(Func<object?[], TResult> selector, ICombineLatestSource<TResult>[] sources)
         {
             _selector = selector;
             _sources = sources;

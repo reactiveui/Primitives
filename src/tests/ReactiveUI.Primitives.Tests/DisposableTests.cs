@@ -108,7 +108,7 @@ public class DisposableTests
         lateSingle.Dispose();
         lateSingle.Create(new ActionDisposable(() => disposedBeforeAssign++));
         await Assert.That(disposedBeforeAssign).IsEqualTo(DoubleDisposalCount);
-        Assert.Throws<ArgumentNullException>(() => lateSingle.Create(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => lateSingle.Create(null!));
         var replaced = 0;
         SingleReplaceableDisposable replaceable = new(
             new ActionDisposable(() => replaced++),
@@ -117,7 +117,7 @@ public class DisposableTests
         replaceable.Dispose();
         replaceable.Create(new ActionDisposable(() => replaced++));
         await Assert.That(replaced).IsEqualTo(ReplaceableDisposalCount);
-        Assert.Throws<ArgumentNullException>(() => replaceable.Create(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => replaceable.Create(null!));
         var disposeFalse = 0;
         ExposedSingleDisposable single = new(new ActionDisposable(() => disposeFalse++));
         single.DisposeFalse();
@@ -161,16 +161,24 @@ public class DisposableTests
         factoryGroup.Dispose();
         factoryGroup.Dispose();
         await Assert.That(factoryDisposed).IsEqualTo(DoubleDisposalCount);
-        Assert.Throws<ArgumentNullException>(() => MultipleDisposable.Create(null!));
-        _ = new AssignmentSlot();
-        _ = new AssignmentSlot(() => { });
-        _ = new AssignmentSlot(EmptyDisposable.Instance);
-        _ = new Slot();
-        _ = new Slot(() => { });
-        _ = new Slot(EmptyDisposable.Instance);
-        _ = new Pocket();
-        _ = new Pocket(EmptyDisposable.Instance, EmptyDisposable.Instance);
-        _ = new Pocket(EmptyDisposable.Instance, EmptyDisposable.Instance, EmptyDisposable.Instance);
+        _ = Assert.Throws<ArgumentNullException>(() => MultipleDisposable.Create(null!));
+        IDisposable[] constructedDisposables =
+        [
+            new AssignmentSlot(),
+            new AssignmentSlot(() => { }),
+            new AssignmentSlot(EmptyDisposable.Instance),
+            new Slot(),
+            new Slot(() => { }),
+            new Slot(EmptyDisposable.Instance),
+            new Pocket(),
+            new Pocket(EmptyDisposable.Instance, EmptyDisposable.Instance),
+            new Pocket(EmptyDisposable.Instance, EmptyDisposable.Instance, EmptyDisposable.Instance),
+        ];
+
+        foreach (var disposable in constructedDisposables)
+        {
+            disposable.Dispose();
+        }
     }
 
     /// <summary>Verifies low-level disposables, collections, and schedulers cover deterministic edges.</summary>
@@ -186,8 +194,12 @@ public class DisposableTests
 
         await Assert.That(multiple.Remove(EmptyDisposable.Instance)).IsTrue();
         await Assert.That(multiple.Remove(new ActionDisposable(() => { }))).IsFalse();
-        Assert.Throws<ArgumentNullException>(() => _ = new MultipleDisposable((IDisposable[])null!));
-        Assert.Throws<ArgumentNullException>(() => multiple.Add(null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            MultipleDisposable invalid = new((IDisposable[])null!);
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() => multiple.Add(null!));
         multiple.Dispose();
         multiple.Dispose();
         using CancellationTokenSource cts = new();
@@ -216,8 +228,8 @@ public class DisposableTests
         await Assert.That(eventPattern.Equals((object)samePattern)).IsTrue();
         await Assert.That(eventPattern.GetHashCode()).IsNotEqualTo(0);
         var current = Sequencer.CurrentThread;
-        Assert.Throws<ArgumentNullException>(() => current.Schedule((Action)null!));
-        Assert.Throws<ArgumentNullException>(() => current.Schedule(One, TimeSpan.Zero, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => current.Schedule((Action)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => current.Schedule(One, TimeSpan.Zero, null!));
         List<int> scheduled = [];
         current.Schedule(One, TimeSpan.FromMilliseconds(1), (_, state) =>
         {
@@ -265,7 +277,7 @@ public class DisposableTests
         await Assert.That(unit.GetHashCode()).IsEqualTo(0);
         await Assert.That(unit.ToString()).IsEqualTo("()");
         await InvokeInternalHandleMembers(thrown);
-        Handle.CatchIgnore<int>(new InvalidOperationException("ignored")).Subscribe(_ => ignored++);
+        _ = Handle.CatchIgnore<int>(new InvalidOperationException("ignored")).Subscribe(_ => ignored++);
         await Assert.That(ignored).IsEqualTo(0);
         BooleanDisposable boolean = new();
         await Assert.That(boolean.IsDisposed).IsFalse();
@@ -281,7 +293,7 @@ public class DisposableTests
         await Assert.That(assignmentDisposed).IsEqualTo(Two);
         await Assert.That(pocketDisposed).IsEqualTo(1);
         SingleDisposable single = new(new ActionDisposable(() => { }), () => { });
-        Assert.Throws<InvalidOperationException>(() => single.Create(EmptyDisposable.Instance));
+        _ = Assert.Throws<InvalidOperationException>(() => single.Create(EmptyDisposable.Instance));
         var replaceableFirst = 0;
         var replaceableSecond = 0;
         SingleReplaceableDisposable replaceable = new(new ActionDisposable(() => replaceableFirst++));
@@ -290,7 +302,7 @@ public class DisposableTests
         await Assert.That(replaceableFirst).IsEqualTo(1);
         await Assert.That(replaceableSecond).IsEqualTo(1);
         MultipleDisposable multiple = [];
-        Assert.Throws<ArgumentNullException>(() => multiple.Remove(null));
+        _ = Assert.Throws<ArgumentNullException>(() => multiple.Remove(null));
         multiple.Dispose();
         var lateDisposed = 0;
         multiple.Add(new ActionDisposable(() => lateDisposed++));
@@ -308,10 +320,10 @@ public class DisposableTests
         Handle<int, int>.Ignore(1, Two);
         Handle<int, int, int>.Ignore(1, Two, Three);
         await Assert.That(Handle<string>.Identity("x")).IsEqualTo("x");
-        Assert.Throws<InvalidOperationException>(() => Handle.Throw(exception));
-        Assert.Throws<InvalidOperationException>(() => Handle<int>.Throw(exception, 1));
-        Assert.Throws<InvalidOperationException>(() => Handle<int, int>.Throw(exception, 1, Two));
-        Assert.Throws<InvalidOperationException>(() => Handle<int, int, int>.Throw(exception, 1, Two, Three));
+        _ = Assert.Throws<InvalidOperationException>(() => Handle.Throw(exception));
+        _ = Assert.Throws<InvalidOperationException>(() => Handle<int>.Throw(exception, 1));
+        _ = Assert.Throws<InvalidOperationException>(() => Handle<int, int>.Throw(exception, 1, Two));
+        _ = Assert.Throws<InvalidOperationException>(() => Handle<int, int, int>.Throw(exception, 1, Two, Three));
     }
 
     /// <summary>Exposes the protected dispose path for coverage.</summary>

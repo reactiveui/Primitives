@@ -4,6 +4,8 @@
 
 using System.Diagnostics.CodeAnalysis;
 
+using ReactiveUI.Primitives.Async.Signals;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>
@@ -29,20 +31,18 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(sources);
 
             var materializedSources = (sources as IObservableAsync<bool>[]) ?? [.. sources];
-            return materializedSources.Length == 0
-                ? SignalAsync.Return(true)
-                : materializedSources.CombineLatest(static values =>
+            return materializedSources.Length == 0 ? new SignalAsync.ReturnSignalAsync<bool>(true) : new SyncLatestEnumerableSignal<bool, bool>(materializedSources, static values =>
+            {
+                for (var i = 0; i < values.Count; i++)
                 {
-                    for (var i = 0; i < values.Count; i++)
+                    if (values[i])
                     {
-                        if (values[i])
-                        {
-                            return false;
-                        }
+                        return false;
                     }
+                }
 
-                    return true;
-                });
+                return true;
+            });
         }
 
         /// <summary>Emits <see langword="true"/> when the latest value from every source sequence is <see langword="true"/>.</summary>
@@ -52,20 +52,18 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(sources);
 
             var materializedSources = (sources as IObservableAsync<bool>[]) ?? [.. sources];
-            return materializedSources.Length == 0
-                ? SignalAsync.Return(true)
-                : materializedSources.CombineLatest(static values =>
+            return materializedSources.Length == 0 ? new SignalAsync.ReturnSignalAsync<bool>(true) : new SyncLatestEnumerableSignal<bool, bool>(materializedSources, static values =>
+            {
+                for (var i = 0; i < values.Count; i++)
                 {
-                    for (var i = 0; i < values.Count; i++)
+                    if (!values[i])
                     {
-                        if (!values[i])
-                        {
-                            return false;
-                        }
+                        return false;
                     }
+                }
 
-                    return true;
-                });
+                return true;
+            });
         }
     }
 
@@ -95,7 +93,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source.Catch(static _ => SignalAsync.Empty<T>());
+            return new CatchSignal<T>(source, static _ => SignalAsync.EmptySignalAsync<T>.Instance, null);
         }
 
         /// <summary>Continues with an empty sequence when the source fails with the specified exception type.</summary>
@@ -108,16 +106,19 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(errorAction);
 
-            return source.Catch(ex =>
-            {
-                if (ex is TException typedException)
+            return new CatchSignal<T>(
+                source,
+                ex =>
                 {
-                    errorAction(typedException);
-                    return SignalAsync.Empty<T>();
-                }
+                    if (ex is not TException typedException)
+                    {
+                        return new SignalAsync.ThrowSignalAsync<T>(ex);
+                    }
 
-                return SignalAsync.Throw<T>(ex);
-            });
+                    errorAction(typedException);
+                    return SignalAsync.EmptySignalAsync<T>.Instance;
+                },
+                null);
         }
 
         /// <summary>Continues with a fallback value when the source completes with a failure result.</summary>
@@ -127,7 +128,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source.Catch(_ => SignalAsync.Return(fallback));
+            return new CatchSignal<T>(source, _ => new SignalAsync.ReturnSignalAsync<T>(fallback), null);
         }
 
         /// <summary>Continues with a fallback value produced from a specific exception type.</summary>
@@ -140,8 +141,13 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(fallbackFactory);
 
-            return source.Catch(ex =>
-                ex is TException typedException ? SignalAsync.Return(fallbackFactory(typedException)) : SignalAsync.Throw<T>(ex));
+            return new CatchSignal<T>(
+                source,
+                ex =>
+                    ex is TException typedException
+                        ? new SignalAsync.ReturnSignalAsync<T>(fallbackFactory(typedException))
+                        : new SignalAsync.ThrowSignalAsync<T>(ex),
+                null);
         }
 
         /// <summary>Registers a side effect that runs when the source is subscribed.</summary>
@@ -152,11 +158,7 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(action);
 
-            return SignalAsync.Create<T>((observer, cancellationToken) =>
-            {
-                action();
-                return source.SubscribeAsync(observer.Wrap(), cancellationToken);
-            });
+            return new DoOnSubscribeSignal<T>(source, action);
         }
 
         /// <summary>Registers an asynchronous side effect that runs when the source is subscribed.</summary>
@@ -167,11 +169,7 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(action);
 
-            return SignalAsync.Create<T>(async (observer, cancellationToken) =>
-            {
-                await action(cancellationToken).ConfigureAwait(false);
-                return await source.SubscribeAsync(observer.Wrap(), cancellationToken).ConfigureAwait(false);
-            });
+            return new DoOnSubscribeAsyncSignal<T>(source, action);
         }
 
         /// <summary>Drops source values while the previous asynchronous action is still running.</summary>
@@ -207,15 +205,7 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(logger);
 
-            return SignalAsync.Create<T>((observer, subscribeToken) => source.SubscribeAsync(
-                observer.OnNextAsync,
-                (exception, token) =>
-                {
-                    logger(exception);
-                    return observer.OnErrorResumeAsync(exception, token);
-                },
-                observer.OnCompletedAsync,
-                subscribeToken));
+            return new LogErrorsSignal<T>(source, logger);
         }
 
         /// <summary>Emits the first value that satisfies the predicate and then completes.</summary>
@@ -260,13 +250,22 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source.Publish(initialValue).RefCount();
+            return new RefCountSignal<T>(
+                new ConnectableSignalAsync<T>(
+                    source,
+                    new SerialReplayLatestSignalAsync<T>(new(initialValue))));
         }
 
         /// <summary>Emits only the first value in each throttle window and suppresses duplicates before and after throttling.</summary>
         /// <param name="throttle">The throttle duration.</param>
         /// <returns>A throttled distinct sequence.</returns>
-        public IObservableAsync<T> ThrottleDistinct(TimeSpan throttle) => source.ThrottleDistinct(throttle, null);
+        public IObservableAsync<T> ThrottleDistinct(TimeSpan throttle)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(throttle, TimeSpan.Zero);
+
+            return new ThrottleDistinctSignal<T>(source, throttle, TimeProvider.System);
+        }
 
         /// <summary>Emits only the first value in each throttle window and suppresses duplicates before and after throttling.</summary>
         /// <param name="throttle">The throttle duration.</param>
@@ -275,14 +274,7 @@ public static partial class SignalAsyncExtensions
         public IObservableAsync<T> ThrottleDistinct(TimeSpan throttle, TimeProvider? timeProvider)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
-#if NET8_0_OR_GREATER
-            ArgumentOutOfRangeException.ThrowIfLessThan(throttle, TimeSpan.Zero);
-#else
-            if (throttle < TimeSpan.Zero)
-            {
-                throw new ArgumentOutOfRangeException(nameof(throttle));
-            }
-#endif
+            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(throttle, TimeSpan.Zero);
 
             return new ThrottleDistinctSignal<T>(source, throttle, timeProvider ?? TimeProvider.System);
         }
@@ -323,7 +315,14 @@ public static partial class SignalAsyncExtensions
         /// <returns>A debounced observable sequence.</returns>
         public IObservableAsync<T> DebounceUntil(
             TimeSpan debounce,
-            Func<T, bool> condition) => source.DebounceUntil(debounce, condition, null);
+            Func<T, bool> condition)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+            ArgumentExceptionHelper.ThrowIfNull(condition);
+            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(debounce, TimeSpan.Zero);
+
+            return new DebounceUntilSignal<T>(source, debounce, condition, TimeProvider.System);
+        }
 
         /// <summary>Delays values until the condition becomes true immediately or the debounce interval elapses.</summary>
         /// <param name="debounce">The debounce interval.</param>
@@ -337,14 +336,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(condition);
-#if NET8_0_OR_GREATER
-            ArgumentOutOfRangeException.ThrowIfLessThan(debounce, TimeSpan.Zero);
-#else
-            if (debounce < TimeSpan.Zero)
-            {
-                throw new ArgumentOutOfRangeException(nameof(debounce));
-            }
-#endif
+            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(debounce, TimeSpan.Zero);
 
             return new DebounceUntilSignal<T>(source, debounce, condition, timeProvider ?? TimeProvider.System);
         }
@@ -367,7 +359,7 @@ public static partial class SignalAsyncExtensions
             var allSources = new IObservableAsync<T>[sources.Length + 1];
             allSources[0] = source;
             sources.CopyTo(allSources, 1);
-            return allSources.CombineLatest(static values =>
+            return new SyncLatestEnumerableSignal<T, T>(allSources, static values =>
             {
                 var min = values[0];
                 for (var i = 1; i < values.Count; i++)
@@ -393,7 +385,7 @@ public static partial class SignalAsyncExtensions
             var allSources = new IObservableAsync<T>[sources.Length + 1];
             allSources[0] = source;
             sources.CopyTo(allSources, 1);
-            return allSources.CombineLatest(static values =>
+            return new SyncLatestEnumerableSignal<T, T>(allSources, static values =>
             {
                 var max = values[0];
                 for (var i = 1; i < values.Count; i++)
@@ -433,9 +425,6 @@ public static partial class SignalAsyncExtensions
             return new WhereIsNotNullSignal<T>(source);
         }
 
-        /// <summary>Keeps non-null reference values.</summary>
-        /// <returns>An observable sequence of non-null values.</returns>
-        public IObservableAsync<T> KeepNotNull() => source.WhereIsNotNull();
     }
 
     /// <summary>Boolean parity helper operators for a boolean observable source sequence.</summary>

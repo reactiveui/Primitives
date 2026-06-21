@@ -61,7 +61,7 @@ public class SinkTerminalTests
     {
         TrackingDisposable sink = new();
         ThrowingObserver<int> observer = new();
-        Assert.Throws<InvalidOperationException>(() =>
+        _ = Assert.Throws<InvalidOperationException>(() =>
             SinkTerminal.Fault(observer, new InvalidOperationException("downstream"), sink));
         await Assert.That(sink.DisposeCount).IsEqualTo(1);
     }

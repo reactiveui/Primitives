@@ -34,7 +34,7 @@ public static partial class SignalAsync
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
         Justification = "Public factory API — caller specifies T explicitly: SignalAsync.Empty<int>().")]
-    public static IObservableAsync<T> Empty<T>() => None<T>();
+    public static IObservableAsync<T> Empty<T>() => EmptySignalAsync<T>.Instance;
 
     /// <summary>
     /// Dedicated singleton observable that signals immediate successful completion on subscribe. Replaces the
@@ -42,7 +42,7 @@ public static partial class SignalAsync
     /// per-T cached instance — no anonymous observable wrapper, no closure, no per-subscribe allocation.
     /// </summary>
     /// <typeparam name="T">The element type of the empty sequence.</typeparam>
-    internal sealed class EmptySignalAsync<T> : SignalAsync<T>
+    internal sealed class EmptySignalAsync<T> : IObservableAsync<T>
     {
         /// <summary>The shared singleton instance for <typeparamref name="T"/>.</summary>
         public static readonly EmptySignalAsync<T> Instance = new();
@@ -53,7 +53,7 @@ public static partial class SignalAsync
         }
 
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

@@ -60,10 +60,10 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The upstream element type.</typeparam>
     /// <typeparam name="TResult">The target element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
-    internal sealed class CastSignal<T, TResult>(IObservableAsync<T> source) : SignalAsync<TResult>
+    internal sealed class CastSignal<T, TResult>(IObservableAsync<T> source) : IObservableAsync<TResult>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<TResult>.SubscribeAsync(
             IObserverAsync<TResult> observer,
             CancellationToken cancellationToken)
         {

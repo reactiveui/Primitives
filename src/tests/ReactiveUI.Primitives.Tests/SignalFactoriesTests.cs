@@ -84,6 +84,9 @@ public partial class SignalFactoriesTests
     /// <summary>The expected message from the map-selector fault branch.</summary>
     private static readonly string[] ExpectedMappedErrors = ["map-fault"];
 
+    /// <summary>The expected values emitted by the direct task runner tests.</summary>
+    private static readonly int[] ExpectedOneTwoThree = [One, Two, Three];
+
     /// <summary>Covers scheduled return, throw, and empty signal implementations.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -91,14 +94,14 @@ public partial class SignalFactoriesTests
     {
         List<int> returned = [];
         var returnCompleted = 0;
-        Signal.Emit(One, Sequencer.CurrentThread)
+        _ = Signal.Emit(One, Sequencer.CurrentThread)
             .Subscribe(returned.Add, ex => throw ex, () => returnCompleted++);
         var emptyCompleted = 0;
-        Signal.None<int>(Sequencer.CurrentThread)
+        _ = Signal.None<int>(Sequencer.CurrentThread)
             .Subscribe(_ => { }, ex => throw ex, () => emptyCompleted++);
         InvalidOperationException error = new("scheduled");
         List<Exception> thrown = [];
-        Signal.Fail<int>(error, Sequencer.CurrentThread).Subscribe(_ => { }, thrown.Add, () => { });
+        _ = Signal.Fail<int>(error, Sequencer.CurrentThread).Subscribe(_ => { }, thrown.Add, () => { });
         await Assert.That(returned.SequenceEqual(SingleFirstExpected)).IsTrue();
         await Assert.That(returnCompleted).IsEqualTo(1);
         await Assert.That(emptyCompleted).IsEqualTo(1);
@@ -122,15 +125,15 @@ public partial class SignalFactoriesTests
         List<long> timerDateValues = [];
         List<long> timerPeriodicValues = [];
         VirtualClock clock = new(DateTimeOffset.UnixEpoch);
-        Signal.Sequence(Three, Three, Sequencer.CurrentThread).Subscribe(rangeValues.Add);
-        Signal.Loop("r").Take(Three).Subscribe(repeatValues.Add);
-        Signal.Loop(Five, Two).Subscribe(repeatCountValues.Add);
-        Signal.Start(() => Seven, Sequencer.CurrentThread).Subscribe(startValues.Add);
-        Signal.Start(() => startActions++, Sequencer.CurrentThread).Subscribe(_ => { });
-        Signal.FromTask(Task.FromResult(Four)).Subscribe(taskValues.Add, ex => taskErrors.Add(ex.GetType().Name));
-        Signal.FromTask(Task.FromException<int>(new InvalidOperationException("task-fault")))
+        _ = Signal.Sequence(Three, Three, Sequencer.CurrentThread).Subscribe(rangeValues.Add);
+        _ = Signal.Loop("r").Take(Three).Subscribe(repeatValues.Add);
+        _ = Signal.Loop(Five, Two).Subscribe(repeatCountValues.Add);
+        _ = Signal.Start(() => Seven, Sequencer.CurrentThread).Subscribe(startValues.Add);
+        _ = Signal.Start(() => startActions++, Sequencer.CurrentThread).Subscribe(_ => { });
+        _ = Signal.FromTask(Task.FromResult(Four)).Subscribe(taskValues.Add, ex => taskErrors.Add(ex.GetType().Name));
+        _ = Signal.FromTask(Task.FromException<int>(new InvalidOperationException("task-fault")))
             .Subscribe(taskValues.Add, ex => taskErrors.Add(ex.GetType().Name));
-        Signal.FromTask(Task.FromCanceled<int>(new(true)))
+        _ = Signal.FromTask(Task.FromCanceled<int>(new(true)))
             .Subscribe(taskValues.Add, ex => taskErrors.Add(ex.GetType().Name));
         await TestPolling.SpinUntil(
             () => taskValues.Count == One && taskErrors.Count == Two,
@@ -138,10 +141,10 @@ public partial class SignalFactoriesTests
         using var disposedTaskSubscription = Signal.FromTask(Task.FromResult(NinetyNine))
             .Subscribe(_ => taskValues.Add(NinetyNine));
         disposedTaskSubscription.Dispose();
-        Signal.After(TimeSpan.FromTicks(Two), clock).Subscribe(afterValues.Add);
-        Signal.Every(TimeSpan.FromTicks(Two), clock).Take(Three).Subscribe(everyValues.Add);
-        Signal.After(DateTimeOffset.UnixEpoch.AddTicks(Three), clock).Subscribe(timerDateValues.Add);
-        Signal.After(TimeSpan.FromTicks(Three), TimeSpan.FromTicks(Two), clock).Subscribe(timerPeriodicValues.Add);
+        _ = Signal.After(TimeSpan.FromTicks(Two), clock).Subscribe(afterValues.Add);
+        _ = Signal.Every(TimeSpan.FromTicks(Two), clock).Take(Three).Subscribe(everyValues.Add);
+        _ = Signal.After(DateTimeOffset.UnixEpoch.AddTicks(Three), clock).Subscribe(timerDateValues.Add);
+        _ = Signal.After(TimeSpan.FromTicks(Three), TimeSpan.FromTicks(Two), clock).Subscribe(timerPeriodicValues.Add);
         clock.AdvanceBy(TimeSpan.FromTicks(Two));
         clock.AdvanceBy(TimeSpan.FromTicks(One));
         clock.AdvanceBy(TimeSpan.FromTicks(Four));
@@ -156,24 +159,24 @@ public partial class SignalFactoriesTests
         await Assert.That(everyValues.SequenceEqual(ExpectedZeroToTwoTicks)).IsTrue();
         await Assert.That(timerDateValues.SequenceEqual(ExpectedSingleZeroTick)).IsTrue();
         await Assert.That(timerPeriodicValues.SequenceEqual(ExpectedZeroToTwoTicks)).IsTrue();
-        Assert.Throws<ArgumentNullException>(() => Signal.Sequence(One, Two, null!));
-        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Sequence(One, -1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Loop(One, -1));
-        Assert.Throws<ArgumentNullException>(() => Signal.FromEnumerable<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.FromEnumerable<int>(null!, CancellationToken.None));
-        Assert.Throws<ArgumentNullException>(() => Signal.FromTask((Task<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.FromAsync((Func<Task<int>>)null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.FromAsync((Func<CancellationToken, Task<int>>)null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Start<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Start(() => One, null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Start((Action)null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Start(() => { }, null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.FromAsyncEnumerable<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.FromAsyncEnumerable<int>(null!, CancellationToken.None));
-        Assert.Throws<ArgumentNullException>(() => Signal.After(TimeSpan.Zero, null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Every(TimeSpan.FromTicks(One), null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.After(DateTimeOffset.UnixEpoch, null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.After(TimeSpan.Zero, TimeSpan.FromTicks(One), null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Sequence(One, Two, null!));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Sequence(One, -1));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Loop(One, -1));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.FromEnumerable<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.FromEnumerable<int>(null!, CancellationToken.None));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.FromTask((Task<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.FromAsync((Func<Task<int>>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.FromAsync((Func<CancellationToken, Task<int>>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Start<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Start(() => One, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Start((Action)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Start(() => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.FromAsyncEnumerable<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.FromAsyncEnumerable<int>(null!, CancellationToken.None));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.After(TimeSpan.Zero, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Every(TimeSpan.FromTicks(One), null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.After(DateTimeOffset.UnixEpoch, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.After(TimeSpan.Zero, TimeSpan.FromTicks(One), null!));
     }
 
     /// <summary>Covers small value/factory/inline branches with public surface behavior.</summary>
@@ -184,41 +187,41 @@ public partial class SignalFactoriesTests
         List<int> emptyScheduled = [];
         var emptyCompleted = 0;
         VirtualClock emptyClock = new(DateTimeOffset.UnixEpoch);
-        Signal.None<int>(emptyClock).Subscribe(emptyScheduled.Add, ex => throw ex, () => emptyCompleted++);
+        _ = Signal.None<int>(emptyClock).Subscribe(emptyScheduled.Add, ex => throw ex, () => emptyCompleted++);
         await Assert.That(emptyCompleted).IsEqualTo(0);
         emptyClock.Start();
         await Assert.That(emptyCompleted).IsEqualTo(1);
-        Assert.Throws<ArgumentNullException>(() => Signal.None<int>().Subscribe((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.None<int>().Subscribe((IObserver<int>)null!));
         List<int> repeatValues = [];
         var repeatCompleted = 0;
         var repeat = Signal.Loop(Seven, Three);
         await Assert.That(((IRequireCurrentThread<int>)repeat).IsRequiredSubscribeOnCurrentThread()).IsFalse();
         repeat.Subscribe(new RecordingWitness<int>()).Dispose();
-        Assert.Throws<ArgumentNullException>(() => repeat.Subscribe((IObserver<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => ((IInlineSignal<int>)repeat).Subscribe(null!, _ => { }, () => { }));
-        ((IInlineSignal<int>)repeat).Subscribe(repeatValues.Add, ex => throw ex, () => repeatCompleted++);
+        _ = Assert.Throws<ArgumentNullException>(() => repeat.Subscribe((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ((IInlineSignal<int>)repeat).Subscribe(null!, _ => { }, () => { }));
+        _ = ((IInlineSignal<int>)repeat).Subscribe(repeatValues.Add, ex => throw ex, () => repeatCompleted++);
         await Assert.That(repeatValues.SequenceEqual(ExpectedSevenSevenSeven)).IsTrue();
         await Assert.That(repeatCompleted).IsEqualTo(1);
         List<int> zippedValues = [];
         var zippedCompleted = 0;
         var zipped = Signal.Sequence(One, Three).Pair(Signal.Sequence(Four, Three), (left, right) => left + right);
         await Assert.That(((IRequireCurrentThread<int>)zipped).IsRequiredSubscribeOnCurrentThread()).IsFalse();
-        Assert.Throws<ArgumentNullException>(() => zipped.Subscribe((IObserver<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => ((IInlineSignal<int>)zipped).Subscribe(null!, _ => { }, () => { }));
-        ((IInlineSignal<int>)zipped).Subscribe(zippedValues.Add, ex => throw ex, () => zippedCompleted++);
+        _ = Assert.Throws<ArgumentNullException>(() => zipped.Subscribe((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ((IInlineSignal<int>)zipped).Subscribe(null!, _ => { }, () => { }));
+        _ = ((IInlineSignal<int>)zipped).Subscribe(zippedValues.Add, ex => throw ex, () => zippedCompleted++);
         await Assert.That(zippedValues.SequenceEqual(ExpectedFiveSevenNine)).IsTrue();
         await Assert.That(zippedCompleted).IsEqualTo(1);
         List<string> returned = [];
         var returnCompleted = 0;
         VirtualClock returnClock = new(DateTimeOffset.UnixEpoch);
-        Signal.Emit("scheduled", returnClock).Subscribe(returned.Add, ex => throw ex, () => returnCompleted++);
+        _ = Signal.Emit("scheduled", returnClock).Subscribe(returned.Add, ex => throw ex, () => returnCompleted++);
         await Assert.That(returnCompleted).IsEqualTo(0);
         returnClock.AdvanceBy(TimeSpan.FromTicks(One));
         await Assert.That(returned.SequenceEqual(ExpectedScheduledReturn)).IsTrue();
         await Assert.That(returnCompleted).IsEqualTo(1);
-        Assert.Throws<ArgumentNullException>(() => Signal.Emit("immediate").Subscribe((IObserver<string>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Emit("immediate").Subscribe((IObserver<string>)null!));
         List<string> mappedErrors = [];
-        Signal.FromEnumerable([One, Two])
+        _ = Signal.FromEnumerable([One, Two])
             .Map(value => value == One ? value : throw new InvalidOperationException("map-fault"))
             .Subscribe(_ => { }, ex => mappedErrors.Add(ex.Message));
         await Assert.That(mappedErrors.SequenceEqual(ExpectedMappedErrors)).IsTrue();
@@ -243,5 +246,259 @@ public partial class SignalFactoriesTests
         Signal.Fail<int>(new InvalidOperationException("immediate-throw"), Sequencer.Immediate)
             .Subscribe(immediateThrow).Dispose();
         await Assert.That(immediateThrow.Errors[0].Message).IsEqualTo("immediate-throw");
+    }
+
+    /// <summary>Verifies that cancellable async factories receive a token owned by the subscription.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromAsyncCancellableFactoryDisposalCancelsSubscriptionToken()
+    {
+        TaskCompletionSource<CancellationToken> observedToken = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource canceled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RecordingWitness<int> observer = new();
+        var subscription = Signal.FromAsync<int>(async token =>
+        {
+            observedToken.SetResult(token);
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(TimeoutSeconds), token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                canceled.SetResult();
+                throw;
+            }
+
+            return One;
+        }).Subscribe(observer);
+        var token = await observedToken.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
+        subscription.Dispose();
+        await canceled.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
+        await Assert.That(token.IsCancellationRequested).IsTrue();
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+        await Assert.That(observer.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies that disposal suppresses a task result when the factory ignores cancellation.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromAsyncCancellableFactoryDisposalSuppressesIgnoredCancellationResult()
+    {
+        TaskCompletionSource subscribed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<int> complete = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RecordingWitness<int> observer = new();
+        var subscription = Signal.FromAsync<int>(token =>
+        {
+            subscribed.SetResult();
+            return complete.Task;
+        }).Subscribe(observer);
+        await subscribed.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
+        subscription.Dispose();
+        complete.SetResult(NinetyNine);
+        await Task.Yield();
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+        await Assert.That(observer.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies that external token cancellation remains a source error while subscribed.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromAsyncCancellableFactoryExternalCancellationForwardsObserverError()
+    {
+        using CancellationTokenSource external = new();
+        TaskCompletionSource<CancellationToken> observedToken = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RecordingWitness<int> observer = new();
+        using var subscription = Signal.FromAsync<int>(
+            async token =>
+            {
+                observedToken.SetResult(token);
+                await Task.Delay(TimeSpan.FromSeconds(TimeoutSeconds), token).ConfigureAwait(false);
+                return One;
+            },
+            external.Token).Subscribe(observer);
+        await observedToken.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
+        await external.CancelAsync();
+        await TestPolling.SpinUntil(() => observer.Errors.Count == One, TimeSpan.FromSeconds(TimeoutSeconds));
+        await Assert.That(observer.Errors[0]).IsTypeOf<TaskCanceledException>();
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies that external token cancellation forwards an error even when the task ignores the linked token.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromAsyncCancellableFactoryExternalCancellationForwardsObserverErrorWhenTaskIgnoresToken()
+    {
+        using CancellationTokenSource external = new();
+        TaskCompletionSource subscribed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<int> complete = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RecordingWitness<int> observer = new();
+        using var subscription = Signal.FromAsync<int>(
+            token =>
+            {
+                subscribed.SetResult();
+                return complete.Task;
+            },
+            external.Token).Subscribe(observer);
+        await subscribed.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
+        await external.CancelAsync();
+        await TestPolling.SpinUntil(() => observer.Errors.Count == One, TimeSpan.FromSeconds(TimeoutSeconds));
+        complete.SetResult(NinetyNine);
+        await Task.Yield();
+        await Assert.That(observer.Errors[0]).IsTypeOf<TaskCanceledException>();
+        await Assert.That(observer.Errors.Count).IsEqualTo(One);
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies that cancellable async factories emit the successful task result and complete.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromAsyncCancellableFactorySuccessEmitsValueAndCompletes()
+    {
+        var calls = 0;
+        RecordingWitness<int> observer = new();
+        using var subscription = Signal.FromAsync<int>(token =>
+        {
+            calls++;
+            return Task.FromResult(token.IsCancellationRequested ? NinetyNine : Seven);
+        }).Subscribe(observer);
+        await Assert.That(calls).IsEqualTo(One);
+        await Assert.That(observer.Values.SequenceEqual(ExpectedSingleSeven)).IsTrue();
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+        await Assert.That(observer.Completed).IsEqualTo(One);
+    }
+
+    /// <summary>Verifies that cancellable async factory task faults are forwarded without wrapping.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromAsyncCancellableFactoryFaultForwardsOriginalException()
+    {
+        InvalidOperationException expected = new("from-async-fault");
+        RecordingWitness<int> observer = new();
+        Signal.FromAsync<int>(_ => Task.FromException<int>(expected)).Subscribe(observer).Dispose();
+        await Assert.That(observer.Errors[0]).IsSameReferenceAs(expected);
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies that synchronous cancellable async factory failures are forwarded as observer errors.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromAsyncCancellableFactorySynchronousFailuresForwardObserverErrors()
+    {
+        InvalidOperationException expected = new("from-async-sync-fault");
+        RecordingWitness<int> thrown = new();
+        Signal.FromAsync<int>(_ => throw expected).Subscribe(thrown).Dispose();
+        await Assert.That(thrown.Errors[0]).IsSameReferenceAs(expected);
+        await Assert.That(thrown.Values.Count).IsEqualTo(0);
+        await Assert.That(thrown.Completed).IsEqualTo(0);
+
+        RecordingWitness<int> nullTask = new();
+        Signal.FromAsync<int>(_ => null!).Subscribe(nullTask).Dispose();
+        await Assert.That(nullTask.Errors[0]).IsTypeOf<ArgumentNullException>();
+        await Assert.That(nullTask.Values.Count).IsEqualTo(0);
+        await Assert.That(nullTask.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies that already-canceled task factories forward cancellation as observer errors.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromAsyncCancellableFactoryCanceledTasksForwardObserverErrors()
+    {
+        using CancellationTokenSource taskCancellation = new();
+        await taskCancellation.CancelAsync();
+        RecordingWitness<int> canceledTask = new();
+        Signal.FromAsync<int>(_ => Task.FromCanceled<int>(taskCancellation.Token))
+            .Subscribe(canceledTask).Dispose();
+        await Assert.That(canceledTask.Errors[0]).IsTypeOf<TaskCanceledException>();
+        await Assert.That(canceledTask.Values.Count).IsEqualTo(0);
+        await Assert.That(canceledTask.Completed).IsEqualTo(0);
+
+        using CancellationTokenSource external = new();
+        await external.CancelAsync();
+        var invoked = 0;
+        RecordingWitness<int> externallyCanceled = new();
+        Signal.FromAsync<int>(
+            _ =>
+            {
+                invoked++;
+                return Task.FromResult(One);
+            },
+            external.Token).Subscribe(externallyCanceled).Dispose();
+        await Assert.That(invoked).IsEqualTo(0);
+        await Assert.That(externallyCanceled.Errors[0]).IsTypeOf<TaskCanceledException>();
+        await Assert.That(externallyCanceled.Values.Count).IsEqualTo(0);
+        await Assert.That(externallyCanceled.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies pending cancellable async factory tasks forward success, fault, and cancellation continuations.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromAsyncCancellableFactoryPendingTasksForwardTerminalContinuations()
+    {
+        TaskCompletionSource<int> successfulTask = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RecordingWitness<int> successful = new();
+        using (Signal.FromAsync<int>(_ => successfulTask.Task).Subscribe(successful))
+        {
+            successfulTask.SetResult(Seven);
+            await TestPolling.SpinUntil(
+                () => successful.Completed == One,
+                TimeSpan.FromSeconds(TimeoutSeconds));
+        }
+
+        await Assert.That(successful.Values.SequenceEqual(ExpectedSingleSeven)).IsTrue();
+        await Assert.That(successful.Errors.Count).IsEqualTo(0);
+
+        InvalidOperationException expected = new("from-async-pending-fault");
+        TaskCompletionSource<int> faultedTask = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RecordingWitness<int> faulted = new();
+        using (Signal.FromAsync<int>(_ => faultedTask.Task).Subscribe(faulted))
+        {
+            faultedTask.SetException(expected);
+            await TestPolling.SpinUntil(
+                () => faulted.Errors.Count == One,
+                TimeSpan.FromSeconds(TimeoutSeconds));
+        }
+
+        await Assert.That(faulted.Errors[0]).IsSameReferenceAs(expected);
+        await Assert.That(faulted.Values.Count).IsEqualTo(0);
+        await Assert.That(faulted.Completed).IsEqualTo(0);
+
+        using CancellationTokenSource cancellation = new();
+        await cancellation.CancelAsync();
+        TaskCompletionSource<int> canceledTask = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RecordingWitness<int> canceled = new();
+        using (Signal.FromAsync<int>(_ => canceledTask.Task).Subscribe(canceled))
+        {
+            canceledTask.SetCanceled(cancellation.Token);
+            await TestPolling.SpinUntil(
+                () => canceled.Errors.Count == One,
+                TimeSpan.FromSeconds(TimeoutSeconds));
+        }
+
+        await Assert.That(canceled.Errors[0]).IsTypeOf<TaskCanceledException>();
+        await Assert.That(canceled.Values.Count).IsEqualTo(0);
+        await Assert.That(canceled.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies direct timeout and runner factory APIs without extension method syntax.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DirectExpireAndRunnerFactoriesMirrorExtensionBehavior()
+    {
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        RecordingWitness<int> timedOut = new();
+        var timeoutSubscription = Signal.Expire(Signal.Never<int>(), TimeSpan.FromTicks(One), clock).Subscribe(timedOut);
+        clock.AdvanceBy(TimeSpan.FromTicks(One));
+        timeoutSubscription.Dispose();
+        await Assert.That(timedOut.Errors[0]).IsTypeOf<TimeoutException>();
+        await Assert.That(await Signal.ToTask(Signal.Sequence(One, Three))).IsEqualTo(Three);
+        await Assert.That(await Signal.RunAsync(Signal.Sequence(One, Three))).IsEqualTo(Three);
+        List<int> values = [];
+        _ = Signal.Timeout(Signal.FromEnumerable(ExpectedOneTwoThree), TimeSpan.FromTicks(One), clock).Subscribe(values.Add);
+        await Assert.That(values.SequenceEqual(ExpectedOneTwoThree)).IsTrue();
     }
 }

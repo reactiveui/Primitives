@@ -207,7 +207,7 @@ public static partial class Sequencer
                 {
                     if (isAdded)
                     {
-                        Remove(disposable!);
+                        _ = Remove(disposable!);
                     }
                     else
                     {

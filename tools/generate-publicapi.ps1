@@ -11,13 +11,12 @@
         <Project>/PublicAPI/<tfm>/PublicAPI.Shipped.txt
         <Project>/PublicAPI/<tfm>/PublicAPI.Unshipped.txt
 
-    This script seeds those files and uses `dotnet format analyzers` to capture the
-    project's current public surface (RS0016), drop stale entries (RS0017), and record
-    nullability (RS0037), then folds the surface into Shipped (this repo keeps the full
-    surface in Shipped with Unshipped empty).
+    This script preserves the existing Shipped baseline, resets only Unshipped, then
+    uses `dotnet format analyzers` to add missing public API entries (RS0016), drop
+    stale shipped entries (RS0017), and record nullability (RS0037). The resulting
+    Shipped and Unshipped files are folded back into Shipped, leaving Unshipped empty.
 
-    Only projects with MSBuild property TrackPublicApi=true are processed; the
-    tests/ and benchmarks/ trees opt out centrally in src/Directory.Build.props.
+    Tests, benchmarks, and source generators are skipped structurally.
 
     Each (project, TFM) pair is independent — `dotnet format` builds an in-memory
     MSBuildWorkspace and only writes its own PublicAPI/<tfm>/ files — so the pairs run
@@ -61,6 +60,15 @@ Set-Location $srcDir
 $env:EnableWindowsTargeting = 'true'
 $env:CheckEolTargetFramework = 'false'
 if (-not $env:MinVerVersionOverride) { $env:MinVerVersionOverride = '255.255.255-dev' }
+$env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
+$env:DOTNET_NOLOGO = 'true'
+$env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = '1'
+# The generator must not inherit an environment/MSBuild opt-out. Force API tracking on
+# for normal library projects; Directory.Build.props still disables tests, benchmarks,
+# and source generators by project path/name.
+$env:TrackPublicApi = 'true'
+Remove-Item Env:TRACKPUBLICAPI -ErrorAction SilentlyContinue
+Remove-Item Env:trackpublicapi -ErrorAction SilentlyContinue
 
 if ($Jobs -le 0) {
     $Jobs = if ($env:JOBS) { [int]$env:JOBS } else { [Math]::Min([Environment]::ProcessorCount, 8) }
@@ -80,7 +88,9 @@ function Get-MsBuildProperty {
     param([string]$Project, [string]$Name)
     $value = & dotnet msbuild $Project "-getProperty:$Name" -nologo 2>$null
     if ($LASTEXITCODE -ne 0 -or $null -eq $value) { return '' }
-    return ($value | Out-String).Trim()
+    $lines = @($value | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($lines.Count -eq 0) { return '' }
+    return [string]$lines[$lines.Count - 1].Trim()
 }
 
 # Regenerate one (project, TFM) pair and fold the surface into Shipped. Returns a result
@@ -89,23 +99,68 @@ function Invoke-PublicApiOne {
     param($Item, [string[]]$Diags)
     $proj = $Item.Proj
     $tfm = $Item.Tfm
+    $apiNamespace = $Item.ApiNamespace
     $lf = "`n"
     $header = '#nullable enable'
     # Write LF-only so the baselines match the bash sibling's output byte-for-byte.
     $writeLf = { param($p, $lines) [IO.File]::WriteAllText($p, (($lines -join $lf) + $lf)) }
+    $ensureApiFile = {
+        param($p)
+        if (-not (Test-Path $p)) {
+            & $writeLf $p @($header)
+            return
+        }
+
+        $lines = [string[]]@(Get-Content $p)
+        if ($lines -contains $header) {
+            return
+        }
+
+        $body = [string[]]@($lines | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        & $writeLf $p (@($header) + $body)
+    }
+    $apiLineCount = {
+        param($p)
+        if (-not (Test-Path $p)) { return 0 }
+
+        return @(
+            Get-Content $p |
+                Where-Object { $_ -ne $header -and -not [string]::IsNullOrWhiteSpace($_) }
+        ).Count
+    }
     # Back up any existing baseline so a build failure (a TFM whose workload this platform
     # lacks) restores it instead of wiping it.
     $shippedBak = if (Test-Path $Item.Shipped) { (Get-Content -Raw $Item.Shipped) -replace "`r`n", "`n" } else { $null }
     $unshippedBak = if (Test-Path $Item.Unshipped) { (Get-Content -Raw $Item.Unshipped) -replace "`r`n", "`n" } else { $null }
-    # Empty both to the bare header so the analyzer reports the entire current surface.
-    & $writeLf $Item.Shipped @($header)
+
+    & $ensureApiFile $Item.Shipped
+    $beforeCount = & $apiLineCount $Item.Shipped
+    # Keep Shipped as input so RS0016 reports only missing symbols. Reset Unshipped so
+    # the generated delta is explicit and safe to fold after a successful analyzer run.
     & $writeLf $Item.Unshipped @($header)
     & dotnet format analyzers $proj -f $tfm --diagnostics $Diags --severity info -v quiet
     if ($LASTEXITCODE -eq 0) {
-        # `dotnet format` records the surface in Unshipped; fold it into Shipped (ordinally
-        # sorted+deduped, matching `LC_ALL=C sort -u`) and reset Unshipped to the bare header.
-        $surface = [string[]]@(Get-Content $Item.Unshipped | Where-Object { $_ -ne $header -and $_.Trim() -ne '' } | Select-Object -Unique)
+        # Fold the post-format Shipped file plus generated Unshipped delta into Shipped
+        # (ordinally sorted+deduped) and reset Unshipped to the bare header.
+        $surface = [string[]]@(
+            Get-Content $Item.Shipped |
+                Where-Object { $_ -ne $header -and -not [string]::IsNullOrWhiteSpace($_) }
+            Get-Content $Item.Unshipped |
+                Where-Object { $_ -ne $header -and -not [string]::IsNullOrWhiteSpace($_) }
+        )
+        if ($tfm -like '*-android*' -and -not [string]::IsNullOrWhiteSpace($apiNamespace)) {
+            $surface += "$apiNamespace.Resource"
+            $surface += "$apiNamespace.Resource.Resource() -> void"
+        }
+        $surface = [string[]]@($surface | Select-Object -Unique)
         [Array]::Sort($surface, [System.StringComparer]::Ordinal)
+        if ($beforeCount -gt 0 -and $surface.Count -eq 0) {
+            if ($null -ne $shippedBak) { [IO.File]::WriteAllText($Item.Shipped, $shippedBak) }
+            if ($null -ne $unshippedBak) { [IO.File]::WriteAllText($Item.Unshipped, $unshippedBak) }
+            Write-Host "FAIL [$tfm] $proj (refusing to replace non-empty Shipped with an empty baseline)"
+            return [pscustomobject]@{ Ok = $false }
+        }
+
         & $writeLf $Item.Shipped (@($header) + $surface)
         & $writeLf $Item.Unshipped @($header)
         Write-Host "OK   [$tfm] $proj"
@@ -121,7 +176,9 @@ function Invoke-PublicApiOne {
 $projects = Get-ChildItem -Path . -Recurse -Filter '*.csproj' |
     Where-Object {
         $p = $_.FullName -replace '\\', '/'
-        $p -notmatch '/tests/' -and $p -notmatch '/benchmarks/'
+        $p -notmatch '/tests/' -and
+            $p -notmatch '/benchmarks/' -and
+            $_.BaseName -notlike '*.Generator'
     } |
     Sort-Object FullName
 
@@ -135,13 +192,6 @@ foreach ($projItem in $projects) {
     # Match the filter against a slash-normalized path so a forward-slash filter works on Windows too.
     if ($Filter -and (($proj -replace '\\', '/') -notlike "*$($Filter -replace '\\', '/')*")) { continue }
 
-    $track = Get-MsBuildProperty -Project $proj -Name 'TrackPublicApi'
-    if ($track -ne 'true') {
-        Write-Host "skip  (TrackPublicApi != true): $proj"
-        $skipped++
-        continue
-    }
-
     $tfms = Get-MsBuildProperty -Project $proj -Name 'TargetFrameworks'
     if (-not $tfms) { $tfms = Get-MsBuildProperty -Project $proj -Name 'TargetFramework' }
     if (-not $tfms) {
@@ -151,6 +201,8 @@ foreach ($projItem in $projects) {
     }
 
     $projDir = Split-Path -Parent $proj
+    $apiNamespace = Get-MsBuildProperty -Project $proj -Name 'RootNamespace'
+    if (-not $apiNamespace) { $apiNamespace = Get-MsBuildProperty -Project $proj -Name 'AssemblyName' }
     Write-Host "queue $proj"
     Write-Host "    TFMs: $tfms"
     $restoreSet.Add($proj)
@@ -164,7 +216,7 @@ foreach ($projItem in $projects) {
 
         $shipped = Join-Path $apiDir 'PublicAPI.Shipped.txt'
         $unshipped = Join-Path $apiDir 'PublicAPI.Unshipped.txt'
-        $items.Add([pscustomobject]@{ Proj = $proj; Tfm = $tfm; Shipped = $shipped; Unshipped = $unshipped })
+        $items.Add([pscustomobject]@{ Proj = $proj; Tfm = $tfm; Shipped = $shipped; Unshipped = $unshipped; ApiNamespace = $apiNamespace })
     }
 }
 Write-Host ''

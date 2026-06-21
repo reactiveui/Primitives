@@ -25,7 +25,7 @@ public static class Signal
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
         Justification = "Public factory API — caller specifies T explicitly: Signal.Create<int>().")]
-    public static ISignalAsync<T> Create<T>() => Create<T>(SignalCreationOptions.Default);
+    public static ISignalAsync<T> Create<T>() => new SerialSignalAsync<T>();
 
     /// <summary>Creates a new asynchronous Signal instance with the specified publishing and state options.</summary>
     /// <remarks>Use this method to create an ISignalAsync{T} with the desired concurrency and state
@@ -55,7 +55,7 @@ public static class Signal
     /// <param name="startValue">The initial value to be emitted to new subscribers and stored as the current value of the Signal.</param>
     /// <returns>An asynchronous behavior Signal that holds the specified starting value and emits it to new subscribers.</returns>
     public static ISignalAsync<T> CreateBehavior<T>(T startValue) =>
-        CreateBehavior(startValue, BehaviorSignalCreationOptions.Default);
+        new SerialReplayLatestSignalAsync<T>(new(startValue));
 
     /// <summary>
     /// Creates a new asynchronous Signal that replays the latest value to new subscribers, using the specified initial
@@ -88,7 +88,7 @@ public static class Signal
         "S4018:Generic methods should provide type parameters",
         Justification = "Public factory API — caller specifies T explicitly: Signal.CreateReplayLatest<int>().")]
     public static ISignalAsync<T> CreateReplayLatest<T>() =>
-        CreateReplayLatest<T>(ReplayLatestSignalCreationOptions.Default);
+        new SerialReplayLatestSignalAsync<T>(Optional<T>.Empty);
 
     /// <summary>
     /// Creates a new asynchronous Signal that replays the latest value to new subscribers, with configuration options

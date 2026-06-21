@@ -314,7 +314,7 @@ public class FilteringOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("skip-while-error");
@@ -336,7 +336,7 @@ public class FilteringOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("take-while-error");
@@ -379,7 +379,7 @@ public class FilteringOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("skip-while-async-error");
@@ -401,7 +401,7 @@ public class FilteringOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("take-while-async-error");
@@ -422,7 +422,7 @@ public class FilteringOperatorTests
         await using var sub = await signal.Values.Distinct().SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             caught = ex;
-            errorTcs.TrySetResult();
+            IgnoredResult.Of(errorTcs.TrySetResult());
             return default;
         });
         InvalidOperationException expected = new("distinct-error");
@@ -444,7 +444,7 @@ public class FilteringOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("distinct-by-error");
@@ -466,7 +466,7 @@ public class FilteringOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("distinct-until-changed-error");
@@ -488,7 +488,7 @@ public class FilteringOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("distinct-until-changed-by-error");
@@ -511,7 +511,7 @@ public class FilteringOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("where-sync-error");
@@ -532,7 +532,7 @@ public class FilteringOperatorTests
         await using var sub = await signal.Values.Skip(1).SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             caught = ex;
-            errorTcs.TrySetResult();
+            IgnoredResult.Of(errorTcs.TrySetResult());
             return default;
         });
         InvalidOperationException expected = new("skip-error");
@@ -552,7 +552,7 @@ public class FilteringOperatorTests
         await using var sub = await signal.Values.Take(10).SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             caught = ex;
-            errorTcs.TrySetResult();
+            IgnoredResult.Of(errorTcs.TrySetResult());
             return default;
         });
         InvalidOperationException expected = new("take-error");
@@ -574,7 +574,7 @@ public class FilteringOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("cast-error");
@@ -596,7 +596,7 @@ public class FilteringOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("of-type-error");
@@ -619,7 +619,7 @@ public class FilteringOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("select-sync-error");
@@ -642,7 +642,7 @@ public class FilteringOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("select-async-error");
@@ -665,7 +665,7 @@ public class FilteringOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("where-async-error");

@@ -49,7 +49,7 @@ public class SynchronizeTests
     {
         List<int> received = [];
         var completed = false;
-        new ImmediateSource<int>(1, Second, Third)
+        _ = new ImmediateSource<int>(1, Second, Third)
             .Synchronize()
             .Subscribe(new DelegateWitness<int>(
                 received.Add,
@@ -203,7 +203,7 @@ public class SynchronizeTests
             // Non-atomic on purpose: the gate must serialize callers for this to stay exact.
             Count++;
             Thread.SpinWait(SpinIterations);
-            Interlocked.Exchange(ref _inside, 0);
+            _ = Interlocked.Exchange(ref _inside, 0);
         }
     }
 }

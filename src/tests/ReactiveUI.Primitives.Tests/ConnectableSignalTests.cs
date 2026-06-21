@@ -63,9 +63,9 @@ public sealed class ConnectableSignalTests
         var replayConnection = replayed.Connect();
         List<int> replayFirst = [];
         List<int> replaySecond = [];
-        replayed.Subscribe(replayFirst.Add);
+        _ = replayed.Subscribe(replayFirst.Add);
         source.OnNext(FirstReplayValue);
-        replayed.Subscribe(replaySecond.Add);
+        _ = replayed.Subscribe(replaySecond.Add);
         source.OnNext(SecondReplayValue);
         replayConnection.Dispose();
         await Assert.That(replayFirst.SequenceEqual(ExpectedReplayValues)).IsTrue();
@@ -94,16 +94,16 @@ public sealed class ConnectableSignalTests
         await Assert.That(sourceSubscriptions).IsEqualTo(1);
         await Assert.That(first.SequenceEqual(ExpectedSecondSharedValues[1..])).IsTrue();
         await Assert.That(second.SequenceEqual(ExpectedSecondSharedValues[1..])).IsTrue();
-        Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.Multicast(null!, new Signal<int>()));
-        Assert.Throws<ArgumentNullException>(() => Signal.Silent<int>().Multicast(null!));
-        Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.AutoShare<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.AutoConnect<int>(null!));
-        Assert.Throws<ArgumentOutOfRangeException>(() => cold.ShareLive().AutoConnect(-1));
+        _ = Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.Multicast(null!, new Signal<int>()));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Silent<int>().Multicast(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.AutoShare<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.AutoConnect<int>(null!));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => cold.ShareLive().AutoConnect(-1));
         var replayed = cold.Replay(1, TimeSpan.FromSeconds(1));
         using var connection = replayed.Connect();
         source.OnNext(FirstReplayValue);
         List<int> replayValues = [];
-        replayed.Subscribe(replayValues.Add);
+        _ = replayed.Subscribe(replayValues.Add);
         await Assert.That(replayValues.SequenceEqual(ExpectedReplayValues[..1])).IsTrue();
     }
 
@@ -112,8 +112,16 @@ public sealed class ConnectableSignalTests
     [Test]
     public async Task ConnectableSignalDirectConnectReusesConnectionAndForwardsTerminalError()
     {
-        Assert.Throws<ArgumentNullException>(() => _ = new ConnectableSignal<int>(null!, new Signal<int>()));
-        Assert.Throws<ArgumentNullException>(() => _ = new ConnectableSignal<int>(Signal.Silent<int>(), null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            ConnectableSignal<int> invalid = new(null!, new Signal<int>());
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            ConnectableSignal<int> invalid = new(Signal.Silent<int>(), null!);
+            GC.KeepAlive(invalid);
+        });
 
         Signal<int> source = new();
         var sourceSubscriptions = 0;
@@ -188,11 +196,11 @@ public sealed class ConnectableSignalTests
 
         Exception? selectorError = null;
         InvalidOperationException expectedSelectorError = new("selector");
-        ConnectableSignalExtensions.Publish<int, int>(cold, _ => throw expectedSelectorError)
+        _ = ConnectableSignalExtensions.Publish<int, int>(cold, _ => throw expectedSelectorError)
             .Subscribe(_ => { }, error => selectorError = error);
 
         Exception? nullSelectorError = null;
-        ConnectableSignalExtensions.Publish<int, int>(cold, _ => null!)
+        _ = ConnectableSignalExtensions.Publish<int, int>(cold, _ => null!)
             .Subscribe(_ => { }, error => nullSelectorError = error);
 
         await Assert.That(selectorError).IsSameReferenceAs(expectedSelectorError);
@@ -202,15 +210,15 @@ public sealed class ConnectableSignalTests
         using var replayConnection = replay.Connect();
         source.OnNext(FirstReplayValue);
         List<int> replayValues = [];
-        replay.Subscribe(replayValues.Add);
+        _ = replay.Subscribe(replayValues.Add);
         source.OnNext(SecondReplayValue);
 
         await Assert.That(replayValues.SequenceEqual(ExpectedReplayValues)).IsTrue();
 
-        Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.RefCount<int>(null!));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.RefCount<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
             ConnectableSignalExtensions.Publish<int, int>(null!, static source => source));
-        Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.Publish<int, int>(cold, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.Publish<int, int>(cold, null!));
     }
 
     /// <summary>Verifies <c>RefCount</c> does not reconnect a published source after its hub has completed.</summary>

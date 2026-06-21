@@ -36,12 +36,7 @@ public static class AsyncContextExtensions
                        ReferenceEquals(adapter.Sequencer, @this.Sequencer);
             }
 
-            if (@this.TaskScheduler is not null)
-            {
-                return @this.TaskScheduler == TaskScheduler.Current;
-            }
-
-            return TaskScheduler.Current == TaskScheduler.Default;
+            return @this.TaskScheduler is not null ? @this.TaskScheduler == TaskScheduler.Current : TaskScheduler.Current == TaskScheduler.Default;
         }
     }
 }

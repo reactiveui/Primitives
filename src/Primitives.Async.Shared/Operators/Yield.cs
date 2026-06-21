@@ -1,13 +1,11 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Async.Reactive;
 #else
 namespace ReactiveUI.Primitives.Async;
 #endif
-
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
 /// <remarks>The SignalAsync class contains static methods that extend the functionality of asynchronous
 /// observables, enabling advanced composition and control over asynchronous data streams. These methods are intended
@@ -15,8 +13,8 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncReactiveExtensions
 {
     /// <summary>Scheduler-yielding operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence to yield from.</param>
-    /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
+    /// <param name = "this">The source observable sequence to yield from.</param>
+    /// <typeparam name = "T">The type of the elements in the observable sequence.</typeparam>
     extension<T>(IObservableAsync<T> @this)
     {
         /// <summary>
@@ -30,25 +28,19 @@ public static partial class SignalAsyncReactiveExtensions
         public IObservableAsync<T> Yield()
         {
             ArgumentExceptionHelper.ThrowIfNull(@this);
-
             return new YieldSignal<T>(@this);
         }
     }
 
     /// <summary>An observable that yields control to the current scheduler before forwarding source emissions.</summary>
-    /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
-    /// <param name="source">The source observable to yield from.</param>
-    internal sealed class YieldSignal<T>(IObservableAsync<T> source) : SignalAsync<T>
+    /// <typeparam name = "T">The type of elements in the observable sequence.</typeparam>
+    /// <param name = "source">The source observable to yield from.</param>
+    internal sealed class YieldSignal<T>(IObservableAsync<T> source) : IObservableAsync<T>
     {
-        /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
-            IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(IObserverAsync<T> observer, CancellationToken cancellationToken)
         {
             var currentContext = AsyncContext.GetCurrent();
-            return source.SubscribeAsync(
-                new ContextSwitchSignalAsync<T>.ContextSwitchWitness(observer, currentContext, true),
-                cancellationToken);
+            return source.SubscribeAsync(new ContextSwitchSignalAsync<T>.ContextSwitchWitness(observer, currentContext, true), cancellationToken);
         }
     }
 }

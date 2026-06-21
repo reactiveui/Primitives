@@ -57,13 +57,15 @@ public static partial class SignalAsyncExtensions
             Func<T, CancellationToken, ValueTask>? onNext,
             Func<Exception, CancellationToken, ValueTask>? onErrorResume,
             Func<Result, ValueTask>? onCompleted) =>
-            @this.Tap(onNext, onErrorResume, onCompleted);
+            onNext is null && onErrorResume is null && onCompleted is null
+                ? @this
+                : new TapAsyncSignal<T>(@this, onNext, onErrorResume, onCompleted);
 
         /// <summary>Invokes the specified asynchronous action for each element in the observable sequence without modifying the sequence.</summary>
         /// <param name="onNext">An asynchronous callback to invoke for each element in the sequence.</param>
         /// <returns>An observable sequence that is identical to the source sequence but invokes the specified callback.</returns>
         public IObservableAsync<T> Do(Func<T, CancellationToken, ValueTask>? onNext) =>
-            @this.Tap(onNext, null, null);
+            onNext is null ? @this : new TapAsyncSignal<T>(@this, onNext, null, null);
 
         /// <summary>
         /// Invokes the specified actions in response to notifications from the observable sequence without modifying
@@ -97,10 +99,10 @@ public static partial class SignalAsyncExtensions
         IObservableAsync<T> source,
         Func<T, CancellationToken, ValueTask>? onNext,
         Func<Exception, CancellationToken, ValueTask>? onErrorResume,
-        Func<Result, ValueTask>? onCompleted) : SignalAsync<T>
+        Func<Result, ValueTask>? onCompleted) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -166,10 +168,10 @@ public static partial class SignalAsyncExtensions
         IObservableAsync<T> source,
         Action<T>? onNext,
         Action<Exception>? onErrorResume,
-        Action<Result>? onCompleted) : SignalAsync<T>
+        Action<Result>? onCompleted) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

@@ -212,8 +212,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     {
         var count = 0;
         using var subscription = (library == ExtensionsLibrary.Primitives
-                ? PrimitivesExtensions.DoOnDispose(ArraySource(library), () => count++)
-                : PackageExtensions.DoOnDispose(ArraySource(library), () => count++))
+            ? PrimitivesExtensions.DoOnDispose(ArraySource(library), () => count++)
+            : PackageExtensions.DoOnDispose(ArraySource(library), () => count++))
             .Subscribe(new IntSignalWitness());
         return count;
     }
@@ -415,9 +415,10 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     private static int RunPairwise(ExtensionsLibrary library)
     {
         PairWitness observer = new();
-        using var subscription = (library == ExtensionsLibrary.Primitives
-                ? PrimitivesExtensions.Pairwise(ArraySource(library))
-                : PackageExtensions.Pairwise(ArraySource(library)))
+        using var subscription = (
+                library == ExtensionsLibrary.Primitives
+                    ? PrimitivesExtensions.Pairwise(ArraySource(library))
+                    : PackageExtensions.Pairwise(ArraySource(library)))
             .Subscribe(observer);
         return observer.Total;
     }

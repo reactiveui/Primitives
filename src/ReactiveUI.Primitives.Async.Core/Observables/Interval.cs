@@ -19,7 +19,7 @@ public static partial class SignalAsync
     /// <returns>An SignalAsync{long} that emits an increasing long value at each interval, starting from 1, until the
     /// sequence is cancelled.</returns>
     public static IObservableAsync<long> Interval(TimeSpan period) =>
-        Interval(period, (TimeProvider?)null);
+        new IntervalSignal(period, null);
 
     /// <summary>Creates an asynchronous observable sequence that emits a long integer value at each specified time interval.</summary>
     /// <remarks>The sequence continues emitting values until the observer unsubscribes or the cancellation
@@ -31,42 +31,5 @@ public static partial class SignalAsync
     /// <returns>An SignalAsync{long} that emits an increasing long value at each interval, starting from 1, until the
     /// sequence is cancelled.</returns>
     public static IObservableAsync<long> Interval(TimeSpan period, TimeProvider? timeProvider) =>
-        CreateAsBackgroundJob<long>(
-            async (observer, cancellationToken) =>
-            {
-                long tick = 1;
-                while (!cancellationToken.IsCancellationRequested)
-                {
-                    if (timeProvider is null || timeProvider == TimeProvider.System)
-                    {
-                        await Task.Delay(period, cancellationToken).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-                        await using var tp = timeProvider.CreateTimer(
-                            x => ((TaskCompletionSource<bool>)x!).TrySetResult(true),
-                            tcs,
-                            period,
-                            Timeout.InfiniteTimeSpan);
-
-#if NET8_0_OR_GREATER
-                        await using var ct =
-                            cancellationToken.Register(
-                                x => ((TaskCompletionSource<bool>)x!).TrySetCanceled(cancellationToken),
-                                tcs);
-#else
-                        using var ct =
-                            cancellationToken.Register(
-                                x => ((TaskCompletionSource<bool>)x!).TrySetCanceled(cancellationToken),
-                                tcs);
-#endif
-
-                        await tcs.Task.ConfigureAwait(false);
-                    }
-
-                    await observer.OnNextAsync(tick++, cancellationToken).ConfigureAwait(false);
-                }
-            },
-            true);
+        new IntervalSignal(period, timeProvider);
 }

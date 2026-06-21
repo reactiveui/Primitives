@@ -77,7 +77,7 @@ public class SignalFromTaskTest
         var taskSignal = Signal.FromTask(_ => Task.FromResult(1), Sequencer.Immediate);
         try
         {
-            Assert.Throws<ArgumentNullException>(() => taskSignal.GetOperationCanceled(null!));
+            _ = Assert.Throws<ArgumentNullException>(() => taskSignal.GetOperationCanceled(null!));
         }
         finally
         {
@@ -95,7 +95,7 @@ public class SignalFromTaskTest
         {
             List<int> taskValues = [];
             var taskCompleted = 0;
-            taskSignal.Subscribe(taskValues.Add, error => throw error, () => taskCompleted++);
+            _ = taskSignal.Subscribe(taskValues.Add, error => throw error, () => taskCompleted++);
             await Assert.That(taskValues.SequenceEqual([EmittedValue])).IsTrue();
             await Assert.That(taskCompleted).IsEqualTo(1);
         }
@@ -130,9 +130,9 @@ public class SignalFromTaskTest
         TaskCompletionSource<int> disposed = new();
         var disposedSubscription = Signal.FromTask(disposed.Task).Subscribe(_ => AddValue(DisposedValue), AddError);
         disposedSubscription.Dispose();
-        Signal.FromTask(success.Task).Subscribe(AddValue, AddError);
-        Signal.FromTask(fault.Task).Subscribe(AddValue, AddError);
-        Signal.FromTask(canceled.Task).Subscribe(AddValue, AddError);
+        _ = Signal.FromTask(success.Task).Subscribe(AddValue, AddError);
+        _ = Signal.FromTask(fault.Task).Subscribe(AddValue, AddError);
+        _ = Signal.FromTask(canceled.Task).Subscribe(AddValue, AddError);
         success.SetResult(SuccessValue);
         fault.SetException(new InvalidOperationException("pending-fault"));
         canceled.SetCanceled(new(true));
@@ -237,7 +237,7 @@ public class SignalFromTaskTest
             await Task.Delay(CleanupDelayMilliseconds, cts.Token).HandleCancellation(() =>
             {
                 RecordCancellationCleanup(statusTrail, ref position);
-                cleanupCompleted.TrySetResult();
+                _ = cleanupCompleted.TrySetResult();
             }).ConfigureAwait(true);
             await cancellationTask.ConfigureAwait(false);
             if (!cts.IsCancellationRequested)
@@ -253,7 +253,7 @@ public class SignalFromTaskTest
         }).OnCleanup(() =>
         {
             RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere);
-            finallyCompleted.TrySetResult();
+            _ = finallyCompleted.TrySetResult();
         });
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);
@@ -426,7 +426,7 @@ public class SignalFromTaskTest
             await Task.Delay(CleanupDelayMilliseconds, cts.Token).HandleCancellation(() =>
             {
                 RecordCancellationCleanup(statusTrail, ref position);
-                cleanupCompleted.TrySetResult();
+                _ = cleanupCompleted.TrySetResult();
             }).ConfigureAwait(true);
             await cancellationTask.ConfigureAwait(false);
             if (!cts.IsCancellationRequested)
@@ -442,7 +442,7 @@ public class SignalFromTaskTest
         }).OnCleanup(() =>
         {
             RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere);
-            finallyCompleted.TrySetResult();
+            _ = finallyCompleted.TrySetResult();
         });
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);

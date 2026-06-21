@@ -17,7 +17,7 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
 
     /// <summary>Executes the new operation.</summary>
     /// <returns>The result.</returns>
-    private readonly MultipleDisposable? _cleanUp = [];
+    private readonly MultipleDisposable _cleanUp = [];
 
     /// <summary>Initializes a new instance of the <see cref="TaskSignal{T}" /> class.</summary>
     /// <param name="observableFactory">The observable factory.</param>
@@ -51,12 +51,12 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
     public bool IsCancellationRequested => CancellationTokenSource?.IsCancellationRequested == true;
 
     /// <summary>Gets a value indicating whether gets a value that indicates whether the object is disposed.</summary>
-    public bool IsDisposed => _cleanUp?.IsDisposed ?? true;
+    public bool IsDisposed => _cleanUp.IsDisposed;
 
     /// <summary>Gets the operation canceled.</summary>
     /// <param name="observer">The observer.</param>
     public void GetOperationCanceled(IObserver<Exception> observer) =>
-        CancellationTokenSource?.Token.Register(() => observer.OnNext(new OperationCanceledException())).DisposeWith(_cleanUp!);
+        CancellationTokenSource?.Token.Register(() => observer.OnNext(new OperationCanceledException())).DisposeWith(_cleanUp);
 
     /// <summary>Subscribes the specified observer.</summary>
     /// <param name="observer">The observer.</param>
@@ -67,7 +67,7 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
             ? Source!.Subscribe(observer)
             : Source!.WitnessOn(_sequencer).Subscribe(observer);
 
-        return subscription.DisposeWith(_cleanUp!);
+        return subscription.DisposeWith(_cleanUp);
     }
 
     /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
@@ -77,7 +77,7 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
     private void Dispose(bool disposing)
     {
-        if (_cleanUp?.IsDisposed != false || !disposing)
+        if (_cleanUp.IsDisposed || !disposing)
         {
             return;
         }
@@ -91,7 +91,7 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
             // The token source can be disposed by the task completion path.
         }
 
-        _cleanUp?.Dispose();
+        _cleanUp.Dispose();
         CancellationTokenSource?.Dispose();
     }
 }

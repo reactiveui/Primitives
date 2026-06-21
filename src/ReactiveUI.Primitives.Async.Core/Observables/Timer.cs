@@ -16,7 +16,11 @@ public static partial class SignalAsync
     /// <returns>An observable sequence that produces a single value after the specified delay and then completes.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
     public static IObservableAsync<long> After(TimeSpan dueTime)
-        => Timer(dueTime, (TimeProvider?)null);
+    {
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
+
+        return new TimerSignal(dueTime, null, TimeProvider.System);
+    }
 
     /// <summary>
     /// Creates an observable sequence that produces a single value (0) after the specified delay,
@@ -29,24 +33,47 @@ public static partial class SignalAsync
     /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative
     /// or <paramref name="period"/> is non-positive.</exception>
     public static IObservableAsync<long> After(TimeSpan dueTime, TimeSpan period)
-        => Timer(dueTime, period, (TimeProvider?)null);
+    {
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(period, TimeSpan.Zero);
+
+        return new TimerSignal(dueTime, period, TimeProvider.System);
+    }
 
     /// <summary>Emits monotonically increasing ticks at the specified period.</summary>
     /// <param name="period">The interval between ticks.</param>
     /// <returns>An observable sequence of periodic ticks.</returns>
-    public static IObservableAsync<long> Every(TimeSpan period) => Timer(period, period);
+    public static IObservableAsync<long> Every(TimeSpan period)
+    {
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(period, TimeSpan.Zero);
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(period, TimeSpan.Zero);
+
+        return new TimerSignal(period, period, TimeProvider.System);
+    }
 
     /// <summary>Alias for <see cref="Every(TimeSpan)"/>.</summary>
     /// <param name="period">The interval between ticks.</param>
     /// <returns>An observable sequence of periodic ticks.</returns>
-    public static IObservableAsync<long> Pulse(TimeSpan period) => Every(period);
+    public static IObservableAsync<long> Pulse(TimeSpan period)
+    {
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(period, TimeSpan.Zero);
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(period, TimeSpan.Zero);
+
+        var dueTime = period;
+        return new TimerSignal(dueTime, period, TimeProvider.System);
+    }
 
     /// <summary>Creates an observable sequence that produces a single value (0) after the specified delay, then completes.</summary>
     /// <param name="dueTime">The time span after which to produce the value. Must be non-negative.</param>
     /// <returns>An observable sequence that produces a single value after the specified delay and then completes.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
     public static IObservableAsync<long> Timer(TimeSpan dueTime)
-        => After(dueTime);
+    {
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
+
+        var timeProvider = TimeProvider.System;
+        return new TimerSignal(dueTime, null, timeProvider);
+    }
 
     /// <summary>Creates an observable sequence that produces a single value (0) after the specified delay, then completes.</summary>
     /// <param name="dueTime">The time span after which to produce the value. Must be non-negative.</param>
@@ -56,25 +83,10 @@ public static partial class SignalAsync
     /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
     public static IObservableAsync<long> Timer(TimeSpan dueTime, TimeProvider? timeProvider)
     {
-#if NET8_0_OR_GREATER
-        ArgumentOutOfRangeException.ThrowIfLessThan(dueTime, TimeSpan.Zero);
-#else
-        if (dueTime < TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(dueTime));
-        }
-#endif
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
 
         var tp = timeProvider ?? TimeProvider.System;
-
-        return CreateAsBackgroundJob<long>(
-            async (observer, cancellationToken) =>
-            {
-                await SignalAsyncExtensions.DelayAsync(dueTime, tp, cancellationToken).ConfigureAwait(false);
-                await observer.OnNextAsync(0L, cancellationToken).ConfigureAwait(false);
-                await observer.OnCompletedAsync(Result.Success).ConfigureAwait(false);
-            },
-            true);
+        return new TimerSignal(dueTime, null, tp);
     }
 
     /// <summary>
@@ -88,7 +100,13 @@ public static partial class SignalAsync
     /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative
     /// or <paramref name="period"/> is non-positive.</exception>
     public static IObservableAsync<long> Timer(TimeSpan dueTime, TimeSpan period)
-        => After(dueTime, period);
+    {
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(period, TimeSpan.Zero);
+
+        var timeProvider = TimeProvider.System;
+        return new TimerSignal(dueTime, period, timeProvider);
+    }
 
     /// <summary>
     /// Creates an observable sequence that produces a single value (0) after the specified delay,
@@ -104,35 +122,10 @@ public static partial class SignalAsync
     /// or <paramref name="period"/> is non-positive.</exception>
     public static IObservableAsync<long> Timer(TimeSpan dueTime, TimeSpan period, TimeProvider? timeProvider)
     {
-#if NET8_0_OR_GREATER
-        ArgumentOutOfRangeException.ThrowIfLessThan(dueTime, TimeSpan.Zero);
-        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(period, TimeSpan.Zero);
-#else
-        if (dueTime < TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(dueTime));
-        }
-
-        if (period <= TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(period));
-        }
-#endif
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(period, TimeSpan.Zero);
 
         var tp = timeProvider ?? TimeProvider.System;
-
-        return CreateAsBackgroundJob<long>(
-            async (observer, cancellationToken) =>
-            {
-                await SignalAsyncExtensions.DelayAsync(dueTime, tp, cancellationToken).ConfigureAwait(false);
-
-                long tick = 0;
-                while (!cancellationToken.IsCancellationRequested)
-                {
-                    await observer.OnNextAsync(tick++, cancellationToken).ConfigureAwait(false);
-                    await SignalAsyncExtensions.DelayAsync(period, tp, cancellationToken).ConfigureAwait(false);
-                }
-            },
-            true);
+        return new TimerSignal(dueTime, period, tp);
     }
 }

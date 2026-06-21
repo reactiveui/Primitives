@@ -48,6 +48,6 @@ internal sealed class SequencerWorkItem<TSequencer, TState> : IDisposable
             return;
         }
 
-        _action(_sequencer, _state);
+        _ = _action(_sequencer, _state);
     }
 }

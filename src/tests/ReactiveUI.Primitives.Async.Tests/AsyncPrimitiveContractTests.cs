@@ -258,8 +258,8 @@ public sealed class AsyncPrimitiveContractTests
             .UniqueBy(static value => value, StringComparer.OrdinalIgnoreCase).ToListAsync();
         var casted = await BoxedOne.ToAsyncSignal().CastTo<string>().ToListAsync();
         var notNull = await NullableOneNullTwo.ToAsyncSignal().KeepNotNull().ToListAsync();
-        Assert.Throws<ArgumentNullException>(() => source.MapWith<int, int, int>(State, null!));
-        Assert.Throws<ArgumentNullException>(() => source.KeepWith(State, (Func<int, int, bool>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.MapWith<int, int, int>(State, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.KeepWith(State, (Func<int, int, bool>)null!));
         await Assert.That(mappedAsync.SequenceEqual(TwoFourSix)).IsTrue();
         await Assert.That(mappedWith.SequenceEqual(ElevenTwelveThirteen)).IsTrue();
         await Assert.That(keptAsync.SequenceEqual(TwoOnly)).IsTrue();

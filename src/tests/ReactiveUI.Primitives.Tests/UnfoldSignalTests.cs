@@ -31,7 +31,7 @@ public class UnfoldSignalTests
     {
         List<int> unfolded = [];
         var unfoldCompleted = 0;
-        Signal.Unfold(First, static value => value <= Second, static value => value + 1, static value => value)
+        _ = Signal.Unfold(First, static value => value <= Second, static value => value + 1, static value => value)
             .Subscribe(unfolded.Add, error => throw error, () => unfoldCompleted++);
         await Assert.That(unfolded.SequenceEqual([First, Second])).IsTrue();
         await Assert.That(unfoldCompleted).IsEqualTo(1);

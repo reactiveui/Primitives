@@ -43,7 +43,7 @@ internal static class DisposableSlotHelper
             return;
         }
 
-        Interlocked.Exchange(ref slot, value);
+        _ = Interlocked.Exchange(ref slot, value);
         DisposeIfRaced(ref slot, ref disposed);
     }
 

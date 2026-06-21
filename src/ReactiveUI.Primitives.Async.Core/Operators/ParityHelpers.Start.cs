@@ -14,7 +14,12 @@ public static partial class SignalAsync
     /// <typeparam name="TResult">The result type.</typeparam>
     /// <param name="function">The function to execute.</param>
     /// <returns>An observable sequence that emits the function result and then completes.</returns>
-    public static IObservableAsync<TResult> Start<TResult>(Func<TResult> function) => Start(function, null);
+    public static IObservableAsync<TResult> Start<TResult>(Func<TResult> function)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(function);
+
+        return new StartSignal<TResult>(function, null);
+    }
 
     /// <summary>Creates an observable sequence that executes the supplied function and emits its result.</summary>
     /// <typeparam name="TResult">The result type.</typeparam>
@@ -25,14 +30,6 @@ public static partial class SignalAsync
     {
         ArgumentExceptionHelper.ThrowIfNull(function);
 
-        return taskScheduler is null
-            ? FromAsync(_ => new ValueTask<TResult>(function()))
-            : CreateAsBackgroundJob<TResult>(
-                async (observer, cancellationToken) =>
-                {
-                    await observer.OnNextAsync(function(), cancellationToken).ConfigureAwait(false);
-                    await observer.OnCompletedAsync(Result.Success).ConfigureAwait(false);
-                },
-                taskScheduler);
+        return new StartSignal<TResult>(function, taskScheduler);
     }
 }

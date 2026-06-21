@@ -24,19 +24,19 @@ public sealed class SignalDeferTests
             subscriptions++;
             return Signal.FromEnumerable([First, Second]);
         });
-        deferred.Subscribe(values.Add);
-        deferred.Subscribe(_ => { });
+        _ = deferred.Subscribe(values.Add);
+        _ = deferred.Subscribe(_ => { });
         await Assert.That(values.SequenceEqual([First, Second])).IsTrue();
         await Assert.That(subscriptions).IsEqualTo(ExpectedSubscriptionCount);
         await Assert.That(Signal.FromEnumerable([First, Second]).ToEnumerable().SequenceEqual([First, Second]))
             .IsTrue();
         InvalidOperationException factoryError = new("defer-factory");
         Exception? observedFactoryError = null;
-        Signal.Defer((Func<IObservable<int>>)(() => throw factoryError)).Subscribe(_ => { }, ex => observedFactoryError = ex);
+        _ = Signal.Defer((Func<IObservable<int>>)(() => throw factoryError)).Subscribe(_ => { }, ex => observedFactoryError = ex);
         await Assert.That(observedFactoryError!).IsSameReferenceAs(factoryError);
-        Assert.Throws<InvalidOperationException>(() =>
+        _ = Assert.Throws<InvalidOperationException>(() =>
             Signal.Fail<int>(new InvalidOperationException("enumerable")).ToEnumerable());
-        Assert.Throws<ArgumentNullException>(() => Signal.Defer((Func<IObservable<int>>)null!));
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).ToEnumerable());
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Defer((Func<IObservable<int>>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).ToEnumerable());
     }
 }

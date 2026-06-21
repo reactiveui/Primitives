@@ -50,10 +50,10 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="disposeAction">The async dispose action.</param>
-    internal sealed class OnDisposeSignal<T>(IObservableAsync<T> source, Func<ValueTask> disposeAction) : SignalAsync<T>
+    internal sealed class OnDisposeSignal<T>(IObservableAsync<T> source, Func<ValueTask> disposeAction) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken)
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(IObserverAsync<T> observer, CancellationToken cancellationToken)
         {
             OnDisposeWitness<T> sink = new(observer, disposeAction);
             return source.SubscribeAsync(sink, cancellationToken);
@@ -64,10 +64,10 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="disposeAction">The sync dispose action.</param>
-    internal sealed class OnDisposeSyncSignal<T>(IObservableAsync<T> source, Action disposeAction) : SignalAsync<T>
+    internal sealed class OnDisposeSyncSignal<T>(IObservableAsync<T> source, Action disposeAction) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken)
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(IObserverAsync<T> observer, CancellationToken cancellationToken)
         {
             OnDisposeWitnessSync<T> sink = new(observer, disposeAction);
             return source.SubscribeAsync(sink, cancellationToken);

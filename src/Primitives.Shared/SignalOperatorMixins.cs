@@ -18,13 +18,24 @@ public static partial class LinqExtensions
     {
         /// <summary>Converts an enumerable sequence to a signal.</summary>
         /// <returns>A signal that emits the enumerable values.</returns>
-        public IObservable<T> ToSignal() => Signal.FromEnumerable(values);
+        public IObservable<T> ToSignal()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(values);
+
+            return new FromEnumerableSignal<T>(values);
+        }
 
         /// <summary>Converts an enumerable sequence to a signal that observes cancellation.</summary>
         /// <param name="cancellationToken">The token used to stop enumeration.</param>
         /// <returns>A signal that emits the enumerable values until enumeration completes or cancellation is requested.</returns>
-        public IObservable<T> ToSignal(CancellationToken cancellationToken) =>
-            Signal.FromEnumerable(values, cancellationToken);
+        public IObservable<T> ToSignal(CancellationToken cancellationToken)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(values);
+
+            return cancellationToken.CanBeCanceled
+                ? new FromEnumerableSignal<T>(values, cancellationToken)
+                : new FromEnumerableSignal<T>(values);
+        }
     }
 
     /// <summary>Combining operators for an observable source of inner observable sequences.</summary>
@@ -69,12 +80,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(sources);
 
-            if (TryCreateSynchronousSwitchRangeSignal(sources, out var rangeSignal))
-            {
-                return rangeSignal;
-            }
-
-            return new SwitchSignal<T>(sources);
+            return TryCreateSynchronousSwitchRangeSignal(sources, out var rangeSignal) ? rangeSignal : new SwitchSignal<T>(sources);
         }
     }
 
@@ -249,7 +255,7 @@ public static partial class LinqExtensions
 
             if (source is LoopSignal<T> loop)
             {
-                return count == 0 ? Signal.None<T>() : new RepeatSignal<T>(loop.Value, count);
+                return count == 0 ? ImmutableEmptySignal<T>.Instance : new RepeatSignal<T>(loop.Value, count);
             }
 
             return new TakeSignal<T>(source, count);
@@ -286,8 +292,12 @@ public static partial class LinqExtensions
         /// <summary>Suppresses values that have already been observed.</summary>
         /// <returns>A sequence containing the first occurrence of each source value.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
-        public IObservable<T> Distinct() =>
-            source.Distinct(null);
+        public IObservable<T> Distinct()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new DistinctSignal<T>(source, null);
+        }
 
         /// <summary>Suppresses values that have already been observed using the supplied comparer.</summary>
         /// <param name="comparer">The comparer used to identify duplicate values.</param>
@@ -303,8 +313,12 @@ public static partial class LinqExtensions
         /// <summary>Suppresses adjacent duplicate values.</summary>
         /// <returns>A sequence with adjacent duplicates removed.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
-        public IObservable<T> Unique() =>
-            source.Unique(null);
+        public IObservable<T> Unique()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new UniqueSignal<T>(source, EqualityComparer<T>.Default);
+        }
 
         /// <summary>Suppresses adjacent duplicate values using the supplied comparer.</summary>
         /// <param name="comparer">The comparer used to compare adjacent values.</param>
@@ -356,12 +370,15 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            if (typeof(T) == typeof(int) && typeof(TRight) == typeof(int) && source is RangeSignal leftRange && right is RangeSignal rightRange)
-            {
-                return new RangeZipSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
-            }
-
-            return new ZipSignal<T, TRight, TResult>(source, right, selector);
+            return typeof(T) == typeof(int) &&
+                typeof(TRight) == typeof(int) &&
+                source is RangeSignal leftRange &&
+                right is RangeSignal rightRange
+                ? new RangeZipSignal<TResult>(
+                    leftRange,
+                    rightRange,
+                    (Func<int, int, TResult>)(object)selector)
+                : new ZipSignal<T, TRight, TResult>(source, right, selector);
         }
 
         /// <summary>Combines the latest values after both sequences have produced at least one value.</summary>
@@ -379,12 +396,15 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            if (typeof(T) == typeof(int) && typeof(TRight) == typeof(int) && source is RangeSignal leftRange && right is RangeSignal rightRange)
-            {
-                return CreateRangeCombineLatestSignal(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
-            }
-
-            return new CombineLatestSignal<T, TRight, TResult>(source, right, selector);
+            return typeof(T) == typeof(int) &&
+                typeof(TRight) == typeof(int) &&
+                source is RangeSignal leftRange &&
+                right is RangeSignal rightRange
+                ? new RangeSyncLatestSignal<TResult>(
+                    leftRange,
+                    rightRange,
+                    (Func<int, int, TResult>)(object)selector)
+                : new CombineLatestSignal<T, TRight, TResult>(source, right, selector);
         }
 
         /// <summary>Combines each left value with the latest right value after the right sequence has produced a value.</summary>
@@ -403,12 +423,15 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            if (typeof(T) == typeof(int) && typeof(TRight) == typeof(int) && source is RangeSignal leftRange && right is RangeSignal rightRange)
-            {
-                return CreateRangeWithLatestSignal(leftRange, rightRange, (Func<int, int, TResult>)(object)selector);
-            }
-
-            return new LatchSignal<T, TRight, TResult>(source, right, selector);
+            return typeof(T) == typeof(int) &&
+                typeof(TRight) == typeof(int) &&
+                source is RangeSignal leftRange &&
+                right is RangeSignal rightRange
+                ? new RangeWithLatestSignal<TResult>(
+                    leftRange,
+                    rightRange,
+                    (Func<int, int, TResult>)(object)selector)
+                : new LatchSignal<T, TRight, TResult>(source, right, selector);
         }
 
         /// <summary>Resubscribes to the source after an error up to <paramref name="retryCount"/> times.</summary>
@@ -429,15 +452,27 @@ public static partial class LinqExtensions
         /// <param name="handler">The function that creates the recovery sequence for an error.</param>
         /// <returns>A sequence that continues with the handler result after an error.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="handler"/> is <see langword="null"/>.</exception>
-        public IObservable<T> Recover(Func<Exception, IObservable<T>> handler) =>
-            source.Recover<T, Exception>(handler);
+        public IObservable<T> Recover(Func<Exception, IObservable<T>> handler)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(handler);
+
+            return new RecoverSignal<T, Exception>(source, handler);
+        }
 
         /// <summary>Recovers from errors by switching to a handler-provided sequence.</summary>
         /// <param name="handler">The function that creates the recovery sequence for an error.</param>
         /// <returns>A sequence that continues with the handler result after an error.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="handler"/> is <see langword="null"/>.</exception>
-        public IObservable<T> Rescue(Func<Exception, IObservable<T>> handler) =>
-            source.Recover(handler);
+        public IObservable<T> Rescue(Func<Exception, IObservable<T>> handler)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new RecoverSignal<T, Exception>(
+                source,
+                handler ?? throw new ArgumentNullException(nameof(handler)));
+        }
 
         /// <summary>Continues with a fallback sequence after an error.</summary>
         /// <param name="fallback">The sequence to subscribe to after an error.</param>
@@ -455,8 +490,17 @@ public static partial class LinqExtensions
         /// <summary>Delays source notifications by the specified duration.</summary>
         /// <param name="dueTime">The delay applied to each notification.</param>
         /// <returns>A sequence that forwards source notifications after the delay.</returns>
-        public IObservable<T> Shift(TimeSpan dueTime) =>
-            source.Shift(dueTime, null);
+        public IObservable<T> Shift(TimeSpan dueTime)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+                ? new ShiftedRangeSignal<T>(
+                    range,
+                    Sequencer.Normalize(dueTime),
+                    ThreadPoolSequencer.Instance)
+                : new ShiftSignal<T>(source, dueTime, ThreadPoolSequencer.Instance);
+        }
 
         /// <summary>Delays source notifications by the specified duration on a sequencer.</summary>
         /// <param name="dueTime">The delay applied to each notification.</param>
@@ -467,19 +511,23 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
 
             scheduler ??= ThreadPoolSequencer.Instance;
-            if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
-            {
-                return new ShiftedRangeSignal<T>(range, Sequencer.Normalize(dueTime), scheduler);
-            }
-
-            return new ShiftSignal<T>(source, dueTime, scheduler);
+            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+                ? new ShiftedRangeSignal<T>(
+                    range,
+                    Sequencer.Normalize(dueTime),
+                    scheduler)
+                : new ShiftSignal<T>(source, dueTime, scheduler);
         }
 
         /// <summary>Fails the sequence if it does not terminate before the timeout.</summary>
         /// <param name="dueTime">The timeout duration.</param>
         /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
-        public IObservable<T> Expire(TimeSpan dueTime) =>
-            source.Expire(dueTime, null);
+        public IObservable<T> Expire(TimeSpan dueTime)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new ExpireSignal<T>(source, dueTime, ThreadPoolSequencer.Instance);
+        }
 
         /// <summary>Fails the sequence if it does not terminate before the sequencer timeout.</summary>
         /// <param name="dueTime">The timeout duration.</param>
@@ -499,12 +547,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
-            {
-                return new RangeListSignal<T>(range);
-            }
-
-            return new CollectListSignal<T>(source);
+            return source is RangeSignal range && CanReadRangeAs(typeof(T)) ? new RangeListSignal<T>(range) : new CollectListSignal<T>(source);
         }
 
         /// <summary>Collects all values into an array when the source completes.</summary>
@@ -513,12 +556,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
-            {
-                return new RangeArraySignal<T>(range);
-            }
-
-            return new CollectArraySignal<T>(source);
+            return source is RangeSignal range && CanReadRangeAs(typeof(T)) ? new RangeArraySignal<T>(range) : new CollectArraySignal<T>(source);
         }
 
         /// <summary>Returns an observable sequence as a signal-compatible observable.</summary>
@@ -591,7 +629,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source.Map(value => (TResult)value!);
+            return new CastSignal<TResult>(source);
         }
     }
 
@@ -603,32 +641,27 @@ public static partial class LinqExtensions
         /// <summary>Converts a task to a signal that emits the task result.</summary>
         /// <returns>A signal that emits the completed task result or faults with the task error.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="task"/> is <see langword="null"/>.</exception>
-        public IObservable<T> ToSignal() => Signal.FromTask(task);
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Major Code Smell",
+            "S4462:Calls to \"async\" methods should not be blocking",
+            Justification = "Synchronous read of an already-completed (RanToCompletion) task preserves the existing allocation-free fast path; await is invalid in this synchronous factory.")]
+        public IObservable<T> ToSignal()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(task);
+
+            if (task.Status == TaskStatus.RanToCompletion)
+            {
+                return new ImmediateReturnSignal<T>(task.Result);
+            }
+
+            if (task.IsCanceled)
+            {
+                return new ImmediateThrowSignal<T>(new TaskCanceledException(task));
+            }
+
+            return task.IsFaulted ? new ImmediateThrowSignal<T>(task.Exception!.InnerException ?? task.Exception) : new TaskInstanceSignal<T>(task);
+        }
     }
-
-    /// <summary>Creates the optimized range-backed combine-latest sequence.</summary>
-    /// <typeparam name="TResult">The result value type.</typeparam>
-    /// <param name="left">The left range source.</param>
-    /// <param name="right">The right range source.</param>
-    /// <param name="selector">The function that combines range values.</param>
-    /// <returns>The optimized combine-latest sequence.</returns>
-    private static RangeCombineLatestSignal<TResult> CreateRangeCombineLatestSignal<TResult>(
-        RangeSignal left,
-        RangeSignal right,
-        Func<int, int, TResult> selector) =>
-        new(left, right, selector);
-
-    /// <summary>Creates the optimized range-backed with-latest sequence.</summary>
-    /// <typeparam name="TResult">The result value type.</typeparam>
-    /// <param name="left">The left range source.</param>
-    /// <param name="right">The right range source.</param>
-    /// <param name="selector">The function that combines range values.</param>
-    /// <returns>The optimized with-latest sequence.</returns>
-    private static RangeWithLatestSignal<TResult> CreateRangeWithLatestSignal<TResult>(
-        RangeSignal left,
-        RangeSignal right,
-        Func<int, int, TResult> selector) =>
-        new(left, right, selector);
 
     /// <summary>Determines whether a generic observer type can receive boxed range integers.</summary>
     /// <param name="elementType">The observer value type.</param>
@@ -666,38 +699,5 @@ public static partial class LinqExtensions
 
         signal = (IObservable<T>)(object)new RangeConcatSignal(ranges);
         return true;
-    }
-
-    /// <summary>Emits all range values and completion from a scheduled batch.</summary>
-    /// <typeparam name="T">The observer value type.</typeparam>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="range">The source range.</param>
-    /// <returns>An empty disposable.</returns>
-    private static EmptyDisposable EmitShiftedRange<T>(IObserver<T> observer, RangeSignal range)
-    {
-        for (var i = 0; i < range.Count; i++)
-        {
-            observer.OnNext((T)(object)(range.Start + i));
-        }
-
-        observer.OnCompleted();
-        return EmptyDisposable.Instance;
-    }
-
-    /// <summary>Emits all range values and completion from a scheduled batch.</summary>
-    /// <typeparam name="T">The observer value type.</typeparam>
-    /// <param name="onNext">The next callback.</param>
-    /// <param name="onCompleted">The completion callback.</param>
-    /// <param name="range">The source range.</param>
-    /// <returns>An empty disposable.</returns>
-    private static EmptyDisposable EmitShiftedRange<T>(Action<T> onNext, Action onCompleted, RangeSignal range)
-    {
-        for (var i = 0; i < range.Count; i++)
-        {
-            onNext((T)(object)(range.Start + i));
-        }
-
-        onCompleted();
-        return EmptyDisposable.Instance;
     }
 }

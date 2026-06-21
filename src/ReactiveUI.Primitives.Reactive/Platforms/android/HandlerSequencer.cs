@@ -58,7 +58,7 @@ public sealed class HandlerSequencer : CoalescingDispatchScheduler
     protected override IDisposable ScheduleOnDispatcher(Action work, TimeSpan dueTime)
     {
         var runnable = new Java.Lang.Runnable(work);
-        Handler.PostDelayed(runnable, (long)dueTime.TotalMilliseconds);
+        _ = Handler.PostDelayed(runnable, (long)dueTime.TotalMilliseconds);
         return Disposable.Create((Handler, runnable), static state => state.Handler.RemoveCallbacks(state.runnable));
     }
 }

@@ -56,7 +56,8 @@ public sealed class ShuffleObservable<T>(IObservable<T[]> source) : IObservable<
         {
             if (value is null)
             {
-                downstream.OnNext(value!);
+                var output = value!;
+                downstream.OnNext(output);
                 return;
             }
 

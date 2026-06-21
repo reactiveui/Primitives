@@ -17,11 +17,6 @@ internal static class CurrentThreadRequirement
     /// <returns><see langword="true"/> when the source requires current-thread subscription.</returns>
     public static bool IsRequired<T>(IObservable<T> source)
     {
-        if (source is not IRequireCurrentThread<T> currentThread)
-        {
-            return false;
-        }
-
-        return currentThread.IsRequiredSubscribeOnCurrentThread();
+        return source is not IRequireCurrentThread<T> currentThread ? false : currentThread.IsRequiredSubscribeOnCurrentThread();
     }
 }

@@ -3,6 +3,12 @@
 // See the LICENSE file in the project root for full license information.
 
 #if REACTIVE_SHIM
+using StartSignal = ReactiveUI.Primitives.Async.Reactive.Advanced.StartSignal;
+#else
+using StartSignal = ReactiveUI.Primitives.Async.Advanced.StartSignal;
+#endif
+
+#if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Async.Reactive;
 #else
 namespace ReactiveUI.Primitives.Async;
@@ -14,7 +20,12 @@ public static partial class SignalAsyncReactiveExtensions
     /// <summary>Creates an observable sequence that executes the supplied action and emits <see cref="RxVoid.Default"/>.</summary>
     /// <param name="action">The action to execute.</param>
     /// <returns>An observable sequence that completes after the action has run.</returns>
-    public static IObservableAsync<RxVoid> Start(Action action) => Start(action, null);
+    public static IObservableAsync<RxVoid> Start(Action action)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(action);
+
+        return new StartSignal(action, null);
+    }
 
     /// <summary>Creates an observable sequence that executes the supplied action and emits <see cref="RxVoid.Default"/>.</summary>
     /// <param name="action">The action to execute.</param>
@@ -24,19 +35,6 @@ public static partial class SignalAsyncReactiveExtensions
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
 
-        return taskScheduler is null
-            ? FromAsync(_ =>
-            {
-                action();
-                return default;
-            })
-            : SignalAsync.CreateAsBackgroundJob<RxVoid>(
-                async (observer, cancellationToken) =>
-                {
-                    action();
-                    await observer.OnNextAsync(RxVoid.Default, cancellationToken).ConfigureAwait(false);
-                    await observer.OnCompletedAsync(Result.Success).ConfigureAwait(false);
-                },
-                taskScheduler);
+        return new StartSignal(action, taskScheduler);
     }
 }

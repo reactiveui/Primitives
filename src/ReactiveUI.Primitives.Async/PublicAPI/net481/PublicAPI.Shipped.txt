@@ -1,4 +1,20 @@
 #nullable enable
+ReactiveUI.Primitives.Async.Advanced.FromAsyncSignal
+ReactiveUI.Primitives.Async.Advanced.FromAsyncSignal.FromAsyncSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>! factory) -> void
+ReactiveUI.Primitives.Async.Advanced.FromAsyncSubscription
+ReactiveUI.Primitives.Async.Advanced.FromAsyncSubscription.FromAsyncSubscription(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid>! observer, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>! factory) -> void
+ReactiveUI.Primitives.Async.Advanced.StartSignal
+ReactiveUI.Primitives.Async.Advanced.StartSignal.StartSignal(System.Action! action, System.Threading.Tasks.TaskScheduler? taskScheduler) -> void
+ReactiveUI.Primitives.Async.Advanced.StartSubscription
+ReactiveUI.Primitives.Async.Advanced.StartSubscription.StartSubscription(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid>! observer, System.Action! action, System.Threading.Tasks.TaskScheduler? taskScheduler) -> void
+ReactiveUI.Primitives.Async.Advanced.TaskToAsyncSignal
+ReactiveUI.Primitives.Async.Advanced.TaskToAsyncSignal.TaskToAsyncSignal(System.Threading.Tasks.Task! task) -> void
+ReactiveUI.Primitives.Async.Advanced.ToAsyncSignalSubscription
+ReactiveUI.Primitives.Async.Advanced.ToAsyncSignalSubscription.ToAsyncSignalSubscription(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid>! observer, System.Threading.Tasks.Task! task) -> void
+ReactiveUI.Primitives.Async.Advanced.WitnessOnSignal<T>
+ReactiveUI.Primitives.Async.Advanced.WitnessOnSignal<T>.WitnessOnSignal(ReactiveUI.Primitives.Async.IObservableAsync<T>! source, ReactiveUI.Primitives.Async.AsyncContext! asyncContext, bool forceYielding) -> void
+ReactiveUI.Primitives.Async.Advanced.WitnessOnWitness<T>
+ReactiveUI.Primitives.Async.Advanced.WitnessOnWitness<T>.WitnessOnWitness(ReactiveUI.Primitives.Async.IObserverAsync<T>! observer, ReactiveUI.Primitives.Async.AsyncContext! asyncContext, bool forceYielding) -> void
 ReactiveUI.Primitives.Async.AsyncContext
 ReactiveUI.Primitives.Async.AsyncContext.<Clone>$() -> ReactiveUI.Primitives.Async.AsyncContext!
 ReactiveUI.Primitives.Async.AsyncContext.AsyncContextSwitcherAwaitable

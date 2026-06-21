@@ -12,5 +12,5 @@ public static partial class SignalAsync
     /// <param name="sources">The sources to merge.</param>
     /// <returns>An observable sequence that merges the sources.</returns>
     public static IObservableAsync<T> Blend<T>(params IObservableAsync<T>[] sources) =>
-        sources.Blend();
+        new SignalAsyncExtensions.BlendEnumerableSignal<T>(sources);
 }

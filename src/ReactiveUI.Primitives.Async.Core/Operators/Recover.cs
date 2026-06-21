@@ -38,54 +38,15 @@ public static partial class SignalAsyncExtensions
             return new CatchSignal<T>(source, handler, null);
         }
 
-        /// <summary>
-        /// Creates a new observable sequence that continues with a handler-provided sequence when an exception occurs
-        /// in the source sequence.
-        /// </summary>
-        /// <param name="handler">A function that receives the exception thrown by the source sequence and returns an alternative observable
-        /// sequence to continue with.</param>
-        /// <returns>An observable sequence that emits items from the source sequence, or from the handler-provided sequence if
-        /// an exception is encountered.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
-        public IObservableAsync<T> Catch(Func<Exception, IObservableAsync<T>> handler)
-            => source.Recover(handler);
-
-        /// <summary>
-        /// Creates a new observable sequence that continues with a handler-provided sequence when an exception occurs
-        /// in the source sequence.
-        /// </summary>
-        /// <remarks>Use this method to recover from errors in the source sequence by switching to an
-        /// alternative observable sequence. The handler function is called with the exception, allowing custom error
-        /// recovery logic. If the handler itself throws an exception, the resulting sequence completes with that
-        /// exception.</remarks>
-        /// <param name="handler">A function that receives the exception thrown by the source sequence and returns an alternative observable
-        /// sequence to continue with.</param>
-        /// <param name="onErrorResume">An optional asynchronous callback invoked when an error occurs. If not specified, the observer's default
-        /// error handler is used.</param>
-        /// <returns>An observable sequence that emits items from the source sequence, or from the handler-provided sequence if
-        /// an exception is encountered.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
-        public IObservableAsync<T> Catch(
-            Func<Exception, IObservableAsync<T>> handler,
-            Func<Exception, CancellationToken, ValueTask>? onErrorResume)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            ArgumentExceptionHelper.ThrowIfNull(handler);
-
-            return new CatchSignal<T>(source, handler, onErrorResume);
-        }
-
-        /// <summary>Recovers from a terminal failure with a replacement sequence.</summary>
-        /// <param name="handler">The handler that produces a replacement sequence from the error.</param>
-        /// <returns>An observable sequence that recovers from failures.</returns>
-        public IObservableAsync<T> Rescue(Func<Exception, IObservableAsync<T>> handler) =>
-            source.Recover(handler);
-
         /// <summary>Resumes with a fallback sequence after a terminal failure.</summary>
         /// <param name="fallback">The fallback sequence used after a failure.</param>
         /// <returns>An observable sequence that resumes with the fallback on failure.</returns>
-        public IObservableAsync<T> Resume(IObservableAsync<T> fallback) =>
-            source.Recover(_ => fallback);
+        public IObservableAsync<T> Resume(IObservableAsync<T> fallback)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new CatchSignal<T>(source, _ => fallback, null);
+        }
 
         /// <summary>
         /// Continues the observable sequence with an alternative sequence provided by the specified handler when an
@@ -98,12 +59,20 @@ public static partial class SignalAsyncExtensions
         /// an error occurs.</param>
         /// <returns>An observable sequence that resumes with the sequence returned by the handler when an error is encountered,
         /// and ignores the error after handling.</returns>
-        public IObservableAsync<T> CatchAndIgnoreErrorResume(Func<Exception, IObservableAsync<T>> handler) =>
-            source.Catch(handler, static (error, _) =>
-            {
-                UnhandledExceptionHandler.ReportUnhandledException(error);
-                return default;
-            });
+        public IObservableAsync<T> CatchAndIgnoreErrorResume(Func<Exception, IObservableAsync<T>> handler)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+            ArgumentExceptionHelper.ThrowIfNull(handler);
+
+            return new CatchSignal<T>(
+                source,
+                handler,
+                static (error, _) =>
+                {
+                    UnhandledExceptionHandler.ReportUnhandledException(error);
+                    return default;
+                });
+        }
     }
 
     /// <summary>
@@ -119,10 +88,10 @@ public static partial class SignalAsyncExtensions
     internal sealed class CatchSignal<T>(
         IObservableAsync<T> source,
         Func<Exception, IObservableAsync<T>> handler,
-        Func<Exception, CancellationToken, ValueTask>? onErrorResume) : SignalAsync<T>
+        Func<Exception, CancellationToken, ValueTask>? onErrorResume) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

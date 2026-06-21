@@ -28,12 +28,7 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
     public IAsyncDisposable? GetDisposable()
     {
         var field = Volatile.Read(ref _current);
-        if (DisposableAsyncSlot.IsDisposed(field))
-        {
-            return DisposableAsync.Empty;
-        }
-
-        return field;
+        return DisposableAsyncSlot.IsDisposed(field) ? DisposableAsync.Empty : field;
     }
 
     /// <summary>Asynchronously sets the current disposable resource to the specified value, replacing any previously set resource.</summary>

@@ -59,7 +59,7 @@ public partial class CombiningOperatorTests
     [Test]
     public void WhenZipNullArguments_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(() =>
-            ((SignalAsync<int>)null!).Zip(SignalAsync.Return(1), (a, b) => a + b));
+            ((IObservableAsync<int>)null!).Zip(SignalAsync.Return(1), (a, b) => a + b));
 
     /// <summary>Verifies that zip propagates a failure when the first source errors.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -274,7 +274,7 @@ public partial class CombiningOperatorTests
             null,
             _ =>
             {
-                Interlocked.Increment(ref completionCount);
+                IgnoredResult.Of(Interlocked.Increment(ref completionCount));
                 return default;
             });
         await first.OnCompletedAsync(Result.Success);

@@ -25,7 +25,7 @@ public static class SignalSubscription
 
         if (currentThreadRequired && CurrentThreadSequencer.IsScheduleRequired)
         {
-            Sequencer.CurrentThread.Schedule(() => subscription.Create(subscribeCore(observer, subscription)));
+            _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(subscribeCore(observer, subscription)));
         }
         else
         {

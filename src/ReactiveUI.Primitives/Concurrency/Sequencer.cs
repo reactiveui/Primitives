@@ -72,12 +72,7 @@ public static partial class Sequencer
         }
 
         var ticks = timestampDelta * (double)TimeSpan.TicksPerSecond / System.Diagnostics.Stopwatch.Frequency;
-        if (ticks >= TimeSpan.MaxValue.Ticks)
-        {
-            return TimeSpan.MaxValue;
-        }
-
-        return TimeSpan.FromTicks(Math.Max(1, (long)Math.Ceiling(ticks)));
+        return ticks >= TimeSpan.MaxValue.Ticks ? TimeSpan.MaxValue : TimeSpan.FromTicks(Math.Max(1, (long)Math.Ceiling(ticks)));
     }
 
     /// <summary>Converts a relative duration to monotonic timestamp ticks.</summary>
@@ -92,11 +87,6 @@ public static partial class Sequencer
         }
 
         var ticks = normalized.TotalSeconds * System.Diagnostics.Stopwatch.Frequency;
-        if (ticks >= long.MaxValue)
-        {
-            return long.MaxValue;
-        }
-
-        return Math.Max(1, (long)Math.Ceiling(ticks));
+        return ticks >= long.MaxValue ? long.MaxValue : Math.Max(1, (long)Math.Ceiling(ticks));
     }
 }

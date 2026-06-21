@@ -3,8 +3,12 @@
 // See the LICENSE file in the project root for full license information.
 
 #if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Advanced;
+
 namespace ReactiveUI.Primitives.Reactive;
 #else
+using ReactiveUI.Primitives.Advanced;
+
 namespace ReactiveUI.Primitives;
 #endif
 
@@ -34,27 +38,7 @@ public static partial class LinqExtensions
 
             ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(maxConcurrent);
 
-            return maxConcurrent == int.MaxValue ? sources.Blend() : new MaxConcurrentEnumerableBlendSignal<T>(sources, maxConcurrent);
-        }
-    }
-
-    /// <summary>Dedicated signal for enumerable <c>Blend</c> sources.</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    private sealed class EnumerableBlendSignal<T> : IObservable<T>
-    {
-        /// <summary>The sources to merge.</summary>
-        private readonly IEnumerable<IObservable<T>> _sources;
-
-        /// <summary>Initializes a new instance of the <see cref="EnumerableBlendSignal{T}"/> class.</summary>
-        /// <param name="sources">The sources to merge.</param>
-        internal EnumerableBlendSignal(IEnumerable<IObservable<T>> sources) => _sources = sources;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            return new BlendCoordinator<T>(observer).Run(_sources);
+            return maxConcurrent == int.MaxValue ? new EnumerableBlendSignal<T>(sources) : new MaxConcurrentEnumerableBlendSignal<T>(sources, maxConcurrent);
         }
     }
 }

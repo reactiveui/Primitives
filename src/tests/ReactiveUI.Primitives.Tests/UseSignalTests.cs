@@ -16,7 +16,7 @@ public class UseSignalTests
     public async Task UseValidatesSubscriptionError()
     {
         RecordingDisposable resource = new();
-        Assert.Throws<ArgumentNullException>(() => Signal.Use(
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Use(
                 () => resource,
                 _ => new ScriptedObservable<int>(static observer => observer.OnError(null!)))
             .Subscribe(new Recorder<int>()));
@@ -29,7 +29,7 @@ public class UseSignalTests
     public async Task UseDisposesResourceWhenSubscriptionIsNull()
     {
         RecordingDisposable resource = new();
-        Assert.Throws<ArgumentNullException>(() => Signal
+        _ = Assert.Throws<ArgumentNullException>(() => Signal
             .Use(() => resource, _ => new NullSubscriptionObservable<int>())
             .Subscribe(new Recorder<int>()));
         await Assert.That(resource.DisposeCount).IsEqualTo(1);

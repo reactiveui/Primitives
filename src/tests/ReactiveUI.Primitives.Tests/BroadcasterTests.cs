@@ -76,7 +76,7 @@ public class BroadcasterTests
         completedSignal.Subscribe(_ => { }).Dispose();
         Signal<int> failedSignal = new();
         failedSignal.OnError(new InvalidOperationException("late action"));
-        Assert.Throws<InvalidOperationException>(() => failedSignal.Subscribe(_ => { }).Dispose());
+        _ = Assert.Throws<InvalidOperationException>(() => failedSignal.Subscribe(_ => { }).Dispose());
         Signal<int> source = new();
         List<IList<int>> buffers = [];
         using (source.Buffer(Three, Two).Subscribe(buffers.Add))

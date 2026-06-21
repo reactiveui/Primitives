@@ -38,7 +38,7 @@ public sealed class DispatcherSequencer : CoalescingDispatchScheduler
     /// <inheritdoc/>
     protected override bool Post(Action drain)
     {
-        Dispatcher.BeginInvoke(drain, Priority);
+        _ = Dispatcher.BeginInvoke(drain, Priority);
         return true;
     }
 

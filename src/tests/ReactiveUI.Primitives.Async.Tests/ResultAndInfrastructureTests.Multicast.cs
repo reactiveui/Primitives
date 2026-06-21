@@ -94,7 +94,7 @@ public class ResultAndInfrastructureTests
         }
         finally
         {
-            observer.Release.TrySetResult();
+            _ = observer.Release.TrySetResult();
         }
 
         await first.WaitAsync(TimeSpan.FromSeconds(5));
@@ -202,7 +202,7 @@ public class ResultAndInfrastructureTests
         var callCount = 0;
         var source = SignalAsync.Create<int>(async (observer, ct) =>
         {
-            Interlocked.Increment(ref callCount);
+            _ = Interlocked.Increment(ref callCount);
             await observer.OnNextAsync(callCount, ct);
             return DisposableAsync.Empty;
         });
@@ -309,7 +309,7 @@ public class ResultAndInfrastructureTests
             null,
             _ =>
             {
-                completed.TrySetResult();
+                IgnoredResult.Of(completed.TrySetResult());
                 return default;
             });
         await using var conn = await connectable.ConnectAsync(CancellationToken.None);
@@ -400,7 +400,7 @@ public class ResultAndInfrastructureTests
         /// <inheritdoc/>
         protected override async ValueTask OnNextAsyncCore(int value, CancellationToken cancellationToken)
         {
-            Entered.TrySetResult();
+            _ = Entered.TrySetResult();
             await Release.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
 

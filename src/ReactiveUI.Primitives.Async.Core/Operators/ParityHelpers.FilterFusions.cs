@@ -20,10 +20,10 @@ public static partial class SignalAsyncExtensions
     /// </summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
-    internal sealed class PairwiseSignal<T>(IObservableAsync<T> source) : SignalAsync<(T Previous, T Current)>
+    internal sealed class PairwiseSignal<T>(IObservableAsync<T> source) : IObservableAsync<(T Previous, T Current)>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<(T Previous, T Current)>.SubscribeAsync(
             IObserverAsync<(T Previous, T Current)> observer,
             CancellationToken cancellationToken)
         {
@@ -85,11 +85,11 @@ public static partial class SignalAsyncExtensions
     /// </summary>
     /// <typeparam name="T">The non-nullable element type seen downstream.</typeparam>
     /// <param name="source">The nullable source observable.</param>
-    internal sealed class SkipWhileNullSignal<T>(IObservableAsync<T?> source) : SignalAsync<T>
+    internal sealed class SkipWhileNullSignal<T>(IObservableAsync<T?> source) : IObservableAsync<T>
         where T : class
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -149,11 +149,11 @@ public static partial class SignalAsyncExtensions
     /// </summary>
     /// <typeparam name="T">The non-nullable element type seen downstream.</typeparam>
     /// <param name="source">The nullable source observable.</param>
-    internal sealed class WhereIsNotNullSignal<T>(IObservableAsync<T?> source) : SignalAsync<T>
+    internal sealed class WhereIsNotNullSignal<T>(IObservableAsync<T?> source) : IObservableAsync<T>
         where T : class
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -179,15 +179,10 @@ public static partial class SignalAsyncExtensions
             CancellationToken subscribeToken) : WitnessAsync<T?>(subscribeToken)
         {
             /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T? value, CancellationToken cancellationToken)
-            {
-                if (value is null)
-                {
-                    return default;
-                }
-
-                return downstream.OnNextAsync(value, cancellationToken);
-            }
+            protected override ValueTask OnNextAsyncCore(T? value, CancellationToken cancellationToken) =>
+                value is null
+                    ? default
+                    : downstream.OnNextAsync(value, cancellationToken);
 
             /// <inheritdoc/>
             protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
@@ -209,10 +204,10 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="defaultValue">The seed value emitted on subscribe.</param>
-    internal sealed class LatestOrDefaultSignal<T>(IObservableAsync<T> source, T defaultValue) : SignalAsync<T>
+    internal sealed class LatestOrDefaultSignal<T>(IObservableAsync<T> source, T defaultValue) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -232,7 +227,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Per-subscription observer that swallows values equal to the most-recently-forwarded one.</summary>
         /// <param name="downstream">The downstream observer.</param>
-        /// <param name="seed">The seed value already emitted from <see cref="SubscribeAsyncCore"/>; treated as the initial "last forwarded value".</param>
+        /// <param name="seed">The seed value already emitted during subscription; treated as the initial "last forwarded value".</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
         internal sealed class LatestOrDefaultWitness(
             IObserverAsync<T> downstream,
@@ -277,10 +272,10 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="predicate">The predicate matched against each value.</param>
-    internal sealed class WaitUntilSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate) : SignalAsync<T>
+    internal sealed class WaitUntilSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -333,10 +328,10 @@ public static partial class SignalAsyncExtensions
 
     /// <summary>Fuses <c>source.Select(static value =&gt; !value)</c> into a single observer layer.</summary>
     /// <param name="source">The boolean source observable.</param>
-    internal sealed class NotSignal(IObservableAsync<bool> source) : SignalAsync<bool>
+    internal sealed class NotSignal(IObservableAsync<bool> source) : IObservableAsync<bool>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<bool>.SubscribeAsync(
             IObserverAsync<bool> observer,
             CancellationToken cancellationToken)
         {
@@ -375,10 +370,10 @@ public static partial class SignalAsyncExtensions
 
     /// <summary>Fuses <c>source.Where(static value =&gt; value)</c> into a single observer layer.</summary>
     /// <param name="source">The boolean source observable.</param>
-    internal sealed class WhereTrueSignal(IObservableAsync<bool> source) : SignalAsync<bool>
+    internal sealed class WhereTrueSignal(IObservableAsync<bool> source) : IObservableAsync<bool>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<bool>.SubscribeAsync(
             IObserverAsync<bool> observer,
             CancellationToken cancellationToken)
         {
@@ -417,10 +412,10 @@ public static partial class SignalAsyncExtensions
 
     /// <summary>Fuses <c>source.Where(static value =&gt; !value)</c> into a single observer layer.</summary>
     /// <param name="source">The boolean source observable.</param>
-    internal sealed class WhereFalseSignal(IObservableAsync<bool> source) : SignalAsync<bool>
+    internal sealed class WhereFalseSignal(IObservableAsync<bool> source) : IObservableAsync<bool>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<bool>.SubscribeAsync(
             IObserverAsync<bool> observer,
             CancellationToken cancellationToken)
         {

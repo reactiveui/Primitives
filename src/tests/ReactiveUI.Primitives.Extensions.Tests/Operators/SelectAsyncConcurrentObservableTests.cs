@@ -79,7 +79,7 @@ public class SelectAsyncConcurrentObservableTests
         subject.OnNext(TriggerValue);
         subject.OnCompleted();
         sub.Dispose();
-        gate.TrySetResult(true);
+        _ = gate.TrySetResult(true);
         await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
         await Assert.That(results).IsEmpty();
         await Assert.That(completed).IsFalse();
@@ -110,7 +110,7 @@ public class SelectAsyncConcurrentObservableTests
         // The selector is gated; nothing should have emitted yet.
         await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
         await Assert.That(completed.Task.IsCompleted).IsFalse();
-        gate.TrySetResult(true);
+        _ = gate.TrySetResult(true);
         var done = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(done).IsTrue();
 

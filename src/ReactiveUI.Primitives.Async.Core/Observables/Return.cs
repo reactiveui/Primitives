@@ -23,7 +23,7 @@ public static partial class SignalAsync
     /// <typeparam name="T">The type of the value to be emitted by the observable sequence.</typeparam>
     /// <param name="value">The value to be emitted by the observable sequence.</param>
     /// <returns>An observable sequence that emits the specified value and then signals completion.</returns>
-    public static IObservableAsync<T> Return<T>(T value) => Emit(value);
+    public static IObservableAsync<T> Return<T>(T value) => new ReturnSignalAsync<T>(value);
 
     /// <summary>
     /// Single-value observable that captures the emitted value as a field and routes through a typed
@@ -32,10 +32,10 @@ public static partial class SignalAsync
     /// </summary>
     /// <typeparam name="T">The element type emitted.</typeparam>
     /// <param name="value">The captured value emitted on each subscribe.</param>
-    internal sealed class ReturnSignalAsync<T>(T value) : SignalAsync<T>
+    internal sealed class ReturnSignalAsync<T>(T value) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

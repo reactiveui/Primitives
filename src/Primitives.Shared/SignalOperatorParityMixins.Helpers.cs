@@ -11,6 +11,39 @@ namespace ReactiveUI.Primitives;
 /// <summary>Private helper types for parity operators.</summary>
 public static partial class LinqExtensions
 {
+    /// <summary>Emits all range values and completion from a scheduled batch.</summary>
+    /// <typeparam name="T">The observer value type.</typeparam>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="range">The source range.</param>
+    /// <returns>An empty disposable.</returns>
+    private static EmptyDisposable EmitShiftedRange<T>(IObserver<T> observer, RangeSignal range)
+    {
+        for (var i = 0; i < range.Count; i++)
+        {
+            observer.OnNext((T)(object)(range.Start + i));
+        }
+
+        observer.OnCompleted();
+        return EmptyDisposable.Instance;
+    }
+
+    /// <summary>Emits all range values and completion from a scheduled batch.</summary>
+    /// <typeparam name="T">The observer value type.</typeparam>
+    /// <param name="onNext">The next callback.</param>
+    /// <param name="onCompleted">The completion callback.</param>
+    /// <param name="range">The source range.</param>
+    /// <returns>An empty disposable.</returns>
+    private static EmptyDisposable EmitShiftedRange<T>(Action<T> onNext, Action onCompleted, RangeSignal range)
+    {
+        for (var i = 0; i < range.Count; i++)
+        {
+            onNext((T)(object)(range.Start + i));
+        }
+
+        onCompleted();
+        return EmptyDisposable.Instance;
+    }
+
     /// <summary>Prepends a single value without composing through concat and return signals.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class PrependSignal<T> : IInlineSignal<T>
@@ -465,7 +498,7 @@ public static partial class LinqExtensions
             }
 
             SingleDisposable subscription = new();
-            Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run()));
+            _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run()));
             return subscription;
         }
     }

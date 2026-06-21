@@ -43,6 +43,10 @@ public class DelegateWitnessTests
         // No onError/onCompleted supplied: terminal notifications are ignored without throwing.
         witness.OnError(new InvalidOperationException("ignored"));
         witness.OnCompleted();
-        Assert.Throws<ArgumentNullException>(() => _ = new DelegateWitness<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            DelegateWitness<int> invalid = new(null!);
+            GC.KeepAlive(invalid);
+        });
     }
 }

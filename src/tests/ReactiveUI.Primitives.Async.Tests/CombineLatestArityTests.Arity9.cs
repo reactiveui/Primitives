@@ -141,7 +141,7 @@ public partial class CombineLatestArityTests
             (ex, _) =>
                 {
                     receivedError = ex;
-                    errorReceived.TrySetResult();
+                    IgnoredResult.Of(errorReceived.TrySetResult());
                     return default;
                 });
         InvalidOperationException expected = new("source error");
@@ -188,7 +188,7 @@ public partial class CombineLatestArityTests
             (x, _) =>
             {
                 results.Add(x);
-                emitted.TrySetResult();
+                IgnoredResult.Of(emitted.TrySetResult());
                 return default;
             },
             null);
@@ -254,7 +254,7 @@ public partial class CombineLatestArityTests
             null,
             r =>
                 {
-                    completed.TrySetResult(r);
+                    _ = completed.TrySetResult(r);
                     return default;
                 });
         await s1.OnNextAsync(1, CancellationToken.None);

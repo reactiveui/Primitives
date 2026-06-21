@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
-
 namespace ReactiveUI.Primitives.Async.Signals;
 
 /// <summary>
@@ -14,23 +12,36 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// than concurrently. This can be useful when observer operations are not thread-safe or when order of notification is
 /// important. Notifications to observers are performed asynchronously and in sequence.</remarks>
 /// <typeparam name="T">The type of the elements processed and observed by the Signal.</typeparam>
-public sealed class SerialSignalAsync<T> : BaseSignalAsync<T>
+public sealed class SerialSignalAsync<T> : ISignalAsync<T>
 {
     /// <inheritdoc/>
-    protected override ValueTask OnNextAsyncCore(
-        ImmutableArray<IObserverAsync<T>> observers,
+    IObservableAsync<T> ISignalAsync<T>.Values => this;
+
+    /// <summary>The mutable signal state.</summary>
+    private readonly SignalAsyncState<T> _state = new();
+
+    /// <inheritdoc/>
+    public ValueTask OnNextAsync(
         T value,
         CancellationToken cancellationToken) =>
-        SerialBroadcastHelpers.BroadcastOnNextAsync(observers, value, cancellationToken);
+        SignalAsyncStateHelper.OnNextAsync(_state, SignalBroadcastKind.Serial, value, cancellationToken);
 
     /// <inheritdoc/>
-    protected override ValueTask OnErrorResumeAsyncCore(
-        ImmutableArray<IObserverAsync<T>> observers,
+    public ValueTask OnErrorResumeAsync(
         Exception error,
         CancellationToken cancellationToken) =>
-        SerialBroadcastHelpers.BroadcastOnErrorResumeAsync(observers, error, cancellationToken);
+        SignalAsyncStateHelper.OnErrorResumeAsync(_state, SignalBroadcastKind.Serial, error, cancellationToken);
 
     /// <inheritdoc/>
-    protected override ValueTask OnCompletedAsyncCore(ImmutableArray<IObserverAsync<T>> observers, Result result) =>
-        SerialBroadcastHelpers.BroadcastOnCompletedAsync(observers, result);
+    public ValueTask OnCompletedAsync(Result result) =>
+        SignalAsyncStateHelper.OnCompletedAsync(_state, SignalBroadcastKind.Serial, result);
+
+    /// <inheritdoc/>
+    public ValueTask DisposeAsync() => SignalAsyncStateHelper.DisposeAsync();
+
+    /// <inheritdoc/>
+    public ValueTask<IAsyncDisposable> SubscribeAsync(
+        IObserverAsync<T> observer,
+        CancellationToken cancellationToken) =>
+        SignalAsyncStateHelper.SubscribeAsync(_state, observer, cancellationToken);
 }

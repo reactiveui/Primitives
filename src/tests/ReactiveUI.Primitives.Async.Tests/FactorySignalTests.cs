@@ -382,10 +382,10 @@ public class FactorySignalTests
         await Assert.That(items[0]).IsEqualTo(1L);
     }
 
-    /// <summary>Tests that EmitEnumerableAsync returns early when the cancellation token is already cancelled.</summary>
+    /// <summary>Tests that enumerable subscription emission returns early when the cancellation token is already cancelled.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenEmitEnumerableAsyncWithCancelledToken_ThenReturnsEarly()
+    public async Task WhenEnumerableSubscriptionWithCancelledToken_ThenReturnsEarly()
     {
         List<int> items = [];
         using CancellationTokenSource cts = new();
@@ -396,7 +396,9 @@ public class FactorySignalTests
             return default;
         });
         const int RangeCount = 100;
-        await SignalAsyncExtensions.EmitEnumerableAsync(Enumerable.Range(0, RangeCount), observer, cts.Token);
+        EnumerableSubscription<int> subscription = new(observer, Enumerable.Range(0, RangeCount));
+        await subscription.ExecuteAsync(cts.Token);
+        await subscription.DisposeAsync();
         await Assert.That(items).IsEmpty();
     }
 
@@ -420,7 +422,7 @@ public class FactorySignalTests
         await using var sub = await SignalAsync.Return(EmittedValue).SubscribeAsync((x, _) =>
         {
             items.Add(x);
-            received.TrySetResult();
+            IgnoredResult.Of(received.TrySetResult());
             return default;
         });
         await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -440,7 +442,7 @@ public class FactorySignalTests
             (x, _) =>
             {
                 items.Add(x);
-                received.TrySetResult();
+                IgnoredResult.Of(received.TrySetResult());
                 return default;
             },
             cts.Token);
@@ -512,7 +514,7 @@ public class FactorySignalTests
             (Action<int>)(x =>
             {
                 items.Add(x);
-                received.TrySetResult();
+                _ = received.TrySetResult();
             }),
             _ => { },
             null,
@@ -529,6 +531,6 @@ public class FactorySignalTests
     public void WhenFromAsyncWithNullFactory_ThenThrowsArgumentNull()
     {
         const Func<CancellationToken, ValueTask> Factory = null!;
-        Assert.Throws<ArgumentNullException>(() => SignalAsyncReactiveExtensions.FromAsync(Factory));
+        _ = Assert.Throws<ArgumentNullException>(() => SignalAsyncReactiveExtensions.FromAsync(Factory));
     }
 }

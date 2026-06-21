@@ -46,6 +46,6 @@ public class NotObservableTests
     public void WhenNotObserverNull_ThenSubscribeThrows()
     {
         NotObservable observable = new(new Subject<bool>());
-        Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
     }
 }

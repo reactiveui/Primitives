@@ -267,14 +267,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
     {
         ArgumentExceptionHelper.ThrowIfNull(array);
 
-#if NET8_0_OR_GREATER
-        ArgumentOutOfRangeException.ThrowIfNegative(arrayIndex);
-#else
-        if (arrayIndex < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(arrayIndex));
-        }
-#endif
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(arrayIndex);
 
         Snapshot().CopyTo(array, arrayIndex);
     }

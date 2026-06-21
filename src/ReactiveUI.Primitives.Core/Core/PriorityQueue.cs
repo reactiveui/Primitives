@@ -110,7 +110,7 @@ public sealed class PriorityQueue<T>
 
         var index = Count++;
         _items[index] = new() { Value = item, Id = ++_count };
-        Percolate(index);
+        _ = Percolate(index);
     }
 
     /// <summary>Adds multiple items to the queue.</summary>

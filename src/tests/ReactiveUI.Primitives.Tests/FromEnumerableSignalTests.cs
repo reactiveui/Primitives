@@ -63,9 +63,9 @@ public class FromEnumerableSignalTests
             .Subscribe(iteratorValues.Add, ex => throw ex, () => iteratorCompleted++).Dispose();
         await Assert.That(iteratorValues.SequenceEqual(ExpectedFiveSix)).IsTrue();
         await Assert.That(iteratorCompleted).IsEqualTo(1);
-        Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe((IObserver<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe(null!, ex => { }, () => { }));
-        Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe(_ => { }, ex => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe(null!, ex => { }, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe(_ => { }, ex => { }, null!));
     }
 
     /// <summary>Creates an iterator-backed enumerable for the non-indexable enumerable path.</summary>

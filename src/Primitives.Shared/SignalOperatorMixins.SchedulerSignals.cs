@@ -55,7 +55,7 @@ public static partial class LinqExtensions
             }
 
             SingleDisposable subscription = new();
-            Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run(observer)));
+            _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run(observer)));
             return subscription;
         }
     }
@@ -98,7 +98,7 @@ public static partial class LinqExtensions
             }
 
             SingleDisposable subscription = new();
-            Sequencer.CurrentThread.Schedule(() => subscription.Create(RunCore(observer)));
+            _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(RunCore(observer)));
             return subscription;
         }
 

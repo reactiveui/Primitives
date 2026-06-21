@@ -5,6 +5,12 @@
 using System.Diagnostics.CodeAnalysis;
 
 #if REACTIVE_SHIM
+using TaskToAsyncSignal = ReactiveUI.Primitives.Async.Reactive.Advanced.TaskToAsyncSignal;
+#else
+using TaskToAsyncSignal = ReactiveUI.Primitives.Async.Advanced.TaskToAsyncSignal;
+#endif
+
+#if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Async.Reactive;
 #else
 namespace ReactiveUI.Primitives.Async;
@@ -27,13 +33,6 @@ public static partial class SignalAsyncReactiveExtensions
             "Roslynator",
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
             Justification = "This is an existing method")]
-        public IObservableAsync<RxVoid> ToAsyncSignal() => SignalAsync.CreateAsBackgroundJob<RxVoid>(
-            async (obs, cancellationToken) =>
-            {
-                await @this.WaitAsync(System.Threading.Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
-                await obs.OnNextAsync(RxVoid.Default, cancellationToken).ConfigureAwait(false);
-                await obs.OnCompletedAsync(Result.Success).ConfigureAwait(false);
-            },
-            true);
+        public IObservableAsync<RxVoid> ToAsyncSignal() => new TaskToAsyncSignal(@this);
     }
 }

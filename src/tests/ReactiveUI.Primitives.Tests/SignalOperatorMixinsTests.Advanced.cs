@@ -25,7 +25,7 @@ public partial class SignalOperatorMixinsTests
     {
         MapIndexedSignal<int, int> mapped = new(Signal.Emit(One), static (value, index) => value + index);
         RecordingWitness<int> mappedValues = new();
-        mapped.Subscribe(mappedValues);
+        _ = mapped.Subscribe(mappedValues);
         MapIndexedSignal<int, int> currentThreadMapped = new(
             new CurrentThreadObservable<int>(),
             static (value, index) => value + index);
@@ -34,7 +34,7 @@ public partial class SignalOperatorMixinsTests
             static (value, index) => value + index);
 
         List<int> blended = [];
-        ((IEnumerable<IObservable<int>>)[Signal.Emit(One), Signal.Emit(Two)])
+        _ = ((IEnumerable<IObservable<int>>)[Signal.Emit(One), Signal.Emit(Two)])
             .Blend(int.MaxValue)
             .Subscribe(blended.Add);
 
@@ -67,7 +67,7 @@ public partial class SignalOperatorMixinsTests
         InvalidOperationException first = new(FirstErrorMessage);
         InvalidOperationException late = new(LateErrorMessage);
         RecordingWitness<int> failed = new();
-        new MaxConcurrentBlendCoordinator<int>(failed).Run(
+        _ = new MaxConcurrentBlendCoordinator<int>(failed).Run(
             [
                 new ScriptedObservable<int>(observer =>
                 {
@@ -82,7 +82,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(failed.Errors[0]).IsSameReferenceAs(first);
 
         RecordingWitness<int> nullEnumerator = new();
-        new MaxConcurrentBlendCoordinator<int>(nullEnumerator).Run(new NullEnumeratorEnumerable<int>(true), One);
+        _ = new MaxConcurrentBlendCoordinator<int>(nullEnumerator).Run(new NullEnumeratorEnumerable<int>(true), One);
 
         await Assert.That(nullEnumerator.Completed).IsEqualTo(1);
     }
@@ -96,7 +96,7 @@ public partial class SignalOperatorMixinsTests
         InvalidOperationException late = new(LateErrorMessage);
         RecordingWitness<int> failed = new();
 
-        new TaskChainCoordinator<int>(failed).Run(new ScriptedObservable<Task<int>>(observer =>
+        _ = new TaskChainCoordinator<int>(failed).Run(new ScriptedObservable<Task<int>>(observer =>
         {
             observer.OnError(first);
             observer.OnError(late);
@@ -127,19 +127,19 @@ public partial class SignalOperatorMixinsTests
         Signal.Silent<IObservable<int>>().Chain().Subscribe(chainDisposed).Dispose();
 
         RecordingWitness<int> chainNull = new();
-        new ScriptedObservable<IObservable<int>>(observer => observer.OnNext(null!))
+        _ = new ScriptedObservable<IObservable<int>>(observer => observer.OnNext(null!))
             .Chain()
             .Subscribe(chainNull);
 
         RecordingWitness<int> blendNull = new();
-        new ScriptedObservable<IObservable<int>>(observer => observer.OnNext(null!))
+        _ = new ScriptedObservable<IObservable<int>>(observer => observer.OnNext(null!))
             .Blend()
             .Subscribe(blendNull);
 
         InvalidOperationException first = new(FirstErrorMessage);
         InvalidOperationException late = new(LateErrorMessage);
         RecordingWitness<int> blendErrors = new();
-        new ScriptedObservable<IObservable<int>>(observer =>
+        _ = new ScriptedObservable<IObservable<int>>(observer =>
         {
             observer.OnError(first);
             observer.OnError(late);
@@ -170,7 +170,7 @@ public partial class SignalOperatorMixinsTests
         left.OnCompleted();
 
         RecordingWitness<int> expired = new();
-        Signal.Silent<int>().Expire(TimeSpan.FromTicks(One), new DoubleFireSequencer()).Subscribe(expired);
+        _ = Signal.Silent<int>().Expire(TimeSpan.FromTicks(One), new DoubleFireSequencer()).Subscribe(expired);
 
         await Assert.That(latched.Values.SequenceEqual([Five])).IsTrue();
         await Assert.That(latched.Completed).IsEqualTo(1);
@@ -184,7 +184,7 @@ public partial class SignalOperatorMixinsTests
     public async Task TakeUntilAndDistinctTerminalBranchesAreCovered()
     {
         RecordingWitness<int> completed = new();
-        new ScriptedObservable<int>(observer =>
+        _ = new ScriptedObservable<int>(observer =>
         {
             observer.OnCompleted();
             observer.OnCompleted();
@@ -193,32 +193,32 @@ public partial class SignalOperatorMixinsTests
         InvalidOperationException first = new(FirstErrorMessage);
         InvalidOperationException late = new(LateErrorMessage);
         RecordingWitness<int> failed = new();
-        new ScriptedObservable<int>(observer =>
+        _ = new ScriptedObservable<int>(observer =>
         {
             observer.OnError(first);
             observer.OnError(late);
         }).TakeUntil(Signal.Silent<int>()).Subscribe(failed);
 
         RecordingWitness<int> otherFailed = new();
-        Signal.Emit(One)
+        _ = Signal.Emit(One)
             .TakeUntil(new ScriptedObservable<int>(observer => observer.OnError(late)))
             .Subscribe(otherFailed);
 
         RecordingWitness<int> otherCompleted = new();
-        Signal.Emit(One)
+        _ = Signal.Emit(One)
             .TakeUntil(new ScriptedObservable<int>(observer => observer.OnCompleted()))
             .Subscribe(otherCompleted);
 
         List<int> rangeDistinct = [];
-        Signal.Sequence(One, Three).Distinct().Subscribe(rangeDistinct.Add);
+        _ = Signal.Sequence(One, Three).Distinct().Subscribe(rangeDistinct.Add);
 
         List<int> comparerDistinct = [];
-        Signal.FromEnumerable([One, One, Two])
+        _ = Signal.FromEnumerable([One, One, Two])
             .Distinct(EqualityComparer<int>.Default)
             .Subscribe(comparerDistinct.Add);
 
         List<int> defaultDistinct = [];
-        Signal.FromEnumerable([One, One, Two])
+        _ = Signal.FromEnumerable([One, One, Two])
             .Distinct()
             .Subscribe(defaultDistinct.Add);
 

@@ -91,13 +91,13 @@ public class WitnessTests
     [Test]
     public async Task WitnessesCoverDisposedThrowEmptyAndSafeBranches()
     {
-        Assert.Throws<ObjectDisposedException>(() => DisposedWitness<int>.Instance.OnNext(One));
-        Assert.Throws<ObjectDisposedException>(DisposedWitness<int>.Instance.OnCompleted);
-        Assert.Throws<ObjectDisposedException>(() =>
+        _ = Assert.Throws<ObjectDisposedException>(() => DisposedWitness<int>.Instance.OnNext(One));
+        _ = Assert.Throws<ObjectDisposedException>(DisposedWitness<int>.Instance.OnCompleted);
+        _ = Assert.Throws<ObjectDisposedException>(() =>
             DisposedWitness<int>.Instance.OnError(new InvalidOperationException("disposed")));
         ThrowWitness<int>.Instance.OnNext(One);
         ThrowWitness<int>.Instance.OnCompleted();
-        Assert.Throws<InvalidOperationException>(() =>
+        _ = Assert.Throws<InvalidOperationException>(() =>
             ThrowWitness<int>.Instance.OnError(new InvalidOperationException("throw")));
         List<int> values = [];
         List<string> errors = [];
@@ -108,17 +108,17 @@ public class WitnessTests
             .OnError(new InvalidOperationException("handled"));
         new EmptyWitness<int>(values.Add, () => completed++).OnCompleted();
         new EmptyWitness<int>(values.Add, ex => errors.Add(ex.Message), () => completed++).OnCompleted();
-        Assert.Throws<InvalidOperationException>(() =>
+        _ = Assert.Throws<InvalidOperationException>(() =>
             new EmptyWitness<int>(values.Add).OnError(new InvalidOperationException("rethrown")));
         await Assert.That(values.SequenceEqual(ExpectedTwoOnly)).IsTrue();
         await Assert.That(errors.SequenceEqual(ExpectedHandledErrors)).IsTrue();
         await Assert.That(completed).IsEqualTo(Two);
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, (Action<Exception>)null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, (Action)null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, _ => { }, null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Safe<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Safe(Witness.Create<int>(_ => { }), null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, (Action<Exception>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, (Action)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, _ => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Safe<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Safe(Witness.Create<int>(_ => { }), null!));
         List<string> events = [];
         var cancelDisposed = 0;
         var safe = Witness.Safe(
@@ -138,10 +138,10 @@ public class WitnessTests
         var throwing = Witness.Safe(
             Witness.Create<int>(_ => throw new InvalidOperationException("next-failed")),
             new ActionDisposable(() => throwingCancel++));
-        Assert.Throws<InvalidOperationException>(() => throwing.OnNext(One));
+        _ = Assert.Throws<InvalidOperationException>(() => throwing.OnNext(One));
         throwing.OnNext(Two);
         await Assert.That(throwingCancel).IsEqualTo(1);
-        Assert.Throws<ArgumentNullException>(() => safe.OnError(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => safe.OnError(null!));
     }
 
     /// <summary>Covers the thread-pool-specialized witness dispatch implementation.</summary>
@@ -173,9 +173,21 @@ public class WitnessTests
     [Test]
     public async Task WitnessImplementationsForwardNotificationsAndFallbackErrors()
     {
-        Assert.Throws<ArgumentNullException>(() => _ = new CallbackWitness<int>(null!, null, null));
-        Assert.Throws<ArgumentNullException>(() => _ = new ForwardingWitness<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => _ = new StatefulWitness<int, string>(State, null!, null, null));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            CallbackWitness<int> invalid = new(null!, null, null);
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            ForwardingWitness<int> invalid = new(null!);
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            StatefulWitness<int, string> invalid = new(State, null!, null, null);
+            GC.KeepAlive(invalid);
+        });
         List<int> callbackValues = [];
         List<Exception> callbackErrors = [];
         List<Result> callbackCompletions = [];
@@ -188,7 +200,7 @@ public class WitnessTests
         await Assert.That(callbackErrors[0]).IsSameReferenceAs(callbackError);
         await Assert.That(callbackCompletions[0].IsSuccess).IsTrue();
         InvalidOperationException callbackFallback = new("callback fallback");
-        Assert.Throws<InvalidOperationException>(() =>
+        _ = Assert.Throws<InvalidOperationException>(() =>
             new CallbackWitness<int>(_ => { }, null, null).OnError(callbackFallback));
         new CallbackWitness<int>(_ => { }, null, null).OnCompleted();
         Recorder<int> forwarded = new();
@@ -216,7 +228,7 @@ public class WitnessTests
         await Assert.That(statefulErrors.SequenceEqual([$"{State}:{statefulError.Message}"])).IsTrue();
         await Assert.That(statefulCompletions.SequenceEqual([$"{State}:True"])).IsTrue();
         InvalidOperationException statefulFallback = new("stateful fallback");
-        Assert.Throws<InvalidOperationException>(() =>
+        _ = Assert.Throws<InvalidOperationException>(() =>
             new StatefulWitness<int, string>(State, (_, _) => { }, null, null).OnError(statefulFallback));
         new StatefulWitness<int, string>(State, (_, _) => { }, null, null).OnCompleted();
         List<int> safeValues = [];
@@ -237,15 +249,15 @@ public class WitnessTests
     [Test]
     public void WitnessFactoriesValidateNullCallbacks()
     {
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(null!, _ => { }, () => { }));
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, null!, () => { }));
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, _ => { }, null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Safe<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Safe(Witness.Create<int>(_ => { }), null!));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(null!, _ => { }, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, null!, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, _ => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Safe<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Safe(Witness.Create<int>(_ => { }), null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
             Witness.Safe(new Recorder<int>(), new RecordingDisposable()).OnError(null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Safe(new Recorder<int>()).OnError(null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, _ => { }, () => { }).OnError(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Safe(new Recorder<int>()).OnError(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, _ => { }, () => { }).OnError(null!));
     }
 
     /// <summary>Covers safe-witness error forwarding and post-terminal suppression branches.</summary>
@@ -257,9 +269,418 @@ public class WitnessTests
         Witness.SafeWitness<int> safe = new(
             new ThrowingWitness<int>(throwOnError: true),
             new ActionDisposable(() => cancelDisposed = true));
-        Assert.Throws<InvalidOperationException>(() => safe.OnError(new InvalidOperationException("safe")));
+        _ = Assert.Throws<InvalidOperationException>(() => safe.OnError(new InvalidOperationException("safe")));
         await Assert.That(cancelDisposed).IsTrue();
         safe.OnError(new InvalidOperationException("ignored"));
+    }
+
+    /// <summary>Verifies task terminal witnesses validate null callbacks and error arguments.</summary>
+    [Test]
+    public void TaskTerminalWitnessesValidateNullPredicatesAndErrors()
+    {
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            TaskAnyWitness<int> invalid = new(null!, CancellationToken.None);
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            TaskCountWitness<int> invalid = new(null!, CancellationToken.None);
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            new TaskAnyWitness<int>(CancellationToken.None).OnError(null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            new TaskCountWitness<int>(CancellationToken.None).OnError(null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            new TaskAnyWitness<int>(CancellationToken.None).SetSubscription(null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            new TaskCountWitness<int>(CancellationToken.None).SetSubscription(null!));
+    }
+
+    /// <summary>Verifies any-task witnesses complete true, false, fault, and ignore late notifications.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TaskAnyWitnessCompletesTrueFalseErrorsAndIgnoresLateSignals()
+    {
+        TaskAnyWitness<int> any = new(CancellationToken.None);
+        RecordingDisposable anySubscription = new();
+        any.SetSubscription(anySubscription);
+        any.OnNext(One);
+        any.OnNext(Two);
+        any.OnCompleted();
+        await Assert.That(await WaitForAsync(any.Task)).IsTrue();
+        await Assert.That(anySubscription.DisposeCount).IsEqualTo(One);
+
+        TaskAnyWitness<int> unmatched = new(value => value > Four, CancellationToken.None);
+        unmatched.OnNext(One);
+        unmatched.OnCompleted();
+        unmatched.OnNext(Four);
+        await Assert.That(await WaitForAsync(unmatched.Task)).IsFalse();
+
+        InvalidOperationException predicateError = new("any-predicate");
+        TaskAnyWitness<int> predicateFault = new(_ => throw predicateError, CancellationToken.None);
+        predicateFault.OnNext(One);
+        var observedPredicateError = await Assert.That(() => WaitForAsync(predicateFault.Task))
+            .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(observedPredicateError).IsSameReferenceAs(predicateError);
+
+        InvalidOperationException sourceError = new("any-source");
+        TaskAnyWitness<int> sourceFault = new(CancellationToken.None);
+        sourceFault.OnError(sourceError);
+        sourceFault.OnCompleted();
+        var observedSourceError = await Assert.That(() => WaitForAsync(sourceFault.Task))
+            .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(observedSourceError).IsSameReferenceAs(sourceError);
+    }
+
+    /// <summary>Verifies count-task witnesses count matches, fault, and ignore late notifications.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TaskCountWitnessCountsMatchesErrorsAndIgnoresLateSignals()
+    {
+        TaskCountWitness<int> all = new(CancellationToken.None);
+        all.OnNext(One);
+        all.OnNext(Two);
+        all.OnCompleted();
+        all.OnNext(Three);
+        await Assert.That(await WaitForAsync(all.Task)).IsEqualTo(Two);
+
+        TaskCountWitness<int> even = new(value => value % Two == 0, CancellationToken.None);
+        even.OnNext(One);
+        even.OnNext(Two);
+        even.OnNext(Three);
+        even.OnNext(Four);
+        even.OnCompleted();
+        even.OnError(new InvalidOperationException("late"));
+        await Assert.That(await WaitForAsync(even.Task)).IsEqualTo(Two);
+
+        InvalidOperationException predicateError = new("count-predicate");
+        TaskCountWitness<int> predicateFault = new(_ => throw predicateError, CancellationToken.None);
+        predicateFault.OnNext(One);
+        var observedPredicateError = await Assert.That(() => WaitForAsync(predicateFault.Task))
+            .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(observedPredicateError).IsSameReferenceAs(predicateError);
+
+        InvalidOperationException sourceError = new("count-source");
+        TaskCountWitness<int> sourceFault = new(CancellationToken.None);
+        sourceFault.OnError(sourceError);
+        sourceFault.OnNext(Two);
+        var observedSourceError = await Assert.That(() => WaitForAsync(sourceFault.Task))
+            .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(observedSourceError).IsSameReferenceAs(sourceError);
+    }
+
+    /// <summary>Verifies task terminal witnesses dispose subscriptions on terminal, cancel, and explicit disposal.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TaskTerminalWitnessesDisposeSubscriptionsOnTerminalCancelAndDispose()
+    {
+        TaskAnyWitness<int> completed = new(CancellationToken.None);
+        RecordingDisposable completedSubscription = new();
+        completed.SetSubscription(completedSubscription);
+        completed.OnCompleted();
+        completed.Dispose();
+        await Assert.That(await WaitForAsync(completed.Task)).IsFalse();
+        await Assert.That(completedSubscription.DisposeCount).IsEqualTo(One);
+
+        TaskAnyWitness<int> alreadyStopped = new(CancellationToken.None);
+        alreadyStopped.OnCompleted();
+        RecordingDisposable lateSubscription = new();
+        alreadyStopped.SetSubscription(lateSubscription);
+        await Assert.That(lateSubscription.DisposeCount).IsEqualTo(One);
+
+        using CancellationTokenSource cancellation = new();
+        TaskAnyWitness<int> canceled = new(cancellation.Token);
+        RecordingDisposable canceledSubscription = new();
+        canceled.RegisterCancellation();
+        canceled.SetSubscription(canceledSubscription);
+        await cancellation.CancelAsync();
+        await Assert.That(canceled.Task.IsCanceled).IsTrue();
+        await Assert.That(canceledSubscription.DisposeCount).IsEqualTo(One);
+        canceled.Dispose();
+        await Assert.That(canceledSubscription.DisposeCount).IsEqualTo(One);
+
+        TaskCountWitness<int> disposed = new(CancellationToken.None);
+        RecordingDisposable disposedSubscription = new();
+        disposed.SetSubscription(disposedSubscription);
+        disposed.Dispose();
+        disposed.Dispose();
+        await Assert.That(disposedSubscription.DisposeCount).IsEqualTo(One);
+    }
+
+    /// <summary>Verifies direct empty-state witnesses emit terminal state and dispose upstream subscriptions.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task IsEmptyWitnessEmitsTerminalStateAndIgnoresLateSignals()
+    {
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            IsEmptyWitness<int> invalid = new(null!);
+            GC.KeepAlive(invalid);
+        });
+
+        RecordingWitness<bool> emptyObserver = new();
+        RecordingDisposable emptySubscription = new();
+        IsEmptyWitness<int> empty = new(emptyObserver);
+        empty.SetSubscription(emptySubscription);
+        empty.OnCompleted();
+        empty.OnCompleted();
+        empty.OnNext(One);
+        await Assert.That(emptyObserver.Values.SequenceEqual([true])).IsTrue();
+        await Assert.That(emptyObserver.Completed).IsEqualTo(One);
+        await Assert.That(emptySubscription.DisposeCount).IsEqualTo(One);
+
+        RecordingWitness<bool> valueObserver = new();
+        RecordingDisposable valueSubscription = new();
+        IsEmptyWitness<int> value = new(valueObserver);
+        value.SetSubscription(valueSubscription);
+        value.OnNext(One);
+        value.OnError(new InvalidOperationException("late"));
+        await Assert.That(valueObserver.Values.SequenceEqual([false])).IsTrue();
+        await Assert.That(valueObserver.Completed).IsEqualTo(One);
+        await Assert.That(valueSubscription.DisposeCount).IsEqualTo(One);
+
+        InvalidOperationException expected = new("is-empty");
+        RecordingWitness<bool> errorObserver = new();
+        IsEmptyWitness<int> error = new(errorObserver);
+        error.OnError(expected);
+        error.OnCompleted();
+        await Assert.That(errorObserver.Errors[0]).IsSameReferenceAs(expected);
+        await Assert.That(errorObserver.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies collect witnesses emit immediate, scheduled, final, and error batches.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CollectWitnessEmitsImmediateScheduledFinalAndErrorBatches()
+    {
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            CollectWitness<int> invalid = new(null!);
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            CollectWitness<int> invalid = new(new RecordingWitness<IList<int>>(), TimeSpan.FromTicks(One), null!);
+            GC.KeepAlive(invalid);
+        });
+
+        RecordingWitness<IList<int>> immediateObserver = new();
+        CollectWitness<int> immediate = new(immediateObserver);
+        immediate.OnNext(One);
+        immediate.OnNext(Two);
+        immediate.OnCompleted();
+        immediate.OnNext(Three);
+        await Assert.That(immediateObserver.Values.Select(batch => batch.ToArray()).SelectMany(batch => batch)
+            .SequenceEqual([One, Two])).IsTrue();
+        await Assert.That(immediateObserver.Completed).IsEqualTo(One);
+
+        RecordingWitness<IList<int>> scheduledObserver = new();
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        CollectWitness<int> scheduled = new(scheduledObserver, TimeSpan.FromTicks(One), clock);
+        scheduled.SetSubscription(new RecordingDisposable());
+        scheduled.OnNext(One);
+        scheduled.OnNext(Two);
+        clock.AdvanceBy(TimeSpan.FromTicks(One));
+        scheduled.OnNext(Three);
+        scheduled.OnCompleted();
+        scheduled.OnError(new InvalidOperationException("late"));
+        await Assert.That(scheduledObserver.Values[0].SequenceEqual([One, Two])).IsTrue();
+        await Assert.That(scheduledObserver.Values[1].SequenceEqual([Three])).IsTrue();
+        await Assert.That(scheduledObserver.Completed).IsEqualTo(One);
+
+        InvalidOperationException expected = new("collect");
+        RecordingWitness<IList<int>> errorObserver = new();
+        CollectWitness<int> error = new(errorObserver);
+        error.OnError(expected);
+        error.OnError(new InvalidOperationException("late"));
+        await Assert.That(errorObserver.Errors[0]).IsSameReferenceAs(expected);
+        await Assert.That(errorObserver.Errors.Count).IsEqualTo(One);
+    }
+
+    /// <summary>Verifies chain witnesses concatenate sources and forward null-source failures.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ChainWitnessConcatenatesSourcesAndForwardsNullSourceFailures()
+    {
+        RecordingWitness<int> fixedObserver = new();
+        using (new ChainWitness<int>(fixedObserver).Run(Signal.Emit(One), Signal.Emit(Two)))
+        {
+            await Assert.That(fixedObserver.Values.SequenceEqual([One, Two])).IsTrue();
+            await Assert.That(fixedObserver.Completed).IsEqualTo(One);
+        }
+
+        RecordingWitness<int> enumerableObserver = new();
+        using (new ChainWitness<int>(enumerableObserver).Run([Signal.Emit(Three), Signal.Emit(Four)]))
+        {
+            await Assert.That(enumerableObserver.Values.SequenceEqual([Three, Four])).IsTrue();
+            await Assert.That(enumerableObserver.Completed).IsEqualTo(One);
+        }
+
+        RecordingWitness<int> errorObserver = new();
+        using (new ChainWitness<int>(errorObserver).Run([Signal.Emit(One), null!]))
+        {
+            await Assert.That(errorObserver.Values.SequenceEqual([One])).IsTrue();
+            await Assert.That(errorObserver.Errors[0].Message).IsEqualTo("Chain source contained null.");
+        }
+    }
+
+    /// <summary>Verifies blend witnesses merge active sources, complete once, and forward the first error.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task BlendWitnessMergesSourcesCompletesOnceAndForwardsFirstError()
+    {
+        RecordingWitness<int> mergedObserver = new();
+        Signal<int> first = new();
+        Signal<int> second = new();
+        using (new BlendWitness<int>(mergedObserver).Run([first, second]))
+        {
+            first.OnNext(One);
+            second.OnNext(Two);
+            first.OnCompleted();
+            await Assert.That(mergedObserver.Completed).IsEqualTo(0);
+            second.OnCompleted();
+            await Assert.That(mergedObserver.Values.SequenceEqual([One, Two])).IsTrue();
+            await Assert.That(mergedObserver.Completed).IsEqualTo(One);
+        }
+
+        InvalidOperationException expected = new("blend");
+        RecordingWitness<int> errorObserver = new();
+        Signal<int> failing = new();
+        Signal<int> late = new();
+        using (new BlendWitness<int>(errorObserver).Run([failing, late]))
+        {
+            failing.OnError(expected);
+            late.OnNext(Three);
+            late.OnError(new InvalidOperationException("late"));
+            await Assert.That(errorObserver.Errors[0]).IsSameReferenceAs(expected);
+            await Assert.That(errorObserver.Errors.Count).IsEqualTo(One);
+            await Assert.That(errorObserver.Values.Count).IsEqualTo(0);
+        }
+    }
+
+    /// <summary>Verifies SelectMany coordinators wait for active inners and forward selector failures.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SelectManyCoordinatorWaitsForInnerCompletionAndForwardsFailures()
+    {
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            SelectManyCoordinator<int, int> invalid = new(null!, _ => Signal.Emit(One));
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            SelectManyCoordinator<int, int> invalid =
+                new(new RecordingWitness<int>(), (Func<int, IObservable<int>>)null!);
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            SelectManyCoordinator<int, int> invalid =
+                new(new RecordingWitness<int>(), (IObservable<int>)null!);
+            GC.KeepAlive(invalid);
+        });
+
+        RecordingWitness<int> observer = new();
+        Signal<int> outer = new();
+        Signal<int> inner = new();
+        using (new SelectManyCoordinator<int, int>(observer, _ => inner).Run(outer))
+        {
+            outer.OnNext(One);
+            inner.OnNext(Two);
+            outer.OnCompleted();
+            await Assert.That(observer.Completed).IsEqualTo(0);
+            inner.OnCompleted();
+            await Assert.That(observer.Values.SequenceEqual([Two])).IsTrue();
+            await Assert.That(observer.Completed).IsEqualTo(One);
+        }
+
+        RecordingWitness<int> repeated = new();
+        using (new SelectManyCoordinator<int, int>(repeated, Signal.Emit(Three))
+                   .Run(Signal.FromEnumerable([One, Two])))
+        {
+            await Assert.That(repeated.Values.SequenceEqual([Three, Three])).IsTrue();
+            await Assert.That(repeated.Completed).IsEqualTo(One);
+        }
+
+        InvalidOperationException expected = new("select-many");
+        RecordingWitness<int> failed = new();
+        SelectManyCoordinator<int, int> throwing = new(failed, _ => throw expected);
+        throwing.OnNext(One);
+        throwing.OnNext(Two);
+        await Assert.That(failed.Errors[0]).IsSameReferenceAs(expected);
+        await Assert.That(failed.Errors.Count).IsEqualTo(One);
+
+        RecordingWitness<int> nullInner = new();
+        SelectManyCoordinator<int, int> nullCoordinator = new(nullInner, _ => null!);
+        nullCoordinator.OnNext(One);
+        await Assert.That(nullInner.Errors[0].Message).IsEqualTo("Blend source contained null.");
+    }
+
+    /// <summary>Verifies SelectMany result coordinators project values and forward inner selector failures.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SelectManyResultCoordinatorProjectsValuesAndForwardsFailures()
+    {
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            SelectManyResultCoordinator<int, int, string> invalid =
+                new(null!, _ => Signal.Emit(One), (_, _) => string.Empty);
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            SelectManyResultCoordinator<int, int, string> invalid = new(
+                new RecordingWitness<string>(),
+                null!,
+                (_, _) => string.Empty);
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            SelectManyResultCoordinator<int, int, string> invalid = new(
+                new RecordingWitness<string>(),
+                _ => Signal.Emit(One),
+                null!);
+            GC.KeepAlive(invalid);
+        });
+
+        RecordingWitness<string> observer = new();
+        Signal<int> outer = new();
+        Signal<int> inner = new();
+        using (new SelectManyResultCoordinator<int, int, string>(
+                   observer,
+                   _ => inner,
+                   (outerValue, innerValue) => $"{outerValue}:{innerValue}").Run(outer))
+        {
+            outer.OnNext(One);
+            inner.OnNext(Two);
+            outer.OnCompleted();
+            await Assert.That(observer.Completed).IsEqualTo(0);
+            inner.OnCompleted();
+            await Assert.That(observer.Values.SequenceEqual([$"{One}:{Two}"])).IsTrue();
+            await Assert.That(observer.Completed).IsEqualTo(One);
+        }
+
+        InvalidOperationException selectorError = new("collection");
+        RecordingWitness<string> collectionFailed = new();
+        SelectManyResultCoordinator<int, int, string> collection = new(
+            collectionFailed,
+            _ => throw selectorError,
+            (_, _) => string.Empty);
+        collection.OnNext(One);
+        await Assert.That(collectionFailed.Errors[0]).IsSameReferenceAs(selectorError);
+
+        InvalidOperationException resultError = new("result");
+        RecordingWitness<string> resultFailed = new();
+        SelectManyResultCoordinator<int, int, string> result = new(
+            resultFailed,
+            _ => Signal.Emit(Two),
+            (_, _) => throw resultError);
+        result.OnNext(One);
+        await Assert.That(resultFailed.Errors[0]).IsSameReferenceAs(resultError);
     }
 
     /// <summary>Waits for a task with a bounded timeout.</summary>

@@ -28,6 +28,6 @@ public static partial class SignalAsyncExtensions
         /// values from the most recent inner observable sequence.
         /// </summary>
         /// <returns>An observable sequence that emits items from the most recently emitted inner observable sequence.</returns>
-        public IObservableAsync<T> Switch() => @this.SwitchTo();
+        public IObservableAsync<T> Switch() => new SwitchToSignal<T>(@this);
     }
 }

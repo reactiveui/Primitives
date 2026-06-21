@@ -61,7 +61,7 @@ public sealed class ControlSequencer : ISequencer
 
         try
         {
-            Control.BeginInvoke(drain);
+            _ = Control.BeginInvoke(drain);
             return true;
         }
         catch (InvalidOperationException) when (!Control.IsDisposed)

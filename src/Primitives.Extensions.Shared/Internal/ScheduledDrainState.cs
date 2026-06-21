@@ -151,7 +151,7 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
             _draining = true;
         }
 
-        scheduler.Schedule(target, static (_, drainTarget) =>
+        _ = scheduler.Schedule(target, static (_, drainTarget) =>
         {
             drainTarget.Drain();
             return EmptyDisposable.Instance;

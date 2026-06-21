@@ -307,7 +307,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
 
                     CompletionFlagWitness probe = new(this);
                     var sub = projected.Subscribe(probe);
-                    Interlocked.Exchange(ref _currentSubscription, sub);
+                    _ = Interlocked.Exchange(ref _currentSubscription, sub);
 
                     if (!probe.Completed)
                     {

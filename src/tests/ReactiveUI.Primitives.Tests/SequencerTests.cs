@@ -69,10 +69,10 @@ public class SequencerTests
         const int SecondCall = 2;
         const int ThirdCall = 3;
         List<int> calls = [];
-        Sequencer.CurrentThread.Schedule(() =>
+        _ = Sequencer.CurrentThread.Schedule(() =>
         {
             calls.Add(FirstCall);
-            Sequencer.CurrentThread.Schedule(() => calls.Add(ThirdCall));
+            _ = Sequencer.CurrentThread.Schedule(() => calls.Add(ThirdCall));
             calls.Add(SecondCall);
         });
         int[] expected = [FirstCall, SecondCall, ThirdCall];
@@ -85,7 +85,7 @@ public class SequencerTests
     public async Task ImmediateSequencerHonorsAbsoluteDueTime()
     {
         var elapsed = Stopwatch.StartNew();
-        Sequencer.Immediate.Schedule(Sequencer.Immediate.Now + TimeSpan.FromMilliseconds(30), () => { });
+        _ = Sequencer.Immediate.Schedule(Sequencer.Immediate.Now + TimeSpan.FromMilliseconds(30), () => { });
         elapsed.Stop();
         await Assert.That(elapsed.Elapsed >= TimeSpan.FromMilliseconds(20)).IsTrue();
     }
@@ -99,7 +99,7 @@ public class SequencerTests
         const long BeforeDueTicks = 9;
         VirtualClock clock = new();
         List<long> calls = [];
-        clock.Schedule(TimeSpan.FromTicks(DueTicks), () => calls.Add(clock.Clock.Ticks));
+        _ = clock.Schedule(TimeSpan.FromTicks(DueTicks), () => calls.Add(clock.Clock.Ticks));
         clock.AdvanceBy(TimeSpan.FromTicks(BeforeDueTicks));
         await Assert.That(calls.Count).IsEqualTo(0);
         clock.AdvanceBy(TimeSpan.FromTicks(1));
@@ -140,9 +140,9 @@ public class SequencerTests
     public void ScheduledItemConstructorValidatesSchedulerAndAction()
     {
         const int State = 42;
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() =>
             CreateScheduledItem(null!, State, (_, _) => EmptyDisposable.Instance));
-        Assert.Throws<ArgumentNullException>(() => CreateScheduledItem(Sequencer.Immediate, State, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => CreateScheduledItem(Sequencer.Immediate, State, null!));
 
         static void CreateScheduledItem(
             ISequencer scheduler,
@@ -166,7 +166,7 @@ public class SequencerTests
         await Assert.That(queue.Remove(Four)).IsFalse();
         await Assert.That(queue.Dequeue()).IsEqualTo(One);
         await Assert.That(queue.Dequeue()).IsEqualTo(Three);
-        Assert.Throws<InvalidOperationException>(() => queue.Peek());
+        _ = Assert.Throws<InvalidOperationException>(() => queue.Peek());
         PriorityQueue<int> shrinkQueue = new(Eight);
         for (var i = 0; i < Eight; i++)
         {
@@ -179,7 +179,7 @@ public class SequencerTests
         }
 
         await Assert.That(shrinkQueue.Dequeue()).IsEqualTo(Seven);
-        Assert.Throws<ArgumentOutOfRangeException>(CreateInvalidSequencerQueue);
+        _ = Assert.Throws<ArgumentOutOfRangeException>(CreateInvalidSequencerQueue);
     }
 
     /// <summary>Covers scheduled-item comparison, invocation, disposal, and clock branches.</summary>
@@ -216,7 +216,7 @@ public class SequencerTests
         await Assert.That(first != second).IsTrue();
         await Assert.That(first.Equals(second)).IsFalse();
         await Assert.That(first.CompareTo(null)).IsEqualTo(One);
-        Assert.Throws<ArgumentException>(() => CompareScheduledItemWithInvalidObject(first));
+        _ = Assert.Throws<ArgumentException>(() => CompareScheduledItemWithInvalidObject(first));
         SequencerQueue<int> sequencerQueue = new(Two);
         sequencerQueue.Enqueue(second);
         sequencerQueue.Enqueue(first);
@@ -241,9 +241,9 @@ public class SequencerTests
         cancelled.Cancel();
         cancelled.Invoke();
         await Assert.That(invoked).DoesNotContain("cancelled");
-        Assert.Throws<ArgumentNullException>(CreateScheduledItemWithoutSequencer);
-        Assert.Throws<ArgumentNullException>(CreateScheduledItemWithoutAction);
-        Assert.Throws<ArgumentNullException>(CreateScheduledItemWithoutComparer);
+        _ = Assert.Throws<ArgumentNullException>(CreateScheduledItemWithoutSequencer);
+        _ = Assert.Throws<ArgumentNullException>(CreateScheduledItemWithoutAction);
+        _ = Assert.Throws<ArgumentNullException>(CreateScheduledItemWithoutComparer);
         VirtualClock defaultClock = new();
         VirtualClock initialClock = new(DateTimeOffset.UnixEpoch);
         await Assert.That(defaultClock.Now).IsEqualTo(DateTimeOffset.MinValue);
@@ -260,8 +260,8 @@ public class SequencerTests
         await Assert.That(Sequencer.Default).IsSameReferenceAs(TaskPoolSequencer.Default);
         await Assert.That(Sequencer.Immediate.Now > DateTimeOffset.MinValue).IsTrue();
         await Assert.That(Sequencer.Normalize(TimeSpan.FromTicks(NegativeOne))).IsEqualTo(TimeSpan.Zero);
-        Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.Schedule(One, null!));
-        Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.Schedule(One, TimeSpan.Zero, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.Schedule(One, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.Schedule(One, TimeSpan.Zero, null!));
         List<int> immediateValues = [];
         Sequencer.Immediate.Schedule(One, (_, state) =>
         {
@@ -279,8 +279,8 @@ public class SequencerTests
             return EmptyDisposable.Instance;
         }).Dispose();
         await Assert.That(immediateValues.SequenceEqual(ExpectedImmediateValues)).IsTrue();
-        Assert.Throws<ArgumentNullException>(() => TaskPoolSequencer.Instance.Schedule(One, null!));
-        Assert.Throws<ArgumentNullException>(() => TaskPoolSequencer.Instance.Schedule(One, TimeSpan.Zero, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => TaskPoolSequencer.Instance.Schedule(One, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => TaskPoolSequencer.Instance.Schedule(One, TimeSpan.Zero, null!));
         TaskCompletionSource taskPoolCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var taskPoolSubscription = TaskPoolSequencer.Instance.Schedule(Seven, (_, _) =>
         {
@@ -295,10 +295,10 @@ public class SequencerTests
             return EmptyDisposable.Instance;
         });
         await WaitForAsync(threadPoolCompletion.Task);
-        Assert.Throws<ArgumentNullException>(() => ThreadPoolSequencer.Instance.Schedule(One, null!));
-        Assert.Throws<ArgumentNullException>(() => ThreadPoolSequencer.Instance.Schedule(One, TimeSpan.Zero, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ThreadPoolSequencer.Instance.Schedule(One, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ThreadPoolSequencer.Instance.Schedule(One, TimeSpan.Zero, null!));
         ImmediateSynchronizationContext synchronizationContext = new();
-        Assert.Throws<ArgumentNullException>(CreateSynchronizationContextSequencerWithoutContext);
+        _ = Assert.Throws<ArgumentNullException>(CreateSynchronizationContextSequencerWithoutContext);
         var previousContext = SynchronizationContext.Current;
         try
         {
@@ -313,8 +313,8 @@ public class SequencerTests
 
         SynchronizationContextSequencer synchronizationSequencer = new(synchronizationContext);
         await Assert.That(synchronizationSequencer.Now > DateTimeOffset.MinValue).IsTrue();
-        Assert.Throws<ArgumentNullException>(() => synchronizationSequencer.Schedule(One, null!));
-        Assert.Throws<ArgumentNullException>(() => synchronizationSequencer.Schedule(One, TimeSpan.Zero, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => synchronizationSequencer.Schedule(One, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => synchronizationSequencer.Schedule(One, TimeSpan.Zero, null!));
         List<int> synchronizationValues = [];
         using var synchronizationSubscription = synchronizationSequencer.Schedule(One, (_, state) =>
         {
@@ -328,7 +328,7 @@ public class SequencerTests
             TimeSpan.Zero,
             (_, state) =>
             {
-                delayedSynchronizationCompletion.TrySetResult(state);
+                SetCompletion(delayedSynchronizationCompletion, state);
                 return EmptyDisposable.Instance;
             });
         var delayedValue = await delayedSynchronizationCompletion.Task
@@ -344,20 +344,20 @@ public class SequencerTests
     {
         VirtualClock clock = new(DateTimeOffset.UnixEpoch);
         var invoked = 0;
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() =>
             VirtualTimeSequencerExtensions.ScheduleRelative<DateTimeOffset, TimeSpan>(
                 null!,
                 TimeSpan.Zero,
                 () => { }));
-        Assert.Throws<ArgumentNullException>(() => clock.ScheduleRelative(TimeSpan.Zero, null!));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() => clock.ScheduleRelative(TimeSpan.Zero, null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
             VirtualTimeSequencerExtensions.ScheduleAbsolute<DateTimeOffset, TimeSpan>(
                 null!,
                 DateTimeOffset.UnixEpoch,
                 () => { }));
-        Assert.Throws<ArgumentNullException>(() => clock.ScheduleAbsolute(DateTimeOffset.UnixEpoch, null!));
-        clock.ScheduleRelative(TimeSpan.FromTicks(One), () => invoked += One);
-        clock.ScheduleAbsolute(DateTimeOffset.UnixEpoch.AddTicks(Two), () => invoked += Two);
+        _ = Assert.Throws<ArgumentNullException>(() => clock.ScheduleAbsolute(DateTimeOffset.UnixEpoch, null!));
+        _ = clock.ScheduleRelative(TimeSpan.FromTicks(One), () => invoked += One);
+        _ = clock.ScheduleAbsolute(DateTimeOffset.UnixEpoch.AddTicks(Two), () => invoked += Two);
         clock.AdvanceBy(TimeSpan.FromTicks(One));
         await Assert.That(invoked).IsEqualTo(One);
         clock.AdvanceBy(TimeSpan.FromTicks(One));
@@ -369,33 +369,33 @@ public class SequencerTests
     [Test]
     public async Task SimpleSequencerExtensionsCoverValidationAndRecursiveScheduling()
     {
-        Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).Schedule(() => { }));
-        Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.Schedule((Action)null!));
-        Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).Schedule(TimeSpan.Zero, () => { }));
-        Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.Schedule(TimeSpan.Zero, null!));
-        Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).Schedule(AbsoluteDueTime, () => { }));
-        Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.Schedule(AbsoluteDueTime, null!));
-        Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).Schedule(self => self()));
-        Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.Schedule((Action<Action>)null!));
-        Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).ScheduleAction(One, _ => { }));
-        Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.ScheduleAction(One, (Action<int>)null!));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).Schedule(() => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.Schedule((Action)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).Schedule(TimeSpan.Zero, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.Schedule(TimeSpan.Zero, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).Schedule(AbsoluteDueTime, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.Schedule(AbsoluteDueTime, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).Schedule(self => self()));
+        _ = Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.Schedule((Action<Action>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).ScheduleAction(One, _ => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => Sequencer.Immediate.ScheduleAction(One, (Action<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
             ((ISequencer)null!).ScheduleAction(One, _ => EmptyDisposable.Instance));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() =>
             Sequencer.Immediate.ScheduleAction(One, (Func<int, IDisposable>)null!));
-        Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).ScheduleAction(One, TimeSpan.Zero, _ => { }));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).ScheduleAction(One, TimeSpan.Zero, _ => { }));
+        _ = Assert.Throws<ArgumentNullException>(() =>
             Sequencer.Immediate.ScheduleAction(One, TimeSpan.Zero, (Action<int>)null!));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() =>
             ((ISequencer)null!).ScheduleAction(One, TimeSpan.Zero, _ => EmptyDisposable.Instance));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() =>
             Sequencer.Immediate.ScheduleAction(One, TimeSpan.Zero, (Func<int, IDisposable>)null!));
-        Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).ScheduleAction(One, AbsoluteDueTime, _ => { }));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() => ((ISequencer)null!).ScheduleAction(One, AbsoluteDueTime, _ => { }));
+        _ = Assert.Throws<ArgumentNullException>(() =>
             Sequencer.Immediate.ScheduleAction(One, AbsoluteDueTime, (Action<int>)null!));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() =>
             ((ISequencer)null!).ScheduleAction(One, AbsoluteDueTime, _ => EmptyDisposable.Instance));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() =>
             Sequencer.Immediate.ScheduleAction(One, AbsoluteDueTime, (Func<int, IDisposable>)null!));
         List<int> values = [];
         Sequencer.Immediate.ScheduleAction(One, values.Add).Dispose();
@@ -441,8 +441,8 @@ public class SequencerTests
         using var firstSchedule = clock.ScheduleAction(FirstMessage, TimeSpan.FromTicks(One), value =>
         {
             events.Add(value);
-            Assert.Throws<InvalidOperationException>(() => clock.AdvanceTo(clock.Now.AddTicks(One)));
-            Assert.Throws<InvalidOperationException>(() => clock.AdvanceBy(TimeSpan.FromTicks(One)));
+            _ = Assert.Throws<InvalidOperationException>(() => clock.AdvanceTo(clock.Now.AddTicks(One)));
+            _ = Assert.Throws<InvalidOperationException>(() => clock.AdvanceBy(TimeSpan.FromTicks(One)));
         });
         clock.AdvanceBy(TimeSpan.FromTicks(One));
         using var stoppedSchedule = clock.ScheduleAction(StoppedMessage, TimeSpan.FromTicks(One), events.Add);
@@ -456,7 +456,7 @@ public class SequencerTests
     public void ScheduleWithTimestampValidatesWorkItem()
     {
         SynchronizationContextSequencer sequencer = new(new ImmediateSynchronizationContext());
-        Assert.Throws<ArgumentNullException>(() => sequencer.Schedule(null!, long.MaxValue));
+        _ = Assert.Throws<ArgumentNullException>(() => sequencer.Schedule(null!, long.MaxValue));
     }
 
     /// <summary>Covers timestamp scheduling executing due and past-due work items.</summary>
@@ -481,7 +481,7 @@ public class SequencerTests
         ScheduledItem<int> scheduled = ScheduledProbe.Create(One, () => new ActionDisposable(() => scheduledDisposed = true));
         await Assert.That(scheduled.CompareTo(null)).IsEqualTo(1);
         await Assert.That(scheduled.CompareTo(ScheduledProbe.Create(One, () => EmptyDisposable.Instance))).IsEqualTo(0);
-        Assert.Throws<ArgumentException>(() => scheduled.CompareTo("not-scheduled"));
+        _ = Assert.Throws<ArgumentException>(() => scheduled.CompareTo("not-scheduled"));
         await Assert.That(scheduled.Equals((object)scheduled)).IsTrue();
         await Assert.That(scheduled.Equals(new())).IsFalse();
         await Assert.That(scheduled.GetHashCode()).IsNotEqualTo(0);
@@ -506,7 +506,11 @@ public class SequencerTests
     }
 
     /// <summary>Creates an invalid sequencer queue.</summary>
-    private static void CreateInvalidSequencerQueue() => _ = new SequencerQueue<int>(NegativeOne);
+    private static void CreateInvalidSequencerQueue()
+    {
+        SequencerQueue<int> invalid = new(NegativeOne);
+        GC.KeepAlive(invalid);
+    }
 
     /// <summary>Creates a scheduled item without a sequencer.</summary>
     private static void CreateScheduledItemWithoutSequencer() =>
@@ -526,8 +530,24 @@ public class SequencerTests
             null!);
 
     /// <summary>Creates a synchronization-context sequencer without a context.</summary>
-    private static void CreateSynchronizationContextSequencerWithoutContext() =>
-        _ = new SynchronizationContextSequencer(null!);
+    private static void CreateSynchronizationContextSequencerWithoutContext()
+    {
+        SynchronizationContextSequencer invalid = new(null!);
+        GC.KeepAlive(invalid);
+    }
+
+    /// <summary>Completes a task completion source or throws when it was already completed.</summary>
+    /// <param name="completion">The completion source to update.</param>
+    /// <param name="state">The value to set.</param>
+    private static void SetCompletion(TaskCompletionSource<int> completion, int state)
+    {
+        if (completion.TrySetResult(state))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("Delayed synchronization result was already set.");
+    }
 
     /// <summary>Compares a scheduled item through the non-generic comparable interface.</summary>
     /// <param name="item">The scheduled item.</param>

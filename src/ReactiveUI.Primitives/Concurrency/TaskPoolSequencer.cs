@@ -48,7 +48,7 @@ public sealed class TaskPoolSequencer : ISequencer
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
 
-        _taskFactory.StartNew(
+        _ = _taskFactory.StartNew(
             static state => ((DispatchState)state!).Run(),
             new DispatchState(this, item),
             _taskFactory.CancellationToken,

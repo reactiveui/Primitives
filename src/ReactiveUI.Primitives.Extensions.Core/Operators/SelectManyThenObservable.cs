@@ -65,7 +65,7 @@ public sealed class SelectManyThenObservable<TSource, TMid, TResult>(
         {
             try
             {
-                _first(value).Subscribe(_midObserver);
+                _ = _first(value).Subscribe(_midObserver);
             }
             catch (Exception ex)
             {
@@ -93,7 +93,7 @@ public sealed class SelectManyThenObservable<TSource, TMid, TResult>(
         {
             try
             {
-                second(value).Subscribe(downstream);
+                _ = second(value).Subscribe(downstream);
             }
             catch (Exception ex)
             {

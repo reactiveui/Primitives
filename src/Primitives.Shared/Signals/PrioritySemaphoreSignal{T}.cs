@@ -75,7 +75,7 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
     /// <summary>Releases one semaphore slot and drains queued values when capacity is available.</summary>
     public void Release()
     {
-        Interlocked.Decrement(ref _count);
+        _ = Interlocked.Decrement(ref _count);
         YieldUntilEmptyOrBlocked();
     }
 
@@ -177,7 +177,7 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
             }
 
             next = queue.Dequeue();
-            Interlocked.Increment(ref _count);
+            _ = Interlocked.Increment(ref _count);
             return true;
         }
     }

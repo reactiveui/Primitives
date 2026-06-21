@@ -18,7 +18,7 @@ public static class DispatcherQueueSequencerExtensions
         /// <exception cref="ArgumentNullException"><paramref name="dispatcherQueue"/> is <see langword="null"/>.</exception>
         public DispatcherQueueSequencer ToSequencer()
         {
-            ArgumentNullException.ThrowIfNull(dispatcherQueue);
+            ArgumentExceptionHelper.ThrowIfNull(dispatcherQueue);
 
             return new(dispatcherQueue);
         }

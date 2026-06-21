@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>Tests for the fused <see cref = "LinqExtensions.BlendUnique{T}(System.IObservable{T}[])"/> operator (merge + distinct-until-changed in a single sink).</summary>
+/// <summary>Tests for the fused <see cref = "LinqExtensions.BlendUnique{T}(IObservable{T}[])"/> operator (merge + distinct-until-changed in a single sink).</summary>
 public class BlendUniqueTests
 {
     /// <summary>The value one.</summary>
@@ -51,7 +51,7 @@ public class BlendUniqueTests
         var completed = 0;
 
         // source0 emits 1,1,2 (-> 1,2) then source1 emits 2,3,3 (2 == last, dropped -> 3).
-        LinqExtensions
+        _ = LinqExtensions
             .BlendUnique(
             Signal.FromEnumerable(_firstDuplicatedThenSecond),
             Signal.FromEnumerable(_secondThenThirdDuplicated)).Subscribe(values.Add, ex => throw ex, () => completed++);
@@ -66,7 +66,7 @@ public class BlendUniqueTests
     {
         List<int> values = [];
         var completed = 0;
-        LinqExtensions.BlendUnique<int>().Subscribe(values.Add, ex => throw ex, () => completed++);
+        _ = LinqExtensions.BlendUnique<int>().Subscribe(values.Add, ex => throw ex, () => completed++);
         await Assert.That(values.Count).IsEqualTo(0);
         await Assert.That(completed).IsEqualTo(Once);
     }
@@ -79,7 +79,7 @@ public class BlendUniqueTests
         List<string> values = [];
 
         // Case-insensitive: "a","A" collapse; "B" forwarded.
-        LinqExtensions.BlendUnique([Signal.FromEnumerable(_caseVariants)], StringComparer.OrdinalIgnoreCase)
+        _ = LinqExtensions.BlendUnique([Signal.FromEnumerable(_caseVariants)], StringComparer.OrdinalIgnoreCase)
             .Subscribe(values.Add);
         await Assert.That(values.SequenceEqual(_distinctCaseInsensitive)).IsTrue();
     }
@@ -91,7 +91,7 @@ public class BlendUniqueTests
     {
         List<int> values = [];
         Exception? error = null;
-        LinqExtensions
+        _ = LinqExtensions
             .BlendUnique(Signal.FromEnumerable(_single), Signal.Fail<int>(new InvalidOperationException("boom")))
             .Subscribe(values.Add, ex => error = ex, () => { });
         await Assert.That(values.SequenceEqual(_single)).IsTrue();
@@ -124,7 +124,7 @@ public class BlendUniqueTests
         List<int> values = [];
         Exception? error = null;
         var completed = 0;
-        LinqExtensions.BlendUnique(first, second, third).Subscribe(values.Add, ex => error = ex, () => completed++);
+        _ = LinqExtensions.BlendUnique(first, second, third).Subscribe(values.Add, ex => error = ex, () => completed++);
         first.OnNext(One); // forwarded
         second.OnError(new InvalidOperationException("boom")); // terminal
         first.OnNext(Two); // value suppressed (done)
@@ -139,9 +139,9 @@ public class BlendUniqueTests
     [Test]
     public void NullArgumentsThrow()
     {
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.BlendUnique<int>(null!, comparer: null));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.BlendUnique(Signal.FromEnumerable(_single), null!));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.BlendUnique<int>(null!, comparer: null));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.BlendUnique(Signal.FromEnumerable(_single), null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
             LinqExtensions.BlendUnique(Signal.FromEnumerable(_single)).Subscribe(null!));
     }
 }

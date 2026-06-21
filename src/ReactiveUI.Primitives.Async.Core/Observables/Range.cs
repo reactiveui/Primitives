@@ -18,29 +18,12 @@ public static partial class SignalAsync
     /// <param name="count">The number of sequential integers to emit. Must be non-negative.</param>
     /// <returns>An observable sequence that emits integers from <paramref name="start"/> to <paramref name="start"/> + <paramref
     /// name="count"/> - 1, in order.</returns>
-    public static IObservableAsync<int> Sequence(int start, int count) => CreateAsBackgroundJob<int>(
-        async (observer, cancellationToken) =>
-        {
-            for (var i = 0; i < count; i++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                // Pass CancellationToken.None to the observer so its TryEnter takes the
-                // None fast path; the pump loop's ThrowIfCancellationRequested still terminates
-                // the sequence on subscription disposal. Without this, every observer in the
-                // chain allocated a Linked2CancellationTokenSource per emission, dominating the
-                // GC profile of CountAsync / LastAsync / ToListAsync.
-                await observer.OnNextAsync(start + i, CancellationToken.None).ConfigureAwait(false);
-            }
-
-            await observer.OnCompletedAsync(Result.Success).ConfigureAwait(false);
-        },
-        true);
+    public static IObservableAsync<int> Sequence(int start, int count) => new SequenceSignal(start, count);
 
     /// <summary>Creates an observable sequence that emits a range of consecutive integer values, starting from the specified value.</summary>
     /// <param name="start">The value of the first integer in the sequence.</param>
     /// <param name="count">The number of sequential integers to emit. Must be non-negative.</param>
     /// <returns>An observable sequence that emits integers from <paramref name="start"/> to <paramref name="start"/> + <paramref
     /// name="count"/> - 1, in order.</returns>
-    public static IObservableAsync<int> Range(int start, int count) => Sequence(start, count);
+    public static IObservableAsync<int> Range(int start, int count) => new SequenceSignal(start, count);
 }

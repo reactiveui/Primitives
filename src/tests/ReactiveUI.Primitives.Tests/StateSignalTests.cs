@@ -36,7 +36,7 @@ public class StateSignalTests
     {
         StateSignal<int> source = new(First);
         using var projection = source.ToReadOnlyState(static value => value);
-        Assert.Throws<ArgumentNullException>(() => projection.OnError(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => projection.OnError(null!));
     }
 
     /// <summary>Covers read-only projection selector errors forwarded to current and late subscribers.</summary>
@@ -48,12 +48,12 @@ public class StateSignalTests
         using var projection = source.ToReadOnlyState(value =>
             value == Second ? throw new InvalidOperationException("selector") : value);
         Recorder<int> projected = new();
-        projection.Subscribe(projected);
+        _ = projection.Subscribe(projected);
         source.Value = Second;
         await Assert.That(projected.Errors.Count).IsEqualTo(1);
         await Assert.That(projected.Errors[0].Message).IsEqualTo("selector");
         Recorder<int> lateProjected = new();
-        projection.Subscribe(lateProjected);
+        _ = projection.Subscribe(lateProjected);
         await Assert.That(lateProjected.Errors.Count).IsEqualTo(1);
         await Assert.That(lateProjected.Errors[0]).IsSameReferenceAs(projected.Errors[0]);
     }
@@ -98,9 +98,9 @@ public class StateSignalTests
         StateSignal<int> state = new(InitialStateValue);
         List<int> values = [];
         List<string> readonlyValues = [];
-        state.Changed.Subscribe(values.Add);
+        _ = state.Changed.Subscribe(values.Add);
         using var readOnly = state.ToReadOnlyState(value => $"v:{value}");
-        readOnly.Changed.Subscribe(readonlyValues.Add);
+        _ = readOnly.Changed.Subscribe(readonlyValues.Add);
         state.Value = UpdatedStateValue;
         state.Refresh();
         await Assert.That(state.Value).IsEqualTo(UpdatedStateValue);
@@ -132,7 +132,7 @@ public class StateSignalTests
         var error = new InvalidOperationException("state-error");
         state.OnError(error);
         Recorder<int> lateObserver = new();
-        state.Subscribe(lateObserver);
+        _ = state.Subscribe(lateObserver);
         await Assert.That(lateObserver.Errors.Single()).IsSameReferenceAs(error);
 
         state.Dispose();

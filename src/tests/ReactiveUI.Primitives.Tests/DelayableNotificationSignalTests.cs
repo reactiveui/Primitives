@@ -73,7 +73,7 @@ public sealed class DelayableNotificationSignalTests
         var error = new InvalidOperationException("delayable-error");
         errored.OnError(error);
         var afterError = new RecordingObserver<string>();
-        errored.Subscribe(afterError);
+        _ = errored.Subscribe(afterError);
 
         await Assert.That(recorder.Values.Contains("now")).IsTrue();
         await Assert.That(recorder.Completed).IsEqualTo(1);
@@ -164,7 +164,7 @@ public sealed class DelayableNotificationSignalTests
         signal.OnError(error);
 
         var recorder = new RecordingObserver<string>();
-        signal.Subscribe(recorder);
+        _ = signal.Subscribe(recorder);
 
         await Assert.That(recorder.Errors.Contains(error)).IsTrue();
     }

@@ -20,8 +20,14 @@ public static partial class SignalExtensions
         /// <param name="dueTime">The quiet period before the latest value is emitted.</param>
         /// <returns>A throttled signal.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
-        public IObservable<TSource> EmitIfQuiet(TimeSpan dueTime) =>
-            source.EmitIfQuiet(dueTime, Sequencer.Default);
+        public IObservable<TSource> EmitIfQuiet(TimeSpan dueTime)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return dueTime <= TimeSpan.Zero
+                ? source
+                : new EmitIfQuietSignal<TSource>(source, dueTime, Sequencer.Default);
+        }
 
         /// <summary>Emits only the latest value after a quiet period.</summary>
         /// <param name="dueTime">The quiet period before the latest value is emitted.</param>
@@ -36,13 +42,9 @@ public static partial class SignalExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(sequencer);
 
-            if (dueTime <= TimeSpan.Zero)
-            {
-                return source;
-            }
-
-            return Signal.Create<TSource>(observer =>
-                new Signal.EmitIfQuietCoordinator<TSource>(observer, dueTime, sequencer).Subscribe(source));
+            return dueTime <= TimeSpan.Zero
+                ? source
+                : new EmitIfQuietSignal<TSource>(source, dueTime, sequencer);
         }
     }
 }

@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <typeparam name="T">The type of elements produced by the concatenated observable sequences.</typeparam>
 /// <param name="signals">A collection of asynchronous signals to be concatenated. Each signal is subscribed to sequentially; the next
 /// begins only after the previous completes.</param>
-public sealed class ChainEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> signals) : SignalAsync<T>
+public sealed class ChainEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> signals) : IObservableAsync<T>
 {
     /// <summary>The enumerable collection of signal sequences to concatenate.</summary>
     private readonly IEnumerable<IObservableAsync<T>> _signals = signals;
@@ -26,7 +26,7 @@ public sealed class ChainEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> si
     /// <param name="observer">The observer to receive elements from the concatenated sequences.</param>
     /// <param name="cancellationToken">A token to cancel the subscription.</param>
     /// <returns>An async disposable that tears down the subscription when disposed.</returns>
-    protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+    ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)
     {

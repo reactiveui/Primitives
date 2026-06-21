@@ -29,7 +29,11 @@ public class EventPatternTests
         await Assert.That(pattern.Equals("not an event")).IsFalse();
         await Assert.That(pattern.GetHashCode()).IsNotEqualTo(0);
         await Assert.That(pattern.ToString().Contains(nameof(EventArgs), StringComparison.Ordinal)).IsTrue();
-        Assert.Throws<ArgumentNullException>(() => _ = new EventPattern<EventArgs>(sender, null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            EventPattern<EventArgs> invalid = new(sender, null!);
+            GC.KeepAlive(invalid);
+        });
     }
 
     /// <summary>Verifies generic event factory overloads for supported and unsupported handler shapes.</summary>
@@ -58,11 +62,11 @@ public class EventPatternTests
         propertySubscription.Dispose();
         propertySource.Raise("ignored");
         await Assert.That(propertyNames.SequenceEqual([nameof(PropertyChangedEventSource.Value)])).IsTrue();
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() =>
             Signal.FromEventPattern<EventHandler<TestEventArgs>, TestEventArgs>(null!, _ => { }));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() =>
             Signal.FromEventPattern<EventHandler<TestEventArgs>, TestEventArgs>(_ => { }, null!));
-        Assert.Throws<NotSupportedException>(() =>
+        _ = Assert.Throws<NotSupportedException>(() =>
             Signal.FromEventPattern<Action, EventArgs>(_ => { }, _ => { }).Subscribe(_ => { }));
     }
 

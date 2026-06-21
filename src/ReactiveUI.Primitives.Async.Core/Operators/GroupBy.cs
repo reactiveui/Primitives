@@ -33,10 +33,7 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(keySelector);
 
-            return new GroupByAsyncSignal<TKey, TValue>(
-                source,
-                keySelector,
-                static _ => AsyncSignalFactory.Create<TValue>());
+            return new GroupByAsyncSignal<TKey, TValue>(source, keySelector, static _ => AsyncSignalFactory.Create<TValue>());
         }
 
         /// <summary>
@@ -66,7 +63,7 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>Async observable that groups source elements by key, emitting a <see cref="GroupedAsyncSignal{TKey, TValue}"/> for each unique key encountered.</summary>
+    /// <summary>Async observable that groups source elements by key, emitting one observable per unique key.</summary>
     /// <typeparam name="TKey">The type of the grouping key.</typeparam>
     /// <typeparam name="TValue">The type of elements in the source sequence.</typeparam>
     /// <param name="source">The source observable sequence.</param>
@@ -75,7 +72,8 @@ public static partial class SignalAsyncExtensions
     internal sealed class GroupByAsyncSignal<TKey, TValue>(
         IObservableAsync<TValue> source,
         Func<TValue, TKey> keySelector,
-        Func<TKey, ISignalAsync<TValue>> groupSignalSelector) : SignalAsync<GroupedAsyncSignal<TKey, TValue>>
+        Func<TKey, ISignalAsync<TValue>> groupSignalSelector)
+        : IObservableAsync<GroupedAsyncSignal<TKey, TValue>>
         where TKey : notnull
     {
         /// <summary>The source observable sequence whose elements are grouped by key.</summary>
@@ -87,11 +85,7 @@ public static partial class SignalAsyncExtensions
         /// <summary>The factory function that creates a signal for each new group key.</summary>
         private readonly Func<TKey, ISignalAsync<TValue>> _groupSignalSelector = groupSignalSelector;
 
-        /// <summary>Subscribes the specified observer by creating a <see cref="GroupingCoordinator"/> that tracks groups by key.</summary>
-        /// <param name="observer">The observer to receive grouped observable sequences.</param>
-        /// <param name="cancellationToken">A token to cancel the subscription.</param>
-        /// <returns>An async disposable that tears down the subscription when disposed.</returns>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<GroupedAsyncSignal<TKey, TValue>>.SubscribeAsync(
             IObserverAsync<GroupedAsyncSignal<TKey, TValue>> observer,
             CancellationToken cancellationToken)
         {
@@ -139,7 +133,13 @@ public static partial class SignalAsyncExtensions
                     _signalsByKey.Add(key, signal);
 
                     // We use the cancellationToken passed from the source subscription.
-                    await observer.OnNextAsync(new Signal(this, key, signal.Values), cancellationToken).ConfigureAwait(false);
+                    await observer.OnNextAsync(
+                        new GroupedAsyncSignal<TKey, TValue>(
+                            key,
+                            signal.Values,
+                            _disposables,
+                            InternalDisposedToken),
+                        cancellationToken).ConfigureAwait(false);
                 }
 
                 await signal.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
@@ -173,46 +173,6 @@ public static partial class SignalAsyncExtensions
             {
                 await base.DisposeAsyncCore().ConfigureAwait(false);
                 await _disposables.DisposeAsync().ConfigureAwait(false);
-            }
-
-            /// <summary>Represents a single grouped async observable identified by its key.</summary>
-            /// <param name="parent">The parent coordinator that manages group disposables.</param>
-            /// <param name="key">The key that identifies this group.</param>
-            /// <param name="signalValues">The observable sequence of values for this group.</param>
-            internal sealed class Signal(GroupingCoordinator parent, TKey key, IObservableAsync<TValue> signalValues)
-                : GroupedAsyncSignal<TKey, TValue>
-            {
-                /// <summary>Gets the key associated with this element.</summary>
-                public override TKey Key => key;
-
-                /// <summary>Subscribes the specified observer to this group's value stream.</summary>
-                /// <param name="observer">The observer to receive elements for this group.</param>
-                /// <param name="cancellationToken">A token to cancel the subscription.</param>
-                /// <returns>An async disposable that removes the subscription from the parent on disposal.</returns>
-                protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
-                    IObserverAsync<TValue> observer,
-                    CancellationToken cancellationToken)
-                {
-                    // Inline-create the wrap so we can wire chain-aware cancellation. The wrap
-                    // observes the upstream Subscription's dispose token (broadcasts arrive with
-                    // that token); the downstream observer (if an ObserverAsync) observes the
-                    // wrap's dispose token. Together they collapse the per-emission
-                    // CancellationTokenSource.CreateLinkedTokenSource allocations to zero.
-                    RelayWitnessAsync<TValue> wrap = new(observer);
-                    wrap.LinkUpstreamCancellation(parent.InternalDisposedToken);
-                    if (observer is WitnessAsync<TValue> downstream)
-                    {
-                        downstream.LinkUpstreamCancellation(wrap.InternalDisposedToken);
-                    }
-
-                    var subscription = await signalValues.SubscribeAsync(wrap, cancellationToken).ConfigureAwait(false);
-                    await parent._disposables.AddAsync(subscription).ConfigureAwait(false);
-                    return DisposableAsync.Create(async () =>
-                    {
-                        await parent._disposables.Remove(subscription).ConfigureAwait(false);
-                        await subscription.DisposeAsync().ConfigureAwait(false);
-                    });
-                }
             }
         }
     }

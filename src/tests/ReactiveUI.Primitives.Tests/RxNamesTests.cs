@@ -284,8 +284,8 @@ public partial class RxNamesTests
     [MethodDataSource(nameof(TimeCases))]
     public async Task TimeNamesAreBehaviorallyIdentical(TimeCase testCase)
     {
-        (var deviantValues, var deviantError) = RunTimed(testCase.Deviant, testCase.Source);
-        (var rxValues, var rxError) = RunTimed(testCase.Rx, testCase.Source);
+        var (deviantValues, deviantError) = RunTimed(testCase.Deviant, testCase.Source);
+        var (rxValues, rxError) = RunTimed(testCase.Rx, testCase.Source);
         await Assert.That(deviantValues.SequenceEqual(testCase.Expected)).IsTrue();
         await Assert.That(rxValues.SequenceEqual(testCase.Expected)).IsTrue();
         await Assert.That(rxValues).IsEquivalentTo(deviantValues, EqualityComparer<int>.Default);
@@ -300,8 +300,8 @@ public partial class RxNamesTests
     {
         List<string> keep = [];
         List<string> where = [];
-        Signal.FromEnumerable(["a", null, "b"]).KeepNotNull().Subscribe(keep.Add);
-        Signal.FromEnumerable(["a", null, "b"]).WhereNotNull().Subscribe(where.Add);
+        _ = Signal.FromEnumerable(["a", null, "b"]).KeepNotNull().Subscribe(keep.Add);
+        _ = Signal.FromEnumerable(["a", null, "b"]).WhereNotNull().Subscribe(where.Add);
         await Assert.That(where).IsEquivalentTo(keep, EqualityComparer<string>.Default);
         await Assert.That(where.Count).IsEqualTo(Two);
     }
@@ -313,8 +313,8 @@ public partial class RxNamesTests
     {
         List<int> chain = [];
         List<int> concat = [];
-        Signal.FromEnumerable(_oneToThree).Chain(Signal.FromEnumerable(_oneToThree)).Subscribe(chain.Add);
-        Signal.FromEnumerable(_oneToThree).Concat(Signal.FromEnumerable(_oneToThree)).Subscribe(concat.Add);
+        _ = Signal.FromEnumerable(_oneToThree).Chain(Signal.FromEnumerable(_oneToThree)).Subscribe(chain.Add);
+        _ = Signal.FromEnumerable(_oneToThree).Concat(Signal.FromEnumerable(_oneToThree)).Subscribe(concat.Add);
         await Assert.That(concat).IsEquivalentTo(chain, EqualityComparer<int>.Default);
     }
 
@@ -455,37 +455,37 @@ public partial class RxNamesTests
     public void RxNamesThrowOnNullSource()
     {
         var other = Signal.FromEnumerable(_oneToThree);
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Select(Double));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.SelectWith(Ten, AddState));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Where(IsEven));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.WhereWith(Two, IsMultiple));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<string?>)!.WhereNotNull());
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Do(Ignore));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.DoWith(Ten, IgnoreState));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Scan(Seed, Add));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Aggregate(Seed, Add));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.DistinctUntilChanged());
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.DistinctUntilChangedBy(Identity));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.IgnoreElements());
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.SelectMany(Fan));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<IObservable<int>>)!.Merge());
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<IObservable<int>>)!.Concat());
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Concat(other));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<IObservable<int>>)!.Amb());
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<IObservable<int>>)!.Switch());
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Zip(other, Add));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.CombineLatest(other, Add));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.WithLatestFrom(other, Add));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Delay(TimeSpan.FromTicks(DueTicks)));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Timeout(TimeSpan.FromTicks(DueTicks)));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Sample(TimeSpan.FromTicks(DueTicks)));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Retry(Two));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Materialize());
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<Spark<int>>)!.Dematerialize());
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Resume(other));
-        Assert.Throws<ArgumentNullException>(() => other.Resume(null!));
-        Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Chain(other));
-        Assert.Throws<ArgumentNullException>(() => other.Chain((IObservable<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Select(Double));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.SelectWith(Ten, AddState));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Where(IsEven));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.WhereWith(Two, IsMultiple));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<string?>)!.WhereNotNull());
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Do(Ignore));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.DoWith(Ten, IgnoreState));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Scan(Seed, Add));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Aggregate(Seed, Add));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.DistinctUntilChanged());
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.DistinctUntilChangedBy(Identity));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.IgnoreElements());
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.SelectMany(Fan));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<IObservable<int>>)!.Merge());
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<IObservable<int>>)!.Concat());
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Concat(other));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<IObservable<int>>)!.Amb());
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<IObservable<int>>)!.Switch());
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Zip(other, Add));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.CombineLatest(other, Add));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.WithLatestFrom(other, Add));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Delay(TimeSpan.FromTicks(DueTicks)));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Timeout(TimeSpan.FromTicks(DueTicks)));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Sample(TimeSpan.FromTicks(DueTicks)));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Retry(Two));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Materialize());
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<Spark<int>>)!.Dematerialize());
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Resume(other));
+        _ = Assert.Throws<ArgumentNullException>(() => other.Resume(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Chain(other));
+        _ = Assert.Throws<ArgumentNullException>(() => other.Chain((IObservable<int>)null!));
     }
 
     /// <summary>Verifies the Rx names throw <see cref = "ArgumentNullException"/> for a null projection/predicate.</summary>
@@ -493,25 +493,25 @@ public partial class RxNamesTests
     public void RxNamesThrowOnNullSelector()
     {
         var source = Signal.FromEnumerable(_oneToFive);
-        Assert.Throws<ArgumentNullException>(() => source.Select((Func<int, int>)null!));
-        Assert.Throws<ArgumentNullException>(() => source.SelectWith<int, int, int>(Ten, null!));
-        Assert.Throws<ArgumentNullException>(() => source.Where(null!));
-        Assert.Throws<ArgumentNullException>(() => source.WhereWith(Two, null!));
-        Assert.Throws<ArgumentNullException>(() => source.Do(null!));
-        Assert.Throws<ArgumentNullException>(() => source.DoWith(Ten, null!));
-        Assert.Throws<ArgumentNullException>(() => source.Scan(Seed, null!));
-        Assert.Throws<ArgumentNullException>(() => source.Aggregate(Seed, null!));
-        Assert.Throws<ArgumentNullException>(() => source.DistinctUntilChangedBy<int, int>(null!));
-        Assert.Throws<ArgumentNullException>(() => source.SelectMany((Func<int, IObservable<int>>)null!));
-        Assert.Throws<ArgumentNullException>(() => source.Zip<int, int, int>(source, null!));
-        Assert.Throws<ArgumentNullException>(() => source.CombineLatest<int, int, int>(source, null!));
-        Assert.Throws<ArgumentNullException>(() => source.WithLatestFrom<int, int, int>(source, null!));
-        Assert.Throws<ArgumentNullException>(() => source.Zip((IObservable<int>)null!, Add));
-        Assert.Throws<ArgumentNullException>(() => source.CombineLatest((IObservable<int>)null!, Add));
-        Assert.Throws<ArgumentNullException>(() => source.WithLatestFrom((IObservable<int>)null!, Add));
-        Assert.Throws<ArgumentNullException>(() => source.Concat((IObservable<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => source.SelectMany<int, int, int>(null!, AddPair));
-        Assert.Throws<ArgumentNullException>(() => source.SelectMany<int, int, int>(Fan, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Select((Func<int, int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.SelectWith<int, int, int>(Ten, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Where(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.WhereWith(Two, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Do(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.DoWith(Ten, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Scan(Seed, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Aggregate(Seed, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.DistinctUntilChangedBy<int, int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.SelectMany((Func<int, IObservable<int>>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Zip<int, int, int>(source, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.CombineLatest<int, int, int>(source, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.WithLatestFrom<int, int, int>(source, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Zip((IObservable<int>)null!, Add));
+        _ = Assert.Throws<ArgumentNullException>(() => source.CombineLatest((IObservable<int>)null!, Add));
+        _ = Assert.Throws<ArgumentNullException>(() => source.WithLatestFrom((IObservable<int>)null!, Add));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Concat((IObservable<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.SelectMany<int, int, int>(null!, AddPair));
+        _ = Assert.Throws<ArgumentNullException>(() => source.SelectMany<int, int, int>(Fan, null!));
     }
 
     /// <summary>Verifies the count/interval guards throw <see cref = "ArgumentOutOfRangeException"/>.</summary>
@@ -519,8 +519,8 @@ public partial class RxNamesTests
     public void RxNamesThrowOnNegativeArguments()
     {
         var source = Signal.FromEnumerable(_oneToFive);
-        Assert.Throws<ArgumentOutOfRangeException>(() => source.Retry(NegativeOne));
-        Assert.Throws<ArgumentOutOfRangeException>(() => source.Sample(TimeSpan.FromTicks(NegativeOne)));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => source.Retry(NegativeOne));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => source.Sample(TimeSpan.FromTicks(NegativeOne)));
     }
 
     /// <summary>Verifies the stateful sinks forward a value and then an error (covers their error path).</summary>
@@ -605,8 +605,8 @@ public partial class RxNamesTests
     {
         List<int> flatMap = [];
         List<int> selectMany = [];
-        Signal.FromEnumerable(_oneToThree).FlatMap(Fan, AddPair).Subscribe(flatMap.Add);
-        Signal.FromEnumerable(_oneToThree).SelectMany(Fan, AddPair).Subscribe(selectMany.Add);
+        _ = Signal.FromEnumerable(_oneToThree).FlatMap(Fan, AddPair).Subscribe(flatMap.Add);
+        _ = Signal.FromEnumerable(_oneToThree).SelectMany(Fan, AddPair).Subscribe(selectMany.Add);
         await Assert.That(selectMany).IsEquivalentTo(flatMap, EqualityComparer<int>.Default);
         await Assert.That(selectMany.Count > 0).IsTrue();
     }
@@ -664,9 +664,9 @@ public partial class RxNamesTests
     public void StatefulSinksThrowOnNullObserver()
     {
         var source = Signal.FromEnumerable(_oneToFive);
-        Assert.Throws<ArgumentNullException>(() => source.SelectWith(Ten, AddState).Subscribe((IObserver<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => source.WhereWith(Two, IsMultiple).Subscribe((IObserver<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => source.DoWith(Ten, IgnoreState).Subscribe((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.SelectWith(Ten, AddState).Subscribe((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.WhereWith(Two, IsMultiple).Subscribe((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.DoWith(Ten, IgnoreState).Subscribe((IObserver<int>)null!));
     }
 
     /// <summary>Verifies the stateful sinks propagate the source's current-thread subscription requirement.</summary>
@@ -707,7 +707,7 @@ public partial class RxNamesTests
     public async Task ResumeSchedulesWhenCurrentThreadSequencerActive()
     {
         List<int> values = [];
-        Sequencer.CurrentThread.Schedule(() =>
+        _ = Sequencer.CurrentThread.Schedule(() =>
             new Signal<int>().Resume(Signal.FromEnumerable(_oneToThree)).Subscribe(values.Add));
         await Assert.That(values.Count).IsEqualTo(0);
         await Assert.That(new ResumeSignal<int>(Signal.FromEnumerable(_oneToThree), Signal.FromEnumerable(_oneToThree))
@@ -818,7 +818,7 @@ public partial class RxNamesTests
     private static List<int> RunUnary(Func<IObservable<int>, IObservable<int>> op, int[] input)
     {
         List<int> values = [];
-        op(Signal.FromEnumerable(input)).Subscribe(values.Add);
+        _ = op(Signal.FromEnumerable(input)).Subscribe(values.Add);
         return values;
     }
 
@@ -830,7 +830,7 @@ public partial class RxNamesTests
     {
         var outer = Signal.FromEnumerable(Array.ConvertAll(inners, ToSource));
         List<int> values = [];
-        op(outer).Subscribe(values.Add);
+        _ = op(outer).Subscribe(values.Add);
         return values;
     }
 
@@ -1219,7 +1219,7 @@ public partial class RxNamesTests
     private static List<int> Collect(IObservable<int> source)
     {
         List<int> values = [];
-        source.Subscribe(values.Add);
+        _ = source.Subscribe(values.Add);
         return values;
     }
 

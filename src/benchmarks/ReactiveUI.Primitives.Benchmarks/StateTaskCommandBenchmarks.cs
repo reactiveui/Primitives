@@ -58,7 +58,7 @@ public class StateTaskCommandBenchmarks
     public int R3StateSignalUpdates()
     {
         IntR3Witness observer = new();
-        using R3.BehaviorSubject<int> state = new(0);
+        using BehaviorSubject<int> state = new(0);
         using var subscription = state.Subscribe(observer);
         for (var i = 0; i < Count; i++)
         {
@@ -96,7 +96,7 @@ public class StateTaskCommandBenchmarks
     [Benchmark]
     public int R3ReadOnlyStateProjection()
     {
-        using R3.BehaviorSubject<int> state = new(Value);
+        using BehaviorSubject<int> state = new(Value);
         using var projected = R3.ReactivePropertyExtensions.ToReadOnlyReactiveProperty(
             R3.ObservableExtensions.Select(state, static value => value + 1),
             Value + 1);

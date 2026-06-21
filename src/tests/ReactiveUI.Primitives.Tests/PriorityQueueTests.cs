@@ -94,9 +94,9 @@ public class PriorityQueueTests
     {
         PriorityQueue<int> queue = new();
 
-        Assert.Throws<ArgumentNullException>(() => queue.EnqueueRange(null!));
-        Assert.Throws<ArgumentNullException>(() => queue.DequeueRange(null!));
-        Assert.Throws<ArgumentOutOfRangeException>(() => queue.DequeueSome(-1));
+        _ = Assert.Throws<ArgumentNullException>(() => queue.EnqueueRange(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => queue.DequeueRange(null!));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => queue.DequeueSome(-1));
 
         await Assert.That(queue.DequeueSome(0).Length).IsEqualTo(0);
         await Assert.That(queue.DequeueRange(new int[DestinationLength])).IsEqualTo(0);

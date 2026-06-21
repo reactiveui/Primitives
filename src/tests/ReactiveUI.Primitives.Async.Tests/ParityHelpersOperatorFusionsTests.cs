@@ -178,7 +178,7 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenPartitionSourceErrorResume_ThenBothBranchesReceiveError()
     {
         var signal = Signal.Create<int>();
-        (var evens, var odds) = signal.Values.Partition(static x => x % Two == 0);
+        var (evens, odds) = signal.Values.Partition(static x => x % Two == 0);
 
         Exception? evenError = null;
         Exception? oddError = null;
@@ -190,7 +190,7 @@ public class ParityHelpersOperatorFusionsTests
             (ex, _) =>
             {
                 evenError = ex;
-                evenTcs.TrySetResult();
+                IgnoredResult.Of(evenTcs.TrySetResult());
                 return default;
             });
         await using var oddSub = await odds.SubscribeAsync(
@@ -198,7 +198,7 @@ public class ParityHelpersOperatorFusionsTests
             (ex, _) =>
             {
                 oddError = ex;
-                oddTcs.TrySetResult();
+                IgnoredResult.Of(oddTcs.TrySetResult());
                 return default;
             });
 
@@ -217,7 +217,7 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenPartitionLateBranchSubscribesAfterCompletion_ThenCachedTerminalForwarded()
     {
         var signal = Signal.Create<int>();
-        (var evens, var odds) = signal.Values.Partition(static x => x % Two == 0);
+        var (evens, odds) = signal.Values.Partition(static x => x % Two == 0);
 
         var firstTask = evens.ToListAsync().AsTask();
         await signal.OnNextAsync(Two, CancellationToken.None);
@@ -235,7 +235,7 @@ public class ParityHelpersOperatorFusionsTests
             (_, _) => default,
             result =>
             {
-                lateCompleted.TrySetResult();
+                _ = lateCompleted.TrySetResult();
                 return default;
             });
 
@@ -288,7 +288,7 @@ public class ParityHelpersOperatorFusionsTests
                 (ex, _) =>
                 {
                     caught = ex;
-                    errorTcs.TrySetResult();
+                    IgnoredResult.Of(errorTcs.TrySetResult());
                     return default;
                 });
 
@@ -316,7 +316,7 @@ public class ParityHelpersOperatorFusionsTests
                 (ex, _) =>
                 {
                     caught = ex;
-                    errorTcs.TrySetResult();
+                    IgnoredResult.Of(errorTcs.TrySetResult());
                     return default;
                 });
 
@@ -343,7 +343,7 @@ public class ParityHelpersOperatorFusionsTests
                 (ex, _) =>
                 {
                     caught = ex;
-                    errorTcs.TrySetResult();
+                    IgnoredResult.Of(errorTcs.TrySetResult());
                     return default;
                 });
 
@@ -370,7 +370,7 @@ public class ParityHelpersOperatorFusionsTests
                 (ex, _) =>
                 {
                     caught = ex;
-                    errorTcs.TrySetResult();
+                    IgnoredResult.Of(errorTcs.TrySetResult());
                     return default;
                 });
 
@@ -397,7 +397,7 @@ public class ParityHelpersOperatorFusionsTests
                 (ex, _) =>
                 {
                     caught = ex;
-                    errorTcs.TrySetResult();
+                    IgnoredResult.Of(errorTcs.TrySetResult());
                     return default;
                 });
 
@@ -425,7 +425,7 @@ public class ParityHelpersOperatorFusionsTests
             {
                 await Task.Yield();
                 values.Add(v);
-                emittedTcs.TrySetResult(v);
+                IgnoredResult.Of(emittedTcs.TrySetResult(v));
             });
 
         await signal.OnNextAsync(One, CancellationToken.None);
@@ -438,7 +438,7 @@ public class ParityHelpersOperatorFusionsTests
             .SubscribeAsync(async (_, _) =>
             {
                 await Task.Yield();
-                secondTcs.TrySetResult();
+                _ = secondTcs.TrySetResult();
             });
 
         await signal.OnNextAsync(Two, CancellationToken.None);
@@ -463,7 +463,7 @@ public class ParityHelpersOperatorFusionsTests
                 (ex, _) =>
                 {
                     caught = ex;
-                    errorTcs.TrySetResult();
+                    IgnoredResult.Of(errorTcs.TrySetResult());
                     return default;
                 });
 
@@ -481,7 +481,7 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenPartitionBranchDisposedTwice_ThenIdempotent()
     {
         var signal = Signal.Create<int>();
-        (var evens, _) = signal.Values.Partition(static x => x % Two == 0);
+        var (evens, _) = signal.Values.Partition(static x => x % Two == 0);
 
         var sub = await evens.SubscribeAsync(static (_, _) => default);
 
@@ -578,7 +578,7 @@ public class ParityHelpersOperatorFusionsTests
             .SubscribeAsync((v, _) =>
             {
                 values.Add(v);
-                emitted.TrySetResult();
+                IgnoredResult.Of(emitted.TrySetResult());
                 return default;
             });
 
@@ -621,7 +621,7 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenPartitionEmitsWhileMatchingBranchUnsubscribed_ThenDropped()
     {
         var signal = Signal.Create<int>();
-        (var evens, _) = signal.Values.Partition(static x => x % Two == 0);
+        var (evens, _) = signal.Values.Partition(static x => x % Two == 0);
 
         List<int> values = [];
         await using var sub = await evens.SubscribeAsync((v, _) =>

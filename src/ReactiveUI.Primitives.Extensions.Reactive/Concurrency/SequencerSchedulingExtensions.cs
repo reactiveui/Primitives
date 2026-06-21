@@ -26,7 +26,7 @@ internal static class SequencerSchedulingExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(item);
 
-            scheduler.Schedule(item, static (_, w) =>
+            _ = scheduler.Schedule(item, static (_, w) =>
             {
                 w.Execute();
                 return EmptyDisposable.Instance;

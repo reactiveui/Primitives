@@ -156,12 +156,7 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     public int CompareTo(ScheduledItem<TAbsolute>? other)
     {
         // MSDN: By definition, any object compares greater than null, and two null references compare equal to each other.
-        if (other is null)
-        {
-            return 1;
-        }
-
-        return _comparer.Compare(DueTime, other.DueTime);
+        return other is null ? 1 : _comparer.Compare(DueTime, other.DueTime);
     }
 
     /// <summary>Compares this scheduled item with another object by due time.</summary>

@@ -164,7 +164,7 @@ public static class Witness
             }
             catch
             {
-                Interlocked.Exchange(ref _stopped, 1);
+                _ = Interlocked.Exchange(ref _stopped, 1);
                 DisposeCancel();
                 throw;
             }
@@ -260,7 +260,7 @@ public static class Witness
             }
             catch
             {
-                Interlocked.Exchange(ref _stopped, 1);
+                _ = Interlocked.Exchange(ref _stopped, 1);
                 throw;
             }
         }
@@ -321,7 +321,7 @@ public static class Witness
             }
             catch
             {
-                Interlocked.Exchange(ref _stopped, 1);
+                _ = Interlocked.Exchange(ref _stopped, 1);
                 throw;
             }
         }

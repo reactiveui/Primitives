@@ -46,10 +46,10 @@ public static partial class SignalAsync
     /// freshly-produced inner observable.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="factory">The deferred factory invoked once per subscribe.</param>
-    internal sealed class DeferSyncSignalAsync<T>(Func<IObservableAsync<T>> factory) : SignalAsync<T>
+    internal sealed class DeferSyncSignalAsync<T>(Func<IObservableAsync<T>> factory) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken) =>
             factory().SubscribeAsync(observer.Wrap(), cancellationToken);
@@ -62,10 +62,10 @@ public static partial class SignalAsync
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="factory">The deferred factory invoked once per subscribe.</param>
     internal sealed class DeferAsyncSignalAsync<T>(Func<CancellationToken, ValueTask<IObservableAsync<T>>> factory)
-        : SignalAsync<T>
+        : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

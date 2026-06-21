@@ -63,15 +63,15 @@ public class SparkTests
             () => observer.Events.Add("delegate-completed"));
         await Assert.That(next.Accept(value => "fn-next:" + value, ex => ex.Message, () => FunctionCompletedText))
             .IsEqualTo("fn-next:42");
-        Assert.Throws<ArgumentNullException>(() => next.Accept((IObserver<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => next.Accept<string>(null!));
-        Assert.Throws<ArgumentNullException>(() => next.Accept(null!, ex => { }, () => { }));
-        Assert.Throws<ArgumentNullException>(() => next.Accept(value => { }, null!, () => { }));
-        Assert.Throws<ArgumentNullException>(() => next.Accept(value => { }, ex => { }, null!));
-        Assert.Throws<ArgumentNullException>(() => next.Accept(null!, ex => ex.Message, () => "done"));
-        Assert.Throws<ArgumentNullException>(() => next.Accept(value => value.ToString(), null!, () => "done"));
-        Assert.Throws<ArgumentNullException>(() => next.Accept(value => value.ToString(), ex => ex.Message, null!));
-        next.ToObservable().Subscribe(observableValues.Add, ex => throw ex, () => observableCompleted++);
+        _ = Assert.Throws<ArgumentNullException>(() => next.Accept((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => next.Accept<string>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(null!, ex => { }, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(value => { }, null!, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(value => { }, ex => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(null!, ex => ex.Message, () => "done"));
+        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(value => value.ToString(), null!, () => "done"));
+        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(value => value.ToString(), ex => ex.Message, null!));
+        _ = next.ToObservable().Subscribe(observableValues.Add, ex => throw ex, () => observableCompleted++);
         await Assert.That(observableValues.SequenceEqual(ExpectedObservableValues)).IsTrue();
         await Assert.That(observableCompleted).IsEqualTo(1);
         await Assert.That(observer.Events).Contains("next:42");
@@ -108,15 +108,15 @@ public class SparkTests
             ex => "fn-error:" + ex.Message,
             () => FunctionCompletedText);
         await Assert.That(errorResult).IsEqualTo("fn-error:spark-error");
-        Assert.Throws<ArgumentNullException>(() => Spark.CreateOnError<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => errorSpark.Accept((IObserver<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => errorSpark.Accept<string>(null!));
-        Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(null!, ex => { }, () => { }));
-        Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(value => { }, null!, () => { }));
-        Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(value => { }, ex => { }, null!));
-        Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(null!, ex => ex.Message, () => "done"));
-        Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(value => value.ToString(), null!, () => "done"));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() => Spark.CreateOnError<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept<string>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(null!, ex => { }, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(value => { }, null!, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(value => { }, ex => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(null!, ex => ex.Message, () => "done"));
+        _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(value => value.ToString(), null!, () => "done"));
+        _ = Assert.Throws<ArgumentNullException>(() =>
             errorSpark.Accept(value => value.ToString(), ex => ex.Message, null!));
         await Assert.That(observer.Events).Contains("error:spark-error");
     }
@@ -143,16 +143,16 @@ public class SparkTests
             () => observer.Events.Add("delegate-completed"));
         await Assert.That(completed.Accept(value => value.ToString(), ex => ex.Message, () => FunctionCompletedText))
             .IsEqualTo(FunctionCompletedText);
-        Assert.Throws<ArgumentNullException>(() => completed.Accept((IObserver<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => completed.Accept<string>(null!));
-        Assert.Throws<ArgumentNullException>(() => completed.Accept(null!, ex => { }, () => { }));
-        Assert.Throws<ArgumentNullException>(() => completed.Accept(value => { }, null!, () => { }));
-        Assert.Throws<ArgumentNullException>(() => completed.Accept(value => { }, ex => { }, null!));
-        Assert.Throws<ArgumentNullException>(() => completed.Accept(null!, ex => ex.Message, () => "done"));
-        Assert.Throws<ArgumentNullException>(() => completed.Accept(value => value.ToString(), null!, () => "done"));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() => completed.Accept((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => completed.Accept<string>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => completed.Accept(null!, ex => { }, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => completed.Accept(value => { }, null!, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => completed.Accept(value => { }, ex => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => completed.Accept(null!, ex => ex.Message, () => "done"));
+        _ = Assert.Throws<ArgumentNullException>(() => completed.Accept(value => value.ToString(), null!, () => "done"));
+        _ = Assert.Throws<ArgumentNullException>(() =>
             completed.Accept(value => value.ToString(), ex => ex.Message, null!));
-        Assert.Throws<ArgumentNullException>(() => completed.ToObservable(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => completed.ToObservable(null!));
         await Assert.That(observer.Events).Contains(CompletedText);
     }
 

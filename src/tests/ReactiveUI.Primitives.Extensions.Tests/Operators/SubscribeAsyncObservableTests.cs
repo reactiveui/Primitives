@@ -108,7 +108,7 @@ public class SubscribeAsyncObservableTests
         subject.OnCompleted();
         await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
         await Assert.That(completed.Task.IsCompleted).IsFalse();
-        gate.TrySetResult(true);
+        _ = gate.TrySetResult(true);
         var done = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(done).IsTrue();
     }
@@ -122,14 +122,14 @@ public class SubscribeAsyncObservableTests
         Subject<int> subject = new();
         TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource<bool> handled = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = subject.SubscribeSynchronous(async _ =>
+        using var sub = subject.SubscribeSynchronous(async value =>
         {
             await gate.Task.ConfigureAwait(false);
-            handled.TrySetResult(true);
+            _ = handled.TrySetResult(true);
         });
         subject.OnNext(Value);
         subject.OnCompleted();
-        gate.TrySetResult(true);
+        _ = gate.TrySetResult(true);
         var done = await handled.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
         await Assert.That(done).IsTrue();
@@ -147,9 +147,9 @@ public class SubscribeAsyncObservableTests
         Exception? caught = null;
         var completedCount = 0;
         var sub = subject.SubscribeSynchronous(
-            async _ =>
+            async value =>
             {
-                handlerStarted.TrySetResult(true);
+                _ = handlerStarted.TrySetResult(true);
                 await gate.Task.ConfigureAwait(false);
                 throw new InvalidOperationException(HandlerFailedMessage);
             },
@@ -159,7 +159,7 @@ public class SubscribeAsyncObservableTests
         await handlerStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         subject.OnCompleted();
         sub.Dispose();
-        gate.TrySetResult(true);
+        _ = gate.TrySetResult(true);
         await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
         await Assert.That(caught).IsNull();
         await Assert.That(completedCount).IsEqualTo(0);
@@ -173,9 +173,9 @@ public class SubscribeAsyncObservableTests
         const int IgnoredValue = 1;
         Subject<int> subject = new();
         var handlerRan = 0;
-        var sub = subject.SubscribeSynchronous(_ =>
+        var sub = subject.SubscribeSynchronous(value =>
         {
-            Interlocked.Increment(ref handlerRan);
+            _ = Interlocked.Increment(ref handlerRan);
             return default;
         });
         sub.Dispose();

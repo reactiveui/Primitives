@@ -47,7 +47,7 @@ public sealed class BufferUntilObservable(
             }
 
             _startFound = true;
-            _sb.Append(value);
+            _ = _sb.Append(value);
 
             if (value != endsWith)
             {
@@ -56,7 +56,7 @@ public sealed class BufferUntilObservable(
 
             downstream.OnNext(_sb.ToString());
             _startFound = false;
-            _sb.Clear();
+            _ = _sb.Clear();
         }
 
         /// <inheritdoc/>

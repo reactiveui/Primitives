@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
-
 namespace ReactiveUI.Primitives.Async.Signals;
 
 /// <summary>
@@ -18,23 +16,36 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// <param name="startValue">An optional initial value to be replayed to new observers before any values are published. If not specified, no
 /// value is replayed until the first value is received.</param>
 public sealed class SerialStatelessReplayLatestSignalAsync<T>(Optional<T> startValue)
-    : BaseStatelessReplayLatestSignalAsync<T>(startValue)
+    : ISignalAsync<T>
 {
     /// <inheritdoc/>
-    protected override ValueTask OnNextAsyncCore(
-        ImmutableArray<IObserverAsync<T>> observers,
+    IObservableAsync<T> ISignalAsync<T>.Values => this;
+
+    /// <summary>The mutable signal state.</summary>
+    private readonly StatelessReplayLatestSignalAsyncState<T> _state = new(startValue);
+
+    /// <inheritdoc/>
+    public ValueTask OnNextAsync(
         T value,
         CancellationToken cancellationToken) =>
-        SerialBroadcastHelpers.BroadcastOnNextAsyncMulti(observers, value, cancellationToken);
+        StatelessReplayLatestSignalAsyncStateHelper.OnNextAsync(_state, SignalBroadcastKind.SerialMulti, value, cancellationToken);
 
     /// <inheritdoc/>
-    protected override ValueTask OnErrorResumeAsyncCore(
-        ImmutableArray<IObserverAsync<T>> observers,
+    public ValueTask OnErrorResumeAsync(
         Exception error,
         CancellationToken cancellationToken) =>
-        SerialBroadcastHelpers.BroadcastOnErrorResumeAsync(observers, error, cancellationToken);
+        StatelessReplayLatestSignalAsyncStateHelper.OnErrorResumeAsync(_state, SignalBroadcastKind.SerialMulti, error, cancellationToken);
 
     /// <inheritdoc/>
-    protected override ValueTask OnCompletedAsyncCore(ImmutableArray<IObserverAsync<T>> observers, Result result) =>
-        SerialBroadcastHelpers.BroadcastOnCompletedAsync(observers, result);
+    public ValueTask OnCompletedAsync(Result result) =>
+        StatelessReplayLatestSignalAsyncStateHelper.OnCompletedAsync(_state, SignalBroadcastKind.SerialMulti, result);
+
+    /// <inheritdoc/>
+    public ValueTask DisposeAsync() => StatelessReplayLatestSignalAsyncStateHelper.DisposeAsync(_state);
+
+    /// <inheritdoc/>
+    public ValueTask<IAsyncDisposable> SubscribeAsync(
+        IObserverAsync<T> observer,
+        CancellationToken cancellationToken) =>
+        StatelessReplayLatestSignalAsyncStateHelper.SubscribeAsync(_state, observer, cancellationToken);
 }

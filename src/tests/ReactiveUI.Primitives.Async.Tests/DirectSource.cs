@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// This enables testing race-condition guards inside operators like CombineLatest.
 /// </summary>
 /// <typeparam name="T">The element type.</typeparam>
-internal sealed class DirectSource<T> : SignalAsync<T>
+internal sealed class DirectSource<T> : IObservableAsync<T>
 {
     /// <summary>The stored observer from the most recent subscription.</summary>
     private IObserverAsync<T>? _observer;
@@ -38,7 +38,7 @@ internal sealed class DirectSource<T> : SignalAsync<T>
         _observer!.OnCompletedAsync(result);
 
     /// <inheritdoc/>
-    protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+    ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)
     {

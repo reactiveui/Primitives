@@ -172,7 +172,7 @@ public sealed class CurrentValueSubject<T> : IObservable<T>, IObserver<T>, IDisp
         {
             if (_disposed)
             {
-                observer.OnError(new ObjectDisposedException(nameof(CurrentValueSubject<T>)));
+                observer.OnError(new ObjectDisposedException(nameof(CurrentValueSubject<>)));
                 return EmptyDisposable.Instance;
             }
 

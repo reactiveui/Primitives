@@ -158,7 +158,7 @@ public class ObserveOnAsyncSignalTests
                 (ex, _) =>
                 {
                     caught = ex;
-                    errorTcs.TrySetResult();
+                    IgnoredResult.Of(errorTcs.TrySetResult());
                     return default;
                 });
 

@@ -32,7 +32,7 @@ public partial class PartitionObservableTests
     public async Task WhenPartitionWithBothSidesSubscribed_ThenRoutesByPredicate()
     {
         Subject<int> subject = new();
-        (var evens, var odds) = subject.Partition(static x => x % Two == 0);
+        var (evens, odds) = subject.Partition(static x => x % Two == 0);
         List<int> evenResults = [];
         List<int> oddResults = [];
         using var evenSub = evens.Subscribe(evenResults.Add);
@@ -51,7 +51,7 @@ public partial class PartitionObservableTests
     public async Task WhenPartitionOnlyOneSideSubscribed_ThenOtherSideValuesDropped()
     {
         Subject<int> subject = new();
-        (var evens, _) = subject.Partition(static x => x % Two == 0);
+        var (evens, _) = subject.Partition(static x => x % Two == 0);
         List<int> evenResults = [];
         using var evenSub = evens.Subscribe(evenResults.Add);
         subject.OnNext(One);
@@ -65,7 +65,7 @@ public partial class PartitionObservableTests
     public async Task WhenPartitionSourceErrors_ThenBroadcastsToBothSides()
     {
         Subject<int> subject = new();
-        (var evens, var odds) = subject.Partition(static x => x % Two == 0);
+        var (evens, odds) = subject.Partition(static x => x % Two == 0);
         Exception? evenError = null;
         Exception? oddError = null;
         InvalidOperationException expected = new(SourceErrorMessage);
@@ -86,7 +86,7 @@ public partial class PartitionObservableTests
     public async Task WhenPartitionSourceCompletes_ThenBroadcastsToBothSides()
     {
         Subject<int> subject = new();
-        (var evens, var odds) = subject.Partition(static x => x % Two == 0);
+        var (evens, odds) = subject.Partition(static x => x % Two == 0);
         var evenCompleted = false;
         var oddCompleted = false;
         using var evenSub = evens.Subscribe(
@@ -106,7 +106,7 @@ public partial class PartitionObservableTests
     public async Task WhenPartitionOneSideDisposed_ThenOnlyOtherSideReceives()
     {
         Subject<int> subject = new();
-        (var evens, var odds) = subject.Partition(static x => x % Two == 0);
+        var (evens, odds) = subject.Partition(static x => x % Two == 0);
         List<int> evenResults = [];
         List<int> oddResults = [];
         var evenSub = evens.Subscribe(evenResults.Add);
@@ -125,7 +125,7 @@ public partial class PartitionObservableTests
     public async Task WhenPartitionResubscribedAfterAllSidesDropped_ThenSourceRebound()
     {
         Subject<int> subject = new();
-        (var evens, _) = subject.Partition(static x => x % Two == 0);
+        var (evens, _) = subject.Partition(static x => x % Two == 0);
         var firstSub = evens.Subscribe(static _ => { });
         firstSub.Dispose();
         List<int> secondResults = [];
@@ -142,7 +142,7 @@ public partial class PartitionObservableTests
     public async Task WhenMiddleFalseSideObserverDisposed_ThenOthersStillReceiveValues()
     {
         Subject<int> subject = new();
-        (_, var odds) = subject.Partition(static x => x % Two == 0);
+        var (_, odds) = subject.Partition(static x => x % Two == 0);
         List<int> firstResults = [];
         List<int> middleResults = [];
         List<int> lastResults = [];
@@ -163,7 +163,7 @@ public partial class PartitionObservableTests
     public async Task WhenSubscriptionDisposedAfterParentSinkTornDown_ThenNoOp()
     {
         Subject<int> subject = new();
-        (var evens, _) = subject.Partition(static x => x % Two == 0);
+        var (evens, _) = subject.Partition(static x => x % Two == 0);
         var first = evens.Subscribe(static _ => { });
         first.Dispose();
 

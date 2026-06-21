@@ -239,7 +239,7 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
         {
             ManualResetEvent completionEvent = new(false);
             SubscribeCompletion(() => completionEvent.Set(), false);
-            completionEvent.WaitOne();
+            _ = completionEvent.WaitOne();
         }
 
         _lastError.Rethrow();

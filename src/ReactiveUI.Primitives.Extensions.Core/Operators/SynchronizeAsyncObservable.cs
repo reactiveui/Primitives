@@ -162,7 +162,7 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
                     return;
                 }
 
-                tcs.TrySetResult(true);
+                _ = tcs.TrySetResult(true);
             }
         }
     }

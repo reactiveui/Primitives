@@ -316,7 +316,7 @@ public sealed class ReplaySignal<T> : ISignal<T>
     {
         while (_queue!.Count > _bufferSize)
         {
-            _queue.Dequeue();
+            _ = _queue.Dequeue();
         }
 
         if (!_usesWindow)
@@ -328,7 +328,7 @@ public sealed class ReplaySignal<T> : ISignal<T>
 
         while (_queue.Count > 0 && elapsedTime.Subtract(_queue.Peek().Interval).CompareTo(_window) > 0)
         {
-            _queue.Dequeue();
+            _ = _queue.Dequeue();
         }
     }
 

@@ -30,14 +30,7 @@ public static partial class SignalAsyncExtensions
         public IObservableAsync<T> Take(int count)
         {
             ArgumentExceptionHelper.ThrowIfNull(@this);
-#if NET8_0_OR_GREATER
-            ArgumentOutOfRangeException.ThrowIfNegative(count);
-#else
-            if (count < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count));
-            }
-#endif
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
 
             return count == 0 ? new TakeZeroSignal<T>() : new TakeSignal<T>(@this, count);
         }
@@ -45,10 +38,10 @@ public static partial class SignalAsyncExtensions
 
     /// <summary><c>Take(0)</c> short-circuit: synthesizes an immediate-completion observable without ever subscribing to the upstream.</summary>
     /// <typeparam name="T">The element type.</typeparam>
-    internal sealed class TakeZeroSignal<T> : SignalAsync<T>
+    internal sealed class TakeZeroSignal<T> : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -61,10 +54,10 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="count">The maximum number of values to forward (must be &gt; 0; the zero case uses <see cref="TakeZeroSignal{T}"/>).</param>
-    internal sealed class TakeSignal<T>(IObservableAsync<T> source, int count) : SignalAsync<T>
+    internal sealed class TakeSignal<T>(IObservableAsync<T> source, int count) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        protected override async ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
@@ -101,12 +94,7 @@ public static partial class SignalAsyncExtensions
                 }
 
                 _remaining--;
-                if (_remaining == 0)
-                {
-                    return ForwardThenFinishAsync(value, cancellationToken);
-                }
-
-                return downstream.OnNextAsync(value, cancellationToken);
+                return _remaining == 0 ? ForwardThenFinishAsync(value, cancellationToken) : downstream.OnNextAsync(value, cancellationToken);
             }
 
             /// <inheritdoc/>

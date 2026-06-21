@@ -34,7 +34,7 @@ public class DisposableExtensionsTests
         // Given
         CompositeDisposable sut = [];
         CompositeDisposable compositeDisposable = [];
-        sut.DisposeWith(compositeDisposable);
+        _ = sut.DisposeWith(compositeDisposable);
 
         // When
         compositeDisposable.Dispose();

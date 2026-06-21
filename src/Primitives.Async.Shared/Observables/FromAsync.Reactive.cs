@@ -5,6 +5,12 @@
 using System.Diagnostics.CodeAnalysis;
 
 #if REACTIVE_SHIM
+using FromAsyncSignal = ReactiveUI.Primitives.Async.Reactive.Advanced.FromAsyncSignal;
+#else
+using FromAsyncSignal = ReactiveUI.Primitives.Async.Advanced.FromAsyncSignal;
+#endif
+
+#if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Async.Reactive;
 #else
 namespace ReactiveUI.Primitives.Async;
@@ -33,13 +39,6 @@ public static partial class SignalAsyncReactiveExtensions
     {
         ArgumentExceptionHelper.ThrowIfNull(factory);
 
-        return SignalAsync.CreateAsBackgroundJob<RxVoid>(
-            async (obs, token) =>
-            {
-                await factory(token).ConfigureAwait(false);
-                await obs.OnNextAsync(RxVoid.Default, token).ConfigureAwait(false);
-                await obs.OnCompletedAsync(Result.Success).ConfigureAwait(false);
-            },
-            true);
+        return new FromAsyncSignal(factory);
     }
 }

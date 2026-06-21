@@ -26,7 +26,11 @@ public static partial class SignalAsyncExtensions
         /// element within the specified due time.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
         public IObservableAsync<T> Throttle(TimeSpan dueTime)
-            => @this.Throttle(dueTime, (TimeProvider?)null);
+        {
+            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
+
+            return new ThrottleSignal<T>(@this, dueTime, TimeProvider.System);
+        }
 
         /// <summary>
         /// Ignores elements from the source sequence that are followed by another element within
@@ -41,14 +45,7 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
         public IObservableAsync<T> Throttle(TimeSpan dueTime, TimeProvider? timeProvider)
         {
-#if NET8_0_OR_GREATER
-            ArgumentOutOfRangeException.ThrowIfLessThan(dueTime, TimeSpan.Zero);
-#else
-            if (dueTime < TimeSpan.Zero)
-            {
-                throw new ArgumentOutOfRangeException(nameof(dueTime));
-            }
-#endif
+            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
 
             return new ThrottleSignal<T>(@this, dueTime, timeProvider ?? TimeProvider.System);
         }
@@ -71,12 +68,7 @@ public static partial class SignalAsyncExtensions
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
-        if (timeProvider == TimeProvider.System)
-        {
-            return new(Task.Delay(delay, cancellationToken));
-        }
-
-        return PooledDelaySource.Rent().BeginAsync(delay, timeProvider, cancellationToken);
+        return timeProvider == TimeProvider.System ? new(Task.Delay(delay, cancellationToken)) : PooledDelaySource.Rent().BeginAsync(delay, timeProvider, cancellationToken);
     }
 
     /// <summary>
@@ -88,13 +80,13 @@ public static partial class SignalAsyncExtensions
     /// <param name="dueTime">The quiet period that must elapse before an element is forwarded.</param>
     /// <param name="timeProvider">The time provider used for scheduling the debounce timer.</param>
     internal sealed class ThrottleSignal<T>(IObservableAsync<T> source, TimeSpan dueTime, TimeProvider timeProvider)
-        : SignalAsync<T>
+        : IObservableAsync<T>
     {
         /// <summary>Subscribes the specified observer with throttle behavior applied.</summary>
         /// <param name="observer">The observer to receive throttled elements.</param>
         /// <param name="cancellationToken">A token to cancel the subscription.</param>
         /// <returns>An async disposable that tears down the subscription when disposed.</returns>
-        protected override ValueTask<IAsyncDisposable> SubscribeAsyncCore(
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {

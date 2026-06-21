@@ -100,7 +100,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         catch (OperationCanceledException)
         {
             scope.Dispose();
-            ExitOnSomethingCall();
+            _ = ExitOnSomethingCall();
             return default;
         }
         catch (Exception e)
@@ -111,7 +111,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         if (core.IsCompletedSuccessfully)
         {
             scope.Dispose();
-            ExitOnSomethingCall();
+            _ = ExitOnSomethingCall();
             return default;
         }
 
@@ -138,7 +138,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         if (core.IsCompletedSuccessfully)
         {
             scope.Dispose();
-            ExitOnSomethingCall();
+            _ = ExitOnSomethingCall();
             return default;
         }
 
@@ -294,7 +294,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
                 var tcs = Volatile.Read(ref _allCallsCompletedTcs);
                 if (tcs is not null)
                 {
-                    tcs.TrySetResult(null);
+                    _ = tcs.TrySetResult(null);
                     return false;
                 }
             }
@@ -413,7 +413,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
             var stateAfter = Volatile.Read(ref _callState);
             if ((int)stateAfter == 0)
             {
-                tcs.TrySetResult(null);
+                _ = tcs.TrySetResult(null);
             }
 
             allOnSomethingCallsCompleted = tcs.Task;
@@ -507,7 +507,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         finally
         {
             scope.Dispose();
-            ExitOnSomethingCall();
+            _ = ExitOnSomethingCall();
         }
     }
 
@@ -528,7 +528,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         finally
         {
             scope.Dispose();
-            ExitOnSomethingCall();
+            _ = ExitOnSomethingCall();
         }
     }
 
@@ -545,7 +545,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         finally
         {
             scope.Dispose();
-            ExitOnSomethingCall();
+            _ = ExitOnSomethingCall();
         }
     }
 

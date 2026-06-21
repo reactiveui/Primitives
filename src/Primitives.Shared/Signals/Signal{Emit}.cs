@@ -18,12 +18,7 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     public static IObservable<T> Emit<T>(T value, ISequencer scheduler)
     {
-        if (scheduler == Sequencer.Immediate)
-        {
-            return new ImmediateReturnSignal<T>(value);
-        }
-
-        return new ReturnSignal<T>(value, scheduler);
+        return scheduler == Sequencer.Immediate ? new ImmediateReturnSignal<T>(value) : new ReturnSignal<T>(value, scheduler);
     }
 
     /// <summary>Emit a single value immediately.</summary>
@@ -31,7 +26,7 @@ public static partial class Signal
     /// <param name="value">The value.</param>
     /// <returns>An Signals.</returns>
     public static IObservable<T> Emit<T>(T value) =>
-        Emit(value, Sequencer.Immediate);
+        new ImmediateReturnSignal<T>(value);
 
     /// <summary>Emit a single RxVoid value immediately, optimized for no allocation.</summary>
     /// <param name="value">The value.</param>
@@ -42,7 +37,8 @@ public static partial class Signal
     /// <summary>Emit a single Boolean value immediately, optimized for no allocation.</summary>
     /// <param name="value">if set to <c>true</c> [value].</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<bool> Emit(bool value) => value
+    public static IObservable<bool> Emit(bool value) =>
+        value
             ? ImmutableReturnTrueSignal.Instance
             : ImmutableReturnFalseSignal.Instance;
 
@@ -50,7 +46,7 @@ public static partial class Signal
     /// <param name="value">The value.</param>
     /// <returns>An Signals.</returns>
     public static IObservable<int> Emit(int value) =>
-        ImmutableReturnInt32Signal.GetInt32Signals(value);
+        new ImmediateReturnSignal<int>(value);
 
     /// <summary>Same as Signals.Emit(RxVoid.Default); but no allocate memory.</summary>
     /// <returns>An Signals.</returns>

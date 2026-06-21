@@ -22,7 +22,7 @@ public sealed class FatalExceptionHelperTests
             new BadImageFormatException(),
             new CannotUnloadAppDomainException(),
             new InvalidProgramException(),
-            CreateException(typeof(System.Threading.ThreadAbortException)),
+            CreateException(typeof(ThreadAbortException)),
             CreateException(typeof(OutOfMemoryException)),
         ];
 

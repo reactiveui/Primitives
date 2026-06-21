@@ -70,7 +70,7 @@ public partial class SignalOperatorParityMixinsTests
         for (var i = 0; i < intSignals.Length; i++)
         {
             var signal = intSignals[i];
-            Assert.Throws<ArgumentNullException>(() => signal.Subscribe((IObserver<int>)null!));
+            _ = Assert.Throws<ArgumentNullException>(() => signal.Subscribe((IObserver<int>)null!));
             if (signal is IRequireCurrentThread<int> required)
             {
                 await Assert.That(required.IsRequiredSubscribeOnCurrentThread()).IsFalse();
@@ -80,7 +80,7 @@ public partial class SignalOperatorParityMixinsTests
         for (var i = 0; i < longSignals.Length; i++)
         {
             var signal = longSignals[i];
-            Assert.Throws<ArgumentNullException>(() => signal.Subscribe((IObserver<long>)null!));
+            _ = Assert.Throws<ArgumentNullException>(() => signal.Subscribe((IObserver<long>)null!));
             if (signal is IRequireCurrentThread<long> required)
             {
                 await Assert.That(required.IsRequiredSubscribeOnCurrentThread()).IsFalse();
@@ -90,7 +90,7 @@ public partial class SignalOperatorParityMixinsTests
         for (var i = 0; i < boolSignals.Length; i++)
         {
             var signal = boolSignals[i];
-            Assert.Throws<ArgumentNullException>(() => signal.Subscribe((IObserver<bool>)null!));
+            _ = Assert.Throws<ArgumentNullException>(() => signal.Subscribe((IObserver<bool>)null!));
             if (signal is IRequireCurrentThread<bool> required)
             {
                 await Assert.That(required.IsRequiredSubscribeOnCurrentThread()).IsFalse();
@@ -121,20 +121,20 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(rangeDistinctCount.Values.SequenceEqual(ExpectedSingleTwo)).IsTrue();
         await Assert.That(rangeDistinctLongCount.Values.SequenceEqual(ExpectedRangeDistinctLongCount)).IsTrue();
         RecordingWitness<int> distinctErrors = new();
-        Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One])
+        _ = Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One])
             .DistinctBy<int, int>(_ => throw new InvalidOperationException("distinct-key"))
             .Subscribe(distinctErrors).Dispose());
         await Assert.That(distinctErrors.Values.Count).IsEqualTo(0);
         RecordingWitness<int> countErrors = new();
         RecordingWitness<long> longCountErrors = new();
         RecordingWitness<bool> anyErrors = new();
-        Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One])
+        _ = Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One])
             .Count(_ => throw new InvalidOperationException("count-predicate"))
             .Subscribe(countErrors).Dispose());
-        Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One])
+        _ = Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One])
             .LongCount(_ => throw new InvalidOperationException("long-count-predicate"))
             .Subscribe(longCountErrors).Dispose());
-        Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One])
+        _ = Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One])
             .Any(_ => throw new InvalidOperationException("any-predicate"))
             .Subscribe(anyErrors).Dispose());
         await Assert.That(countErrors.Values.Count).IsEqualTo(0);
@@ -171,39 +171,39 @@ public partial class SignalOperatorParityMixinsTests
             observer.OnError(new InvalidOperationException("late-error"));
             observer.OnNext(Two);
         });
-        badIntegers.Count().Subscribe(value => values.Add(value), ex => errors.Add("count:" + ex.Message));
-        badIntegers.LongCount().Subscribe(value => values.Add(value), ex => errors.Add("long-count:" + ex.Message));
-        badIntegers.Count(value => value > 0)
+        _ = badIntegers.Count().Subscribe(value => values.Add(value), ex => errors.Add("count:" + ex.Message));
+        _ = badIntegers.LongCount().Subscribe(value => values.Add(value), ex => errors.Add("long-count:" + ex.Message));
+        _ = badIntegers.Count(value => value > 0)
             .Subscribe(value => values.Add(value), ex => errors.Add("count-predicate:" + ex.Message));
-        badIntegers.LongCount(value => value > 0)
+        _ = badIntegers.LongCount(value => value > 0)
             .Subscribe(value => values.Add(value), ex => errors.Add("long-count-predicate:" + ex.Message));
-        badIntegers.Any().Subscribe(value => values.Add(value), ex => errors.Add("any:" + ex.Message));
-        badIntegers.Any(value => value > 0)
+        _ = badIntegers.Any().Subscribe(value => values.Add(value), ex => errors.Add("any:" + ex.Message));
+        _ = badIntegers.Any(value => value > 0)
             .Subscribe(value => values.Add(value), ex => errors.Add("any-predicate:" + ex.Message));
-        badIntegers.All(value => value > 0)
+        _ = badIntegers.All(value => value > 0)
             .Subscribe(value => values.Add(value), ex => errors.Add("all:" + ex.Message));
-        badIntegers.Contains(Two).Subscribe(value => values.Add(value), ex => errors.Add("contains:" + ex.Message));
-        lateCompletionIntegers.Count()
+        _ = badIntegers.Contains(Two).Subscribe(value => values.Add(value), ex => errors.Add("contains:" + ex.Message));
+        _ = lateCompletionIntegers.Count()
             .Subscribe(value => values.Add(value), ex => errors.Add("late-count:" + ex.Message));
-        lateCompletionIntegers.LongCount()
+        _ = lateCompletionIntegers.LongCount()
             .Subscribe(value => values.Add(value), ex => errors.Add("late-long-count:" + ex.Message));
-        lateCompletionIntegers.Any(value => value > 0)
+        _ = lateCompletionIntegers.Any(value => value > 0)
             .Subscribe(value => values.Add(value), ex => errors.Add("late-any:" + ex.Message));
-        lateCompletionIntegers.All(value => value > 0)
+        _ = lateCompletionIntegers.All(value => value > 0)
             .Subscribe(value => values.Add(value), ex => errors.Add("late-all:" + ex.Message));
-        lateCompletionIntegers.Contains(One)
+        _ = lateCompletionIntegers.Contains(One)
             .Subscribe(value => values.Add(value), ex => errors.Add("late-contains:" + ex.Message));
-        Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One, Two])
+        _ = Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One, Two])
             .Count(value => value == One ? true : throw new InvalidOperationException("count-predicate-fault"))
             .Subscribe(_ => { }, ex => errors.Add(ex.Message)).Dispose());
-        Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One, Two])
+        _ = Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One, Two])
             .LongCount(value =>
                 value == One ? true : throw new InvalidOperationException("long-count-predicate-fault"))
             .Subscribe(_ => { }, ex => errors.Add(ex.Message)).Dispose());
-        Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One, Two])
+        _ = Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One, Two])
             .Any(value => value == One ? false : throw new InvalidOperationException("any-predicate-fault"))
             .Subscribe(_ => { }, ex => errors.Add(ex.Message)).Dispose());
-        Signal.FromEnumerable([One, Two]).Contains(Two, new ThrowingComparer())
+        _ = Signal.FromEnumerable([One, Two]).Contains(Two, new ThrowingComparer())
             .Subscribe(_ => { }, ex => errors.Add(ex.Message));
         await Assert.That(errors).Contains("count:first-terminal");
         await Assert.That(errors).Contains("long-count:first-terminal");
@@ -223,14 +223,14 @@ public partial class SignalOperatorParityMixinsTests
     public async Task ToObservableSchedulerAndTaskAliasesEmitAndHonorCancellation()
     {
         List<int> immediate = [];
-        new[] { One, Two }.ToObservable(Sequencer.Immediate).Subscribe(immediate.Add);
+        _ = new[] { One, Two }.ToObservable(Sequencer.Immediate).Subscribe(immediate.Add);
 
         await Assert.That(immediate.SequenceEqual(ExpectedOneTwo)).IsTrue();
 
         VirtualClock clock = new(DateTimeOffset.UnixEpoch);
         List<int> scheduled = [];
         var completed = 0;
-        new[] { One, Two }.ToObservable(clock).Subscribe(scheduled.Add, ex => throw ex, () => completed++);
+        _ = new[] { One, Two }.ToObservable(clock).Subscribe(scheduled.Add, ex => throw ex, () => completed++);
         clock.Start();
 
         await Assert.That(scheduled.SequenceEqual(ExpectedOneTwo)).IsTrue();
@@ -270,8 +270,8 @@ public partial class SignalOperatorParityMixinsTests
         var taskValue = await Task.FromResult(Three).ToObservable().FirstAsync().ConfigureAwait(false);
         await Assert.That(taskValue).IsEqualTo(Three);
 
-        Assert.Throws<ArgumentNullException>(() => ((IEnumerable<int>)null!).ToObservable(Sequencer.Immediate));
-        Assert.Throws<ArgumentNullException>(() => new[] { One }.ToObservable(null!));
-        Assert.Throws<ArgumentNullException>(() => ((Task<int>)null!).ToObservable());
+        _ = Assert.Throws<ArgumentNullException>(() => ((IEnumerable<int>)null!).ToObservable(Sequencer.Immediate));
+        _ = Assert.Throws<ArgumentNullException>(() => new[] { One }.ToObservable(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ((Task<int>)null!).ToObservable());
     }
 }

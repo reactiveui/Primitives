@@ -134,7 +134,7 @@ internal sealed class CatchSignal<T> : IRequireCurrentThread<T>
             _e = null;
             _subscription?.Dispose();
             _subscription = null;
-            WitnessTeardown.Dispose(ref _disposed, ref _cancel);
+            _ = WitnessTeardown.Dispose(ref _disposed, ref _cancel);
         }
 
         /// <summary>Executes the RecursiveRun operation.</summary>

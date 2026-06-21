@@ -183,7 +183,7 @@ public partial class CombineLatestOperatorTests
                 null,
                 async _ =>
                 {
-                    completionBlocked.TrySetResult();
+                    IgnoredResult.Of(completionBlocked.TrySetResult());
                     await allowCompletion.Task;
                 });
 
@@ -200,7 +200,7 @@ public partial class CombineLatestOperatorTests
 
         await Assert.That(items).Count().IsEqualTo(1);
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 
@@ -226,7 +226,7 @@ public partial class CombineLatestOperatorTests
                 },
                 async _ =>
                 {
-                    completionBlocked.TrySetResult();
+                    IgnoredResult.Of(completionBlocked.TrySetResult());
                     await allowCompletion.Task;
                 });
 
@@ -241,7 +241,7 @@ public partial class CombineLatestOperatorTests
 
         await Assert.That(errors).IsEmpty();
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 
@@ -261,7 +261,7 @@ public partial class CombineLatestOperatorTests
                 null,
                 _ =>
                 {
-                    Interlocked.Increment(ref completionCount);
+                    IgnoredResult.Of(Interlocked.Increment(ref completionCount));
                     return default;
                 });
 
@@ -393,7 +393,7 @@ public partial class CombineLatestOperatorTests
                 null,
                 _ =>
                 {
-                    Interlocked.Increment(ref completionCount);
+                    IgnoredResult.Of(Interlocked.Increment(ref completionCount));
                     return default;
                 });
 

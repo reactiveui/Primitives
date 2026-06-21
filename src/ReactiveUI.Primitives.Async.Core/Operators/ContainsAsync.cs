@@ -73,12 +73,7 @@ public static partial class SignalAsyncExtensions
         protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
-            if (!comparer.Equals(target, value))
-            {
-                return default;
-            }
-
-            return SetResultAndDisposeAsync(true);
+            return !comparer.Equals(target, value) ? default : SetResultAndDisposeAsync(true);
         }
 
         /// <inheritdoc/>

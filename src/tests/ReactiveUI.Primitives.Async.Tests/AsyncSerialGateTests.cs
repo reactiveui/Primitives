@@ -79,7 +79,7 @@ public class AsyncSerialGateTests
         var contender = Task.Run(async () =>
         {
             using var lease = await gate.EnterAsync().ConfigureAwait(false);
-            secondAcquired.TrySetResult(true);
+            _ = secondAcquired.TrySetResult(true);
             await release.Task.ConfigureAwait(false);
         });
 
@@ -95,7 +95,7 @@ public class AsyncSerialGateTests
         var acquired = await secondAcquired.Task.WaitAsync(TimeSpan.FromSeconds(30));
         await Assert.That(acquired).IsTrue();
 
-        release.TrySetResult(true);
+        _ = release.TrySetResult(true);
         await contender;
     }
 

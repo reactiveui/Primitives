@@ -45,7 +45,7 @@ public sealed class AwaitWitness<T> : IObserver<T>
     {
         if (_context is not null)
         {
-            _context.Post(c => ((Action)c!)(), _callback);
+            _context.Post(static state => ((Action?)state)?.Invoke(), _callback);
         }
         else
         {
