@@ -18,9 +18,8 @@ When you add, remove, or change public API, those files must be updated or the b
 fails with `RS0016` (symbol not in baseline) / `RS0017` (baseline entry not found) /
 `RS0037` (missing `#nullable enable`). These scripts do that for you.
 
-Only projects with the MSBuild property `TrackPublicApi=true` are processed. The
-`tests/` and `benchmarks/` trees opt out centrally in `src/Directory.Build.props`,
-so they are never touched.
+Tests, benchmarks, and source-generator projects are skipped structurally, so they
+are never touched.
 
 ### Usage
 
@@ -44,14 +43,16 @@ path, so you can scope a run to a single library while iterating.
 
 ### What it does per TFM
 
-1. Resets both `PublicAPI/<tfm>/PublicAPI.Shipped.txt` and `PublicAPI.Unshipped.txt`
-   to just `#nullable enable`, so the analyzer reports the *entire* current surface.
-2. Runs `dotnet format analyzers <proj> -f <tfm> --diagnostics RS0016 RS0017 RS0037
-   --severity info`, which fills `PublicAPI.Unshipped.txt` with the current public API.
-3. Folds that surface into `PublicAPI.Shipped.txt` (ordinally sorted, deduped) and
-   resets `PublicAPI.Unshipped.txt` back to the bare header. This repo keeps the full
-   surface in **Shipped** with **Unshipped empty**, so a later API change shows up as
-   new Unshipped lines.
+1. Ensures `PublicAPI/<tfm>/PublicAPI.Shipped.txt` exists and preserves its current
+   content as the analyzer input.
+2. Resets only `PublicAPI.Unshipped.txt` to `#nullable enable`.
+3. Runs `dotnet format analyzers <proj> -f <tfm> --diagnostics RS0016 RS0017 RS0037
+   --severity info`, which adds missing API entries to `PublicAPI.Unshipped.txt` and
+   lets the analyzer repair stale shipped entries.
+4. Folds post-format **Shipped** plus generated **Unshipped** into
+   `PublicAPI.Shipped.txt` (ordinally sorted, deduped), then resets
+   `PublicAPI.Unshipped.txt` back to the bare header. The scripts refuse to replace
+   a previously non-empty Shipped baseline with an empty baseline.
 
 ### Platform notes
 
@@ -85,5 +86,6 @@ path, so you can scope a run to a single library while iterating.
 * After adding a new target framework to a tracked library.
 * After bumping an analyzer package that changes how the public surface is rendered.
 
-Review the resulting `PublicAPI.Unshipped.txt` diff before committing — it is the
-human-auditable record of your public API change.
+Review the resulting `PublicAPI.Shipped.txt` diff before committing — it is the
+human-auditable record of your public API change. `PublicAPI.Unshipped.txt` should
+return to just `#nullable enable`.

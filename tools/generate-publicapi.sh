@@ -9,13 +9,12 @@
 #     <Project>/PublicAPI/<tfm>/PublicAPI.Shipped.txt
 #     <Project>/PublicAPI/<tfm>/PublicAPI.Unshipped.txt
 #
-# This script seeds those files and uses `dotnet format analyzers` to capture the
-# project's current public surface (RS0016), drop stale entries (RS0017), and record
-# nullability (RS0037), then folds the surface into Shipped (this repo keeps the full
-# surface in Shipped with Unshipped empty).
+# This script preserves the existing Shipped baseline, resets only Unshipped, then
+# uses `dotnet format analyzers` to add missing public API entries (RS0016), drop
+# stale shipped entries (RS0017), and record nullability (RS0037). The resulting
+# Shipped and Unshipped files are folded back into Shipped, leaving Unshipped empty.
 #
-# Only projects with MSBuild property TrackPublicApi=true are processed; the
-# tests/ and benchmarks/ trees opt out centrally in src/Directory.Build.props.
+# Tests, benchmarks, and source generators are skipped structurally.
 #
 # Each (project, TFM) pair is independent — `dotnet format` builds an in-memory
 # MSBuildWorkspace and only writes its own PublicAPI/<tfm>/ files — so the pairs run
@@ -130,7 +129,56 @@ for proj in "${restore_set[@]}"; do
 done
 echo
 
-# Worker: regenerate one (project, TFM) pair and fold the surface into Shipped.
+write_header() {
+  printf '#nullable enable\n' >"$1"
+}
+
+ensure_api_file() {
+  local file="$1"
+  if [ ! -f "$file" ]; then
+    write_header "$file"
+    return
+  fi
+
+  if ! grep -qxF '#nullable enable' "$file"; then
+    local tmp="$RESULTS_DIR/ensure.$RANDOM.$RANDOM"
+    {
+      printf '#nullable enable\n'
+      grep -v '^[[:space:]]*$' "$file"
+    } >"$tmp"
+    mv "$tmp" "$file"
+  fi
+}
+
+api_line_count() {
+  if [ ! -f "$1" ]; then
+    printf '0\n'
+    return
+  fi
+
+  grep -vxF '#nullable enable' "$1" | grep -vc '^[[:space:]]*$' || true
+}
+
+merge_api_files() {
+  local output="$1"
+  local shipped="$2"
+  local unshipped="$3"
+  local tfm="$4"
+  local api_namespace="$5"
+  {
+    printf '#nullable enable\n'
+    {
+      grep -vxF '#nullable enable' "$shipped" 2>/dev/null || true
+      grep -vxF '#nullable enable' "$unshipped" 2>/dev/null || true
+      if [[ "$tfm" == *-android* ]] && [ -n "$api_namespace" ]; then
+        printf '%s.Resource\n' "$api_namespace"
+        printf '%s.Resource.Resource() -> void\n' "$api_namespace"
+      fi
+    } | grep -v '^[[:space:]]*$' | LC_ALL=C sort -u
+  } >"$output"
+}
+
+# Worker: update one (project, TFM) pair and fold missing Unshipped entries into Shipped.
 generate_one() {
   local item="$1"
   local proj tfm api_namespace
@@ -147,23 +195,29 @@ generate_one() {
   # this platform lacks) restores it instead of wiping it.
   [ -f "$shipped" ] && cp "$shipped" "$bsh"
   [ -f "$unshipped" ] && cp "$unshipped" "$bun"
-  # Empty both to the bare header so the analyzer reports the entire current surface.
-  printf '#nullable enable\n' >"$shipped"
-  printf '#nullable enable\n' >"$unshipped"
+
+  ensure_api_file "$shipped"
+  local before_count
+  before_count="$(api_line_count "$shipped")"
+  # Keep Shipped as input so RS0016 reports only missing symbols. Reset Unshipped so
+  # the generated delta is explicit and safe to fold after a successful analyzer run.
+  write_header "$unshipped"
+
   if dotnet format analyzers "$proj" -f "$tfm" --diagnostics $DIAGS --severity info -v quiet; then
-    # `dotnet format` records the surface in Unshipped; fold it into Shipped (ordinally
-    # sorted+deduped, as the analyzer emits) and reset Unshipped to the bare header default.
-    {
-      printf '#nullable enable\n'
-      {
-        grep -vxF '#nullable enable' "$unshipped"
-        if [[ "$tfm" == *-android* ]] && [ -n "$api_namespace" ]; then
-          printf '%s.Resource\n' "$api_namespace"
-          printf '%s.Resource.Resource() -> void\n' "$api_namespace"
-        fi
-      } | grep -v '^[[:space:]]*$' | LC_ALL=C sort -u
-    } >"$shipped"
-    printf '#nullable enable\n' >"$unshipped"
+    local merged="$RESULTS_DIR/$tag.merged"
+    merge_api_files "$merged" "$shipped" "$unshipped" "$tfm" "$api_namespace"
+    local after_count
+    after_count="$(api_line_count "$merged")"
+    if [ "$before_count" -gt 0 ] && [ "$after_count" -eq 0 ]; then
+      [ -f "$bsh" ] && cp "$bsh" "$shipped"
+      [ -f "$bun" ] && cp "$bun" "$unshipped"
+      printf 'FAIL [%s] %s (refusing to replace non-empty Shipped with an empty baseline)\n' "$tfm" "$proj"
+      : >"$RESULTS_DIR/$tag.fail"
+      return
+    fi
+
+    mv "$merged" "$shipped"
+    write_header "$unshipped"
     printf 'OK   [%s] %s\n' "$tfm" "$proj"
     : >"$RESULTS_DIR/$tag.ok"
   else
@@ -175,6 +229,10 @@ generate_one() {
   fi
 }
 export -f generate_one
+export -f write_header
+export -f ensure_api_file
+export -f api_line_count
+export -f merge_api_files
 
 RESULTS_DIR="$(mktemp -d)"
 export RESULTS_DIR

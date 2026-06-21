@@ -11,13 +11,12 @@
         <Project>/PublicAPI/<tfm>/PublicAPI.Shipped.txt
         <Project>/PublicAPI/<tfm>/PublicAPI.Unshipped.txt
 
-    This script seeds those files and uses `dotnet format analyzers` to capture the
-    project's current public surface (RS0016), drop stale entries (RS0017), and record
-    nullability (RS0037), then folds the surface into Shipped (this repo keeps the full
-    surface in Shipped with Unshipped empty).
+    This script preserves the existing Shipped baseline, resets only Unshipped, then
+    uses `dotnet format analyzers` to add missing public API entries (RS0016), drop
+    stale shipped entries (RS0017), and record nullability (RS0037). The resulting
+    Shipped and Unshipped files are folded back into Shipped, leaving Unshipped empty.
 
-    Only projects with MSBuild property TrackPublicApi=true are processed; the
-    tests/ and benchmarks/ trees opt out centrally in src/Directory.Build.props.
+    Tests, benchmarks, and source generators are skipped structurally.
 
     Each (project, TFM) pair is independent — `dotnet format` builds an in-memory
     MSBuildWorkspace and only writes its own PublicAPI/<tfm>/ files — so the pairs run
@@ -105,24 +104,63 @@ function Invoke-PublicApiOne {
     $header = '#nullable enable'
     # Write LF-only so the baselines match the bash sibling's output byte-for-byte.
     $writeLf = { param($p, $lines) [IO.File]::WriteAllText($p, (($lines -join $lf) + $lf)) }
+    $ensureApiFile = {
+        param($p)
+        if (-not (Test-Path $p)) {
+            & $writeLf $p @($header)
+            return
+        }
+
+        $lines = [string[]]@(Get-Content $p)
+        if ($lines -contains $header) {
+            return
+        }
+
+        $body = [string[]]@($lines | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        & $writeLf $p (@($header) + $body)
+    }
+    $apiLineCount = {
+        param($p)
+        if (-not (Test-Path $p)) { return 0 }
+
+        return @(
+            Get-Content $p |
+                Where-Object { $_ -ne $header -and -not [string]::IsNullOrWhiteSpace($_) }
+        ).Count
+    }
     # Back up any existing baseline so a build failure (a TFM whose workload this platform
     # lacks) restores it instead of wiping it.
     $shippedBak = if (Test-Path $Item.Shipped) { (Get-Content -Raw $Item.Shipped) -replace "`r`n", "`n" } else { $null }
     $unshippedBak = if (Test-Path $Item.Unshipped) { (Get-Content -Raw $Item.Unshipped) -replace "`r`n", "`n" } else { $null }
-    # Empty both to the bare header so the analyzer reports the entire current surface.
-    & $writeLf $Item.Shipped @($header)
+
+    & $ensureApiFile $Item.Shipped
+    $beforeCount = & $apiLineCount $Item.Shipped
+    # Keep Shipped as input so RS0016 reports only missing symbols. Reset Unshipped so
+    # the generated delta is explicit and safe to fold after a successful analyzer run.
     & $writeLf $Item.Unshipped @($header)
     & dotnet format analyzers $proj -f $tfm --diagnostics $Diags --severity info -v quiet
     if ($LASTEXITCODE -eq 0) {
-        # `dotnet format` records the surface in Unshipped; fold it into Shipped (ordinally
-        # sorted+deduped, matching `LC_ALL=C sort -u`) and reset Unshipped to the bare header.
-        $surface = [string[]]@(Get-Content $Item.Unshipped | Where-Object { $_ -ne $header -and $_.Trim() -ne '' })
+        # Fold the post-format Shipped file plus generated Unshipped delta into Shipped
+        # (ordinally sorted+deduped) and reset Unshipped to the bare header.
+        $surface = [string[]]@(
+            Get-Content $Item.Shipped |
+                Where-Object { $_ -ne $header -and -not [string]::IsNullOrWhiteSpace($_) }
+            Get-Content $Item.Unshipped |
+                Where-Object { $_ -ne $header -and -not [string]::IsNullOrWhiteSpace($_) }
+        )
         if ($tfm -like '*-android*' -and -not [string]::IsNullOrWhiteSpace($apiNamespace)) {
             $surface += "$apiNamespace.Resource"
             $surface += "$apiNamespace.Resource.Resource() -> void"
         }
         $surface = [string[]]@($surface | Select-Object -Unique)
         [Array]::Sort($surface, [System.StringComparer]::Ordinal)
+        if ($beforeCount -gt 0 -and $surface.Count -eq 0) {
+            if ($null -ne $shippedBak) { [IO.File]::WriteAllText($Item.Shipped, $shippedBak) }
+            if ($null -ne $unshippedBak) { [IO.File]::WriteAllText($Item.Unshipped, $unshippedBak) }
+            Write-Host "FAIL [$tfm] $proj (refusing to replace non-empty Shipped with an empty baseline)"
+            return [pscustomobject]@{ Ok = $false }
+        }
+
         & $writeLf $Item.Shipped (@($header) + $surface)
         & $writeLf $Item.Unshipped @($header)
         Write-Host "OK   [$tfm] $proj"
