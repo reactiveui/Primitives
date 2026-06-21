@@ -167,12 +167,12 @@ public class TransformationOperatorTests
             exception =>
             {
                 errors.Add(exception);
-                errored.TrySetResult();
+                _ = errored.TrySetResult();
             },
             result =>
             {
                 completions.Add(result);
-                completed.TrySetResult();
+                _ = completed.TrySetResult();
             }).SubscribeAsync(static (_, _) => default);
         await Task.WhenAll(errored.Task, completed.Task).WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(nextValues).IsCollectionEqualTo([ExpectedFirst, ExpectedSecond]);
@@ -204,7 +204,7 @@ public class TransformationOperatorTests
                 },
                 _ =>
                 {
-                    done.TrySetResult();
+                    IgnoredResult.Of(done.TrySetResult());
                     return default;
                 });
         await done.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -250,13 +250,13 @@ public class TransformationOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             },
             _ =>
             {
                 completed = true;
-                completionTcs.TrySetResult();
+                IgnoredResult.Of(completionTcs.TrySetResult());
                 return default;
             });
         await Task.WhenAll(errorTcs.Task, completionTcs.Task).WaitAsync(TimeSpan.FromSeconds(5));
@@ -336,7 +336,7 @@ public class TransformationOperatorTests
         await using var sub = await source.Cast<object, string>().SubscribeAsync((_, _) => default, null, result =>
         {
             completionResult = result;
-            tcs.TrySetResult();
+            _ = tcs.TrySetResult();
             return default;
         });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -468,7 +468,7 @@ public class TransformationOperatorTests
             },
             _ =>
             {
-                tcs.TrySetResult();
+                IgnoredResult.Of(tcs.TrySetResult());
                 return default;
             });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -496,7 +496,7 @@ public class TransformationOperatorTests
             capturedResult = result;
         }).SubscribeAsync((_, _) => default, null, _ =>
         {
-            tcs.TrySetResult();
+            IgnoredResult.Of(tcs.TrySetResult());
             return default;
         });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -533,7 +533,7 @@ public class TransformationOperatorTests
                 },
                 _ =>
                 {
-                    tcs.TrySetResult();
+                    IgnoredResult.Of(tcs.TrySetResult());
                     return default;
                 });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -587,7 +587,7 @@ public class TransformationOperatorTests
             },
             _ =>
             {
-                tcs.TrySetResult();
+                IgnoredResult.Of(tcs.TrySetResult());
                 return default;
             });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -691,7 +691,7 @@ public class TransformationOperatorTests
         await using var sub = await SignalAsync.Return(42).Yield().SubscribeAsync((_, _) => default, null, result =>
         {
             capturedResult = result;
-            tcs.TrySetResult();
+            _ = tcs.TrySetResult();
             return default;
         });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -715,7 +715,7 @@ public class TransformationOperatorTests
         await using var sub = await source.Yield().SubscribeAsync((_, _) => default, null, result =>
         {
             capturedResult = result;
-            tcs.TrySetResult();
+            _ = tcs.TrySetResult();
             return default;
         });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -770,7 +770,7 @@ public class TransformationOperatorTests
             null,
             _ =>
             {
-                tcs.TrySetResult();
+                IgnoredResult.Of(tcs.TrySetResult());
                 return default;
             });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -803,7 +803,7 @@ public class TransformationOperatorTests
             },
             _ =>
             {
-                tcs.TrySetResult();
+                IgnoredResult.Of(tcs.TrySetResult());
                 return default;
             });
         await AsyncTestHelpers.WaitForConditionAsync(() => tcs.Task.IsCompleted, TimeSpan.FromSeconds(5));
@@ -926,7 +926,7 @@ public class TransformationOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("scan-sync-error");
@@ -948,7 +948,7 @@ public class TransformationOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("scan-async-error");

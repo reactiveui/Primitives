@@ -6,10 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides the arity-4 (<c>four</c>-source) <c>CombineLatest</c> extension method
-/// and its supporting internal observable + subscription types.
-/// </summary>
+/// <summary>Provides the arity-4 (<c>four</c>-source) <c>CombineLatest</c> extension methods.</summary>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Combines the latest values from multiple asynchronous observable sources.</summary>
@@ -39,7 +36,7 @@ public static partial class SignalAsyncExtensions
             IObservableAsync<T3> src3,
             IObservableAsync<T4> src4,
             Func<T1, T2, T3, T4, TResult> selector) =>
-            new SyncLatest4SignalAsync<T1, T2, T3, T4, TResult>(
+            new SyncLatest4Signal<T1, T2, T3, T4, TResult>(
                 new(src1, src2, src3, src4),
                 selector);
 
@@ -65,177 +62,8 @@ public static partial class SignalAsyncExtensions
             IObservableAsync<T3> src3,
             IObservableAsync<T4> src4,
             Func<T1, T2, T3, T4, TResult> selector) =>
-            src1.SyncLatest(src2, src3, src4, selector);
-    }
-
-    /// <summary>Async observable that combines the latest values from four source sequences using a selector.</summary>
-    /// <typeparam name="T1">Element type of source 1.</typeparam>
-    /// <typeparam name="T2">Element type of source 2.</typeparam>
-    /// <typeparam name="T3">Element type of source 3.</typeparam>
-    /// <typeparam name="T4">Element type of source 4.</typeparam>
-    /// <typeparam name="TResult">The projected element type.</typeparam>
-    /// <param name="sources">The bundled source observables.</param>
-    /// <param name="selector">The selector that projects the latest values.</param>
-    internal sealed class SyncLatest4SignalAsync<T1, T2, T3, T4, TResult>(
-        SyncLatest4SignalAsync<T1, T2, T3, T4, TResult>.Sources sources,
-        Func<T1, T2, T3, T4, TResult> selector) : IObservableAsync<TResult>
-    {
-        /// <inheritdoc/>
-        ValueTask<IAsyncDisposable> IObservableAsync<TResult>.SubscribeAsync(
-            IObserverAsync<TResult> observer,
-            CancellationToken cancellationToken)
-        {
-            SyncLatestCoordinator subscription = new(observer, sources, selector);
-            subscription.Lifecycle.LinkExternalCancellation(cancellationToken);
-            return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
-                subscription,
-                () => subscription.SubscribeSourcesAsync(cancellationToken));
-        }
-
-        /// <summary>
-        /// Bundles the four source observables so the subscription constructor stays at three
-        /// parameters (observer, sources, selector) regardless of arity. Sonar S107 caps method /
-        /// constructor parameter count; the bundle keeps the internal types compliant.
-        /// </summary>
-        /// <param name="Src1">Source observable 1.</param>
-        /// <param name="Src2">Source observable 2.</param>
-        /// <param name="Src3">Source observable 3.</param>
-        /// <param name="Src4">Source observable 4.</param>
-        internal readonly record struct Sources(
-            IObservableAsync<T1> Src1,
-            IObservableAsync<T2> Src2,
-            IObservableAsync<T3> Src3,
-            IObservableAsync<T4> Src4);
-
-        /// <summary>
-        /// Per-arity subscription holding the typed Optional slots, the pre-built indexed
-        /// observers, the SubscribeAtAsync switch, and the selector invocation. Shared scaffolding
-        /// (gate, lifecycle, ValuesLock, OnErrorResume, SubscribeSourcesAsync, DisposeAsync) lives
-        /// in <see cref="SyncLatestCoordinatorBase{TResult}"/>; the per-source OnNext / OnError /
-        /// OnCompleted forwarding lives in <see cref="SyncLatestIndexedWitness{TSource, TResult}"/>.
-        /// </summary>
-        internal sealed class SyncLatestCoordinator : SyncLatestCoordinatorBase<TResult>
-        {
-            /// <summary>Bit owned by source 1 inside the lifecycle's completion bitmask.</summary>
-            private const int Source1Bit = 1 << 0;
-
-            /// <summary>Bit owned by source 2 inside the lifecycle's completion bitmask.</summary>
-            private const int Source2Bit = 1 << 1;
-
-            /// <summary>Bit owned by source 3 inside the lifecycle's completion bitmask.</summary>
-            private const int Source3Bit = 1 << 2;
-
-            /// <summary>Bit owned by source 4 inside the lifecycle's completion bitmask.</summary>
-            private const int Source4Bit = 1 << 3;
-
-            /// <summary>Bundled source observables.</summary>
-            private readonly Sources _sources;
-
-            /// <summary>The result selector function.</summary>
-            private readonly Func<T1, T2, T3, T4, TResult> _selector;
-
-            /// <summary>Indexed observer for source 1.</summary>
-            private readonly SyncLatestIndexedWitness<T1, TResult> _obs1;
-
-            /// <summary>Indexed observer for source 2.</summary>
-            private readonly SyncLatestIndexedWitness<T2, TResult> _obs2;
-
-            /// <summary>Indexed observer for source 3.</summary>
-            private readonly SyncLatestIndexedWitness<T3, TResult> _obs3;
-
-            /// <summary>Indexed observer for source 4.</summary>
-            private readonly SyncLatestIndexedWitness<T4, TResult> _obs4;
-
-            /// <summary>Latest value from source 1.</summary>
-            private Optional<T1> _val1 = Optional<T1>.Empty;
-
-            /// <summary>Latest value from source 2.</summary>
-            private Optional<T2> _val2 = Optional<T2>.Empty;
-
-            /// <summary>Latest value from source 3.</summary>
-            private Optional<T3> _val3 = Optional<T3>.Empty;
-
-            /// <summary>Latest value from source 4.</summary>
-            private Optional<T4> _val4 = Optional<T4>.Empty;
-
-            /// <summary>Initializes a new instance of the <see cref="SyncLatestCoordinator"/> class.</summary>
-            /// <param name="observer">The downstream observer.</param>
-            /// <param name="sources">The bundled source observables.</param>
-            /// <param name="selector">The selector that projects the latest values.</param>
-            public SyncLatestCoordinator(
-                IObserverAsync<TResult> observer,
-                Sources sources,
-                Func<T1, T2, T3, T4, TResult> selector)
-                : base(observer, sourceCount: 4)
-            {
-                _sources = sources;
-                _selector = selector;
-                _obs1 = new(this, Source1Bit, v => _val1 = new(v));
-                _obs2 = new(this, Source2Bit, v => _val2 = new(v));
-                _obs3 = new(this, Source3Bit, v => _val3 = new(v));
-                _obs4 = new(this, Source4Bit, v => _val4 = new(v));
-            }
-
-            /// <inheritdoc/>
-            internal override ValueTask EmitLatestAsync() =>
-                TryReadValues(out var values)
-                    ? Lifecycle.EmitDownstreamAsync(_selector(values.V1, values.V2, values.V3, values.V4))
-                    : default;
-
-            /// <inheritdoc/>
-            [SuppressMessage(
-                "Minor Code Smell",
-                "S109:Magic numbers should not be used",
-                Justification = "Switch dispatches on the 0..N-1 source index; naming each numeric arm would just rename the obvious.")]
-            [SuppressMessage(
-                "Major Code Smell",
-                "S1541:Methods and properties should not be too complex",
-                Justification = "Switch arm per source — the high arms-count IS the dispatch surface; splitting hurts readability more than it helps.")]
-            protected override ValueTask<IAsyncDisposable> SubscribeAtAsync(int index, CancellationToken cancellationToken) =>
-                index switch
-                {
-                    0 => _sources.Src1.SubscribeAsync(_obs1, cancellationToken),
-                    1 => _sources.Src2.SubscribeAsync(_obs2, cancellationToken),
-                    2 => _sources.Src3.SubscribeAsync(_obs3, cancellationToken),
-                    _ => _sources.Src4.SubscribeAsync(_obs4, cancellationToken),
-                };
-
-            /// <summary>
-            /// Reads every source's latest value into a single snapshot. Returns <see langword="false"/>
-            /// (with <paramref name="values"/> set to <see langword="default"/>) until every source has
-            /// produced at least one value.
-            /// </summary>
-            /// <param name="values">When the method returns <see langword="true"/>, the snapshot.</param>
-            /// <returns><see langword="true"/> when every source has produced a value; otherwise <see langword="false"/>.</returns>
-            [SuppressMessage(
-                "Major Code Smell",
-                "S1541:Methods and properties should not be too complex",
-                Justification = "Short-circuited && chain over every source's Optional; the high condition count IS the snapshot semantic.")]
-            private bool TryReadValues(out Values values)
-            {
-                if (_val1.TryGetValue(out var v1)
-                    && _val2.TryGetValue(out var v2)
-                    && _val3.TryGetValue(out var v3)
-                    && _val4.TryGetValue(out var v4))
-                {
-                    values = new(v1, v2, v3, v4);
-                    return true;
-                }
-
-                values = default;
-                return false;
-            }
-
-            /// <summary>Latest-value snapshot taken when every source has produced at least one value.</summary>
-            /// <param name="V1">Latest value from source 1.</param>
-            /// <param name="V2">Latest value from source 2.</param>
-            /// <param name="V3">Latest value from source 3.</param>
-            /// <param name="V4">Latest value from source 4.</param>
-            internal readonly record struct Values(
-                T1 V1,
-                T2 V2,
-                T3 V3,
-                T4 V4);
-        }
+            new SyncLatest4Signal<T1, T2, T3, T4, TResult>(
+                new(src1, src2, src3, src4),
+                selector);
     }
 }

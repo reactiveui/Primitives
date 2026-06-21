@@ -23,14 +23,7 @@ public static partial class SignalAsyncExtensions
         public IObservableAsync<T> Skip(int count)
         {
             ArgumentExceptionHelper.ThrowIfNull(@this);
-#if NET8_0_OR_GREATER
-            ArgumentOutOfRangeException.ThrowIfNegative(count);
-#else
-            if (count < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count));
-            }
-#endif
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
 
             return count == 0 ? @this : new SkipSignal<T>(@this, count);
         }

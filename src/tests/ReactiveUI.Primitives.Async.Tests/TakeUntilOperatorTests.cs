@@ -42,7 +42,7 @@ public partial class TakeUntilOperatorTests
     public void WhenTakeUntilObservableNullSource_ThenThrowsArgumentNull()
     {
         const IObservableAsync<int> Source = null!;
-        Assert.Throws<ArgumentNullException>(() => Source.TakeUntil(SignalAsync.Never<string>()));
+        _ = Assert.Throws<ArgumentNullException>(() => Source.TakeUntil(SignalAsync.Never<string>()));
     }
 
     /// <summary>Tests that TakeUntil(observable) throws on null other.</summary>
@@ -198,7 +198,7 @@ public partial class TakeUntilOperatorTests
     public void WhenTaskStopSignalNullSource_ThenThrowsArgumentNull()
     {
         const IObservableAsync<int> Source = null!;
-        Assert.Throws<ArgumentNullException>(() => Source!.TakeUntil(Task.CompletedTask));
+        _ = Assert.Throws<ArgumentNullException>(() => Source!.TakeUntil(Task.CompletedTask));
     }
 
     /// <summary>Tests that task failure with SourceFailsWhenOtherFails=true completes with failure.</summary>
@@ -311,7 +311,7 @@ public partial class TakeUntilOperatorTests
         TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await source.Values.TakeUntil(cts.Token).SubscribeAsync((_, _) => default, null, result =>
         {
-            completed.TrySetResult(result);
+            _ = completed.TrySetResult(result);
             return default;
         });
         var completionResult = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -573,7 +573,7 @@ public partial class TakeUntilOperatorTests
             null,
             _ =>
             {
-                completed.TrySetResult();
+                IgnoredResult.Of(completed.TrySetResult());
                 return default;
             });
         await cts.CancelAsync();
@@ -594,7 +594,7 @@ public partial class TakeUntilOperatorTests
             null,
             _ =>
             {
-                completed.TrySetResult();
+                IgnoredResult.Of(completed.TrySetResult());
                 return default;
             });
         await cts.CancelAsync();
@@ -614,7 +614,7 @@ public partial class TakeUntilOperatorTests
             null,
             _ =>
             {
-                completed.TrySetResult();
+                IgnoredResult.Of(completed.TrySetResult());
                 return default;
             });
         await cts.CancelAsync();
@@ -634,7 +634,7 @@ public partial class TakeUntilOperatorTests
             null,
             _ =>
             {
-                completed.TrySetResult();
+                IgnoredResult.Of(completed.TrySetResult());
                 return default;
             });
         await cts.CancelAsync();

@@ -1460,7 +1460,7 @@ dotnet_diagnostic.SST2205.severity = error # An enum switch statement omits name
 dotnet_diagnostic.SST2206.severity = error # An enum switch expression omits named enum values
 dotnet_diagnostic.SST2207.severity = error # A null guard and return can keep the throw in the returned expression
 dotnet_diagnostic.SST2208.severity = error # An out variable can be declared at the call site
-dotnet_diagnostic.SST2209.severity = error # A null-forgiving operator has no local effect
+dotnet_diagnostic.SST2209.severity = none  # A null-forgiving operator has no local effect
 dotnet_diagnostic.SST2210.severity = error # A nullable directive repeats the current file-local state
 dotnet_diagnostic.SST2211.severity = error # A nullable restore directive has no file-local state to restore
 dotnet_diagnostic.SST2212.severity = error # Literal UTF-8 byte data can use a u8 string literal
@@ -1709,7 +1709,7 @@ dotnet_diagnostic.S6930.severity = error # Backslash should be avoided in route 
 # SonarAnalyzer (Sxxxx) - Minor Bug
 ###################
 dotnet_diagnostic.S1206.severity = none # "Equals(Object)" and "GetHashCode()" should be overridden in pairs - DUPLICATE CA2218
-dotnet_diagnostic.S1226.severity = error # Method parameters, caught exceptions and foreach variables' initial values should not be ignored
+dotnet_diagnostic.S1226.severity = none  # Method parameters, caught exceptions and foreach variables' initial values should not be ignored
 dotnet_diagnostic.S2183.severity = error # Integral numbers should not be shifted by zero or more than their number of bits-1
 dotnet_diagnostic.S2184.severity = error # Results of integer division should not be assigned to floating point variables
 dotnet_diagnostic.S2328.severity = error # "GetHashCode" should not reference mutable fields
@@ -2021,7 +2021,7 @@ dotnet_diagnostic.S3220.severity = error # Method calls should not resolve ambig
 dotnet_diagnostic.S3234.severity = error # "GC.SuppressFinalize" should not be invoked for types without destructors
 dotnet_diagnostic.S3235.severity = error # Redundant parentheses should not be used
 dotnet_diagnostic.S3236.severity = error # Caller information arguments should not be provided explicitly
-dotnet_diagnostic.S3240.severity = error # The simplest possible condition syntax should be used
+dotnet_diagnostic.S3240.severity = none # The simplest possible condition syntax should be used - duplicate of SST1198
 dotnet_diagnostic.S3241.severity = error # Methods should not return values that are never used
 dotnet_diagnostic.S3242.severity = none # Method parameters should be declared with base types
 dotnet_diagnostic.S3247.severity = error # Duplicate casts should not be made

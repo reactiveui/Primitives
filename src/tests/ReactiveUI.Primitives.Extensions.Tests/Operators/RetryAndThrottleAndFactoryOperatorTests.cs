@@ -255,7 +255,7 @@ public class RetryAndThrottleAndFactoryOperatorTests
     [Test]
     public async Task WhenToReadOnlyBehavior_ThenReplayInitial()
     {
-        (var observable, var observer) = ReactiveExtensions.ToReadOnlyBehavior(Value1);
+        var (observable, observer) = ReactiveExtensions.ToReadOnlyBehavior(Value1);
         List<int> results = [];
         using var sub = observable.Subscribe(results.Add);
         observer.OnNext(Value2);

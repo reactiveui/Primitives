@@ -2,10 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Collections.Specialized;
-using System.ComponentModel;
-
 #if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Advanced;
+
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
 namespace ReactiveUI.Primitives.Signals;
@@ -18,8 +17,12 @@ public static partial class Signal
     /// <param name="start">The first value to emit.</param>
     /// <param name="count">The number of values to emit.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<int> Sequence(int start, int count) =>
-        Sequence(start, count, Sequencer.CurrentThread);
+    public static IObservable<int> Sequence(int start, int count)
+    {
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
+
+        return count == 0 ? ImmutableEmptySignal<int>.Instance : new RangeSignal(start, count);
+    }
 
     /// <summary>Creates a finite integer signal from <paramref name="start"/> for <paramref name="count"/> values on <paramref name="scheduler"/>.</summary>
     /// <param name="start">The first value to emit.</param>
@@ -34,25 +37,10 @@ public static partial class Signal
 
         if (count == 0)
         {
-            return None<int>();
+            return ImmutableEmptySignal<int>.Instance;
         }
 
-        if (scheduler == Sequencer.Immediate || scheduler == Sequencer.CurrentThread)
-        {
-            return new RangeSignal(start, count);
-        }
-
-        return CreateSafe<int>(
-            observer => scheduler.Schedule(() =>
-            {
-                for (var i = 0; i < count; i++)
-                {
-                    observer.OnNext(start + i);
-                }
-
-                observer.OnCompleted();
-            }),
-            scheduler == Sequencer.CurrentThread);
+        return scheduler == Sequencer.Immediate || scheduler == Sequencer.CurrentThread ? new RangeSignal(start, count) : new SequenceSignal(start, count, scheduler);
     }
 
     /// <summary>Creates a signal that repeats a value forever.</summary>
@@ -71,12 +59,7 @@ public static partial class Signal
     {
         ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
 
-        if (count == 0)
-        {
-            return None<T>();
-        }
-
-        return new RepeatSignal<T>(value, count);
+        return count == 0 ? ImmutableEmptySignal<T>.Instance : new RepeatSignal<T>(value, count);
     }
 
     /// <summary>Unfolds state into a finite signal.</summary>
@@ -114,8 +97,16 @@ public static partial class Signal
         TState initialState,
         Func<TState, bool> condition,
         Func<TState, TState> iterator,
-        Func<TState, TResult> resultSelector) =>
-        Unfold(initialState, condition, iterator, resultSelector);
+        Func<TState, TResult> resultSelector)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(condition);
+
+        ArgumentExceptionHelper.ThrowIfNull(iterator);
+
+        ArgumentExceptionHelper.ThrowIfNull(resultSelector);
+
+        return new UnfoldSignal<TState, TResult>(initialState, condition, iterator, resultSelector);
+    }
 
     /// <summary>Creates a signal whose subscription lifetime owns a resource.</summary>
     /// <typeparam name="TResource">The type of the resource.</typeparam>
@@ -145,14 +136,7 @@ public static partial class Signal
 
         ArgumentExceptionHelper.ThrowIfNull(removeHandler);
 
-        return Create<EventPattern<EventArgs>>(observer =>
-        {
-            void Handler(object? sender, EventArgs eventArgs) =>
-                observer.OnNext(new(sender, eventArgs));
-
-            addHandler(Handler);
-            return new ActionDisposable(() => removeHandler(Handler));
-        });
+        return new FromEventPatternSignal<EventHandler, EventArgs>(addHandler, removeHandler);
     }
 
     /// <summary>Converts an event into a signal of event pattern values.</summary>
@@ -169,14 +153,7 @@ public static partial class Signal
 
         ArgumentExceptionHelper.ThrowIfNull(removeHandler);
 
-        return Create<EventPattern<TEventArgs>>(observer =>
-        {
-            void Handler(object? sender, TEventArgs eventArgs) =>
-                observer.OnNext(new(sender, eventArgs));
-
-            addHandler(Handler);
-            return new ActionDisposable(() => removeHandler(Handler));
-        });
+        return new FromEventPatternSignal<EventHandler<TEventArgs>, TEventArgs>(addHandler, removeHandler);
     }
 
     /// <summary>Creates a signal from an event add/remove pair.</summary>
@@ -201,41 +178,7 @@ public static partial class Signal
 
         ArgumentExceptionHelper.ThrowIfNull(removeHandler);
 
-        return Create<EventPattern<TEventArgs>>(observer =>
-        {
-            TEventHandler handler;
-            if (typeof(TEventHandler) == typeof(PropertyChangedEventHandler))
-            {
-                PropertyChangedEventHandler typed = (sender, args) =>
-                    observer.OnNext(new(sender, (TEventArgs)(EventArgs)args));
-                handler = (TEventHandler)(object)typed;
-            }
-            else if (typeof(TEventHandler) == typeof(NotifyCollectionChangedEventHandler))
-            {
-                NotifyCollectionChangedEventHandler typed = (sender, args) =>
-                    observer.OnNext(new(sender, (TEventArgs)(EventArgs)args));
-                handler = (TEventHandler)(object)typed;
-            }
-            else if (typeof(TEventHandler) == typeof(ListChangedEventHandler))
-            {
-                ListChangedEventHandler typed = (sender, args) =>
-                    observer.OnNext(new(sender, (TEventArgs)(EventArgs)args));
-                handler = (TEventHandler)(object)typed;
-            }
-            else if (typeof(TEventHandler) == typeof(EventHandler<TEventArgs>))
-            {
-                EventHandler<TEventArgs> typed = (sender, args) =>
-                    observer.OnNext(new(sender, args));
-                handler = (TEventHandler)(object)typed;
-            }
-            else
-            {
-                throw new NotSupportedException($"Event handler type '{typeof(TEventHandler)}' is not supported.");
-            }
-
-            addHandler(handler);
-            return Scope.Create(() => removeHandler(handler));
-        });
+        return new FromEventPatternSignal<TEventHandler, TEventArgs>(addHandler, removeHandler);
     }
 
     /// <summary>Creates a signal from an enumerable sequence.</summary>
@@ -277,48 +220,15 @@ public static partial class Signal
 
         if (task.Status == TaskStatus.RanToCompletion)
         {
-            return Emit(task.Result);
+            return new ImmediateReturnSignal<T>(task.Result);
         }
 
         if (task.IsCanceled)
         {
-            return Fail<T>(new TaskCanceledException(task));
+            return new ImmediateThrowSignal<T>(new TaskCanceledException(task));
         }
 
-        if (task.IsFaulted)
-        {
-            return Fail<T>(task.Exception!.InnerException ?? task.Exception);
-        }
-
-        return CreateSafe<T>(observer =>
-        {
-            var disposed = 0;
-            task.ContinueWith(
-                completed =>
-                {
-                    if (Volatile.Read(ref disposed) != 0)
-                    {
-                        return;
-                    }
-
-                    if (completed.IsCanceled)
-                    {
-                        observer.OnError(new TaskCanceledException(completed));
-                    }
-                    else if (completed.IsFaulted)
-                    {
-                        observer.OnError(completed.Exception!.InnerException ?? completed.Exception);
-                    }
-                    else
-                    {
-                        observer.OnNext(completed.Result);
-                        observer.OnCompleted();
-                    }
-                },
-                TaskScheduler.Default);
-
-            return new ActionDisposable(() => Volatile.Write(ref disposed, 1));
-        });
+        return task.IsFaulted ? new ImmediateThrowSignal<T>(task.Exception!.InnerException ?? task.Exception) : new TaskInstanceSignal<T>(task);
     }
 
     /// <summary>Creates a signal by invoking an asynchronous factory at subscription time.</summary>
@@ -329,7 +239,7 @@ public static partial class Signal
     {
         ArgumentExceptionHelper.ThrowIfNull(taskFactory);
 
-        return Lazy(() => FromTask(taskFactory()));
+        return new FromAsyncSignal<T>(_ => taskFactory());
     }
 
     /// <summary>Creates a signal by invoking an asynchronous factory at subscription time.</summary>
@@ -337,7 +247,7 @@ public static partial class Signal
     /// <param name="taskFactory">The factory that creates the task.</param>
     /// <returns>An Signals.</returns>
     public static IObservable<T> FromAsync<T>(Func<CancellationToken, Task<T>> taskFactory) =>
-        FromAsync(taskFactory, CancellationToken.None);
+        new FromAsyncSignal<T>(taskFactory);
 
     /// <summary>Creates a signal by invoking an asynchronous factory at subscription time.</summary>
     /// <typeparam name="T">The type.</typeparam>
@@ -356,8 +266,12 @@ public static partial class Signal
     /// <param name="source">The source sequence.</param>
     /// <param name="dueTime">The timeout duration.</param>
     /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
-    public static IObservable<T> Expire<T>(IObservable<T> source, TimeSpan dueTime) =>
-        Expire(source, dueTime, null);
+    public static IObservable<T> Expire<T>(IObservable<T> source, TimeSpan dueTime)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        return new ExpireSignal<T>(source, dueTime, ThreadPoolSequencer.Instance);
+    }
 
     /// <summary>Fails the sequence if it does not terminate before the sequencer timeout.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
@@ -373,29 +287,16 @@ public static partial class Signal
         return new ExpireSignal<T>(source, dueTime, scheduler);
     }
 
-    /// <summary>Fails the sequence if it does not terminate before the timeout.</summary>
-    /// <typeparam name="T">The source value type.</typeparam>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="dueTime">The timeout duration.</param>
-    /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
-    public static IObservable<T> Timeout<T>(IObservable<T> source, TimeSpan dueTime) =>
-        Expire(source, dueTime);
-
-    /// <summary>Fails the sequence if it does not terminate before the sequencer timeout.</summary>
-    /// <typeparam name="T">The source value type.</typeparam>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="dueTime">The timeout duration.</param>
-    /// <param name="scheduler">The sequencer used to schedule the timeout.</param>
-    /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
-    public static IObservable<T> Timeout<T>(IObservable<T> source, TimeSpan dueTime, ISequencer? scheduler) =>
-        Expire(source, dueTime, scheduler);
-
     /// <summary>Runs a function on the supplied scheduler and emits its result.</summary>
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="function">The function to run.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<T> Start<T>(Func<T> function) =>
-        Start(function, Sequencer.Default);
+    public static IObservable<T> Start<T>(Func<T> function)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(function);
+
+        return new StartSignal<T>(function, Sequencer.Default);
+    }
 
     /// <summary>Runs a function on the supplied scheduler and emits its result.</summary>
     /// <typeparam name="T">The type.</typeparam>
@@ -408,46 +309,18 @@ public static partial class Signal
 
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
-        if (scheduler == Sequencer.Immediate)
-        {
-            return CreateSafe<T>(
-                observer =>
-                {
-                    try
-                    {
-                        observer.OnNext(function());
-                        observer.OnCompleted();
-                    }
-                    catch (Exception error)
-                    {
-                        observer.OnError(error);
-                    }
-
-                    return EmptyDisposable.Instance;
-                });
-        }
-
-        return CreateSafe<T>(
-            observer => scheduler.Schedule(() =>
-            {
-                try
-                {
-                    observer.OnNext(function());
-                    observer.OnCompleted();
-                }
-                catch (Exception error)
-                {
-                    observer.OnError(error);
-                }
-            }),
-            scheduler == Sequencer.CurrentThread);
+        return new StartSignal<T>(function, scheduler);
     }
 
     /// <summary>Runs an action on the supplied scheduler and emits <see cref="RxVoid.Default"/> when it completes.</summary>
     /// <param name="action">The action to run.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<RxVoid> Start(Action action) =>
-        Start(action, Sequencer.Default);
+    public static IObservable<RxVoid> Start(Action action)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(action);
+
+        return new StartSignal(action, Sequencer.Default);
+    }
 
     /// <summary>Runs an action on the supplied scheduler and emits <see cref="RxVoid.Default"/> when it completes.</summary>
     /// <param name="action">The action to run.</param>
@@ -457,13 +330,9 @@ public static partial class Signal
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
 
-        return Start(
-            () =>
-            {
-                action();
-                return RxVoid.Default;
-            },
-            scheduler);
+        ArgumentExceptionHelper.ThrowIfNull(scheduler);
+
+        return new StartSignal(action, scheduler);
     }
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER
@@ -471,8 +340,12 @@ public static partial class Signal
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="values">The values to emit.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<T> FromAsyncEnumerable<T>(IAsyncEnumerable<T> values) =>
-        FromAsyncEnumerable(values, CancellationToken.None);
+    public static IObservable<T> FromAsyncEnumerable<T>(IAsyncEnumerable<T> values)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(values);
+
+        return new AsyncEnumerableSignal<T>(values, CancellationToken.None);
+    }
 
     /// <summary>Creates a signal from an async enumerable sequence and cancels enumeration when disposed.</summary>
     /// <typeparam name="T">The type.</typeparam>
@@ -492,7 +365,7 @@ public static partial class Signal
     /// <param name="dueTime">The relative time after which to emit the tick.</param>
     /// <returns>An Signals.</returns>
     public static IObservable<long> After(TimeSpan dueTime) =>
-        After(dueTime, ThreadPoolSequencer.Instance);
+        new AfterSignal(dueTime, ThreadPoolSequencer.Instance);
 
     /// <summary>Emits a single zero tick after the due time.</summary>
     /// <param name="dueTime">The relative time after which to emit the tick.</param>
@@ -509,7 +382,7 @@ public static partial class Signal
     /// <param name="dueTime">The absolute time at which to emit the tick.</param>
     /// <returns>An Signals.</returns>
     public static IObservable<long> After(DateTimeOffset dueTime) =>
-        After(dueTime, ThreadPoolSequencer.Instance);
+        new AfterSignal(Sequencer.Normalize(dueTime - ThreadPoolSequencer.Instance.Now), ThreadPoolSequencer.Instance);
 
     /// <summary>Emits a single zero tick at the specified absolute due time.</summary>
     /// <param name="dueTime">The absolute time at which to emit the tick.</param>
@@ -519,7 +392,7 @@ public static partial class Signal
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
-        return After(Sequencer.Normalize(dueTime - scheduler.Now), scheduler);
+        return new AfterSignal(Sequencer.Normalize(dueTime - scheduler.Now), scheduler);
     }
 
     /// <summary>Emits first after <paramref name="dueTime"/> and then at <paramref name="period"/>.</summary>
@@ -527,7 +400,7 @@ public static partial class Signal
     /// <param name="period">The period between subsequent ticks.</param>
     /// <returns>An Signals.</returns>
     public static IObservable<long> After(TimeSpan dueTime, TimeSpan period) =>
-        After(dueTime, period, ThreadPoolSequencer.Instance);
+        new AfterSignal(dueTime, period, ThreadPoolSequencer.Instance);
 
     /// <summary>Emits first after <paramref name="dueTime"/> and then at <paramref name="period"/>.</summary>
     /// <param name="dueTime">The relative time before the first tick.</param>
@@ -538,30 +411,18 @@ public static partial class Signal
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
-        return CreateSafe<long>(
-            observer =>
-            {
-                MultipleDisposable pocket = [];
-                var current = 0L;
-                pocket.Add(
-                    scheduler.Schedule(
-                        Sequencer.Normalize(dueTime),
-                        () =>
-                        {
-                            observer.OnNext(current++);
-                            pocket.Add(Every(period, scheduler).Subscribe(value => observer.OnNext(current + value), observer.OnError, observer.OnCompleted));
-                        }));
-
-                return pocket;
-            },
-            scheduler == Sequencer.CurrentThread);
+        return new AfterSignal(dueTime, period, scheduler);
     }
 
     /// <summary>Emits monotonically increasing ticks at the specified period.</summary>
     /// <param name="period">The period between ticks.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<long> Every(TimeSpan period) =>
-        Every(period, ThreadPoolSequencer.Instance);
+    public static IObservable<long> Every(TimeSpan period)
+    {
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(period, TimeSpan.Zero);
+
+        return new EverySignal(period, ThreadPoolSequencer.Instance);
+    }
 
     /// <summary>Emits monotonically increasing ticks at the specified period.</summary>
     /// <param name="period">The period between ticks.</param>
@@ -576,17 +437,6 @@ public static partial class Signal
         return new EverySignal(period, scheduler);
     }
 
-    /// <summary>Alias for <see cref="Every(TimeSpan, ISequencer?)"/>.</summary>
-    /// <param name="period">The period between ticks.</param>
-    /// <returns>An Signals.</returns>
-    public static IObservable<long> Pulse(TimeSpan period) => Every(period);
-
-    /// <summary>Alias for <see cref="Every(TimeSpan, ISequencer?)"/>.</summary>
-    /// <param name="period">The period between ticks.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <returns>An Signals.</returns>
-    public static IObservable<long> Pulse(TimeSpan period, ISequencer scheduler) => Every(period, scheduler);
-
     /// <summary>Concatenates the supplied signals.</summary>
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="sources">The signals to concatenate.</param>
@@ -595,7 +445,7 @@ public static partial class Signal
     {
         var validated = ValidateSources(sources);
         var rangeConcat = TryCreateRangeConcat(validated);
-        return rangeConcat is null ? FromEnumerable(validated).Chain() : (IObservable<T>)(object)rangeConcat;
+        return rangeConcat is null ? new ChainSignal<T>(validated) : (IObservable<T>)(object)rangeConcat;
     }
 
     /// <summary>Merges the supplied signals.</summary>
@@ -606,7 +456,7 @@ public static partial class Signal
     {
         var validated = ValidateSources(sources);
         var rangeConcat = TryCreateRangeConcat(validated);
-        return rangeConcat is null ? FromEnumerable(validated).Blend() : (IObservable<T>)(object)rangeConcat;
+        return rangeConcat is null ? new EnumerableBlendSignal<T>(validated) : (IObservable<T>)(object)rangeConcat;
     }
 
     /// <summary>Races the supplied signals and mirrors the first one to produce a value or terminal signal.</summary>
@@ -616,12 +466,7 @@ public static partial class Signal
     public static IObservable<T> Race<T>(params IObservable<T>[] sources)
     {
         var validated = ValidateSources(sources);
-        if (validated.Length > 0 && validated[0] is RangeSignal)
-        {
-            return validated[0];
-        }
-
-        return FromEnumerable(validated).Race();
+        return validated.Length > 0 && validated[0] is RangeSignal ? validated[0] : new RaceSignal<T>(validated);
     }
 
     /// <summary>Mirrors the first supplied signal to produce a value or terminal signal.</summary>
@@ -632,8 +477,18 @@ public static partial class Signal
     /// <param name="right">The right signal.</param>
     /// <param name="selector">The function that combines the paired values.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<TResult> Pair<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) =>
-        left.Pair(right, selector);
+    public static IObservable<TResult> Pair<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(left);
+
+        ArgumentExceptionHelper.ThrowIfNull(right);
+
+        ArgumentExceptionHelper.ThrowIfNull(selector);
+
+        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange && right is RangeSignal rightRange
+            ? new RangeZipSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
+            : new PairSignal<TLeft, TRight, TResult>(left, right, selector);
+    }
 
     /// <summary>Combines the latest values from two signals.</summary>
     /// <typeparam name="TLeft">The type of the left signal values.</typeparam>
@@ -643,19 +498,18 @@ public static partial class Signal
     /// <param name="right">The right signal.</param>
     /// <param name="selector">The function that combines the latest values.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<TResult> SyncLatest<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) =>
-        left.SyncLatest(right, selector);
+    public static IObservable<TResult> SyncLatest<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(left);
 
-    /// <summary>Combines latest values from two signals using latest-fusion semantics.</summary>
-    /// <typeparam name="TLeft">The type of the left signal values.</typeparam>
-    /// <typeparam name="TRight">The type of the right signal values.</typeparam>
-    /// <typeparam name="TResult">The type of the result.</typeparam>
-    /// <param name="left">The left signal.</param>
-    /// <param name="right">The right signal.</param>
-    /// <param name="selector">The function that combines the latest values.</param>
-    /// <returns>An Signals.</returns>
-    public static IObservable<TResult> PairLatest<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) =>
-        left.PairLatest(right, selector);
+        ArgumentExceptionHelper.ThrowIfNull(right);
+
+        ArgumentExceptionHelper.ThrowIfNull(selector);
+
+        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange && right is RangeSignal rightRange
+            ? new RangeSyncLatestSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
+            : new SyncLatestSignal<TLeft, TRight, TResult>(left, right, selector);
+    }
 
     /// <summary>Waits for both signals to complete and emits one result from their last values.</summary>
     /// <typeparam name="TLeft">The type of the left signal values.</typeparam>
@@ -665,8 +519,18 @@ public static partial class Signal
     /// <param name="right">The right signal.</param>
     /// <param name="selector">The function that combines the last values.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<TResult> ForkJoin<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) =>
-        left.ForkJoin(right, selector);
+    public static IObservable<TResult> ForkJoin<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(left);
+
+        ArgumentExceptionHelper.ThrowIfNull(right);
+
+        ArgumentExceptionHelper.ThrowIfNull(selector);
+
+        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange && right is RangeSignal rightRange
+            ? new RangeForkJoinSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
+            : new ForkJoinSignal<TLeft, TRight, TResult>(left, right, selector);
+    }
 
     /// <summary>Validates source arrays supplied to params-based factories.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
@@ -678,10 +542,7 @@ public static partial class Signal
 
         for (var i = 0; i < sources.Length; i++)
         {
-            if (sources[i] is null)
-            {
-                throw new ArgumentNullException(nameof(sources));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(sources[i]);
         }
 
         return sources;

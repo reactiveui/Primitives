@@ -693,12 +693,7 @@ public static partial class LinqExtensions
                 return true;
             }
 
-            if (current >= 0)
-            {
-                return false;
-            }
-
-            return Interlocked.CompareExchange(ref _winner, candidate, -1) == -1;
+            return current >= 0 ? false : Interlocked.CompareExchange(ref _winner, candidate, -1) == -1;
         }
     }
 

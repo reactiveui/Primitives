@@ -32,7 +32,7 @@ public static partial class SignalAsyncExtensions
         /// </summary>
         /// <returns>An asynchronous observable sequence that emits all items from each source sequence in order.</returns>
         public IObservableAsync<T> Concat() =>
-            @this.Chain();
+            new ChainEnumerableSignal<T>(@this);
     }
 
     /// <summary>Chain/Concat operators for an observable sequence of inner observable sequences.</summary>
@@ -59,7 +59,7 @@ public static partial class SignalAsyncExtensions
         /// </summary>
         /// <returns>An observable sequence that emits the elements of each inner observable sequence in order.</returns>
         public IObservableAsync<T> Concat() =>
-            @this.Chain();
+            new ChainSignalSourcesSignal<T>(@this);
     }
 
     /// <summary>Chain/Concat operators for an observable source sequence.</summary>
@@ -87,6 +87,6 @@ public static partial class SignalAsyncExtensions
         /// <param name="second">The second observable sequence to concatenate.</param>
         /// <returns>An observable sequence that emits all elements from the first sequence, followed by all elements from the second.</returns>
         public IObservableAsync<T> Concat(IObservableAsync<T> second) =>
-            @this.Chain(second);
+            new ChainEnumerableSignal<T>([@this, second]);
     }
 }

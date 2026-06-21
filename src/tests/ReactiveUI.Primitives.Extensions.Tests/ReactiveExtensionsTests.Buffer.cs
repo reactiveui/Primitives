@@ -131,7 +131,7 @@ public partial class ReactiveExtensionsTests
         VirtualClock scheduler = new();
         Subject<int> subject = new();
         List<IList<int>> results = [];
-        subject.BufferUntilIdle(TimeSpan.FromMilliseconds(100), scheduler).Subscribe(results.Add);
+        _ = subject.BufferUntilIdle(TimeSpan.FromMilliseconds(100), scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         scheduler.AdvanceBy(TimeSpan.FromMilliseconds(50).Ticks);
@@ -150,7 +150,7 @@ public partial class ReactiveExtensionsTests
         Subject<int> subject = new();
         List<IList<int>> results = [];
         Exception? observedError = null;
-        subject.BufferUntilIdle(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add, ex => observedError = ex);
+        _ = subject.BufferUntilIdle(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add, ex => observedError = ex);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnError(new InvalidOperationException("test error"));
@@ -171,7 +171,7 @@ public partial class ReactiveExtensionsTests
         Subject<int> subject = new();
         List<IList<int>> results = [];
         var completed = false;
-        subject.BufferUntilIdle(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add, () => completed = true);
+        _ = subject.BufferUntilIdle(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add, () => completed = true);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnCompleted();
@@ -190,7 +190,7 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         List<IList<int>> results = [];
-        subject.BufferUntilIdle(TimeSpan.FromMilliseconds(100)).Subscribe(results.Add);
+        _ = subject.BufferUntilIdle(TimeSpan.FromMilliseconds(100)).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnNext(SampleValue3);
@@ -206,7 +206,7 @@ public partial class ReactiveExtensionsTests
         VirtualClock scheduler = new();
         Subject<int> subject = new();
         List<IList<int>> results = [];
-        subject.BufferUntilInactive(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add);
+        _ = subject.BufferUntilInactive(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         scheduler.AdvanceBy(SchedulerHalfWindowTicks);
@@ -225,7 +225,7 @@ public partial class ReactiveExtensionsTests
         Subject<int> subject = new();
         List<IList<int>> results = [];
         Exception? observedError = null;
-        subject.BufferUntilInactive(TimeSpan.FromTicks(100), scheduler)
+        _ = subject.BufferUntilInactive(TimeSpan.FromTicks(100), scheduler)
             .Subscribe(results.Add, ex => observedError = ex);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
@@ -247,7 +247,7 @@ public partial class ReactiveExtensionsTests
         Subject<int> subject = new();
         List<IList<int>> results = [];
         var completed = false;
-        subject.BufferUntilInactive(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add, () => completed = true);
+        _ = subject.BufferUntilInactive(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add, () => completed = true);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnCompleted();
@@ -268,7 +268,7 @@ public partial class ReactiveExtensionsTests
         Subject<int> subject = new();
         List<int> results = [];
         var completed = false;
-        subject.Conflate(TimeSpan.FromTicks(100), scheduler).Subscribe(
+        _ = subject.Conflate(TimeSpan.FromTicks(100), scheduler).Subscribe(
             results.Add,
             _ => { },
             () => completed = true);

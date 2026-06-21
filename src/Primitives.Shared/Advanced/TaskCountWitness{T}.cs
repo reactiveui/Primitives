@@ -8,12 +8,12 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Task-producing terminal sink that completes with whether a source produced a matching value.</summary>
+/// <summary>Task-producing terminal sink that completes with the number of matching source values.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
-public sealed class TaskAnySink<T> : IObserver<T>, IDisposable
+public sealed class TaskCountWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>The task completed by this sink.</summary>
-    private readonly TaskCompletionSource<bool> _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource<int> _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>The cancellation token used by this sink.</summary>
     private readonly CancellationToken _cancellationToken;
@@ -27,17 +27,20 @@ public sealed class TaskAnySink<T> : IObserver<T>, IDisposable
     /// <summary>The source subscription.</summary>
     private IDisposable? _subscription;
 
+    /// <summary>The observed count.</summary>
+    private int _count;
+
     /// <summary>Non-zero after disposal or terminal result.</summary>
     private int _stopped;
 
-    /// <summary>Initializes a new instance of the <see cref="TaskAnySink{T}"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="TaskCountWitness{T}"/> class.</summary>
     /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
-    public TaskAnySink(CancellationToken cancellationToken) => _cancellationToken = cancellationToken;
+    public TaskCountWitness(CancellationToken cancellationToken) => _cancellationToken = cancellationToken;
 
-    /// <summary>Initializes a new instance of the <see cref="TaskAnySink{T}"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="TaskCountWitness{T}"/> class.</summary>
     /// <param name="predicate">The predicate.</param>
     /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
-    public TaskAnySink(Func<T, bool> predicate, CancellationToken cancellationToken)
+    public TaskCountWitness(Func<T, bool> predicate, CancellationToken cancellationToken)
     {
         ArgumentExceptionHelper.ThrowIfNull(predicate);
 
@@ -46,51 +49,51 @@ public sealed class TaskAnySink<T> : IObserver<T>, IDisposable
     }
 
     /// <summary>Gets the task completed by this sink.</summary>
-    public Task<bool> Task => _completion.Task;
+    public Task<int> Task => _completion.Task;
 
     /// <summary>Registers cancellation after construction.</summary>
     public void RegisterCancellation() =>
-        TaskTerminalSinkHelper.RegisterCancellation(this, static state => ((TaskAnySink<T>)state!).Cancel(), ref _registration, _cancellationToken);
+        TaskTerminalWitnessHelper.RegisterCancellation(this, static state => ((TaskCountWitness<T>)state!).Cancel(), ref _registration, _cancellationToken);
 
     /// <summary>Assigns the source subscription.</summary>
     /// <param name="subscription">The source subscription.</param>
     public void SetSubscription(IDisposable subscription) =>
-        TaskTerminalSinkHelper.SetSubscription(ref _subscription, ref _stopped, subscription);
+        TaskTerminalWitnessHelper.SetSubscription(ref _subscription, ref _stopped, subscription);
 
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (!TaskTerminalSinkHelper.TryStop(ref _stopped))
+        if (!TaskTerminalWitnessHelper.TryStop(ref _stopped))
         {
             return;
         }
 
         _registration.Dispose();
-        TaskTerminalSinkHelper.DisposeSubscription(ref _subscription);
+        TaskTerminalWitnessHelper.DisposeSubscription(ref _subscription);
     }
 
     /// <inheritdoc/>
-    public void OnCompleted() => Complete(false);
+    public void OnCompleted() => Complete(_count);
 
     /// <inheritdoc/>
     public void OnError(Exception error)
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
 
-        if (!TaskTerminalSinkHelper.TryStop(ref _stopped))
+        if (!TaskTerminalWitnessHelper.TryStop(ref _stopped))
         {
             return;
         }
 
         _registration.Dispose();
-        _completion.TrySetException(error);
-        TaskTerminalSinkHelper.DisposeSubscription(ref _subscription);
+        _ = _completion.TrySetException(error);
+        TaskTerminalWitnessHelper.DisposeSubscription(ref _subscription);
     }
 
     /// <inheritdoc/>
     public void OnNext(T value)
     {
-        if (TaskTerminalSinkHelper.IsStopped(ref _stopped))
+        if (TaskTerminalWitnessHelper.IsStopped(ref _stopped))
         {
             return;
         }
@@ -99,7 +102,7 @@ public sealed class TaskAnySink<T> : IObserver<T>, IDisposable
         {
             if (_predicate is null || _predicate(value))
             {
-                Complete(result: true);
+                _count = checked(_count + 1);
             }
         }
         catch (Exception error)
@@ -111,26 +114,26 @@ public sealed class TaskAnySink<T> : IObserver<T>, IDisposable
     /// <summary>Completes the sink with cancellation.</summary>
     private void Cancel()
     {
-        if (!TaskTerminalSinkHelper.TryStop(ref _stopped))
+        if (!TaskTerminalWitnessHelper.TryStop(ref _stopped))
         {
             return;
         }
 
-        TaskTerminalSinkHelper.DisposeSubscription(ref _subscription);
-        _completion.TrySetCanceled(_cancellationToken);
+        TaskTerminalWitnessHelper.DisposeSubscription(ref _subscription);
+        _ = _completion.TrySetCanceled(_cancellationToken);
     }
 
     /// <summary>Completes the sink with a result.</summary>
     /// <param name="result">The terminal result.</param>
-    private void Complete(bool result)
+    private void Complete(int result)
     {
-        if (!TaskTerminalSinkHelper.TryStop(ref _stopped))
+        if (!TaskTerminalWitnessHelper.TryStop(ref _stopped))
         {
             return;
         }
 
         _registration.Dispose();
-        _completion.TrySetResult(result);
-        TaskTerminalSinkHelper.DisposeSubscription(ref _subscription);
+        _ = _completion.TrySetResult(result);
+        TaskTerminalWitnessHelper.DisposeSubscription(ref _subscription);
     }
 }

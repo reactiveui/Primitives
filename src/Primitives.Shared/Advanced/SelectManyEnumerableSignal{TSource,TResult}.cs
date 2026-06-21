@@ -33,7 +33,7 @@ public sealed class SelectManyEnumerableSignal<TSource, TResult> : IObservable<T
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        SelectManyEnumerableObserver<TSource, TResult> sink = new(observer, _selector);
+        SelectManyEnumerableWitness<TSource, TResult> sink = new(observer, _selector);
         sink.SetSubscription(_source.Subscribe(sink));
         return sink;
     }

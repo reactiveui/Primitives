@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using ReactiveUI.Primitives.Async.Signals;
-using AsyncSignalFactory = ReactiveUI.Primitives.Async.Signals.Signal;
 
 namespace ReactiveUI.Primitives.Async;
 
@@ -17,20 +16,6 @@ namespace ReactiveUI.Primitives.Async;
 /// range of reactive programming patterns.</remarks>
 public static partial class SignalAsyncExtensions
 {
-    /// <summary>Cached creation options for stateless Signal publishing.</summary>
-    private static readonly SignalCreationOptions _statelessPublishOptions = SignalCreationOptions.Default with
-    {
-        IsStateless = true
-    };
-
-    /// <summary>Cached creation options for stateless behavior Signal publishing.</summary>
-    private static readonly BehaviorSignalCreationOptions _statelessBehaviorPublishOptions =
-        BehaviorSignalCreationOptions.Default with { IsStateless = true };
-
-    /// <summary>Cached creation options for stateless replay-latest Signal publishing.</summary>
-    private static readonly ReplayLatestSignalCreationOptions _statelessReplayLatestPublishOptions =
-        ReplayLatestSignalCreationOptions.Default with { IsStateless = true };
-
     /// <summary>Multicasting and publishing operators for an observable source sequence.</summary>
     /// <param name="source">The source sequence.</param>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
@@ -57,7 +42,8 @@ public static partial class SignalAsyncExtensions
         /// observable is asynchronous and supports concurrent observers.</remarks>
         /// <returns>A connectable observable sequence that multicasts notifications to all subscribed observers. The sequence
         /// does not begin emitting items until its Connect method is called.</returns>
-        public ConnectableSignalAsync<T> Publish() => source.Multicast(AsyncSignalFactory.Create<T>());
+        public ConnectableSignalAsync<T> Publish() =>
+            new(source, new SerialSignalAsync<T>());
 
         /// <summary>
         /// Creates a connectable observable sequence that shares a single subscription to the underlying sequence,
@@ -70,7 +56,14 @@ public static partial class SignalAsyncExtensions
         /// <returns>A connectable observable sequence that multicasts the source sequence using a Signal configured with the
         /// specified options.</returns>
         public ConnectableSignalAsync<T> Publish(SignalCreationOptions options) =>
-            source.Multicast(AsyncSignalFactory.Create<T>(options));
+            new(source, options switch
+            {
+                { PublishingOption: PublishingOption.Serial, IsStateless: false } => new SerialSignalAsync<T>(),
+                { PublishingOption: PublishingOption.Concurrent, IsStateless: false } => new ConcurrentSignalAsync<T>(),
+                { PublishingOption: PublishingOption.Serial, IsStateless: true } => new SerialStatelessSignalAsync<T>(),
+                { PublishingOption: PublishingOption.Concurrent, IsStateless: true } => new ConcurrentStatelessSignalAsync<T>(),
+                _ => throw new ArgumentOutOfRangeException(nameof(options), options, "Unsupported signal creation options.")
+            });
 
         /// <summary>
         /// Returns a connectable observable sequence that shares a single subscription to the underlying sequence and
@@ -83,7 +76,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>A connectable observable sequence that multicasts the source sequence and replays the latest value, starting
         /// with the specified initial value.</returns>
         public ConnectableSignalAsync<T> Publish(T initialValue) =>
-            source.Multicast(AsyncSignalFactory.CreateBehavior(initialValue));
+            new(source, new SerialReplayLatestSignalAsync<T>(new(initialValue)));
 
         /// <summary>
         /// Creates a connectable observable sequence that shares a single subscription to the underlying sequence and
@@ -97,7 +90,18 @@ public static partial class SignalAsyncExtensions
         /// <returns>A connectable observable sequence that multicasts the source sequence and emits the specified initial value
         /// to new subscribers.</returns>
         public ConnectableSignalAsync<T> Publish(T initialValue, BehaviorSignalCreationOptions options) =>
-            source.Multicast(AsyncSignalFactory.CreateBehavior(initialValue, options));
+            new(source, options switch
+            {
+                { PublishingOption: PublishingOption.Serial, IsStateless: false } =>
+                    new SerialReplayLatestSignalAsync<T>(new(initialValue)),
+                { PublishingOption: PublishingOption.Concurrent, IsStateless: false } =>
+                    new ConcurrentReplayLatestSignalAsync<T>(new(initialValue)),
+                { PublishingOption: PublishingOption.Serial, IsStateless: true } =>
+                    new SerialStatelessReplayLatestSignalAsync<T>(new(initialValue)),
+                { PublishingOption: PublishingOption.Concurrent, IsStateless: true } =>
+                    new ConcurrentStatelessReplayLatestSignalAsync<T>(new(initialValue)),
+                _ => throw new ArgumentOutOfRangeException(nameof(options), options, "Unsupported behavior signal creation options.")
+            });
 
         /// <summary>
         /// Creates a connectable observable sequence that shares a single subscription to the underlying source and
@@ -109,7 +113,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>A connectable observable sequence that multicasts notifications from the source without retaining state
         /// between subscribers.</returns>
         public ConnectableSignalAsync<T> StatelessPublish() =>
-            source.Multicast(AsyncSignalFactory.Create<T>(_statelessPublishOptions));
+            new(source, new SerialStatelessSignalAsync<T>());
 
         /// <summary>
         /// Creates a connectable observable sequence that shares a single subscription to the underlying source and
@@ -123,7 +127,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>A connectable observable sequence that multicasts the source sequence and replays the latest value, starting
         /// with the specified initial value.</returns>
         public ConnectableSignalAsync<T> StatelessPublish(T initialValue) =>
-            source.Multicast(AsyncSignalFactory.CreateBehavior(initialValue, _statelessBehaviorPublishOptions));
+            new(source, new SerialStatelessReplayLatestSignalAsync<T>(new(initialValue)));
 
         /// <summary>Creates a connectable observable sequence that replays only the most recent item to new subscribers.</summary>
         /// <remarks>This method enables late subscribers to immediately receive the most recently
@@ -133,7 +137,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>A connectable observable sequence that publishes the latest item to current and future subscribers until a
         /// new item is emitted.</returns>
         public ConnectableSignalAsync<T> ReplayLatestPublish() =>
-            source.Multicast(AsyncSignalFactory.CreateReplayLatest<T>());
+            new(source, new SerialReplayLatestSignalAsync<T>(Optional<T>.Empty));
 
         /// <summary>
         /// Creates a connectable observable sequence that replays only the latest published value to new subscribers,
@@ -147,7 +151,18 @@ public static partial class SignalAsyncExtensions
         /// <returns>A connectable observable sequence that replays the most recent value to each new subscriber after
         /// connection.</returns>
         public ConnectableSignalAsync<T> ReplayLatestPublish(ReplayLatestSignalCreationOptions options) =>
-            source.Multicast(AsyncSignalFactory.CreateReplayLatest<T>(options));
+            new(source, options switch
+            {
+                { PublishingOption: PublishingOption.Serial, IsStateless: false } =>
+                    new SerialReplayLatestSignalAsync<T>(Optional<T>.Empty),
+                { PublishingOption: PublishingOption.Concurrent, IsStateless: false } =>
+                    new ConcurrentReplayLatestSignalAsync<T>(Optional<T>.Empty),
+                { PublishingOption: PublishingOption.Serial, IsStateless: true } =>
+                    new SerialStatelessReplayLatestSignalAsync<T>(Optional<T>.Empty),
+                { PublishingOption: PublishingOption.Concurrent, IsStateless: true } =>
+                    new ConcurrentStatelessReplayLatestSignalAsync<T>(Optional<T>.Empty),
+                _ => throw new ArgumentOutOfRangeException(nameof(options), options, "Unsupported replay-latest signal creation options.")
+            });
 
         /// <summary>
         /// Creates a connectable observable sequence that replays only the latest item to new subscribers and publishes
@@ -160,6 +175,6 @@ public static partial class SignalAsyncExtensions
         /// <returns>A connectable observable sequence that replays the most recent item to new subscribers and multicasts
         /// notifications to all current subscribers.</returns>
         public ConnectableSignalAsync<T> StatelessReplayLatestPublish() =>
-            source.Multicast(AsyncSignalFactory.CreateReplayLatest<T>(_statelessReplayLatestPublishOptions));
+            new(source, new SerialStatelessReplayLatestSignalAsync<T>(Optional<T>.Empty));
     }
 }

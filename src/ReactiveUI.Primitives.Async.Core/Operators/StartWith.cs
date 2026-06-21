@@ -20,7 +20,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="value">The value to prepend to the sequence.</param>
         /// <returns>An observable sequence that emits the specified value first, followed by the elements
         /// of the source sequence.</returns>
-        public IObservableAsync<T> StartWith(T value) => @this.Prepend(value);
+        public IObservableAsync<T> StartWith(T value) => new LeadSignal<T>(@this, [value]);
 
         /// <summary>Prepends the specified values to the beginning of the observable sequence.</summary>
         /// <remarks>This is equivalent to Prepend(IEnumerable{T}) and follows the System.Reactive
@@ -28,7 +28,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="values">The values to prepend to the sequence. Cannot be null.</param>
         /// <returns>An observable sequence that emits the specified values first, followed by the elements
         /// of the source sequence.</returns>
-        public IObservableAsync<T> StartWith(IEnumerable<T> values) => @this.Prepend(values);
+        public IObservableAsync<T> StartWith(IEnumerable<T> values) => new LeadSignal<T>(@this, values);
 
         /// <summary>Prepends the specified values to the beginning of the observable sequence.</summary>
         /// <remarks>This overload accepts a params array for convenience. Values are emitted in the
@@ -36,6 +36,6 @@ public static partial class SignalAsyncExtensions
         /// <param name="values">The values to prepend to the sequence.</param>
         /// <returns>An observable sequence that emits the specified values first, followed by the elements
         /// of the source sequence.</returns>
-        public IObservableAsync<T> StartWith(params T[] values) => @this.Prepend(values);
+        public IObservableAsync<T> StartWith(params T[] values) => new LeadSignal<T>(@this, values);
     }
 }

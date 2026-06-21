@@ -111,7 +111,7 @@ public static class FirstAsValueTaskHelper<T>
             finally
             {
                 _subscription = null;
-                Interlocked.CompareExchange(ref _pooled, this, null);
+                _ = Interlocked.CompareExchange(ref _pooled, this, null);
             }
         }
     }

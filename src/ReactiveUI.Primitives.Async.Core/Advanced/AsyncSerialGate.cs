@@ -56,12 +56,9 @@ public sealed class AsyncSerialGate : IDisposable
         }
 
         // Fast uncontended acquire: pure CAS, no semaphore touch.
-        if (Interlocked.CompareExchange(ref _ownerThreadId, currentThreadId, 0) == 0)
-        {
-            return new(new Lease(this));
-        }
-
-        return WaitForEntryAsync(cancellationToken);
+        return Interlocked.CompareExchange(ref _ownerThreadId, currentThreadId, 0) == 0
+            ? new(new Lease(this))
+            : WaitForEntryAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -104,7 +101,7 @@ public sealed class AsyncSerialGate : IDisposable
             return;
         }
 
-        _semaphore.Release();
+        _ = _semaphore.Release();
     }
 
     /// <summary>Slow path: park as a waiter and retry the acquire CAS after each semaphore signal.</summary>
@@ -112,7 +109,7 @@ public sealed class AsyncSerialGate : IDisposable
     /// <returns>A <see cref="Lease"/> for the acquired gate.</returns>
     private async ValueTask<Lease> WaitForEntryAsync(CancellationToken cancellationToken)
     {
-        Interlocked.Increment(ref _waiters);
+        _ = Interlocked.Increment(ref _waiters);
         try
         {
             while (true)
@@ -129,7 +126,7 @@ public sealed class AsyncSerialGate : IDisposable
         }
         finally
         {
-            Interlocked.Decrement(ref _waiters);
+            _ = Interlocked.Decrement(ref _waiters);
         }
     }
 

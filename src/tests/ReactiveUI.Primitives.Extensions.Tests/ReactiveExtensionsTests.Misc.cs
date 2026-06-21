@@ -43,18 +43,18 @@ public partial class ReactiveExtensionsTests
                 if (x.Value)
                 {
                     await Task.Delay(LongDelayMilliseconds);
-                    Interlocked.Increment(ref result);
+                    _ = Interlocked.Increment(ref result);
                 }
                 else
                 {
                     await Task.Delay(ShortDelayMilliseconds);
-                    Interlocked.Decrement(ref result);
+                    _ = Interlocked.Decrement(ref result);
                 }
             }
             finally
             {
                 x.Sync.Dispose();
-                Interlocked.Increment(ref itterations);
+                _ = Interlocked.Increment(ref itterations);
             }
         }
 
@@ -67,7 +67,7 @@ public partial class ReactiveExtensionsTests
         await Task.WhenAll(tasks);
         while (itterations < SampleValue6)
         {
-            Thread.Yield();
+            _ = Thread.Yield();
         }
 
         // Then
@@ -150,7 +150,7 @@ public partial class ReactiveExtensionsTests
         Subject<int> subject = new();
         List<int> trueResults = [];
         List<int> falseResults = [];
-        (var trueObs, var falseObs) = subject.Partition(x => x % SampleValue2 == 0);
+        var (trueObs, falseObs) = subject.Partition(x => x % SampleValue2 == 0);
         using var trueSub = trueObs.Subscribe(trueResults.Add);
         using var falseSub = falseObs.Subscribe(falseResults.Add);
         for (var i = 1; i <= SampleValue10; i++)
@@ -263,7 +263,7 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         List<(int Previous, int Current)> results = [];
-        subject.Pairwise().Subscribe(results.Add);
+        _ = subject.Pairwise().Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnNext(SampleValue3);
@@ -282,7 +282,7 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         List<int> results = [];
-        subject.ScanWithInitial(SampleValue10, (acc, x) => acc + x).Subscribe(results.Add);
+        _ = subject.ScanWithInitial(SampleValue10, (acc, x) => acc + x).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         await Assert.That(results).IsCollectionEqualTo([SampleValue10, SampleValue11, SampleValue13]);
@@ -296,7 +296,7 @@ public partial class ReactiveExtensionsTests
         Subject<int> subject = new();
         Subject<object> trigger = new();
         List<int> results = [];
-        subject.SampleLatest(trigger).Subscribe(results.Add);
+        _ = subject.SampleLatest(trigger).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         trigger.OnNext(new()); // Should emit 2
@@ -313,7 +313,7 @@ public partial class ReactiveExtensionsTests
         Subject<int> emptySubject = new();
         Subject<int> fallbackSubject = new();
         List<int> results = [];
-        emptySubject.SwitchIfEmpty(fallbackSubject).Subscribe(results.Add);
+        _ = emptySubject.SwitchIfEmpty(fallbackSubject).Subscribe(results.Add);
         emptySubject.OnCompleted(); // Empty completes
         fallbackSubject.OnNext(SampleValue42);
         fallbackSubject.OnCompleted();
@@ -325,9 +325,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ToReadOnlyBehavior_CreatesReadOnly()
     {
-        (var observable, var observer) = ReactiveExtensions.ToReadOnlyBehavior(SampleValue10);
+        var (observable, observer) = ReactiveExtensions.ToReadOnlyBehavior(SampleValue10);
         List<int> results = [];
-        observable.Subscribe(results.Add);
+        _ = observable.Subscribe(results.Add);
         observer.OnNext(SampleValue20);
         observer.OnNext(SampleValue30);
         await Assert.That(results).IsCollectionEqualTo([SampleValue10, SampleValue20, SampleValue30]);
@@ -362,7 +362,7 @@ public partial class ReactiveExtensionsTests
     {
         TestNotifyPropertyChanged obj = new() { TestProperty = InitialValueLiteral };
         List<string> results = [];
-        obj.ToPropertyObservable(x => x.TestProperty).Subscribe(results.Add);
+        _ = obj.ToPropertyObservable(x => x.TestProperty).Subscribe(results.Add);
         obj.TestProperty = ChangedValueLiteral;
         await Assert.That(results).IsCollectionEqualTo([InitialValueLiteral, ChangedValueLiteral]);
     }
@@ -422,7 +422,7 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         List<int> results = [];
-        subject.LatestOrDefault(SampleValue42).Subscribe(results.Add);
+        _ = subject.LatestOrDefault(SampleValue42).Subscribe(results.Add);
         subject.OnNext(SampleValue42); // Same as default, should be suppressed by DistinctUntilChanged
         subject.OnNext(1);
         subject.OnNext(1); // Duplicate, suppressed
@@ -473,7 +473,7 @@ public partial class ReactiveExtensionsTests
             () =>
             {
                 completed = true;
-                completionSource.TrySetResult(true);
+                _ = completionSource.TrySetResult(true);
             });
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
@@ -516,7 +516,7 @@ public partial class ReactiveExtensionsTests
     {
         VirtualClock scheduler = new();
         var ran = false;
-        scheduler.ScheduleSafe(() => ran = true);
+        _ = scheduler.ScheduleSafe(() => ran = true);
         await Assert.That(ran).IsFalse();
         scheduler.AdvanceBy(1);
         await Assert.That(ran).IsTrue();
@@ -530,7 +530,7 @@ public partial class ReactiveExtensionsTests
         const int DelayTicks = 50;
         VirtualClock scheduler = new();
         var ran = false;
-        scheduler.ScheduleSafe(TimeSpan.FromTicks(DelayTicks), () => ran = true);
+        _ = scheduler.ScheduleSafe(TimeSpan.FromTicks(DelayTicks), () => ran = true);
         await Assert.That(ran).IsFalse();
         scheduler.AdvanceBy(DelayTicks + 1);
         await Assert.That(ran).IsTrue();

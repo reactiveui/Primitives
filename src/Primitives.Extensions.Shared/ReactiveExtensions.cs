@@ -48,7 +48,7 @@ public static class ReactiveExtensions
         /// <summary>Emits each element of an IEnumerable.</summary>
         /// <returns>Observable of elements.</returns>
         public IObservable<T> FromArray() =>
-            source.FromArray(null);
+            new FromArrayObservable<T>(source, null);
 
         /// <summary>Emits each element of an IEnumerable.</summary>
         /// <param name="scheduler">Scheduler (optional).</param>
@@ -81,7 +81,7 @@ public static class ReactiveExtensions
         /// <summary>Flattens a sequence of enumerables into individual values.</summary>
         /// <returns>A flattened observable.</returns>
         public IObservable<T> ForEach() =>
-            source.ForEach(null);
+            new ForEachObservable<T>(source, null);
 
         /// <summary>Flattens a sequence of enumerables into individual values.</summary>
         /// <param name="scheduler">Scheduler (optional).</param>
@@ -119,7 +119,7 @@ public static class ReactiveExtensions
         /// <param name="idleTime">The idle time.</param>
         /// <returns>A sequence of buffered lists.</returns>
         public IObservable<IList<T>> BufferUntilIdle(TimeSpan idleTime) =>
-            source.BufferUntilIdle(idleTime, null);
+            new BufferUntilIdleObservable<T>(source, idleTime, Sequencer.Default);
 
         /// <summary>Emit a batch when the stream goes quiet.</summary>
         /// <param name="idleTime">The idle time.</param>
@@ -292,7 +292,24 @@ public static class ReactiveExtensions
         /// <param name="onError">The on error.</param>
         /// <returns>A sequence that retries on error with optional delay.</returns>
         public IObservable<T> OnErrorRetry<TException>(Action<TException> onError)
-            where TException : Exception => source.OnErrorRetry(onError, TimeSpan.Zero);
+            where TException : Exception =>
+            new RetryWithBackoffObservable<T>(
+                source,
+                new(
+                    MaxRetries: int.MaxValue,
+                    InitialDelay: TimeSpan.Zero,
+                    BackoffFactor: 1.0,
+                    MaxDelay: null,
+                    Scheduler: Sequencer.Default,
+                    OnError: ex =>
+                    {
+                        if (ex is not TException tex)
+                        {
+                            return;
+                        }
+
+                        onError(tex);
+                    }));
 
         /// <summary>When caught exception, do onError action and repeat observable sequence after delay time.</summary>
         /// <typeparam name="TException">The type of the exception.</typeparam>
@@ -300,7 +317,24 @@ public static class ReactiveExtensions
         /// <param name="delay">The delay.</param>
         /// <returns>A sequence that retries on error with optional delay.</returns>
         public IObservable<T> OnErrorRetry<TException>(Action<TException> onError, TimeSpan delay)
-            where TException : Exception => source.OnErrorRetry(onError, int.MaxValue, delay);
+            where TException : Exception =>
+            new RetryWithBackoffObservable<T>(
+                source,
+                new(
+                    MaxRetries: int.MaxValue,
+                    InitialDelay: delay,
+                    BackoffFactor: 1.0,
+                    MaxDelay: null,
+                    Scheduler: Sequencer.Default,
+                    OnError: ex =>
+                    {
+                        if (ex is not TException tex)
+                        {
+                            return;
+                        }
+
+                        onError(tex);
+                    }));
 
         /// <summary>When caught exception, do onError action and repeat observable sequence during within retryCount.</summary>
         /// <typeparam name="TException">The type of the exception.</typeparam>
@@ -308,7 +342,24 @@ public static class ReactiveExtensions
         /// <param name="retryCount">The retry count.</param>
         /// <returns>A sequence that retries on error with optional delay.</returns>
         public IObservable<T> OnErrorRetry<TException>(Action<TException> onError, int retryCount)
-            where TException : Exception => source.OnErrorRetry(onError, retryCount, TimeSpan.Zero);
+            where TException : Exception =>
+            new RetryWithBackoffObservable<T>(
+                source,
+                new(
+                    MaxRetries: retryCount,
+                    InitialDelay: TimeSpan.Zero,
+                    BackoffFactor: 1.0,
+                    MaxDelay: null,
+                    Scheduler: Sequencer.Default,
+                    OnError: ex =>
+                    {
+                        if (ex is not TException tex)
+                        {
+                            return;
+                        }
+
+                        onError(tex);
+                    }));
 
         /// <summary>When caught exception, do onError action and repeat observable sequence after delay time during within retryCount.</summary>
         /// <typeparam name="TException">The type of the exception.</typeparam>
@@ -317,7 +368,24 @@ public static class ReactiveExtensions
         /// <param name="delay">The delay.</param>
         /// <returns>A sequence that retries on error with optional delay.</returns>
         public IObservable<T> OnErrorRetry<TException>(Action<TException> onError, int retryCount, TimeSpan delay)
-            where TException : Exception => source.OnErrorRetry(onError, retryCount, delay, Sequencer.Default);
+            where TException : Exception =>
+            new RetryWithBackoffObservable<T>(
+                source,
+                new(
+                    MaxRetries: retryCount,
+                    InitialDelay: delay,
+                    BackoffFactor: 1.0,
+                    MaxDelay: null,
+                    Scheduler: Sequencer.Default,
+                    OnError: ex =>
+                    {
+                        if (ex is not TException tex)
+                        {
+                            return;
+                        }
+
+                        onError(tex);
+                    }));
 
         /// <summary>
         /// When caught exception, do onError action and repeat observable sequence after delay
@@ -493,7 +561,15 @@ public static class ReactiveExtensions
         /// <param name="initialDelay">Initial backoff delay.</param>
         /// <returns>Retried sequence with backoff.</returns>
         public IObservable<T> RetryWithBackoff(int maxRetries, TimeSpan initialDelay) =>
-            source.RetryWithBackoff(maxRetries, initialDelay, DefaultBackoffFactor, null, null);
+            new RetryWithBackoffObservable<T>(
+                source,
+                new(
+                    MaxRetries: maxRetries,
+                    InitialDelay: initialDelay,
+                    BackoffFactor: DefaultBackoffFactor,
+                    MaxDelay: null,
+                    Scheduler: Sequencer.Default,
+                    OnError: null));
 
         /// <summary>Retries with exponential backoff.</summary>
         /// <param name="maxRetries">Maximum number of retries.</param>
@@ -560,7 +636,7 @@ public static class ReactiveExtensions
         /// <param name="window">Time window.</param>
         /// <returns>Throttle-first sequence.</returns>
         public IObservable<T> ThrottleFirst(TimeSpan window) =>
-            source.ThrottleFirst(window, null);
+            new ThrottleFirstObservable<T>(source, window, Sequencer.Default);
 
         /// <summary>Emits only the first value in each time window.</summary>
         /// <param name="window">Time window.</param>
@@ -618,7 +694,7 @@ public static class ReactiveExtensions
         /// <param name="dueTime">Debounce time.</param>
         /// <returns>Debounced sequence.</returns>
         public IObservable<T> DebounceImmediate(TimeSpan dueTime) =>
-            source.DebounceImmediate(dueTime, null);
+            new DebounceImmediateObservable<T>(source, dueTime, Sequencer.Default);
 
         /// <summary>Debounces with an immediate first emission then standard debounce behavior.</summary>
         /// <param name="dueTime">Debounce time.</param>
@@ -632,7 +708,7 @@ public static class ReactiveExtensions
         /// <param name="condition">The condition.</param>
         /// <returns>An IObservable of T.</returns>
         public IObservable<T> DebounceUntil(TimeSpan debounce, Func<T, bool> condition) =>
-            source.DebounceUntil(debounce, condition, null);
+            new DebounceUntilObservable<T>(source, debounce, condition, Sequencer.Default);
 
         /// <summary>Debounce until a condition becomes true.</summary>
         /// <param name="debounce">The debounce.</param>
@@ -699,7 +775,7 @@ public static class ReactiveExtensions
         /// <param name="inactivityPeriod">Inactivity period.</param>
         /// <returns>Sequence of buffered lists.</returns>
         public IObservable<IList<T>> BufferUntilInactive(TimeSpan inactivityPeriod) =>
-            source.BufferUntilInactive(inactivityPeriod, null);
+            new BufferUntilIdleObservable<T>(source, inactivityPeriod, Sequencer.Default);
 
         /// <summary>Buffers items until inactivity period elapses then emits and resets buffer.</summary>
         /// <param name="inactivityPeriod">Inactivity period.</param>
@@ -909,7 +985,7 @@ public static class ReactiveExtensions
         /// <param name="regexPattern">Regex pattern.</param>
         /// <returns>Filtered sequence.</returns>
         public IObservable<string> Filter(string regexPattern) =>
-            source.Filter(new Regex(regexPattern, RegexOptions.None, DefaultRegexMatchTimeout));
+            new FilterRegexObservable(source, new Regex(regexPattern, RegexOptions.None, DefaultRegexMatchTimeout));
 
         /// <summary>Filters strings by regex.</summary>
         /// <param name="regex">Regex.</param>
@@ -1030,7 +1106,7 @@ public static class ReactiveExtensions
         /// <param name="action">Action to run.</param>
         /// <returns>Completion signal.</returns>
         public IObservable<RxVoid> Using(Action<T>? action) =>
-            obj.Using(action, null);
+            new UsingActionObservable<T>(obj, action, null);
 
         /// <summary>Using helper with Action.</summary>
         /// <param name="action">Action to run.</param>
@@ -1044,7 +1120,7 @@ public static class ReactiveExtensions
         /// <param name="function">Function to invoke.</param>
         /// <returns>Observable of result.</returns>
         public IObservable<TResult> Using<TResult>(Func<T, TResult> function) =>
-            obj.Using(function, null);
+            new UsingFuncObservable<T, TResult>(obj, function, null);
 
         /// <summary>Using helper with Func.</summary>
         /// <typeparam name="TResult">Result type.</typeparam>

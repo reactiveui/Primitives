@@ -95,7 +95,7 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         List<int> results = [];
-        subject.CatchAndReturn<int, InvalidOperationException>(ex => -1).Subscribe(results.Add);
+        _ = subject.CatchAndReturn<int, InvalidOperationException>(ex => -1).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnError(new InvalidOperationException("boom"));
         await Assert.That(results).IsCollectionEqualTo([1, -1]);

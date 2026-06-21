@@ -105,12 +105,7 @@ public static partial class SignalAsyncExtensions
         protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
-            if (predicate is not null && !predicate(value))
-            {
-                return default;
-            }
-
-            return SetResultAndDisposeAsync(value);
+            return predicate is not null && !predicate(value) ? default : SetResultAndDisposeAsync(value);
         }
 
         /// <inheritdoc/>

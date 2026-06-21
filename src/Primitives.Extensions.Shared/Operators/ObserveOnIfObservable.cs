@@ -95,7 +95,7 @@ internal sealed class ObserveOnIfObservable<T>(
                 scheduler = _currentScheduler;
             }
 
-            scheduler.Schedule((Sink: this, Value: value), static state => state.Sink.ForwardNext(state.Value));
+            _ = scheduler.Schedule((Sink: this, Value: value), static state => state.Sink.ForwardNext(state.Value));
         }
 
         /// <inheritdoc/>

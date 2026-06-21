@@ -170,9 +170,9 @@ public class FirstMatchFromCandidatesAsyncPathTests
         var completed = false;
         using var sub = ((IReadOnlyList<string>)keys)
             .FirstMatchFromCandidates(
-            key => key == SyncErrorKey
-                    ? new SyncErroringObservable<string>(new InvalidOperationException(SyncErrorKey))
-                    : Observable.Return(key),
+            static key => key == SyncErrorKey
+                ? new SyncErroringObservable<string>(new InvalidOperationException(SyncErrorKey))
+                : Observable.Return(key),
             static raw => raw,
             static value => value == HitKey,
             Fallback).Subscribe(results.Add, () => completed = true);

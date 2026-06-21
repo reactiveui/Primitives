@@ -179,15 +179,10 @@ public static partial class SignalAsyncExtensions
             CancellationToken subscribeToken) : WitnessAsync<T?>(subscribeToken)
         {
             /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T? value, CancellationToken cancellationToken)
-            {
-                if (value is null)
-                {
-                    return default;
-                }
-
-                return downstream.OnNextAsync(value, cancellationToken);
-            }
+            protected override ValueTask OnNextAsyncCore(T? value, CancellationToken cancellationToken) =>
+                value is null
+                    ? default
+                    : downstream.OnNextAsync(value, cancellationToken);
 
             /// <inheritdoc/>
             protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>

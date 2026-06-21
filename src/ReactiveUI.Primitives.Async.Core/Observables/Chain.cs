@@ -12,5 +12,5 @@ public static partial class SignalAsync
     /// <param name="sources">The sources to concatenate.</param>
     /// <returns>An observable sequence that concatenates the sources.</returns>
     public static IObservableAsync<T> Chain<T>(params IObservableAsync<T>[] sources) =>
-        sources.Chain();
+        new ChainEnumerableSignal<T>(sources);
 }

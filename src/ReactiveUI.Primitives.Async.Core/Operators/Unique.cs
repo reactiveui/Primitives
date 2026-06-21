@@ -27,7 +27,12 @@ public static partial class SignalAsyncExtensions
         /// affected.</remarks>
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not equal to their
         /// immediate predecessor.</returns>
-        public IObservableAsync<T> Unique() => @this.Unique(EqualityComparer<T>.Default);
+        public IObservableAsync<T> Unique()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(@this);
+
+            return new UniqueSignal<T>(@this, EqualityComparer<T>.Default);
+        }
 
         /// <summary>
         /// Returns an observable sequence that emits elements from the source sequence only when the current element is
@@ -59,8 +64,13 @@ public static partial class SignalAsyncExtensions
         /// <param name="keySelector">A function that extracts the comparison key from each element in the source sequence.</param>
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
         /// duplicates according to the specified key.</returns>
-        public IObservableAsync<T> UniqueBy<TKey>(Func<T, TKey> keySelector) =>
-            @this.UniqueBy(keySelector, EqualityComparer<TKey>.Default);
+        public IObservableAsync<T> UniqueBy<TKey>(Func<T, TKey> keySelector)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(keySelector);
+
+            return new UniqueBySignal<T, TKey>(@this, keySelector, EqualityComparer<TKey>.Default);
+        }
 
         /// <summary>
         /// Returns an observable sequence that emits elements from the source sequence, suppressing consecutive
@@ -86,50 +96,6 @@ public static partial class SignalAsyncExtensions
             return new UniqueBySignal<T, TKey>(@this, keySelector, equalityComparer);
         }
 
-        /// <summary>
-        /// Returns an observable sequence that emits only distinct consecutive elements, suppressing duplicates that
-        /// are equal to the previous element.
-        /// </summary>
-        /// <returns>An observable sequence that contains only the elements from the source sequence that are not equal to their
-        /// immediate predecessor.</returns>
-        public IObservableAsync<T> DistinctUntilChanged() => @this.Unique();
-
-        /// <summary>
-        /// Returns an observable sequence that emits elements from the source sequence only when the current element is
-        /// not equal to the previous element, as determined by the specified equality comparer.
-        /// </summary>
-        /// <param name="equalityComparer">An equality comparer used to determine whether consecutive elements are considered equal.</param>
-        /// <returns>An observable sequence that contains only distinct consecutive elements from the source sequence, as
-        /// determined by the specified equality comparer.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="equalityComparer"/> is <see langword="null"/>.</exception>
-        public IObservableAsync<T> DistinctUntilChanged(IEqualityComparer<T> equalityComparer) =>
-            @this.Unique(equalityComparer);
-
-        /// <summary>
-        /// Returns an observable sequence that emits elements from the source sequence, suppressing consecutive
-        /// duplicates as determined by a key selector function.
-        /// </summary>
-        /// <typeparam name="TKey">The type of the key used to determine whether consecutive elements are considered duplicates.</typeparam>
-        /// <param name="keySelector">A function that extracts the comparison key from each element in the source sequence.</param>
-        /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
-        /// duplicates according to the specified key.</returns>
-        public IObservableAsync<T> DistinctUntilChangedBy<TKey>(Func<T, TKey> keySelector) =>
-            @this.UniqueBy(keySelector);
-
-        /// <summary>
-        /// Returns an observable sequence that emits elements from the source sequence, suppressing consecutive
-        /// duplicates as determined by a key selector and equality comparer.
-        /// </summary>
-        /// <typeparam name="TKey">The type of the key used to determine whether consecutive elements are considered duplicates.</typeparam>
-        /// <param name="keySelector">A function that extracts the comparison key from each element in the source sequence.</param>
-        /// <param name="equalityComparer">An equality comparer used to compare keys for equality.</param>
-        /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
-        /// duplicates according to the specified key and comparer.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="keySelector"/> or <paramref name="equalityComparer"/> is null.</exception>
-        public IObservableAsync<T> DistinctUntilChangedBy<TKey>(
-            Func<T, TKey> keySelector,
-            IEqualityComparer<TKey> equalityComparer) =>
-            @this.UniqueBy(keySelector, equalityComparer);
     }
 
     /// <summary>

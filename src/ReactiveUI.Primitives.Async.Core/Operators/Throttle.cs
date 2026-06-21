@@ -26,7 +26,11 @@ public static partial class SignalAsyncExtensions
         /// element within the specified due time.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
         public IObservableAsync<T> Throttle(TimeSpan dueTime)
-            => @this.Throttle(dueTime, (TimeProvider?)null);
+        {
+            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
+
+            return new ThrottleSignal<T>(@this, dueTime, TimeProvider.System);
+        }
 
         /// <summary>
         /// Ignores elements from the source sequence that are followed by another element within
@@ -41,14 +45,7 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
         public IObservableAsync<T> Throttle(TimeSpan dueTime, TimeProvider? timeProvider)
         {
-#if NET8_0_OR_GREATER
-            ArgumentOutOfRangeException.ThrowIfLessThan(dueTime, TimeSpan.Zero);
-#else
-            if (dueTime < TimeSpan.Zero)
-            {
-                throw new ArgumentOutOfRangeException(nameof(dueTime));
-            }
-#endif
+            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
 
             return new ThrottleSignal<T>(@this, dueTime, timeProvider ?? TimeProvider.System);
         }
@@ -71,12 +68,7 @@ public static partial class SignalAsyncExtensions
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
-        if (timeProvider == TimeProvider.System)
-        {
-            return new(Task.Delay(delay, cancellationToken));
-        }
-
-        return PooledDelaySource.Rent().BeginAsync(delay, timeProvider, cancellationToken);
+        return timeProvider == TimeProvider.System ? new(Task.Delay(delay, cancellationToken)) : PooledDelaySource.Rent().BeginAsync(delay, timeProvider, cancellationToken);
     }
 
     /// <summary>

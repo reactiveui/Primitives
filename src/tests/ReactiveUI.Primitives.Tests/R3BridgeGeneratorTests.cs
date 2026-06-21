@@ -94,7 +94,7 @@ public class R3BridgeGeneratorTests
                                   }
                               }
                               """;
-        (var diagnostics, var generatedSources) = RunGenerators(Source);
+        var (diagnostics, generatedSources) = RunGenerators(Source);
         await Assert.That(diagnostics.Length).IsEqualTo(0);
         await Assert.That(Array.Exists(
             generatedSources,
@@ -116,7 +116,7 @@ public class R3BridgeGeneratorTests
                                   public static IObservable<int> Use() => Signal.Emit(1);
                               }
                               """;
-        (var diagnostics, var generatedSources) = RunGenerators(Source);
+        var (diagnostics, generatedSources) = RunGenerators(Source);
         await Assert.That(diagnostics.Length).IsEqualTo(0);
         await Assert.That(Array.Exists(
             generatedSources,

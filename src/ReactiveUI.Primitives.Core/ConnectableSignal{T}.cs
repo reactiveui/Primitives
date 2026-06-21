@@ -70,7 +70,7 @@ public sealed class ConnectableSignal<T> : IObservable<T>
             }
 
             var connection = new Connection(this, sourceSubscription);
-            _connection = new StrongBox<Connection>(connection);
+            _connection = new(connection);
             return connection;
         }
     }

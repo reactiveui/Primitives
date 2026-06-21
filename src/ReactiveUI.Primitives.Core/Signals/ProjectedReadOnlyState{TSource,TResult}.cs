@@ -222,7 +222,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
             return;
         }
 
-        throw new ObjectDisposedException(nameof(ProjectedReadOnlyState<TSource, TResult>));
+        throw new ObjectDisposedException("ProjectedReadOnlyState");
     }
 
     /// <summary>Projection subscription.</summary>

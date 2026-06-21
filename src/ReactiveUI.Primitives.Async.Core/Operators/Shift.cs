@@ -23,45 +23,14 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence with element notifications time-shifted by the specified duration.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="delayInterval"/> is negative.</exception>
         public IObservableAsync<T> Shift(TimeSpan delayInterval)
-            => @this.Delay(delayInterval, (TimeProvider?)null);
-
-        /// <summary>
-        /// Time-shifts the observable sequence by the specified time span. Each element notification
-        /// is delayed by the specified duration.
-        /// </summary>
-        /// <param name="delayInterval">The time span by which to delay each element notification. Must be non-negative.</param>
-        /// <returns>An observable sequence with element notifications time-shifted by the specified duration.</returns>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="delayInterval"/> is negative.</exception>
-        public IObservableAsync<T> Delay(TimeSpan delayInterval)
-            => @this.Shift(delayInterval);
-
-        /// <summary>
-        /// Time-shifts the observable sequence by the specified time span. Each element notification
-        /// is delayed by the specified duration.
-        /// </summary>
-        /// <param name="delayInterval">The time span by which to delay each element notification. Must be non-negative.</param>
-        /// <param name="timeProvider">An optional time provider for controlling timing. If null, <see cref="TimeProvider.System"/>
-        /// is used.</param>
-        /// <returns>An observable sequence with element notifications time-shifted by the specified duration.</returns>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="delayInterval"/> is negative.</exception>
-        public IObservableAsync<T> Delay(TimeSpan delayInterval, TimeProvider? timeProvider)
         {
-#if NET8_0_OR_GREATER
-            ArgumentOutOfRangeException.ThrowIfLessThan(delayInterval, TimeSpan.Zero);
-#else
-            if (delayInterval < TimeSpan.Zero)
-            {
-                throw new ArgumentOutOfRangeException(nameof(delayInterval));
-            }
-#endif
+            ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(delayInterval, TimeSpan.Zero);
 
-            if (delayInterval == TimeSpan.Zero)
-            {
-                return @this;
-            }
-
-            return new DelaySignal<T>(@this, delayInterval, timeProvider ?? TimeProvider.System);
+            return delayInterval == TimeSpan.Zero
+                ? @this
+                : new DelaySignal<T>(@this, delayInterval, TimeProvider.System);
         }
+
     }
 
     /// <summary>An observable that delays each element notification by a specified duration.</summary>

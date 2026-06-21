@@ -41,7 +41,8 @@ public static partial class SignalAsync
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
         Justification = "Public factory API — caller specifies T explicitly: SignalAsync.Throw<int>(ex).")]
-    public static IObservableAsync<T> Throw<T>(Exception error) => Fail<T>(error);
+    public static IObservableAsync<T> Throw<T>(Exception error) =>
+        new ThrowSignalAsync<T>(error ?? throw new ArgumentNullException(nameof(error)));
 
     /// <summary>Represents an asynchronous observable sequence that immediately terminates with the specified exception.</summary>
     /// <remarks>Use this type to create an observable sequence that fails immediately upon subscription,

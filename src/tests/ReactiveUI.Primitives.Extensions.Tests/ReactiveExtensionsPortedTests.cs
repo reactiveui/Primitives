@@ -29,7 +29,7 @@ public sealed class ReactiveExtensionsPortedTests
         await Assert.That(heartbeatUpdate.Update).IsEqualTo(HeartbeatUpdate);
         await Assert.That(stale.IsStale).IsTrue();
         await Assert.That(staleUpdate.Update).IsEqualTo(StaleUpdate);
-        Assert.Throws<InvalidOperationException>(() => _ = stale.Update);
+        _ = Assert.Throws<InvalidOperationException>(() => _ = stale.Update);
     }
 
     /// <summary>Verifies null filtering, signal projection, and boolean helpers.</summary>
@@ -206,7 +206,7 @@ public sealed class ReactiveExtensionsPortedTests
         Subject<object> trigger = new();
         using var latestSub = source.LatestOrDefault(DefaultValue).Subscribe(latest.Add);
         using var pairwiseSub = source.Pairwise().Subscribe(pairwise.Add);
-        (var truePartition, var falsePartition) = source.Partition(x => x % PartitionDivisor == 0);
+        var (truePartition, falsePartition) = source.Partition(x => x % PartitionDivisor == 0);
         using var evenSub = truePartition.Subscribe(even.Add);
         using var oddSub = falsePartition.Subscribe(odd.Add);
         using var sampledSub = source.SampleLatest(trigger).Subscribe(sampled.Add);

@@ -76,7 +76,7 @@ public class SelectLatestAsyncObservableTests
         subject.OnNext(TriggerValue);
         subject.OnCompleted();
         sub.Dispose();
-        gate.TrySetResult(true);
+        _ = gate.TrySetResult(true);
 
         // Give the awaited continuation a chance to attempt delivery.
         await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
@@ -113,7 +113,7 @@ public class SelectLatestAsyncObservableTests
             await Task.Delay(PollIntervalMilliseconds).ConfigureAwait(false);
         }
 
-        slowGate.TrySetResult(true);
+        _ = slowGate.TrySetResult(true);
         subject.OnCompleted();
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 

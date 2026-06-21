@@ -277,7 +277,7 @@ public partial class CombiningOperatorTests
             null,
             async _ =>
             {
-                completionBlocked.TrySetResult();
+                IgnoredResult.Of(completionBlocked.TrySetResult());
                 await allowCompletion.Task;
             });
 
@@ -293,7 +293,7 @@ public partial class CombiningOperatorTests
 
         await Assert.That(items).IsEmpty();
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 
@@ -315,7 +315,7 @@ public partial class CombiningOperatorTests
             },
             async _ =>
             {
-                completionBlocked.TrySetResult();
+                IgnoredResult.Of(completionBlocked.TrySetResult());
                 await allowCompletion.Task;
             });
 
@@ -329,7 +329,7 @@ public partial class CombiningOperatorTests
 
         await Assert.That(errors).IsEmpty();
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 

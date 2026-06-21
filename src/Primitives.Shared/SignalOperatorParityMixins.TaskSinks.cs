@@ -16,7 +16,7 @@ public static partial class LinqExtensions
     /// <param name="source">The source sequence.</param>
     /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
     /// <returns>A task that completes with whether any value was observed.</returns>
-    private static Task<bool> AnyTaskAsync<T>(IObservable<T> source, CancellationToken cancellationToken)
+    internal static Task<bool> AnyTaskAsync<T>(IObservable<T> source, CancellationToken cancellationToken)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -30,7 +30,7 @@ public static partial class LinqExtensions
             return Task.FromResult(range.Count > 0);
         }
 
-        TaskAnySink<T> sink = new(cancellationToken);
+        TaskAnyWitness<T> sink = new(cancellationToken);
         sink.RegisterCancellation();
         sink.SetSubscription(source.Subscribe(sink));
         return sink.Task;
@@ -42,7 +42,7 @@ public static partial class LinqExtensions
     /// <param name="predicate">The predicate.</param>
     /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
     /// <returns>A task that completes with whether any value matched the predicate.</returns>
-    private static Task<bool> AnyTaskAsync<T>(IObservable<T> source, Func<T, bool> predicate, CancellationToken cancellationToken)
+    internal static Task<bool> AnyTaskAsync<T>(IObservable<T> source, Func<T, bool> predicate, CancellationToken cancellationToken)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -58,7 +58,7 @@ public static partial class LinqExtensions
             return AnyRangeTask(range, predicate);
         }
 
-        TaskAnySink<T> sink = new(predicate, cancellationToken);
+        TaskAnyWitness<T> sink = new(predicate, cancellationToken);
         sink.RegisterCancellation();
         sink.SetSubscription(source.Subscribe(sink));
         return sink.Task;
@@ -69,7 +69,7 @@ public static partial class LinqExtensions
     /// <param name="source">The source sequence.</param>
     /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
     /// <returns>A task that completes with the value count.</returns>
-    private static Task<int> CountTaskAsync<T>(IObservable<T> source, CancellationToken cancellationToken)
+    internal static Task<int> CountTaskAsync<T>(IObservable<T> source, CancellationToken cancellationToken)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -83,7 +83,7 @@ public static partial class LinqExtensions
             return Task.FromResult(range.Count);
         }
 
-        TaskCountSink<T> sink = new(cancellationToken);
+        TaskCountWitness<T> sink = new(cancellationToken);
         sink.RegisterCancellation();
         sink.SetSubscription(source.Subscribe(sink));
         return sink.Task;
@@ -95,7 +95,7 @@ public static partial class LinqExtensions
     /// <param name="predicate">The predicate.</param>
     /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
     /// <returns>A task that completes with the matching value count.</returns>
-    private static Task<int> CountTaskAsync<T>(IObservable<T> source, Func<T, bool> predicate, CancellationToken cancellationToken)
+    internal static Task<int> CountTaskAsync<T>(IObservable<T> source, Func<T, bool> predicate, CancellationToken cancellationToken)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -111,7 +111,7 @@ public static partial class LinqExtensions
             return CountRangeTask(range, predicate);
         }
 
-        TaskCountSink<T> sink = new(predicate, cancellationToken);
+        TaskCountWitness<T> sink = new(predicate, cancellationToken);
         sink.RegisterCancellation();
         sink.SetSubscription(source.Subscribe(sink));
         return sink.Task;

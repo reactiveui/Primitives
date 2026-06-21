@@ -46,7 +46,7 @@ public sealed class MauiDispatcherSequencerTests
         MauiDispatcherSequencer scheduler = new(dispatcher);
         var executed = false;
 
-        scheduler.Schedule(() => executed = true);
+        _ = scheduler.Schedule(() => executed = true);
 
         await Assert.That(executed).IsTrue();
         await Assert.That(dispatcher.DispatchCount).IsGreaterThan(0);
@@ -65,7 +65,7 @@ public sealed class MauiDispatcherSequencerTests
         MauiDispatcherSequencer scheduler = new(dispatcher);
         var executed = false;
 
-        scheduler.Schedule(TimeSpan.FromSeconds(1), () => executed = true);
+        _ = scheduler.Schedule(TimeSpan.FromSeconds(1), () => executed = true);
 
         await Assert.That(executed).IsTrue();
         await Assert.That(dispatcher.DispatchDelayedCount).IsEqualTo(1);
@@ -81,7 +81,7 @@ public sealed class MauiDispatcherSequencerTests
         MauiDispatcherSequencer scheduler = new(dispatcher);
         var executed = false;
 
-        scheduler.Schedule(TimeSpan.Zero, () => executed = true);
+        _ = scheduler.Schedule(TimeSpan.Zero, () => executed = true);
 
         await Assert.That(executed).IsTrue();
         await Assert.That(dispatcher.DispatchCount).IsGreaterThan(0);
@@ -100,7 +100,7 @@ public sealed class MauiDispatcherSequencerTests
         foreach (var value in ExpectedBurst)
         {
             var captured = value;
-            scheduler.Schedule(() => values.Add(captured));
+            _ = scheduler.Schedule(() => values.Add(captured));
         }
 
         await Assert.That(values).IsEquivalentTo(ExpectedBurst, EqualityComparer<int>.Default);

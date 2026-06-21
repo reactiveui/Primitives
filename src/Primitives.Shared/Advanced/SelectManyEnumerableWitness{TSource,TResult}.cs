@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Observer for enumerable <c>SelectMany</c>.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
-public sealed class SelectManyEnumerableObserver<TSource, TResult> : IObserver<TSource>, IDisposable
+public sealed class SelectManyEnumerableWitness<TSource, TResult> : IObserver<TSource>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
     private readonly IObserver<TResult> _observer;
@@ -25,28 +25,28 @@ public sealed class SelectManyEnumerableObserver<TSource, TResult> : IObserver<T
     /// <summary>Non-zero after terminal notification or disposal.</summary>
     private int _stopped;
 
-    /// <summary>Initializes a new instance of the <see cref="SelectManyEnumerableObserver{TSource, TResult}"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="SelectManyEnumerableWitness{TSource, TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="selector">The enumerable projection.</param>
-    public SelectManyEnumerableObserver(IObserver<TResult> observer, Func<TSource, IEnumerable<TResult>> selector)
+    public SelectManyEnumerableWitness(IObserver<TResult> observer, Func<TSource, IEnumerable<TResult>> selector)
     {
         _observer = observer;
         _selector = selector;
     }
 
     /// <inheritdoc/>
-    public void Dispose() => ObserverSinkLifetime.Dispose(ref _stopped, _subscription);
+    public void Dispose() => WitnessLifetime.Dispose(ref _stopped, _subscription);
 
     /// <inheritdoc/>
-    public void OnCompleted() => ObserverSinkLifetime.Complete(ref _stopped, _subscription, _observer);
+    public void OnCompleted() => WitnessLifetime.Complete(ref _stopped, _subscription, _observer);
 
     /// <inheritdoc/>
-    public void OnError(Exception error) => ObserverSinkLifetime.Error(ref _stopped, _subscription, _observer, error);
+    public void OnError(Exception error) => WitnessLifetime.Error(ref _stopped, _subscription, _observer, error);
 
     /// <inheritdoc/>
     public void OnNext(TSource value)
     {
-        if (ObserverSinkLifetime.IsStopped(ref _stopped))
+        if (WitnessLifetime.IsStopped(ref _stopped))
         {
             return;
         }
@@ -56,7 +56,7 @@ public sealed class SelectManyEnumerableObserver<TSource, TResult> : IObserver<T
             var values = _selector(value);
             if (values is null)
             {
-                ObserverSinkLifetime.Error(
+                WitnessLifetime.Error(
                     ref _stopped,
                     _subscription,
                     _observer,
@@ -66,7 +66,7 @@ public sealed class SelectManyEnumerableObserver<TSource, TResult> : IObserver<T
 
             foreach (var result in values)
             {
-                if (ObserverSinkLifetime.IsStopped(ref _stopped))
+                if (WitnessLifetime.IsStopped(ref _stopped))
                 {
                     return;
                 }
@@ -76,12 +76,12 @@ public sealed class SelectManyEnumerableObserver<TSource, TResult> : IObserver<T
         }
         catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {
-            ObserverSinkLifetime.Error(ref _stopped, _subscription, _observer, error);
+            WitnessLifetime.Error(ref _stopped, _subscription, _observer, error);
         }
     }
 
     /// <summary>Assigns the upstream subscription.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     public void SetSubscription(IDisposable subscription) =>
-        ObserverSinkLifetime.SetSubscription(ref _stopped, _subscription, subscription);
+        WitnessLifetime.SetSubscription(ref _stopped, _subscription, subscription);
 }

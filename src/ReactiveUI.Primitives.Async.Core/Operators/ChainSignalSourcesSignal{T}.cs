@@ -100,12 +100,7 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
                 }
             }
 
-            if (!shouldSubscribe)
-            {
-                return default;
-            }
-
-            return SubscribeCurrentInnerAsync(inner);
+            return !shouldSubscribe ? default : SubscribeCurrentInnerAsync(inner);
         }
 
         /// <summary>
@@ -148,8 +143,8 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
             bool outerCompleted;
             lock (_buffer)
             {
-                _buffer.TryDequeue(out _);
-                _buffer.TryPeek(out nextInner);
+                _ = _buffer.TryDequeue(out _);
+                _ = _buffer.TryPeek(out nextInner);
                 outerCompleted = _outerCompleted;
             }
 

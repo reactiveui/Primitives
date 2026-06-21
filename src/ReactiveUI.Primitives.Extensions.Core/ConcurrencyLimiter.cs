@@ -109,9 +109,8 @@ public sealed class ConcurrencyLimiter<T> : IObservable<T>
                 ClearRator();
                 if (!subscription.Disposed)
                 {
-                    subscription.Observer.OnError((completed.Exception is null
-                        ? new OperationCanceledException()
-                        : completed.Exception.InnerException)!);
+                    var innerException = completed.Exception?.InnerExceptions is null ? new OperationCanceledException() : completed.Exception.InnerException!;
+                    subscription.Observer.OnError(innerException);
                 }
 
                 return;

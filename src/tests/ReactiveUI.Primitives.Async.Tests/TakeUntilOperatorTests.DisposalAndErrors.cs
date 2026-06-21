@@ -573,7 +573,7 @@ public partial class TakeUntilOperatorTests
             null,
             _ =>
             {
-                completed.TrySetResult();
+                IgnoredResult.Of(completed.TrySetResult());
                 return default;
             });
         await source.EmitNext(1);
@@ -600,7 +600,7 @@ public partial class TakeUntilOperatorTests
             null,
             _ =>
             {
-                completed.TrySetResult();
+                IgnoredResult.Of(completed.TrySetResult());
                 return default;
             });
         await source.EmitNext(1);

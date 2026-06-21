@@ -117,7 +117,7 @@ public sealed class MaxConcurrentBlendCoordinator<T> : IDisposable
                 return null;
             }
 
-            var next = enumerator!.Current;
+            var next = enumerator.Current;
             if (next is null)
             {
                 FailCore(new InvalidOperationException("Blend source contained null."));
@@ -164,7 +164,7 @@ public sealed class MaxConcurrentBlendCoordinator<T> : IDisposable
     /// <param name="inner">The completed inner subscription.</param>
     private void OnInnerCompleted(OnceDisposable inner)
     {
-        _subscriptions.Remove(inner);
+        _ = _subscriptions.Remove(inner);
 
         lock (_gate)
         {
@@ -177,7 +177,7 @@ public sealed class MaxConcurrentBlendCoordinator<T> : IDisposable
             TryCompleteCore();
         }
 
-        SubscribeNext();
+        _ = SubscribeNext();
     }
 
     /// <summary>Marks the coordinator failed and forwards the error. Caller must hold the gate.</summary>

@@ -63,7 +63,7 @@ public class ErrorHandlingOperatorTests
         await using var sub = await source.OnErrorResumeAsFailure().SubscribeAsync((_, _) => default, null, result =>
         {
             completionResult = result;
-            completed.TrySetResult();
+            _ = completed.TrySetResult();
             return default;
         });
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -77,7 +77,7 @@ public class ErrorHandlingOperatorTests
     public void WhenOnErrorResumeAsFailureWithNullSource_ThenThrowsArgumentNullException()
     {
         const IObservableAsync<int> Source = null!;
-        Assert.Throws<ArgumentNullException>(() => Source.OnErrorResumeAsFailure());
+        _ = Assert.Throws<ArgumentNullException>(() => Source.OnErrorResumeAsFailure());
     }
 
     /// <summary>Tests that OnErrorResumeAsFailure forwards emitted values to the downstream observer.</summary>
@@ -167,7 +167,7 @@ public class ErrorHandlingOperatorTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
         InvalidOperationException expected = new("catch-passthrough");
@@ -213,7 +213,7 @@ public class ErrorHandlingOperatorTests
             NewThreadTaskScheduler.Instance);
         await using var sub = await source.Retry(0).SubscribeAsync((_, _) => default, null, result =>
         {
-            completed.TrySetResult(result);
+            _ = completed.TrySetResult(result);
             return default;
         });
         var completionResult = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -238,7 +238,7 @@ public class ErrorHandlingOperatorTests
             NewThreadTaskScheduler.Instance);
         await using var sub = await source.Retry(2).SubscribeAsync((_, _) => default, null, result =>
         {
-            completed.TrySetResult(result);
+            _ = completed.TrySetResult(result);
             return default;
         });
         var completionResult = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -263,7 +263,7 @@ public class ErrorHandlingOperatorTests
             NewThreadTaskScheduler.Instance);
         await using var sub = await source.Retry(1).SubscribeAsync((_, _) => default, null, result =>
         {
-            completed.TrySetResult(result);
+            _ = completed.TrySetResult(result);
             return default;
         });
         var completionResult = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -283,7 +283,7 @@ public class ErrorHandlingOperatorTests
             null,
             result =>
             {
-                completed.TrySetResult(result);
+                _ = completed.TrySetResult(result);
                 return default;
             });
         var completionResult = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -301,7 +301,7 @@ public class ErrorHandlingOperatorTests
         var handlerObservable = SignalAsync.Create<int>(async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
-            handlerItemReceived.TrySetResult(true);
+            _ = handlerItemReceived.TrySetResult(true);
             return DisposableAsync.Empty;
         });
         var sub = await source.Catch(_ => handlerObservable).SubscribeAsync((_, _) => default, null, _ => default);
@@ -326,14 +326,14 @@ public class ErrorHandlingOperatorTests
             UnhandledExceptionHandler.Register(ex =>
             {
                 unhandled = ex;
-                unhandledTcs.TrySetResult();
+                _ = unhandledTcs.TrySetResult();
             });
             InvalidOperationException disposeFailure = new("handler-dispose-failed");
             var source = SignalAsync.Throw<int>(new InvalidOperationException("fail"));
             TaskCompletionSource handlerSubscribed = new(TaskCreationOptions.RunContinuationsAsynchronously);
             var handlerObservable = SignalAsync.Create<int>((_, _) =>
             {
-                handlerSubscribed.TrySetResult();
+                _ = handlerSubscribed.TrySetResult();
                 return new(new ThrowingDisposable(disposeFailure));
             });
             var sub = await source.Catch(_ => handlerObservable)
@@ -391,7 +391,7 @@ public class ErrorHandlingOperatorTests
         });
         await using var sub = await source.Retry(3).SubscribeAsync((_, _) => default, null, result =>
         {
-            completed.TrySetResult(result);
+            _ = completed.TrySetResult(result);
             return default;
         });
 
@@ -425,7 +425,7 @@ public class ErrorHandlingOperatorTests
         });
         await using var sub = await source.Retry(3).SubscribeAsync((_, _) => default, null, result =>
         {
-            completed.TrySetResult(result);
+            _ = completed.TrySetResult(result);
             return default;
         });
         var completionResult = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));

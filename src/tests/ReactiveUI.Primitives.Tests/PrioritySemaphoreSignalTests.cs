@@ -168,7 +168,7 @@ public sealed class PrioritySemaphoreSignalTests
         /// <inheritdoc />
         public void Schedule(IWorkItem item)
         {
-            Interlocked.Increment(ref _scheduleCount);
+            _ = Interlocked.Increment(ref _scheduleCount);
             _items.Enqueue(item);
         }
 

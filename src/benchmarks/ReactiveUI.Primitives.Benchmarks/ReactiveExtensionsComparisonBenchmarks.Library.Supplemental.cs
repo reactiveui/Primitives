@@ -32,13 +32,13 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         IntSignalWitness observer = new();
         if (library == ExtensionsLibrary.Primitives)
         {
-            (var even, var odd) = PrimitivesExtensions.Partition(ArraySource(library), static value => (value & 1) == 0);
+            var (even, odd) = PrimitivesExtensions.Partition(ArraySource(library), static value => (value & 1) == 0);
             using var evenSubscription = even.Subscribe(observer);
             using var oddSubscription = odd.Subscribe(observer);
         }
         else
         {
-            (var even, var odd) = PackageExtensions.Partition(ArraySource(library), static value => (value & 1) == 0);
+            var (even, odd) = PackageExtensions.Partition(ArraySource(library), static value => (value & 1) == 0);
             using var evenSubscription = even.Subscribe(observer);
             using var oddSubscription = odd.Subscribe(observer);
         }
@@ -402,8 +402,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         PropertySource source = new();
         IntSignalWitness observer = new();
         using var subscription = (library == ExtensionsLibrary.Primitives
-                ? PrimitivesExtensions.ToPropertyObservable(source, static item => item.CurrentValue)
-                : PackageExtensions.ToPropertyObservable(source, static item => item.CurrentValue))
+            ? PrimitivesExtensions.ToPropertyObservable(source, static item => item.CurrentValue)
+            : PackageExtensions.ToPropertyObservable(source, static item => item.CurrentValue))
             .Subscribe(observer);
         source.CurrentValue = Value;
         return observer.Total;
@@ -417,13 +417,13 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         IntSignalWitness observer = new();
         if (library == ExtensionsLibrary.Primitives)
         {
-            (var observable, var sink) = PrimitivesExtensions.ToReadOnlyBehavior(Value);
+            var (observable, sink) = PrimitivesExtensions.ToReadOnlyBehavior(Value);
             using var subscription = observable.Subscribe(observer);
             sink.OnNext(Value + 1);
         }
         else
         {
-            (var observable, var sink) = PackageExtensions.ToReadOnlyBehavior(Value);
+            var (observable, sink) = PackageExtensions.ToReadOnlyBehavior(Value);
             using var subscription = observable.Subscribe(observer);
             sink.OnNext(Value + 1);
         }

@@ -78,6 +78,6 @@ public class ForEachObservableTests
     public void WhenForEachObserverNull_ThenSubscribeThrows()
     {
         ForEachObservable<int> observable = new(new Subject<IEnumerable<int>>(), null);
-        Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
     }
 }

@@ -190,7 +190,7 @@ public class ParityOperatorTests
         const int Emit6 = 6;
 
         var signal = Signal.Create<int>();
-        (var trueBranch, var falseBranch) = signal.Values.Partition(static value => value % EvenDivisor == 0);
+        var (trueBranch, falseBranch) = signal.Values.Partition(static value => value % EvenDivisor == 0);
 
         var trueTask = trueBranch.ToListAsync().AsTask();
         var falseTask = falseBranch.ToListAsync().AsTask();
@@ -668,7 +668,7 @@ public class ParityOperatorTests
                 (value, _) =>
                 {
                     results.Add(value);
-                    firstReceived.TrySetResult();
+                    IgnoredResult.Of(firstReceived.TrySetResult());
                     return default;
                 },
                 null);
@@ -1090,7 +1090,7 @@ public class ParityOperatorTests
         await using var sub = await source
             .DropIfBusy(async (value, _) =>
             {
-                Interlocked.Increment(ref actionStarted);
+                IgnoredResult.Of(Interlocked.Increment(ref actionStarted));
 
                 if (value == 1)
                 {

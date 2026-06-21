@@ -80,7 +80,7 @@ public static partial class Signal
             cancellationRegistration = cancellationToken.Register(() =>
             {
                 subscription?.Dispose();
-                completion.TrySetCanceled(cancellationToken);
+                _ = completion.TrySetCanceled(cancellationToken);
             });
         }
 
@@ -94,7 +94,7 @@ public static partial class Signal
             {
                 cancellationRegistration.Dispose();
                 subscription?.Dispose();
-                completion.TrySetException(error);
+                _ = completion.TrySetException(error);
             },
             () =>
             {
@@ -102,11 +102,11 @@ public static partial class Signal
                 subscription?.Dispose();
                 if (seen)
                 {
-                    completion.TrySetResult(last!);
+                    _ = completion.TrySetResult(last!);
                 }
                 else
                 {
-                    completion.TrySetException(new InvalidOperationException("The source completed without producing a value."));
+                    _ = completion.TrySetException(new InvalidOperationException("The source completed without producing a value."));
                 }
             });
 
@@ -139,10 +139,10 @@ public static partial class Signal
         var ctr = token.Register(() =>
         {
             subscription.Dispose();
-            Cancel(subject, token);
+            _ = Cancel(subject, token);
         });
 
-        subject.Subscribe(Handle<T>.Ignore, _ => ctr.Dispose(), ctr.Dispose);
+        _ = subject.Subscribe(Handle<T>.Ignore, _ => ctr.Dispose(), ctr.Dispose);
     }
 
     /// <summary>Completes a task directly from a range signal when the source type can represent integers.</summary>

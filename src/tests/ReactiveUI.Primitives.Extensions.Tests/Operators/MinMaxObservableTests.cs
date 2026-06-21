@@ -130,7 +130,7 @@ public class MinMaxObservableTests
     public void WhenMinMaxObservableNullObserver_ThenSubscribeThrows()
     {
         MinMaxObservable<int> observable = new([new Subject<int>()], false);
-        Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
     }
 
     /// <summary>Verifies that when every source completes, the combined sequence completes via the per-source <c>OnCompleted</c> path.</summary>

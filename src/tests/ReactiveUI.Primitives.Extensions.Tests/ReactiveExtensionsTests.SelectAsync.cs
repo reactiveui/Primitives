@@ -16,7 +16,7 @@ public partial class ReactiveExtensionsTests
         List<int> results = [];
         TaskCompletionSource<bool> tcs = new();
 
-        source.SelectAsync((x, _) => Task.FromResult(x * SampleValue2))
+        _ = source.SelectAsync((x, _) => Task.FromResult(x * SampleValue2))
             .Subscribe(
                 results.Add,
                 () => tcs.TrySetResult(true));
@@ -35,7 +35,7 @@ public partial class ReactiveExtensionsTests
         List<int> results = [];
         TaskCompletionSource<bool> tcs = new();
 
-        source.SelectAsync(x => Task.FromResult(x * SampleValue2))
+        _ = source.SelectAsync(x => Task.FromResult(x * SampleValue2))
             .Subscribe(
                 results.Add,
                 () => tcs.TrySetResult(true));
@@ -54,7 +54,7 @@ public partial class ReactiveExtensionsTests
         List<int> results = [];
         TaskCompletionSource<bool> tcs = new();
 
-        source.SelectAsyncSequential(x => Task.FromResult(x * SampleValue2))
+        _ = source.SelectAsyncSequential(x => Task.FromResult(x * SampleValue2))
             .Subscribe(
                 results.Add,
                 () => tcs.TrySetResult(true));
@@ -74,7 +74,7 @@ public partial class ReactiveExtensionsTests
         List<int> results = [];
         TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        source.SelectLatestAsync(async x =>
+        _ = source.SelectLatestAsync(async x =>
         {
             await Task.Delay(AsyncDelayMs);
             return x * SampleValue2;
@@ -98,7 +98,7 @@ public partial class ReactiveExtensionsTests
         TaskCompletionSource<bool> tcs = new();
         const int MaxConcurrency = 2;
 
-        source.SelectAsyncConcurrent(
+        _ = source.SelectAsyncConcurrent(
             async x =>
             {
                 await Task.Delay(1);

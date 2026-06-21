@@ -47,7 +47,7 @@ internal sealed class RecoverSignal<T, TException> : IRequireCurrentThread<T>
         }
 
         SingleDisposable subscription = new();
-        Sequencer.CurrentThread.Schedule(() => subscription.Create(Run(observer)));
+        _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(Run(observer)));
         return subscription;
     }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # generate-publicapi.sh — (re)generate PublicAPI baseline files for every shipped
-# ReactiveUI.Primitives library, across each target framework that builds on this machine.
+# ReactiveUI library, across each target framework that builds on this machine.
 #
 # The Microsoft.CodeAnalysis.PublicApiAnalyzers (RS0016 / RS0017 / RS0037) require a
 # per-TFM pair of tracking files:
@@ -48,6 +48,9 @@ cd "$SRC_DIR"
 export EnableWindowsTargeting=true
 export CheckEolTargetFramework=false
 export MinVerVersionOverride="${MinVerVersionOverride:-255.255.255-dev}"
+# The generator must not inherit a shell/MSBuild opt-out. Directory.Build.props
+# will still disable tests, benchmarks, and source generators by project path/name.
+unset TrackPublicApi TRACKPUBLICAPI trackpublicapi
 
 FILTER="${1:-}"
 export DIAGS="RS0016 RS0017 RS0037"
@@ -94,6 +97,10 @@ for proj in "${projects[@]}"; do
   fi
 
   projdir="$(dirname "$proj")"
+  api_namespace="$(dotnet msbuild "$proj" -getProperty:RootNamespace -nologo 2>/dev/null | tr -d '[:space:]')"
+  if [ -z "$api_namespace" ]; then
+    api_namespace="$(dotnet msbuild "$proj" -getProperty:AssemblyName -nologo 2>/dev/null | tr -d '[:space:]')"
+  fi
   echo "queue $proj"
   echo "    TFMs: $tfms"
   restore_set+=("$proj")
@@ -101,7 +108,7 @@ for proj in "${projects[@]}"; do
   for tfm in "${tfm_arr[@]}"; do
     [ -z "$tfm" ] && continue
     mkdir -p "$projdir/PublicAPI/$tfm"
-    items+=("$proj|$tfm")
+    items+=("$proj|$tfm|$api_namespace")
   done
 done
 echo
@@ -122,8 +129,8 @@ echo
 # Worker: regenerate one (project, TFM) pair and fold the surface into Shipped.
 generate_one() {
   local item="$1"
-  local proj="${item%%|*}"
-  local tfm="${item##*|}"
+  local proj tfm api_namespace
+  IFS='|' read -r proj tfm api_namespace <<<"$item"
   local projdir apidir shipped unshipped tag
   projdir="$(dirname "$proj")"
   apidir="$projdir/PublicAPI/$tfm"
@@ -144,7 +151,13 @@ generate_one() {
     # sorted+deduped, as the analyzer emits) and reset Unshipped to the bare header default.
     {
       printf '#nullable enable\n'
-      grep -vxF '#nullable enable' "$unshipped" | grep -v '^[[:space:]]*$' | LC_ALL=C sort -u
+      {
+        grep -vxF '#nullable enable' "$unshipped"
+        if [[ "$tfm" == *-android* ]] && [ -n "$api_namespace" ]; then
+          printf '%s.Resource\n' "$api_namespace"
+          printf '%s.Resource.Resource() -> void\n' "$api_namespace"
+        fi
+      } | grep -v '^[[:space:]]*$' | LC_ALL=C sort -u
     } >"$shipped"
     printf '#nullable enable\n' >"$unshipped"
     printf 'OK   [%s] %s\n' "$tfm" "$proj"

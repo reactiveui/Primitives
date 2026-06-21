@@ -30,13 +30,6 @@ public static partial class SignalAsync
     {
         ArgumentExceptionHelper.ThrowIfNull(factory);
 
-        return CreateAsBackgroundJob<T>(
-            async (obs, token) =>
-            {
-                var result = await factory(token).ConfigureAwait(false);
-                await obs.OnNextAsync(result, token).ConfigureAwait(false);
-                await obs.OnCompletedAsync(Result.Success).ConfigureAwait(false);
-            },
-            true);
+        return new FromAsyncSignal<T>(factory);
     }
 }

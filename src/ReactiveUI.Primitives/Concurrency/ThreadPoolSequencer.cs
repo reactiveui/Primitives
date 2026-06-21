@@ -3,8 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using ReactiveUI.Primitives.Core;
-using ReactiveUI.Primitives.Disposables;
 using Timer = System.Threading.Timer;
 
 namespace ReactiveUI.Primitives.Concurrency;
@@ -50,7 +48,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
 
-        ThreadPool.UnsafeQueueUserWorkItem(ImmediateCallback, item);
+        _ = ThreadPool.UnsafeQueueUserWorkItem(ImmediateCallback, item);
     }
 
     /// <summary>Schedules a work item to be executed through the thread pool at a monotonic timestamp.</summary>
@@ -118,7 +116,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
             var next = _queue.Peek();
             if (Sequencer.IsCancelled(next.Item))
             {
-                _queue.Dequeue();
+                _ = _queue.Dequeue();
                 continue;
             }
 
@@ -141,16 +139,16 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     {
         while (_queue.Count > 0 && Sequencer.IsCancelled(_queue.Peek().Item))
         {
-            _queue.Dequeue();
+            _ = _queue.Dequeue();
         }
 
         if (_queue.Count == 0)
         {
-            _timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            _ = _timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
             return;
         }
 
-        _timer.Change(Sequencer.TimeUntil(_queue.Peek().DueTimestamp), Timeout.InfiniteTimeSpan);
+        _ = _timer.Change(Sequencer.TimeUntil(_queue.Peek().DueTimestamp), Timeout.InfiniteTimeSpan);
     }
 
     /// <summary>Delayed thread-pool work item queued in the sequencer heap.</summary>

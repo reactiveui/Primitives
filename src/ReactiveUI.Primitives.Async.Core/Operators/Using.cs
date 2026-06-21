@@ -26,21 +26,8 @@ public static partial class SignalAsync
     public static IObservableAsync<T> Use<TResource, T>(
         Func<CancellationToken, ValueTask<TResource>> resourceFactory,
         Func<TResource, IObservableAsync<T>> signalFactory)
-        where TResource : IAsyncDisposable => Defer(async token =>
-    {
-        var resource = await resourceFactory(token).ConfigureAwait(false);
-
-        try
-        {
-            var signal = signalFactory(resource);
-            return signal.OnDispose(resource.DisposeAsync);
-        }
-        catch
-        {
-            await resource.DisposeAsync().ConfigureAwait(false);
-            throw;
-        }
-    });
+        where TResource : IAsyncDisposable =>
+        new UsingSignal<TResource, T>(resourceFactory, signalFactory);
 
     /// <summary>
     /// Creates an observable sequence that manages the lifetime of an asynchronous resource, ensuring the resource is
@@ -62,5 +49,5 @@ public static partial class SignalAsync
         Func<CancellationToken, ValueTask<TResource>> resourceFactory,
         Func<TResource, IObservableAsync<T>> signalFactory)
         where TResource : IAsyncDisposable =>
-        Use(resourceFactory, signalFactory);
+        new UsingSignal<TResource, T>(resourceFactory, signalFactory);
 }

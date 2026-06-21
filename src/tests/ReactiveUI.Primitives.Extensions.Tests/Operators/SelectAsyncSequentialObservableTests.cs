@@ -74,7 +74,7 @@ public class SelectAsyncSequentialObservableTests
         subject.OnNext(TriggerValue);
         subject.OnCompleted();
         sub.Dispose();
-        gate.TrySetResult(true);
+        _ = gate.TrySetResult(true);
         await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
         await Assert.That(results).IsEmpty();
         await Assert.That(completed).IsFalse();
@@ -101,7 +101,7 @@ public class SelectAsyncSequentialObservableTests
         // Completion must not fire while selector is gated.
         await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
         await Assert.That(completed.Task.IsCompleted).IsFalse();
-        gate.TrySetResult(true);
+        _ = gate.TrySetResult(true);
         var done = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(done).IsTrue();
         await Assert.That(results).IsCollectionEqualTo([Value]);

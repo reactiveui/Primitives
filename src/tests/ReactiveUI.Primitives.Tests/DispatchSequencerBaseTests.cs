@@ -74,7 +74,7 @@ public sealed class DispatchSequencerBaseTests
     public async Task StatefulScheduleOverloadPassesState()
     {
         List<int> values = [];
-        Sequencer.Immediate.Schedule(
+        _ = Sequencer.Immediate.Schedule(
             (values, value: StatefulScheduleValue),
             static state => state.values.Add(state.value));
         await Assert.That(values[0]).IsEqualTo(StatefulScheduleValue);

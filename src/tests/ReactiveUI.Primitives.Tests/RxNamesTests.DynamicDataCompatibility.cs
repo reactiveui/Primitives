@@ -92,7 +92,8 @@ public partial class RxNamesTests
         var startWith = Collect(Signal.FromEnumerable([Three]).StartWith(One, Two));
         var enumerableSelectMany = Collect(Signal.FromEnumerable([One, Two]).SelectMany(static value => new[] { value, value + Ten }));
         var repeatedSelectMany = Collect(Signal.FromEnumerable([One, Two]).SelectMany(Signal.Return(Ten)));
-        var recovered = Collect(Signal.Throw<int>(new InvalidOperationException(Boom)).Catch((InvalidOperationException _) => Signal.Return(Two)));
+        Func<InvalidOperationException, IObservable<int>> recoverBoom = _ => Signal.Return(Two);
+        var recovered = Collect(Signal.Throw<int>(new InvalidOperationException(Boom)).Catch(recoverBoom));
 
         await Assert.That(startWith.SequenceEqual([One, Two, Three])).IsTrue();
         await Assert.That(enumerableSelectMany.SequenceEqual([One, One + Ten, Two, Two + Ten])).IsTrue();
@@ -157,7 +158,7 @@ public partial class RxNamesTests
         var cleanupCount = 0;
         List<int> values = [];
 
-        Signal.FromEnumerable([One]).Finally(() => cleanupCount++).Subscribe(values.Add);
+        _ = Signal.FromEnumerable([One]).Finally(() => cleanupCount++).Subscribe(values.Add);
 
         await Assert.That(values.SequenceEqual([One])).IsTrue();
         await Assert.That(cleanupCount).IsEqualTo(One);
@@ -169,20 +170,20 @@ public partial class RxNamesTests
     public async Task EnumerableMergeMaxConcurrentHandlesTerminalAndFailureBranches()
     {
         var completed = 0;
-        Enumerable.Empty<IObservable<int>>().Merge(Two)
+        _ = Enumerable.Empty<IObservable<int>>().Merge(Two)
             .Subscribe(_ => { }, ex => throw ex, () => completed++);
 
         await Assert.That(completed).IsEqualTo(One);
 
         Exception? nullError = null;
         IEnumerable<IObservable<int>> sourcesWithNull = [null!];
-        sourcesWithNull.Merge(One).Subscribe(_ => { }, error => nullError = error);
+        _ = sourcesWithNull.Merge(One).Subscribe(_ => { }, error => nullError = error);
 
         await Assert.That(nullError is InvalidOperationException).IsTrue();
 
         InvalidOperationException enumerableError = new("enumerable");
         Exception? observedEnumerableError = null;
-        ThrowingSources(enumerableError).Merge(One).Subscribe(_ => { }, error => observedEnumerableError = error);
+        _ = ThrowingSources(enumerableError).Merge(One).Subscribe(_ => { }, error => observedEnumerableError = error);
 
         await Assert.That(observedEnumerableError).IsSameReferenceAs(enumerableError);
 
@@ -196,7 +197,7 @@ public partial class RxNamesTests
                 observer.OnCompleted();
             })
         ];
-        scripted.Merge(One).Subscribe(failed);
+        _ = scripted.Merge(One).Subscribe(failed);
 
         await Assert.That(failed.Errors.Count).IsEqualTo(One);
         await Assert.That(failed.Errors[0]).IsSameReferenceAs(sourceError);
@@ -213,9 +214,9 @@ public partial class RxNamesTests
 
         await Assert.That(sequentialCompleted).IsEqualTo(One);
 
-        Assert.Throws<ArgumentNullException>(() => ((IEnumerable<IObservable<int>>)null!).Merge());
-        Assert.Throws<ArgumentNullException>(() => ((IEnumerable<IObservable<int>>)null!).Merge(One));
-        Assert.Throws<ArgumentOutOfRangeException>(() => scripted.Merge(0));
+        _ = Assert.Throws<ArgumentNullException>(() => ((IEnumerable<IObservable<int>>)null!).Merge());
+        _ = Assert.Throws<ArgumentNullException>(() => ((IEnumerable<IObservable<int>>)null!).Merge(One));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => scripted.Merge(0));
     }
 
     /// <summary>Verifies SubscribeSafe overloads stop after terminal notifications and dispose upstream.</summary>
@@ -224,13 +225,13 @@ public partial class RxNamesTests
     public async Task SubscribeSafeOverloadsStopAfterTerminalNotifications()
     {
         List<int> values = [];
-        Signal.FromEnumerable([One]).SubscribeSafe(values.Add, _ => { });
+        _ = Signal.FromEnumerable([One]).SubscribeSafe(values.Add, _ => { });
 
         await Assert.That(values.SequenceEqual([One])).IsTrue();
 
         InvalidOperationException expected = new(Boom);
         var errorOnlyCount = 0;
-        new ScriptedObservable<int>(observer =>
+        _ = new ScriptedObservable<int>(observer =>
         {
             observer.OnError(expected);
             observer.OnError(new InvalidOperationException("late"));
@@ -239,7 +240,7 @@ public partial class RxNamesTests
         await Assert.That(errorOnlyCount).IsEqualTo(One);
 
         var completed = 0;
-        new ScriptedObservable<int>(observer =>
+        _ = new ScriptedObservable<int>(observer =>
         {
             observer.OnCompleted();
             observer.OnNext(Two);
@@ -249,7 +250,7 @@ public partial class RxNamesTests
         await Assert.That(completed).IsEqualTo(One);
 
         RecordingWitness<int> witness = new();
-        new ScriptedObservable<int>(observer =>
+        _ = new ScriptedObservable<int>(observer =>
         {
             observer.OnCompleted();
             observer.OnNext(Three);
@@ -269,7 +270,7 @@ public partial class RxNamesTests
         List<int> values = [];
         List<string> sideEffects = [];
         var completed = 0;
-        Signal.FromEnumerable([One, Two])
+        _ = Signal.FromEnumerable([One, Two])
             .Do(
                 value => sideEffects.Add("next:" + value),
                 error => sideEffects.Add("error:" + error.Message),
@@ -282,7 +283,7 @@ public partial class RxNamesTests
 
         Signal<int> source = new();
         RecordingWitness<int> synchronized = new();
-        using (source.SynchronizeObject(new object()).Subscribe(synchronized))
+        using (source.Synchronize(new Lock()).Subscribe(synchronized))
         {
             source.OnNext(One);
             source.OnCompleted();
@@ -293,7 +294,7 @@ public partial class RxNamesTests
 
         Signal<int> errorSource = new();
         RecordingWitness<int> synchronizedError = new();
-        using (errorSource.SynchronizeObject(new object()).Subscribe(synchronizedError))
+        using (errorSource.Synchronize(new Lock()).Subscribe(synchronizedError))
         {
             errorSource.OnError(new InvalidOperationException(Boom));
         }
@@ -302,11 +303,11 @@ public partial class RxNamesTests
         await Assert.That(synchronizedError.Errors[0].Message).IsEqualTo(Boom);
 
         List<int> aliasValues = [];
-        Signal.FromEnumerable([Three]).StartWith((IEnumerable<int>)[One, Two]).Subscribe(aliasValues.Add);
-        Signal.FromEnumerable([One, Two]).Merge(Signal.FromEnumerable([Three])).Subscribe(aliasValues.Add);
-        Signal.FromEnumerable([One, Two]).Select(static (value, index) => value + index).Subscribe(aliasValues.Add);
-        Signal.FromEnumerable([Task.FromResult(One), Task.FromResult(Two)]).Concat().Subscribe(aliasValues.Add);
-        ((IEnumerable<IObservable<int>>)[Signal.Return(One), Signal.Return(Two)]).Merge().Subscribe(aliasValues.Add);
+        _ = Signal.FromEnumerable([Three]).StartWith((IEnumerable<int>)[One, Two]).Subscribe(aliasValues.Add);
+        _ = Signal.FromEnumerable([One, Two]).Merge(Signal.FromEnumerable([Three])).Subscribe(aliasValues.Add);
+        _ = Signal.FromEnumerable([One, Two]).Select(static (value, index) => value + index).Subscribe(aliasValues.Add);
+        _ = Signal.FromEnumerable([Task.FromResult(One), Task.FromResult(Two)]).Concat().Subscribe(aliasValues.Add);
+        _ = ((IEnumerable<IObservable<int>>)[Signal.Return(One), Signal.Return(Two)]).Merge().Subscribe(aliasValues.Add);
         await Task.Yield();
 
         await Assert.That(aliasValues.SequenceEqual([One, Two, Three, One, Two, Three, One, Three, One, Two, One, Two]))
@@ -315,11 +316,11 @@ public partial class RxNamesTests
         await Assert.That(Signal.Return(One).Buffer(TimeSpan.FromTicks(One))).IsNotNull();
         await Assert.That(Signal.Return(One).Throttle(TimeSpan.FromTicks(One))).IsNotNull();
 
-        Assert.Throws<ArgumentNullException>(() => Signal.Return(One).Do(_ => { }, null!, () => { }));
-        Assert.Throws<ArgumentNullException>(() => Signal.Return(One).SynchronizeObject(null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Return(One).Merge(null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Return(One).Select((Func<int, int, int>)null!));
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<Task<int>>)null!).Concat());
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Return(One).Do(_ => { }, null!, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Return(One).Synchronize(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Return(One).Merge(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Return(One).Select((Func<int, int, int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<Task<int>>)null!).Concat());
     }
 
     /// <summary>Verifies enumerable SelectMany forwards projected values and stops after failures or completion.</summary>
@@ -328,7 +329,7 @@ public partial class RxNamesTests
     public async Task SelectManyEnumerableStopsAfterErrorsAndTerminalNotifications()
     {
         RecordingWitness<int> completed = new();
-        new ScriptedObservable<int>(observer =>
+        _ = new ScriptedObservable<int>(observer =>
         {
             observer.OnNext(One);
             observer.OnCompleted();
@@ -397,8 +398,8 @@ public partial class RxNamesTests
 
         await Assert.That(stoppedValues).IsEqualTo(One);
 
-        Assert.Throws<ArgumentNullException>(() => Signal.Return(One).SelectMany((Func<int, IEnumerable<int>>)null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Return(One).SelectMany((IObservable<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Return(One).SelectMany((Func<int, IEnumerable<int>>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Return(One).SelectMany((IObservable<int>)null!));
     }
 
     /// <summary>Produces an enumerable that throws when enumeration starts.</summary>

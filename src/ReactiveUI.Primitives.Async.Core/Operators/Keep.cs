@@ -57,7 +57,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-            return @this.Keep(value => predicate(state, value));
+            return new KeepSyncSignal<T>(@this, value => predicate(state, value));
         }
 
         /// <summary>
@@ -67,7 +67,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="predicate">A function that evaluates each element and cancellation token.</param>
         /// <returns>An observable sequence that emits only those elements for which the predicate returns <see langword="true"/>.</returns>
         public IObservableAsync<T> Where(Func<T, CancellationToken, ValueTask<bool>> predicate) =>
-            @this.Keep(predicate);
+            new KeepAsyncSignal<T>(@this, predicate);
 
         /// <summary>
         /// Creates a new observable sequence that contains only the elements from the current sequence that satisfy the
@@ -76,7 +76,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="predicate">A function to test each element for a condition.</param>
         /// <returns>An observable sequence that contains elements from the current sequence that satisfy the predicate.</returns>
         public IObservableAsync<T> Where(Func<T, bool> predicate) =>
-            @this.Keep(predicate);
+            new KeepSyncSignal<T>(@this, predicate);
     }
 
     /// <summary>
@@ -181,12 +181,7 @@ public static partial class SignalAsyncExtensions
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
-                if (!predicate(value))
-                {
-                    return default;
-                }
-
-                return downstream.OnNextAsync(value, cancellationToken);
+                return !predicate(value) ? default : downstream.OnNextAsync(value, cancellationToken);
             }
 
             /// <inheritdoc/>

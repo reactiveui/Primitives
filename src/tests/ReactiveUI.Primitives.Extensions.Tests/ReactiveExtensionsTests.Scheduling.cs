@@ -201,7 +201,7 @@ public partial class ReactiveExtensionsTests
     {
         var executed = false;
         using ActionDisposable disposable = new(() => { });
-        disposable.Using(d => executed = true, Sequencer.Immediate).Subscribe();
+        _ = disposable.Using(d => executed = true, Sequencer.Immediate).Subscribe();
         await Assert.That(executed).IsTrue();
     }
 
@@ -223,7 +223,7 @@ public partial class ReactiveExtensionsTests
     {
         using ActionDisposable disposable = new(() => { });
         var result = 0;
-        disposable.Using(d => SampleValue42, Sequencer.Immediate).Subscribe(r => result = r);
+        _ = disposable.Using(d => SampleValue42, Sequencer.Immediate).Subscribe(r => result = r);
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
@@ -234,7 +234,7 @@ public partial class ReactiveExtensionsTests
     {
         var executed = false;
         const int Value = 42;
-        Value.Schedule(TimeSpan.FromMilliseconds(10), Sequencer.Immediate, v => executed = true).Subscribe();
+        _ = Value.Schedule(TimeSpan.FromMilliseconds(10), Sequencer.Immediate, v => executed = true).Subscribe();
         await Assert.That(executed).IsTrue();
     }
 
@@ -271,7 +271,7 @@ public partial class ReactiveExtensionsTests
     {
         var executed = false;
         Subject<int> subject = new();
-        subject.Schedule(TimeSpan.FromMilliseconds(10), Sequencer.Immediate, v => executed = true).Subscribe();
+        _ = subject.Schedule(TimeSpan.FromMilliseconds(10), Sequencer.Immediate, v => executed = true).Subscribe();
         subject.OnNext(SampleValue42);
         await Assert.That(executed).IsTrue();
     }
@@ -283,7 +283,7 @@ public partial class ReactiveExtensionsTests
     {
         var executed = false;
         const int Value = 42;
-        Value.Schedule(
+        _ = Value.Schedule(
             TimeProvider.System.GetLocalNow().AddMilliseconds(SampleValue10),
             Sequencer.Immediate,
             v => executed = true).Subscribe();
@@ -297,7 +297,7 @@ public partial class ReactiveExtensionsTests
     {
         var executed = false;
         Subject<int> subject = new();
-        subject.Schedule(
+        _ = subject.Schedule(
             TimeProvider.System.GetLocalNow().AddMilliseconds(SampleValue10),
             Sequencer.Immediate,
             v => executed = true).Subscribe();
@@ -312,7 +312,7 @@ public partial class ReactiveExtensionsTests
     {
         const int Value = 42;
         var result = 0;
-        Value.Schedule(Sequencer.Immediate, v => v * SampleValue2).Subscribe(r => result = r);
+        _ = Value.Schedule(Sequencer.Immediate, v => v * SampleValue2).Subscribe(r => result = r);
         await Assert.That(result).IsEqualTo(SampleValue84);
     }
 
@@ -323,7 +323,7 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         var result = 0;
-        subject.Schedule(Sequencer.Immediate, v => v * SampleValue2).Subscribe(r => result = r);
+        _ = subject.Schedule(Sequencer.Immediate, v => v * SampleValue2).Subscribe(r => result = r);
         subject.OnNext(SampleValue42);
         await Assert.That(result).IsEqualTo(SampleValue84);
     }
@@ -335,7 +335,7 @@ public partial class ReactiveExtensionsTests
     {
         const int Value = 42;
         var result = 0;
-        Value.Schedule(TimeSpan.FromMilliseconds(10), Sequencer.Immediate, v => v * SampleValue2)
+        _ = Value.Schedule(TimeSpan.FromMilliseconds(10), Sequencer.Immediate, v => v * SampleValue2)
             .Subscribe(r => result = r);
         await Assert.That(result).IsEqualTo(SampleValue84);
     }
@@ -347,7 +347,7 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         var result = 0;
-        subject.Schedule(TimeSpan.FromMilliseconds(10), Sequencer.Immediate, v => v * SampleValue2)
+        _ = subject.Schedule(TimeSpan.FromMilliseconds(10), Sequencer.Immediate, v => v * SampleValue2)
             .Subscribe(r => result = r);
         subject.OnNext(SampleValue42);
         await Assert.That(result).IsEqualTo(SampleValue84);
@@ -361,7 +361,7 @@ public partial class ReactiveExtensionsTests
         VirtualClock scheduler = new();
         Subject<int> subject = new();
         List<int> results = [];
-        subject.ObserveOnIf(true, scheduler).Subscribe(results.Add);
+        _ = subject.ObserveOnIf(true, scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         await Assert.That(results).IsEmpty();
         scheduler.AdvanceBy(1);
@@ -376,7 +376,7 @@ public partial class ReactiveExtensionsTests
         VirtualClock scheduler = new();
         Subject<int> subject = new();
         List<int> results = [];
-        subject.ObserveOnIf(false, scheduler).Subscribe(results.Add);
+        _ = subject.ObserveOnIf(false, scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         await Assert.That(results).IsCollectionEqualTo([1]);
     }
@@ -390,7 +390,7 @@ public partial class ReactiveExtensionsTests
         VirtualClock falseScheduler = new();
         Subject<int> subject = new();
         List<int> results = [];
-        subject.ObserveOnIf(true, trueScheduler, falseScheduler).Subscribe(results.Add);
+        _ = subject.ObserveOnIf(true, trueScheduler, falseScheduler).Subscribe(results.Add);
         subject.OnNext(1);
         await Assert.That(results).IsEmpty();
         trueScheduler.AdvanceBy(1);
@@ -406,7 +406,7 @@ public partial class ReactiveExtensionsTests
         VirtualClock falseScheduler = new();
         Subject<int> subject = new();
         List<int> results = [];
-        subject.ObserveOnIf(false, trueScheduler, falseScheduler).Subscribe(results.Add);
+        _ = subject.ObserveOnIf(false, trueScheduler, falseScheduler).Subscribe(results.Add);
         subject.OnNext(1);
         await Assert.That(results).IsEmpty();
         falseScheduler.AdvanceBy(1);
@@ -630,7 +630,7 @@ public partial class ReactiveExtensionsTests
         Subject<int> subject = new();
         List<int> results = [];
         List<int> actionValues = [];
-        subject.Schedule(TimeSpan.FromTicks(50), scheduler, actionValues.Add).Subscribe(results.Add);
+        _ = subject.Schedule(TimeSpan.FromTicks(50), scheduler, actionValues.Add).Subscribe(results.Add);
         subject.OnNext(SampleValue10);
         scheduler.AdvanceBy(SchedulerHalfWindowTicks + 1);
         await Assert.That(actionValues).IsCollectionEqualTo([SampleValue10]);

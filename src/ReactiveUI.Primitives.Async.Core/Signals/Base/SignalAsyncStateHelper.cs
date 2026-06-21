@@ -27,15 +27,10 @@ internal static class SignalAsyncStateHelper
         SignalAsyncState<T> state,
         SignalBroadcastKind kind,
         T value,
-        CancellationToken cancellationToken)
-    {
-        if (!state.TryGetObservers(out var observers))
-        {
-            return default;
-        }
-
-        return BroadcastOnNextAsync(kind, observers, value, cancellationToken);
-    }
+        CancellationToken cancellationToken) =>
+        !state.TryGetObservers(out var observers)
+            ? default
+            : BroadcastOnNextAsync(kind, observers, value, cancellationToken);
 
     /// <summary>Notifies subscribed observers of a recoverable error.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
@@ -48,15 +43,8 @@ internal static class SignalAsyncStateHelper
         SignalAsyncState<T> state,
         SignalBroadcastKind kind,
         Exception error,
-        CancellationToken cancellationToken)
-    {
-        if (!state.TryGetObservers(out var observers))
-        {
-            return default;
-        }
-
-        return BroadcastOnErrorResumeAsync(kind, observers, error, cancellationToken);
-    }
+        CancellationToken cancellationToken) =>
+        !state.TryGetObservers(out var observers) ? default : BroadcastOnErrorResumeAsync(kind, observers, error, cancellationToken);
 
     /// <summary>Completes the signal and notifies subscribed observers.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
@@ -67,15 +55,8 @@ internal static class SignalAsyncStateHelper
     public static ValueTask OnCompletedAsync<T>(
         SignalAsyncState<T> state,
         SignalBroadcastKind kind,
-        Result result)
-    {
-        if (!state.TryComplete(result, out var observers))
-        {
-            return default;
-        }
-
-        return BroadcastOnCompletedAsync(kind, observers, result);
-    }
+        Result result) =>
+        !state.TryComplete(result, out var observers) ? default : BroadcastOnCompletedAsync(kind, observers, result);
 
     /// <summary>Releases resources used by the signal.</summary>
     /// <returns>A completed task.</returns>

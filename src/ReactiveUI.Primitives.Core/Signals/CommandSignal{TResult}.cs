@@ -86,7 +86,27 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     public bool CanRun => Volatile.Read(ref _canRun);
 
     /// <summary>Gets the lazily allocated fault stream.</summary>
-    private Signal<Exception> FaultsSignal => EnsureSignal(ref _faults);
+    private Signal<Exception> FaultsSignal
+    {
+        get
+        {
+            var signal = Volatile.Read(ref _faults);
+            if (signal is not null)
+            {
+                return signal;
+            }
+
+            signal = new();
+            var current = Interlocked.CompareExchange(ref _faults, signal, null);
+            if (current is null)
+            {
+                return signal;
+            }
+
+            signal.Dispose();
+            return current;
+        }
+    }
 
     /// <summary>Gets the lazily allocated running state stream.</summary>
     private StateSignal<bool> IsRunningSignal
@@ -162,29 +182,6 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
         ThrowIfDisposed();
         AddResult(observer);
         return new ResultSubscription(this, observer);
-    }
-
-    /// <summary>Creates a stream exactly once.</summary>
-    /// <typeparam name="T">The signal value type.</typeparam>
-    /// <param name="field">The field to initialize.</param>
-    /// <returns>The initialized signal.</returns>
-    private static Signal<T> EnsureSignal<T>(ref Signal<T>? field)
-    {
-        var signal = Volatile.Read(ref field);
-        if (signal is not null)
-        {
-            return signal;
-        }
-
-        signal = new();
-        var current = Interlocked.CompareExchange(ref field, signal, null);
-        if (current is null)
-        {
-            return signal;
-        }
-
-        signal.Dispose();
-        return current;
     }
 
     /// <summary>Gets the observer snapshot that should replace the current snapshot.</summary>
@@ -351,7 +348,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
             return;
         }
 
-        throw new ObjectDisposedException(nameof(CommandSignal<TResult>));
+        throw new ObjectDisposedException(nameof(CommandSignal<>));
     }
 
     /// <summary>Adds a result subscriber.</summary>

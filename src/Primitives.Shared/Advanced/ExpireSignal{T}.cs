@@ -53,7 +53,7 @@ public sealed class ExpireSignal<T> : IRequireCurrentThread<T>
         }
 
         SingleDisposable subscription = new();
-        Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run()));
+        _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run()));
         return subscription;
     }
 }

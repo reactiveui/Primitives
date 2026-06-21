@@ -1,12 +1,262 @@
 #nullable enable
+ReactiveUI.Primitives.Reactive.Advanced.AfterSignal
+ReactiveUI.Primitives.Reactive.Advanced.AfterSignal.AfterSignal(System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler! scheduler) -> void
+ReactiveUI.Primitives.Reactive.Advanced.AfterSignal.AfterSignal(System.TimeSpan dueTime, System.TimeSpan period, System.Reactive.Concurrency.IScheduler! scheduler) -> void
+ReactiveUI.Primitives.Reactive.Advanced.AfterSignal.IsRequiredSubscribeOnCurrentThread() -> bool
+ReactiveUI.Primitives.Reactive.Advanced.AfterSignal.Subscribe(System.IObserver<long>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.AfterSubscription
+ReactiveUI.Primitives.Reactive.Advanced.AfterSubscription.AfterSubscription(System.IObserver<long>! observer, System.Reactive.Concurrency.IScheduler! scheduler, System.TimeSpan dueTime, System.TimeSpan? period) -> void
+ReactiveUI.Primitives.Reactive.Advanced.AfterSubscription.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.AfterSubscription.Run() -> ReactiveUI.Primitives.Reactive.Advanced.AfterSubscription!
+ReactiveUI.Primitives.Reactive.Advanced.AsyncCreateSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.AsyncCreateSignal<T>.AsyncCreateSignal(System.Func<System.IObserver<T>!, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.IDisposable!>!>! subscribe) -> void
+ReactiveUI.Primitives.Reactive.Advanced.AsyncCreateSignal<T>.AsyncCreateSignal(System.Func<System.IObserver<T>!, System.Threading.Tasks.Task<System.IDisposable!>!>! subscribe) -> void
+ReactiveUI.Primitives.Reactive.Advanced.AsyncCreateSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.AsyncDeferSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.AsyncDeferSignal<T>.AsyncDeferSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<System.IObservable<T>!>!>! observableFactory) -> void
+ReactiveUI.Primitives.Reactive.Advanced.AsyncDeferSignal<T>.AsyncDeferSignal(System.Func<System.Threading.Tasks.Task<System.IObservable<T>!>!>! observableFactory) -> void
+ReactiveUI.Primitives.Reactive.Advanced.AsyncDeferSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.AsyncSubscriptionLifetime
+ReactiveUI.Primitives.Reactive.Advanced.AsyncSubscriptionLifetime.AsyncSubscriptionLifetime() -> void
+ReactiveUI.Primitives.Reactive.Advanced.AsyncSubscriptionLifetime.Complete() -> void
+ReactiveUI.Primitives.Reactive.Advanced.AsyncSubscriptionLifetime.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.AsyncSubscriptionLifetime.IsCancellationRequested.get -> bool
+ReactiveUI.Primitives.Reactive.Advanced.AsyncSubscriptionLifetime.SetSubscription(System.IDisposable? disposable) -> void
+ReactiveUI.Primitives.Reactive.Advanced.AsyncSubscriptionLifetime.Token.get -> System.Threading.CancellationToken
+ReactiveUI.Primitives.Reactive.Advanced.AutoConnectSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.AutoConnectSignal<T>.AutoConnectSignal(ReactiveUI.Primitives.ConnectableSignal<T>! source, int subscriberCount) -> void
+ReactiveUI.Primitives.Reactive.Advanced.AutoConnectSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.AutoShareSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.AutoShareSignal<T>.AutoShareSignal(ReactiveUI.Primitives.ConnectableSignal<T>! source) -> void
+ReactiveUI.Primitives.Reactive.Advanced.AutoShareSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.AutoShareSubscription<T>
+ReactiveUI.Primitives.Reactive.Advanced.AutoShareSubscription<T>.AutoShareSubscription(ReactiveUI.Primitives.Reactive.Advanced.AutoShareSignal<T>! owner, System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.Reactive.Advanced.AutoShareSubscription<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.BlendSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.BlendSignal<T>.BlendSignal(System.IObservable<System.IObservable<T>!>! sources) -> void
+ReactiveUI.Primitives.Reactive.Advanced.BlendSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.BlendWitness<T>
+ReactiveUI.Primitives.Reactive.Advanced.BlendWitness<T>.BlendWitness(System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.BlendWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.BlendWitness<T>.Run(System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources) -> ReactiveUI.Primitives.Reactive.Advanced.BlendWitness<T>!
+ReactiveUI.Primitives.Reactive.Advanced.BlendWitness<T>.Run(System.IObservable<System.IObservable<T>!>! sources) -> ReactiveUI.Primitives.Reactive.Advanced.BlendWitness<T>!
+ReactiveUI.Primitives.Reactive.Advanced.BufferEachWitness<T>
+ReactiveUI.Primitives.Reactive.Advanced.BufferEachWitness<T>.BufferEachWitness(System.IObserver<System.Collections.Generic.IList<T>!>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.BufferEachWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.BufferEachWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.BufferEachWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.BufferEachWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.BufferEachWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.Reactive.Advanced.BufferSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.BufferSignal<T>.BufferSignal(System.IObservable<T>! source, System.TimeSpan timeSpan, System.Reactive.Concurrency.IScheduler! sequencer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.BufferSignal<T>.Subscribe(System.IObserver<System.Collections.Generic.IList<T>!>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.CastSignal<TResult>
+ReactiveUI.Primitives.Reactive.Advanced.CastSignal<TResult>.CastSignal(System.IObservable<object?>! source) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CastSignal<TResult>.IsRequiredSubscribeOnCurrentThread() -> bool
+ReactiveUI.Primitives.Reactive.Advanced.CastSignal<TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.CastWitness<TResult>
+ReactiveUI.Primitives.Reactive.Advanced.CastWitness<TResult>.CastWitness(System.IObserver<TResult>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CastWitness<TResult>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.CastWitness<TResult>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.CastWitness<TResult>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CastWitness<TResult>.OnNext(object? value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CastWitness<TResult>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.Reactive.Advanced.ChainSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.ChainSignal<T>.ChainSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources) -> void
+ReactiveUI.Primitives.Reactive.Advanced.ChainSignal<T>.ChainSignal(System.IObservable<System.IObservable<T>!>! sources) -> void
+ReactiveUI.Primitives.Reactive.Advanced.ChainSignal<T>.ChainSignal(System.IObservable<T>! first, System.IObservable<T>! second) -> void
+ReactiveUI.Primitives.Reactive.Advanced.ChainSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.ChainWitness<T>
+ReactiveUI.Primitives.Reactive.Advanced.ChainWitness<T>.ChainWitness(System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.ChainWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.ChainWitness<T>.Run(System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources) -> ReactiveUI.Primitives.Reactive.Advanced.ChainWitness<T>!
+ReactiveUI.Primitives.Reactive.Advanced.ChainWitness<T>.Run(System.IObservable<System.IObservable<T>!>! sources) -> ReactiveUI.Primitives.Reactive.Advanced.ChainWitness<T>!
+ReactiveUI.Primitives.Reactive.Advanced.ChainWitness<T>.Run(System.IObservable<T>! first, System.IObservable<T>! second) -> ReactiveUI.Primitives.Reactive.Advanced.ChainWitness<T>!
+ReactiveUI.Primitives.Reactive.Advanced.CollectSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.CollectSignal<T>.CollectSignal(System.IObservable<T>! source, System.TimeSpan timeSpan, System.Reactive.Concurrency.IScheduler! sequencer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CollectSignal<T>.Subscribe(System.IObserver<System.Collections.Generic.IList<T>!>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.CollectWitness<T>
+ReactiveUI.Primitives.Reactive.Advanced.CollectWitness<T>.CollectWitness(System.IObserver<System.Collections.Generic.IList<T>!>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CollectWitness<T>.CollectWitness(System.IObserver<System.Collections.Generic.IList<T>!>! observer, System.TimeSpan timeSpan, System.Reactive.Concurrency.IScheduler! sequencer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CollectWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.CollectWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.CollectWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CollectWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CollectWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CreateWitness<T>
+ReactiveUI.Primitives.Reactive.Advanced.CreateWitness<T>.CreateWitness(System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CreateWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.CreateWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.CreateWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CreateWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CreateWitness<T>.SetCancel(System.IDisposable! cancel) -> void
+ReactiveUI.Primitives.Reactive.Advanced.EmitIfQuietSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.EmitIfQuietSignal<T>.EmitIfQuietSignal(System.IObservable<T>! source, System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler! sequencer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.EmitIfQuietSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.EmitIfQuietWitness<T>
+ReactiveUI.Primitives.Reactive.Advanced.EmitIfQuietWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.EmitIfQuietWitness<T>.EmitIfQuietWitness(System.IObserver<T>! observer, System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler! sequencer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.EmitIfQuietWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.EmitIfQuietWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.EmitIfQuietWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.EmitIfQuietWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.Reactive.Advanced.EnumerableBlendSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.EnumerableBlendSignal<T>.EnumerableBlendSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources) -> void
+ReactiveUI.Primitives.Reactive.Advanced.EnumerableBlendSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.ExpireCoordinator<T>
+ReactiveUI.Primitives.Reactive.Advanced.ExpireCoordinator<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.ExpireCoordinator<T>.ExpireCoordinator(System.IObservable<T>! source, System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler! sequencer, System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.ExpireCoordinator<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.ExpireCoordinator<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.ExpireCoordinator<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.ExpireCoordinator<T>.Run() -> ReactiveUI.Primitives.Reactive.Advanced.ExpireCoordinator<T>!
+ReactiveUI.Primitives.Reactive.Advanced.ExpireSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.ExpireSignal<T>.ExpireSignal(System.IObservable<T>! source, System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler! sequencer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.ExpireSignal<T>.IsRequiredSubscribeOnCurrentThread() -> bool
+ReactiveUI.Primitives.Reactive.Advanced.ExpireSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.ForkJoinSignal<TLeft, TRight, TResult>
+ReactiveUI.Primitives.Reactive.Advanced.ForkJoinSignal<TLeft, TRight, TResult>.ForkJoinSignal(System.IObservable<TLeft>! left, System.IObservable<TRight>! right, System.Func<TLeft, TRight, TResult>! selector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.ForkJoinSignal<TLeft, TRight, TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.ForkJoinWitness<TLeft, TRight, TResult>
+ReactiveUI.Primitives.Reactive.Advanced.ForkJoinWitness<TLeft, TRight, TResult>.ForkJoinWitness(System.IObserver<TResult>! observer, System.Func<TLeft, TRight, TResult>! selector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.ForkJoinWitness<TLeft, TRight, TResult>.Run(System.IObservable<TLeft>! left, System.IObservable<TRight>! right) -> ReactiveUI.Primitives.Disposables.MultipleDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.FromAsyncSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.FromAsyncSignal<T>.FromAsyncSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>!>! taskFactory) -> void
+ReactiveUI.Primitives.Reactive.Advanced.FromAsyncSignal<T>.FromAsyncSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>!>! taskFactory, System.Threading.CancellationToken cancellationToken) -> void
+ReactiveUI.Primitives.Reactive.Advanced.FromAsyncSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.FromAsyncSubscription<T>
+ReactiveUI.Primitives.Reactive.Advanced.FromAsyncSubscription<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.FromAsyncSubscription<T>.FromAsyncSubscription(System.IObserver<T>! observer, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>!>! taskFactory) -> void
+ReactiveUI.Primitives.Reactive.Advanced.FromAsyncSubscription<T>.FromAsyncSubscription(System.IObserver<T>! observer, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>!>! taskFactory, System.Threading.CancellationToken externalCancellationToken) -> void
+ReactiveUI.Primitives.Reactive.Advanced.FromEventPatternSignal<TEventHandler, TEventArgs>
+ReactiveUI.Primitives.Reactive.Advanced.FromEventPatternSignal<TEventHandler, TEventArgs>.FromEventPatternSignal(System.Action<TEventHandler!>! addHandler, System.Action<TEventHandler!>! removeHandler) -> void
+ReactiveUI.Primitives.Reactive.Advanced.FromEventPatternSignal<TEventHandler, TEventArgs>.Subscribe(System.IObserver<ReactiveUI.Primitives.Core.EventPattern<TEventArgs!>>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Reactive.Advanced.ImmutableReturnRxVoidSignal
 ReactiveUI.Primitives.Reactive.Advanced.ImmutableReturnRxVoidSignal.IsRequiredSubscribeOnCurrentThread() -> bool
 ReactiveUI.Primitives.Reactive.Advanced.ImmutableReturnRxVoidSignal.Subscribe(System.Action<System.Reactive.Unit>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted) -> System.IDisposable!
 ReactiveUI.Primitives.Reactive.Advanced.ImmutableReturnRxVoidSignal.Subscribe(System.IObserver<System.Reactive.Unit>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.IsEmptySignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.IsEmptySignal<T>.IsEmptySignal(System.IObservable<T>! source) -> void
+ReactiveUI.Primitives.Reactive.Advanced.IsEmptySignal<T>.IsRequiredSubscribeOnCurrentThread() -> bool
+ReactiveUI.Primitives.Reactive.Advanced.IsEmptySignal<T>.Subscribe(System.IObserver<bool>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.IsEmptyWitness<T>
+ReactiveUI.Primitives.Reactive.Advanced.IsEmptyWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.IsEmptyWitness<T>.IsEmptyWitness(System.IObserver<bool>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.IsEmptyWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.IsEmptyWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.IsEmptyWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.IsEmptyWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.Reactive.Advanced.LeadSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.LeadSignal<T>.LeadSignal(System.IObservable<T>! source, T value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.LeadSignal<T>.Subscribe(System.Action<T>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.LeadSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.MapIndexedSignal<TSource, TResult>
+ReactiveUI.Primitives.Reactive.Advanced.MapIndexedSignal<TSource, TResult>.IsRequiredSubscribeOnCurrentThread() -> bool
+ReactiveUI.Primitives.Reactive.Advanced.MapIndexedSignal<TSource, TResult>.MapIndexedSignal(System.IObservable<TSource>! source, System.Func<TSource, int, TResult>! selector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.MapIndexedSignal<TSource, TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.MapIndexedWitness<TSource, TResult>
+ReactiveUI.Primitives.Reactive.Advanced.MapIndexedWitness<TSource, TResult>.MapIndexedWitness(System.IObserver<TResult>! observer, System.Func<TSource, int, TResult>! selector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.MapIndexedWitness<TSource, TResult>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.MapIndexedWitness<TSource, TResult>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.MapIndexedWitness<TSource, TResult>.OnNext(TSource value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.MaxConcurrentBlendCoordinator<T>
+ReactiveUI.Primitives.Reactive.Advanced.MaxConcurrentBlendCoordinator<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.MaxConcurrentBlendCoordinator<T>.MaxConcurrentBlendCoordinator(System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.MaxConcurrentBlendCoordinator<T>.Run(System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources, int maxConcurrent) -> ReactiveUI.Primitives.Reactive.Advanced.MaxConcurrentBlendCoordinator<T>!
+ReactiveUI.Primitives.Reactive.Advanced.MaxConcurrentEnumerableBlendSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.MaxConcurrentEnumerableBlendSignal<T>.MaxConcurrentEnumerableBlendSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources, int maxConcurrent) -> void
+ReactiveUI.Primitives.Reactive.Advanced.MaxConcurrentEnumerableBlendSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.MergeCoordinator<T>
+ReactiveUI.Primitives.Reactive.Advanced.MergeCoordinator<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.MergeCoordinator<T>.MergeCoordinator(System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.MergeCoordinator<T>.OnAnyError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.MergeCoordinator<T>.OnSource(System.IObservable<T>? source) -> void
+ReactiveUI.Primitives.Reactive.Advanced.MergeCoordinator<T>.Run(System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources) -> ReactiveUI.Primitives.Reactive.Advanced.MergeCoordinator<T>!
+ReactiveUI.Primitives.Reactive.Advanced.MergeCoordinator<T>.Run(System.IObservable<T>! first, System.IObservable<T>! second) -> ReactiveUI.Primitives.Reactive.Advanced.MergeCoordinator<T>!
+ReactiveUI.Primitives.Reactive.Advanced.MergeSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.MergeSignal<T>.MergeSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources) -> void
+ReactiveUI.Primitives.Reactive.Advanced.MergeSignal<T>.MergeSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources, int maxConcurrent) -> void
+ReactiveUI.Primitives.Reactive.Advanced.MergeSignal<T>.MergeSignal(System.IObservable<T>! first, System.IObservable<T>! second) -> void
+ReactiveUI.Primitives.Reactive.Advanced.MergeSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.PairSignal<TLeft, TRight, TResult>
+ReactiveUI.Primitives.Reactive.Advanced.PairSignal<TLeft, TRight, TResult>.PairSignal(System.IObservable<TLeft>! left, System.IObservable<TRight>! right, System.Func<TLeft, TRight, TResult>! selector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.PairSignal<TLeft, TRight, TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.PairWitness<TLeft, TRight, TResult>
+ReactiveUI.Primitives.Reactive.Advanced.PairWitness<TLeft, TRight, TResult>.PairWitness(System.IObserver<TResult>! observer, System.Func<TLeft, TRight, TResult>! selector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.PairWitness<TLeft, TRight, TResult>.Run(System.IObservable<TLeft>! left, System.IObservable<TRight>! right) -> ReactiveUI.Primitives.Disposables.MultipleDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.PublishSelectorSignal<TSource, TResult>
+ReactiveUI.Primitives.Reactive.Advanced.PublishSelectorSignal<TSource, TResult>.PublishSelectorSignal(System.IObservable<TSource>! source, System.Func<System.IObservable<TSource>!, System.IObservable<TResult>!>! selector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.PublishSelectorSignal<TSource, TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.PublishSelectorWitness<T>
+ReactiveUI.Primitives.Reactive.Advanced.PublishSelectorWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.PublishSelectorWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.PublishSelectorWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.PublishSelectorWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.PublishSelectorWitness<T>.PublishSelectorWitness(System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.PublishSelectorWitness<T>.SetCancel(System.IDisposable! cancel) -> void
+ReactiveUI.Primitives.Reactive.Advanced.RaceSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.RaceSignal<T>.RaceSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources) -> void
+ReactiveUI.Primitives.Reactive.Advanced.RaceSignal<T>.RaceSignal(System.IObservable<System.IObservable<T>!>! sources) -> void
+ReactiveUI.Primitives.Reactive.Advanced.RaceSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.RaceWitness<T>
+ReactiveUI.Primitives.Reactive.Advanced.RaceWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.RaceWitness<T>.RaceWitness(System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.RaceWitness<T>.Run(System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources) -> ReactiveUI.Primitives.Reactive.Advanced.RaceWitness<T>!
+ReactiveUI.Primitives.Reactive.Advanced.RaceWitness<T>.Run(System.IObservable<System.IObservable<T>!>! sources) -> ReactiveUI.Primitives.Reactive.Advanced.RaceWitness<T>!
+ReactiveUI.Primitives.Reactive.Advanced.RangeForkJoinSignal<TResult>
+ReactiveUI.Primitives.Reactive.Advanced.RangeForkJoinSignal<TResult>.RangeForkJoinSignal(ReactiveUI.Primitives.Advanced.RangeSignal! left, ReactiveUI.Primitives.Advanced.RangeSignal! right, System.Func<int, int, TResult>! selector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.RangeForkJoinSignal<TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.RangeSyncLatestSignal<TResult>
+ReactiveUI.Primitives.Reactive.Advanced.RangeSyncLatestSignal<TResult>.RangeSyncLatestSignal(ReactiveUI.Primitives.Advanced.RangeSignal! left, ReactiveUI.Primitives.Advanced.RangeSignal! right, System.Func<int, int, TResult>! selector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.RangeSyncLatestSignal<TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.RangeWithLatestSignal<TResult>
+ReactiveUI.Primitives.Reactive.Advanced.RangeWithLatestSignal<TResult>.RangeWithLatestSignal(ReactiveUI.Primitives.Advanced.RangeSignal! left, ReactiveUI.Primitives.Advanced.RangeSignal! right, System.Func<int, int, TResult>! selector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.RangeWithLatestSignal<TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Reactive.Advanced.ReturnSignal<T>
 ReactiveUI.Primitives.Reactive.Advanced.ReturnSignal<T>.IsRequiredSubscribeOnCurrentThread() -> bool
 ReactiveUI.Primitives.Reactive.Advanced.ReturnSignal<T>.ReturnSignal(T value, System.Reactive.Concurrency.IScheduler! scheduler) -> void
 ReactiveUI.Primitives.Reactive.Advanced.ReturnSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.ScheduledEnumerableSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.ScheduledEnumerableSignal<T>.ScheduledEnumerableSignal(System.Collections.Generic.IEnumerable<T>! values, System.Reactive.Concurrency.IScheduler! scheduler) -> void
+ReactiveUI.Primitives.Reactive.Advanced.ScheduledEnumerableSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyCoordinator<TSource, TResult>
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyCoordinator<TSource, TResult>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyCoordinator<TSource, TResult>.OnAnyError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyCoordinator<TSource, TResult>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyCoordinator<TSource, TResult>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyCoordinator<TSource, TResult>.OnNext(TSource value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyCoordinator<TSource, TResult>.Run(System.IObservable<TSource>! source) -> ReactiveUI.Primitives.Reactive.Advanced.SelectManyCoordinator<TSource, TResult>!
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyCoordinator<TSource, TResult>.SelectManyCoordinator(System.IObserver<TResult>! observer, System.Func<TSource, System.IObservable<TResult>!>! selector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyCoordinator<TSource, TResult>.SelectManyCoordinator(System.IObserver<TResult>! observer, System.IObservable<TResult>! inner) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyEnumerableSignal<TSource, TResult>
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyEnumerableSignal<TSource, TResult>.SelectManyEnumerableSignal(System.IObservable<TSource>! source, System.Func<TSource, System.Collections.Generic.IEnumerable<TResult>!>! selector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyEnumerableSignal<TSource, TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyEnumerableWitness<TSource, TResult>
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyEnumerableWitness<TSource, TResult>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyEnumerableWitness<TSource, TResult>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyEnumerableWitness<TSource, TResult>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyEnumerableWitness<TSource, TResult>.OnNext(TSource value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyEnumerableWitness<TSource, TResult>.SelectManyEnumerableWitness(System.IObserver<TResult>! observer, System.Func<TSource, System.Collections.Generic.IEnumerable<TResult>!>! selector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyEnumerableWitness<TSource, TResult>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyResultCoordinator<TSource, TCollection, TResult>
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyResultCoordinator<TSource, TCollection, TResult>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyResultCoordinator<TSource, TCollection, TResult>.OnAnyError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyResultCoordinator<TSource, TCollection, TResult>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyResultCoordinator<TSource, TCollection, TResult>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyResultCoordinator<TSource, TCollection, TResult>.OnNext(TSource value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyResultCoordinator<TSource, TCollection, TResult>.Run(System.IObservable<TSource>! source) -> ReactiveUI.Primitives.Reactive.Advanced.SelectManyResultCoordinator<TSource, TCollection, TResult>!
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyResultCoordinator<TSource, TCollection, TResult>.SelectManyResultCoordinator(System.IObserver<TResult>! observer, System.Func<TSource, System.IObservable<TCollection>!>! collectionSelector, System.Func<TSource, TCollection, TResult>! resultSelector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyResultSignal<TSource, TCollection, TResult>
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyResultSignal<TSource, TCollection, TResult>.SelectManyResultSignal(System.IObservable<TSource>! source, System.Func<TSource, System.IObservable<TCollection>!>! collectionSelector, System.Func<TSource, TCollection, TResult>! resultSelector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManyResultSignal<TSource, TCollection, TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.SelectManySignal<TSource, TResult>
+ReactiveUI.Primitives.Reactive.Advanced.SelectManySignal<TSource, TResult>.SelectManySignal(System.IObservable<TSource>! source, System.Func<TSource, System.IObservable<TResult>!>! selector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManySignal<TSource, TResult>.SelectManySignal(System.IObservable<TSource>! source, System.IObservable<TResult>! inner) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SelectManySignal<TSource, TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.SequenceSignal
+ReactiveUI.Primitives.Reactive.Advanced.SequenceSignal.IsRequiredSubscribeOnCurrentThread() -> bool
+ReactiveUI.Primitives.Reactive.Advanced.SequenceSignal.SequenceSignal(int start, int count, System.Reactive.Concurrency.IScheduler! scheduler) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SequenceSignal.Subscribe(System.IObserver<int>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Reactive.Advanced.SignalSubscription
 ReactiveUI.Primitives.Reactive.Advanced.SparkWitness<T>
 ReactiveUI.Primitives.Reactive.Advanced.SparkWitness<T>.Dispose() -> void
@@ -15,6 +265,78 @@ ReactiveUI.Primitives.Reactive.Advanced.SparkWitness<T>.OnError(System.Exception
 ReactiveUI.Primitives.Reactive.Advanced.SparkWitness<T>.OnNext(T value) -> void
 ReactiveUI.Primitives.Reactive.Advanced.SparkWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
 ReactiveUI.Primitives.Reactive.Advanced.SparkWitness<T>.SparkWitness(System.IObserver<ReactiveUI.Primitives.Reactive.Core.Spark<T>>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.StartSignal
+ReactiveUI.Primitives.Reactive.Advanced.StartSignal.IsRequiredSubscribeOnCurrentThread() -> bool
+ReactiveUI.Primitives.Reactive.Advanced.StartSignal.StartSignal(System.Action! action, System.Reactive.Concurrency.IScheduler! scheduler) -> void
+ReactiveUI.Primitives.Reactive.Advanced.StartSignal.Subscribe(System.IObserver<System.Reactive.Unit>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.StartSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.StartSignal<T>.IsRequiredSubscribeOnCurrentThread() -> bool
+ReactiveUI.Primitives.Reactive.Advanced.StartSignal<T>.StartSignal(System.Func<T>! function, System.Reactive.Concurrency.IScheduler! scheduler) -> void
+ReactiveUI.Primitives.Reactive.Advanced.StartSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.SubscribeSafeWitness<T>
+ReactiveUI.Primitives.Reactive.Advanced.SubscribeSafeWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.SubscribeSafeWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.SubscribeSafeWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SubscribeSafeWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SubscribeSafeWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SubscribeSafeWitness<T>.SubscribeSafeWitness(System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SwitchSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.SwitchSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.SwitchSignal<T>.SwitchSignal(System.IObservable<System.IObservable<T>!>! sources) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SwitchWitness<T>
+ReactiveUI.Primitives.Reactive.Advanced.SwitchWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.SwitchWitness<T>.Run(System.IObservable<System.IObservable<T>!>! sources) -> ReactiveUI.Primitives.Reactive.Advanced.SwitchWitness<T>!
+ReactiveUI.Primitives.Reactive.Advanced.SwitchWitness<T>.SwitchWitness(System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SyncLatestSignal<TLeft, TRight, TResult>
+ReactiveUI.Primitives.Reactive.Advanced.SyncLatestSignal<TLeft, TRight, TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.SyncLatestSignal<TLeft, TRight, TResult>.SyncLatestSignal(System.IObservable<TLeft>! left, System.IObservable<TRight>! right, System.Func<TLeft, TRight, TResult>! selector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SyncLatestWitness<TLeft, TRight, TResult>
+ReactiveUI.Primitives.Reactive.Advanced.SyncLatestWitness<TLeft, TRight, TResult>.Run(System.IObservable<TLeft>! left, System.IObservable<TRight>! right) -> ReactiveUI.Primitives.Disposables.MultipleDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.SyncLatestWitness<TLeft, TRight, TResult>.SyncLatestWitness(System.IObserver<TResult>! observer, System.Func<TLeft, TRight, TResult>! selector) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SynchronizeObjectSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.SynchronizeObjectSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.SynchronizeObjectSignal<T>.SynchronizeObjectSignal(System.IObservable<T>! source, object! gate) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SynchronizeObjectWitness<T>
+ReactiveUI.Primitives.Reactive.Advanced.SynchronizeObjectWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.SynchronizeObjectWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.SynchronizeObjectWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SynchronizeObjectWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SynchronizeObjectWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.Reactive.Advanced.SynchronizeObjectWitness<T>.SynchronizeObjectWitness(System.IObserver<T>! observer, object! gate) -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskAnyWitness<T>
+ReactiveUI.Primitives.Reactive.Advanced.TaskAnyWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskAnyWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskAnyWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskAnyWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskAnyWitness<T>.RegisterCancellation() -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskAnyWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskAnyWitness<T>.Task.get -> System.Threading.Tasks.Task<bool>!
+ReactiveUI.Primitives.Reactive.Advanced.TaskAnyWitness<T>.TaskAnyWitness(System.Func<T, bool>! predicate, System.Threading.CancellationToken cancellationToken) -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskAnyWitness<T>.TaskAnyWitness(System.Threading.CancellationToken cancellationToken) -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskChainCoordinator<T>
+ReactiveUI.Primitives.Reactive.Advanced.TaskChainCoordinator<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskChainCoordinator<T>.Run(System.IObservable<System.Threading.Tasks.Task<T>!>! sources) -> ReactiveUI.Primitives.Reactive.Advanced.TaskChainCoordinator<T>!
+ReactiveUI.Primitives.Reactive.Advanced.TaskChainCoordinator<T>.TaskChainCoordinator(System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskChainSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.TaskChainSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.TaskChainSignal<T>.TaskChainSignal(System.IObservable<System.Threading.Tasks.Task<T>!>! sources) -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskCountWitness<T>
+ReactiveUI.Primitives.Reactive.Advanced.TaskCountWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskCountWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskCountWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskCountWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskCountWitness<T>.RegisterCancellation() -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskCountWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskCountWitness<T>.Task.get -> System.Threading.Tasks.Task<int>!
+ReactiveUI.Primitives.Reactive.Advanced.TaskCountWitness<T>.TaskCountWitness(System.Func<T, bool>! predicate, System.Threading.CancellationToken cancellationToken) -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskCountWitness<T>.TaskCountWitness(System.Threading.CancellationToken cancellationToken) -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskInstanceSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.TaskInstanceSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.TaskInstanceSignal<T>.TaskInstanceSignal(System.Threading.Tasks.Task<T>! task) -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskInstanceSubscription
+ReactiveUI.Primitives.Reactive.Advanced.TaskInstanceSubscription.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskInstanceSubscription.TaskInstanceSubscription() -> void
+ReactiveUI.Primitives.Reactive.Advanced.TaskInstanceSubscription.TryStop() -> bool
 ReactiveUI.Primitives.Reactive.Advanced.TimeIntervalWitness<T>
 ReactiveUI.Primitives.Reactive.Advanced.TimeIntervalWitness<T>.Dispose() -> void
 ReactiveUI.Primitives.Reactive.Advanced.TimeIntervalWitness<T>.OnCompleted() -> void
@@ -239,7 +561,6 @@ ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).SyncLatest<TRight, TResult>(System.IObservable<TRight>! right, System.Func<T, TRight, TResult>! selector) -> System.IObservable<TResult>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Synchronize() -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Synchronize(object! gate) -> System.IObservable<T>!
-ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).SynchronizeObject(object! gate) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).Take(int count) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).TakeUntil<TOther>(System.IObservable<TOther>! other) -> System.IObservable<T>!
 ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).TakeWhile(System.Func<T, bool>! predicate) -> System.IObservable<T>!
@@ -567,7 +888,6 @@ static ReactiveUI.Primitives.Reactive.LinqExtensions.SyncLatest<T, T2, T3, TResu
 static ReactiveUI.Primitives.Reactive.LinqExtensions.SyncLatest<T, TRight, TResult>(this System.IObservable<T>! source, System.IObservable<TRight>! right, System.Func<T, TRight, TResult>! selector) -> System.IObservable<TResult>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Synchronize<T>(this System.IObservable<T>! source) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Synchronize<T>(this System.IObservable<T>! source, object! gate) -> System.IObservable<T>!
-static ReactiveUI.Primitives.Reactive.LinqExtensions.SynchronizeObject<T>(this System.IObservable<T>! source, object! gate) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.Take<T>(this System.IObservable<T>! source, int count) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.TakeUntil<T, TOther>(this System.IObservable<T>! source, System.IObservable<TOther>! other) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.TakeWhile<T>(this System.IObservable<T>! source, System.Func<T, bool>! predicate) -> System.IObservable<T>!
@@ -639,6 +959,8 @@ static ReactiveUI.Primitives.Reactive.Signals.Signal.Empty<T>() -> System.IObser
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Empty<T>(System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Every(System.TimeSpan period) -> System.IObservable<long>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Every(System.TimeSpan period, System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<long>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.Expire<T>(System.IObservable<T>! source, System.TimeSpan dueTime) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.Expire<T>(System.IObservable<T>! source, System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Fail<T>(System.Exception! error) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Fail<T>(System.Exception! error, System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Fail<T>(System.Exception! error, System.Reactive.Concurrency.IScheduler! scheduler, T witness) -> System.IObservable<T>!
@@ -682,6 +1004,8 @@ static ReactiveUI.Primitives.Reactive.Signals.Signal.Range(int start, int count,
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Recover<TSource>(params System.IObservable<TSource>![]! sources) -> System.IObservable<TSource>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Return<T>(T value) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Return<T>(T value, System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.RunAsync<TSource>(System.IObservable<TSource>! source) -> ReactiveUI.Primitives.Signals.IAwaitSignal<TSource>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.RunAsync<TSource>(System.IObservable<TSource>! source, System.Threading.CancellationToken cancellationToken) -> ReactiveUI.Primitives.Signals.IAwaitSignal<TSource>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Scheduled<T>(System.Reactive.Concurrency.IScheduler! scheduler) -> ReactiveUI.Primitives.Reactive.Signals.ScheduledSignal<T>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Scheduled<T>(System.Reactive.Concurrency.IScheduler! scheduler, System.IObserver<T>? defaultObserver) -> ReactiveUI.Primitives.Reactive.Signals.ScheduledSignal<T>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Sequence(int start, int count) -> System.IObservable<int>!
@@ -696,12 +1020,16 @@ static ReactiveUI.Primitives.Reactive.Signals.Signal.Switch<T>(System.IObservabl
 static ReactiveUI.Primitives.Reactive.Signals.Signal.SyncLatest<TLeft, TRight, TResult>(System.IObservable<TLeft>! left, System.IObservable<TRight>! right, System.Func<TLeft, TRight, TResult>! selector) -> System.IObservable<TResult>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Throw<T>(System.Exception! error) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Throw<T>(System.Exception! error, System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.Timeout<T>(System.IObservable<T>! source, System.TimeSpan dueTime) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.Timeout<T>(System.IObservable<T>! source, System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Timer(System.DateTimeOffset dueTime) -> System.IObservable<long>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Timer(System.DateTimeOffset dueTime, System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<long>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Timer(System.TimeSpan dueTime) -> System.IObservable<long>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Timer(System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<long>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Timer(System.TimeSpan dueTime, System.TimeSpan period) -> System.IObservable<long>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Timer(System.TimeSpan dueTime, System.TimeSpan period, System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<long>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.ToTask<TSource>(System.IObservable<TSource>! source) -> System.Threading.Tasks.Task<TSource>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.ToTask<TSource>(System.IObservable<TSource>! source, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<TSource>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Unfold<TState, TResult>(TState initialState, System.Func<TState, bool>! condition, System.Func<TState, TState>! iterate, System.Func<TState, TResult>! resultSelector) -> System.IObservable<TResult>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Use<TResource, T>(System.Func<TResource>! resourceFactory, System.Func<TResource, System.IObservable<T>!>! signalFactory) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.Signals.SignalExtensions.Collect<TSource>(this System.IObservable<TSource>! source, System.TimeSpan timeSpan) -> System.IObservable<System.Collections.Generic.IList<TSource>!>!

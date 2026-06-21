@@ -26,7 +26,7 @@ public partial class ScanWithInitialTests
         // Arrange
         Subject<int> source = new();
         const int Initial = 10;
-        var accumulator = (int acc, int x) => acc + x;
+        Func<int, int, int> accumulator = static (acc, x) => acc + x;
         ScanWithInitialObservable<int, int> observable = new(source, Initial, accumulator);
         List<int> results = [];
 
@@ -47,7 +47,7 @@ public partial class ScanWithInitialTests
         // Arrange
         Subject<int> source = new();
         const int Initial = 0;
-        var accumulator = (int acc, int x) => acc + x;
+        Func<int, int, int> accumulator = static (acc, x) => acc + x;
         ScanWithInitialObservable<int, int> observable = new(source, Initial, accumulator);
         List<int> results = [];
 
@@ -104,7 +104,7 @@ public partial class ScanWithInitialTests
         // Arrange
         Subject<int> source = new();
         const int Initial = 0;
-        var accumulator = (int acc, int x) =>
+        Func<int, int, int> accumulator = (acc, x) =>
         {
             Thread.Sleep(1); // Force potential race condition
             return acc + x;

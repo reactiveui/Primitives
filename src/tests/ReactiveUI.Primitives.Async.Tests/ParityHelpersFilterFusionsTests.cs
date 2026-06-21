@@ -213,7 +213,7 @@ public class ParityHelpersFilterFusionsTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
 
@@ -238,7 +238,7 @@ public class ParityHelpersFilterFusionsTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
 
@@ -263,7 +263,7 @@ public class ParityHelpersFilterFusionsTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
 
@@ -288,7 +288,7 @@ public class ParityHelpersFilterFusionsTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
 
@@ -313,7 +313,7 @@ public class ParityHelpersFilterFusionsTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
 
@@ -338,7 +338,7 @@ public class ParityHelpersFilterFusionsTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
 
@@ -363,7 +363,7 @@ public class ParityHelpersFilterFusionsTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
 
@@ -388,7 +388,7 @@ public class ParityHelpersFilterFusionsTests
             (ex, _) =>
             {
                 caught = ex;
-                errorTcs.TrySetResult();
+                IgnoredResult.Of(errorTcs.TrySetResult());
                 return default;
             });
 

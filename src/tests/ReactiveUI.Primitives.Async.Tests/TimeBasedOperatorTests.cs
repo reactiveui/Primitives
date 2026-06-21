@@ -58,11 +58,11 @@ public class TimeBasedOperatorTests
                 results.Add(x);
                 if (results.Count == 1)
                 {
-                    firstReceived.TrySetResult(true);
+                    IgnoredResult.Of(firstReceived.TrySetResult(true));
                 }
                 else if (results.Count == 2)
                 {
-                    secondReceived.TrySetResult(true);
+                    IgnoredResult.Of(secondReceived.TrySetResult(true));
                 }
 
                 return default;
@@ -279,7 +279,7 @@ public class TimeBasedOperatorTests
                 (x, _) =>
                 {
                     results.Add(x);
-                    resultReceived.TrySetResult(true);
+                    IgnoredResult.Of(resultReceived.TrySetResult(true));
                     return default;
                 },
                 null);
@@ -312,7 +312,7 @@ public class TimeBasedOperatorTests
                 (x, _) =>
                 {
                     results.Add(x);
-                    resultReceived.TrySetResult(true);
+                    IgnoredResult.Of(resultReceived.TrySetResult(true));
                     return default;
                 },
                 null);
@@ -370,7 +370,7 @@ public class TimeBasedOperatorTests
             (ex, _) =>
             {
                 errors.Add(ex);
-                errorReceived.TrySetResult(true);
+                IgnoredResult.Of(errorReceived.TrySetResult(true));
                 return default;
             });
 
@@ -424,7 +424,7 @@ public class TimeBasedOperatorTests
             (ex, _) =>
             {
                 errors.Add(ex);
-                errorReceived.TrySetResult(true);
+                IgnoredResult.Of(errorReceived.TrySetResult(true));
                 return default;
             });
         InvalidOperationException testError = new("test error");
@@ -455,7 +455,7 @@ public class TimeBasedOperatorTests
             },
             _ =>
             {
-                completed.TrySetResult();
+                IgnoredResult.Of(completed.TrySetResult());
                 return default;
             });
         InvalidOperationException expectedError = new("resume error");
@@ -486,7 +486,7 @@ public class TimeBasedOperatorTests
             null,
             _ =>
             {
-                completed.TrySetResult();
+                IgnoredResult.Of(completed.TrySetResult());
                 return default;
             });
         const int LastValue = 2;
@@ -622,7 +622,7 @@ public class TimeBasedOperatorTests
                 }
 
                 await cts.CancelAsync();
-                cancelled.TrySetResult();
+                IgnoredResult.Of(cancelled.TrySetResult());
             },
             null,
             null,
@@ -651,7 +651,7 @@ public class TimeBasedOperatorTests
                     }
 
                     await cts.CancelAsync();
-                    cancelled.TrySetResult();
+                    IgnoredResult.Of(cancelled.TrySetResult());
                 },
                 null,
                 null,
@@ -683,7 +683,7 @@ public class TimeBasedOperatorTests
             null,
             _ =>
             {
-                completed.TrySetResult();
+                IgnoredResult.Of(completed.TrySetResult());
                 return default;
             });
         await source.EmitNext(1);

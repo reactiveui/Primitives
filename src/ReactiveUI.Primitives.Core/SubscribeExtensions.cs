@@ -59,17 +59,12 @@ public static class SubscribeExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(onNext);
 
-            if (source is Signals.Signal<T> signal)
+            return source switch
             {
-                return signal.SubscribeAction(onNext);
-            }
-
-            if (source is IInlineSignal<T> inline)
-            {
-                return inline.Subscribe(onNext, rethrow, nop);
-            }
-
-            return source.Subscribe(onNext, rethrow, nop);
+                Signals.Signal<T> signal => signal.SubscribeAction(onNext),
+                IInlineSignal<T> inline => inline.Subscribe(onNext, rethrow, nop),
+                _ => source.Subscribe(onNext, rethrow, nop),
+            };
         }
 
         /// <summary>Subscribes to the Signals providing both the <paramref name="onNext" /> and <paramref name="onError" /> delegates.</summary>
@@ -109,12 +104,9 @@ public static class SubscribeExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(onCompleted);
 
-            if (source is IInlineSignal<T> inline)
-            {
-                return inline.Subscribe(onNext, onError, onCompleted);
-            }
-
-            return source.Subscribe(new EmptyWitness<T>(onNext, onError, onCompleted));
+            return source is IInlineSignal<T> inline
+                ? inline.Subscribe(onNext, onError, onCompleted)
+                : source.Subscribe(new EmptyWitness<T>(onNext, onError, onCompleted));
         }
     }
 

@@ -98,7 +98,7 @@ public class DisposableTests
     /// <summary>Tests CompositeDisposableAsync negative capacity throws.</summary>
     [Test]
     public void WhenCompositeDisposableAsyncNegativeCapacity_ThenThrowsArgumentOutOfRange() =>
-        Assert.Throws<ArgumentOutOfRangeException>(() => _ = new MultipleDisposableAsync(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => _ = CreateCompositeWithInvalidCapacity());
 
     /// <summary>Tests CompositeDisposableAsync with zero capacity leaves the backing array unallocated.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -136,7 +136,7 @@ public class DisposableTests
         var count = 0;
         var disposables = Enumerable.Range(0, 3).Select(_ => DisposableAsync.Create(() =>
         {
-            Interlocked.Increment(ref count);
+            _ = Interlocked.Increment(ref count);
             return default;
         }));
         const int ExpectedCount = 3;
@@ -405,7 +405,7 @@ public class DisposableTests
 
         // Array of size 2 starting at index 1 means only 1 slot available for 2 items
         var array = new IAsyncDisposable[2];
-        Assert.Throws<ArgumentOutOfRangeException>(() => composite.CopyTo(array, 1));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => composite.CopyTo(array, 1));
         await composite.DisposeAsync();
         await Assert.That(composite.IsDisposed).IsTrue();
     }
@@ -417,7 +417,7 @@ public class DisposableTests
     {
         MultipleDisposableAsync composite = new();
         var array = new IAsyncDisposable[5];
-        Assert.Throws<ArgumentOutOfRangeException>(() => composite.CopyTo(array, -1));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => composite.CopyTo(array, -1));
         await composite.DisposeAsync();
         await Assert.That(composite.IsDisposed).IsTrue();
     }
@@ -430,7 +430,7 @@ public class DisposableTests
         const int ArrayLength = 2;
         MultipleDisposableAsync composite = new();
         var array = new IAsyncDisposable[ArrayLength];
-        Assert.Throws<ArgumentOutOfRangeException>(() => composite.CopyTo(array, ArrayLength));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => composite.CopyTo(array, ArrayLength));
         await composite.DisposeAsync();
         await Assert.That(composite.IsDisposed).IsTrue();
     }
@@ -481,7 +481,7 @@ public class DisposableTests
 
         IAsyncDisposable MakeDisposable() => DisposableAsync.Create(() =>
         {
-            Interlocked.Increment(ref disposedCount);
+            _ = Interlocked.Increment(ref disposedCount);
             return default;
         });
 
@@ -593,7 +593,7 @@ public class DisposableTests
         {
             await composite.AddAsync(DisposableAsync.Create(() =>
             {
-                Interlocked.Increment(ref count);
+                _ = Interlocked.Increment(ref count);
                 return default;
             }));
         }
@@ -649,7 +649,7 @@ public class DisposableTests
     {
         MultipleDisposableAsync composite = new();
         var array = new IAsyncDisposable[1];
-        Assert.Throws<ArgumentOutOfRangeException>(() => composite.CopyTo(array, -1));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => composite.CopyTo(array, -1));
     }
 
     /// <summary>Tests CompositeDisposableAsync double dispose is safe.</summary>
@@ -806,7 +806,7 @@ public class DisposableTests
 
         IAsyncDisposable MakeDisposable() => DisposableAsync.Create(() =>
         {
-            Interlocked.Increment(ref disposedCount);
+            _ = Interlocked.Increment(ref disposedCount);
             return default;
         });
 
@@ -895,7 +895,7 @@ public class DisposableTests
     {
         await using MultipleDisposableAsync composite = new();
         var array = new IAsyncDisposable[1];
-        Assert.Throws<ArgumentOutOfRangeException>(() => composite.CopyTo(array, -1));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => composite.CopyTo(array, -1));
     }
 
     /// <summary>Tests CompositeDisposableAsync.CopyTo with insufficient space throws.</summary>
@@ -907,7 +907,7 @@ public class DisposableTests
         await composite.AddAsync(DisposableAsync.Empty);
         await composite.AddAsync(DisposableAsync.Empty);
         var array = new IAsyncDisposable[1];
-        Assert.Throws<ArgumentOutOfRangeException>(() => composite.CopyTo(array, 0));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => composite.CopyTo(array, 0));
         await composite.DisposeAsync();
     }
 
@@ -921,12 +921,12 @@ public class DisposableTests
         [
             DisposableAsync.Create(() =>
             {
-                Interlocked.Increment(ref count);
+                _ = Interlocked.Increment(ref count);
                 return default;
             }),
             DisposableAsync.Create(() =>
             {
-                Interlocked.Increment(ref count);
+                _ = Interlocked.Increment(ref count);
                 return default;
             })
         ];
@@ -974,7 +974,7 @@ public class DisposableTests
         {
             items[i] = DisposableAsync.Create(() =>
             {
-                Interlocked.Increment(ref disposed);
+                _ = Interlocked.Increment(ref disposed);
                 return default;
             });
             await composite.AddAsync(items[i]);
@@ -1029,6 +1029,10 @@ public class DisposableTests
         yield return disposable;
         yield return null!;
     }
+
+    /// <summary>Creates a composite disposable with an invalid capacity.</summary>
+    /// <returns>The created composite disposable.</returns>
+    private static MultipleDisposableAsync CreateCompositeWithInvalidCapacity() => new(-1);
 
     /// <summary>Helper disposable for testing ToDisposableAsync.</summary>
     /// <param name = "onDispose">The action to invoke on disposal.</param>

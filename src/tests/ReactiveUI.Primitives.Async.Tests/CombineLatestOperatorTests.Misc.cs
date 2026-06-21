@@ -103,7 +103,7 @@ public partial class CombineLatestOperatorTests
                 null,
                 result =>
                 {
-                    completed.TrySetResult(result);
+                    _ = completed.TrySetResult(result);
                     return default;
                 });
 

@@ -91,13 +91,13 @@ public class WitnessTests
     [Test]
     public async Task WitnessesCoverDisposedThrowEmptyAndSafeBranches()
     {
-        Assert.Throws<ObjectDisposedException>(() => DisposedWitness<int>.Instance.OnNext(One));
-        Assert.Throws<ObjectDisposedException>(DisposedWitness<int>.Instance.OnCompleted);
-        Assert.Throws<ObjectDisposedException>(() =>
+        _ = Assert.Throws<ObjectDisposedException>(() => DisposedWitness<int>.Instance.OnNext(One));
+        _ = Assert.Throws<ObjectDisposedException>(DisposedWitness<int>.Instance.OnCompleted);
+        _ = Assert.Throws<ObjectDisposedException>(() =>
             DisposedWitness<int>.Instance.OnError(new InvalidOperationException("disposed")));
         ThrowWitness<int>.Instance.OnNext(One);
         ThrowWitness<int>.Instance.OnCompleted();
-        Assert.Throws<InvalidOperationException>(() =>
+        _ = Assert.Throws<InvalidOperationException>(() =>
             ThrowWitness<int>.Instance.OnError(new InvalidOperationException("throw")));
         List<int> values = [];
         List<string> errors = [];
@@ -108,17 +108,17 @@ public class WitnessTests
             .OnError(new InvalidOperationException("handled"));
         new EmptyWitness<int>(values.Add, () => completed++).OnCompleted();
         new EmptyWitness<int>(values.Add, ex => errors.Add(ex.Message), () => completed++).OnCompleted();
-        Assert.Throws<InvalidOperationException>(() =>
+        _ = Assert.Throws<InvalidOperationException>(() =>
             new EmptyWitness<int>(values.Add).OnError(new InvalidOperationException("rethrown")));
         await Assert.That(values.SequenceEqual(ExpectedTwoOnly)).IsTrue();
         await Assert.That(errors.SequenceEqual(ExpectedHandledErrors)).IsTrue();
         await Assert.That(completed).IsEqualTo(Two);
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, (Action<Exception>)null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, (Action)null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, _ => { }, null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Safe<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Safe(Witness.Create<int>(_ => { }), null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, (Action<Exception>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, (Action)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, _ => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Safe<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Safe(Witness.Create<int>(_ => { }), null!));
         List<string> events = [];
         var cancelDisposed = 0;
         var safe = Witness.Safe(
@@ -138,10 +138,10 @@ public class WitnessTests
         var throwing = Witness.Safe(
             Witness.Create<int>(_ => throw new InvalidOperationException("next-failed")),
             new ActionDisposable(() => throwingCancel++));
-        Assert.Throws<InvalidOperationException>(() => throwing.OnNext(One));
+        _ = Assert.Throws<InvalidOperationException>(() => throwing.OnNext(One));
         throwing.OnNext(Two);
         await Assert.That(throwingCancel).IsEqualTo(1);
-        Assert.Throws<ArgumentNullException>(() => safe.OnError(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => safe.OnError(null!));
     }
 
     /// <summary>Covers the thread-pool-specialized witness dispatch implementation.</summary>
@@ -173,9 +173,21 @@ public class WitnessTests
     [Test]
     public async Task WitnessImplementationsForwardNotificationsAndFallbackErrors()
     {
-        Assert.Throws<ArgumentNullException>(() => _ = new CallbackWitness<int>(null!, null, null));
-        Assert.Throws<ArgumentNullException>(() => _ = new ForwardingWitness<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => _ = new StatefulWitness<int, string>(State, null!, null, null));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            CallbackWitness<int> invalid = new(null!, null, null);
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            ForwardingWitness<int> invalid = new(null!);
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            StatefulWitness<int, string> invalid = new(State, null!, null, null);
+            GC.KeepAlive(invalid);
+        });
         List<int> callbackValues = [];
         List<Exception> callbackErrors = [];
         List<Result> callbackCompletions = [];
@@ -188,7 +200,7 @@ public class WitnessTests
         await Assert.That(callbackErrors[0]).IsSameReferenceAs(callbackError);
         await Assert.That(callbackCompletions[0].IsSuccess).IsTrue();
         InvalidOperationException callbackFallback = new("callback fallback");
-        Assert.Throws<InvalidOperationException>(() =>
+        _ = Assert.Throws<InvalidOperationException>(() =>
             new CallbackWitness<int>(_ => { }, null, null).OnError(callbackFallback));
         new CallbackWitness<int>(_ => { }, null, null).OnCompleted();
         Recorder<int> forwarded = new();
@@ -216,7 +228,7 @@ public class WitnessTests
         await Assert.That(statefulErrors.SequenceEqual([$"{State}:{statefulError.Message}"])).IsTrue();
         await Assert.That(statefulCompletions.SequenceEqual([$"{State}:True"])).IsTrue();
         InvalidOperationException statefulFallback = new("stateful fallback");
-        Assert.Throws<InvalidOperationException>(() =>
+        _ = Assert.Throws<InvalidOperationException>(() =>
             new StatefulWitness<int, string>(State, (_, _) => { }, null, null).OnError(statefulFallback));
         new StatefulWitness<int, string>(State, (_, _) => { }, null, null).OnCompleted();
         List<int> safeValues = [];
@@ -237,15 +249,15 @@ public class WitnessTests
     [Test]
     public void WitnessFactoriesValidateNullCallbacks()
     {
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(null!, _ => { }, () => { }));
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, null!, () => { }));
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, _ => { }, null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Safe<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Safe(Witness.Create<int>(_ => { }), null!));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(null!, _ => { }, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, null!, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, _ => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Safe<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Safe(Witness.Create<int>(_ => { }), null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
             Witness.Safe(new Recorder<int>(), new RecordingDisposable()).OnError(null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Safe(new Recorder<int>()).OnError(null!));
-        Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, _ => { }, () => { }).OnError(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Safe(new Recorder<int>()).OnError(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Witness.Create<int>(_ => { }, _ => { }, () => { }).OnError(null!));
     }
 
     /// <summary>Covers safe-witness error forwarding and post-terminal suppression branches.</summary>
@@ -257,7 +269,7 @@ public class WitnessTests
         Witness.SafeWitness<int> safe = new(
             new ThrowingWitness<int>(throwOnError: true),
             new ActionDisposable(() => cancelDisposed = true));
-        Assert.Throws<InvalidOperationException>(() => safe.OnError(new InvalidOperationException("safe")));
+        _ = Assert.Throws<InvalidOperationException>(() => safe.OnError(new InvalidOperationException("safe")));
         await Assert.That(cancelDisposed).IsTrue();
         safe.OnError(new InvalidOperationException("ignored"));
     }

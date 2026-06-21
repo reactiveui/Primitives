@@ -59,16 +59,11 @@ public sealed class ListWitness<T> : IObserver<T>
     internal IObserver<T> Remove(IObserver<T> observer)
     {
         var i = Array.IndexOf(_observers.Items, observer);
-        if (i < 0)
+        return i switch
         {
-            return this;
-        }
-
-        if (_observers.Items.Length == 1)
-        {
-            return EmptyWitness<T>.Instance;
-        }
-
-        return new ListWitness<T>(_observers.Remove(observer));
+            < 0 => this,
+            _ when _observers.Items.Length == 1 => EmptyWitness<T>.Instance,
+            _ => new ListWitness<T>(_observers.Remove(observer)),
+        };
     }
 }

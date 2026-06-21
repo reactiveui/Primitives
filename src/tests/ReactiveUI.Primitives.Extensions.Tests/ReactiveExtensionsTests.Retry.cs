@@ -159,7 +159,7 @@ public partial class ReactiveExtensionsTests
 
             return EmptyDisposable.Instance;
         });
-        source.OnErrorRetry<int, InvalidOperationException>(
+        _ = source.OnErrorRetry<int, InvalidOperationException>(
             ex => errorsCaught++,
             int.MaxValue,
             TimeSpan.FromMilliseconds(10),
@@ -188,7 +188,7 @@ public partial class ReactiveExtensionsTests
             observer.OnError(new InvalidOperationException($"Attempt {attemptCount}"));
             return EmptyDisposable.Instance;
         });
-        source.OnErrorRetry<int, InvalidOperationException>(ex => errorsCaught++, RetryCount).Subscribe(
+        _ = source.OnErrorRetry<int, InvalidOperationException>(ex => errorsCaught++, RetryCount).Subscribe(
             _ => { },
             ex => finalError = true);
         var finalErrorReceived =
@@ -221,7 +221,7 @@ public partial class ReactiveExtensionsTests
             observer.OnError(new InvalidOperationException($"Attempt {attemptCount}"));
             return EmptyDisposable.Instance;
         });
-        source.OnErrorRetry<int, InvalidOperationException>(
+        _ = source.OnErrorRetry<int, InvalidOperationException>(
             ex => errorsCaught++,
             RetryCount,
             TimeSpan.FromMilliseconds(DelayMilliseconds),
@@ -263,7 +263,7 @@ public partial class ReactiveExtensionsTests
         });
         var result = 0;
         const int RetryCount = 3;
-        source.OnErrorRetry<int, InvalidOperationException>(
+        _ = source.OnErrorRetry<int, InvalidOperationException>(
             ex => errorsCaught++,
             RetryCount,
             TimeSpan.FromMilliseconds(10),
@@ -342,7 +342,7 @@ public partial class ReactiveExtensionsTests
         Exception? caughtError = null;
         const int MaxRetries = 2;
         const double BackoffFactor = 2.0;
-        source.RetryWithBackoff(
+        _ = source.RetryWithBackoff(
             MaxRetries,
             TimeSpan.FromMilliseconds(1),
             BackoffFactor,
@@ -468,13 +468,15 @@ public partial class ReactiveExtensionsTests
         var source = Observable.Defer(() =>
         {
             attempt++;
-            return attempt < 3 ? Observable.Throw<int>(new InvalidOperationException("retry")) : Observable.Return(42);
+            return attempt < 3
+                ? Observable.Throw<int>(new InvalidOperationException("retry"))
+                : Observable.Return(42);
         });
         List<int> results = [];
         Exception? error = null;
         const int MaxRetries = 5;
         const double BackoffFactor = 2.0;
-        source.RetryWithBackoff(
+        _ = source.RetryWithBackoff(
             MaxRetries,
             TimeSpan.FromTicks(10),
             BackoffFactor,
@@ -496,20 +498,22 @@ public partial class ReactiveExtensionsTests
         var source = Observable.Defer(() =>
         {
             attempt++;
-            return attempt < 3 ? Observable.Throw<int>(new InvalidOperationException("fail")) : Observable.Return(42);
+            return attempt < 3
+                ? Observable.Throw<int>(new InvalidOperationException("fail"))
+                : Observable.Return(42);
         });
         List<int> results = [];
         Exception? error = null;
         TaskCompletionSource received = new(TaskCreationOptions.RunContinuationsAsynchronously);
         const int RetryCount = 5;
-        source.OnErrorRetry<int, InvalidOperationException>(
+        _ = source.OnErrorRetry<int, InvalidOperationException>(
             _ => { },
             RetryCount,
             TimeSpan.FromTicks(-1)).Subscribe(
             v =>
             {
                 results.Add(v);
-                received.TrySetResult();
+                _ = received.TrySetResult();
             },
             ex => error = ex);
         await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -525,7 +529,7 @@ public partial class ReactiveExtensionsTests
         Exception? caught = null;
         TaskCompletionSource errorReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
         const int RetryCount = 2;
-        source.OnErrorRetry<int, InvalidOperationException>(
+        _ = source.OnErrorRetry<int, InvalidOperationException>(
             _ => { },
             RetryCount,
             TimeSpan.Zero).Subscribe(
@@ -533,7 +537,7 @@ public partial class ReactiveExtensionsTests
             ex =>
             {
                 caught = ex;
-                errorReceived.TrySetResult();
+                _ = errorReceived.TrySetResult();
             });
         await errorReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(caught).IsNotNull();
@@ -609,7 +613,7 @@ public partial class ReactiveExtensionsTests
         List<int> results = [];
         const int MaxRetries = 5;
         const double BackoffFactor = 100.0;
-        source.RetryWithBackoff(
+        _ = source.RetryWithBackoff(
             MaxRetries,
             TimeSpan.FromMilliseconds(1),
             BackoffFactor,

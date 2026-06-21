@@ -45,7 +45,7 @@ public sealed class TaskResultCompletionSource<T>(CancellationToken cancellation
     {
         try
         {
-            _taskSource.TrySetResult(value);
+            _ = _taskSource.TrySetResult(value);
         }
         finally
         {
@@ -62,7 +62,7 @@ public sealed class TaskResultCompletionSource<T>(CancellationToken cancellation
     {
         try
         {
-            _taskSource.TrySetException(exception);
+            _ = _taskSource.TrySetException(exception);
         }
         finally
         {
@@ -77,7 +77,7 @@ public sealed class TaskResultCompletionSource<T>(CancellationToken cancellation
             static state =>
             {
                 var source = (TaskResultCompletionSource<T>)state!;
-                source._taskSource.TrySetException(new OperationCanceledException(source._cancellationToken));
+                _ = source._taskSource.TrySetException(new OperationCanceledException(source._cancellationToken));
             },
             this);
 }

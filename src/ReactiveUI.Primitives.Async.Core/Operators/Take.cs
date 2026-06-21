@@ -30,14 +30,7 @@ public static partial class SignalAsyncExtensions
         public IObservableAsync<T> Take(int count)
         {
             ArgumentExceptionHelper.ThrowIfNull(@this);
-#if NET8_0_OR_GREATER
-            ArgumentOutOfRangeException.ThrowIfNegative(count);
-#else
-            if (count < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count));
-            }
-#endif
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
 
             return count == 0 ? new TakeZeroSignal<T>() : new TakeSignal<T>(@this, count);
         }
@@ -101,12 +94,7 @@ public static partial class SignalAsyncExtensions
                 }
 
                 _remaining--;
-                if (_remaining == 0)
-                {
-                    return ForwardThenFinishAsync(value, cancellationToken);
-                }
-
-                return downstream.OnNextAsync(value, cancellationToken);
+                return _remaining == 0 ? ForwardThenFinishAsync(value, cancellationToken) : downstream.OnNextAsync(value, cancellationToken);
             }
 
             /// <inheritdoc/>

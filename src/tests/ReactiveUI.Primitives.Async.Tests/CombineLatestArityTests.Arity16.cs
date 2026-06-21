@@ -190,7 +190,7 @@ public partial class CombineLatestArityTests
                 v7 + v8 + v9 + v10 + v11 + v12 + v13 + v14 + v15 + v16).SubscribeAsync((_, _) => default, (ex, _) =>
         {
             receivedError = ex;
-            errorReceived.TrySetResult();
+            IgnoredResult.Of(errorReceived.TrySetResult());
             return default;
         });
         InvalidOperationException expected = new("source error");
@@ -252,7 +252,7 @@ public partial class CombineLatestArityTests
             (x, _) =>
             {
                 results.Add(x);
-                emitted.TrySetResult();
+                IgnoredResult.Of(emitted.TrySetResult());
                 return default;
             },
             null);
@@ -345,7 +345,7 @@ public partial class CombineLatestArityTests
             (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) => v1 + v2 + v3 + v4 + v5 + v6 +
                 v7 + v8 + v9 + v10 + v11 + v12 + v13 + v14 + v15 + v16).SubscribeAsync((_, _) => default, null, r =>
         {
-            completed.TrySetResult(r);
+            _ = completed.TrySetResult(r);
             return default;
         });
         await s1.OnNextAsync(1, CancellationToken.None);

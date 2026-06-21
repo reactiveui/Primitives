@@ -57,14 +57,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     /// <exception cref="ArgumentOutOfRangeException">Thrown when capacity is less than 0.</exception>
     public MultipleDisposableAsync(int capacity)
     {
-#if NET8_0_OR_GREATER
-        ArgumentOutOfRangeException.ThrowIfLessThan(capacity, 0);
-#else
-        if (capacity < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(capacity));
-        }
-#endif
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(capacity, 0);
 
         _items = capacity == 0 ? null : new IAsyncDisposable?[capacity];
     }
@@ -260,12 +253,9 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     {
         lock (_gate)
         {
-            if (_isDisposed || _items is null)
-            {
-                return false;
-            }
-
-            return Array.IndexOf(_items, item, 0, _length) >= 0;
+            return _isDisposed || _items is null
+                ? false
+                : Array.IndexOf(_items, item, 0, _length) >= 0;
         }
     }
 

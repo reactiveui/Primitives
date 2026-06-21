@@ -30,17 +30,7 @@ public static partial class SignalAsyncExtensions
             "Roslynator",
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
             Justification = "This is an existing method")]
-        public IObservableAsync<T> ToAsyncSignal() => SignalAsync.CreateAsBackgroundJob<T>(
-            async (obs, cancellationToken) =>
-            {
-                await foreach (var value in @this.WithCancellation(cancellationToken))
-                {
-                    await obs.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
-                }
-
-                await obs.OnCompletedAsync(Result.Success).ConfigureAwait(false);
-            },
-            true);
+        public IObservableAsync<T> ToAsyncSignal() => new AsyncEnumerableSignal<T>(@this);
     }
 
     /// <summary>Observable-conversion operators for an enumerable source.</summary>
@@ -60,9 +50,7 @@ public static partial class SignalAsyncExtensions
             "Roslynator",
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
             Justification = "This is an existing method")]
-        public IObservableAsync<T> ToAsyncSignal() => SignalAsync.CreateAsBackgroundJob<T>(
-            (obs, cancellationToken) => EmitEnumerableAsync(@this, obs, cancellationToken),
-            true);
+        public IObservableAsync<T> ToAsyncSignal() => new EnumerableSignal<T>(@this);
     }
 
     /// <summary>Observable-conversion operators for an asynchronous observable source.</summary>
@@ -98,37 +86,6 @@ public static partial class SignalAsyncExtensions
             "Roslynator",
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
             Justification = "This is an existing method")]
-        public IObservableAsync<T> ToAsyncSignal() => SignalAsync.CreateAsBackgroundJob<T>(
-            async (obs, cancellationToken) =>
-            {
-                var result = await @this.WaitAsync(System.Threading.Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
-                await obs.OnNextAsync(result, cancellationToken).ConfigureAwait(false);
-                await obs.OnCompletedAsync(Result.Success).ConfigureAwait(false);
-            },
-            true);
-    }
-
-    /// <summary>Emits each element of the enumerable to the observer, checking for cancellation between elements.</summary>
-    /// <typeparam name="T">The element type.</typeparam>
-    /// <param name="source">The enumerable source.</param>
-    /// <param name="observer">The observer to emit to.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A ValueTask representing the operation.</returns>
-    internal static async ValueTask EmitEnumerableAsync<T>(
-        IEnumerable<T> source,
-        IObserverAsync<T> observer,
-        CancellationToken cancellationToken)
-    {
-        foreach (var value in source)
-        {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return;
-            }
-
-            await observer.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
-        }
-
-        await observer.OnCompletedAsync(Result.Success).ConfigureAwait(false);
+        public IObservableAsync<T> ToAsyncSignal() => new TaskResultSignal<T>(@this);
     }
 }

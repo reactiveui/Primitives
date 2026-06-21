@@ -20,8 +20,12 @@ public static partial class SignalExtensions
         /// <param name="timeSpan">The duration of each buffer window.</param>
         /// <returns>A signal that emits batches of source values.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
-        public IObservable<IList<TSource>> Collect(TimeSpan timeSpan) =>
-            source.Collect(timeSpan, Sequencer.Default);
+        public IObservable<IList<TSource>> Collect(TimeSpan timeSpan)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new CollectSignal<TSource>(source, timeSpan, Sequencer.Default);
+        }
 
         /// <summary>Collects values into time-windowed batches.</summary>
         /// <param name="timeSpan">The duration of each buffer window.</param>
@@ -36,13 +40,7 @@ public static partial class SignalExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(sequencer);
 
-            if (timeSpan <= TimeSpan.Zero)
-            {
-                return source.Map(static value => (IList<TSource>)[value]);
-            }
-
-            return Signal.Create<IList<TSource>>(observer =>
-                new Signal.CollectCoordinator<TSource>(observer, timeSpan, sequencer).Subscribe(source));
+            return new CollectSignal<TSource>(source, timeSpan, sequencer);
         }
     }
 }

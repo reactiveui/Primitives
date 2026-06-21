@@ -21,12 +21,7 @@ public static partial class Signal
         Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> None<T>(ISequencer scheduler)
     {
-        if (scheduler == Sequencer.Immediate)
-        {
-            return ImmutableEmptySignal<T>.Instance;
-        }
-
-        return new EmptySignal<T>(scheduler);
+        return scheduler == Sequencer.Immediate ? ImmutableEmptySignal<T>.Instance : new EmptySignal<T>(scheduler);
     }
 
     /// <summary>Empty Signals. Returns only OnCompleted on specified scheduler. witness is for type inference.</summary>
@@ -34,8 +29,9 @@ public static partial class Signal
     /// <param name="scheduler">The scheduler.</param>
     /// <param name="witness">The witness.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<T> None<T>(ISequencer scheduler, T witness) =>
-        None<T>(scheduler);
+    public static IObservable<T> None<T>(ISequencer scheduler, T witness) => scheduler == Sequencer.Immediate
+        ? ImmutableEmptySignal<T>.Instance
+        : new EmptySignal<T>(scheduler);
 
     /// <summary>Empty Signals. Returns only OnCompleted.</summary>
     /// <typeparam name="T">The Type.</typeparam>
@@ -45,12 +41,12 @@ public static partial class Signal
         "S4018:Generic methods should provide type parameters",
         Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> None<T>() =>
-        None<T>(Sequencer.Immediate);
+        ImmutableEmptySignal<T>.Instance;
 
     /// <summary>Empty Signals. Returns only OnCompleted. witness is for type inference.</summary>
     /// <typeparam name="T">The Type.</typeparam>
     /// <param name="witness">The witness.</param>
     /// <returns>An Signals.</returns>
     public static IObservable<T> None<T>(T witness) =>
-        None<T>(Sequencer.Immediate);
+        ImmutableEmptySignal<T>.Instance;
 }

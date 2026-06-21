@@ -119,23 +119,23 @@ public partial class SignalOperatorParityMixinsTests
         List<bool> rangeAllFalse = [];
         List<bool> rangeContainsTrue = [];
         List<bool> rangeContainsFalse = [];
-        Signal.FromEnumerable(AggregateSource).Count(value => value % Second == 0).Subscribe(countPredicate.Add);
-        Signal.FromEnumerable(DuplicateKeySource).DistinctBy(value => value).Count().Subscribe(distinctCount.Add);
-        Signal.FromEnumerable(AggregateSource).LongCount().Subscribe(longCount.Add);
-        Signal.FromEnumerable(AggregateSource).LongCount(value => value > Second).Subscribe(longCountPredicate.Add);
-        Signal.FromEnumerable(DuplicateKeySource).DistinctBy(value => value).LongCount()
+        _ = Signal.FromEnumerable(AggregateSource).Count(value => value % Second == 0).Subscribe(countPredicate.Add);
+        _ = Signal.FromEnumerable(DuplicateKeySource).DistinctBy(value => value).Count().Subscribe(distinctCount.Add);
+        _ = Signal.FromEnumerable(AggregateSource).LongCount().Subscribe(longCount.Add);
+        _ = Signal.FromEnumerable(AggregateSource).LongCount(value => value > Second).Subscribe(longCountPredicate.Add);
+        _ = Signal.FromEnumerable(DuplicateKeySource).DistinctBy(value => value).LongCount()
             .Subscribe(distinctLongCount.Add);
-        Signal.FromEnumerable(AggregateSource).Any().Subscribe(anyTrue.Add);
-        Signal.None<int>().Any().Subscribe(anyFalse.Add);
-        Signal.Sequence(First, Fourth).DistinctBy(value => value / Second).Count().Subscribe(rangeDistinctCount.Add);
-        Signal.Sequence(First, Fourth).DistinctBy(value => value / Second).LongCount()
+        _ = Signal.FromEnumerable(AggregateSource).Any().Subscribe(anyTrue.Add);
+        _ = Signal.None<int>().Any().Subscribe(anyFalse.Add);
+        _ = Signal.Sequence(First, Fourth).DistinctBy(value => value / Second).Count().Subscribe(rangeDistinctCount.Add);
+        _ = Signal.Sequence(First, Fourth).DistinctBy(value => value / Second).LongCount()
             .Subscribe(rangeDistinctLongCount.Add);
-        Signal.Sequence(First, Fourth).Any(value => value == Third).Subscribe(rangeAnyTrue.Add);
-        Signal.Sequence(First, Fourth).Any(value => value == MissingRangeValue).Subscribe(rangeAnyFalse.Add);
-        Signal.Sequence(First, Fourth).All(value => value > 0).Subscribe(rangeAllTrue.Add);
-        Signal.Sequence(First, Fourth).All(value => value < Fourth).Subscribe(rangeAllFalse.Add);
-        Signal.Sequence(First, Fourth).Contains(Third).Subscribe(rangeContainsTrue.Add);
-        Signal.Sequence(First, Fourth).Contains(MissingRangeValue).Subscribe(rangeContainsFalse.Add);
+        _ = Signal.Sequence(First, Fourth).Any(value => value == Third).Subscribe(rangeAnyTrue.Add);
+        _ = Signal.Sequence(First, Fourth).Any(value => value == MissingRangeValue).Subscribe(rangeAnyFalse.Add);
+        _ = Signal.Sequence(First, Fourth).All(value => value > 0).Subscribe(rangeAllTrue.Add);
+        _ = Signal.Sequence(First, Fourth).All(value => value < Fourth).Subscribe(rangeAllFalse.Add);
+        _ = Signal.Sequence(First, Fourth).Contains(Third).Subscribe(rangeContainsTrue.Add);
+        _ = Signal.Sequence(First, Fourth).Contains(MissingRangeValue).Subscribe(rangeContainsFalse.Add);
         await Assert.That(countPredicate.SequenceEqual(CountTwoExpected)).IsTrue();
         await Assert.That(distinctCount.SequenceEqual(DistinctCountExpected)).IsTrue();
         await Assert.That(longCount.SequenceEqual(LongCountFourExpected)).IsTrue();
@@ -170,10 +170,10 @@ public partial class SignalOperatorParityMixinsTests
         InvalidOperationException anyError = new("any");
         InvalidOperationException distinctError = new("distinct");
         List<Exception> observed = [];
-        Signal.Fail<int>(countError).Count().Subscribe(_ => { }, observed.Add, () => { });
-        Signal.Fail<int>(longCountError).LongCount().Subscribe(_ => { }, observed.Add, () => { });
-        Signal.Fail<int>(anyError).Any().Subscribe(_ => { }, observed.Add, () => { });
-        Signal.Fail<int>(distinctError).DistinctBy(value => value).Count()
+        _ = Signal.Fail<int>(countError).Count().Subscribe(_ => { }, observed.Add, () => { });
+        _ = Signal.Fail<int>(longCountError).LongCount().Subscribe(_ => { }, observed.Add, () => { });
+        _ = Signal.Fail<int>(anyError).Any().Subscribe(_ => { }, observed.Add, () => { });
+        _ = Signal.Fail<int>(distinctError).DistinctBy(value => value).Count()
             .Subscribe(_ => { }, observed.Add, () => { });
         await Assert.That(observed[0]).IsSameReferenceAs(countError);
         await Assert.That(observed[1]).IsSameReferenceAs(longCountError);
@@ -188,7 +188,7 @@ public partial class SignalOperatorParityMixinsTests
     {
         InvalidOperationException allError = new(AllMessage);
         List<Exception> observed = [];
-        Signal.Sequence(First, Fourth).All(_ => throw allError).Subscribe(_ => { }, observed.Add, () => { });
+        _ = Signal.Sequence(First, Fourth).All(_ => throw allError).Subscribe(_ => { }, observed.Add, () => { });
         await Assert.That(observed[0]).IsSameReferenceAs(allError);
     }
 
@@ -221,7 +221,7 @@ public partial class SignalOperatorParityMixinsTests
     public async Task FlatMapResultSelectorProjectsOuterAndInnerValues()
     {
         List<int> values = [];
-        Signal.FromEnumerable(FirstSecondSource)
+        _ = Signal.FromEnumerable(FirstSecondSource)
             .FlatMap(value => Signal.FromEnumerable(SingleInnerSource), (outer, inner) => outer + inner)
             .Subscribe(values.Add);
         await Assert.That(values.SequenceEqual(ResultFlatMapExpected)).IsTrue();
@@ -236,11 +236,11 @@ public partial class SignalOperatorParityMixinsTests
         InvalidOperationException innerError = new(InnerMessage);
         InvalidOperationException outerError = new(OuterMessage);
         List<Exception> observed = [];
-        Signal.FromEnumerable(SingleFirstSource).FlatMap<int, int>(_ => throw selectorError)
+        _ = Signal.FromEnumerable(SingleFirstSource).FlatMap<int, int>(_ => throw selectorError)
             .Subscribe(_ => { }, observed.Add, () => { });
-        Signal.FromEnumerable(SingleFirstSource).FlatMap(_ => Signal.Fail<int>(innerError))
+        _ = Signal.FromEnumerable(SingleFirstSource).FlatMap(_ => Signal.Fail<int>(innerError))
             .Subscribe(_ => { }, observed.Add, () => { });
-        Signal.Fail<int>(outerError).FlatMap(ReturnValue).Subscribe(_ => { }, observed.Add, () => { });
+        _ = Signal.Fail<int>(outerError).FlatMap(ReturnValue).Subscribe(_ => { }, observed.Add, () => { });
         await Assert.That(observed[0]).IsSameReferenceAs(selectorError);
         await Assert.That(observed[1]).IsSameReferenceAs(innerError);
         await Assert.That(observed[OuterErrorIndex]).IsSameReferenceAs(outerError);

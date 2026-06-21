@@ -33,7 +33,7 @@ public partial class SignalTests
             null,
             _ =>
             {
-                completed.TrySetResult();
+                IgnoredResult.Of(completed.TrySetResult());
                 return default;
             });
         await mapped.OnNextAsync(FirstInput, CancellationToken.None);
@@ -53,7 +53,7 @@ public partial class SignalTests
         TaskCompletionSource<Exception> errorTcs = new();
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
-            errorTcs.TrySetResult(ex);
+            IgnoredResult.Of(errorTcs.TrySetResult(ex));
             return default;
         });
         InvalidOperationException expected = new("serial-stateless-error");
@@ -72,7 +72,7 @@ public partial class SignalTests
         TaskCompletionSource<Exception> errorTcs = new();
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
-            errorTcs.TrySetResult(ex);
+            IgnoredResult.Of(errorTcs.TrySetResult(ex));
             return default;
         });
         InvalidOperationException expected = new("concurrent-stateless-error");
@@ -143,7 +143,7 @@ public partial class SignalTests
         TaskCompletionSource<Exception> errorTcs = new();
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
-            errorTcs.TrySetResult(ex);
+            IgnoredResult.Of(errorTcs.TrySetResult(ex));
             return default;
         });
         InvalidOperationException expected = new("concurrent-stateful");
@@ -169,7 +169,7 @@ public partial class SignalTests
             },
             _ =>
             {
-                completionTcs.TrySetResult();
+                IgnoredResult.Of(completionTcs.TrySetResult());
                 return default;
             });
         await signal.OnCompletedAsync(Result.Success);
@@ -188,8 +188,8 @@ public partial class SignalTests
         TaskCompletionSource completionTcs = new();
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, null, _ =>
         {
-            Interlocked.Increment(ref completionCount);
-            completionTcs.TrySetResult();
+            IgnoredResult.Of(Interlocked.Increment(ref completionCount));
+            IgnoredResult.Of(completionTcs.TrySetResult());
             return default;
         });
         await signal.OnCompletedAsync(Result.Success);
@@ -207,7 +207,7 @@ public partial class SignalTests
         TaskCompletionSource firstCompletionTcs = new();
         await using var firstSub = await signal.Values.SubscribeAsync(static (_, _) => default, null, _ =>
         {
-            firstCompletionTcs.TrySetResult();
+            IgnoredResult.Of(firstCompletionTcs.TrySetResult());
             return default;
         });
         await signal.OnCompletedAsync(Result.Success);
@@ -217,7 +217,7 @@ public partial class SignalTests
         await using var lateSub = await signal.Values.SubscribeAsync(static (_, _) => default, null, result =>
         {
             lateResult = result;
-            lateTcs.TrySetResult();
+            _ = lateTcs.TrySetResult();
             return default;
         });
         await lateTcs.Task;
@@ -242,7 +242,7 @@ public partial class SignalTests
             null,
             _ =>
             {
-                completionTcs.TrySetResult();
+                IgnoredResult.Of(completionTcs.TrySetResult());
                 return default;
             });
         const int PostCompletionValue = 2;
@@ -262,7 +262,7 @@ public partial class SignalTests
         TaskCompletionSource<Exception> errorTcs = new();
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
-            errorTcs.TrySetResult(ex);
+            IgnoredResult.Of(errorTcs.TrySetResult(ex));
             return default;
         });
         InvalidOperationException expected = new("forwarded");
@@ -280,7 +280,7 @@ public partial class SignalTests
         TaskCompletionSource<Result> resultTcs = new();
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, null, result =>
         {
-            resultTcs.TrySetResult(result);
+            _ = resultTcs.TrySetResult(result);
             return default;
         });
         var failure = Result.Failure(new InvalidOperationException("done"));
@@ -368,7 +368,7 @@ public partial class SignalTests
         TaskCompletionSource<Exception> errorTcs = new();
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
-            errorTcs.TrySetResult(ex);
+            IgnoredResult.Of(errorTcs.TrySetResult(ex));
             return default;
         });
         InvalidOperationException expected = new("mapped-error");
@@ -402,7 +402,7 @@ public partial class SignalTests
         TaskCompletionSource<Exception> errorTcs = new();
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
-            errorTcs.TrySetResult(ex);
+            IgnoredResult.Of(errorTcs.TrySetResult(ex));
             return default;
         });
         InvalidOperationException expected = new("observer-error");
@@ -421,7 +421,7 @@ public partial class SignalTests
         TaskCompletionSource<Result> resultTcs = new();
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, null, result =>
         {
-            resultTcs.TrySetResult(result);
+            _ = resultTcs.TrySetResult(result);
             return default;
         });
         await observer.OnCompletedAsync(Result.Success);
@@ -532,12 +532,12 @@ public partial class SignalTests
         TaskCompletionSource completed2 = new();
         await using var sub1 = await signal.Values.SubscribeAsync(static (_, _) => default, null, _ =>
         {
-            completed1.TrySetResult();
+            IgnoredResult.Of(completed1.TrySetResult());
             return default;
         });
         await using var sub2 = await signal.Values.SubscribeAsync(static (_, _) => default, null, _ =>
         {
-            completed2.TrySetResult();
+            IgnoredResult.Of(completed2.TrySetResult());
             return default;
         });
         await signal.OnCompletedAsync(Result.Success);

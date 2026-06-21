@@ -5,6 +5,10 @@
 using System.Diagnostics.CodeAnalysis;
 
 #if REACTIVE_SHIM
+using ReactiveUI.Primitives.Async.Reactive.Advanced;
+#endif
+
+#if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Async.Reactive;
 #else
 namespace ReactiveUI.Primitives.Async;
@@ -34,7 +38,12 @@ public static partial class SignalAsyncReactiveExtensions
         /// <summary>Uses ObserveOn only when a context is provided.</summary>
         /// <param name="asyncContext">The target async context, or <see langword="null"/> to leave the sequence unchanged.</param>
         /// <returns>The source sequence, optionally observed on the provided context.</returns>
-        public IObservableAsync<T> ObserveOnSafe(AsyncContext? asyncContext) => source.ObserveOnSafe(asyncContext, false);
+        public IObservableAsync<T> ObserveOnSafe(AsyncContext? asyncContext)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return asyncContext is null ? source : new WitnessOnSignal<T>(source, asyncContext, false);
+        }
 
         /// <summary>Uses ObserveOn only when a context is provided.</summary>
         /// <param name="asyncContext">The target async context, or <see langword="null"/> to leave the sequence unchanged.</param>
@@ -44,13 +53,18 @@ public static partial class SignalAsyncReactiveExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return asyncContext is null ? source : source.WitnessOn(asyncContext, forceYielding);
+            return asyncContext is null ? source : new WitnessOnSignal<T>(source, asyncContext, forceYielding);
         }
 
         /// <summary>Uses ObserveOn only when a scheduler is provided.</summary>
         /// <param name="taskScheduler">The target scheduler, or <see langword="null"/> to leave the sequence unchanged.</param>
         /// <returns>The source sequence, optionally observed on the provided scheduler.</returns>
-        public IObservableAsync<T> ObserveOnSafe(TaskScheduler? taskScheduler) => source.ObserveOnSafe(taskScheduler, false);
+        public IObservableAsync<T> ObserveOnSafe(TaskScheduler? taskScheduler)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return taskScheduler is null ? source : new WitnessOnSignal<T>(source, AsyncContext.From(taskScheduler), false);
+        }
 
         /// <summary>Uses ObserveOn only when a scheduler is provided.</summary>
         /// <param name="taskScheduler">The target scheduler, or <see langword="null"/> to leave the sequence unchanged.</param>
@@ -60,14 +74,20 @@ public static partial class SignalAsyncReactiveExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return taskScheduler is null ? source : source.WitnessOn(taskScheduler, forceYielding);
+            return taskScheduler is null ? source : new WitnessOnSignal<T>(source, AsyncContext.From(taskScheduler), forceYielding);
         }
 
         /// <summary>Observes the source on the provided context only when the condition is true.</summary>
         /// <param name="condition">A value indicating whether to switch context.</param>
         /// <param name="asyncContext">The target async context.</param>
         /// <returns>The source sequence, optionally observed on the provided context.</returns>
-        public IObservableAsync<T> ObserveOnIf(bool condition, AsyncContext asyncContext) => source.ObserveOnIf(condition, asyncContext, false);
+        public IObservableAsync<T> ObserveOnIf(bool condition, AsyncContext asyncContext)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+            ArgumentExceptionHelper.ThrowIfNull(asyncContext);
+
+            return condition ? new WitnessOnSignal<T>(source, asyncContext, false) : source;
+        }
 
         /// <summary>Observes the source on the provided context only when the condition is true.</summary>
         /// <param name="condition">A value indicating whether to switch context.</param>
@@ -79,14 +99,20 @@ public static partial class SignalAsyncReactiveExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(asyncContext);
 
-            return condition ? source.WitnessOn(asyncContext, forceYielding) : source;
+            return condition ? new WitnessOnSignal<T>(source, asyncContext, forceYielding) : source;
         }
 
         /// <summary>Observes the source on the provided scheduler only when the condition is true.</summary>
         /// <param name="condition">A value indicating whether to switch context.</param>
         /// <param name="taskScheduler">The target scheduler.</param>
         /// <returns>The source sequence, optionally observed on the provided scheduler.</returns>
-        public IObservableAsync<T> ObserveOnIf(bool condition, TaskScheduler taskScheduler) => source.ObserveOnIf(condition, taskScheduler, false);
+        public IObservableAsync<T> ObserveOnIf(bool condition, TaskScheduler taskScheduler)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+            ArgumentExceptionHelper.ThrowIfNull(taskScheduler);
+
+            return condition ? new WitnessOnSignal<T>(source, AsyncContext.From(taskScheduler), false) : source;
+        }
 
         /// <summary>Observes the source on the provided scheduler only when the condition is true.</summary>
         /// <param name="condition">A value indicating whether to switch context.</param>
@@ -98,7 +124,7 @@ public static partial class SignalAsyncReactiveExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(taskScheduler);
 
-            return condition ? source.WitnessOn(taskScheduler, forceYielding) : source;
+            return condition ? new WitnessOnSignal<T>(source, AsyncContext.From(taskScheduler), forceYielding) : source;
         }
     }
 }

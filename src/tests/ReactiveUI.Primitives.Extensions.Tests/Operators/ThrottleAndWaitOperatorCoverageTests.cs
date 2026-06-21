@@ -279,7 +279,7 @@ public class ThrottleAndWaitOperatorCoverageTests
         var emissions = 0;
         var sub = subject.SynchronizeAsync().Subscribe(tuple =>
         {
-            Interlocked.Increment(ref emissions);
+            _ = Interlocked.Increment(ref emissions);
             tuple.Sync.Dispose();
         });
         sub.Dispose();

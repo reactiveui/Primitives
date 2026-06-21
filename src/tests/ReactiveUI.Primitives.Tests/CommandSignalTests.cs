@@ -41,8 +41,8 @@ public sealed class CommandSignalTests
             canRun);
         List<int> results = [];
         List<bool> running = [];
-        command.Results.Subscribe(results.Add);
-        command.IsRunning.Changed.Subscribe(running.Add);
+        _ = command.Results.Subscribe(results.Add);
+        _ = command.IsRunning.Changed.Subscribe(running.Add);
         var executed = await command.ExecuteAsync();
         canRun.Value = false;
         InvalidOperationException? rejected = null;
@@ -73,8 +73,8 @@ public sealed class CommandSignalTests
         CommandSignal<int> command = new(() => throw fault);
         List<int> results = [];
         List<Exception> faults = [];
-        command.Results.Subscribe(results.Add);
-        command.Faults.Subscribe(faults.Add);
+        _ = command.Results.Subscribe(results.Add);
+        _ = command.Faults.Subscribe(faults.Add);
         behavior.OnNext(UpdatedStateValue);
         disposable.Dispose();
         InvalidOperationException? observed = null;

@@ -35,24 +35,6 @@ public static partial class SignalAsyncExtensions
             return new ZipSignal<T1, T2, TResult>(first, second, resultSelector);
         }
 
-        /// <summary>Combines two observable sequences element-by-element using the specified result selector.</summary>
-        /// <typeparam name="T2">The type of elements in the second source sequence.</typeparam>
-        /// <typeparam name="TResult">The type of elements in the result sequence.</typeparam>
-        /// <param name="second">The second observable sequence.</param>
-        /// <param name="resultSelector">A function to apply to each pair of elements.</param>
-        /// <returns>An observable sequence whose elements are the pair-wise combination of source elements.</returns>
-        public IObservableAsync<TResult> Zip<T2, TResult>(
-            IObservableAsync<T2> second,
-            Func<T1, T2, TResult> resultSelector) =>
-            first.Pair(second, resultSelector);
-
-        /// <summary>Combines two observable sequences element-by-element into pairs.</summary>
-        /// <typeparam name="T2">The type of elements in the second source sequence.</typeparam>
-        /// <param name="second">The second observable sequence.</param>
-        /// <returns>An observable sequence of tuples pairing elements from each source.</returns>
-        public IObservableAsync<(T1 First, T2 Second)> Zip<T2>(
-            IObservableAsync<T2> second) =>
-            first.Pair(second, static (a, b) => (a, b));
     }
 
     /// <summary>

@@ -97,16 +97,11 @@ internal sealed class ScheduledValueObservable<T> : IObservable<T>
             });
         }
 
-        if (_useAbsolute)
-        {
-            return _scheduler.Schedule(state, _absoluteDueTime, static (_, s) =>
+        return _useAbsolute ? _scheduler.Schedule(state, _absoluteDueTime, static (_, s) =>
             {
                 s.Emit();
                 return EmptyDisposable.Instance;
-            });
-        }
-
-        return _scheduler.Schedule(state, _dueTime, static (_, s) =>
+            }) : _scheduler.Schedule(state, _dueTime, static (_, s) =>
         {
             s.Emit();
             return EmptyDisposable.Instance;

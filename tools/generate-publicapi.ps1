@@ -61,6 +61,11 @@ Set-Location $srcDir
 $env:EnableWindowsTargeting = 'true'
 $env:CheckEolTargetFramework = 'false'
 if (-not $env:MinVerVersionOverride) { $env:MinVerVersionOverride = '255.255.255-dev' }
+# The generator must not inherit an environment/MSBuild opt-out. Directory.Build.props
+# still disables tests, benchmarks, and source generators by project path/name.
+Remove-Item Env:TrackPublicApi -ErrorAction SilentlyContinue
+Remove-Item Env:TRACKPUBLICAPI -ErrorAction SilentlyContinue
+Remove-Item Env:trackpublicapi -ErrorAction SilentlyContinue
 
 if ($Jobs -le 0) {
     $Jobs = if ($env:JOBS) { [int]$env:JOBS } else { [Math]::Min([Environment]::ProcessorCount, 8) }
@@ -89,6 +94,7 @@ function Invoke-PublicApiOne {
     param($Item, [string[]]$Diags)
     $proj = $Item.Proj
     $tfm = $Item.Tfm
+    $apiNamespace = $Item.ApiNamespace
     $lf = "`n"
     $header = '#nullable enable'
     # Write LF-only so the baselines match the bash sibling's output byte-for-byte.
@@ -104,7 +110,12 @@ function Invoke-PublicApiOne {
     if ($LASTEXITCODE -eq 0) {
         # `dotnet format` records the surface in Unshipped; fold it into Shipped (ordinally
         # sorted+deduped, matching `LC_ALL=C sort -u`) and reset Unshipped to the bare header.
-        $surface = [string[]]@(Get-Content $Item.Unshipped | Where-Object { $_ -ne $header -and $_.Trim() -ne '' } | Select-Object -Unique)
+        $surface = [string[]]@(Get-Content $Item.Unshipped | Where-Object { $_ -ne $header -and $_.Trim() -ne '' })
+        if ($tfm -like '*-android*' -and -not [string]::IsNullOrWhiteSpace($apiNamespace)) {
+            $surface += "$apiNamespace.Resource"
+            $surface += "$apiNamespace.Resource.Resource() -> void"
+        }
+        $surface = [string[]]@($surface | Select-Object -Unique)
         [Array]::Sort($surface, [System.StringComparer]::Ordinal)
         & $writeLf $Item.Shipped (@($header) + $surface)
         & $writeLf $Item.Unshipped @($header)
@@ -151,6 +162,8 @@ foreach ($projItem in $projects) {
     }
 
     $projDir = Split-Path -Parent $proj
+    $apiNamespace = Get-MsBuildProperty -Project $proj -Name 'RootNamespace'
+    if (-not $apiNamespace) { $apiNamespace = Get-MsBuildProperty -Project $proj -Name 'AssemblyName' }
     Write-Host "queue $proj"
     Write-Host "    TFMs: $tfms"
     $restoreSet.Add($proj)
@@ -164,7 +177,7 @@ foreach ($projItem in $projects) {
 
         $shipped = Join-Path $apiDir 'PublicAPI.Shipped.txt'
         $unshipped = Join-Path $apiDir 'PublicAPI.Unshipped.txt'
-        $items.Add([pscustomobject]@{ Proj = $proj; Tfm = $tfm; Shipped = $shipped; Unshipped = $unshipped })
+        $items.Add([pscustomobject]@{ Proj = $proj; Tfm = $tfm; Shipped = $shipped; Unshipped = $unshipped; ApiNamespace = $apiNamespace })
     }
 }
 Write-Host ''

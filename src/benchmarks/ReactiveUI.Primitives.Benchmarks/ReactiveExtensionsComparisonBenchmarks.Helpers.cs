@@ -39,7 +39,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     {
         while (!task.IsCompleted)
         {
-            Thread.Yield();
+            _ = Thread.Yield();
         }
 
         if (task.IsCompletedSuccessfully)

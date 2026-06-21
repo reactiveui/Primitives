@@ -202,7 +202,7 @@ public static partial class Signal
     {
         try
         {
-            (var result, var isCanceled) = await cancellableTask.ConfigureAwait(false);
+            var (result, isCanceled) = await cancellableTask.ConfigureAwait(false);
             if (!isCanceled && !token.IsCancellationRequested && shouldEmit(result))
             {
                 observer.OnNext(result);
@@ -283,7 +283,7 @@ public static partial class Signal
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            SourceCore.Token.Register(
+            _ = SourceCore.Token.Register(
                 static state => ((IObserver<Exception>)state!).OnNext(new OperationCanceledException()),
                 observer,
                 useSynchronizationContext: false);
@@ -371,7 +371,7 @@ public static partial class Signal
                 return;
             }
 
-            throw new ObjectDisposedException(nameof(ImmediateTaskSignal<TResult>));
+            throw new ObjectDisposedException(nameof(ImmediateTaskSignal<>));
         }
 
         /// <summary>Subscription for pending immediate tasks.</summary>

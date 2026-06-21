@@ -111,7 +111,7 @@ public class ConcurencyTests
         using var scheduled = nt.Schedule(CancelDueTime, () =>
         {
             Volatile.Write(ref runCount, 1);
-            completed.TrySetResult(1);
+            _ = completed.TrySetResult(1);
         });
         scheduled.Dispose();
         var delay = Task.Delay(CancelObservationWindow);

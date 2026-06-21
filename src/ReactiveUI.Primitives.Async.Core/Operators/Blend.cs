@@ -38,7 +38,7 @@ public static partial class SignalAsyncExtensions
         /// </summary>
         /// <returns>An observable sequence that emits items from all input sequences as they are produced.</returns>
         public IObservableAsync<T> Merge() =>
-            @this.Blend();
+            new BlendEnumerableSignal<T>(@this);
     }
 
     /// <summary>Blend/Merge operators for an observable source sequence of inner observable sequences.</summary>
@@ -64,7 +64,7 @@ public static partial class SignalAsyncExtensions
         /// </summary>
         /// <returns>An asynchronous observable sequence that emits items from all inner observable sequences as they are produced.</returns>
         public IObservableAsync<T> Merge() =>
-            @this.Blend();
+            new BlendSignalSourcesSignal<T>(@this);
 
         /// <summary>
         /// Merges the emissions of multiple asynchronous observable sequences into a single observable sequence, limiting
@@ -94,7 +94,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="other">The second asynchronous observable sequence to merge with the first.</param>
         /// <returns>An observable that emits the elements from both input sequences as they arrive.</returns>
         public IObservableAsync<T> Merge(IObservableAsync<T> other) =>
-            @this.Blend(other);
+            new BlendEnumerableSignal<T>([@this, other]);
     }
 
     /// <summary>Async observable that merges items from an observable of observables into a single stream.</summary>
@@ -240,12 +240,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task representing the asynchronous forward operation.</returns>
         internal ValueTask RelayNextIfActiveAsync(T value)
         {
-            if (DisposalHelper.HasDisposed(_disposed))
-            {
-                return default;
-            }
-
-            return _observer.OnNextAsync(value, DisposedCancellationToken);
+            return DisposalHelper.HasDisposed(_disposed) ? default : _observer.OnNextAsync(value, DisposedCancellationToken);
         }
 
         /// <summary>
@@ -257,12 +252,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task representing the asynchronous forward operation.</returns>
         internal ValueTask RelayErrorIfActiveAsync(Exception exception)
         {
-            if (DisposalHelper.HasDisposed(_disposed))
-            {
-                return default;
-            }
-
-            return _observer.OnErrorResumeAsync(exception, DisposedCancellationToken);
+            return DisposalHelper.HasDisposed(_disposed) ? default : _observer.OnErrorResumeAsync(exception, DisposedCancellationToken);
         }
 
         /// <summary>Forwards a value to the downstream observer under the serialization gate.</summary>
@@ -470,7 +460,7 @@ public static partial class SignalAsyncExtensions
                     return default;
                 }
 
-                parent._semaphore.Release();
+                _ = parent._semaphore.Release();
                 return default;
             }
         }
@@ -552,11 +542,11 @@ public static partial class SignalAsyncExtensions
                     // Sentinel: prevents premature completion while the loop is subscribing to sources.
                     // Without this, a synchronously-completing source (e.g. Return) can decrement _active
                     // to zero before the next source is subscribed, terminating the merge early.
-                    Interlocked.Increment(ref _active);
+                    _ = Interlocked.Increment(ref _active);
 
                     foreach (var src in _sources)
                     {
-                        Interlocked.Increment(ref _active);
+                        _ = Interlocked.Increment(ref _active);
 
                         BlendBranchWitness innerObserver = new(this);
                         await _innerDisposables.AddAsync(innerObserver).ConfigureAwait(false);
@@ -662,12 +652,7 @@ public static partial class SignalAsyncExtensions
             /// <returns>A task representing the asynchronous forward operation.</returns>
             internal ValueTask RelayNextIfActiveAsync(T value)
             {
-                if (DisposalHelper.HasDisposed(_disposed))
-                {
-                    return default;
-                }
-
-                return _observer.OnNextAsync(value, _disposedCancellationToken);
+                return DisposalHelper.HasDisposed(_disposed) ? default : _observer.OnNextAsync(value, _disposedCancellationToken);
             }
 
             /// <summary>Forwards a non-terminal error to the downstream observer under the serialization gate.</summary>
@@ -697,12 +682,7 @@ public static partial class SignalAsyncExtensions
             /// <returns>A task representing the asynchronous forward operation.</returns>
             internal ValueTask RelayErrorIfActiveAsync(Exception ex)
             {
-                if (DisposalHelper.HasDisposed(_disposed))
-                {
-                    return default;
-                }
-
-                return _observer.OnErrorResumeAsync(ex, _disposedCancellationToken);
+                return DisposalHelper.HasDisposed(_disposed) ? default : _observer.OnErrorResumeAsync(ex, _disposedCancellationToken);
             }
 
             /// <summary>Handles completion from an inner source, triggering final completion when all sources are done.</summary>
@@ -715,12 +695,7 @@ public static partial class SignalAsyncExtensions
                     return FinishAsync(result);
                 }
 
-                if (Interlocked.Decrement(ref _active) != 0)
-                {
-                    return default;
-                }
-
-                return FinishAsync(Result.Success);
+                return Interlocked.Decrement(ref _active) != 0 ? default : FinishAsync(Result.Success);
             }
 
             /// <summary>Completes the merged sequence, disposes all subscriptions, and optionally signals the downstream observer.</summary>

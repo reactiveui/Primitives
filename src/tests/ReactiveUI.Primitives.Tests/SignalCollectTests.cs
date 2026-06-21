@@ -20,7 +20,7 @@ public sealed class SignalCollectTests
         const int Third = 3;
         const int ExpectedBatchCount = 2;
         List<int[]> immediateBatches = [];
-        Signal.FromEnumerable([First, Second]).Collect(TimeSpan.Zero)
+        _ = Signal.FromEnumerable([First, Second]).Collect(TimeSpan.Zero)
             .Subscribe(batch => immediateBatches.Add([.. batch]));
         await Assert.That(immediateBatches.Count).IsEqualTo(ExpectedBatchCount);
         await Assert.That(immediateBatches[0].SequenceEqual([First])).IsTrue();
@@ -46,15 +46,15 @@ public sealed class SignalCollectTests
         Signal<int> errorSource = new();
         InvalidOperationException expected = new("collect");
         Exception? observed = null;
-        errorSource.Collect(TimeSpan.FromTicks(First), errorClock).Subscribe(_ => { }, ex => observed = ex);
+        _ = errorSource.Collect(TimeSpan.FromTicks(First), errorClock).Subscribe(_ => { }, ex => observed = ex);
         errorSource.OnNext(First);
         errorSource.OnError(expected);
         errorClock.AdvanceBy(TimeSpan.FromTicks(First));
         await Assert.That(observed!).IsSameReferenceAs(expected);
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Collect(TimeSpan.FromTicks(First)));
-        Assert.Throws<ArgumentNullException>(() => Signal.Emit(First).Collect(TimeSpan.FromTicks(First), null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Collect(TimeSpan.FromTicks(First)));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Emit(First).Collect(TimeSpan.FromTicks(First), null!));
         var stoppedGuardCompleted = 0;
-        new ScriptedObservable<int>(observer =>
+        _ = new ScriptedObservable<int>(observer =>
             {
                 observer.OnCompleted();
                 observer.OnNext(First);

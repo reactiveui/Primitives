@@ -123,6 +123,6 @@ public class WhileObservableTests
             return;
         }
 
-        gate.TrySetResult(true);
+        _ = gate.TrySetResult(true);
     }
 }

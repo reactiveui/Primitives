@@ -8,15 +8,15 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Shared terminal and subscription handling for advanced observer sinks.</summary>
-internal static class ObserverSinkLifetime
+/// <summary>Shared terminal and subscription handling for advanced witnesses.</summary>
+internal static class WitnessLifetime
 {
     /// <summary>Disposes a sink and its upstream subscription.</summary>
     /// <param name="stopped">The stopped flag.</param>
     /// <param name="subscription">The upstream subscription slot.</param>
     public static void Dispose(ref int stopped, SingleReplaceableDisposable subscription)
     {
-        Interlocked.Exchange(ref stopped, 1);
+        _ = Interlocked.Exchange(ref stopped, 1);
         subscription.Dispose();
     }
 

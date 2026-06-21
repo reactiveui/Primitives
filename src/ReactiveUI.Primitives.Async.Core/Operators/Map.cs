@@ -52,7 +52,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            return @this.Map(value => selector(state, value));
+            return new MapSyncSignal<T, TDest>(@this, value => selector(state, value));
         }
 
         /// <summary>Projects each element of the observable sequence into a new form using the specified asynchronous selector function.</summary>
@@ -61,7 +61,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence containing the results of applying the selector function to each source element.</returns>
         public IObservableAsync<TDest> Select<TDest>(
             Func<T, CancellationToken, ValueTask<TDest>> selector) =>
-            @this.Map(selector);
+            new MapAsyncSignal<T, TDest>(@this, selector);
 
         /// <summary>Projects each element of the observable sequence into a new form using the specified selector function.</summary>
         /// <typeparam name="TDest">The type of the value returned by the selector function.</typeparam>
@@ -69,7 +69,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence whose elements are the result of invoking the selector function.</returns>
         public IObservableAsync<TDest> Select<TDest>(
             Func<T, TDest> selector) =>
-            @this.Map(selector);
+            new MapSyncSignal<T, TDest>(@this, selector);
     }
 
     /// <summary>

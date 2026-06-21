@@ -30,12 +30,44 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>SystemReactiveCombineLatestValuesAreAllFalse</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveCombineLatestValuesAreAllFalse</c> result.</returns>
     private static int SystemReactiveCombineLatestValuesAreAllFalse() =>
-        DrainBool(BoolSources(ExtensionsLibrary.ReactiveUIExtensions, false).CombineLatest(static values => values.All(static value => !value)));
+        DrainBool(BoolSources(ExtensionsLibrary.ReactiveUIExtensions, false).CombineLatest(ValuesAreAllFalse));
 
     /// <summary>Executes the <c>SystemReactiveCombineLatestValuesAreAllTrue</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveCombineLatestValuesAreAllTrue</c> result.</returns>
     private static int SystemReactiveCombineLatestValuesAreAllTrue() =>
-        DrainBool(BoolSources(ExtensionsLibrary.ReactiveUIExtensions, true).CombineLatest(static values => values.All(static value => value)));
+        DrainBool(BoolSources(ExtensionsLibrary.ReactiveUIExtensions, true).CombineLatest(ValuesAreAllTrue));
+
+    /// <summary>Determines whether every value is false.</summary>
+    /// <param name="values">The values to inspect.</param>
+    /// <returns><see langword="true"/> when every value is false; otherwise, <see langword="false"/>.</returns>
+    private static bool ValuesAreAllFalse(IList<bool> values)
+    {
+        for (var i = 0; i < values.Count; i++)
+        {
+            if (values[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>Determines whether every value is true.</summary>
+    /// <param name="values">The values to inspect.</param>
+    /// <returns><see langword="true"/> when every value is true; otherwise, <see langword="false"/>.</returns>
+    private static bool ValuesAreAllTrue(IList<bool> values)
+    {
+        for (var i = 0; i < values.Count; i++)
+        {
+            if (!values[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     /// <summary>Executes the <c>SystemReactiveFilter</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveFilter</c> result.</returns>

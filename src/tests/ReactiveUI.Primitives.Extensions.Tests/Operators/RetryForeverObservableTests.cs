@@ -61,7 +61,7 @@ public class RetryForeverObservableTests
         IObserver<int>? captured = null;
         var source = Observable.Create<int>(observer =>
         {
-            Interlocked.Increment(ref subscribeCount);
+            _ = Interlocked.Increment(ref subscribeCount);
             captured = observer;
             return EmptyDisposable.Instance;
         });
@@ -92,6 +92,6 @@ public class RetryForeverObservableTests
     public void WhenRetryForeverObserverNull_ThenSubscribeThrows()
     {
         RetryForeverObservable<int> observable = new(new Subject<int>());
-        Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
     }
 }

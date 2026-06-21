@@ -69,13 +69,12 @@ path, so you can scope a run to a single library while iterating.
   (its seed files are left in place); the rest of the run continues. The script's
   exit code is non-zero if any TFM failed, so CI can detect an incomplete run.
 * **Android caveat:** the generators build through `dotnet format` (in-memory), which
-  does not run the Android Resource designer, so a regen strips the generated
-  `ReactiveUI.Primitives.Resource` entries from the `net*-android` Shipped baselines.
-  The real `-c Release` build emits that type, so re-add these two lines (the Release
-  build's `RS0016` fails without them):
+  does not run the Android Resource designer. The scripts add the generated
+  `<RootNamespace>.Resource` entries to `net*-android` Shipped baselines explicitly
+  because the real `-c Release` build emits that type:
   ```
-  ReactiveUI.Primitives.Resource
-  ReactiveUI.Primitives.Resource.Resource() -> void
+  <RootNamespace>.Resource
+  <RootNamespace>.Resource.Resource() -> void
   ```
 * The scripts set `MinVerVersionOverride` (default `255.255.255-dev`) so versioning
   does not depend on git history; override it by exporting/setting the variable first.

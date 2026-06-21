@@ -60,7 +60,7 @@ public class AsyncSignalTests
     {
         AsyncSignal<int> s = new();
         s.OnCompleted();
-        Assert.Throws<InvalidOperationException>(() => s.GetResult());
+        _ = Assert.Throws<InvalidOperationException>(() => s.GetResult());
     }
 
     /// <summary>Gets the result blocking.</summary>
@@ -221,9 +221,9 @@ public class AsyncSignalTests
     {
         var completionFaults = 0;
         AsyncSignal<int> asyncSignal = new();
-        Assert.Throws<InvalidOperationException>(() => _ = asyncSignal.Value);
-        Assert.Throws<ArgumentNullException>(() => asyncSignal.OnCompleted(null!));
-        Assert.Throws<ArgumentNullException>(() => asyncSignal.OnError(null!));
+        _ = Assert.Throws<InvalidOperationException>(() => _ = asyncSignal.Value);
+        _ = Assert.Throws<ArgumentNullException>(() => asyncSignal.OnCompleted(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => asyncSignal.OnError(null!));
         RecordingWitness<int> asyncFirst = new();
         RecordingWitness<int> asyncSecond = new();
         using var asyncSubscription = asyncSignal.Subscribe(asyncFirst);
@@ -248,15 +248,15 @@ public class AsyncSignalTests
         InvalidOperationException asyncFault = new("async-fault");
         asyncError.OnError(asyncFault);
         asyncError.OnError(new InvalidOperationException("late"));
-        Assert.Throws<InvalidOperationException>(() => asyncError.GetResult());
+        _ = Assert.Throws<InvalidOperationException>(() => asyncError.GetResult());
         RecordingWitness<int> asyncErrorLate = new();
         asyncError.Subscribe(asyncErrorLate).Dispose();
         await Assert.That(asyncErrorLate.Errors[0]).IsSameReferenceAs(asyncFault);
         AsyncSignal<int> disposedAsync = new();
         disposedAsync.Dispose();
         disposedAsync.Dispose();
-        Assert.Throws<ObjectDisposedException>(() => disposedAsync.OnNext(1));
-        Assert.Throws<ObjectDisposedException>(() => disposedAsync.Subscribe(new RecordingWitness<int>()));
+        _ = Assert.Throws<ObjectDisposedException>(() => disposedAsync.OnNext(1));
+        _ = Assert.Throws<ObjectDisposedException>(() => disposedAsync.Subscribe(new RecordingWitness<int>()));
         await Assert.That(completionFaults).IsEqualTo(1);
     }
 
@@ -318,7 +318,7 @@ public class AsyncSignalTests
             started.Set();
             try
             {
-                s.GetResult();
+                _ = s.GetResult();
             }
             catch (Exception exception)
             {

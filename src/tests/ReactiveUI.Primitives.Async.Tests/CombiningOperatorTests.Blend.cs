@@ -617,7 +617,7 @@ public partial class CombiningOperatorTests
         await using var sub = await outer.Merge().SubscribeAsync(static (_, _) => default, null, result =>
         {
             completionResult = result;
-            completed.TrySetResult();
+            _ = completed.TrySetResult();
             return default;
         });
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -638,7 +638,7 @@ public partial class CombiningOperatorTests
         await using var sub = await outer.Merge(1).SubscribeAsync(static (_, _) => default, null, result =>
         {
             completionResult = result;
-            completed.TrySetResult();
+            _ = completed.TrySetResult();
             return default;
         });
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));

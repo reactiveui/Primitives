@@ -35,7 +35,7 @@ public partial class CombineLatestArityTests
                 null,
                 async _ =>
                 {
-                    completionBlocked.TrySetResult();
+                    IgnoredResult.Of(completionBlocked.TrySetResult());
                     await allowCompletion.Task;
                 });
 
@@ -49,7 +49,7 @@ public partial class CombineLatestArityTests
 
         await Assert.That(results).Count().IsEqualTo(1);
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 
@@ -78,7 +78,7 @@ public partial class CombineLatestArityTests
                 },
                 async _ =>
                 {
-                    completionBlocked.TrySetResult();
+                    IgnoredResult.Of(completionBlocked.TrySetResult());
                     await allowCompletion.Task;
                 });
 
@@ -92,7 +92,7 @@ public partial class CombineLatestArityTests
 
         await Assert.That(receivedError).IsNull();
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 
@@ -126,7 +126,7 @@ public partial class CombineLatestArityTests
                 null,
                 async _ =>
                 {
-                    completionBlocked.TrySetResult();
+                    IgnoredResult.Of(completionBlocked.TrySetResult());
                     await allowCompletion.Task;
                 });
 
@@ -141,7 +141,7 @@ public partial class CombineLatestArityTests
 
         await Assert.That(results).Count().IsEqualTo(1);
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 
@@ -171,7 +171,7 @@ public partial class CombineLatestArityTests
                 },
                 async _ =>
                 {
-                    completionBlocked.TrySetResult();
+                    IgnoredResult.Of(completionBlocked.TrySetResult());
                     await allowCompletion.Task;
                 });
 
@@ -186,7 +186,7 @@ public partial class CombineLatestArityTests
 
         await Assert.That(receivedError).IsNull();
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 
@@ -217,7 +217,7 @@ public partial class CombineLatestArityTests
                 null,
                 async _ =>
                 {
-                    completionBlocked.TrySetResult();
+                    IgnoredResult.Of(completionBlocked.TrySetResult());
                     await allowCompletion.Task;
                 });
 
@@ -233,7 +233,7 @@ public partial class CombineLatestArityTests
 
         await Assert.That(results).Count().IsEqualTo(1);
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 
@@ -264,7 +264,7 @@ public partial class CombineLatestArityTests
                 },
                 async _ =>
                 {
-                    completionBlocked.TrySetResult();
+                    IgnoredResult.Of(completionBlocked.TrySetResult());
                     await allowCompletion.Task;
                 });
 
@@ -280,7 +280,7 @@ public partial class CombineLatestArityTests
 
         await Assert.That(receivedError).IsNull();
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 
@@ -312,7 +312,7 @@ public partial class CombineLatestArityTests
                 null,
                 async _ =>
                 {
-                    completionBlocked.TrySetResult();
+                    IgnoredResult.Of(completionBlocked.TrySetResult());
                     await allowCompletion.Task;
                 });
 
@@ -329,7 +329,7 @@ public partial class CombineLatestArityTests
 
         await Assert.That(results).Count().IsEqualTo(1);
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 
@@ -361,7 +361,7 @@ public partial class CombineLatestArityTests
                 },
                 async _ =>
                 {
-                    completionBlocked.TrySetResult();
+                    IgnoredResult.Of(completionBlocked.TrySetResult());
                     await allowCompletion.Task;
                 });
 
@@ -378,7 +378,7 @@ public partial class CombineLatestArityTests
 
         await Assert.That(receivedError).IsNull();
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 
@@ -411,7 +411,7 @@ public partial class CombineLatestArityTests
                 null,
                 async _ =>
                 {
-                    completionBlocked.TrySetResult();
+                    IgnoredResult.Of(completionBlocked.TrySetResult());
                     await allowCompletion.Task;
                 });
 
@@ -429,7 +429,7 @@ public partial class CombineLatestArityTests
 
         await Assert.That(results).Count().IsEqualTo(1);
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 
@@ -462,7 +462,7 @@ public partial class CombineLatestArityTests
                 },
                 async _ =>
                 {
-                    completionBlocked.TrySetResult();
+                    IgnoredResult.Of(completionBlocked.TrySetResult());
                     await allowCompletion.Task;
                 });
 
@@ -480,7 +480,7 @@ public partial class CombineLatestArityTests
 
         await Assert.That(receivedError).IsNull();
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 
@@ -514,7 +514,7 @@ public partial class CombineLatestArityTests
                 null,
                 async _ =>
                 {
-                    completionBlocked.TrySetResult();
+                    IgnoredResult.Of(completionBlocked.TrySetResult());
                     await allowCompletion.Task;
                 });
 
@@ -533,7 +533,7 @@ public partial class CombineLatestArityTests
 
         await Assert.That(results).Count().IsEqualTo(1);
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 
@@ -567,7 +567,7 @@ public partial class CombineLatestArityTests
                 },
                 async _ =>
                 {
-                    completionBlocked.TrySetResult();
+                    IgnoredResult.Of(completionBlocked.TrySetResult());
                     await allowCompletion.Task;
                 });
 
@@ -586,7 +586,7 @@ public partial class CombineLatestArityTests
 
         await Assert.That(receivedError).IsNull();
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 
@@ -632,7 +632,7 @@ public partial class CombineLatestArityTests
                 null,
                 async _ =>
                 {
-                    completionBlocked.TrySetResult();
+                    IgnoredResult.Of(completionBlocked.TrySetResult());
                     await allowCompletion.Task;
                 });
 
@@ -652,7 +652,7 @@ public partial class CombineLatestArityTests
 
         await Assert.That(results).Count().IsEqualTo(1);
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 
@@ -698,7 +698,7 @@ public partial class CombineLatestArityTests
                 },
                 async _ =>
                 {
-                    completionBlocked.TrySetResult();
+                    IgnoredResult.Of(completionBlocked.TrySetResult());
                     await allowCompletion.Task;
                 });
 
@@ -718,7 +718,7 @@ public partial class CombineLatestArityTests
 
         await Assert.That(receivedError).IsNull();
 
-        allowCompletion.TrySetResult();
+        _ = allowCompletion.TrySetResult();
         await failTask;
     }
 }

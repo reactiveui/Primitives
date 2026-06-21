@@ -62,20 +62,13 @@ public readonly record struct Spark<T>
     /// Equality of Spark&lt;T&gt; objects is based on the equality of the observer message payload they represent,
     /// including the Spark Kind and the Value or Exception (if any).
     /// </remarks>
-    public bool Equals(Spark<T> other)
-    {
-        if (Kind != other.Kind)
-        {
-            return false;
-        }
-
-        return Kind switch
+    public bool Equals(Spark<T> other) =>
+        Kind != other.Kind ? false : Kind switch
         {
             SparkKind.OnNext => EqualityComparer<T>.Default.Equals(Value, other.Value),
             SparkKind.OnError => Equals(_exception, other._exception),
             _ => true,
         };
-    }
 
     /// <summary>Returns the hash code for this spark.</summary>
     /// <returns>A hash code for this spark.</returns>

@@ -61,34 +61,19 @@ public sealed class ContextSwitchSignalAsync<T>(IObservableAsync<T> source, Asyn
         {
             // Fast path: already on the target context and no forced yield — skip the awaitable
             // dance entirely and forward synchronously.
-            if (!forceYielding && asyncContext.IsSameAsCurrentAsyncContext())
-            {
-                return observer.OnNextAsync(value, cancellationToken);
-            }
-
-            return ForwardAfterContextSwitchAsync(value, cancellationToken);
+            return !forceYielding && asyncContext.IsSameAsCurrentAsyncContext() ? observer.OnNextAsync(value, cancellationToken) : ForwardAfterContextSwitchAsync(value, cancellationToken);
         }
 
         /// <inheritdoc/>
         protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
         {
-            if (!forceYielding && asyncContext.IsSameAsCurrentAsyncContext())
-            {
-                return observer.OnErrorResumeAsync(error, cancellationToken);
-            }
-
-            return ForwardErrorAfterContextSwitchAsync(error, cancellationToken);
+            return !forceYielding && asyncContext.IsSameAsCurrentAsyncContext() ? observer.OnErrorResumeAsync(error, cancellationToken) : ForwardErrorAfterContextSwitchAsync(error, cancellationToken);
         }
 
         /// <inheritdoc/>
         protected override ValueTask OnCompletedAsyncCore(Result result)
         {
-            if (!forceYielding && asyncContext.IsSameAsCurrentAsyncContext())
-            {
-                return observer.OnCompletedAsync(result);
-            }
-
-            return ForwardCompletionAfterContextSwitchAsync(result);
+            return !forceYielding && asyncContext.IsSameAsCurrentAsyncContext() ? observer.OnCompletedAsync(result) : ForwardCompletionAfterContextSwitchAsync(result);
         }
     }
 }

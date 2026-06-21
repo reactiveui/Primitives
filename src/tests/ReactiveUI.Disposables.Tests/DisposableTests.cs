@@ -116,7 +116,7 @@ public class DisposableTests
         IDisposable[] items = [first, second];
         MultipleDisposable disposable = [.. items];
         await Assert.That(disposable.Count).IsEqualTo(items.Length);
-        disposable.Remove(first);
+        _ = disposable.Remove(first);
         await Assert.That(disposable.Count).IsEqualTo(items.Length - 1);
         disposable.Dispose();
         await Assert.That(disposable.Count).IsEqualTo(0);
@@ -229,9 +229,9 @@ public class DisposableTests
         await Assert.That(array.Length).IsEqualTo(items.Length);
         ActionDisposable missing = new(() => { });
         await Assert.That(disposable.Contains(items[0])).IsTrue();
-        await Assert.That(disposable.Contains(items[items.Length - 1])).IsTrue();
+        await Assert.That(disposable.Contains(items[^1])).IsTrue();
         await Assert.That(disposable.Contains(missing)).IsFalse();
-        await Assert.That(disposable.Remove(items[items.Length - 1])).IsTrue();
+        await Assert.That(disposable.Remove(items[^1])).IsTrue();
         await Assert.That(disposable.Remove(missing)).IsFalse();
         await Assert.That(disposable.Count).IsEqualTo(items.Length - 1);
 

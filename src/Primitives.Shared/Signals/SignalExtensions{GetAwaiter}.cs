@@ -22,12 +22,8 @@ public static partial class SignalExtensions
         /// </summary>
         /// <returns>A final signal awaiter.</returns>
         /// <exception cref="ArgumentExceptionHelper">source.</exception>
-        public IAwaitSignal<TSource> GetAwaiter()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return Signal.RunAsync(source, CancellationToken.None);
-        }
+        public IAwaitSignal<TSource> GetAwaiter() =>
+            Signal.RunAsync(source);
 
         /// <summary>
         /// Gets an awaiter that returns the last value of the observable sequence or throws an exception if the sequence is empty.
@@ -38,11 +34,7 @@ public static partial class SignalExtensions
         /// A final signal awaiter.
         /// </returns>
         /// <exception cref="ArgumentExceptionHelper">source.</exception>
-        public IAwaitSignal<TSource> GetAwaiter(CancellationToken cancellationToken)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return Signal.RunAsync(source, cancellationToken);
-        }
+        public IAwaitSignal<TSource> GetAwaiter(CancellationToken cancellationToken) =>
+            Signal.RunAsync(source, cancellationToken);
     }
 }

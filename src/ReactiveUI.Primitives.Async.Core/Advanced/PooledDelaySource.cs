@@ -132,7 +132,7 @@ public sealed class PooledDelaySource : IValueTaskSource
     {
         try
         {
-            _core.GetResult(token);
+            _ = _core.GetResult(token);
         }
         finally
         {

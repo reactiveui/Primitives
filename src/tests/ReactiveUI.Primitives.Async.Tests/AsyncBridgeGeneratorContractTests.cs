@@ -182,7 +182,7 @@ public sealed class AsyncBridgeGeneratorContractTests
     public async Task BridgeGeneratorsEmitAsyncAdaptersOnlyWhenAsyncShapesArePresent()
     {
         const string Source = BaseSmokeUsings + AsyncBridgeSmokeUsings + BridgeShapeSource + AsyncBridgeSmokeSource;
-        (var diagnostics, var generatedSources) = RunGenerators(Source, true);
+        var (diagnostics, generatedSources) = RunGenerators(Source, true);
         await Assert.That(diagnostics.Length).IsEqualTo(0);
         await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncBridgeName)).IsTrue();
         await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncObservableBridgeName)).IsTrue();
@@ -195,7 +195,7 @@ public sealed class AsyncBridgeGeneratorContractTests
     public async Task BridgeGeneratorsSkipAsyncAdaptersWhenAsyncAssemblyIsAbsent()
     {
         const string Source = BaseSmokeUsings + CoreBridgeSmokeUsings + BridgeShapeSource + CoreOnlySmokeSource;
-        (var diagnostics, var generatedSources) = RunGenerators(Source, false);
+        var (diagnostics, generatedSources) = RunGenerators(Source, false);
         await Assert.That(diagnostics.Length).IsEqualTo(0);
         await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncBridgeName)).IsFalse();
         await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncObservableBridgeName)).IsFalse();
@@ -254,7 +254,7 @@ public sealed class AsyncBridgeGeneratorContractTests
             var name = Path.GetFileName(path);
             if (!string.IsNullOrEmpty(name))
             {
-                platformAssemblies.TryAdd(name, path);
+                _ = platformAssemblies.TryAdd(name, path);
             }
         }
 

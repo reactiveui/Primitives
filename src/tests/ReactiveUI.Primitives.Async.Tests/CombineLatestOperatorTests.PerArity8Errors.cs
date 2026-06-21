@@ -42,7 +42,7 @@ public partial class CombineLatestOperatorTests
             null,
             r =>
             {
-                completed.TrySetResult(r);
+                _ = completed.TrySetResult(r);
                 return default;
             });
 
@@ -85,7 +85,7 @@ public partial class CombineLatestOperatorTests
             null,
             r =>
             {
-                completed.TrySetResult(r);
+                _ = completed.TrySetResult(r);
                 return default;
             });
 
@@ -128,7 +128,7 @@ public partial class CombineLatestOperatorTests
             null,
             r =>
             {
-                completed.TrySetResult(r);
+                _ = completed.TrySetResult(r);
                 return default;
             });
 
@@ -171,7 +171,7 @@ public partial class CombineLatestOperatorTests
             null,
             r =>
             {
-                completed.TrySetResult(r);
+                _ = completed.TrySetResult(r);
                 return default;
             });
 
@@ -214,7 +214,7 @@ public partial class CombineLatestOperatorTests
             null,
             r =>
             {
-                completed.TrySetResult(r);
+                _ = completed.TrySetResult(r);
                 return default;
             });
 
@@ -257,7 +257,7 @@ public partial class CombineLatestOperatorTests
             null,
             r =>
             {
-                completed.TrySetResult(r);
+                _ = completed.TrySetResult(r);
                 return default;
             });
 
@@ -300,7 +300,7 @@ public partial class CombineLatestOperatorTests
             null,
             r =>
             {
-                completed.TrySetResult(r);
+                _ = completed.TrySetResult(r);
                 return default;
             });
 
@@ -343,7 +343,7 @@ public partial class CombineLatestOperatorTests
             null,
             r =>
             {
-                completed.TrySetResult(r);
+                _ = completed.TrySetResult(r);
                 return default;
             });
 

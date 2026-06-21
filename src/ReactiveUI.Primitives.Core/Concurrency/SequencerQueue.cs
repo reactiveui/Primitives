@@ -58,7 +58,7 @@ public class SequencerQueue<TAbsolute>
 
         if (ReferenceEquals(_queue.Peek(), scheduledItem))
         {
-            _queue.Dequeue();
+            _ = _queue.Dequeue();
             return true;
         }
 

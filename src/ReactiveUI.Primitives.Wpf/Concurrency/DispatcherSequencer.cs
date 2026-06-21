@@ -61,7 +61,7 @@ public sealed class DispatcherSequencer : ISequencer
     /// <returns><see langword="true"/>, since the dispatcher always accepts the work.</returns>
     private bool Post(Action drain)
     {
-        Dispatcher.BeginInvoke(drain, Priority);
+        _ = Dispatcher.BeginInvoke(drain, Priority);
         return true;
     }
 

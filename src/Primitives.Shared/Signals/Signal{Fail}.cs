@@ -49,6 +49,7 @@ public static partial class Signal
     /// <param name="scheduler">The scheduler.</param>
     /// <param name="witness">The witness.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<T> Fail<T>(Exception error, ISequencer scheduler, T witness) =>
-        Fail<T>(error, scheduler);
+    public static IObservable<T> Fail<T>(Exception error, ISequencer scheduler, T witness) => scheduler == Sequencer.Immediate
+        ? new ImmediateThrowSignal<T>(error)
+        : new ThrowSignal<T>(error, scheduler);
 }

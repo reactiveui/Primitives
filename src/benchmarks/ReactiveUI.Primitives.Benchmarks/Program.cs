@@ -88,7 +88,7 @@ internal static class Program
             return;
         }
 
-        BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
+        _ = BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
     }
 
     /// <summary>Runs the extension comparison scenarios once to validate benchmark delegates.</summary>
@@ -433,13 +433,13 @@ internal static class Program
         var index = 0;
         while (index < results.Length)
         {
-            (var firstName, var firstValue) = ParseSmokeResult(results[index]);
+            var (firstName, firstValue) = ParseSmokeResult(results[index]);
             var scenario = NormalizeSmokeScenarioName(firstName);
             List<(string Name, int Value)> rows = [(firstName, firstValue)];
             var next = index + 1;
             while (next < results.Length)
             {
-                (var name, var value) = ParseSmokeResult(results[next]);
+                var (name, value) = ParseSmokeResult(results[next]);
                 if (NormalizeSmokeScenarioName(name) != scenario)
                 {
                     break;
@@ -538,19 +538,12 @@ internal static class Program
     /// <returns>The normalized smoke scenario name.</returns>
     private static string NormalizeSmokeScenarioName(string name)
     {
-        string scenario;
-        if (name.StartsWith(SystemReactivePrefix, StringComparison.Ordinal))
+        var scenario = name switch
         {
-            scenario = name[SystemReactivePrefix.Length..];
-        }
-        else if (name.StartsWith(PrimitivesPrefix, StringComparison.Ordinal))
-        {
-            scenario = name[PrimitivesPrefix.Length..];
-        }
-        else
-        {
-            scenario = name[R3Prefix.Length..];
-        }
+            _ when name.StartsWith(SystemReactivePrefix, StringComparison.Ordinal) => name[SystemReactivePrefix.Length..],
+            _ when name.StartsWith(PrimitivesPrefix, StringComparison.Ordinal) => name[PrimitivesPrefix.Length..],
+            _ => name[R3Prefix.Length..],
+        };
 
         return SmokeScenarioAliases.TryGetValue(scenario, out var normalized) ? normalized : scenario;
     }
@@ -575,7 +568,7 @@ internal static class Program
         var r3Value = 0;
         for (var i = 0; i < rows.Count; i++)
         {
-            (var name, var value) = rows[i];
+            var (name, value) = rows[i];
             if (name.StartsWith(SystemReactivePrefix, StringComparison.Ordinal))
             {
                 systemReactiveValue = value;
@@ -599,7 +592,7 @@ internal static class Program
     /// <returns>A failure description, or <see langword="null"/> when the values match the documented difference.</returns>
     private static string? ValidateDocumentedSmokeDifference(List<(string Name, int Value)> rows)
     {
-        (var primitivesName, var primitivesValue, var systemReactiveValue, var r3Value) = SplitLibraryValues(rows);
+        var (primitivesName, primitivesValue, systemReactiveValue, r3Value) = SplitLibraryValues(rows);
 
         var expected = primitivesName switch
         {

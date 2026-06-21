@@ -53,6 +53,6 @@ public class LogErrorsObservableTests
     public void WhenLogErrorsObserverNull_ThenSubscribeThrows()
     {
         LogErrorsObservable<int> observable = new(new Subject<int>(), static _ => { });
-        Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => observable.Subscribe(null!));
     }
 }

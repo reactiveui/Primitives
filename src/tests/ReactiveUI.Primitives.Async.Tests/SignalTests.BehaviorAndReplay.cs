@@ -23,7 +23,7 @@ public partial class SignalTests
             (x, _) =>
             {
                 items.Add(x);
-                firstReceived.TrySetResult();
+                IgnoredResult.Of(firstReceived.TrySetResult());
                 return default;
             },
             null);
@@ -57,7 +57,7 @@ public partial class SignalTests
                     items.Add(x);
                 }
 
-                firstReceived.TrySetResult();
+                IgnoredResult.Of(firstReceived.TrySetResult());
                 return default;
             },
             null);
@@ -86,7 +86,7 @@ public partial class SignalTests
             (x, _) =>
             {
                 items.Add(x);
-                firstReceived.TrySetResult();
+                IgnoredResult.Of(firstReceived.TrySetResult());
                 return default;
             },
             null);
@@ -122,7 +122,7 @@ public partial class SignalTests
                     items.Add(x);
                 }
 
-                firstReceived.TrySetResult();
+                IgnoredResult.Of(firstReceived.TrySetResult());
                 return default;
             },
             null);
@@ -151,7 +151,7 @@ public partial class SignalTests
             (x, _) =>
             {
                 items.Add(x);
-                firstReceived.TrySetResult();
+                IgnoredResult.Of(firstReceived.TrySetResult());
                 return default;
             },
             null);
@@ -183,7 +183,7 @@ public partial class SignalTests
             (x, _) =>
             {
                 items.Add(x);
-                firstReceived.TrySetResult();
+                IgnoredResult.Of(firstReceived.TrySetResult());
                 return default;
             },
             null);
@@ -219,7 +219,7 @@ public partial class SignalTests
                     items.Add(x);
                 }
 
-                firstReceived.TrySetResult();
+                IgnoredResult.Of(firstReceived.TrySetResult());
                 return default;
             },
             null);
@@ -278,7 +278,7 @@ public partial class SignalTests
             static (_, _) => default,
             (ex, _) =>
             {
-                errorTcs.TrySetResult(ex);
+                IgnoredResult.Of(errorTcs.TrySetResult(ex));
                 return default;
             });
 
@@ -306,7 +306,7 @@ public partial class SignalTests
             static (_, _) => default,
             (ex, _) =>
             {
-                errorTcs.TrySetResult(ex);
+                IgnoredResult.Of(errorTcs.TrySetResult(ex));
                 return default;
             });
 
@@ -335,7 +335,7 @@ public partial class SignalTests
             null,
             result =>
             {
-                resultTcs.TrySetResult(result);
+                _ = resultTcs.TrySetResult(result);
                 return default;
             });
 
@@ -377,7 +377,7 @@ public partial class SignalTests
             null,
             result =>
             {
-                resultTcs.TrySetResult(result);
+                _ = resultTcs.TrySetResult(result);
                 return default;
             });
 
@@ -442,7 +442,7 @@ public partial class SignalTests
                     items.Add(x);
                 }
 
-                firstReceived.TrySetResult();
+                IgnoredResult.Of(firstReceived.TrySetResult());
                 return default;
             },
             null);
@@ -471,7 +471,7 @@ public partial class SignalTests
             null,
             _ =>
             {
-                completionTcs.TrySetResult();
+                IgnoredResult.Of(completionTcs.TrySetResult());
                 return default;
             });
 
@@ -498,7 +498,7 @@ public partial class SignalTests
             static (_, _) => default,
             (ex, _) =>
             {
-                errorTcs.TrySetResult(ex);
+                IgnoredResult.Of(errorTcs.TrySetResult(ex));
                 return default;
             });
 
@@ -527,7 +527,7 @@ public partial class SignalTests
             },
             _ =>
             {
-                completionTcs.TrySetResult();
+                IgnoredResult.Of(completionTcs.TrySetResult());
                 return default;
             });
 
@@ -552,7 +552,7 @@ public partial class SignalTests
             null,
             result =>
             {
-                completionTcs.TrySetResult(result);
+                _ = completionTcs.TrySetResult(result);
                 return default;
             });
 
@@ -576,8 +576,8 @@ public partial class SignalTests
             null,
             _ =>
             {
-                Interlocked.Increment(ref completionCount);
-                completionTcs.TrySetResult();
+                IgnoredResult.Of(Interlocked.Increment(ref completionCount));
+                IgnoredResult.Of(completionTcs.TrySetResult());
                 return default;
             });
 
@@ -618,7 +618,7 @@ public partial class SignalTests
             static (_, _) => default,
             (ex, _) =>
             {
-                errorTcs.TrySetResult(ex);
+                IgnoredResult.Of(errorTcs.TrySetResult(ex));
                 return default;
             });
 
@@ -647,7 +647,7 @@ public partial class SignalTests
             null,
             result =>
             {
-                resultTcs.TrySetResult(result);
+                _ = resultTcs.TrySetResult(result);
                 return default;
             });
 
@@ -670,7 +670,7 @@ public partial class SignalTests
             null,
             _ =>
             {
-                firstCompletionTcs.TrySetResult();
+                IgnoredResult.Of(firstCompletionTcs.TrySetResult());
                 return default;
             });
 
@@ -688,7 +688,7 @@ public partial class SignalTests
             result =>
             {
                 lateResult = result;
-                lateTcs.TrySetResult();
+                _ = lateTcs.TrySetResult();
                 return default;
             });
 
@@ -713,7 +713,7 @@ public partial class SignalTests
 
         await using var sub = await signal.Values.SubscribeAsync((v, _) =>
         {
-            tcs.TrySetResult(v);
+            IgnoredResult.Of(tcs.TrySetResult(v));
             return default;
         });
 
@@ -742,7 +742,7 @@ public partial class SignalTests
             static (_, _) => default,
             (ex, _) =>
             {
-                tcs.TrySetResult(ex);
+                IgnoredResult.Of(tcs.TrySetResult(ex));
                 return default;
             });
 
@@ -769,7 +769,7 @@ public partial class SignalTests
 
         await using var sub = await signal.Values.SubscribeAsync((value, _) =>
         {
-            tcs.TrySetResult(value);
+            IgnoredResult.Of(tcs.TrySetResult(value));
             return default;
         });
 
@@ -798,7 +798,7 @@ public partial class SignalTests
             static (_, _) => default,
             (error, _) =>
             {
-                tcs.TrySetResult(error);
+                IgnoredResult.Of(tcs.TrySetResult(error));
                 return default;
             });
 

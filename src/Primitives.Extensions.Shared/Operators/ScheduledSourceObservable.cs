@@ -101,7 +101,7 @@ internal sealed class ScheduledSourceObservable<T> : IObservable<T>
 
             if (!config.HasDelay)
             {
-                scheduler.Schedule(state, static (_, s) =>
+                _ = scheduler.Schedule(state, static (_, s) =>
                 {
                     s.Emit();
                     return EmptyDisposable.Instance;
@@ -111,7 +111,7 @@ internal sealed class ScheduledSourceObservable<T> : IObservable<T>
 
             if (config.UseAbsolute)
             {
-                scheduler.Schedule(state, config.AbsoluteDueTime, static (_, s) =>
+                _ = scheduler.Schedule(state, config.AbsoluteDueTime, static (_, s) =>
                 {
                     s.Emit();
                     return EmptyDisposable.Instance;
@@ -119,7 +119,7 @@ internal sealed class ScheduledSourceObservable<T> : IObservable<T>
                 return;
             }
 
-            scheduler.Schedule(state, config.DueTime, static (_, s) =>
+            _ = scheduler.Schedule(state, config.DueTime, static (_, s) =>
             {
                 s.Emit();
                 return EmptyDisposable.Instance;

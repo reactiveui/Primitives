@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer that turns downstream <c>OnNext</c> exceptions into a terminal error and upstream disposal.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-public sealed class SubscribeSafeObserver<T> : IObserver<T>, IDisposable
+public sealed class SubscribeSafeWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>The wrapped observer.</summary>
     private readonly IObserver<T> _observer;
@@ -21,23 +21,23 @@ public sealed class SubscribeSafeObserver<T> : IObserver<T>, IDisposable
     /// <summary>Non-zero after terminal notification or disposal.</summary>
     private int _stopped;
 
-    /// <summary>Initializes a new instance of the <see cref="SubscribeSafeObserver{T}"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="SubscribeSafeWitness{T}"/> class.</summary>
     /// <param name="observer">The wrapped observer.</param>
-    public SubscribeSafeObserver(IObserver<T> observer) => _observer = observer;
+    public SubscribeSafeWitness(IObserver<T> observer) => _observer = observer;
 
     /// <inheritdoc/>
-    public void Dispose() => ObserverSinkLifetime.Dispose(ref _stopped, _subscription);
+    public void Dispose() => WitnessLifetime.Dispose(ref _stopped, _subscription);
 
     /// <inheritdoc/>
-    public void OnCompleted() => ObserverSinkLifetime.Complete(ref _stopped, _subscription, _observer);
+    public void OnCompleted() => WitnessLifetime.Complete(ref _stopped, _subscription, _observer);
 
     /// <inheritdoc/>
-    public void OnError(Exception error) => ObserverSinkLifetime.Error(ref _stopped, _subscription, _observer, error);
+    public void OnError(Exception error) => WitnessLifetime.Error(ref _stopped, _subscription, _observer, error);
 
     /// <inheritdoc/>
     public void OnNext(T value)
     {
-        if (ObserverSinkLifetime.IsStopped(ref _stopped))
+        if (WitnessLifetime.IsStopped(ref _stopped))
         {
             return;
         }
@@ -48,12 +48,12 @@ public sealed class SubscribeSafeObserver<T> : IObserver<T>, IDisposable
         }
         catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {
-            ObserverSinkLifetime.Error(ref _stopped, _subscription, _observer, error);
+            WitnessLifetime.Error(ref _stopped, _subscription, _observer, error);
         }
     }
 
     /// <summary>Assigns the upstream subscription.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     public void SetSubscription(IDisposable subscription) =>
-        ObserverSinkLifetime.SetSubscription(ref _stopped, _subscription, subscription);
+        WitnessLifetime.SetSubscription(ref _stopped, _subscription, subscription);
 }

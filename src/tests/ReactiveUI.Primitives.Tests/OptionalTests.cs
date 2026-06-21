@@ -20,7 +20,7 @@ public class OptionalTests
     {
         Optional<int> defaultOptional = new();
         await Assert.That(defaultOptional.HasValue).IsFalse();
-        Assert.Throws<InvalidOperationException>(() => _ = defaultOptional.Value);
+        _ = Assert.Throws<InvalidOperationException>(() => _ = defaultOptional.Value);
         await Assert.That(Optional<int>.Empty.HasValue).IsFalse();
         await Assert.That(Optional<int>.None.HasValue).IsFalse();
         Optional<int> constructed = new(First);

@@ -8,22 +8,22 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Shared static helpers for task-producing terminal sinks.</summary>
-internal static class TaskTerminalSinkHelper
+/// <summary>Shared static helpers for task-producing terminal witnesses.</summary>
+internal static class TaskTerminalWitnessHelper
 {
     /// <summary>Disposes the source subscription.</summary>
     /// <param name="subscription">The subscription slot.</param>
     public static void DisposeSubscription(ref IDisposable? subscription) =>
         Interlocked.Exchange(ref subscription, null)?.Dispose();
 
-    /// <summary>Gets a value indicating whether a sink has stopped.</summary>
+    /// <summary>Gets a value indicating whether a witness has stopped.</summary>
     /// <param name="stopped">The stopped flag.</param>
     /// <returns><see langword="true"/> when the sink has stopped.</returns>
     public static bool IsStopped(ref int stopped) => Volatile.Read(ref stopped) != 0;
 
-    /// <summary>Registers cancellation for a sink after construction.</summary>
+    /// <summary>Registers cancellation for a witness after construction.</summary>
     /// <typeparam name="TState">The state type.</typeparam>
-    /// <param name="state">The sink state.</param>
+    /// <param name="state">The witness state.</param>
     /// <param name="callback">The cancellation callback.</param>
     /// <param name="registration">The registration slot.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -64,7 +64,7 @@ internal static class TaskTerminalSinkHelper
         DisposeSubscription(ref subscription);
     }
 
-    /// <summary>Attempts to mark a sink stopped.</summary>
+    /// <summary>Attempts to mark a witness stopped.</summary>
     /// <param name="stopped">The stopped flag.</param>
     /// <returns><see langword="true"/> when this caller won the stop race.</returns>
     public static bool TryStop(ref int stopped) => Interlocked.Exchange(ref stopped, 1) == 0;

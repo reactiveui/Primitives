@@ -44,12 +44,9 @@ public sealed class ImmutableReturnInt32Signal : IRequireCurrentThread<int>, IIn
     /// <returns>The result.</returns>
     public static IObservable<int> GetInt32Signals(int x)
     {
-        if (x is >= MinCachedValue and <= MaxCachedValue)
-        {
-            return Caches[x - MinCachedValue];
-        }
-
-        return new ImmediateReturnSignal<int>(x);
+        return x is >= MinCachedValue and <= MaxCachedValue
+            ? Caches[x - MinCachedValue]
+            : new ImmediateReturnSignal<int>(x);
     }
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>

@@ -99,7 +99,7 @@ public abstract class CoalescingDispatchScheduler : LocalScheduler
     private void Enqueue(IDispatchWorkItem item)
     {
         _ready.Enqueue(item);
-        Interlocked.Increment(ref _readyCount);
+        _ = Interlocked.Increment(ref _readyCount);
         PostDrain();
     }
 
@@ -142,7 +142,7 @@ public abstract class CoalescingDispatchScheduler : LocalScheduler
             var remaining = Volatile.Read(ref _readyCount);
             while (remaining-- > 0 && _ready.TryDequeue(out var item))
             {
-                Interlocked.Decrement(ref _readyCount);
+                _ = Interlocked.Decrement(ref _readyCount);
                 item.Run();
             }
         }

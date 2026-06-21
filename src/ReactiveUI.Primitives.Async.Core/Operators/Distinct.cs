@@ -23,8 +23,12 @@ public static partial class SignalAsyncExtensions
         /// <remarks>Elements are considered distinct based on the default equality comparer for type T.
         /// The order of elements is preserved.</remarks>
         /// <returns>An observable sequence that contains distinct elements from the source sequence.</returns>
-        public IObservableAsync<T> Distinct() =>
-            @this.Distinct(EqualityComparer<T>.Default);
+        public IObservableAsync<T> Distinct()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(@this);
+
+            return new DistinctSignal<T>(@this, EqualityComparer<T>.Default);
+        }
 
         /// <summary>
         /// Returns an observable sequence that contains only distinct elements from the source sequence, using the
@@ -54,8 +58,13 @@ public static partial class SignalAsyncExtensions
         /// <param name="keySelector">A function to extract the key for each element. Cannot be null.</param>
         /// <returns>An observable sequence that contains only the first occurrence of each distinct key as determined by the key
         /// selector.</returns>
-        public IObservableAsync<T> DistinctBy<TKey>(Func<T, TKey> keySelector) =>
-            @this.DistinctBy(keySelector, EqualityComparer<TKey>.Default);
+        public IObservableAsync<T> DistinctBy<TKey>(Func<T, TKey> keySelector)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(keySelector);
+
+            return new DistinctBySignal<T, TKey>(@this, keySelector, EqualityComparer<TKey>.Default);
+        }
 
         /// <summary>
         /// Returns an observable sequence that contains only distinct elements from the source sequence, comparing

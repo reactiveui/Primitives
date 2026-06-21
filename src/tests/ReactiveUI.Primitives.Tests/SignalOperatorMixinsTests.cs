@@ -122,27 +122,27 @@ public partial class SignalOperatorMixinsTests
         List<int> skipWhile = [];
         List<string> distinctKeys = [];
         List<bool> isEmptyValues = [];
-        source.Tap(
+        _ = source.Tap(
                 value => sideEffects.Add("next:" + value),
                 error => sideEffects.Add("error:" + error.Message),
                 () => sideEffects.Add("completed"))
             .Subscribe(values.Add, ex => throw ex, () => completed++);
-        Signal.Fail<int>(new InvalidOperationException("do-error"))
+        _ = Signal.Fail<int>(new InvalidOperationException("do-error"))
             .Tap(
                 value => sideEffects.Add(value.ToString()),
                 error => sideEffects.Add("error:" + error.Message),
                 () => sideEffects.Add("unused"))
             .Subscribe(_ => { }, _ => { }, () => { });
-        Signal.None<int?>().DefaultIfEmpty().Subscribe(defaultValue.Add);
-        source.IgnoreValues().Subscribe(_ => values.Add(NinetyNine), ex => throw ex, () => ignoreCompleted++);
-        Signal.FromEnumerable([One, Two, Three, Four]).TakeWhile(value => value < Three).Subscribe(takeWhile.Add);
-        Signal.FromEnumerable([One, Two, Three, Four]).SkipWhile(value => value < Three).Subscribe(skipWhile.Add);
-        Signal.FromEnumerable(["aa", "bb", "ccc", "dd", "e"]).UniqueBy(value => value.Length)
+        _ = Signal.None<int?>().DefaultIfEmpty().Subscribe(defaultValue.Add);
+        _ = source.IgnoreValues().Subscribe(_ => values.Add(NinetyNine), ex => throw ex, () => ignoreCompleted++);
+        _ = Signal.FromEnumerable([One, Two, Three, Four]).TakeWhile(value => value < Three).Subscribe(takeWhile.Add);
+        _ = Signal.FromEnumerable([One, Two, Three, Four]).SkipWhile(value => value < Three).Subscribe(skipWhile.Add);
+        _ = Signal.FromEnumerable(["aa", "bb", "ccc", "dd", "e"]).UniqueBy(value => value.Length)
             .Subscribe(distinctKeys.Add);
-        Signal.None<int>().IsEmpty().Subscribe(isEmptyValues.Add);
-        Signal.Sequence(One, Three).IsEmpty().Subscribe(isEmptyValues.Add);
+        _ = Signal.None<int>().IsEmpty().Subscribe(isEmptyValues.Add);
+        _ = Signal.Sequence(One, Three).IsEmpty().Subscribe(isEmptyValues.Add);
         List<int> forkJoinRange = [];
-        Signal.Sequence(One, Four).ForkJoin(Signal.Sequence(Three, Three), (left, right) => left + right)
+        _ = Signal.Sequence(One, Four).ForkJoin(Signal.Sequence(Three, Three), (left, right) => left + right)
             .Subscribe(forkJoinRange.Add);
         await Assert.That(values.SequenceEqual(ExpectedOneToFour)).IsTrue();
         await Assert.That(sideEffects.SequenceEqual(ExpectedTapSideEffects)).IsTrue();
@@ -171,17 +171,17 @@ public partial class SignalOperatorMixinsTests
         List<string> delayErrors = [];
         List<string> timeoutErrors = [];
         VirtualClock clock = new(DateTimeOffset.UnixEpoch);
-        source.Prepend(Two).Subscribe(startOne.Add);
-        source.Prepend((IEnumerable<int>)[One, Two]).Subscribe(startMany.Add);
+        _ = source.Prepend(Two).Subscribe(startOne.Add);
+        _ = source.Prepend((IEnumerable<int>)[One, Two]).Subscribe(startMany.Add);
         await Assert.That(source.ObserveOn(Sequencer.Immediate)).IsSameReferenceAs(source);
         var range = Signal.Sequence(One, Three);
         await Assert.That(range.DefaultIfEmpty(NinetyNine)).IsSameReferenceAs(range);
         await Assert.That(source.Shift(TimeSpan.Zero)).IsNotNull();
         await Assert.That(source.Expire(TimeSpan.FromTicks(One))).IsNotNull();
-        source.DelayStart(TimeSpan.FromTicks(Two), clock).Subscribe(delayed.Add);
-        Signal.Fail<int>(new InvalidOperationException("delay-error")).Shift(TimeSpan.FromTicks(Two), clock)
+        _ = source.DelayStart(TimeSpan.FromTicks(Two), clock).Subscribe(delayed.Add);
+        _ = Signal.Fail<int>(new InvalidOperationException("delay-error")).Shift(TimeSpan.FromTicks(Two), clock)
             .Subscribe(_ => { }, ex => delayErrors.Add(ex.Message));
-        Signal.Silent<int>().Expire(TimeSpan.FromTicks(Three), clock)
+        _ = Signal.Silent<int>().Expire(TimeSpan.FromTicks(Three), clock)
             .Subscribe(_ => { }, ex => timeoutErrors.Add(ex.GetType().Name));
         clock.AdvanceBy(TimeSpan.FromTicks(Three));
         await Assert.That(startOne.SequenceEqual(ExpectedTwoToFour)).IsTrue();
@@ -203,12 +203,12 @@ public partial class SignalOperatorMixinsTests
         var trueSignal = Signal.Emit(true);
         var falseSignal = Signal.Emit(false);
         var voidSignal = Signal.EmitRxVoid();
-        trueSignal.Subscribe(new RecordingWitness<bool>());
-        falseSignal.Subscribe(new RecordingWitness<bool>());
-        voidSignal.Subscribe(new RecordingWitness<RxVoid>());
-        trueSignal.Subscribe(trueValues.Add, _ => { }, () => inlineCompleted++);
-        falseSignal.Subscribe(falseValues.Add, _ => { }, () => inlineCompleted++);
-        voidSignal.Subscribe(voidValues.Add, _ => { }, () => inlineCompleted++);
+        _ = trueSignal.Subscribe(new RecordingWitness<bool>());
+        _ = falseSignal.Subscribe(new RecordingWitness<bool>());
+        _ = voidSignal.Subscribe(new RecordingWitness<RxVoid>());
+        _ = trueSignal.Subscribe(trueValues.Add, _ => { }, () => inlineCompleted++);
+        _ = falseSignal.Subscribe(falseValues.Add, _ => { }, () => inlineCompleted++);
+        _ = voidSignal.Subscribe(voidValues.Add, _ => { }, () => inlineCompleted++);
         await Assert.That(((IRequireCurrentThread<bool>)trueSignal).IsRequiredSubscribeOnCurrentThread()).IsFalse();
         await Assert.That(((IRequireCurrentThread<bool>)falseSignal).IsRequiredSubscribeOnCurrentThread()).IsFalse();
         await Assert.That(((IRequireCurrentThread<RxVoid>)voidSignal).IsRequiredSubscribeOnCurrentThread())
@@ -226,17 +226,17 @@ public partial class SignalOperatorMixinsTests
     {
         var virtualClock = MinimalVirtualClock.Create();
         List<int> scheduled = [];
-        Assert.Throws<ArgumentNullException>(() => _ = MinimalVirtualClock.Create(null!));
-        Assert.Throws<ArgumentOutOfRangeException>(() => virtualClock.AdvanceBy(-1));
+        _ = Assert.Throws<ArgumentNullException>(() => _ = MinimalVirtualClock.Create(null!));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => virtualClock.AdvanceBy(-1));
         virtualClock.AdvanceBy(0);
-        Assert.Throws<ArgumentOutOfRangeException>(() => virtualClock.AdvanceTo(-1));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => virtualClock.AdvanceTo(-1));
         virtualClock.AdvanceTo(0);
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() =>
             virtualClock.Schedule(One, (Func<ISequencer, int, IDisposable>)null!));
-        Assert.Throws<ArgumentNullException>(() => virtualClock.Schedule(One, TimeSpan.Zero, null!));
-        Assert.Throws<ArgumentNullException>(() => virtualClock.Schedule(One, DateTimeOffset.UnixEpoch, null!));
-        Assert.Throws<ArgumentNullException>(() => virtualClock.ScheduleRelative(One, 0, null!));
-        virtualClock.Schedule(Seven, DateTimeOffset.UnixEpoch.AddTicks(Three), (_, state) =>
+        _ = Assert.Throws<ArgumentNullException>(() => virtualClock.Schedule(One, TimeSpan.Zero, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => virtualClock.Schedule(One, DateTimeOffset.UnixEpoch, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => virtualClock.ScheduleRelative(One, 0, null!));
+        _ = virtualClock.Schedule(Seven, DateTimeOffset.UnixEpoch.AddTicks(Three), (_, state) =>
         {
             scheduled.Add(state);
             return EmptyDisposable.Instance;
@@ -262,24 +262,24 @@ public partial class SignalOperatorMixinsTests
         Signal.Emit(Two).Prepend(One).Append(Three).Subscribe(prependAppendValues).Dispose();
         await Assert.That(prependAppendValues.Values.SequenceEqual(ExpectedOneToThree)).IsTrue();
         await Assert.That(prependAppendValues.Completed).IsEqualTo(1);
-        Assert.Throws<ArgumentNullException>(() => Signal.Emit(One).Prepend(Two).Subscribe((IObserver<int>)null!));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Emit(One).Prepend(Two).Subscribe((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
             Signal.Emit(One).Prepend((IEnumerable<int>)[Two]).Subscribe((IObserver<int>)null!));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() =>
             Signal.Emit(One).Prepend(Two).Append(Three).Subscribe((IObserver<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => Signal.Emit(One).Append(Two).Subscribe((IObserver<int>)null!));
-        Assert.Throws<InvalidOperationException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Emit(One).Append(Two).Subscribe((IObserver<int>)null!));
+        _ = Assert.Throws<InvalidOperationException>(() =>
             Signal.Emit(One).Append(Two).Subscribe(new ThrowingWitness<int>(true)).Dispose());
         ThrowingWitness<int> appendErrorObserver = new(throwOnError: true);
-        Assert.Throws<InvalidOperationException>(() => Signal.Fail<int>(new InvalidOperationException("append-error"))
+        _ = Assert.Throws<InvalidOperationException>(() => Signal.Fail<int>(new InvalidOperationException("append-error"))
             .Append(Two)
             .Subscribe(appendErrorObserver).Dispose());
         await Assert.That(appendErrorObserver.SeenError).IsTrue();
-        Assert.Throws<InvalidOperationException>(() => Signal.Emit(One).DefaultIfEmpty(Two)
+        _ = Assert.Throws<InvalidOperationException>(() => Signal.Emit(One).DefaultIfEmpty(Two)
             .Subscribe(new ThrowingWitness<int>(true))
             .Dispose());
         var delegateErrors = 0;
-        Assert.Throws<InvalidOperationException>(() => Signal.Emit(Two).Prepend(One).Append(Three)
+        _ = Assert.Throws<InvalidOperationException>(() => Signal.Emit(Two).Prepend(One).Append(Three)
             .Subscribe(_ => throw new InvalidOperationException("delegate-next"), _ => delegateErrors++, () => { })
             .Dispose());
         Signal.Fail<int>(new InvalidOperationException("delegate-error")).Prepend(One).Append(Three)
@@ -354,26 +354,26 @@ public partial class SignalOperatorMixinsTests
         List<int> catchValues = [];
         List<string> catchErrors = [];
         var finallyCalls = 0;
-        Signal.FromEnumerable([One, Two])
+        _ = Signal.FromEnumerable([One, Two])
             .Keep(value => value == One ? true : throw new InvalidOperationException("keep-predicate"))
             .Subscribe(_ => { }, ex => keepErrors.Add(ex.Message));
-        Signal.FromEnumerable([One, Two])
+        _ = Signal.FromEnumerable([One, Two])
             .All(value => value == One ? true : throw new InvalidOperationException("all-predicate"))
             .Subscribe(_ => { }, ex => allErrors.Add(ex.Message));
-        Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable(["a", "bb"])
+        _ = Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable(["a", "bb"])
             .DistinctBy(value =>
                 value.Length == 1 ? value.Length : throw new InvalidOperationException("distinct-key"))
             .Subscribe(_ => { }, ex => distinctErrors.Add(ex.Message)).Dispose());
-        Signal.Fail<int>(new InvalidOperationException("typed-catch"))
+        _ = Signal.Fail<int>(new InvalidOperationException("typed-catch"))
             .Recover<int, InvalidOperationException>(_ => Signal.Emit(Five))
             .Subscribe(catchValues.Add, ex => catchErrors.Add(ex.Message));
-        Signal.Fail<int>(new InvalidOperationException("handler-fault"))
+        _ = Signal.Fail<int>(new InvalidOperationException("handler-fault"))
             .Recover<int, InvalidOperationException>(_ => throw new FormatException("handler-threw"))
             .Subscribe(_ => { }, ex => catchErrors.Add(ex.Message));
-        Signal.Fail<int>(new ArgumentException("not-matched"))
+        _ = Signal.Fail<int>(new ArgumentException("not-matched"))
             .Recover<int, InvalidOperationException>(_ => Signal.Emit(Six))
             .Subscribe(_ => { }, ex => catchErrors.Add(ex.Message));
-        Signal.Fail<int>(new InvalidOperationException("finally-error")).OnCleanup(() => finallyCalls++)
+        _ = Signal.Fail<int>(new InvalidOperationException("finally-error")).OnCleanup(() => finallyCalls++)
             .Subscribe(_ => { }, _ => { });
         await Assert.That(keepErrors.SequenceEqual(ExpectedKeepErrors)).IsTrue();
         await Assert.That(allErrors.SequenceEqual(ExpectedAllErrors)).IsTrue();
@@ -391,9 +391,9 @@ public partial class SignalOperatorMixinsTests
         List<int> values = [];
         List<int> emptyPrependValues = [];
         var completed = 0;
-        Signal.None<int>().DefaultIfEmpty(Two).Prepend(One).Append(Three)
+        _ = Signal.None<int>().DefaultIfEmpty(Two).Prepend(One).Append(Three)
             .Subscribe(values.Add, ex => throw ex, () => completed++);
-        Signal.FromEnumerable([One, Two, Three, Four]).Prepend().Append(Four).Subscribe(emptyPrependValues.Add);
+        _ = Signal.FromEnumerable([One, Two, Three, Four]).Prepend().Append(Four).Subscribe(emptyPrependValues.Add);
         await Assert.That(values.SequenceEqual([One, Two, Three])).IsTrue();
         await Assert.That(completed).IsEqualTo(1);
         await Assert.That(emptyPrependValues.SequenceEqual([One, Two, Three, Four, Four])).IsTrue();
@@ -432,7 +432,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(failed.Errors[0].Message).IsEqualTo("indexed");
 
         RecordingWitness<int> duplicateTerminal = new();
-        LinqExtensions.MapIndexed(
+        _ = LinqExtensions.MapIndexed(
             new ScriptedObservable<int>(observer =>
             {
                 observer.OnNext(One);
@@ -447,7 +447,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(duplicateTerminal.Errors[0].Message).IsEqualTo("first");
 
         RecordingWitness<int> duplicateCompletion = new();
-        LinqExtensions.MapIndexed(
+        _ = LinqExtensions.MapIndexed(
             new ScriptedObservable<int>(observer =>
             {
                 observer.OnCompleted();
@@ -462,7 +462,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(currentThread.IsRequiredSubscribeOnCurrentThread()).IsTrue();
 
         List<int> chained = [];
-        Signal.FromEnumerable([Task.FromResult(One), Task.FromResult(Two)]).Chain().Subscribe(chained.Add);
+        _ = Signal.FromEnumerable([Task.FromResult(One), Task.FromResult(Two)]).Chain().Subscribe(chained.Add);
         await Task.Yield();
 
         await Assert.That(chained.SequenceEqual(ExpectedOneTwo)).IsTrue();
@@ -470,9 +470,9 @@ public partial class SignalOperatorMixinsTests
         var taskValue = await Task.FromResult(Three).ToSignal().FirstAsync().ConfigureAwait(false);
         await Assert.That(taskValue).IsEqualTo(Three);
 
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.MapIndexed<int, int>(null!, static (value, _) => value));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.MapIndexed<int, int>(source, null!));
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<Task<int>>)null!).Chain());
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.MapIndexed<int, int>(null!, static (value, _) => value));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.MapIndexed<int, int>(source, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<Task<int>>)null!).Chain());
     }
 
     /// <summary>Verifies direct task-chain sequencing without the map adapter.</summary>
@@ -509,7 +509,7 @@ public partial class SignalOperatorMixinsTests
     {
         InvalidOperationException sourceError = new("task-source");
         RecordingWitness<int> sourceFailure = new();
-        new ScriptedObservable<Task<int>>(observer =>
+        _ = new ScriptedObservable<Task<int>>(observer =>
         {
             observer.OnError(sourceError);
             observer.OnNext(Task.FromResult(One));
@@ -522,7 +522,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(sourceFailure.Completed).IsEqualTo(0);
 
         RecordingWitness<int> nullTaskFailure = new();
-        new ScriptedObservable<Task<int>>(observer =>
+        _ = new ScriptedObservable<Task<int>>(observer =>
         {
             observer.OnNext(null!);
             observer.OnCompleted();
@@ -534,7 +534,7 @@ public partial class SignalOperatorMixinsTests
 
         InvalidOperationException taskError = new("task");
         RecordingWitness<int> taskFailure = new();
-        Signal.FromEnumerable([Task.FromException<int>(taskError), Task.FromResult(One)]).Chain().Subscribe(taskFailure);
+        _ = Signal.FromEnumerable([Task.FromException<int>(taskError), Task.FromResult(One)]).Chain().Subscribe(taskFailure);
 
         await Assert.That(taskFailure.Errors.Count).IsEqualTo(One);
         await Assert.That(taskFailure.Errors[0]).IsSameReferenceAs(taskError);
@@ -565,19 +565,19 @@ public partial class SignalOperatorMixinsTests
         const string Fallback = "fallback";
         Signal<string?> emptySource = new();
         RecordingWitness<string?> empty = new();
-        emptySource.DefaultIfEmpty(Fallback).Subscribe(empty);
+        _ = emptySource.DefaultIfEmpty(Fallback).Subscribe(empty);
         emptySource.OnCompleted();
         Signal<string?> nonEmptySource = new();
         RecordingWitness<string?> nonEmpty = new();
-        nonEmptySource.DefaultIfEmpty(Fallback).Subscribe(nonEmpty);
+        _ = nonEmptySource.DefaultIfEmpty(Fallback).Subscribe(nonEmpty);
         nonEmptySource.OnNext(null);
         nonEmptySource.OnNext("actual");
         nonEmptySource.OnCompleted();
         Signal<string?> errorSource = new();
         RecordingWitness<string?> errors = new();
-        errorSource.DefaultIfEmpty(Fallback).Subscribe(errors);
+        _ = errorSource.DefaultIfEmpty(Fallback).Subscribe(errors);
         errorSource.OnError(new InvalidOperationException("broken"));
-        Assert.Throws<ArgumentNullException>(() => emptySource.DefaultIfEmpty("x").Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => emptySource.DefaultIfEmpty("x").Subscribe(null!));
         await Assert.That(empty.Values.SequenceEqual([Fallback])).IsTrue();
         await Assert.That(empty.Completed).IsEqualTo(1);
         string?[] expectedNonEmpty = [null, "actual"];
@@ -654,7 +654,7 @@ public partial class SignalOperatorMixinsTests
     private static List<T> Capture<T>(IObservable<T> source)
     {
         List<T> values = [];
-        source.Subscribe(values.Add);
+        _ = source.Subscribe(values.Add);
         return values;
     }
 
@@ -666,10 +666,10 @@ public partial class SignalOperatorMixinsTests
         List<int[]> arrayValues = [];
         List<IList<int>> rangeListValues = [];
         List<int[]> rangeArrayValues = [];
-        source.CollectList().Subscribe(listValues.Add);
-        source.CollectArray().Subscribe(arrayValues.Add);
-        Signal.Sequence(Three, Three).CollectList().Subscribe(rangeListValues.Add);
-        Signal.Sequence(Three, Three).CollectArray().Subscribe(rangeArrayValues.Add);
+        _ = source.CollectList().Subscribe(listValues.Add);
+        _ = source.CollectArray().Subscribe(arrayValues.Add);
+        _ = Signal.Sequence(Three, Three).CollectList().Subscribe(rangeListValues.Add);
+        _ = Signal.Sequence(Three, Three).CollectArray().Subscribe(rangeArrayValues.Add);
         if (listValues[0].SequenceEqual([One, Two, Three, Four])
             && arrayValues[0].SequenceEqual([One, Two, Three, Four])
             && rangeListValues[0].SequenceEqual([Three, Four, Five])
@@ -685,67 +685,67 @@ public partial class SignalOperatorMixinsTests
     /// <param name="source">A non-null source used to exercise instance guards.</param>
     private static void AssertPrependObserveTapGuards(IObservable<int> source)
     {
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.Prepend(null!, One, Two));
-        Assert.Throws<ArgumentNullException>(() => source.Prepend((int[])null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.Prepend<int>(null!, (IEnumerable<int>)[One]));
-        Assert.Throws<ArgumentNullException>(() => source.Prepend((IEnumerable<int>)null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.ObserveOn<int>(null!, Sequencer.Immediate));
-        Assert.Throws<ArgumentNullException>(() => source.ObserveOn(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.SubscribeOn<int>(null!, Sequencer.Immediate));
-        Assert.Throws<ArgumentNullException>(() => source.SubscribeOn(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.Tap<int>(null!, _ => { }, _ => { }, () => { }));
-        Assert.Throws<ArgumentNullException>(() => source.Tap(null!, _ => { }, () => { }));
-        Assert.Throws<ArgumentNullException>(() => source.Tap(_ => { }, null!, () => { }));
-        Assert.Throws<ArgumentNullException>(() => source.Tap(_ => { }, _ => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.Prepend(null!, One, Two));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Prepend((int[])null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.Prepend<int>(null!, (IEnumerable<int>)[One]));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Prepend((IEnumerable<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.ObserveOn<int>(null!, Sequencer.Immediate));
+        _ = Assert.Throws<ArgumentNullException>(() => source.ObserveOn(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.SubscribeOn<int>(null!, Sequencer.Immediate));
+        _ = Assert.Throws<ArgumentNullException>(() => source.SubscribeOn(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.Tap<int>(null!, _ => { }, _ => { }, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Tap(null!, _ => { }, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Tap(_ => { }, null!, () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Tap(_ => { }, _ => { }, null!));
     }
 
     /// <summary>Asserts the aggregate, flat-map, and timing operator argument guards.</summary>
     /// <param name="source">A non-null source used to exercise instance guards.</param>
     private static void AssertAggregateAndTimingGuards(IObservable<int> source)
     {
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.IgnoreValues<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.DistinctBy<int, int>(null!, value => value));
-        Assert.Throws<ArgumentNullException>(() => source.DistinctBy<int, int>(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.UniqueBy<int, int>(null!, value => value));
-        Assert.Throws<ArgumentNullException>(() => source.UniqueBy<int, int>(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.TakeWhile<int>(null!, value => true));
-        Assert.Throws<ArgumentNullException>(() => source.TakeWhile(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.SkipWhile<int>(null!, value => true));
-        Assert.Throws<ArgumentNullException>(() => source.SkipWhile(null!));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.IgnoreValues<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.DistinctBy<int, int>(null!, value => value));
+        _ = Assert.Throws<ArgumentNullException>(() => source.DistinctBy<int, int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.UniqueBy<int, int>(null!, value => value));
+        _ = Assert.Throws<ArgumentNullException>(() => source.UniqueBy<int, int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.TakeWhile<int>(null!, value => true));
+        _ = Assert.Throws<ArgumentNullException>(() => source.TakeWhile(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.SkipWhile<int>(null!, value => true));
+        _ = Assert.Throws<ArgumentNullException>(() => source.SkipWhile(null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
             LinqExtensions.FlatMap<int, int>(null!, value => Signal.Emit(value)));
-        Assert.Throws<ArgumentNullException>(() => source.FlatMap<int, int>(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.FlatMapValues<int, int>(null!, value => [value]));
-        Assert.Throws<ArgumentNullException>(() => source.FlatMapValues<int, int>(null!));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() => source.FlatMap<int, int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.FlatMapValues<int, int>(null!, value => [value]));
+        _ = Assert.Throws<ArgumentNullException>(() => source.FlatMapValues<int, int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
             source.FlatMap<int, int, int>(null!, (outer, inner) => outer + inner));
-        Assert.Throws<ArgumentNullException>(() => source.FlatMap<int, int, int>(value => Signal.Emit(value), null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.Count<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => source.Count(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.LongCount<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => source.LongCount(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.Any<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.Any<int>(null!, value => true));
-        Assert.Throws<ArgumentNullException>(() => source.Any(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.All<int>(null!, value => true));
-        Assert.Throws<ArgumentNullException>(() => source.All(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.Contains(null!, One));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.DelayStart<int>(null!, TimeSpan.Zero));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.Calm<int>(null!, TimeSpan.Zero));
-        Assert.Throws<ArgumentOutOfRangeException>(() => source.Probe(TimeSpan.FromTicks(-1)));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.Timestamp<int>(null!));
-        Assert.Throws<ArgumentNullException>(() => LinqExtensions.TimeInterval<int>(null!));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() => source.FlatMap<int, int, int>(value => Signal.Emit(value), null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.Count<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Count(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.LongCount<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.LongCount(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.Any<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.Any<int>(null!, value => true));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Any(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.All<int>(null!, value => true));
+        _ = Assert.Throws<ArgumentNullException>(() => source.All(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.Contains(null!, One));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.DelayStart<int>(null!, TimeSpan.Zero));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.Calm<int>(null!, TimeSpan.Zero));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => source.Probe(TimeSpan.FromTicks(-1)));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.Timestamp<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.TimeInterval<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
             LinqExtensions.ForkJoin<int, int, int>(null!, Signal.Emit(One), (left, right) => left + right));
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() =>
             source.ForkJoin<int, int, int>(null!, (left, right) => left + right));
-        Assert.Throws<ArgumentNullException>(() => source.ForkJoin<int, int, int>(Signal.Emit(One), null!));
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).AsObservable());
-        Assert.Throws<ArgumentNullException>(() => ((IEnumerable<int>)null!).ToObservable());
-        Assert.Throws<ArgumentNullException>(() => ((IEnumerable<int>)null!).ToObservable(CancellationToken.None));
-        Assert.Throws<ArgumentOutOfRangeException>(() => source.Take(-1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => source.Skip(-1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => source.Reattempt(-1));
+        _ = Assert.Throws<ArgumentNullException>(() => source.ForkJoin<int, int, int>(Signal.Emit(One), null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).AsObservable());
+        _ = Assert.Throws<ArgumentNullException>(() => ((IEnumerable<int>)null!).ToObservable());
+        _ = Assert.Throws<ArgumentNullException>(() => ((IEnumerable<int>)null!).ToObservable(CancellationToken.None));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => source.Take(-1));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => source.Skip(-1));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => source.Reattempt(-1));
     }
 
     /// <summary>Telemetry metric value type used by high-throughput scenarios.</summary>

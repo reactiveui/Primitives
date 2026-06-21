@@ -41,7 +41,7 @@ public static class FirstAsTaskHelper
                 return;
             }
 
-            TrySetResult(value);
+            _ = TrySetResult(value);
             Subscription?.Dispose();
         }
 
@@ -53,7 +53,7 @@ public static class FirstAsTaskHelper
                 return;
             }
 
-            TrySetException(error);
+            _ = TrySetException(error);
         }
 
         /// <inheritdoc/>
@@ -64,7 +64,7 @@ public static class FirstAsTaskHelper
                 return;
             }
 
-            TrySetException(new InvalidOperationException("Sequence contains no elements."));
+            _ = TrySetException(new InvalidOperationException("Sequence contains no elements."));
         }
     }
 }

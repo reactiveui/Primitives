@@ -274,7 +274,7 @@ public partial class CombiningOperatorTests
             null,
             _ =>
             {
-                Interlocked.Increment(ref completionCount);
+                IgnoredResult.Of(Interlocked.Increment(ref completionCount));
                 return default;
             });
         await first.OnCompletedAsync(Result.Success);

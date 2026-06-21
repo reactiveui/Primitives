@@ -95,7 +95,7 @@ public record struct DispatchSequencerState
         ArgumentExceptionHelper.ThrowIfNull(item);
 
         _ready.Enqueue(item);
-        Interlocked.Increment(ref _readyCount);
+        _ = Interlocked.Increment(ref _readyCount);
         PostDrain();
     }
 
@@ -161,7 +161,7 @@ public record struct DispatchSequencerState
             var remaining = Volatile.Read(ref _readyCount);
             while (remaining-- > 0 && _ready.TryDequeue(out var item))
             {
-                Interlocked.Decrement(ref _readyCount);
+                _ = Interlocked.Decrement(ref _readyCount);
                 if (!Sequencer.IsCancelled(item))
                 {
                     item.Execute();

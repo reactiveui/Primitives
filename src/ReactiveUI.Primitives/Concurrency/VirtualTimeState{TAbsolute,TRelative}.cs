@@ -248,7 +248,7 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
 
-        ScheduleAbsolute(owner, item, _clock, static (_, workItem) =>
+        _ = ScheduleAbsolute(owner, item, _clock, static (_, workItem) =>
         {
             if (!Sequencer.IsCancelled(workItem))
             {
@@ -269,7 +269,7 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
         ArgumentExceptionHelper.ThrowIfNull(item);
 
         var delta = Sequencer.ToTimeSpanDelta(dueTimestamp - Timestamp);
-        ScheduleRelative(owner, item, _toRelative(delta), static (_, workItem) =>
+        _ = ScheduleRelative(owner, item, _toRelative(delta), static (_, workItem) =>
         {
             if (!Sequencer.IsCancelled(workItem))
             {

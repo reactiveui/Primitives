@@ -58,7 +58,7 @@ public sealed class BlazorRendererSequencerTests
         BlazorRendererSequencer scheduler = new(renderer.InvokeAsync);
         var executed = false;
 
-        scheduler.Schedule(() => executed = true);
+        _ = scheduler.Schedule(() => executed = true);
 
         await Assert.That(executed).IsTrue();
         await Assert.That(renderer.InvokeCount).IsGreaterThan(0);
@@ -76,7 +76,7 @@ public sealed class BlazorRendererSequencerTests
         foreach (var value in ExpectedBurst)
         {
             var captured = value;
-            scheduler.Schedule(() => values.Add(captured));
+            _ = scheduler.Schedule(() => values.Add(captured));
         }
 
         await Assert.That(values).IsEquivalentTo(ExpectedBurst, EqualityComparer<int>.Default);

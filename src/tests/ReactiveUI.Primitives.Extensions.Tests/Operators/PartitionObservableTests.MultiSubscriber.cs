@@ -17,7 +17,7 @@ public partial class PartitionObservableTests
     public async Task WhenThreeObserversSameSide_ThenAllReceive()
     {
         Subject<int> subject = new();
-        (var evens, _) = subject.Partition(static x => x % Two == 0);
+        var (evens, _) = subject.Partition(static x => x % Two == 0);
         List<int> a = [];
         List<int> b = [];
         List<int> c = [];
@@ -37,7 +37,7 @@ public partial class PartitionObservableTests
     public async Task WhenMiddleOfThreeDisposed_ThenOthersStillReceive()
     {
         Subject<int> subject = new();
-        (var evens, _) = subject.Partition(static x => x % Two == 0);
+        var (evens, _) = subject.Partition(static x => x % Two == 0);
         List<int> a = [];
         List<int> b = [];
         List<int> c = [];
@@ -58,7 +58,7 @@ public partial class PartitionObservableTests
     public async Task WhenSubscriptionDisposedTwice_ThenIdempotent()
     {
         Subject<int> subject = new();
-        (var evens, _) = subject.Partition(static x => x % Two == 0);
+        var (evens, _) = subject.Partition(static x => x % Two == 0);
         List<int> values = [];
         var sub = evens.Subscribe(values.Add);
         sub.Dispose();
@@ -73,7 +73,7 @@ public partial class PartitionObservableTests
     public async Task WhenSourceCompletesAfterAllDropped_ThenSafe()
     {
         Subject<int> subject = new();
-        (var evens, _) = subject.Partition(static x => x % Two == 0);
+        var (evens, _) = subject.Partition(static x => x % Two == 0);
         var sub = evens.Subscribe(static _ => { });
         sub.Dispose();
 

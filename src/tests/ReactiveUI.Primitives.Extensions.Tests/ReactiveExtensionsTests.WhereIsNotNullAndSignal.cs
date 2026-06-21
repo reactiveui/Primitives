@@ -117,7 +117,7 @@ public partial class ReactiveExtensionsTests
     {
         Subject<string?> subject = new();
         List<string?> results = [];
-        subject.WhereIsNotNull().Subscribe(results.Add);
+        _ = subject.WhereIsNotNull().Subscribe(results.Add);
         subject.OnNext("first");
         subject.OnNext(null);
         subject.OnNext("second");
@@ -135,7 +135,7 @@ public partial class ReactiveExtensionsTests
     {
         Subject<bool> subject = new();
         List<bool> results = [];
-        subject.Not().Subscribe(results.Add);
+        _ = subject.Not().Subscribe(results.Add);
         subject.OnNext(true);
         subject.OnNext(false);
         subject.OnNext(true);
@@ -150,7 +150,7 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         List<RxVoid> results = [];
-        subject.AsSignal().Subscribe(results.Add);
+        _ = subject.AsSignal().Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnNext(SampleValue3);
