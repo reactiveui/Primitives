@@ -33,7 +33,7 @@ public sealed class DispatcherQueueSequencerTests
         var sequencer = new DispatcherQueueSequencer(harness.DispatcherQueue);
         var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _ = sequencer.Schedule(new DelegateWorkItem(() => completion.TrySetResult(harness.DispatcherQueue.HasThreadAccess)));
+        sequencer.Schedule(new DelegateWorkItem(() => completion.TrySetResult(harness.DispatcherQueue.HasThreadAccess)));
 
         var ranOnQueueThread = await completion.Task.WaitAsync(WaitTimeout);
         await Assert.That(ranOnQueueThread).IsTrue();
@@ -49,7 +49,7 @@ public sealed class DispatcherQueueSequencerTests
         var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var due = sequencer.Timestamp + (Stopwatch.Frequency / 20); // ~50 ms into the future.
-        _ = sequencer.Schedule(new DelegateWorkItem(() => completion.TrySetResult(harness.DispatcherQueue.HasThreadAccess)), due);
+        sequencer.Schedule(new DelegateWorkItem(() => completion.TrySetResult(harness.DispatcherQueue.HasThreadAccess)), due);
 
         var ranOnQueueThread = await completion.Task.WaitAsync(WaitTimeout);
         await Assert.That(ranOnQueueThread).IsTrue();
