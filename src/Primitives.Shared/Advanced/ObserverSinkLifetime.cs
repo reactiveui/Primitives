@@ -55,14 +55,8 @@ internal static class ObserverSinkLifetime
             return;
         }
 
-        try
-        {
-            observer.OnCompleted();
-        }
-        finally
-        {
-            subscription.Dispose();
-        }
+        using var _ = subscription;
+        observer.OnCompleted();
     }
 
     /// <summary>Forwards an error exactly once and disposes the upstream subscription.</summary>
