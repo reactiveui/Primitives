@@ -274,6 +274,141 @@ public class WitnessTests
         safe.OnError(new InvalidOperationException("ignored"));
     }
 
+    /// <summary>Verifies task terminal witnesses validate null callbacks and error arguments.</summary>
+    [Test]
+    public void TaskTerminalWitnessesValidateNullPredicatesAndErrors()
+    {
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            TaskAnyWitness<int> invalid = new(null!, CancellationToken.None);
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            TaskCountWitness<int> invalid = new(null!, CancellationToken.None);
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            new TaskAnyWitness<int>(CancellationToken.None).OnError(null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            new TaskCountWitness<int>(CancellationToken.None).OnError(null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            new TaskAnyWitness<int>(CancellationToken.None).SetSubscription(null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            new TaskCountWitness<int>(CancellationToken.None).SetSubscription(null!));
+    }
+
+    /// <summary>Verifies any-task witnesses complete true, false, fault, and ignore late notifications.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TaskAnyWitnessCompletesTrueFalseErrorsAndIgnoresLateSignals()
+    {
+        TaskAnyWitness<int> any = new(CancellationToken.None);
+        RecordingDisposable anySubscription = new();
+        any.SetSubscription(anySubscription);
+        any.OnNext(One);
+        any.OnNext(Two);
+        any.OnCompleted();
+        await Assert.That(await WaitForAsync(any.Task)).IsTrue();
+        await Assert.That(anySubscription.DisposeCount).IsEqualTo(One);
+
+        TaskAnyWitness<int> unmatched = new(value => value > Four, CancellationToken.None);
+        unmatched.OnNext(One);
+        unmatched.OnCompleted();
+        unmatched.OnNext(Four);
+        await Assert.That(await WaitForAsync(unmatched.Task)).IsFalse();
+
+        InvalidOperationException predicateError = new("any-predicate");
+        TaskAnyWitness<int> predicateFault = new(_ => throw predicateError, CancellationToken.None);
+        predicateFault.OnNext(One);
+        var observedPredicateError = await Assert.That(() => WaitForAsync(predicateFault.Task))
+            .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(observedPredicateError).IsSameReferenceAs(predicateError);
+
+        InvalidOperationException sourceError = new("any-source");
+        TaskAnyWitness<int> sourceFault = new(CancellationToken.None);
+        sourceFault.OnError(sourceError);
+        sourceFault.OnCompleted();
+        var observedSourceError = await Assert.That(() => WaitForAsync(sourceFault.Task))
+            .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(observedSourceError).IsSameReferenceAs(sourceError);
+    }
+
+    /// <summary>Verifies count-task witnesses count matches, fault, and ignore late notifications.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TaskCountWitnessCountsMatchesErrorsAndIgnoresLateSignals()
+    {
+        TaskCountWitness<int> all = new(CancellationToken.None);
+        all.OnNext(One);
+        all.OnNext(Two);
+        all.OnCompleted();
+        all.OnNext(Three);
+        await Assert.That(await WaitForAsync(all.Task)).IsEqualTo(Two);
+
+        TaskCountWitness<int> even = new(value => value % Two == 0, CancellationToken.None);
+        even.OnNext(One);
+        even.OnNext(Two);
+        even.OnNext(Three);
+        even.OnNext(Four);
+        even.OnCompleted();
+        even.OnError(new InvalidOperationException("late"));
+        await Assert.That(await WaitForAsync(even.Task)).IsEqualTo(Two);
+
+        InvalidOperationException predicateError = new("count-predicate");
+        TaskCountWitness<int> predicateFault = new(_ => throw predicateError, CancellationToken.None);
+        predicateFault.OnNext(One);
+        var observedPredicateError = await Assert.That(() => WaitForAsync(predicateFault.Task))
+            .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(observedPredicateError).IsSameReferenceAs(predicateError);
+
+        InvalidOperationException sourceError = new("count-source");
+        TaskCountWitness<int> sourceFault = new(CancellationToken.None);
+        sourceFault.OnError(sourceError);
+        sourceFault.OnNext(Two);
+        var observedSourceError = await Assert.That(() => WaitForAsync(sourceFault.Task))
+            .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(observedSourceError).IsSameReferenceAs(sourceError);
+    }
+
+    /// <summary>Verifies task terminal witnesses dispose subscriptions on terminal, cancel, and explicit disposal.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TaskTerminalWitnessesDisposeSubscriptionsOnTerminalCancelAndDispose()
+    {
+        TaskAnyWitness<int> completed = new(CancellationToken.None);
+        RecordingDisposable completedSubscription = new();
+        completed.SetSubscription(completedSubscription);
+        completed.OnCompleted();
+        completed.Dispose();
+        await Assert.That(await WaitForAsync(completed.Task)).IsFalse();
+        await Assert.That(completedSubscription.DisposeCount).IsEqualTo(One);
+
+        TaskAnyWitness<int> alreadyStopped = new(CancellationToken.None);
+        alreadyStopped.OnCompleted();
+        RecordingDisposable lateSubscription = new();
+        alreadyStopped.SetSubscription(lateSubscription);
+        await Assert.That(lateSubscription.DisposeCount).IsEqualTo(One);
+
+        using CancellationTokenSource cancellation = new();
+        TaskAnyWitness<int> canceled = new(cancellation.Token);
+        RecordingDisposable canceledSubscription = new();
+        canceled.RegisterCancellation();
+        canceled.SetSubscription(canceledSubscription);
+        await cancellation.CancelAsync();
+        await Assert.That(canceled.Task.IsCanceled).IsTrue();
+        await Assert.That(canceledSubscription.DisposeCount).IsEqualTo(One);
+        canceled.Dispose();
+        await Assert.That(canceledSubscription.DisposeCount).IsEqualTo(One);
+
+        TaskCountWitness<int> disposed = new(CancellationToken.None);
+        RecordingDisposable disposedSubscription = new();
+        disposed.SetSubscription(disposedSubscription);
+        disposed.Dispose();
+        disposed.Dispose();
+        await Assert.That(disposedSubscription.DisposeCount).IsEqualTo(One);
+    }
+
     /// <summary>Waits for a task with a bounded timeout.</summary>
     /// <param name="task">The task to wait for.</param>
     /// <returns>A task that completes when the supplied task completes.</returns>

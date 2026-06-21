@@ -182,6 +182,26 @@ public partial class SignalOperatorMixinsTests
         _ = Assert.Throws<ArgumentNullException>(() => TaskSignal.Create<int>(null!));
     }
 
+    /// <summary>Verifies non-range task terminal sinks use the observer-backed async paths.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task NonRangeTaskTerminalsUseObserverBackedSinks()
+    {
+        var source = Signal.FromEnumerable([Three, Four]);
+        await Assert.That(await source.CountAsync(CancellationToken.None).ConfigureAwait(false)).IsEqualTo(Two);
+        await Assert.That(
+                await source.CountAsync(value => value > Three, CancellationToken.None).ConfigureAwait(false))
+            .IsEqualTo(One);
+        await Assert.That(await source.AnyAsync(CancellationToken.None).ConfigureAwait(false)).IsTrue();
+        await Assert.That(
+                await source.AnyAsync(value => value == One, CancellationToken.None).ConfigureAwait(false))
+            .IsFalse();
+        using CancellationTokenSource canceledTerminal = new();
+        await canceledTerminal.CancelAsync().ConfigureAwait(false);
+        await Assert.That(source.AnyAsync(canceledTerminal.Token).IsCanceled).IsTrue();
+        await Assert.That(source.CountAsync(canceledTerminal.Token).IsCanceled).IsTrue();
+    }
+
     /// <summary>Verifies remaining operator, factory, and observer failure branches are deterministic.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]

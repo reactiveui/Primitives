@@ -11,6 +11,12 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests for transformation operators: Select, SelectMany, Scan, Do, Cast, OfType.</summary>
 public class TransformationOperatorTests
 {
+    /// <summary>Sample integer value one.</summary>
+    private const int One = 1;
+
+    /// <summary>Sample integer value two.</summary>
+    private const int Two = 2;
+
     /// <summary>Number of inputs fed into the async-accumulator <c>Scan</c> sync-result test.</summary>
     private const int ScanInputCount = 3;
 
@@ -91,6 +97,104 @@ public class TransformationOperatorTests
         await Assert.That(result).Count().IsEqualTo(ExpectedCount);
         await Assert.That(result).Contains("1:10");
         await Assert.That(result).Contains("2:20");
+    }
+
+    /// <summary>Verifies SelectMany waits for active inner sequences after the outer sequence completes.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectManyOuterCompletesBeforeInner_ThenWaitsForInnerCompletion()
+    {
+        DirectSource<int> outer = new();
+        DirectSource<int> inner = new();
+        List<int> values = [];
+        Result? completion = null;
+
+        await using var subscription = await outer
+            .SelectMany(_ => inner)
+            .SubscribeAsync(
+                (value, _) =>
+                {
+                    values.Add(value);
+                    return default;
+                },
+                null,
+                result =>
+                {
+                    completion = result;
+                    return default;
+                });
+
+        await outer.EmitNext(One);
+        await inner.EmitNext(Two);
+        await outer.Complete(Result.Success);
+        await Assert.That(completion.HasValue).IsFalse();
+
+        await inner.Complete(Result.Success);
+        await AsyncTestHelpers.WaitForConditionAsync(
+            () => completion.HasValue,
+            TimeSpan.FromSeconds(5));
+
+        await Assert.That(values).Contains(Two);
+        await Assert.That(completion!.Value.IsSuccess).IsTrue();
+    }
+
+    /// <summary>Verifies SelectMany forwards inner completion failures to the downstream observer.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectManyInnerFails_ThenCompletesWithFailure()
+    {
+        DirectSource<int> outer = new();
+        DirectSource<int> inner = new();
+        InvalidOperationException expected = new("select-many-inner");
+        Result? completion = null;
+
+        await using var subscription = await outer
+            .SelectMany(_ => inner)
+            .SubscribeAsync(
+                (_, _) => default,
+                null,
+                result =>
+                {
+                    completion = result;
+                    return default;
+                });
+
+        await outer.EmitNext(One);
+        await inner.Complete(Result.Failure(expected));
+        await AsyncTestHelpers.WaitForConditionAsync(
+            () => completion.HasValue,
+            TimeSpan.FromSeconds(5));
+
+        await Assert.That(completion!.Value.IsFailure).IsTrue();
+        await Assert.That(completion.Value.Exception).IsSameReferenceAs(expected);
+    }
+
+    /// <summary>Verifies SelectMany forwards inner subscription failures to the downstream observer.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectManyInnerSubscribeThrows_ThenCompletesWithFailure()
+    {
+        InvalidOperationException expected = new("select-many-subscribe");
+        Result? completion = null;
+
+        await using var subscription = await SignalAsync
+            .Return(One)
+            .SelectMany(_ => SignalAsync.Create<int>((_, _) => throw expected))
+            .SubscribeAsync(
+                (_, _) => default,
+                null,
+                result =>
+                {
+                    completion = result;
+                    return default;
+                });
+
+        await AsyncTestHelpers.WaitForConditionAsync(
+            () => completion.HasValue,
+            TimeSpan.FromSeconds(5));
+
+        await Assert.That(completion!.Value.IsFailure).IsTrue();
+        await Assert.That(completion.Value.Exception).IsSameReferenceAs(expected);
     }
 
     /// <summary>Tests SelectMany null selector throws.</summary>
