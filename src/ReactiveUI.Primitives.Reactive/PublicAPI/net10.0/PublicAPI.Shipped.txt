@@ -120,6 +120,9 @@ ReactiveUI.Primitives.Reactive.Advanced.ForkJoinSignal<TLeft, TRight, TResult>.S
 ReactiveUI.Primitives.Reactive.Advanced.ForkJoinWitness<TLeft, TRight, TResult>
 ReactiveUI.Primitives.Reactive.Advanced.ForkJoinWitness<TLeft, TRight, TResult>.ForkJoinWitness(System.IObserver<TResult>! observer, System.Func<TLeft, TRight, TResult>! selector) -> void
 ReactiveUI.Primitives.Reactive.Advanced.ForkJoinWitness<TLeft, TRight, TResult>.Run(System.IObservable<TLeft>! left, System.IObservable<TRight>! right) -> ReactiveUI.Primitives.Disposables.MultipleDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.FromAsyncExternalCancellationSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.FromAsyncExternalCancellationSignal<T>.FromAsyncExternalCancellationSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>!>! taskFactory, System.Threading.CancellationToken cancellationToken) -> void
+ReactiveUI.Primitives.Reactive.Advanced.FromAsyncExternalCancellationSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Reactive.Advanced.FromAsyncSignal<T>
 ReactiveUI.Primitives.Reactive.Advanced.FromAsyncSignal<T>.FromAsyncSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>!>! taskFactory) -> void
 ReactiveUI.Primitives.Reactive.Advanced.FromAsyncSignal<T>.FromAsyncSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>!>! taskFactory, System.Threading.CancellationToken cancellationToken) -> void

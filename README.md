@@ -457,8 +457,10 @@ Creation APIs live on `ReactiveUI.Primitives.Signals.Signal`.
 | `Signal.FromEnumerable<T>(IEnumerable<T>)`                                                     | Convert an enumerable.                                                                     |
 | `Signal.FromEnumerable<T>(IEnumerable<T>, CancellationToken)`                                  | Convert an enumerable and stop synchronous enumeration when cancelled.                     |
 | `Signal.FromAsyncEnumerable<T>(IAsyncEnumerable<T>, CancellationToken)`                        | Convert an async enumerable on modern TFMs.                                                |
-| `Signal.FromTask<T>(Task<T>)`                                                                  | Convert a task to a signal.                                                                |
-| `Signal.FromAsync<T>(...)`                                                                     | Invoke a task factory per subscription.                                                    |
+| `Signal.FromTask<T>(Task<T>)`                                                                  | Convert an existing task to a signal.                                                      |
+| `Signal.FromAsync<T>(Func<Task<T>>)`                                                           | Invoke a task factory per subscription.                                                    |
+| `Signal.FromAsync<T>(Func<CancellationToken, Task<T>>)`                                        | Invoke a cancellable task factory per subscription; disposing that subscription cancels only that subscription's token. |
+| `Signal.FromAsync<T>(Func<CancellationToken, Task<T>>, CancellationToken)`                      | Link each subscription to an external token; external cancellation is forwarded as an observer error while subscribed. |
 | `Signal.After(TimeSpan, ISequencer?)`                                                          | Emit one `long` tick after a delay.                                                        |
 | `Signal.Every(TimeSpan, ISequencer?)`                                                          | Emit increasing `long` ticks repeatedly.                                                   |
 | `Signal.Pulse(...)`                                                                            | Alias of `Every`.                                                                          |
@@ -705,6 +707,16 @@ key.Value = "abcd";
 | collect to list/array signal | `CollectList`, `CollectArray`, `ToList`, `ToArray`                     |
 | collect asynchronously       | `CollectListAsync`, `CollectArrayAsync`, `ToListAsync`, `ToArrayAsync` |
 | first/last value task        | `FirstAsync`, `FirstOrDefaultAsync`, `LastAsync`, `LastOrDefaultAsync` |
+
+Direct static helpers are available when a call site wants an explicit source argument instead of extension-method
+syntax:
+
+| Helper                       | Purpose                                                                 |
+|------------------------------|-------------------------------------------------------------------------|
+| `Signal.Expire(source, dueTime)` / `Signal.Expire(source, dueTime, sequencer)` | Apply the Primitives timeout operator directly to a source.              |
+| `Signal.Timeout(source, dueTime)` / `Signal.Timeout(source, dueTime, sequencer)` | System.Reactive-name alias for the direct `Expire` helper.               |
+| `Signal.ToTask(source)` / `Signal.ToTask(source, cancellationToken)`            | Await source completion and return the final value, matching `ToTask()`. |
+| `Signal.RunAsync(source)` / `Signal.RunAsync(source, cancellationToken)`        | Subscribe immediately and return an awaitable signal for the run.        |
 
 After example:
 

@@ -35,22 +35,16 @@ public sealed class AsyncSubscriptionLifetime : IDisposable
     /// <summary>Gets a value indicating whether disposal requested cancellation before asynchronous setup completed.</summary>
     public bool IsCancellationRequested => Volatile.Read(ref _canceled) != 0;
 
+    /// <summary>Gets a value indicating whether the asynchronous subscription reached a terminal state.</summary>
+    internal bool IsCompleted => Volatile.Read(ref _completed) != 0;
+
     /// <summary>Assigns the disposable returned by asynchronous setup.</summary>
     /// <param name="disposable">The returned disposable, or <see langword="null"/> for an empty lifetime.</param>
     public void SetSubscription(IDisposable? disposable) =>
         _subscription.Create(disposable ?? EmptyDisposable.Instance);
 
     /// <summary>Marks asynchronous setup complete and releases the cancellation source when still owned here.</summary>
-    public void Complete()
-    {
-        Volatile.Write(ref _completed, 1);
-        if (Volatile.Read(ref _disposed) != 0)
-        {
-            return;
-        }
-
-        _cts.Dispose();
-    }
+    public void Complete() => _ = TryComplete();
 
     /// <inheritdoc/>
     public void Dispose()
@@ -71,6 +65,24 @@ public sealed class AsyncSubscriptionLifetime : IDisposable
         CancelIgnoringDisposed(_cts);
         _subscription.Dispose();
         _cts.Dispose();
+    }
+
+    /// <summary>Attempts to mark asynchronous setup complete and release the cancellation source when still owned here.</summary>
+    /// <returns><see langword="true"/> when this call completed the lifetime.</returns>
+    internal bool TryComplete()
+    {
+        if (Interlocked.Exchange(ref _completed, 1) != 0)
+        {
+            return false;
+        }
+
+        if (Volatile.Read(ref _disposed) != 0)
+        {
+            return true;
+        }
+
+        _cts.Dispose();
+        return true;
     }
 
     /// <summary>Cancels the source while tolerating a concurrent completion disposing it first.</summary>

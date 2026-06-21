@@ -170,12 +170,14 @@ public class FirstMatchFromCandidatesAsyncPathTests
         var completed = false;
         using var sub = ((IReadOnlyList<string>)keys)
             .FirstMatchFromCandidates(
-            static key => key == SyncErrorKey
-                ? new SyncErroringObservable<string>(new InvalidOperationException(SyncErrorKey))
-                : Observable.Return(key),
-            static raw => raw,
-            static value => value == HitKey,
-            Fallback).Subscribe(results.Add, () => completed = true);
+                static key => key switch
+                {
+                    SyncErrorKey => new SyncErroringObservable<string>(new InvalidOperationException(SyncErrorKey)),
+                    _ => Observable.Return(key),
+                },
+                static raw => raw,
+                static value => value == HitKey,
+                Fallback).Subscribe(results.Add, () => completed = true);
         await Assert.That(results).IsCollectionEqualTo([HitKey]);
         await Assert.That(completed).IsTrue();
     }

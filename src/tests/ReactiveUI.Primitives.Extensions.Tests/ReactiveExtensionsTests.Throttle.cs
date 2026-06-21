@@ -60,7 +60,7 @@ public partial class ReactiveExtensionsTests
         {
             await release.Task;
             results.Add(x);
-            _ = processed.TrySetResult();
+            processed.SetResult();
         }).Subscribe();
         subject.OnNext(1); // Should process
         subject.OnNext(SampleValue2); // Should drop

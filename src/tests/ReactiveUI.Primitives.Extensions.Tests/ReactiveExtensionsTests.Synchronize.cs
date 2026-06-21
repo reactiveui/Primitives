@@ -387,7 +387,7 @@ public partial class ReactiveExtensionsTests
             {
                 await Task.Yield();
                 results.Add(v);
-                _ = onNextCompleted.TrySetResult();
+                onNextCompleted.SetResult();
             },
             _ => errorHandled.TrySetResult());
         subject.OnNext(1);

@@ -258,7 +258,7 @@ public static partial class Signal
     {
         ArgumentExceptionHelper.ThrowIfNull(taskFactory);
 
-        return new FromAsyncSignal<T>(taskFactory, cancellationToken);
+        return new FromAsyncExternalCancellationSignal<T>(taskFactory, cancellationToken);
     }
 
     /// <summary>Fails the sequence if it does not terminate before the timeout.</summary>

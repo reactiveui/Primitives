@@ -326,6 +326,33 @@ public partial class SignalFactoriesTests
         await Assert.That(observer.Completed).IsEqualTo(0);
     }
 
+    /// <summary>Verifies that external token cancellation forwards an error even when the task ignores the linked token.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromAsyncCancellableFactoryExternalCancellationForwardsObserverErrorWhenTaskIgnoresToken()
+    {
+        using CancellationTokenSource external = new();
+        TaskCompletionSource subscribed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<int> complete = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RecordingWitness<int> observer = new();
+        using var subscription = Signal.FromAsync<int>(
+            token =>
+            {
+                subscribed.SetResult();
+                return complete.Task;
+            },
+            external.Token).Subscribe(observer);
+        await subscribed.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
+        await external.CancelAsync();
+        await TestPolling.SpinUntil(() => observer.Errors.Count == One, TimeSpan.FromSeconds(TimeoutSeconds));
+        complete.SetResult(NinetyNine);
+        await Task.Yield();
+        await Assert.That(observer.Errors[0]).IsTypeOf<TaskCanceledException>();
+        await Assert.That(observer.Errors.Count).IsEqualTo(One);
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Completed).IsEqualTo(0);
+    }
+
     /// <summary>Verifies that cancellable async factories emit the successful task result and complete.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
