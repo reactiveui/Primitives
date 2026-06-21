@@ -24,6 +24,18 @@ public class WitnessTests
     /// <summary>A reusable value for four.</summary>
     private const int Four = 4;
 
+    /// <summary>A reusable value for ten.</summary>
+    private const int Ten = 10;
+
+    /// <summary>A reusable value for twelve.</summary>
+    private const int Twelve = 12;
+
+    /// <summary>A reusable value for thirteen.</summary>
+    private const int Thirteen = 13;
+
+    /// <summary>A reusable value for fourteen.</summary>
+    private const int Fourteen = 14;
+
     /// <summary>Timeout used when waiting for thread-pool scheduled observer callbacks.</summary>
     private const int TimeoutSeconds = 2;
 
@@ -681,6 +693,271 @@ public class WitnessTests
             (_, _) => throw resultError);
         result.OnNext(One);
         await Assert.That(resultFailed.Errors[0]).IsSameReferenceAs(resultError);
+    }
+
+    /// <summary>Verifies merge coordinators wait for active sources and forward the first terminal error.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task MergeCoordinatorWaitsForActiveSourcesAndForwardsFirstError()
+    {
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            MergeCoordinator<int> invalid = new(null!);
+            GC.KeepAlive(invalid);
+        });
+
+        RecordingWitness<int> empty = new();
+        using (new MergeCoordinator<int>(empty).Run([]))
+        {
+            await Assert.That(empty.Completed).IsEqualTo(One);
+            await Assert.That(empty.Values.Count).IsEqualTo(0);
+        }
+
+        RecordingWitness<int> synchronous = new();
+        using (new MergeCoordinator<int>(synchronous).Run([Signal.Emit(One), Signal.Emit(Two), Signal.Emit(Three)]))
+        {
+            await Assert.That(synchronous.Values.SequenceEqual([One, Two, Three])).IsTrue();
+            await Assert.That(synchronous.Completed).IsEqualTo(One);
+        }
+
+        RecordingWitness<int> observer = new();
+        Signal<int> first = new();
+        Signal<int> second = new();
+        using (new MergeCoordinator<int>(observer).Run(first, second))
+        {
+            first.OnNext(One);
+            second.OnNext(Two);
+            first.OnCompleted();
+            await Assert.That(observer.Completed).IsEqualTo(0);
+            second.OnCompleted();
+            await Assert.That(observer.Values.SequenceEqual([One, Two])).IsTrue();
+            await Assert.That(observer.Completed).IsEqualTo(One);
+        }
+
+        RecordingWitness<int> nullSource = new();
+        MergeCoordinator<int> nullCoordinator = new(nullSource);
+        nullCoordinator.OnSource(null);
+        nullCoordinator.OnSource(Signal.Emit(Three));
+        await Assert.That(nullSource.Errors[0].Message).IsEqualTo("Blend source contained null.");
+        await Assert.That(nullSource.Values.Count).IsEqualTo(0);
+
+        InvalidOperationException expected = new("merge");
+        RecordingWitness<int> error = new();
+        MergeCoordinator<int> failing = new(error);
+        failing.OnAnyError(expected);
+        failing.OnAnyError(new InvalidOperationException("late"));
+        await Assert.That(error.Errors[0]).IsSameReferenceAs(expected);
+        await Assert.That(error.Errors.Count).IsEqualTo(One);
+    }
+
+    /// <summary>Verifies race witnesses forward only the winning source and ignore late candidates.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RaceWitnessForwardsOnlyWinningSourceAndIgnoresLateCandidates()
+    {
+        InvalidOperationException outerFailure = new("race-outer");
+        RecordingWitness<int> outerError = new();
+        Signal<IObservable<int>> outerFailureSource = new();
+        using (new RaceWitness<int>(outerError).Run(outerFailureSource))
+        {
+            outerFailureSource.OnError(outerFailure);
+            await Assert.That(outerError.Errors[0]).IsSameReferenceAs(outerFailure);
+            await Assert.That(outerError.Completed).IsEqualTo(0);
+        }
+
+        RecordingWitness<int> outerCompleted = new();
+        Signal<IObservable<int>> outer = new();
+        Signal<int> completingWinner = new();
+        using (new RaceWitness<int>(outerCompleted).Run(outer))
+        {
+            outer.OnNext(completingWinner);
+            outer.OnCompleted();
+            await Assert.That(outerCompleted.Completed).IsEqualTo(0);
+            completingWinner.OnCompleted();
+            await Assert.That(outerCompleted.Completed).IsEqualTo(One);
+        }
+
+        RecordingWitness<int> observer = new();
+        Signal<int> first = new();
+        Signal<int> second = new();
+        Signal<int> third = new();
+        using (new RaceWitness<int>(observer).Run([first, second, third]))
+        {
+            second.OnNext(Two);
+            first.OnNext(One);
+            first.OnCompleted();
+            third.OnError(new InvalidOperationException("late"));
+            second.OnNext(Three);
+            second.OnCompleted();
+            await Assert.That(observer.Values.SequenceEqual([Two, Three])).IsTrue();
+            await Assert.That(observer.Completed).IsEqualTo(One);
+            await Assert.That(observer.Errors.Count).IsEqualTo(0);
+        }
+
+        InvalidOperationException expected = new("race");
+        RecordingWitness<int> error = new();
+        Signal<int> winner = new();
+        Signal<int> loser = new();
+        using (new RaceWitness<int>(error).Run([winner, loser]))
+        {
+            winner.OnError(expected);
+            loser.OnNext(One);
+            await Assert.That(error.Errors[0]).IsSameReferenceAs(expected);
+            await Assert.That(error.Values.Count).IsEqualTo(0);
+        }
+
+        RecordingWitness<int> nullSource = new();
+        using (new RaceWitness<int>(nullSource).Run([null!]))
+        {
+            await Assert.That(nullSource.Errors[0].Message).IsEqualTo("Race source contained null.");
+            await Assert.That(nullSource.Values.Count).IsEqualTo(0);
+        }
+    }
+
+    /// <summary>Verifies publish selector witnesses dispose cancellation resources on terminal and disposal.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task PublishSelectorWitnessDisposesCancellationOnTerminalAndDisposal()
+    {
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            PublishSelectorWitness<int> invalid = new(null!);
+            GC.KeepAlive(invalid);
+        });
+
+        RecordingWitness<int> completedObserver = new();
+        RecordingDisposable completedCancel = new();
+        PublishSelectorWitness<int> completed = new(completedObserver);
+        completed.SetCancel(completedCancel);
+        _ = Assert.Throws<ArgumentNullException>(() => completed.SetCancel(null!));
+        completed.OnNext(One);
+        completed.OnCompleted();
+        completed.OnNext(Two);
+        completed.OnError(new InvalidOperationException("late"));
+        await Assert.That(completedObserver.Values.SequenceEqual([One])).IsTrue();
+        await Assert.That(completedObserver.Completed).IsEqualTo(One);
+        await Assert.That(completedCancel.DisposeCount).IsEqualTo(One);
+
+        InvalidOperationException expected = new("publish-selector");
+        RecordingWitness<int> errorObserver = new();
+        RecordingDisposable firstCancel = new();
+        RecordingDisposable duplicateCancel = new();
+        PublishSelectorWitness<int> error = new(errorObserver);
+        error.SetCancel(firstCancel);
+        error.SetCancel(duplicateCancel);
+        error.OnError(expected);
+        error.OnCompleted();
+        await Assert.That(errorObserver.Errors[0]).IsSameReferenceAs(expected);
+        await Assert.That(firstCancel.DisposeCount).IsEqualTo(One);
+        await Assert.That(duplicateCancel.DisposeCount).IsEqualTo(One);
+
+        RecordingDisposable completionThrowCancel = new();
+        PublishSelectorWitness<int> completionThrow = new(new ThrowingWitness<int>(throwOnCompleted: true));
+        completionThrow.SetCancel(completionThrowCancel);
+        _ = Assert.Throws<InvalidOperationException>(completionThrow.OnCompleted);
+        await Assert.That(completionThrowCancel.DisposeCount).IsEqualTo(One);
+
+        RecordingDisposable errorThrowCancel = new();
+        PublishSelectorWitness<int> errorThrow = new(new ThrowingWitness<int>(throwOnError: true));
+        errorThrow.SetCancel(errorThrowCancel);
+        _ = Assert.Throws<InvalidOperationException>(() => errorThrow.OnError(expected));
+        await Assert.That(errorThrowCancel.DisposeCount).IsEqualTo(One);
+
+        PublishSelectorWitness<int> disposed = new(new RecordingWitness<int>());
+        RecordingDisposable lateCancel = new();
+        disposed.Dispose();
+        disposed.SetCancel(lateCancel);
+        disposed.OnNext(Three);
+        await Assert.That(lateCancel.DisposeCount).IsEqualTo(One);
+    }
+
+    /// <summary>Verifies buffer-each witnesses emit single-value lists and suppress late notifications.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task BufferEachWitnessEmitsSingleValueListsAndSuppressesLateNotifications()
+    {
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            BufferEachWitness<int> invalid = new(null!);
+            GC.KeepAlive(invalid);
+        });
+
+        RecordingWitness<IList<int>> observer = new();
+        RecordingDisposable firstSubscription = new();
+        RecordingDisposable secondSubscription = new();
+        BufferEachWitness<int> buffer = new(observer);
+        buffer.SetSubscription(firstSubscription);
+        buffer.SetSubscription(secondSubscription);
+        _ = Assert.Throws<ArgumentNullException>(() => buffer.SetSubscription(null!));
+        buffer.OnNext(One);
+        buffer.OnNext(Two);
+        buffer.OnCompleted();
+        buffer.OnNext(Three);
+        await Assert.That(firstSubscription.DisposeCount).IsEqualTo(One);
+        await Assert.That(observer.Values[0].SequenceEqual([One])).IsTrue();
+        await Assert.That(observer.Values[1].SequenceEqual([Two])).IsTrue();
+        await Assert.That(observer.Completed).IsEqualTo(One);
+        await Assert.That(secondSubscription.DisposeCount).IsEqualTo(One);
+
+        InvalidOperationException expected = new("buffer");
+        RecordingWitness<IList<int>> errorObserver = new();
+        BufferEachWitness<int> error = new(errorObserver);
+        error.OnError(expected);
+        error.OnError(new InvalidOperationException("late"));
+        await Assert.That(errorObserver.Errors[0]).IsSameReferenceAs(expected);
+        await Assert.That(errorObserver.Errors.Count).IsEqualTo(One);
+
+        BufferEachWitness<int> disposed = new(new RecordingWitness<IList<int>>());
+        RecordingDisposable lateSubscription = new();
+        disposed.Dispose();
+        disposed.SetSubscription(lateSubscription);
+        await Assert.That(lateSubscription.DisposeCount).IsEqualTo(One);
+    }
+
+    /// <summary>Verifies range-with-latest fast-path signals combine each left value with the final right value.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RangeWithLatestSignalCombinesEachLeftValueWithFinalRightValue()
+    {
+        RangeWithLatestSignal<int> signal = new(
+            new RangeSignal(One, Three),
+            new RangeSignal(Ten, Two),
+            (left, right) => left + right);
+        RecordingWitness<int> observer = new();
+        using (signal.Subscribe(observer))
+        {
+            await Assert.That(observer.Values.SequenceEqual([Twelve, Thirteen, Fourteen])).IsTrue();
+            await Assert.That(observer.Completed).IsEqualTo(One);
+        }
+
+        var selectorCalls = 0;
+        RangeWithLatestSignal<int> emptyLeft = new(
+            new RangeSignal(One, 0),
+            new RangeSignal(Ten, Two),
+            (left, right) =>
+            {
+                selectorCalls++;
+                return left + right;
+            });
+        RecordingWitness<int> emptyObserver = new();
+        using (emptyLeft.Subscribe(emptyObserver))
+        {
+            await Assert.That(selectorCalls).IsEqualTo(0);
+            await Assert.That(emptyObserver.Values.Count).IsEqualTo(0);
+            await Assert.That(emptyObserver.Completed).IsEqualTo(One);
+        }
+
+        InvalidOperationException expected = new("range-with-latest");
+        RangeWithLatestSignal<int> throwing = new(
+            new RangeSignal(One, Three),
+            new RangeSignal(Ten, Two),
+            (left, right) => left == Two ? throw expected : left + right);
+        RecordingWitness<int> throwingObserver = new();
+        _ = Assert.Throws<InvalidOperationException>(() => throwing.Subscribe(throwingObserver));
+        await Assert.That(throwingObserver.Values.SequenceEqual([Twelve])).IsTrue();
+        await Assert.That(throwingObserver.Completed).IsEqualTo(0);
+
+        _ = Assert.Throws<ArgumentNullException>(() => signal.Subscribe(null!));
     }
 
     /// <summary>Waits for a task with a bounded timeout.</summary>
