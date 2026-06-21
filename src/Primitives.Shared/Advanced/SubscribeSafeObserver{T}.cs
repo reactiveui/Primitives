@@ -26,37 +26,18 @@ public sealed class SubscribeSafeObserver<T> : IObserver<T>, IDisposable
     public SubscribeSafeObserver(IObserver<T> observer) => _observer = observer;
 
     /// <inheritdoc/>
-    public void Dispose()
-    {
-        Interlocked.Exchange(ref _stopped, 1);
-        _subscription.Dispose();
-    }
+    public void Dispose() => ObserverSinkLifetime.Dispose(ref _stopped, _subscription);
 
     /// <inheritdoc/>
-    public void OnCompleted()
-    {
-        if (Interlocked.Exchange(ref _stopped, 1) != 0)
-        {
-            return;
-        }
-
-        try
-        {
-            _observer.OnCompleted();
-        }
-        finally
-        {
-            _subscription.Dispose();
-        }
-    }
+    public void OnCompleted() => ObserverSinkLifetime.Complete(ref _stopped, _subscription, _observer);
 
     /// <inheritdoc/>
-    public void OnError(Exception error) => StopWithError(error);
+    public void OnError(Exception error) => ObserverSinkLifetime.Error(ref _stopped, _subscription, _observer, error);
 
     /// <inheritdoc/>
     public void OnNext(T value)
     {
-        if (Volatile.Read(ref _stopped) != 0)
+        if (ObserverSinkLifetime.IsStopped(ref _stopped))
         {
             return;
         }
@@ -67,39 +48,12 @@ public sealed class SubscribeSafeObserver<T> : IObserver<T>, IDisposable
         }
         catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {
-            StopWithError(error);
+            ObserverSinkLifetime.Error(ref _stopped, _subscription, _observer, error);
         }
     }
 
     /// <summary>Assigns the upstream subscription.</summary>
     /// <param name="subscription">The upstream subscription.</param>
-    public void SetSubscription(IDisposable subscription)
-    {
-        _subscription.Create(subscription);
-        if (Volatile.Read(ref _stopped) == 0)
-        {
-            return;
-        }
-
-        _subscription.Dispose();
-    }
-
-    /// <summary>Forwards an error exactly once and disposes the upstream subscription.</summary>
-    /// <param name="error">The terminal error.</param>
-    private void StopWithError(Exception error)
-    {
-        if (Interlocked.Exchange(ref _stopped, 1) != 0)
-        {
-            return;
-        }
-
-        try
-        {
-            _observer.OnError(error);
-        }
-        finally
-        {
-            _subscription.Dispose();
-        }
-    }
+    public void SetSubscription(IDisposable subscription) =>
+        ObserverSinkLifetime.SetSubscription(ref _stopped, _subscription, subscription);
 }

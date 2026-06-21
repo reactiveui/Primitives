@@ -40,6 +40,7 @@ public sealed class ConnectableSignal<T> : IObservable<T>
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>Subscribes the hub to the source if it is not already connected.</summary>

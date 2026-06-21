@@ -107,6 +107,48 @@ public sealed class ConnectableSignalTests
         await Assert.That(replayValues.SequenceEqual(ExpectedReplayValues[..1])).IsTrue();
     }
 
+    /// <summary>Verifies direct connect handles reuse, terminate, and dispose idempotently.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ConnectableSignalDirectConnectReusesConnectionAndForwardsTerminalError()
+    {
+        Assert.Throws<ArgumentNullException>(() => _ = new ConnectableSignal<int>(null!, new Signal<int>()));
+        Assert.Throws<ArgumentNullException>(() => _ = new ConnectableSignal<int>(Signal.Silent<int>(), null!));
+
+        Signal<int> source = new();
+        var sourceSubscriptions = 0;
+        var sourceDisposals = 0;
+        var cold = Signal.Create<int>(observer =>
+        {
+            sourceSubscriptions++;
+            var inner = source.Subscribe(observer);
+            return new ActionDisposable(() =>
+            {
+                sourceDisposals++;
+                inner.Dispose();
+            });
+        });
+
+        ConnectableSignal<int> connectable = new(cold, new Signal<int>());
+        RecordingWitness<int> recorded = new();
+        using var recordedSubscription = connectable.Subscribe(recorded);
+
+        var firstConnection = connectable.Connect();
+        var secondConnection = connectable.Connect();
+        await Assert.That(secondConnection).IsSameReferenceAs(firstConnection);
+        await Assert.That(sourceSubscriptions).IsEqualTo(1);
+
+        InvalidOperationException expected = new("connectable");
+        source.OnError(expected);
+        await Assert.That(recorded.Errors.Count).IsEqualTo(1);
+        await Assert.That(recorded.Errors[0]).IsSameReferenceAs(expected);
+
+        firstConnection.Dispose();
+        firstConnection.Dispose();
+        await Assert.That(sourceDisposals).IsEqualTo(1);
+        await Assert.That(connectable.Connect()).IsSameReferenceAs(Scope.Empty);
+    }
+
     /// <summary>Verifies Rx connectable aliases share, replay, and route selector failures.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

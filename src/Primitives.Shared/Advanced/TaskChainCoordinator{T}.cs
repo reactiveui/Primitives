@@ -49,6 +49,37 @@ public sealed class TaskChainCoordinator<T> : IDisposable
         return this;
     }
 
+    /// <summary>Subscribes the next queued task signal, or completes when the task chain is drained.</summary>
+    internal void Drain()
+    {
+        IObservable<T>? next = null;
+        lock (_gate)
+        {
+            if (_done || _active)
+            {
+                return;
+            }
+
+            if (_queue.Count > 0)
+            {
+                _active = true;
+                next = _queue.Dequeue();
+            }
+            else if (_outerCompleted)
+            {
+                _done = true;
+                _observer.OnCompleted();
+            }
+        }
+
+        if (next is null)
+        {
+            return;
+        }
+
+        _pocket.Add(next.Subscribe(_observer.OnNext, OnError, OnInnerCompleted));
+    }
+
     /// <summary>Queues a task as a task-backed signal and pumps the drain.</summary>
     /// <param name="task">The task to observe in source order.</param>
     private void OnTask(Task<T> task)
@@ -94,20 +125,8 @@ public sealed class TaskChainCoordinator<T> : IDisposable
     }
 
     /// <summary>Marks the active task signal complete and pumps the drain.</summary>
-    private void OnInnerCompleted()
-    {
-        lock (_gate)
-        {
-            if (_done)
-            {
-                return;
-            }
-
-            _active = false;
-        }
-
-        Drain();
-    }
+    private void OnInnerCompleted() =>
+        TaskChainCoordinatorState.OnInnerCompleted(_gate, ref _done, ref _active, this);
 
     /// <summary>Forwards an error and terminates active subscriptions.</summary>
     /// <param name="error">The terminal error.</param>
@@ -125,36 +144,5 @@ public sealed class TaskChainCoordinator<T> : IDisposable
         }
 
         Dispose();
-    }
-
-    /// <summary>Subscribes the next queued task signal, or completes when the task chain is drained.</summary>
-    private void Drain()
-    {
-        IObservable<T>? next = null;
-        lock (_gate)
-        {
-            if (_done || _active)
-            {
-                return;
-            }
-
-            if (_queue.Count > 0)
-            {
-                _active = true;
-                next = _queue.Dequeue();
-            }
-            else if (_outerCompleted)
-            {
-                _done = true;
-                _observer.OnCompleted();
-            }
-        }
-
-        if (next is null)
-        {
-            return;
-        }
-
-        _pocket.Add(next.Subscribe(_observer.OnNext, OnError, OnInnerCompleted));
     }
 }

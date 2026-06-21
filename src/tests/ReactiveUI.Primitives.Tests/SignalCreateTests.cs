@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
@@ -190,6 +191,28 @@ public class SignalCreateTests
         Assert.Throws<ArgumentNullException>(() => Signal.CreateWithState<int, int>(First, null!));
         Assert.Throws<ArgumentNullException>(() => Signal.CreateWithState<int, int>(First, null!, true));
         Assert.Throws<ArgumentNullException>(() => Signal.Lazy<int>(null!));
+    }
+
+    /// <summary>Verifies create overloads preserve current-thread subscription requirements.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CreateWithCurrentThreadRequirementReportsAndEmitsSynchronously()
+    {
+        var created = Signal.Create<int>(
+            observer =>
+            {
+                observer.OnNext(CreatedValue);
+                observer.OnCompleted();
+                return EmptyDisposable.Instance;
+            },
+            true);
+
+        RecordingWitness<int> observer = new();
+        created.Subscribe(observer);
+
+        await Assert.That(((IRequireCurrentThread<int>)created).IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(observer.Values.SequenceEqual([CreatedValue])).IsTrue();
+        await Assert.That(observer.Completed).IsEqualTo(1);
     }
 
     /// <summary>Verifies asynchronous create overloads assign lifetimes, forward failures, and honor cancellation.</summary>

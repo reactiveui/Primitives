@@ -30,7 +30,7 @@ public sealed class MapIndexedSignal<TSource, TResult> : IRequireCurrentThread<T
 
     /// <inheritdoc/>
     public bool IsRequiredSubscribeOnCurrentThread() =>
-        _source is IRequireCurrentThread<TSource> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread();
+        CurrentThreadRequirement.IsRequired(_source);
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TResult> observer)

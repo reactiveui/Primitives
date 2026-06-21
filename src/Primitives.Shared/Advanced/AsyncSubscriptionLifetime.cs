@@ -68,16 +68,23 @@ public sealed class AsyncSubscriptionLifetime : IDisposable
         }
 
         Volatile.Write(ref _canceled, 1);
+        CancelIgnoringDisposed(_cts);
+        _subscription.Dispose();
+        _cts.Dispose();
+    }
+
+    /// <summary>Cancels the source while tolerating a concurrent completion disposing it first.</summary>
+    /// <param name="cts">The cancellation source to cancel.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private static void CancelIgnoringDisposed(CancellationTokenSource cts)
+    {
         try
         {
-            _cts.Cancel();
+            cts.Cancel();
         }
         catch (ObjectDisposedException)
         {
             // Completion can release the CTS concurrently; disposal still continues with the inner subscription.
         }
-
-        _subscription.Dispose();
-        _cts.Dispose();
     }
 }
