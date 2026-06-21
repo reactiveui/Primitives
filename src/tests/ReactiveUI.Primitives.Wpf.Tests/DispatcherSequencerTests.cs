@@ -79,7 +79,7 @@ public sealed class DispatcherSequencerTests
         public DispatcherHarness()
         {
             using var ready = new ManualResetEventSlim(false);
-            _thread = new Thread(() =>
+            _thread = new(() =>
             {
                 Dispatcher = Dispatcher.CurrentDispatcher;
                 ThreadId = Environment.CurrentManagedThreadId;
@@ -106,7 +106,7 @@ public sealed class DispatcherSequencerTests
         public void Dispose()
         {
             Dispatcher.InvokeShutdown();
-            _thread.Join(WaitTimeout);
+            _ = _thread.Join(WaitTimeout);
         }
     }
 }

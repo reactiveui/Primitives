@@ -32,76 +32,34 @@ public sealed class PublishSelectorWitness<T> : IObserver<T>, IDisposable
 
     /// <summary>Assigns the cancellation resource.</summary>
     /// <param name="cancel">Cancellation resource.</param>
-    public void SetCancel(IDisposable cancel)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(cancel);
-
-        if (Interlocked.CompareExchange(ref _cancel, cancel, null) is not null)
-        {
-            cancel.Dispose();
-            return;
-        }
-
-        if (Volatile.Read(ref _stopped) == 0)
-        {
-            return;
-        }
-
-        Interlocked.Exchange(ref _cancel, null)?.Dispose();
-    }
+    public void SetCancel(IDisposable cancel) =>
+        WitnessLifetime.SetCancel(ref _cancel, ref _stopped, cancel);
 
     /// <inheritdoc/>
-    public void OnNext(T value)
-    {
-        if (Volatile.Read(ref _stopped) != 0)
-        {
-            return;
-        }
-
-        Observer.OnNext(value);
-    }
+    public void OnNext(T value) =>
+        WitnessLifetime.OnNext(ref _stopped, this, value, static (owner, item) => owner.Observer.OnNext(item));
 
     /// <inheritdoc/>
-    public void OnError(Exception error)
-    {
-        if (Interlocked.Exchange(ref _stopped, 1) != 0)
-        {
-            return;
-        }
-
-        try
-        {
-            Observer.OnError(error);
-        }
-        finally
-        {
-            Dispose();
-        }
-    }
+    public void OnError(Exception error) =>
+        WitnessLifetime.OnError(
+            ref _stopped,
+            this,
+            error,
+            static (owner, failure) => owner.Observer.OnError(failure),
+            static owner => owner.Dispose());
 
     /// <inheritdoc/>
-    public void OnCompleted()
-    {
-        if (Interlocked.Exchange(ref _stopped, 1) != 0)
-        {
-            return;
-        }
-
-        try
-        {
-            Observer.OnCompleted();
-        }
-        finally
-        {
-            Dispose();
-        }
-    }
+    public void OnCompleted() =>
+        WitnessLifetime.OnCompleted(
+            ref _stopped,
+            this,
+            static owner => owner.Observer.OnCompleted(),
+            static owner => owner.Dispose());
 
     /// <inheritdoc/>
     public void Dispose()
     {
         Observer = EmptyWitness<T>.Instance;
-        Interlocked.Exchange(ref _cancel, null)?.Dispose();
-        Volatile.Write(ref _stopped, 1);
+        WitnessLifetime.Dispose(ref _cancel, ref _stopped);
     }
 }

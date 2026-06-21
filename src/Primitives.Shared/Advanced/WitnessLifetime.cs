@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Shared terminal and subscription handling for advanced witnesses.</summary>
+/// <summary>Shared lifecycle helpers for witness wrappers that own one cancellation resource.</summary>
 internal static class WitnessLifetime
 {
     /// <summary>Disposes a sink and its upstream subscription.</summary>
@@ -18,6 +18,15 @@ internal static class WitnessLifetime
     {
         _ = Interlocked.Exchange(ref stopped, 1);
         subscription.Dispose();
+    }
+
+    /// <summary>Releases the cancellation resource and marks the witness stopped.</summary>
+    /// <param name="cancelSlot">The slot that owns the cancellation resource.</param>
+    /// <param name="stopped">The stopped flag.</param>
+    public static void Dispose(ref IDisposable? cancelSlot, ref int stopped)
+    {
+        Interlocked.Exchange(ref cancelSlot, null)?.Dispose();
+        Volatile.Write(ref stopped, 1);
     }
 
     /// <summary>Gets a value indicating whether the sink has stopped.</summary>
@@ -78,5 +87,103 @@ internal static class WitnessLifetime
 
         using var _ = subscription;
         observer.OnError(terminalError);
+    }
+
+    /// <summary>Assigns the cancellation resource or disposes it when the witness already stopped.</summary>
+    /// <param name="cancelSlot">The slot that owns the cancellation resource.</param>
+    /// <param name="stopped">The stopped flag.</param>
+    /// <param name="cancel">The cancellation resource to assign.</param>
+    public static void SetCancel(ref IDisposable? cancelSlot, ref int stopped, IDisposable cancel)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(cancel);
+
+        if (Interlocked.CompareExchange(ref cancelSlot, cancel, null) is not null)
+        {
+            cancel.Dispose();
+            return;
+        }
+
+        if (Volatile.Read(ref stopped) == 0)
+        {
+            return;
+        }
+
+        Interlocked.Exchange(ref cancelSlot, null)?.Dispose();
+    }
+
+    /// <summary>Forwards a value when the witness is still active.</summary>
+    /// <typeparam name="TOwner">The witness owner type.</typeparam>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="stopped">The stopped flag.</param>
+    /// <param name="owner">The witness owner.</param>
+    /// <param name="value">The value to forward.</param>
+    /// <param name="forward">The forwarding action.</param>
+    public static void OnNext<TOwner, T>(ref int stopped, TOwner owner, T value, Action<TOwner, T> forward)
+        where TOwner : class
+    {
+        if (Volatile.Read(ref stopped) != 0)
+        {
+            return;
+        }
+
+        forward(owner, value);
+    }
+
+    /// <summary>Forwards a terminal error once and then disposes the owner.</summary>
+    /// <typeparam name="TOwner">The witness owner type.</typeparam>
+    /// <param name="stopped">The stopped flag.</param>
+    /// <param name="owner">The witness owner.</param>
+    /// <param name="error">The error to forward.</param>
+    /// <param name="forward">The error forwarding action.</param>
+    /// <param name="dispose">The owner disposal action.</param>
+    public static void OnError<TOwner>(
+        ref int stopped,
+        TOwner owner,
+        Exception error,
+        Action<TOwner, Exception> forward,
+        Action<TOwner> dispose)
+        where TOwner : class
+    {
+        if (Interlocked.Exchange(ref stopped, 1) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            forward(owner, error);
+        }
+        finally
+        {
+            dispose(owner);
+        }
+    }
+
+    /// <summary>Forwards completion once and then disposes the owner.</summary>
+    /// <typeparam name="TOwner">The witness owner type.</typeparam>
+    /// <param name="stopped">The stopped flag.</param>
+    /// <param name="owner">The witness owner.</param>
+    /// <param name="forward">The completion forwarding action.</param>
+    /// <param name="dispose">The owner disposal action.</param>
+    public static void OnCompleted<TOwner>(
+        ref int stopped,
+        TOwner owner,
+        Action<TOwner> forward,
+        Action<TOwner> dispose)
+        where TOwner : class
+    {
+        if (Interlocked.Exchange(ref stopped, 1) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            forward(owner);
+        }
+        finally
+        {
+            dispose(owner);
+        }
     }
 }

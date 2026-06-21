@@ -20,83 +20,46 @@ public sealed class CreateWitness<T> : IDisposable, IObserver<T>
 
     /// <summary>Initializes a new instance of the <see cref="CreateWitness{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
-    public CreateWitness(IObserver<T> observer) => Observer = observer ?? throw new ArgumentNullException(nameof(observer));
+    public CreateWitness(IObserver<T> observer)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(observer);
+
+        Observer = observer;
+    }
 
     /// <summary>Gets or sets the wrapped observer.</summary>
     private IObserver<T> Observer { get; set; }
 
     /// <summary>Assigns the cancellation resource.</summary>
     /// <param name="cancel">Cancellation resource.</param>
-    public void SetCancel(IDisposable cancel)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(cancel);
-
-        if (Interlocked.CompareExchange(ref _cancel, cancel, null) is not null)
-        {
-            cancel.Dispose();
-            return;
-        }
-
-        if (Volatile.Read(ref _stopped) == 0)
-        {
-            return;
-        }
-
-        Interlocked.Exchange(ref _cancel, null)?.Dispose();
-    }
+    public void SetCancel(IDisposable cancel) =>
+        WitnessLifetime.SetCancel(ref _cancel, ref _stopped, cancel);
 
     /// <inheritdoc/>
-    public void OnNext(T value)
-    {
-        if (Volatile.Read(ref _stopped) != 0)
-        {
-            return;
-        }
-
-        Observer.OnNext(value);
-    }
+    public void OnNext(T value) =>
+        WitnessLifetime.OnNext(ref _stopped, this, value, static (owner, item) => owner.Observer.OnNext(item));
 
     /// <inheritdoc/>
-    public void OnError(Exception error)
-    {
-        if (Interlocked.Exchange(ref _stopped, 1) != 0)
-        {
-            return;
-        }
-
-        try
-        {
-            Observer.OnError(error);
-        }
-        finally
-        {
-            Dispose();
-        }
-    }
+    public void OnError(Exception error) =>
+        WitnessLifetime.OnError(
+            ref _stopped,
+            this,
+            error,
+            static (owner, failure) => owner.Observer.OnError(failure),
+            static owner => owner.Dispose());
 
     /// <inheritdoc/>
-    public void OnCompleted()
-    {
-        if (Interlocked.Exchange(ref _stopped, 1) != 0)
-        {
-            return;
-        }
-
-        try
-        {
-            Observer.OnCompleted();
-        }
-        finally
-        {
-            Dispose();
-        }
-    }
+    public void OnCompleted() =>
+        WitnessLifetime.OnCompleted(
+            ref _stopped,
+            this,
+            static owner => owner.Observer.OnCompleted(),
+            static owner => owner.Dispose());
 
     /// <inheritdoc/>
     public void Dispose()
     {
         Observer = EmptyWitness<T>.Instance;
-        Interlocked.Exchange(ref _cancel, null)?.Dispose();
-        Volatile.Write(ref _stopped, 1);
+        WitnessLifetime.Dispose(ref _cancel, ref _stopped);
     }
 }

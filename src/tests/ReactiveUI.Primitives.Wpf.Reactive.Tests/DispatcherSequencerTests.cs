@@ -33,7 +33,7 @@ public sealed class DispatcherSequencerTests
         var scheduler = new DispatcherSequencer(harness.Dispatcher);
         var completion = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        scheduler.Schedule(() => completion.TrySetResult(Environment.CurrentManagedThreadId));
+        _ = scheduler.Schedule(() => completion.TrySetResult(Environment.CurrentManagedThreadId));
 
         var ranOnThreadId = await completion.Task.WaitAsync(WaitTimeout);
         await Assert.That(ranOnThreadId).IsEqualTo(harness.ThreadId);
@@ -48,7 +48,7 @@ public sealed class DispatcherSequencerTests
         var scheduler = new DispatcherSequencer(harness.Dispatcher);
         var completion = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        scheduler.Schedule(TimeSpan.FromMilliseconds(50), () => completion.TrySetResult(Environment.CurrentManagedThreadId));
+        _ = scheduler.Schedule(TimeSpan.FromMilliseconds(50), () => completion.TrySetResult(Environment.CurrentManagedThreadId));
 
         var ranOnThreadId = await completion.Task.WaitAsync(WaitTimeout);
         await Assert.That(ranOnThreadId).IsEqualTo(harness.ThreadId);
@@ -64,7 +64,7 @@ public sealed class DispatcherSequencerTests
         public DispatcherHarness()
         {
             using var ready = new ManualResetEventSlim(false);
-            _thread = new Thread(() =>
+            _thread = new(() =>
             {
                 Dispatcher = Dispatcher.CurrentDispatcher;
                 ThreadId = Environment.CurrentManagedThreadId;
@@ -91,7 +91,7 @@ public sealed class DispatcherSequencerTests
         public void Dispose()
         {
             Dispatcher.InvokeShutdown();
-            _thread.Join(WaitTimeout);
+            _ = _thread.Join(WaitTimeout);
         }
     }
 }

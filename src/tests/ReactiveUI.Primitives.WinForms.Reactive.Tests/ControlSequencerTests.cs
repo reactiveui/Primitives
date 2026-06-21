@@ -32,7 +32,7 @@ public sealed class ControlSequencerTests
         var scheduler = new ControlSequencer(harness.Control);
         var completion = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        scheduler.Schedule(() => completion.TrySetResult(Environment.CurrentManagedThreadId));
+        _ = scheduler.Schedule(() => completion.TrySetResult(Environment.CurrentManagedThreadId));
 
         var ranOnThreadId = await completion.Task.WaitAsync(WaitTimeout);
         await Assert.That(ranOnThreadId).IsEqualTo(harness.ThreadId);
@@ -48,9 +48,9 @@ public sealed class ControlSequencerTests
         public ControlHarness()
         {
             using var ready = new ManualResetEventSlim(false);
-            _thread = new Thread(() =>
+            _thread = new(() =>
             {
-                Control = new Control();
+                Control = new();
                 _ = Control.Handle; // Force handle creation so BeginInvoke can marshal work.
                 ThreadId = Environment.CurrentManagedThreadId;
                 ready.Set();
