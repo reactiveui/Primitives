@@ -246,7 +246,6 @@ public static partial class LinqExtensions
             return new SynchronizeSignal<T>(source);
         }
 
-#if NET9_0_OR_GREATER
         /// <summary>
         /// Serializes notifications behind the supplied <paramref name="gate"/>, so this sequence and every other
         /// sequence synchronized on the same gate observe the single-threaded grammar relative to one another.
@@ -255,20 +254,16 @@ public static partial class LinqExtensions
         /// <param name="gate">The gate shared with other synchronized sequences.</param>
         /// <returns>A sequence that forwards the source notifications one at a time under the shared gate.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="gate"/> is <see langword="null"/>.</exception>
-        [SuppressMessage("Modernization", "SST2000:Use ArgumentNullException.ThrowIfNull", Justification = "Can't use object with Locks.")]
         public IObservable<T> Synchronize(Lock gate)
         {
-            if (gate is null)
-            {
-                throw new ArgumentNullException(nameof(gate));
-            }
+            ArgumentExceptionHelper.ThrowIfNull(gate);
 
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return new SynchronizeSignal<T>(source, gate);
+            return new SynchronizeGateSignal<T>(source, gate);
         }
-#endif
 
+#if NET9_0_OR_GREATER
         /// <summary>
         /// Serializes notifications behind an object gate for System.Reactive compatibility on callers that
         /// intentionally share an object lock.
@@ -284,6 +279,7 @@ public static partial class LinqExtensions
 
             return new SynchronizeObjectSignal<T>(source, gate);
         }
+#endif
 
         /// <summary>Invokes a stateful action for each value while preserving the sequence. State-carrying name for <c>TapWith</c>.</summary>
         /// <typeparam name="TState">The state type.</typeparam>
@@ -659,7 +655,7 @@ public static partial class LinqExtensions
 
             return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange &&
                    right is RangeSignal rightRange
-                ? new RangeSyncLatestSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
+                ? new RangeCombineLatestSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
                 : new CombineLatestSignal<TLeft, TRight, TResult>(left, right, selector);
         }
 

@@ -8,15 +8,15 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Combines two synchronous integer ranges using latest-value semantics.</summary>
+/// <summary>Combines two synchronous integer ranges using System.Reactive <c>CombineLatest</c> semantics.</summary>
 /// <typeparam name="TResult">The result value type.</typeparam>
-public sealed class RangeSyncLatestSignal<TResult> : IObservable<TResult>
+public sealed class RangeCombineLatestSignal<TResult> : IObservable<TResult>
 {
-    /// <summary>Initializes a new instance of the <see cref="RangeSyncLatestSignal{TResult}"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="RangeCombineLatestSignal{TResult}"/> class.</summary>
     /// <param name="left">The left range.</param>
     /// <param name="right">The right range.</param>
     /// <param name="selector">The result projection.</param>
-    public RangeSyncLatestSignal(RangeSignal left, RangeSignal right, Func<int, int, TResult> selector)
+    public RangeCombineLatestSignal(RangeSignal left, RangeSignal right, Func<int, int, TResult> selector)
     {
         Left = left;
         Right = right;
