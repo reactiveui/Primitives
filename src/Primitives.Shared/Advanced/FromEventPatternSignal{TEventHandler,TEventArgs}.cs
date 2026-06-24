@@ -4,6 +4,7 @@
 
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Reflection;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
@@ -18,6 +19,9 @@ public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : IObserva
     where TEventHandler : Delegate
     where TEventArgs : EventArgs
 {
+    /// <summary>The compatible handler forwarder method for this closed generic signal.</summary>
+    private static readonly MethodInfo ForwarderOnEvent = typeof(Forwarder).GetMethod(nameof(Forwarder.OnEvent))!;
+
     /// <summary>Initializes a new instance of the <see cref="FromEventPatternSignal{TEventHandler, TEventArgs}"/> class.</summary>
     /// <param name="addHandler">The action that attaches the generated handler.</param>
     /// <param name="removeHandler">The action that detaches the generated handler.</param>
@@ -87,14 +91,13 @@ public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : IObserva
     private static TEventHandler CreateCompatibleHandler(IObserver<EventPattern<TEventArgs>> observer)
     {
         var forwarder = new Forwarder(observer);
-        var method = typeof(Forwarder).GetMethod(nameof(Forwarder.OnEvent))!;
 
         try
         {
 #if NET8_0_OR_GREATER
-            return method.CreateDelegate<TEventHandler>(forwarder);
+            return ForwarderOnEvent.CreateDelegate<TEventHandler>(forwarder);
 #else
-            return (TEventHandler)Delegate.CreateDelegate(typeof(TEventHandler), forwarder, method);
+            return (TEventHandler)Delegate.CreateDelegate(typeof(TEventHandler), forwarder, ForwarderOnEvent);
 #endif
         }
         catch (ArgumentException ex)

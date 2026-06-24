@@ -382,6 +382,48 @@ public partial class RxNamesTests
         await Assert.That(timeout).IsTypeOf<TimeoutException>();
     }
 
+    /// <summary>Verifies absolute-time operators resolve scheduler time when subscribed, not when constructed.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AbsoluteTimeOperatorsUseSchedulerNowAtSubscription()
+    {
+        const long RelativeTicks = 5;
+        const long ConstructionAdvanceTicks = 3;
+        const long RemainingTicks = RelativeTicks - ConstructionAdvanceTicks;
+
+        VirtualClock delayClock = new(DateTimeOffset.UnixEpoch);
+        var delayDueTime = delayClock.Now.AddTicks(RelativeTicks);
+        var delayedSignal = Signal.Emit(One).Delay(delayDueTime, delayClock);
+        delayClock.AdvanceBy(TimeSpan.FromTicks(ConstructionAdvanceTicks));
+        List<int> delayed = [];
+        _ = delayedSignal.Subscribe(delayed.Add);
+        delayClock.AdvanceBy(TimeSpan.FromTicks(RemainingTicks));
+        await Assert.That(delayed.SequenceEqual([One])).IsTrue();
+
+        VirtualClock subscriptionClock = new(DateTimeOffset.UnixEpoch);
+        var subscriptionDueTime = subscriptionClock.Now.AddTicks(RelativeTicks);
+        var delayedSubscriptionSignal = Signal.Emit(Two).DelaySubscription(subscriptionDueTime, subscriptionClock);
+        subscriptionClock.AdvanceBy(TimeSpan.FromTicks(ConstructionAdvanceTicks));
+        List<int> delayedSubscription = [];
+        _ = delayedSubscriptionSignal.Subscribe(delayedSubscription.Add);
+        subscriptionClock.AdvanceBy(TimeSpan.FromTicks(RemainingTicks));
+        await Assert.That(delayedSubscription.SequenceEqual([Two])).IsTrue();
+
+        VirtualClock timeoutClock = new(DateTimeOffset.UnixEpoch);
+        var timeoutDueTime = timeoutClock.Now.AddTicks(RelativeTicks);
+        var timeoutSignal = Signal.Silent<int>().Timeout(timeoutDueTime, timeoutClock);
+        timeoutClock.AdvanceBy(TimeSpan.FromTicks(ConstructionAdvanceTicks));
+        Exception? timeout = null;
+        _ = timeoutSignal.Subscribe(static _ => { }, error => timeout = error);
+        timeoutClock.AdvanceBy(TimeSpan.FromTicks(RemainingTicks));
+        await Assert.That(timeout).IsTypeOf<TimeoutException>();
+
+        await Assert.That(((IRequireCurrentThread<int>)Signal.Emit(One).Delay(delayDueTime, Sequencer.CurrentThread)).IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(((IRequireCurrentThread<int>)Signal.Silent<int>().Timeout(timeoutDueTime, Sequencer.CurrentThread)).IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(((IRequireCurrentThread<int>)Signal.OnErrorResumeNext(Signal.Silent<int>()).Timeout(timeoutDueTime, Sequencer.Immediate)).IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(((IRequireCurrentThread<int>)new ManualSource<int>().Timeout(timeoutDueTime, Sequencer.Immediate)).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+    }
+
     /// <summary>Verifies absolute-time overloads use the default scheduler when no scheduler is supplied.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

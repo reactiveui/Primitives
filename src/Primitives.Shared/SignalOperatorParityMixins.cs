@@ -175,11 +175,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            var scheduler = ThreadPoolSequencer.Instance;
-            var normalizedDueTime = Sequencer.Normalize(dueTime - scheduler.Now);
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
-                ? new ShiftedRangeSignal<T>(range, normalizedDueTime, scheduler)
-                : new DelayStartSignal<T>(source, normalizedDueTime, scheduler);
+            return new AbsoluteDelayStartSignal<T>(source, dueTime, ThreadPoolSequencer.Instance);
         }
 
         /// <summary>Alias for <c>DelayStart</c> using the System.Reactive operator name.</summary>
@@ -207,10 +203,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
 
             scheduler ??= ThreadPoolSequencer.Instance;
-            var normalizedDueTime = Sequencer.Normalize(dueTime - scheduler.Now);
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
-                ? new ShiftedRangeSignal<T>(range, normalizedDueTime, scheduler)
-                : new DelayStartSignal<T>(source, normalizedDueTime, scheduler);
+            return new AbsoluteDelayStartSignal<T>(source, dueTime, scheduler);
         }
 
         /// <summary>Invokes actions for each element in the observable sequence, for error notifications, and for successful completion.</summary>

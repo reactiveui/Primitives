@@ -727,11 +727,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
 
-            var scheduler = ThreadPoolSequencer.Instance;
-            var normalizedDueTime = Sequencer.Normalize(dueTime - scheduler.Now);
-            return left is RangeSignal range && CanReadRangeAs(typeof(TLeft))
-                ? new ShiftedRangeSignal<TLeft>(range, normalizedDueTime, scheduler)
-                : new ShiftSignal<TLeft>(left, normalizedDueTime, scheduler);
+            return new AbsoluteShiftSignal<TLeft>(left, dueTime, ThreadPoolSequencer.Instance);
         }
 
         /// <summary>Delays source notifications until the specified absolute due time on a sequencer.</summary>
@@ -743,10 +739,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(left);
 
             scheduler ??= ThreadPoolSequencer.Instance;
-            var normalizedDueTime = Sequencer.Normalize(dueTime - scheduler.Now);
-            return left is RangeSignal range && CanReadRangeAs(typeof(TLeft))
-                ? new ShiftedRangeSignal<TLeft>(range, normalizedDueTime, scheduler)
-                : new ShiftSignal<TLeft>(left, normalizedDueTime, scheduler);
+            return new AbsoluteShiftSignal<TLeft>(left, dueTime, scheduler);
         }
 
         /// <summary>Fails the sequence if it does not terminate before the timeout. System.Reactive name for <c>Expire</c>.</summary>
@@ -778,8 +771,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
 
-            var scheduler = ThreadPoolSequencer.Instance;
-            return new ExpireSignal<TLeft>(left, Sequencer.Normalize(dueTime - scheduler.Now), scheduler);
+            return new AbsoluteExpireSignal<TLeft>(left, dueTime, ThreadPoolSequencer.Instance);
         }
 
         /// <summary>Fails the sequence if it does not terminate before the absolute sequencer timeout.</summary>
@@ -791,7 +783,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(left);
 
             scheduler ??= ThreadPoolSequencer.Instance;
-            return new ExpireSignal<TLeft>(left, Sequencer.Normalize(dueTime - scheduler.Now), scheduler);
+            return new AbsoluteExpireSignal<TLeft>(left, dueTime, scheduler);
         }
 
         /// <summary>Emits the most recent value at the end of each sampling period. System.Reactive name for <c>Probe</c>.</summary>
