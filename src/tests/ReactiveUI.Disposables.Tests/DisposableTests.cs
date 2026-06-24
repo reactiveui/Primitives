@@ -76,6 +76,23 @@ public class DisposableTests
         await Assert.That(disposed).IsEqualTo(1);
     }
 
+    /// <summary>Verifies action runs once and late assigned disposable is still disposed.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task SingleDisposableDisposeThenCreateRunsActionOnce()
+    {
+        var disposed = 0;
+        var created = 0;
+        SingleDisposable disposable = new(EmptyDisposable.Instance, () => disposed++);
+
+        disposable.Dispose();
+        disposable.Create(new ActionDisposable(() => created++));
+
+        await Assert.That(disposable.IsDisposed).IsTrue();
+        await Assert.That(disposed).IsEqualTo(1);
+        await Assert.That(created).IsEqualTo(1);
+    }
+
     /// <summary>Multiples the disposable dispose.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
