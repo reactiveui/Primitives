@@ -78,6 +78,38 @@ public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : IObserva
             return (TEventHandler)(object)typed;
         }
 
-        throw new NotSupportedException($"Event handler type '{typeof(TEventHandler)}' is not supported.");
+        return CreateCompatibleHandler(observer);
+    }
+
+    /// <summary>Creates a delegate for event handler shapes compatible with <c>void Handler(object, TEventArgs)</c>.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <returns>The generated event handler.</returns>
+    private static TEventHandler CreateCompatibleHandler(IObserver<EventPattern<TEventArgs>> observer)
+    {
+        var forwarder = new Forwarder(observer);
+        var method = typeof(Forwarder).GetMethod(nameof(Forwarder.OnEvent))!;
+
+        try
+        {
+#if NET8_0_OR_GREATER
+            return method.CreateDelegate<TEventHandler>(forwarder);
+#else
+            return (TEventHandler)Delegate.CreateDelegate(typeof(TEventHandler), forwarder, method);
+#endif
+        }
+        catch (ArgumentException ex)
+        {
+            throw new NotSupportedException($"Event handler type '{typeof(TEventHandler)}' is not supported.", ex);
+        }
+    }
+
+    /// <summary>Forwards compatible delegate invocations to the subscribed observer.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    private sealed class Forwarder(IObserver<EventPattern<TEventArgs>> observer)
+    {
+        /// <summary>Forwards event arguments to the observer.</summary>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="args">The event arguments.</param>
+        public void OnEvent(object? sender, TEventArgs args) => observer.OnNext(new(sender, args));
     }
 }
