@@ -814,6 +814,27 @@ public class WitnessTests
         }
     }
 
+    /// <summary>Verifies race witnesses dispose losing source subscriptions once a winner emerges.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RaceWitnessDisposesLosingSubscriptionAfterWinnerEmerges()
+    {
+        RecordingDisposableObservable<int> winner = new();
+        RecordingDisposableObservable<int> loser = new();
+        RecordingWitness<int> observer = new();
+        using (new RaceWitness<int>(observer).Run([winner, loser]))
+        {
+            winner.Observer!.OnNext(One);
+            await Assert.That(loser.DisposeCount).IsEqualTo(1);
+            await Assert.That(winner.DisposeCount).IsEqualTo(0);
+            await Assert.That(observer.Values.SequenceEqual([One])).IsTrue();
+            await Assert.That(observer.Errors.Count).IsEqualTo(0);
+        }
+
+        await Assert.That(winner.DisposeCount).IsEqualTo(1);
+        await Assert.That(loser.DisposeCount).IsEqualTo(1);
+    }
+
     /// <summary>Verifies publish selector witnesses dispose cancellation resources on terminal and disposal.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -1006,5 +1027,23 @@ public class WitnessTests
 
         /// <inheritdoc/>
         public void OnNext(T value) => Values.Add(value);
+    }
+
+    /// <summary>Observable with a disposable subscription tracker and captured observer.</summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    private sealed class RecordingDisposableObservable<T> : IObservable<T>
+    {
+        /// <summary>Gets the captured observer.</summary>
+        public IObserver<T>? Observer { get; private set; }
+
+        /// <summary>Gets the number of times the source subscription was disposed.</summary>
+        public int DisposeCount { get; private set; }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            Observer = observer;
+            return new ActionDisposable(() => DisposeCount++);
+        }
     }
 }

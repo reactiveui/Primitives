@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Disposables;
 public sealed class OnceDisposable : IsDisposed
 {
     /// <summary>Sentinel value indicating the object has been disposed.</summary>
-    private static readonly IDisposable DisposedSentinel = EmptyDisposable.Instance;
+    private static readonly IDisposable DisposedSentinel = new DisposedMarker();
 
     /// <summary>The current inner disposable.</summary>
     private IDisposable? _current;
@@ -67,5 +67,15 @@ public sealed class OnceDisposable : IsDisposed
         }
 
         previous.Dispose();
+    }
+
+    /// <summary>Disposable marker for disposed instances.</summary>
+    private sealed class DisposedMarker : IDisposable
+    {
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            // Intentionally empty.
+        }
     }
 }
