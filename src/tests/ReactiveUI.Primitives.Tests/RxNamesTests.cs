@@ -2,11 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
-using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -59,6 +57,9 @@ public partial class RxNamesTests
 
     /// <summary>The amount the virtual clock is advanced, comfortably past <see cref = "DueTicks"/>.</summary>
     private const long AdvanceTicks = 5;
+
+    /// <summary>The timeout in seconds used while waiting for ThreadPool-scheduled coverage branches.</summary>
+    private const int PollTimeoutSeconds = 2;
 
     /// <summary>Source values 1..5.</summary>
     private static readonly int[] _oneToFive = [1, 2, 3, 4, 5];
@@ -306,6 +307,186 @@ public partial class RxNamesTests
         await Assert.That(where.Count).IsEqualTo(Two);
     }
 
+    /// <summary>Verifies the Rx type-filtering names match the existing KeepType and CastTo operators.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CastAndOfTypeMatchTypeFilteringAliases()
+    {
+        List<string> keepType = [];
+        List<string> ofType = [];
+        _ = Signal.FromEnumerable<object?>(["a", null, Two, "b"]).KeepType<string>().Subscribe(keepType.Add);
+        _ = Signal.FromEnumerable<object?>(["a", null, Two, "b"]).OfType<string>().Subscribe(ofType.Add);
+
+        List<string> castValues = [];
+        Exception? castError = null;
+        _ = Signal.FromEnumerable<object?>(["a", Two]).Cast<string>().Subscribe(castValues.Add, error => castError = error);
+
+        await Assert.That(ofType).IsEquivalentTo(keepType, EqualityComparer<string>.Default);
+        await Assert.That(ofType.SequenceEqual(["a", "b"])).IsTrue();
+        await Assert.That(castValues.SequenceEqual(["a"])).IsTrue();
+        await Assert.That(castError).IsTypeOf<InvalidCastException>();
+    }
+
+    /// <summary>Verifies OnErrorResumeNext continues after both normal completion and errors.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task OnErrorResumeNextContinuesAfterCompletionAndError()
+    {
+        List<int> binary = [];
+        var binaryCompleted = 0;
+        _ = Signal.Emit(Ten)
+            .OnErrorResumeNext(Signal.FromEnumerable(_oneToThree))
+            .Subscribe(binary.Add, ex => throw ex, () => binaryCompleted++);
+
+        List<int> staticValues = [];
+        var staticCompleted = 0;
+        _ = Signal.OnErrorResumeNext(
+            Signal.FromEnumerable([One]),
+            Signal.Fail<int>(new InvalidOperationException(Boom)),
+            Signal.FromEnumerable([Two, Three]))
+            .Subscribe(staticValues.Add, ex => throw ex, () => staticCompleted++);
+
+        await Assert.That(binary.SequenceEqual(_tenThenFallback)).IsTrue();
+        await Assert.That(binaryCompleted).IsEqualTo(1);
+        await Assert.That(staticValues.SequenceEqual(_oneToThree)).IsTrue();
+        await Assert.That(staticCompleted).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies absolute-time Delay, DelaySubscription, and Timeout overloads use scheduler time.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AbsoluteTimeOperatorsUseSchedulerNow()
+    {
+        VirtualClock delayClock = new(DateTimeOffset.UnixEpoch);
+        List<int> delayed = [];
+        _ = Signal.Emit(One).Delay(delayClock.Now.AddTicks(DueTicks), delayClock).Subscribe(delayed.Add);
+        await Assert.That(delayed.Count).IsEqualTo(0);
+        delayClock.AdvanceBy(TimeSpan.FromTicks(DueTicks));
+        await Assert.That(delayed.SequenceEqual([One])).IsTrue();
+
+        VirtualClock subscriptionClock = new(DateTimeOffset.UnixEpoch);
+        List<int> delayedSubscription = [];
+        _ = Signal.Emit(Two)
+            .DelaySubscription(subscriptionClock.Now.AddTicks(DueTicks), subscriptionClock)
+            .Subscribe(delayedSubscription.Add);
+        await Assert.That(delayedSubscription.Count).IsEqualTo(0);
+        subscriptionClock.AdvanceBy(TimeSpan.FromTicks(DueTicks));
+        await Assert.That(delayedSubscription.SequenceEqual([Two])).IsTrue();
+
+        VirtualClock timeoutClock = new(DateTimeOffset.UnixEpoch);
+        Exception? timeout = null;
+        _ = Signal.Silent<int>()
+            .Timeout(timeoutClock.Now.AddTicks(DueTicks), timeoutClock)
+            .Subscribe(static _ => { }, error => timeout = error);
+        timeoutClock.AdvanceBy(TimeSpan.FromTicks(DueTicks));
+        await Assert.That(timeout).IsTypeOf<TimeoutException>();
+    }
+
+    /// <summary>Verifies absolute-time operators resolve scheduler time when subscribed, not when constructed.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AbsoluteTimeOperatorsUseSchedulerNowAtSubscription()
+    {
+        const long RelativeTicks = 5;
+        const long ConstructionAdvanceTicks = 3;
+        const long RemainingTicks = RelativeTicks - ConstructionAdvanceTicks;
+
+        VirtualClock delayClock = new(DateTimeOffset.UnixEpoch);
+        var delayDueTime = delayClock.Now.AddTicks(RelativeTicks);
+        var delayedSignal = Signal.Emit(One).Delay(delayDueTime, delayClock);
+        delayClock.AdvanceBy(TimeSpan.FromTicks(ConstructionAdvanceTicks));
+        List<int> delayed = [];
+        _ = delayedSignal.Subscribe(delayed.Add);
+        delayClock.AdvanceBy(TimeSpan.FromTicks(RemainingTicks));
+        await Assert.That(delayed.SequenceEqual([One])).IsTrue();
+
+        VirtualClock subscriptionClock = new(DateTimeOffset.UnixEpoch);
+        var subscriptionDueTime = subscriptionClock.Now.AddTicks(RelativeTicks);
+        var delayedSubscriptionSignal = Signal.Emit(Two).DelaySubscription(subscriptionDueTime, subscriptionClock);
+        subscriptionClock.AdvanceBy(TimeSpan.FromTicks(ConstructionAdvanceTicks));
+        List<int> delayedSubscription = [];
+        _ = delayedSubscriptionSignal.Subscribe(delayedSubscription.Add);
+        subscriptionClock.AdvanceBy(TimeSpan.FromTicks(RemainingTicks));
+        await Assert.That(delayedSubscription.SequenceEqual([Two])).IsTrue();
+
+        VirtualClock timeoutClock = new(DateTimeOffset.UnixEpoch);
+        var timeoutDueTime = timeoutClock.Now.AddTicks(RelativeTicks);
+        var timeoutSignal = Signal.Silent<int>().Timeout(timeoutDueTime, timeoutClock);
+        timeoutClock.AdvanceBy(TimeSpan.FromTicks(ConstructionAdvanceTicks));
+        Exception? timeout = null;
+        _ = timeoutSignal.Subscribe(static _ => { }, error => timeout = error);
+        timeoutClock.AdvanceBy(TimeSpan.FromTicks(RemainingTicks));
+        await Assert.That(timeout).IsTypeOf<TimeoutException>();
+
+        await Assert.That(((IRequireCurrentThread<int>)Signal.Emit(One).Delay(delayDueTime, Sequencer.CurrentThread)).IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(((IRequireCurrentThread<int>)Signal.Silent<int>().Timeout(timeoutDueTime, Sequencer.CurrentThread)).IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(((IRequireCurrentThread<int>)Signal.OnErrorResumeNext(Signal.Silent<int>()).Timeout(timeoutDueTime, Sequencer.Immediate)).IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(((IRequireCurrentThread<int>)new ManualSource<int>().Timeout(timeoutDueTime, Sequencer.Immediate)).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+    }
+
+    /// <summary>Verifies absolute-time overloads use the default scheduler when no scheduler is supplied.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AbsoluteTimeOperatorsUseDefaultScheduler()
+    {
+        var dueTime = ThreadPoolSequencer.Instance.Now.AddSeconds(-PollTimeoutSeconds);
+        List<int> delayedScalar = [];
+        List<int> delayedRange = [];
+        List<int> delayedSubscriptionScalar = [];
+        List<int> delayedSubscriptionRange = [];
+        List<int> delayedExplicitRange = [];
+        List<int> delayedSubscriptionExplicitRange = [];
+        Exception? timeout = null;
+        Exception? explicitTimeout = null;
+        const ISequencer? defaultScheduler = null;
+
+        using var delayScalarSubscription = Signal.Emit(One)
+            .Delay(dueTime)
+            .Subscribe(delayedScalar.Add);
+        using var delayRangeSubscription = Signal.Sequence(Two, Two)
+            .Delay(dueTime)
+            .Subscribe(delayedRange.Add);
+        using var delayExplicitRangeSubscription = Signal.Sequence(Two, Two)
+            .Delay(dueTime, defaultScheduler)
+            .Subscribe(delayedExplicitRange.Add);
+        using var subscriptionScalarSubscription = Signal.Emit(One)
+            .DelaySubscription(dueTime)
+            .Subscribe(delayedSubscriptionScalar.Add);
+        using var subscriptionRangeSubscription = Signal.Sequence(Two, Two)
+            .DelaySubscription(dueTime)
+            .Subscribe(delayedSubscriptionRange.Add);
+        using var subscriptionExplicitRangeSubscription = Signal.Sequence(Two, Two)
+            .DelaySubscription(dueTime, defaultScheduler)
+            .Subscribe(delayedSubscriptionExplicitRange.Add);
+        using var timeoutSubscription = Signal.Silent<int>()
+            .Timeout(dueTime)
+            .Subscribe(static _ => { }, captured => timeout = captured);
+        using var explicitTimeoutSubscription = Signal.Silent<int>()
+            .Timeout(dueTime, defaultScheduler)
+            .Subscribe(static _ => { }, captured => explicitTimeout = captured);
+
+        await TestPolling.SpinUntil(
+            () =>
+                delayedScalar.Count == One &&
+                delayedRange.Count == Two &&
+                delayedExplicitRange.Count == Two &&
+                delayedSubscriptionScalar.Count == One &&
+                delayedSubscriptionRange.Count == Two &&
+                delayedSubscriptionExplicitRange.Count == Two &&
+                timeout is not null &&
+                explicitTimeout is not null,
+            TimeSpan.FromSeconds(PollTimeoutSeconds));
+
+        await Assert.That(delayedScalar.SequenceEqual([One])).IsTrue();
+        await Assert.That(delayedRange.SequenceEqual([Two, Three])).IsTrue();
+        await Assert.That(delayedExplicitRange.SequenceEqual([Two, Three])).IsTrue();
+        await Assert.That(delayedSubscriptionScalar.SequenceEqual([One])).IsTrue();
+        await Assert.That(delayedSubscriptionRange.SequenceEqual([Two, Three])).IsTrue();
+        await Assert.That(delayedSubscriptionExplicitRange.SequenceEqual([Two, Three])).IsTrue();
+        await Assert.That(timeout).IsTypeOf<TimeoutException>();
+        await Assert.That(explicitTimeout).IsTypeOf<TimeoutException>();
+    }
+
     /// <summary>Verifies the binary <c>Concat</c>/<c>Chain</c> overload concatenates two sequences identically.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -477,15 +658,22 @@ public partial class RxNamesTests
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.CombineLatest(other, Add));
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.WithLatestFrom(other, Add));
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Delay(TimeSpan.FromTicks(DueTicks)));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Delay(DateTimeOffset.UnixEpoch));
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Timeout(TimeSpan.FromTicks(DueTicks)));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Timeout(DateTimeOffset.UnixEpoch));
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Sample(TimeSpan.FromTicks(DueTicks)));
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Retry(Two));
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Materialize());
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<Spark<int>>)!.Dematerialize());
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Resume(other));
         _ = Assert.Throws<ArgumentNullException>(() => other.Resume(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.OnErrorResumeNext(other));
+        _ = Assert.Throws<ArgumentNullException>(() => other.OnErrorResumeNext(null!));
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Chain(other));
         _ = Assert.Throws<ArgumentNullException>(() => other.Chain((IObservable<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<object?>)!.OfType<string>());
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<object?>)!.Cast<string>());
+        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.DelaySubscription(DateTimeOffset.UnixEpoch));
     }
 
     /// <summary>Verifies the Rx names throw <see cref = "ArgumentNullException"/> for a null projection/predicate.</summary>
@@ -809,559 +997,5 @@ public partial class RxNamesTests
         left.OnNext(Two);
         right.OnNext(Twenty);
         left.OnNext(Three);
-    }
-
-    /// <summary>Runs a unary operator over a cold source and collects the forwarded values.</summary>
-    /// <param name = "op">The operator under test.</param>
-    /// <param name = "input">The source values.</param>
-    /// <returns>The forwarded values.</returns>
-    private static List<int> RunUnary(Func<IObservable<int>, IObservable<int>> op, int[] input)
-    {
-        List<int> values = [];
-        _ = op(Signal.FromEnumerable(input)).Subscribe(values.Add);
-        return values;
-    }
-
-    /// <summary>Runs a higher-order operator over a source of cold inner sources and collects the forwarded values.</summary>
-    /// <param name = "op">The operator under test.</param>
-    /// <param name = "inners">The inner source values.</param>
-    /// <returns>The forwarded values.</returns>
-    private static List<int> RunHigherOrder(Func<IObservable<IObservable<int>>, IObservable<int>> op, int[][] inners)
-    {
-        var outer = Signal.FromEnumerable(Array.ConvertAll(inners, ToSource));
-        List<int> values = [];
-        _ = op(outer).Subscribe(values.Add);
-        return values;
-    }
-
-    /// <summary>Wraps an inner value array in a cold source.</summary>
-    /// <param name = "inner">The inner values.</param>
-    /// <returns>A cold source over the inner values.</returns>
-    private static IObservable<int> ToSource(int[] inner) => Signal.FromEnumerable(inner);
-
-    /// <summary>Runs a binary operator over two manual subjects driven by a script and collects the forwarded values.</summary>
-    /// <param name = "op">The operator under test.</param>
-    /// <param name = "drive">The script that pushes values into the subjects.</param>
-    /// <returns>The forwarded values.</returns>
-    private static List<int> RunBinary(
-        Func<IObservable<int>, IObservable<int>, IObservable<int>> op,
-        Action<Signal<int>, Signal<int>> drive)
-    {
-        Signal<int> left = new();
-        Signal<int> right = new();
-        List<int> values = [];
-        using var subscription = op(left, right).Subscribe(values.Add);
-        drive(left, right);
-        return values;
-    }
-
-    /// <summary>Runs a time-based operator against a virtual clock and collects the forwarded values and any error.</summary>
-    /// <param name = "op">The operator under test.</param>
-    /// <param name = "source">The source factory.</param>
-    /// <returns>The forwarded values and any terminal error.</returns>
-    private static (List<int> Values, Exception? Error) RunTimed(
-        Func<IObservable<int>, ISequencer, IObservable<int>> op,
-        Func<IObservable<int>> source)
-    {
-        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
-        List<int> values = [];
-        Exception? error = null;
-        using var subscription = op(source(), clock).Subscribe(values.Add, captured => error = captured, () => { });
-        clock.AdvanceBy(TimeSpan.FromTicks(AdvanceTicks));
-        return (values, error);
-    }
-
-    /// <summary>Pushes one value then an error through a stateful sink and reports whether both were forwarded.</summary>
-    /// <param name = "op">The stateful operator under test.</param>
-    /// <returns><see langword="true"/> when one value and the error were forwarded.</returns>
-    private static bool RunStatefulError(Func<IObservable<int>, IObservable<int>> op)
-    {
-        Signal<int> source = new();
-        List<int> values = [];
-        Exception? error = null;
-        using var subscription = op(source).Subscribe(values.Add, captured => error = captured, () => { });
-        source.OnNext(Two);
-        source.OnError(new InvalidOperationException(Boom));
-        return values.Count == One && error is InvalidOperationException;
-    }
-
-    /// <summary>Pushes a value through a sink whose projection throws and reports whether the error was forwarded.</summary>
-    /// <param name = "op">The stateful operator under test.</param>
-    /// <returns><see langword="true"/> when the thrown error was forwarded downstream.</returns>
-    private static bool RunStatefulThrow(Func<IObservable<int>, IObservable<int>> op)
-    {
-        Signal<int> source = new();
-        Exception? error = null;
-        using var subscription = op(source).Subscribe(
-            static _ => { },
-            captured => error = captured,
-            () => { });
-        source.OnNext(One);
-        return error is InvalidOperationException;
-    }
-
-    /// <summary>A stateful projection that always throws (drives the sink catch path).</summary>
-    /// <param name = "state">The unused state.</param>
-    /// <param name = "value">The unused value.</param>
-    /// <returns>Never returns; always throws.</returns>
-    private static int ThrowProjection(int state, int value) => throw new InvalidOperationException(Boom);
-
-    /// <summary>A stateful predicate that always throws (drives the sink catch path).</summary>
-    /// <param name = "state">The unused state.</param>
-    /// <param name = "value">The unused value.</param>
-    /// <returns>Never returns; always throws.</returns>
-    private static bool ThrowPredicate(int state, int value) => throw new InvalidOperationException(Boom);
-
-    /// <summary>Runs a sampling operator against a virtual clock with a fixed drive and collects the sampled values.</summary>
-    /// <param name = "op">The sampling operator under test.</param>
-    /// <returns>The sampled values.</returns>
-    private static List<int> RunSampling(Func<IObservable<int>, ISequencer, IObservable<int>> op)
-    {
-        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
-        Signal<int> source = new();
-        List<int> values = [];
-        using var subscription = op(source, clock).Subscribe(values.Add);
-        source.OnNext(One);
-        clock.AdvanceBy(TimeSpan.FromTicks(Two));
-        source.OnNext(Three);
-        clock.AdvanceBy(TimeSpan.FromTicks(Two));
-        return values;
-    }
-
-    /// <summary>Combines a source value with an inner value (result selector for the 3-arg SelectMany/FlatMap).</summary>
-    /// <param name = "source">The source value.</param>
-    /// <param name = "inner">The inner value.</param>
-    /// <returns>The combined value.</returns>
-    private static int AddPair(int source, int inner) => source + inner;
-
-    /// <summary>Creates the requested multi-source CombineLatest overload.</summary>
-    /// <param name="arity">The arity to create.</param>
-    /// <param name="sources">The source signals.</param>
-    /// <returns>The combined observable.</returns>
-    [SuppressMessage(
-        "Style",
-        "S1541:Methods and properties should not be too complex",
-        Justification = "Compile-time overload coverage intentionally invokes each generated arity.")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Compile-time overload coverage intentionally invokes high-arity selector lambdas.")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S109:Magic numbers should not be used",
-        Justification = "Compile-time overload coverage indexes each source slot by arity.")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S138:Functions should not have too many lines of code",
-        Justification = "Compile-time overload coverage keeps the arity switch in one audited helper.")]
-    private static IObservable<int> CreateCombineLatest(int arity, Signal<int>[] sources) =>
-        arity switch
-        {
-            4 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                static (value1, value2, value3, value4) =>
-                    value1 + value2 + value3 + value4),
-            5 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                static (value1, value2, value3, value4, value5) =>
-                    value1 + value2 + value3 + value4 + value5),
-            6 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                static (value1, value2, value3, value4, value5, value6) =>
-                    value1 + value2 + value3 + value4 + value5 + value6),
-            7 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                static (value1, value2, value3, value4, value5, value6, value7) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7),
-            8 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                sources[7],
-                static (value1, value2, value3, value4, value5, value6, value7, value8) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8),
-            9 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                sources[7],
-                sources[8],
-                static (value1, value2, value3, value4, value5, value6, value7, value8, value9) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9),
-            10 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                sources[7],
-                sources[8],
-                sources[9],
-                static (value1, value2, value3, value4, value5, value6, value7, value8, value9, value10) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10),
-            11 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                sources[7],
-                sources[8],
-                sources[9],
-                sources[10],
-                static (value1, value2, value3, value4, value5, value6, value7, value8, value9, value10, value11) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
-                    value11),
-            12 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                sources[7],
-                sources[8],
-                sources[9],
-                sources[10],
-                sources[11],
-                static (
-                    value1,
-                    value2,
-                    value3,
-                    value4,
-                    value5,
-                    value6,
-                    value7,
-                    value8,
-                    value9,
-                    value10,
-                    value11,
-                    value12) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
-                    value11 + value12),
-            13 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                sources[7],
-                sources[8],
-                sources[9],
-                sources[10],
-                sources[11],
-                sources[12],
-                static (
-                    value1,
-                    value2,
-                    value3,
-                    value4,
-                    value5,
-                    value6,
-                    value7,
-                    value8,
-                    value9,
-                    value10,
-                    value11,
-                    value12,
-                    value13) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
-                    value11 + value12 + value13),
-            14 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                sources[7],
-                sources[8],
-                sources[9],
-                sources[10],
-                sources[11],
-                sources[12],
-                sources[13],
-                static (
-                    value1,
-                    value2,
-                    value3,
-                    value4,
-                    value5,
-                    value6,
-                    value7,
-                    value8,
-                    value9,
-                    value10,
-                    value11,
-                    value12,
-                    value13,
-                    value14) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
-                    value11 + value12 + value13 + value14),
-            15 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                sources[7],
-                sources[8],
-                sources[9],
-                sources[10],
-                sources[11],
-                sources[12],
-                sources[13],
-                sources[14],
-                static (
-                    value1,
-                    value2,
-                    value3,
-                    value4,
-                    value5,
-                    value6,
-                    value7,
-                    value8,
-                    value9,
-                    value10,
-                    value11,
-                    value12,
-                    value13,
-                    value14,
-                    value15) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
-                    value11 + value12 + value13 + value14 + value15),
-            _ => throw new ArgumentOutOfRangeException(nameof(arity), arity, null)
-        };
-
-    /// <summary>Sums sixteen values for the widest CombineLatest overload.</summary>
-    /// <param name="value1">Value 1.</param>
-    /// <param name="value2">Value 2.</param>
-    /// <param name="value3">Value 3.</param>
-    /// <param name="value4">Value 4.</param>
-    /// <param name="value5">Value 5.</param>
-    /// <param name="value6">Value 6.</param>
-    /// <param name="value7">Value 7.</param>
-    /// <param name="value8">Value 8.</param>
-    /// <param name="value9">Value 9.</param>
-    /// <param name="value10">Value 10.</param>
-    /// <param name="value11">Value 11.</param>
-    /// <param name="value12">Value 12.</param>
-    /// <param name="value13">Value 13.</param>
-    /// <param name="value14">Value 14.</param>
-    /// <param name="value15">Value 15.</param>
-    /// <param name="value16">Value 16.</param>
-    /// <returns>The sum of all values.</returns>
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Has more than 7 parameters - required to exercise the arity-16 CombineLatest selector.")]
-    private static int SumSixteen(
-        int value1,
-        int value2,
-        int value3,
-        int value4,
-        int value5,
-        int value6,
-        int value7,
-        int value8,
-        int value9,
-        int value10,
-        int value11,
-        int value12,
-        int value13,
-        int value14,
-        int value15,
-        int value16) =>
-        value1 +
-        value2 +
-        value3 +
-        value4 +
-        value5 +
-        value6 +
-        value7 +
-        value8 +
-        value9 +
-        value10 +
-        value11 +
-        value12 +
-        value13 +
-        value14 +
-        value15 +
-        value16;
-
-    /// <summary>Subscribes to a source and collects its forwarded values.</summary>
-    /// <param name = "source">The source sequence.</param>
-    /// <returns>The forwarded values.</returns>
-    private static List<int> Collect(IObservable<int> source)
-    {
-        List<int> values = [];
-        _ = source.Subscribe(values.Add);
-        return values;
-    }
-
-    /// <summary>Builds a source of two int-range inner sources (exercises the synchronous Switch range fast path).</summary>
-    /// <returns>An outer source of two range inners.</returns>
-    private static IObservable<IObservable<int>> RangeInners() =>
-        Signal.FromEnumerable([Signal.Sequence(One, Two), Signal.Sequence(Three, Two)]);
-
-    /// <summary>
-    /// Drives a stateful sink through a value, a terminal completion, and then further notifications, reporting
-    /// whether the post-terminal notifications were dropped (exactly one completion, no leaked error).
-    /// </summary>
-    /// <param name = "op">The stateful operator under test.</param>
-    /// <returns><see langword="true"/> when notifications after the terminal were dropped.</returns>
-    private static bool RunStopGuards(Func<IObservable<int>, IObservable<int>> op)
-    {
-        ManualSource<int> source = new();
-        var completed = 0;
-        Exception? error = null;
-        using var subscription = op(source).Subscribe(
-            static _ => { },
-            captured => error = captured,
-            () => completed++);
-        source.Next(Two);
-        source.Complete();
-        source.Next(Three);
-        source.Error(new InvalidOperationException(Boom));
-        source.Complete();
-        return completed == One && error is null;
-    }
-
-    /// <summary>
-    /// An observable whose subscription retains its observer and ignores disposal, letting a test push raw
-    /// notifications (including ones after a terminal notification) to exercise a sink's terminal guards.
-    /// </summary>
-    /// <typeparam name = "T">The element type.</typeparam>
-    private sealed class ManualSource<T> : IObservable<T>
-    {
-        /// <summary>The observer retained from the most recent subscription.</summary>
-        private IObserver<T>? _observer;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            _observer = observer;
-            return EmptyDisposable.Instance;
-        }
-
-        /// <summary>Pushes a value to the retained observer.</summary>
-        /// <param name = "value">The value to push.</param>
-        public void Next(T value) => _observer?.OnNext(value);
-
-        /// <summary>Pushes an error to the retained observer.</summary>
-        /// <param name = "exception">The error to push.</param>
-        public void Error(Exception exception) => _observer?.OnError(exception);
-
-        /// <summary>Pushes completion to the retained observer.</summary>
-        public void Complete() => _observer?.OnCompleted();
-    }
-
-    /// <summary>A source that reports it requires current-thread subscription (drives the sink's propagation check).</summary>
-    /// <typeparam name = "T">The element type.</typeparam>
-    private sealed class CurrentThreadSource<T> : IRequireCurrentThread<T>
-    {
-        /// <inheritdoc/>
-        public bool IsRequiredSubscribeOnCurrentThread() => true;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer) => EmptyDisposable.Instance;
-    }
-
-    /// <summary>A unary parity case: a Primitives-named builder and its Rx-named twin over one source.</summary>
-    /// <param name = "Name">The pair name.</param>
-    /// <param name = "Deviant">The Primitives-named builder.</param>
-    /// <param name = "Rx">The Rx/LINQ-named builder.</param>
-    /// <param name = "Input">The source values.</param>
-    /// <param name = "Expected">The expected forwarded values.</param>
-    public sealed record UnaryCase(
-        string Name,
-        Func<IObservable<int>, IObservable<int>> Deviant,
-        Func<IObservable<int>, IObservable<int>> Rx,
-        int[] Input,
-        int[] Expected)
-    {
-        /// <inheritdoc/>
-        public override string ToString() => Name;
-    }
-
-    /// <summary>A higher-order parity case operating over a source of inner sources.</summary>
-    /// <param name = "Name">The pair name.</param>
-    /// <param name = "Deviant">The Primitives-named builder.</param>
-    /// <param name = "Rx">The Rx/LINQ-named builder.</param>
-    /// <param name = "Inners">The inner source values.</param>
-    /// <param name = "Expected">The expected forwarded values.</param>
-    [SuppressMessage(
-        "Major Code Smell",
-        "S2368:Public methods should not have multidimensional array parameters",
-        Justification = "The jagged array is the public TUnit method-data shape for higher-order parity cases.")]
-    public sealed record HigherOrderCase(
-        string Name,
-        Func<IObservable<IObservable<int>>, IObservable<int>> Deviant,
-        Func<IObservable<IObservable<int>>, IObservable<int>> Rx,
-        int[][] Inners,
-        int[] Expected)
-    {
-        /// <inheritdoc/>
-        public override string ToString() => Name;
-    }
-
-    /// <summary>A binary parity case driven by a scripted interleaving of two manual subjects.</summary>
-    /// <param name = "Name">The pair name.</param>
-    /// <param name = "Deviant">The Primitives-named builder.</param>
-    /// <param name = "Rx">The Rx/LINQ-named builder.</param>
-    /// <param name = "Drive">The script that pushes values into the left and right subjects.</param>
-    /// <param name = "Expected">The expected forwarded values.</param>
-    public sealed record BinaryCase(
-        string Name,
-        Func<IObservable<int>, IObservable<int>, IObservable<int>> Deviant,
-        Func<IObservable<int>, IObservable<int>, IObservable<int>> Rx,
-        Action<Signal<int>, Signal<int>> Drive,
-        int[] Expected)
-    {
-        /// <inheritdoc/>
-        public override string ToString() => Name;
-    }
-
-    /// <summary>A time-based parity case driven by a virtual clock.</summary>
-    /// <param name = "Name">The pair name.</param>
-    /// <param name = "Deviant">The Primitives-named builder.</param>
-    /// <param name = "Rx">The Rx/LINQ-named builder.</param>
-    /// <param name = "Source">The source factory.</param>
-    /// <param name = "Expected">The expected forwarded values.</param>
-    /// <param name = "ExpectsTimeout">Whether a <see cref = "TimeoutException"/> is expected.</param>
-    public sealed record TimeCase(
-        string Name,
-        Func<IObservable<int>, ISequencer, IObservable<int>> Deviant,
-        Func<IObservable<int>, ISequencer, IObservable<int>> Rx,
-        Func<IObservable<int>> Source,
-        int[] Expected,
-        bool ExpectsTimeout)
-    {
-        /// <inheritdoc/>
-        public override string ToString() => Name;
     }
 }
