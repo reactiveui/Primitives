@@ -14,10 +14,67 @@ public sealed class ExpireCoordinatorTests
     /// <summary>The integer constant one.</summary>
     private const int One = 1;
 
+    /// <summary>The number of values emitted by the re-arming test.</summary>
+    private const int ValueCount = 5;
+
+    /// <summary>The timeout window in ticks used by the re-arming tests.</summary>
+    private const int DueTicks = 10;
+
+    /// <summary>A gap shorter than <see cref="DueTicks"/> that must not expire the timeout.</summary>
+    private const int ActiveGapTicks = 9;
+
+    /// <summary>A gap shorter than <see cref="DueTicks"/> after which a value still arrives in time.</summary>
+    private const int ShortGapTicks = 5;
+
+    /// <summary>The values forwarded by the active-source re-arming test.</summary>
+    private static readonly int[] ExpectedActiveValues = [0, 1, 2, 3, 4];
+
     /// <summary>Timeout used while waiting for background work in this test.</summary>
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
 
-    /// <summary>Verifies timeout delivery is serialized behind an in-flight source value.</summary>
+    /// <summary>Verifies the timeout re-arms on each value so an active source never expires.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TimeoutResetsOnEachValueSoActiveSourceNeverExpires()
+    {
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        Signal<int> source = new();
+        List<int> values = [];
+        List<string> errors = [];
+        using var subscription = source.Expire(TimeSpan.FromTicks(DueTicks), clock)
+            .Subscribe(values.Add, ex => errors.Add(ex.GetType().Name));
+
+        for (var i = 0; i < ValueCount; i++)
+        {
+            clock.AdvanceBy(TimeSpan.FromTicks(ActiveGapTicks));
+            source.OnNext(i);
+        }
+
+        await Assert.That(errors.Count).IsEqualTo(0);
+        await Assert.That(values.SequenceEqual(ExpectedActiveValues)).IsTrue();
+    }
+
+    /// <summary>Verifies silence longer than the timeout still expires after re-arming.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TimeoutExpiresWhenSilenceExceedsDueTimeAfterAValue()
+    {
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        Signal<int> source = new();
+        List<int> values = [];
+        List<string> errors = [];
+        using var subscription = source.Expire(TimeSpan.FromTicks(DueTicks), clock)
+            .Subscribe(values.Add, ex => errors.Add(ex.GetType().Name));
+
+        clock.AdvanceBy(TimeSpan.FromTicks(ShortGapTicks));
+        source.OnNext(One);
+        clock.AdvanceBy(TimeSpan.FromTicks(DueTicks));
+
+        await Assert.That(values.SequenceEqual([One])).IsTrue();
+        await Assert.That(errors.SequenceEqual([nameof(TimeoutException)])).IsTrue();
+    }
+
+    /// <summary>Verifies an in-flight value wins the race and suppresses the superseded timeout.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TimeoutDoesNotEnterObserverWhileOnNextIsInFlight()
@@ -39,7 +96,7 @@ public sealed class ExpireCoordinatorTests
         await onNextTask.WaitAsync(WaitTimeout).ConfigureAwait(false);
         await timeoutTask.WaitAsync(WaitTimeout).ConfigureAwait(false);
 
-        await Assert.That(observer.Errors).IsEqualTo(One);
+        await Assert.That(observer.Errors).IsEqualTo(0);
         await Assert.That(observer.Values).IsEqualTo(One);
     }
 

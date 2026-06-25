@@ -44,6 +44,9 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
     /// <summary>A value indicating whether the timeout or source has terminated.</summary>
     private int _done;
 
+    /// <summary>Monotonic version used to suppress timeouts superseded by a newer value.</summary>
+    private long _epoch;
+
     /// <summary>Initializes a new instance of the <see cref="ExpireCoordinator{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="dueTime">The timeout period.</param>
@@ -128,6 +131,7 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
     /// <inheritdoc/>
     public void OnNext(T value)
     {
+        long epoch;
         lock (_gate)
         {
             if (_done != 0)
@@ -135,15 +139,24 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
                 return;
             }
 
+            epoch = ++_epoch;
             _observer.OnNext(value);
         }
+
+        ArmTimer(epoch);
     }
 
     /// <summary>Starts observing the source and timeout timer.</summary>
     /// <returns>The coordinator that owns the subscription cleanup.</returns>
     public ExpireCoordinator<T> Run()
     {
-        _timer = _sequencer.Schedule(this, _dueTime, static (_, coordinator) => coordinator.EmitTimeout());
+        long epoch;
+        lock (_gate)
+        {
+            epoch = ++_epoch;
+        }
+
+        ArmTimer(epoch);
         _subscription = _source.Subscribe(this);
         if (Volatile.Read(ref _done) == 0)
         {
@@ -154,16 +167,25 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
         return this;
     }
 
-    /// <summary>Emits the timeout error.</summary>
+    /// <summary>Schedules a fresh inactivity timer for the given epoch and discards the in-flight one.</summary>
+    /// <param name="epoch">The version this timer must still match to fire.</param>
+    private void ArmTimer(long epoch)
+    {
+        var timer = _sequencer.Schedule((Coordinator: this, Epoch: epoch), _dueTime, static (_, state) => state.Coordinator.EmitTimeout(state.Epoch));
+        Interlocked.Exchange(ref _timer, timer)?.Dispose();
+    }
+
+    /// <summary>Emits the timeout error when the firing timer is still current.</summary>
+    /// <param name="epoch">The version captured when the firing timer was armed.</param>
     /// <returns>An empty disposable.</returns>
-    private EmptyDisposable EmitTimeout()
+    private EmptyDisposable EmitTimeout(long epoch)
     {
         var shouldDispose = false;
         try
         {
             lock (_gate)
             {
-                if (_done != 0)
+                if (_done != 0 || epoch != _epoch)
                 {
                     return EmptyDisposable.Instance;
                 }
