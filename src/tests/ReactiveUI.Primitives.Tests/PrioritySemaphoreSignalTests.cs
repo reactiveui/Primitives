@@ -332,6 +332,53 @@ public sealed class PrioritySemaphoreSignalTests
         await Assert.That(observer.OverlapDetected).IsFalse();
     }
 
+    /// <summary>A terminal notification arriving after the signal is already terminal is ignored.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task OnErrorAfterTerminalIsIgnored()
+    {
+        using var signal = new PrioritySemaphoreSignal<int>(InitialMaximumCount);
+        var observer = new RecordingObserver<int>();
+        using var subscription = signal.Subscribe(observer);
+        var first = new InvalidOperationException("first");
+
+        signal.OnError(first);
+        signal.OnError(new InvalidOperationException("second"));
+
+        await Assert.That(observer.Errors.Length).IsEqualTo(1);
+        await Assert.That(observer.Errors[0]).IsSameReferenceAs(first);
+    }
+
+    /// <summary>A throwing delivery still releases drain ownership so a later release can drain again.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DrainReleasesOwnershipWhenDeliveryThrows()
+    {
+        using var signal = new PrioritySemaphoreSignal<int>(InitialMaximumCount);
+        var failure = new InvalidOperationException("boom");
+        var deliveries = 0;
+        using var subscription = signal.Subscribe(
+            _ =>
+            {
+                deliveries++;
+                throw failure;
+            },
+            _ => { },
+            () => { });
+
+        // Delivery throws out of the drain loop; the finally path must still release ownership.
+        var first = Assert.Throws<InvalidOperationException>(() => signal.OnNext(FirstValue));
+        await Assert.That(first).IsSameReferenceAs(failure);
+
+        // Capacity is now exhausted, so this value only enqueues.
+        signal.OnNext(SecondValue);
+
+        // Releasing frees capacity and must begin a fresh drain, proving ownership was released.
+        var second = Assert.Throws<InvalidOperationException>(signal.Release);
+        await Assert.That(second).IsSameReferenceAs(failure);
+        await Assert.That(deliveries).IsEqualTo(FirstDrainCount);
+    }
+
     /// <summary>Starts a background thread running the supplied action.</summary>
     /// <param name="action">The work to run.</param>
     /// <returns>The started thread.</returns>
