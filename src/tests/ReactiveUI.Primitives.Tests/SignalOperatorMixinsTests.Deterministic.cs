@@ -552,6 +552,62 @@ public partial class SignalOperatorMixinsTests
 
         await Assert.That(switched.Values.Count).IsEqualTo(0);
         await Assert.That(switched.Errors[0].Message).IsEqualTo("current-switch");
+
+        await VerifySwitchTerminalGatingBranches();
+    }
+
+    /// <summary>Verifies switch outer-error, deferred-completion, and post-terminal gating branches.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task VerifySwitchTerminalGatingBranches()
+    {
+        // Outer error is forwarded once and gates all subsequent notifications.
+        Signal<IObservable<int>> outerErrorOuter = new();
+        CapturingObservable<int> outerErrorInner = new();
+        RecordingWitness<int> outerErrored = new();
+        using (outerErrorOuter.SwitchTo().Subscribe(outerErrored))
+        {
+            outerErrorOuter.OnNext(outerErrorInner);
+            outerErrorOuter.OnError(new InvalidOperationException("outer-switch"));
+            outerErrorInner.Observer!.OnNext(One);
+            outerErrorInner.Observer.OnCompleted();
+            outerErrorOuter.OnNext(outerErrorInner);
+        }
+
+        await Assert.That(outerErrored.Errors[0].Message).IsEqualTo("outer-switch");
+        await Assert.That(outerErrored.Errors.Count).IsEqualTo(1);
+        await Assert.That(outerErrored.Values.Count).IsEqualTo(0);
+
+        // Outer completes while the inner is still active: completion is deferred until the inner finishes.
+        Signal<IObservable<int>> deferredOuter = new();
+        CapturingObservable<int> deferredInner = new();
+        RecordingWitness<int> deferred = new();
+        using (deferredOuter.SwitchTo().Subscribe(deferred))
+        {
+            deferredOuter.OnNext(deferredInner);
+            deferredOuter.OnCompleted();
+            await Assert.That(deferred.Completed).IsEqualTo(0);
+            deferredInner.Observer!.OnCompleted();
+        }
+
+        await Assert.That(deferred.Completed).IsEqualTo(1);
+
+        // A stale inner completion (superseded version) does not complete the observer.
+        Signal<IObservable<int>> staleCompleteOuter = new();
+        CapturingObservable<int> staleCompleteFirst = new();
+        CapturingObservable<int> staleCompleteSecond = new();
+        RecordingWitness<int> staleCompleted = new();
+        using (staleCompleteOuter.SwitchTo().Subscribe(staleCompleted))
+        {
+            staleCompleteOuter.OnNext(staleCompleteFirst);
+            var staleObserver = staleCompleteFirst.Observer!;
+            staleCompleteOuter.OnNext(staleCompleteSecond);
+            staleCompleteOuter.OnCompleted();
+            staleObserver.OnCompleted();
+            await Assert.That(staleCompleted.Completed).IsEqualTo(0);
+            staleCompleteSecond.Observer!.OnCompleted();
+        }
+
+        await Assert.That(staleCompleted.Completed).IsEqualTo(1);
     }
 
     /// <summary>Verifies the probe operator error, disposal, and completion branches.</summary>
