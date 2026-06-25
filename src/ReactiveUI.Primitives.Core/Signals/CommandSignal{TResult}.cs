@@ -123,6 +123,11 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
             var current = Interlocked.CompareExchange(ref _isRunningState, signal, null);
             if (current is null)
             {
+                // Re-sync against the authoritative flag: a SetRunning call may have run
+                // between the snapshot above and the install, leaving the new stream with a
+                // stale value and no future correcting notification. Closing the window from
+                // the install side complements the re-read in SetRunning.
+                signal.Value = Volatile.Read(ref _isRunning);
                 return signal;
             }
 
@@ -305,6 +310,13 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
         {
             state.Value = value;
         }
+        else
+        {
+            // The stream may be installed concurrently by IsRunningSignal after we wrote the
+            // flag but before reading it back. Re-read and reconcile so the just-installed
+            // stream cannot latch at a stale value; the getter performs the symmetric re-sync.
+            ReconcileRunningState();
+        }
 
         if (value)
         {
@@ -312,6 +324,24 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
         }
 
         Volatile.Write(ref _running, 0);
+    }
+
+    /// <summary>Pushes the authoritative flag onto a concurrently installed stream when it has drifted.</summary>
+    private void ReconcileRunningState()
+    {
+        var state = Volatile.Read(ref _isRunningState);
+        if (state is null)
+        {
+            return;
+        }
+
+        var authoritative = Volatile.Read(ref _isRunning);
+        if (state.TryGetValue(out var current) && current == authoritative)
+        {
+            return;
+        }
+
+        state.Value = authoritative;
     }
 
     /// <summary>Publishes a successful result when the results surface has been requested.</summary>

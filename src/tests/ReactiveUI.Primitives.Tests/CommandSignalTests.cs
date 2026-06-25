@@ -107,4 +107,40 @@ public sealed class CommandSignalTests
         await Assert.That(disposable.IsDisposed).IsTrue();
         await Assert.That(disposed).IsNotNull();
     }
+
+    /// <summary>
+    /// Reproduces the lazy-init race for <see cref="CommandSignal{TResult}.IsRunning"/>: the state
+    /// stream is requested for the first time while an execution is finishing. If the getter
+    /// snapshots a <see langword="true"/> flag and installs the stream after the matching
+    /// completion lowered it, the stream must still settle at <see langword="false"/> rather than
+    /// latching permanently true with no in-flight execution to correct it.
+    /// </summary>
+    /// <returns>A task that completes when every interleaving has settled at false.</returns>
+    [Test]
+    public async Task IsRunningNeverLatchesTrueWhenFirstObservedDuringCompletion()
+    {
+        const int iterations = 20_000;
+
+        for (var iteration = 0; iteration < iterations; iteration++)
+        {
+            CommandSignal<int> command = new(() => CommandResult);
+            using ManualResetEventSlim ready = new(false);
+
+            // Race the first observation of the lazily allocated stream against the execution that
+            // raises and immediately lowers the running flag.
+            var reader = Task.Run(() =>
+            {
+                ready.Wait();
+                return command.IsRunning;
+            });
+
+            ready.Set();
+            _ = command.ExecuteAsync();
+            var stream = await reader;
+
+            // No execution is in flight once ExecuteAsync returns for the synchronous path, so a
+            // stuck-true stream would have no future event to correct it.
+            await Assert.That(stream.Value).IsFalse();
+        }
+    }
 }
