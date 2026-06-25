@@ -230,4 +230,40 @@ public class BehaviourSignalTests
         _ = Assert.Throws<ObjectDisposedException>(() => _ = s.Value);
         await Assert.That(s.TryGetValue(out _)).IsFalse();
     }
+
+    /// <summary>
+    /// A new subscriber that races a live <see cref="BehaviorSignal{T}.OnNext"/> must never observe a newer
+    /// value before the initial value it was promised; the values it receives stay monotonically ordered.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task Subscribe_RacingOnNext_NeverDeliversNewerValueBeforeInitial()
+    {
+        const int subscribeAttempts = 50_000;
+
+        BehaviorSignal<int> signal = new(0);
+        using CancellationTokenSource stop = new();
+        var firstFailure = default(OrderingWitness<int>.OutOfOrderDelivery);
+
+        var producer = Task.Run(() =>
+        {
+            var value = 1;
+            while (!stop.IsCancellationRequested)
+            {
+                signal.OnNext(value++);
+            }
+        });
+
+        for (var attempt = 0; attempt < subscribeAttempts && firstFailure is null; attempt++)
+        {
+            OrderingWitness<int> witness = new();
+            signal.Subscribe(witness).Dispose();
+            firstFailure = witness.OutOfOrder;
+        }
+
+        await stop.CancelAsync();
+        await producer;
+
+        await Assert.That(firstFailure).IsNull();
+    }
 }

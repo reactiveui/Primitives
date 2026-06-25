@@ -50,14 +50,17 @@ public sealed class ForkJoinWitness<TLeft, TRight, TResult>
     /// <summary>Gets or sets the latest right value.</summary>
     private TRight? LatestRight { get; set; }
 
+    /// <summary>Gets or sets a value indicating whether a terminal notification has been emitted.</summary>
+    private bool IsDone { get; set; }
+
     /// <summary>Subscribes to both sources.</summary>
     /// <param name="left">The left source.</param>
     /// <param name="right">The right source.</param>
     /// <returns>The subscriptions.</returns>
     public MultipleDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
         new(
-            left.Subscribe(OnLeftNext, Observer.OnError, OnLeftCompleted),
-            right.Subscribe(OnRightNext, Observer.OnError, OnRightCompleted));
+            left.Subscribe(OnLeftNext, OnError, OnLeftCompleted),
+            right.Subscribe(OnRightNext, OnError, OnRightCompleted));
 
     /// <summary>Records a left value.</summary>
     /// <param name="value">The left value.</param>
@@ -84,77 +87,63 @@ public sealed class ForkJoinWitness<TLeft, TRight, TResult>
     /// <summary>Marks the left source complete.</summary>
     private void OnLeftCompleted()
     {
-        if (!CompleteLeft(out var result, out var emit))
+        lock (_gate)
         {
-            return;
-        }
+            if (IsDone)
+            {
+                return;
+            }
 
-        Finish(result, emit);
+            IsLeftDone = true;
+            TryFinish();
+        }
     }
 
     /// <summary>Marks the right source complete.</summary>
     private void OnRightCompleted()
     {
-        if (!CompleteRight(out var result, out var emit))
+        lock (_gate)
+        {
+            if (IsDone)
+            {
+                return;
+            }
+
+            IsRightDone = true;
+            TryFinish();
+        }
+    }
+
+    /// <summary>Forwards the first source error and gates every later notification.</summary>
+    /// <param name="error">The error to forward.</param>
+    private void OnError(Exception error)
+    {
+        lock (_gate)
+        {
+            if (IsDone)
+            {
+                return;
+            }
+
+            IsDone = true;
+            Observer.OnError(error);
+        }
+    }
+
+    /// <summary>Emits the result and completes once both sources are done.</summary>
+    /// <remarks>Must be called while holding <see cref="_gate"/> so the terminal notification stays serialized.</remarks>
+    private void TryFinish()
+    {
+        if (!IsLeftDone || !IsRightDone)
         {
             return;
         }
 
-        Finish(result, emit);
-    }
+        IsDone = true;
 
-    /// <summary>Completes the left side and computes the result when both sides are done.</summary>
-    /// <param name="result">The result to emit.</param>
-    /// <param name="emit">Whether a result should be emitted.</param>
-    /// <returns><see langword="true"/> when fork-join is ready to finish.</returns>
-    private bool CompleteLeft(out TResult result, out bool emit)
-    {
-        lock (_gate)
+        if (HasLeft && HasRight)
         {
-            IsLeftDone = true;
-            return TryFinish(out result, out emit);
-        }
-    }
-
-    /// <summary>Completes the right side and computes the result when both sides are done.</summary>
-    /// <param name="result">The result to emit.</param>
-    /// <param name="emit">Whether a result should be emitted.</param>
-    /// <returns><see langword="true"/> when fork-join is ready to finish.</returns>
-    private bool CompleteRight(out TResult result, out bool emit)
-    {
-        lock (_gate)
-        {
-            IsRightDone = true;
-            return TryFinish(out result, out emit);
-        }
-    }
-
-    /// <summary>Computes the result when both sources are complete.</summary>
-    /// <param name="result">The result to emit.</param>
-    /// <param name="emit">Whether a result should be emitted.</param>
-    /// <returns><see langword="true"/> when both sources are complete.</returns>
-    private bool TryFinish(out TResult result, out bool emit)
-    {
-        if (!IsLeftDone || !IsRightDone)
-        {
-            result = default!;
-            emit = false;
-            return false;
-        }
-
-        emit = HasLeft && HasRight;
-        result = emit ? Selector(LatestLeft!, LatestRight!) : default!;
-        return true;
-    }
-
-    /// <summary>Emits the result when present, then completes.</summary>
-    /// <param name="result">The result to emit.</param>
-    /// <param name="emit">Whether a result should be emitted.</param>
-    private void Finish(TResult result, bool emit)
-    {
-        if (emit)
-        {
-            Observer.OnNext(result);
+            Observer.OnNext(Selector(LatestLeft!, LatestRight!));
         }
 
         Observer.OnCompleted();
