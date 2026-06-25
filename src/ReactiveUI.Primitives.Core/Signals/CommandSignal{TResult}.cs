@@ -15,6 +15,9 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <summary>Stores synchronous command execution.</summary>
     private readonly Func<TResult>? _executeSync;
 
+    /// <summary>Serializes running-flag writes with running-state stream notifications so the two never diverge.</summary>
+    private readonly Lock _runningGate = new();
+
     /// <summary>Stores null, a single result observer, or an observer array.</summary>
     private object? _resultObservers;
 
@@ -123,6 +126,11 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
             var current = Interlocked.CompareExchange(ref _isRunningState, signal, null);
             if (current is null)
             {
+                // The snapshot above may already be stale: a SetRunning call can run between it and
+                // the install. Reconcile under the running gate so the just-installed stream cannot
+                // latch a stale value, and so a concurrent SetRunning cannot lose its update to a
+                // late seed write here.
+                ReconcileRunningState();
                 return signal;
             }
 
@@ -299,11 +307,14 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <param name="value">The running state.</param>
     private void SetRunning(bool value)
     {
-        Volatile.Write(ref _isRunning, value);
-        var state = Volatile.Read(ref _isRunningState);
-        if (state is not null)
+        // Set the flag and notify the stream through the same gated path the getter uses. Holding
+        // the gate across the flag write and the notification keeps the flag and the stream value
+        // observed together, so the lazy install and a concurrent transition cannot lose each
+        // other's update.
+        lock (_runningGate)
         {
-            state.Value = value;
+            _isRunning = value;
+            PublishRunningState();
         }
 
         if (value)
@@ -313,6 +324,18 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
 
         Volatile.Write(ref _running, 0);
     }
+
+    /// <summary>Seeds a just-installed stream from the authoritative flag without losing a concurrent update.</summary>
+    private void ReconcileRunningState()
+    {
+        lock (_runningGate)
+        {
+            PublishRunningState();
+        }
+    }
+
+    /// <summary>Pushes the authoritative running flag onto the stream when one is installed. Caller holds the gate.</summary>
+    private void PublishRunningState() => Volatile.Read(ref _isRunningState)?.OnNext(_isRunning);
 
     /// <summary>Publishes a successful result when the results surface has been requested.</summary>
     /// <param name="result">The command result.</param>
