@@ -588,6 +588,19 @@ public static partial class LinqExtensions
 
             return new ChainSignal<T>(source, second);
         }
+
+        /// <summary>Continues with <paramref name="second"/> after this sequence completes or errors.</summary>
+        /// <param name="second">The second sequence.</param>
+        /// <returns>A sequence that forwards both sources in order, ignoring errors from the first.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="second"/> is <see langword="null"/>.</exception>
+        public IObservable<T> OnErrorResumeNext(IObservable<T> second)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(second);
+
+            return new OnErrorResumeNextSignal<T>([source, second]);
+        }
     }
 
     /// <summary>Null-filtering operator using System.Reactive vocabulary for an observable source of nullable reference values.</summary>
@@ -707,6 +720,28 @@ public static partial class LinqExtensions
                 : new ShiftSignal<TLeft>(left, dueTime, scheduler);
         }
 
+        /// <summary>Delays source notifications until the specified absolute due time.</summary>
+        /// <param name="dueTime">The absolute time at which notifications may be forwarded.</param>
+        /// <returns>A sequence that forwards source notifications after the due time.</returns>
+        public IObservable<TLeft> Delay(DateTimeOffset dueTime)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(left);
+
+            return new AbsoluteShiftSignal<TLeft>(left, dueTime, ThreadPoolSequencer.Instance);
+        }
+
+        /// <summary>Delays source notifications until the specified absolute due time on a sequencer.</summary>
+        /// <param name="dueTime">The absolute time at which notifications may be forwarded.</param>
+        /// <param name="scheduler">The sequencer used to schedule delayed notifications.</param>
+        /// <returns>A sequence that forwards source notifications after the due time.</returns>
+        public IObservable<TLeft> Delay(DateTimeOffset dueTime, ISequencer? scheduler)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(left);
+
+            scheduler ??= ThreadPoolSequencer.Instance;
+            return new AbsoluteShiftSignal<TLeft>(left, dueTime, scheduler);
+        }
+
         /// <summary>Fails the sequence if it does not terminate before the timeout. System.Reactive name for <c>Expire</c>.</summary>
         /// <param name="dueTime">The timeout duration.</param>
         /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
@@ -727,6 +762,28 @@ public static partial class LinqExtensions
 
             scheduler ??= ThreadPoolSequencer.Instance;
             return new ExpireSignal<TLeft>(left, dueTime, scheduler);
+        }
+
+        /// <summary>Fails the sequence if it does not terminate before the absolute timeout.</summary>
+        /// <param name="dueTime">The absolute timeout time.</param>
+        /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
+        public IObservable<TLeft> Timeout(DateTimeOffset dueTime)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(left);
+
+            return new AbsoluteExpireSignal<TLeft>(left, dueTime, ThreadPoolSequencer.Instance);
+        }
+
+        /// <summary>Fails the sequence if it does not terminate before the absolute sequencer timeout.</summary>
+        /// <param name="dueTime">The absolute timeout time.</param>
+        /// <param name="scheduler">The sequencer used to schedule the timeout.</param>
+        /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
+        public IObservable<TLeft> Timeout(DateTimeOffset dueTime, ISequencer? scheduler)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(left);
+
+            scheduler ??= ThreadPoolSequencer.Instance;
+            return new AbsoluteExpireSignal<TLeft>(left, dueTime, scheduler);
         }
 
         /// <summary>Emits the most recent value at the end of each sampling period. System.Reactive name for <c>Probe</c>.</summary>
@@ -873,6 +930,41 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(sources);
 
             return new TaskChainSignal<T>(sources);
+        }
+    }
+
+    /// <summary>System.Reactive-named type filtering and casting operators for an untyped observable source.</summary>
+    /// <param name="source">The source sequence.</param>
+    extension(IObservable<object?> source)
+    {
+        /// <summary>Filters values to those assignable to <typeparamref name="TResult"/>. System.Reactive name for <c>KeepType</c>.</summary>
+        /// <typeparam name="TResult">The result value type.</typeparam>
+        /// <returns>A sequence containing only values assignable to <typeparamref name="TResult"/>.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Major Code Smell",
+            "S4018:Generic methods should provide type parameters",
+            Justification = "The type parameter defines the element type for this Rx-style operator and cannot be inferred from the arguments.")]
+        public IObservable<TResult> OfType<TResult>()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new KeepTypeSignal<TResult>(source);
+        }
+
+        /// <summary>Casts each source value to <typeparamref name="TResult"/>. System.Reactive name for <c>CastTo</c>.</summary>
+        /// <typeparam name="TResult">The result value type.</typeparam>
+        /// <returns>A sequence containing each value cast to <typeparamref name="TResult"/>.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Major Code Smell",
+            "S4018:Generic methods should provide type parameters",
+            Justification = "The type parameter defines the element type for this Rx-style operator and cannot be inferred from the arguments.")]
+        public IObservable<TResult> Cast<TResult>()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new CastSignal<TResult>(source);
         }
     }
 }
