@@ -621,6 +621,38 @@ public partial class SignalOperatorMixinsTests
         }
 
         await Assert.That(staleCompleted.Completed).IsEqualTo(1);
+
+        // An inner error makes the coordinator terminal while the outer source stays live, so a
+        // later source switch and a later outer error are both gated.
+        Signal<IObservable<int>> innerErrorOuter = new();
+        CapturingObservable<int> innerErrorFirst = new();
+        CapturingObservable<int> innerErrorLate = new();
+        RecordingWitness<int> innerErrored = new();
+        using (innerErrorOuter.SwitchTo().Subscribe(innerErrored))
+        {
+            innerErrorOuter.OnNext(innerErrorFirst);
+            innerErrorFirst.Observer!.OnError(new InvalidOperationException("inner-switch"));
+            innerErrorOuter.OnNext(innerErrorLate);
+            innerErrorOuter.OnError(new InvalidOperationException("ignored"));
+        }
+
+        await Assert.That(innerErrored.Errors.Count).IsEqualTo(1);
+        await Assert.That(innerErrored.Errors[0].Message).IsEqualTo("inner-switch");
+        await Assert.That(innerErrorLate.Observer).IsNull();
+
+        // A terminal coordinator also gates a later outer completion (outer source still live).
+        Signal<IObservable<int>> innerErrorCompleteOuter = new();
+        CapturingObservable<int> innerErrorCompleteInner = new();
+        RecordingWitness<int> innerErrorCompleted = new();
+        using (innerErrorCompleteOuter.SwitchTo().Subscribe(innerErrorCompleted))
+        {
+            innerErrorCompleteOuter.OnNext(innerErrorCompleteInner);
+            innerErrorCompleteInner.Observer!.OnError(new InvalidOperationException("inner-complete-gate"));
+            innerErrorCompleteOuter.OnCompleted();
+        }
+
+        await Assert.That(innerErrorCompleted.Errors.Count).IsEqualTo(1);
+        await Assert.That(innerErrorCompleted.Completed).IsEqualTo(0);
     }
 
     /// <summary>Verifies the probe operator error, disposal, and completion branches.</summary>

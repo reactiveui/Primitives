@@ -255,6 +255,31 @@ public sealed class SwitchWitnessTests
         await Assert.That(inner.Observer).IsNull();
     }
 
+    /// <summary>Verifies a terminal witness gates a later source switch and outer error while the outer source stays live.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SwitchWitnessGatesLateNotificationsAfterInnerError()
+    {
+        RecordingWitness<int> observer = new();
+        Signal<IObservable<int>> outer = new();
+        CapturingObservable<int> first = new();
+        CapturingObservable<int> late = new();
+        using var subscription = new SwitchWitness<int>(observer).Run(outer);
+
+        outer.OnNext(first);
+
+        // An inner error makes the witness terminal without stopping the outer source.
+        first.Observer!.OnError(new InvalidOperationException("boom"));
+        await Assert.That(observer.Errors).HasSingleItem();
+
+        // Subsequent source switches and outer errors are gated: nothing more is forwarded.
+        outer.OnNext(late);
+        outer.OnError(new InvalidOperationException("late"));
+
+        await Assert.That(late.Observer).IsNull();
+        await Assert.That(observer.Errors).HasSingleItem();
+    }
+
     /// <summary>Verifies disposal mid-switch disposes the active inner subscription.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
