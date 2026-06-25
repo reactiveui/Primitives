@@ -80,7 +80,7 @@ public static partial class LinqExtensions
         internal ShiftSignal(IObservable<T> source, TimeSpan dueTime, ISequencer scheduler)
         {
             _source = source;
-            _dueTime = dueTime;
+            _dueTime = Sequencer.Normalize(dueTime);
             _scheduler = scheduler;
         }
 
@@ -105,14 +105,283 @@ public static partial class LinqExtensions
         /// <summary>Subscribes to the source and schedules each notification by the delay.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <returns>The disposable that cancels the source subscription and pending timers.</returns>
-        private MultipleDisposable RunCore(IObserver<T> observer)
+        private ShiftCoordinator<T> RunCore(IObserver<T> observer)
         {
-            MultipleDisposable pocket = [];
-            pocket.Add(_source.Subscribe(
-                value => pocket.Add(_scheduler.Schedule(_dueTime, () => observer.OnNext(value))),
-                error => pocket.Add(_scheduler.Schedule(_dueTime, () => observer.OnError(error))),
-                () => pocket.Add(_scheduler.Schedule(_dueTime, observer.OnCompleted))));
-            return pocket;
+            ShiftCoordinator<T> coordinator = new(_source, _dueTime, _scheduler, observer);
+            return coordinator.Run();
+        }
+    }
+
+    /// <summary>Coordinates delayed notification delivery with a single serialized timer.</summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    private sealed class ShiftCoordinator<T> : IDisposable
+    {
+        /// <summary>The source observable.</summary>
+        private readonly IObservable<T> _source;
+
+        /// <summary>The normalized delay applied to each notification.</summary>
+        private readonly TimeSpan _dueTime;
+
+        /// <summary>The sequencer used to schedule delayed notifications.</summary>
+        private readonly ISequencer _sequencer;
+
+        /// <summary>The downstream observer.</summary>
+        private readonly IObserver<T> _observer;
+
+        /// <summary>Serializes queue state and downstream callbacks.</summary>
+        private readonly Lock _gate = new();
+
+        /// <summary>Active source and timer resources.</summary>
+        private readonly MultipleDisposable _subscriptions = [];
+
+        /// <summary>The single active timer slot.</summary>
+        private readonly SingleReplaceableDisposable _timer = new();
+
+        /// <summary>Queued delayed notifications in source order.</summary>
+        private readonly Queue<DelayedNotification> _queue = [];
+
+        /// <summary>A value indicating whether a timer or drain is active.</summary>
+        private bool _timerActive;
+
+        /// <summary>A value indicating whether the source has already signaled terminal notification.</summary>
+        private bool _sourceStopped;
+
+        /// <summary>A value indicating whether a terminal notification has been delivered.</summary>
+        private bool _done;
+
+        /// <summary>Tracks disposal.</summary>
+        private int _disposed;
+
+        /// <summary>Initializes a new instance of the <see cref="ShiftCoordinator{T}"/> class.</summary>
+        /// <param name="source">The source observable.</param>
+        /// <param name="dueTime">The normalized delay applied to each notification.</param>
+        /// <param name="sequencer">The sequencer used to schedule delayed notifications.</param>
+        /// <param name="observer">The downstream observer.</param>
+        internal ShiftCoordinator(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer, IObserver<T> observer)
+        {
+            _source = source;
+            _dueTime = dueTime;
+            _sequencer = sequencer;
+            _observer = observer;
+        }
+
+        /// <summary>The queued notification kind.</summary>
+        private enum NotificationKind
+        {
+            /// <summary>A value notification.</summary>
+            Next,
+
+            /// <summary>An error notification.</summary>
+            Error,
+
+            /// <summary>A completion notification.</summary>
+            Completed
+        }
+
+        /// <summary>Gets a value indicating whether the coordinator is disposed.</summary>
+        private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+
+            _timer.Dispose();
+            _subscriptions.Dispose();
+        }
+
+        /// <summary>Starts the delayed notification coordinator.</summary>
+        /// <returns>The coordinator that owns the subscription cleanup.</returns>
+        internal ShiftCoordinator<T> Run()
+        {
+            _subscriptions.Add(_timer);
+            _subscriptions.Add(_source.Subscribe(OnNext, OnError, OnCompleted));
+            return this;
+        }
+
+        /// <summary>Queues a source value for delayed delivery.</summary>
+        /// <param name="value">The source value.</param>
+        private void OnNext(T value) => Enqueue(DelayedNotification.Next(value, DueAt()), isTerminal: false);
+
+        /// <summary>Queues a source error for delayed delivery behind earlier values.</summary>
+        /// <param name="error">The source error.</param>
+        private void OnError(Exception error) => Enqueue(DelayedNotification.Failure(error, DueAt()), isTerminal: true);
+
+        /// <summary>Queues source completion for delayed delivery behind earlier values.</summary>
+        private void OnCompleted() => Enqueue(DelayedNotification.Completed(DueAt()), isTerminal: true);
+
+        /// <summary>Computes the due time for the current source notification.</summary>
+        /// <returns>The absolute due time.</returns>
+        private DateTimeOffset DueAt() => _sequencer.Now + _dueTime;
+
+        /// <summary>Queues a notification and starts the timer when this item owns the drain.</summary>
+        /// <param name="notification">The delayed notification.</param>
+        /// <param name="isTerminal">A value indicating whether the notification stops the source.</param>
+        private void Enqueue(DelayedNotification notification, bool isTerminal)
+        {
+            TimeSpan delay = default;
+            var shouldSchedule = false;
+            lock (_gate)
+            {
+                if (IsDisposed || _done || _sourceStopped)
+                {
+                    return;
+                }
+
+                if (isTerminal)
+                {
+                    _sourceStopped = true;
+                }
+
+                _queue.Enqueue(notification);
+                if (!_timerActive)
+                {
+                    _timerActive = true;
+                    delay = DelayUntil(notification.DueAt);
+                    shouldSchedule = true;
+                }
+            }
+
+            if (!shouldSchedule)
+            {
+                return;
+            }
+
+            Schedule(delay);
+        }
+
+        /// <summary>Schedules the single active drain timer.</summary>
+        /// <param name="delay">The delay before the drain should run.</param>
+        private void Schedule(TimeSpan delay) => _timer.Create(_sequencer.Schedule(delay, Tick));
+
+        /// <summary>Drains all due notifications in FIFO order.</summary>
+        private void Tick()
+        {
+            while (true)
+            {
+                TimeSpan delay;
+                var shouldReschedule = false;
+                var terminal = false;
+                lock (_gate)
+                {
+                    if (IsDisposed || _done)
+                    {
+                        _timerActive = false;
+                        return;
+                    }
+
+                    if (_queue.Count == 0)
+                    {
+                        _timerActive = false;
+                        return;
+                    }
+
+                    delay = DelayUntil(_queue.Peek().DueAt);
+                    if (delay > TimeSpan.Zero)
+                    {
+                        shouldReschedule = true;
+                    }
+                    else
+                    {
+                        terminal = Deliver(_queue.Dequeue());
+                    }
+                }
+
+                if (shouldReschedule)
+                {
+                    Schedule(delay);
+                    return;
+                }
+
+                if (terminal)
+                {
+                    Dispose();
+                    return;
+                }
+            }
+        }
+
+        /// <summary>Forwards a queued notification while the caller holds the gate.</summary>
+        /// <param name="notification">The queued notification.</param>
+        /// <returns><see langword="true"/> when a terminal notification was delivered.</returns>
+        private bool Deliver(DelayedNotification notification)
+        {
+            switch (notification.Kind)
+            {
+                case NotificationKind.Next:
+                {
+                    _observer.OnNext(notification.Value!);
+                    return false;
+                }
+
+                case NotificationKind.Error:
+                {
+                    _done = true;
+                    _observer.OnError(notification.Error!);
+                    return true;
+                }
+
+                default:
+                {
+                    _done = true;
+                    _observer.OnCompleted();
+                    return true;
+                }
+            }
+        }
+
+        /// <summary>Computes the remaining delay for an absolute due time.</summary>
+        /// <param name="dueAt">The absolute due time.</param>
+        /// <returns>The remaining non-negative delay.</returns>
+        private TimeSpan DelayUntil(DateTimeOffset dueAt) => Sequencer.Normalize(dueAt - _sequencer.Now);
+
+        /// <summary>A delayed source notification.</summary>
+        private sealed class DelayedNotification
+        {
+            /// <summary>Initializes a new instance of the <see cref="DelayedNotification"/> struct.</summary>
+            /// <param name="kind">The notification kind.</param>
+            /// <param name="value">The notification value.</param>
+            /// <param name="error">The notification error.</param>
+            /// <param name="dueAt">The notification due time.</param>
+            private DelayedNotification(NotificationKind kind, T? value, Exception? error, DateTimeOffset dueAt)
+            {
+                Kind = kind;
+                Value = value;
+                Error = error;
+                DueAt = dueAt;
+            }
+
+            /// <summary>Gets the notification kind.</summary>
+            public NotificationKind Kind { get; }
+
+            /// <summary>Gets the notification value.</summary>
+            public T? Value { get; }
+
+            /// <summary>Gets the notification error.</summary>
+            public Exception? Error { get; }
+
+            /// <summary>Gets the notification due time.</summary>
+            public DateTimeOffset DueAt { get; }
+
+            /// <summary>Creates a value notification.</summary>
+            /// <param name="value">The notification value.</param>
+            /// <param name="dueAt">The notification due time.</param>
+            /// <returns>The delayed notification.</returns>
+            public static DelayedNotification Next(T value, DateTimeOffset dueAt) => new(NotificationKind.Next, value, null, dueAt);
+
+            /// <summary>Creates an error notification.</summary>
+            /// <param name="error">The notification error.</param>
+            /// <param name="dueAt">The notification due time.</param>
+            /// <returns>The delayed notification.</returns>
+            public static DelayedNotification Failure(Exception error, DateTimeOffset dueAt) => new(NotificationKind.Error, default, error, dueAt);
+
+            /// <summary>Creates a completion notification.</summary>
+            /// <param name="dueAt">The notification due time.</param>
+            /// <returns>The delayed notification.</returns>
+            public static DelayedNotification Completed(DateTimeOffset dueAt) => new(NotificationKind.Completed, default, null, dueAt);
         }
     }
 
