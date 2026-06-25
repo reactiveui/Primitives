@@ -23,6 +23,9 @@ internal sealed class SequencerWorkItem<TSequencer, TState> : IDisposable
     /// <summary>Action invoked when the scheduled item runs.</summary>
     private readonly Func<ISequencer, TState, IDisposable> _action;
 
+    /// <summary>Disposable returned by the scheduled action after it starts.</summary>
+    private IDisposable? _disposable;
+
     /// <summary>Tracks cancellation.</summary>
     private int _isDisposed;
 
@@ -38,7 +41,15 @@ internal sealed class SequencerWorkItem<TSequencer, TState> : IDisposable
     }
 
     /// <summary>Cancels the work item.</summary>
-    public void Dispose() => Interlocked.Exchange(ref _isDisposed, 1);
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
+        {
+            return;
+        }
+
+        Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
+    }
 
     /// <summary>Invokes the scheduled action if it has not been cancelled.</summary>
     public void Invoke()
@@ -48,6 +59,7 @@ internal sealed class SequencerWorkItem<TSequencer, TState> : IDisposable
             return;
         }
 
-        _ = _action(_sequencer, _state);
+        var disposable = _action(_sequencer, _state) ?? EmptyDisposable.Instance;
+        SequencerWorkItemDisposal.Publish(ref _disposable, disposable);
     }
 }

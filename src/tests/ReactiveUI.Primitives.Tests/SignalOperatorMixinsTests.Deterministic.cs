@@ -35,6 +35,9 @@ public partial class SignalOperatorMixinsTests
     /// <summary>The integer constant thirty-two.</summary>
     private const int ThirtyTwo = 32;
 
+    /// <summary>Iterations used to stress the work item invoke/dispose race.</summary>
+    private const int RaceIterations = 256;
+
     /// <summary>The long constant two.</summary>
     private const long TwoLong = 2L;
 
@@ -808,13 +811,14 @@ public partial class SignalOperatorMixinsTests
         SequencerWorkItem<ISequencer, int> helper = new(Sequencer.Immediate, One, (_, state) =>
         {
             helperValues.Add(state);
-            return EmptyDisposable.Instance;
+            return new ActionDisposable(() => { });
         });
         helper.Invoke();
         helper.Dispose();
         helper.Invoke();
         int[] expectedHelperValues = [One];
         await Assert.That(helperValues.SequenceEqual(expectedHelperValues)).IsTrue();
+        await VerifySequencerWorkItemDisposalBranches();
         ScheduledItem<int> unusedScheduled =
             ScheduledItem.Create(Sequencer.Immediate, "unused", (_, _) => EmptyDisposable.Instance, One);
         await Assert.That(new SequencerQueue<int>().Remove(unusedScheduled)).IsFalse();
@@ -828,6 +832,89 @@ public partial class SignalOperatorMixinsTests
         for (var i = 0; i < TwentySix; i++)
         {
             await Assert.That(shrink.Dequeue()).IsEqualTo(i);
+        }
+    }
+
+    /// <summary>Verifies the sequencer work item disposes the action's disposable across invoke and dispose orderings.</summary>
+    /// <returns>A task representing the asynchronous verification.</returns>
+    private static async Task VerifySequencerWorkItemDisposalBranches()
+    {
+        // Invoke then dispose: the published disposable is released by Dispose exactly once,
+        // and a redundant second Dispose is a no-op.
+        var invokeThenDisposeReleased = 0;
+        SequencerWorkItem<ISequencer, int> invokeThenDispose = new(Sequencer.Immediate, One, (_, _) =>
+            new ActionDisposable(() => Interlocked.Increment(ref invokeThenDisposeReleased)));
+        invokeThenDispose.Invoke();
+        invokeThenDispose.Dispose();
+        invokeThenDispose.Dispose();
+        await Assert.That(invokeThenDisposeReleased).IsEqualTo(1);
+
+        // A null action result is coalesced to an empty disposable and never throws.
+        var nullActionRan = false;
+        SequencerWorkItem<ISequencer, int> nullAction = new(Sequencer.Immediate, One, (_, _) =>
+        {
+            nullActionRan = true;
+            return null!;
+        });
+        nullAction.Invoke();
+        nullAction.Dispose();
+        await Assert.That(nullActionRan).IsTrue();
+
+        await VerifySequencerWorkItemPublishBranches();
+        await VerifySequencerWorkItemDisposeRaceInvariant();
+    }
+
+    /// <summary>Verifies both compare-exchange outcomes of <c>SequencerWorkItem.Publish</c>.</summary>
+    /// <returns>A task representing the asynchronous verification.</returns>
+    private static async Task VerifySequencerWorkItemPublishBranches()
+    {
+        // Publish wins the empty slot: the disposable is stored and left alive for Dispose.
+        var stored = 0;
+        ActionDisposable storedDisposable = new(() => Interlocked.Increment(ref stored));
+        IDisposable? winSlot = null;
+        SequencerWorkItemDisposal.Publish(ref winSlot, storedDisposable);
+        await Assert.That(ReferenceEquals(winSlot, storedDisposable)).IsTrue();
+        await Assert.That(stored).IsEqualTo(0);
+
+        // Publish loses to disposal (slot already claimed): the disposable is released immediately.
+        var loserDisposed = 0;
+        ActionDisposable loser = new(() => Interlocked.Increment(ref loserDisposed));
+        IDisposable? loseSlot = EmptyDisposable.Instance;
+        SequencerWorkItemDisposal.Publish(ref loseSlot, loser);
+        await Assert.That(loserDisposed).IsEqualTo(1);
+        await Assert.That(ReferenceEquals(loseSlot, EmptyDisposable.Instance)).IsTrue();
+    }
+
+    /// <summary>Verifies the action's disposable is released exactly once when invoke and dispose race.</summary>
+    /// <returns>A task representing the asynchronous verification.</returns>
+    private static async Task VerifySequencerWorkItemDisposeRaceInvariant()
+    {
+        for (var iteration = 0; iteration < RaceIterations; iteration++)
+        {
+            var created = 0;
+            var disposed = 0;
+            SequencerWorkItem<ISequencer, int> item = new(Sequencer.Immediate, One, (_, _) =>
+            {
+                _ = Interlocked.Increment(ref created);
+                return new ActionDisposable(() => Interlocked.Increment(ref disposed));
+            });
+
+            using Barrier barrier = new(2);
+            Task invoke = Task.Run(() =>
+            {
+                barrier.SignalAndWait();
+                item.Invoke();
+            });
+            Task dispose = Task.Run(() =>
+            {
+                barrier.SignalAndWait();
+                item.Dispose();
+            });
+            await Task.WhenAll(invoke, dispose);
+
+            // Whenever the action produced a disposable it is released once; otherwise nothing leaks.
+            await Assert.That(disposed).IsEqualTo(created);
+            await Assert.That(created <= 1).IsTrue();
         }
     }
 
