@@ -833,7 +833,11 @@ public partial class SignalOperatorMixinsTests
             _ = release.Wait(DelayForRaceMilliseconds);
             return new ActionDisposable(() => Interlocked.Increment(ref beforeInvokeDisposed));
         });
-        Task invoke = Task.Run(before.Invoke);
+        Task invoke = Task.Factory.StartNew(
+            before.Invoke,
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
         await Assert.That(started.Wait(DelayForRaceMilliseconds)).IsTrue();
         before.Dispose();
         release.Set();
@@ -849,7 +853,11 @@ public partial class SignalOperatorMixinsTests
             _ = releaseFirst.Wait(DelayForRaceMilliseconds);
             return new ActionDisposable(() => Interlocked.Increment(ref invokeFirstDisposed));
         });
-        Task invokeFirstTask = Task.Run(invokeFirst.Invoke);
+        Task invokeFirstTask = Task.Factory.StartNew(
+            invokeFirst.Invoke,
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
         await Assert.That(startedFirst.Wait(DelayForRaceMilliseconds)).IsTrue();
         releaseFirst.Set();
         await Task.Yield();
