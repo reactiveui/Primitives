@@ -795,13 +795,14 @@ public partial class SignalOperatorMixinsTests
         SequencerWorkItem<ISequencer, int> helper = new(Sequencer.Immediate, One, (_, state) =>
         {
             helperValues.Add(state);
-            return EmptyDisposable.Instance;
+            return new ActionDisposable(() => { });
         });
         helper.Invoke();
         helper.Dispose();
         helper.Invoke();
         int[] expectedHelperValues = [One];
         await Assert.That(helperValues.SequenceEqual(expectedHelperValues)).IsTrue();
+        await VerifySequencerWorkItemDisposalBranches();
         ScheduledItem<int> unusedScheduled =
             ScheduledItem.Create(Sequencer.Immediate, "unused", (_, _) => EmptyDisposable.Instance, One);
         await Assert.That(new SequencerQueue<int>().Remove(unusedScheduled)).IsFalse();
@@ -816,6 +817,35 @@ public partial class SignalOperatorMixinsTests
         {
             await Assert.That(shrink.Dequeue()).IsEqualTo(i);
         }
+    }
+
+    /// <summary>Verifies the sequencer work item disposes returned disposables on disposal race paths.</summary>
+    /// <returns>A task representing the asynchronous verification.</returns>
+    private static async Task VerifySequencerWorkItemDisposalBranches()
+    {
+        const int DelayForRaceMilliseconds = 1000;
+        int beforeInvokeDisposed = 0;
+        using ManualResetEventSlim started = new();
+        using ManualResetEventSlim release = new();
+        SequencerWorkItem<ISequencer, int> before = new(Sequencer.Immediate, One, (_, _) =>
+        {
+            started.Set();
+            _ = release.Wait(DelayForRaceMilliseconds);
+            return new ActionDisposable(() => Interlocked.Increment(ref beforeInvokeDisposed));
+        });
+        Task invoke = Task.Run(before.Invoke);
+        await Assert.That(started.Wait(DelayForRaceMilliseconds)).IsTrue();
+        before.Dispose();
+        release.Set();
+        await invoke;
+        await Assert.That(beforeInvokeDisposed).IsEqualTo(1);
+
+        int afterInvokeDisposed = 0;
+        SequencerWorkItem<ISequencer, int> after = new(Sequencer.Immediate, One, (_, _) =>
+            new ActionDisposable(() => Interlocked.Increment(ref afterInvokeDisposed)));
+        after.Invoke();
+        after.Dispose();
+        await Assert.That(afterInvokeDisposed).IsEqualTo(1);
     }
 
     /// <summary>Verifies the thread pool absolute scheduling and scheduled work item disposal branches.</summary>
