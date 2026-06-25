@@ -39,7 +39,7 @@ public static partial class Signal
         Func<CancellationTokenSource, Task<RxVoid>> execution,
         ISequencer? scheduler,
         CancellationTokenSource? cancellationTokenSource) =>
-        CreateTaskSignal(execution, static _ => true, scheduler, cancellationTokenSource);
+        CreateTaskSignal(execution, scheduler, cancellationTokenSource);
 
     /// <summary>Froms the asynchronous.</summary>
     /// <typeparam name="TResult">The type of the return value.</typeparam>
@@ -72,24 +72,22 @@ public static partial class Signal
         Func<CancellationTokenSource, Task<TResult>> actionAsync,
         ISequencer? scheduler,
         CancellationTokenSource? cancellationTokenSource) =>
-        CreateTaskSignal(actionAsync, static _ => true, scheduler, cancellationTokenSource);
+        CreateTaskSignal(actionAsync, scheduler, cancellationTokenSource);
 
     /// <summary>Executes the CreateTaskSignal operation.</summary>
     /// <typeparam name="TResult">The TResult type.</typeparam>
     /// <param name="execution">The execution value.</param>
-    /// <param name="shouldEmit">The shouldEmit value.</param>
     /// <param name="scheduler">The scheduler value.</param>
     /// <param name="cancellationTokenSource">The cancellationTokenSource value.</param>
     /// <returns>The result.</returns>
     private static ITaskSignal<TResult> CreateTaskSignal<TResult>(
         Func<CancellationTokenSource, Task<TResult>> execution,
-        Func<TResult, bool> shouldEmit,
         ISequencer? scheduler,
         CancellationTokenSource? cancellationTokenSource) =>
         ReferenceEquals(scheduler, Sequencer.Immediate)
-            ? new ImmediateTaskSignal<TResult>(execution, shouldEmit, cancellationTokenSource)
+            ? new ImmediateTaskSignal<TResult>(execution, cancellationTokenSource)
             : TaskSignal.Create<TResult>(
-                ao => Lazy(() => Create<TResult>(observer => SubscribeTask(ao, execution, shouldEmit, observer))),
+                ao => Lazy(() => Create<TResult>(observer => SubscribeTask(ao, execution, observer))),
                 scheduler,
                 cancellationTokenSource);
 
@@ -97,19 +95,16 @@ public static partial class Signal
     /// <typeparam name="TResult">The TResult type.</typeparam>
     /// <param name="signal">The signal value.</param>
     /// <param name="execution">The execution value.</param>
-    /// <param name="shouldEmit">The shouldEmit value.</param>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
     private static IDisposable SubscribeTask<TResult>(
         ITaskSignal<TResult> signal,
         Func<CancellationTokenSource, Task<TResult>> execution,
-        Func<TResult, bool> shouldEmit,
         IObserver<TResult> observer)
     {
         var source = signal.CancellationTokenSource!;
         var token = source.Token;
         token.ThrowIfCancellationRequested();
-        TaskStopGate gate = new();
         Task<TResult> task;
         try
         {
@@ -117,15 +112,17 @@ public static partial class Signal
         }
         catch (Exception error)
         {
-            return EmitError(gate, observer, error);
+            observer.OnError(error);
+            return EmptyDisposable.Instance;
         }
 
-        if (TryEmitSynchronously(task, shouldEmit, observer, gate, token, out var synchronous))
+        if (TryEmitSynchronously(task, observer, token))
         {
-            return synchronous;
+            return EmptyDisposable.Instance;
         }
 
-        _ = ObserveTask(task.WhenCancelled(token), shouldEmit, observer, gate, token);
+        TaskStopGate gate = new();
+        _ = ObserveTask(task.WhenCancelled(token), observer, gate, token);
 
         return CancelOnDispose(gate, source);
     }
@@ -148,87 +145,46 @@ public static partial class Signal
     /// <summary>Emits a synchronous terminal notification when the task has already finished.</summary>
     /// <typeparam name="TResult">The TResult type.</typeparam>
     /// <param name="task">The task to inspect.</param>
-    /// <param name="shouldEmit">The result filter.</param>
     /// <param name="observer">The observer value.</param>
-    /// <param name="gate">The terminal-notification gate shared with the disposer.</param>
     /// <param name="token">The token value.</param>
-    /// <param name="disposable">The disposable returned when a synchronous terminal was produced.</param>
     /// <returns><see langword="true"/> when a synchronous terminal notification was produced.</returns>
+    /// <remarks>
+    /// Runs before any disposer is handed out, so no dispose race is possible and the emission is ungated.
+    /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4462:Calls to \"async\" methods should not be blocking",
         Justification = "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
     private static bool TryEmitSynchronously<TResult>(
         Task<TResult> task,
-        Func<TResult, bool> shouldEmit,
         IObserver<TResult> observer,
-        TaskStopGate gate,
-        CancellationToken token,
-        out IDisposable disposable)
+        CancellationToken token)
     {
         if (task.Status == TaskStatus.RanToCompletion)
         {
-            var result = task.Result;
-            disposable = shouldEmit(result)
-                ? EmitResult(gate, observer, result)
-                : EmitError(gate, observer, new OperationCanceledException());
+            observer.OnNext(task.Result);
+            observer.OnCompleted();
             return true;
         }
 
         if (task.IsCanceled || token.IsCancellationRequested)
         {
-            disposable = EmitError(gate, observer, new OperationCanceledException());
+            observer.OnError(new OperationCanceledException());
             return true;
         }
 
-        if (task.IsFaulted)
+        if (!task.IsFaulted)
         {
-            disposable = EmitError(gate, observer, task.Exception!.InnerException ?? task.Exception);
-            return true;
+            return false;
         }
 
-        disposable = EmptyDisposable.Instance;
-        return false;
+        observer.OnError(task.Exception!.InnerException ?? task.Exception);
+        return true;
     }
 
-    /// <summary>Emits a successful result and completion through the gate.</summary>
-    /// <typeparam name="TResult">The TResult type.</typeparam>
-    /// <param name="gate">The terminal-notification gate shared with the disposer.</param>
-    /// <param name="observer">The observer value.</param>
-    /// <param name="result">The task result.</param>
-    /// <returns>An empty disposable.</returns>
-    private static EmptyDisposable EmitResult<TResult>(TaskStopGate gate, IObserver<TResult> observer, TResult result)
-    {
-        if (!gate.TryStop())
-        {
-            return EmptyDisposable.Instance;
-        }
-
-        observer.OnNext(result);
-        observer.OnCompleted();
-        return EmptyDisposable.Instance;
-    }
-
-    /// <summary>Emits an error through the gate.</summary>
-    /// <typeparam name="TResult">The TResult type.</typeparam>
-    /// <param name="gate">The terminal-notification gate shared with the disposer.</param>
-    /// <param name="observer">The observer value.</param>
-    /// <param name="error">The error to emit.</param>
-    /// <returns>An empty disposable.</returns>
-    private static EmptyDisposable EmitError<TResult>(TaskStopGate gate, IObserver<TResult> observer, Exception error)
-    {
-        if (gate.TryStop())
-        {
-            observer.OnError(error);
-        }
-
-        return EmptyDisposable.Instance;
-    }
-
-    /// <summary>Executes the ObserveTask operation.</summary>
+    /// <summary>Observes a pending task and forwards the terminal notification while honoring disposal.</summary>
     /// <typeparam name="TResult">The TResult type.</typeparam>
     /// <param name="cancellableTask">The cancellableTask value.</param>
-    /// <param name="shouldEmit">The shouldEmit value.</param>
     /// <param name="observer">The observer value.</param>
     /// <param name="gate">The terminal-notification gate shared with the disposer.</param>
     /// <param name="token">The token value.</param>
@@ -240,7 +196,6 @@ public static partial class Signal
     /// </remarks>
     private static async Task ObserveTask<TResult>(
         Task<(TResult Value, bool IsCanceled)> cancellableTask,
-        Func<TResult, bool> shouldEmit,
         IObserver<TResult> observer,
         TaskStopGate gate,
         CancellationToken token)
@@ -248,13 +203,27 @@ public static partial class Signal
         try
         {
             var (result, isCanceled) = await cancellableTask.ConfigureAwait(false);
-            _ = !isCanceled && !token.IsCancellationRequested && shouldEmit(result)
-                ? EmitResult(gate, observer, result)
-                : EmitError(gate, observer, new OperationCanceledException());
+            if (!gate.TryStop())
+            {
+                return;
+            }
+
+            if (!isCanceled && !token.IsCancellationRequested)
+            {
+                observer.OnNext(result);
+                observer.OnCompleted();
+            }
+            else
+            {
+                observer.OnError(new OperationCanceledException());
+            }
         }
         catch (Exception error)
         {
-            _ = EmitError(gate, observer, error);
+            if (gate.TryStop())
+            {
+                observer.OnError(error);
+            }
         }
     }
 
@@ -279,24 +248,17 @@ public static partial class Signal
         /// <summary>Executes the task.</summary>
         private readonly Func<CancellationTokenSource, Task<TResult>> _execution;
 
-        /// <summary>Filters successful task results.</summary>
-        private readonly Func<TResult, bool> _shouldEmit;
-
         /// <summary>Non-zero after disposal.</summary>
         private int _disposed;
 
         /// <summary>Initializes a new instance of the <see cref="ImmediateTaskSignal{TResult}"/> class.</summary>
         /// <param name="execution">Task factory.</param>
-        /// <param name="shouldEmit">Result filter.</param>
         /// <param name="cancellationTokenSource">Optional cancellation source.</param>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
         public ImmediateTaskSignal(
             Func<CancellationTokenSource, Task<TResult>> execution,
-            Func<TResult, bool> shouldEmit,
             CancellationTokenSource? cancellationTokenSource)
         {
             _execution = execution ?? throw new ArgumentNullException(nameof(execution));
-            _shouldEmit = shouldEmit ?? throw new ArgumentNullException(nameof(shouldEmit));
             SourceCore = cancellationTokenSource ?? new CancellationTokenSource();
         }
 
@@ -335,7 +297,6 @@ public static partial class Signal
             var token = SourceCore.Token;
             token.ThrowIfCancellationRequested();
 
-            TaskStopGate gate = new();
             Task<TResult> task;
             try
             {
@@ -343,15 +304,17 @@ public static partial class Signal
             }
             catch (Exception error)
             {
-                return EmitError(gate, observer, error);
+                observer.OnError(error);
+                return EmptyDisposable.Instance;
             }
 
-            if (TryEmitSynchronously(task, _shouldEmit, observer, gate, token, out var synchronous))
+            if (TryEmitSynchronously(task, observer, token))
             {
-                return synchronous;
+                return EmptyDisposable.Instance;
             }
 
-            _ = ObserveTask(task.WhenCancelled(token), _shouldEmit, observer, gate, token);
+            TaskStopGate gate = new();
+            _ = ObserveTask(task.WhenCancelled(token), observer, gate, token);
 
             return CancelOnDispose(gate, SourceCore);
         }
