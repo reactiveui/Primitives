@@ -92,6 +92,89 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(Volatile.Read(ref completed)).IsEqualTo(0);
     }
 
+    /// <summary>Verifies a delayed error is forwarded after the queued values that precede it.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ShiftForwardsDelayedErrorAfterQueuedValues()
+    {
+        var dueTime = TimeSpan.FromTicks(Ten);
+        RecordingSequencer sequencer = new(DateTimeOffset.UnixEpoch);
+        Signal<int> source = new();
+        RecordingWitness<int> observer = new();
+        InvalidOperationException failure = new("boom");
+        using var subscription = source.Shift(dueTime, sequencer).Subscribe(observer);
+
+        source.OnNext(One);
+        source.OnError(failure);
+
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+
+        sequencer.AdvanceBy(dueTime);
+        sequencer.RunNext();
+
+        await Assert.That(observer.Values.SequenceEqual([One])).IsTrue();
+        await Assert.That(observer.Errors.Count).IsEqualTo(One);
+        await Assert.That(observer.Errors[0]).IsSameReferenceAs(failure);
+        await Assert.That(observer.Completed).IsEqualTo(0);
+        await Assert.That(sequencer.ScheduledCount).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies notifications after a terminal one are dropped while the source is stopped.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ShiftDropsNotificationsAfterTerminalNotification()
+    {
+        var dueTime = TimeSpan.FromTicks(Ten);
+        RecordingSequencer sequencer = new(DateTimeOffset.UnixEpoch);
+        Signal<int> source = new();
+        RecordingWitness<int> observer = new();
+        using var subscription = source.Shift(dueTime, sequencer).Subscribe(observer);
+
+        source.OnNext(One);
+        source.OnCompleted();
+        source.OnNext(Two);
+
+        sequencer.AdvanceBy(dueTime);
+        sequencer.RunNext();
+
+        await Assert.That(observer.Values.SequenceEqual([One])).IsTrue();
+        await Assert.That(observer.Completed).IsEqualTo(One);
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+        await Assert.That(sequencer.ScheduledCount).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies the drain reschedules when the next queued notification is not yet due.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ShiftReschedulesWhenNextNotificationIsNotYetDue()
+    {
+        var step = TimeSpan.FromTicks(Five);
+        var dueTime = TimeSpan.FromTicks(Ten);
+        RecordingSequencer sequencer = new(DateTimeOffset.UnixEpoch);
+        Signal<int> source = new();
+        RecordingWitness<int> observer = new();
+        using var subscription = source.Shift(dueTime, sequencer).Subscribe(observer);
+
+        source.OnNext(One);
+        sequencer.AdvanceBy(step);
+        source.OnNext(Two);
+
+        await Assert.That(sequencer.ScheduledCount).IsEqualTo(One);
+
+        sequencer.AdvanceBy(step);
+        sequencer.RunNext();
+
+        await Assert.That(observer.Values.SequenceEqual([One])).IsTrue();
+        await Assert.That(sequencer.ScheduledCount).IsEqualTo(One);
+
+        sequencer.AdvanceBy(step);
+        sequencer.RunNext();
+
+        await Assert.That(observer.Values.SequenceEqual([One, Two])).IsTrue();
+        await Assert.That(sequencer.ScheduledCount).IsEqualTo(0);
+    }
+
     /// <summary>Sequencer that records scheduled work for deterministic execution.</summary>
     private sealed class RecordingSequencer : ISequencer
     {
