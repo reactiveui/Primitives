@@ -11,12 +11,6 @@ namespace ReactiveUI.Primitives.Signals;
 /// <summary>Provides static factory and operator methods for signals.</summary>
 public static partial class Signal
 {
-    /// <summary>Stores state for the signal implementation.</summary>
-    private const int TaskCompleted = 1;
-
-    /// <summary>Stores state for the signal implementation.</summary>
-    private const int TaskFaulted = 2;
-
     /// <summary>Handles Asnyc Tasks with cancellation.</summary>
     /// <param name="execution">The function to execute.</param>
     /// <returns>
@@ -45,7 +39,7 @@ public static partial class Signal
         Func<CancellationTokenSource, Task<RxVoid>> execution,
         ISequencer? scheduler,
         CancellationTokenSource? cancellationTokenSource) =>
-        CreateTaskSignal(execution, static _ => true, scheduler, cancellationTokenSource);
+        CreateTaskSignal(execution, scheduler, cancellationTokenSource);
 
     /// <summary>Froms the asynchronous.</summary>
     /// <typeparam name="TResult">The type of the return value.</typeparam>
@@ -78,24 +72,22 @@ public static partial class Signal
         Func<CancellationTokenSource, Task<TResult>> actionAsync,
         ISequencer? scheduler,
         CancellationTokenSource? cancellationTokenSource) =>
-        CreateTaskSignal(actionAsync, static _ => true, scheduler, cancellationTokenSource);
+        CreateTaskSignal(actionAsync, scheduler, cancellationTokenSource);
 
     /// <summary>Executes the CreateTaskSignal operation.</summary>
     /// <typeparam name="TResult">The TResult type.</typeparam>
     /// <param name="execution">The execution value.</param>
-    /// <param name="shouldEmit">The shouldEmit value.</param>
     /// <param name="scheduler">The scheduler value.</param>
     /// <param name="cancellationTokenSource">The cancellationTokenSource value.</param>
     /// <returns>The result.</returns>
     private static ITaskSignal<TResult> CreateTaskSignal<TResult>(
         Func<CancellationTokenSource, Task<TResult>> execution,
-        Func<TResult, bool> shouldEmit,
         ISequencer? scheduler,
         CancellationTokenSource? cancellationTokenSource) =>
         ReferenceEquals(scheduler, Sequencer.Immediate)
-            ? new ImmediateTaskSignal<TResult>(execution, shouldEmit, cancellationTokenSource)
+            ? new ImmediateTaskSignal<TResult>(execution, cancellationTokenSource)
             : TaskSignal.Create<TResult>(
-                ao => Lazy(() => Create<TResult>(observer => SubscribeTask(ao, execution, shouldEmit, observer))),
+                ao => Lazy(() => Create<TResult>(observer => SubscribeTask(ao, execution, observer))),
                 scheduler,
                 cancellationTokenSource);
 
@@ -103,23 +95,16 @@ public static partial class Signal
     /// <typeparam name="TResult">The TResult type.</typeparam>
     /// <param name="signal">The signal value.</param>
     /// <param name="execution">The execution value.</param>
-    /// <param name="shouldEmit">The shouldEmit value.</param>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4462:Calls to \"async\" methods should not be blocking",
-        Justification = "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
     private static IDisposable SubscribeTask<TResult>(
         ITaskSignal<TResult> signal,
         Func<CancellationTokenSource, Task<TResult>> execution,
-        Func<TResult, bool> shouldEmit,
         IObserver<TResult> observer)
     {
         var source = signal.CancellationTokenSource!;
         var token = source.Token;
         token.ThrowIfCancellationRequested();
-        var completionState = 0;
         Task<TResult> task;
         try
         {
@@ -127,97 +112,118 @@ public static partial class Signal
         }
         catch (Exception error)
         {
-            Volatile.Write(ref completionState, TaskFaulted);
             observer.OnError(error);
             return EmptyDisposable.Instance;
         }
 
-        if (task.Status == TaskStatus.RanToCompletion)
+        if (TryEmitSynchronously(task, observer, token))
         {
-            var result = task.Result;
-            if (shouldEmit(result))
-            {
-                observer.OnNext(result);
-                Volatile.Write(ref completionState, TaskCompleted);
-                observer.OnCompleted();
-                return EmptyDisposable.Instance;
-            }
-
-            Volatile.Write(ref completionState, TaskFaulted);
-            observer.OnError(new OperationCanceledException());
             return EmptyDisposable.Instance;
         }
 
-        if (task.IsCanceled || token.IsCancellationRequested)
+        TaskStopGate gate = new();
+        _ = ObserveTask(task.WhenCancelled(token), observer, gate, token);
+
+        return CancelOnDispose(gate, source);
+    }
+
+    /// <summary>Builds a disposer that cancels the source if it wins the terminal transition.</summary>
+    /// <param name="gate">The terminal-notification gate shared with the continuation.</param>
+    /// <param name="source">The cancellation source to cancel on disposal.</param>
+    /// <returns>The disposer.</returns>
+    private static ActionDisposable CancelOnDispose(TaskStopGate gate, CancellationTokenSource source) =>
+        new(() =>
         {
-            Volatile.Write(ref completionState, TaskFaulted);
-            observer.OnError(new OperationCanceledException());
-            return EmptyDisposable.Instance;
-        }
-
-        if (task.IsFaulted)
-        {
-            Volatile.Write(ref completionState, TaskFaulted);
-            observer.OnError(task.Exception!.InnerException ?? task.Exception);
-            return EmptyDisposable.Instance;
-        }
-
-        var cancellableTask = task.WhenCancelled(token);
-
-        _ = ObserveTask(
-            cancellableTask,
-            shouldEmit,
-            observer,
-            () => Volatile.Write(ref completionState, TaskCompleted),
-            () => Volatile.Write(ref completionState, TaskFaulted),
-            token);
-
-        return new ActionDisposable(() =>
-        {
-            if (Volatile.Read(ref completionState) == TaskCompleted)
+            if (!gate.TryStop())
             {
                 return;
             }
 
             Cancel(source);
         });
+
+    /// <summary>Emits a synchronous terminal notification when the task has already finished.</summary>
+    /// <typeparam name="TResult">The TResult type.</typeparam>
+    /// <param name="task">The task to inspect.</param>
+    /// <param name="observer">The observer value.</param>
+    /// <param name="token">The token value.</param>
+    /// <returns><see langword="true"/> when a synchronous terminal notification was produced.</returns>
+    /// <remarks>
+    /// Runs before any disposer is handed out, so no dispose race is possible and the emission is ungated.
+    /// </remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S4462:Calls to \"async\" methods should not be blocking",
+        Justification = "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
+    private static bool TryEmitSynchronously<TResult>(
+        Task<TResult> task,
+        IObserver<TResult> observer,
+        CancellationToken token)
+    {
+        if (task.Status == TaskStatus.RanToCompletion)
+        {
+            observer.OnNext(task.Result);
+            observer.OnCompleted();
+            return true;
+        }
+
+        if (task.IsCanceled || token.IsCancellationRequested)
+        {
+            observer.OnError(new OperationCanceledException());
+            return true;
+        }
+
+        if (!task.IsFaulted)
+        {
+            return false;
+        }
+
+        observer.OnError(task.Exception!.InnerException ?? task.Exception);
+        return true;
     }
 
-    /// <summary>Executes the ObserveTask operation.</summary>
+    /// <summary>Observes a pending task and forwards the terminal notification while honoring disposal.</summary>
     /// <typeparam name="TResult">The TResult type.</typeparam>
     /// <param name="cancellableTask">The cancellableTask value.</param>
-    /// <param name="shouldEmit">The shouldEmit value.</param>
     /// <param name="observer">The observer value.</param>
-    /// <param name="setCompleted">The setCompleted value.</param>
-    /// <param name="setFaulted">The setFaulted value.</param>
+    /// <param name="gate">The terminal-notification gate shared with the disposer.</param>
     /// <param name="token">The token value.</param>
     /// <returns>The result.</returns>
+    /// <remarks>
+    /// The terminal notification is gated on <see cref="TaskStopGate.TryStop"/>, the same atomic
+    /// transition the disposer wins when the subscription is torn down. Only the winner emits, so a
+    /// subscription disposed while the task continuation runs never observes a post-dispose notification.
+    /// </remarks>
     private static async Task ObserveTask<TResult>(
         Task<(TResult Value, bool IsCanceled)> cancellableTask,
-        Func<TResult, bool> shouldEmit,
         IObserver<TResult> observer,
-        Action setCompleted,
-        Action setFaulted,
+        TaskStopGate gate,
         CancellationToken token)
     {
         try
         {
             var (result, isCanceled) = await cancellableTask.ConfigureAwait(false);
-            if (!isCanceled && !token.IsCancellationRequested && shouldEmit(result))
+            if (!gate.TryStop())
             {
-                observer.OnNext(result);
-                setCompleted();
-                observer.OnCompleted();
                 return;
             }
 
-            setFaulted();
-            observer.OnError(new OperationCanceledException());
+            if (!isCanceled && !token.IsCancellationRequested)
+            {
+                observer.OnNext(result);
+                observer.OnCompleted();
+            }
+            else
+            {
+                observer.OnError(new OperationCanceledException());
+            }
         }
         catch (Exception error)
         {
-            setFaulted();
-            observer.OnError(error);
+            if (gate.TryStop())
+            {
+                observer.OnError(error);
+            }
         }
     }
 
@@ -242,24 +248,17 @@ public static partial class Signal
         /// <summary>Executes the task.</summary>
         private readonly Func<CancellationTokenSource, Task<TResult>> _execution;
 
-        /// <summary>Filters successful task results.</summary>
-        private readonly Func<TResult, bool> _shouldEmit;
-
         /// <summary>Non-zero after disposal.</summary>
         private int _disposed;
 
         /// <summary>Initializes a new instance of the <see cref="ImmediateTaskSignal{TResult}"/> class.</summary>
         /// <param name="execution">Task factory.</param>
-        /// <param name="shouldEmit">Result filter.</param>
         /// <param name="cancellationTokenSource">Optional cancellation source.</param>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
         public ImmediateTaskSignal(
             Func<CancellationTokenSource, Task<TResult>> execution,
-            Func<TResult, bool> shouldEmit,
             CancellationTokenSource? cancellationTokenSource)
         {
             _execution = execution ?? throw new ArgumentNullException(nameof(execution));
-            _shouldEmit = shouldEmit ?? throw new ArgumentNullException(nameof(shouldEmit));
             SourceCore = cancellationTokenSource ?? new CancellationTokenSource();
         }
 
@@ -290,10 +289,6 @@ public static partial class Signal
         }
 
         /// <inheritdoc/>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Major Code Smell",
-            "S4462:Calls to \"async\" methods should not be blocking",
-            Justification = "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
@@ -313,42 +308,15 @@ public static partial class Signal
                 return EmptyDisposable.Instance;
             }
 
-            if (task.Status == TaskStatus.RanToCompletion)
+            if (TryEmitSynchronously(task, observer, token))
             {
-                var result = task.Result;
-                if (_shouldEmit(result))
-                {
-                    observer.OnNext(result);
-                    observer.OnCompleted();
-                    return EmptyDisposable.Instance;
-                }
-
-                observer.OnError(new OperationCanceledException());
                 return EmptyDisposable.Instance;
             }
 
-            if (task.IsCanceled || token.IsCancellationRequested)
-            {
-                observer.OnError(new OperationCanceledException());
-                return EmptyDisposable.Instance;
-            }
+            TaskStopGate gate = new();
+            _ = ObserveTask(task.WhenCancelled(token), observer, gate, token);
 
-            if (task.IsFaulted)
-            {
-                observer.OnError(task.Exception!.InnerException ?? task.Exception);
-                return EmptyDisposable.Instance;
-            }
-
-            ImmediateTaskSubscription subscription = new(SourceCore);
-            _ = ObserveTask(
-                task.WhenCancelled(token),
-                _shouldEmit,
-                observer,
-                subscription.MarkCompleted,
-                subscription.MarkFaulted,
-                token);
-
-            return subscription;
+            return CancelOnDispose(gate, SourceCore);
         }
 
         /// <inheritdoc/>
@@ -373,42 +341,21 @@ public static partial class Signal
 
             throw new ObjectDisposedException(nameof(ImmediateTaskSignal<>));
         }
+    }
 
-        /// <summary>Subscription for pending immediate tasks.</summary>
-        private sealed class ImmediateTaskSubscription : IDisposable
-        {
-            /// <summary>Completed state marker.</summary>
-            private const int Completed = 1;
+    /// <summary>Atomic gate that serializes the terminal notification against subscription disposal.</summary>
+    /// <remarks>
+    /// Mirrors the <c>TaskInstanceSubscription.TryStop()</c> pattern: both the task continuation and the
+    /// disposer race on a single <see cref="Interlocked.Exchange(ref int, int)"/>; only the winner proceeds,
+    /// so a notification can never reach a subscription that has already been disposed.
+    /// </remarks>
+    private sealed class TaskStopGate
+    {
+        /// <summary>Non-zero once the continuation has emitted or the subscription has been disposed.</summary>
+        private int _stopped;
 
-            /// <summary>Faulted state marker.</summary>
-            private const int Faulted = 2;
-
-            /// <summary>Cancellation source to cancel while pending.</summary>
-            private readonly CancellationTokenSource _source;
-
-            /// <summary>Completion state.</summary>
-            private int _state;
-
-            /// <summary>Initializes a new instance of the <see cref="ImmediateTaskSubscription"/> class.</summary>
-            /// <param name="source">Cancellation source.</param>
-            public ImmediateTaskSubscription(CancellationTokenSource source) => _source = source;
-
-            /// <summary>Marks the task completed.</summary>
-            public void MarkCompleted() => Volatile.Write(ref _state, Completed);
-
-            /// <summary>Marks the task faulted.</summary>
-            public void MarkFaulted() => Volatile.Write(ref _state, Faulted);
-
-            /// <inheritdoc/>
-            public void Dispose()
-            {
-                if (Volatile.Read(ref _state) == Completed)
-                {
-                    return;
-                }
-
-                Cancel(_source);
-            }
-        }
+        /// <summary>Attempts to win the terminal transition.</summary>
+        /// <returns><see langword="true"/> when this caller won the stop race.</returns>
+        public bool TryStop() => Interlocked.Exchange(ref _stopped, 1) == 0;
     }
 }
