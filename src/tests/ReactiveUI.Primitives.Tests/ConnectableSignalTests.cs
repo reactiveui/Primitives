@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
@@ -147,6 +148,36 @@ public sealed class ConnectableSignalTests
         await Assert.That(first.SequenceEqual(ExpectedSecondSharedValues[1..])).IsTrue();
         await Assert.That(second.SequenceEqual(ExpectedSecondSharedValues[1..])).IsTrue();
         _ = Assert.Throws<ArgumentNullException>(() => cold.Publish().AutoConnect(1, null!));
+    }
+
+    /// <summary>Verifies AutoShare disposes the source connection when release happens during Connect().</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AutoShareDisposesConnectionWhenRefcountDropsDuringConnect()
+    {
+        var sourceSubscriptions = 0;
+        var sourceDisposals = 0;
+        IObservable<int> cold = Signal.Create<int>(observer =>
+        {
+            sourceSubscriptions++;
+            observer.OnNext(FirstSharedValue);
+            return new ActionDisposable(() => sourceDisposals++);
+        });
+
+        AutoShareSignal<int> shared = new(cold.Share());
+
+        var reentrantReleaseInvoked = false;
+        void OnNext(int _)
+        {
+            reentrantReleaseInvoked = true;
+            using AutoShareSubscription<int> reentrantRelease = new(shared, Scope.Empty);
+            reentrantRelease.Dispose();
+        }
+        using var subscription = shared.Subscribe((Action<int>)OnNext);
+
+        await Assert.That(reentrantReleaseInvoked).IsTrue();
+        await Assert.That(sourceSubscriptions).IsEqualTo(1);
+        await Assert.That(sourceDisposals).IsEqualTo(1);
     }
 
     /// <summary>Verifies direct connect handles reuse, terminate, and dispose idempotently.</summary>

@@ -21,6 +21,9 @@ public sealed class AutoShareSignal<T> : IObservable<T>
     /// <summary>Active source connection.</summary>
     private IDisposable? _connection;
 
+    /// <summary>Set while a connect operation is in progress.</summary>
+    private bool _isConnecting;
+
     /// <summary>Initializes a new instance of the <see cref="AutoShareSignal{T}"/> class.</summary>
     /// <param name="source">Connectable signal being reference-counted.</param>
     public AutoShareSignal(ConnectableSignal<T> source)
@@ -40,12 +43,64 @@ public sealed class AutoShareSignal<T> : IObservable<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        IDisposable subscription;
+        var subscription = Source.Subscribe(observer);
+        IDisposable? connection;
+        var shouldConnect = false;
+
         lock (_gate)
         {
-            subscription = Source.Subscribe(observer);
             _count++;
-            _connection ??= Source.Connect();
+            if (_count == 1 && _connection is null && !_isConnecting)
+            {
+                _isConnecting = true;
+                shouldConnect = true;
+            }
+        }
+
+        if (shouldConnect)
+        {
+            try
+            {
+                connection = Source.Connect();
+            }
+            catch
+            {
+                lock (_gate)
+                {
+                    _isConnecting = false;
+                    if (_count > 0)
+                    {
+                        _count--;
+                    }
+                }
+
+                subscription.Dispose();
+                throw;
+            }
+
+            bool disposeConnection;
+            lock (_gate)
+            {
+                _isConnecting = false;
+                if (_count == 0)
+                {
+                    disposeConnection = true;
+                }
+                else if (_connection is null)
+                {
+                    _connection = connection;
+                    disposeConnection = false;
+                }
+                else
+                {
+                    disposeConnection = true;
+                }
+            }
+
+            if (disposeConnection)
+            {
+                connection.Dispose();
+            }
         }
 
         return new AutoShareSubscription<T>(this, subscription);
@@ -56,14 +111,25 @@ public sealed class AutoShareSignal<T> : IObservable<T>
     internal void Release(IDisposable subscription)
     {
         subscription.Dispose();
+
+        IDisposable? connection;
         lock (_gate)
         {
-            _count--;
             if (_count == 0)
             {
-                _connection?.Dispose();
-                _connection = null;
+                return;
             }
+
+            _count--;
+            if (_count != 0)
+            {
+                return;
+            }
+
+            connection = _connection;
+            _connection = null;
         }
+
+        connection?.Dispose();
     }
 }
