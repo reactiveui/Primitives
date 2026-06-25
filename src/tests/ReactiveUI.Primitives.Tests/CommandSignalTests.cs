@@ -149,7 +149,7 @@ public sealed class CommandSignalTests
     /// <summary>
     /// Verifies the running-state stream is allocated lazily, cached on the second access, and
     /// reports <see langword="false"/> when first observed on an idle command (the install CAS wins
-    /// and the post-install re-sync reads a non-drifted authoritative flag).
+    /// and the post-install reconcile publishes the authoritative flag).
     /// </summary>
     /// <returns>A task that completes when the lazy-allocation assertions finish.</returns>
     [Test]

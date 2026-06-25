@@ -307,14 +307,14 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <param name="value">The running state.</param>
     private void SetRunning(bool value)
     {
-        // Hold the gate across the flag write and the stream notification so the running flag and
-        // the stream value are always observed together. The getter reconciles under the same gate
-        // after installing the stream, which closes the lazy-init window without either side losing
-        // an update to the other.
+        // Set the flag and notify the stream through the same gated path the getter uses. Holding
+        // the gate across the flag write and the notification keeps the flag and the stream value
+        // observed together, so the lazy install and a concurrent transition cannot lose each
+        // other's update.
         lock (_runningGate)
         {
             _isRunning = value;
-            Volatile.Read(ref _isRunningState)?.OnNext(value);
+            PublishRunningState();
         }
 
         if (value)
@@ -330,20 +330,12 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     {
         lock (_runningGate)
         {
-            var state = Volatile.Read(ref _isRunningState);
-            if (state is null)
-            {
-                return;
-            }
-
-            if (state.TryGetValue(out var current) && current == _isRunning)
-            {
-                return;
-            }
-
-            state.OnNext(_isRunning);
+            PublishRunningState();
         }
     }
+
+    /// <summary>Pushes the authoritative running flag onto the stream when one is installed. Caller holds the gate.</summary>
+    private void PublishRunningState() => Volatile.Read(ref _isRunningState)?.OnNext(_isRunning);
 
     /// <summary>Publishes a successful result when the results surface has been requested.</summary>
     /// <param name="result">The command result.</param>
