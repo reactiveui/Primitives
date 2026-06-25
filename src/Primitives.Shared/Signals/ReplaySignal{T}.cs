@@ -188,10 +188,10 @@ public sealed class ReplaySignal<T> : ISignal<T>
             {
                 Trim();
             }
-        }
 
-        _broadcaster.Completed();
-        _broadcaster.Clear();
+            _broadcaster.Completed();
+            _broadcaster.Clear();
+        }
     }
 
     /// <summary>Called when [error].</summary>
@@ -215,14 +215,21 @@ public sealed class ReplaySignal<T> : ISignal<T>
             {
                 Trim();
             }
-        }
 
-        _broadcaster.Error(error);
-        _broadcaster.Clear();
+            _broadcaster.Error(error);
+            _broadcaster.Clear();
+        }
     }
 
     /// <summary>Called when [next].</summary>
     /// <param name="value">The value.</param>
+    /// <remarks>
+    /// The buffer append and the broadcast happen together under <see cref="_observerLock"/>, which is the
+    /// same gate <see cref="Subscribe"/> holds while it adds an observer and replays the buffer. A value is
+    /// therefore atomically either buffered-and-broadcast before a new observer is added (so that observer
+    /// receives it only via replay) or buffered-and-broadcast after the observer's replay completes (so it
+    /// receives it only live) - never both, and never out of order.
+    /// </remarks>
     public void OnNext(T value)
     {
         // Read the scheduler clock outside the lock; the window inputs are immutable.
@@ -244,9 +251,9 @@ public sealed class ReplaySignal<T> : ISignal<T>
                 _queue!.Enqueue(new(value, interval));
                 Trim();
             }
-        }
 
-        _broadcaster.Next(value);
+            _broadcaster.Next(value);
+        }
     }
 
     /// <summary>Subscribes the specified observer.</summary>

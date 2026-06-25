@@ -86,6 +86,11 @@ internal record struct BehaviorSignalState<T>
     }
 
     /// <summary>Notifies all observers about the end of the sequence.</summary>
+    /// <remarks>
+    /// The broadcast runs under <see cref="_gate"/> so it serializes against <see cref="Subscribe"/>: a new
+    /// subscriber is either added before this completes (and is broadcast to here) or after (and replays the
+    /// terminal state itself), never seeing an out-of-order or duplicated notification.
+    /// </remarks>
     public void OnCompleted()
     {
         lock (_gate)
@@ -97,10 +102,9 @@ internal record struct BehaviorSignalState<T>
             }
 
             _isStopped = true;
+            _broadcaster.Completed();
+            _broadcaster.Clear();
         }
-
-        _broadcaster.Completed();
-        _broadcaster.Clear();
     }
 
     /// <summary>Notifies all observers about the exception.</summary>
@@ -119,14 +123,18 @@ internal record struct BehaviorSignalState<T>
 
             _isStopped = true;
             _lastError = error;
+            _broadcaster.Error(error);
+            _broadcaster.Clear();
         }
-
-        _broadcaster.Error(error);
-        _broadcaster.Clear();
     }
 
     /// <summary>Notifies all observers about the arrival of the specified value.</summary>
     /// <param name="value">The value to send to all observers.</param>
+    /// <remarks>
+    /// The latest-value update and the broadcast happen together under <see cref="_gate"/>, so they are atomic
+    /// with respect to <see cref="Subscribe"/>; a new subscriber never observes a live value before the initial
+    /// value it was promised, and never observes the same value twice.
+    /// </remarks>
     public void OnNext(T value)
     {
         lock (_gate)
@@ -137,9 +145,8 @@ internal record struct BehaviorSignalState<T>
             }
 
             _lastValue = value;
+            _broadcaster.Next(value);
         }
-
-        _broadcaster.Next(value);
     }
 
     /// <summary>Subscribes an observer, replaying the current value or terminal notification.</summary>
@@ -151,28 +158,23 @@ internal record struct BehaviorSignalState<T>
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         var ex = default(Exception);
-        var v = default(T);
-        BehaviorWitnessHandler<T>? subscription = null;
 
         lock (_gate)
         {
             ThrowIfDisposed();
             if (!_isStopped)
             {
+                // Add and deliver the initial value under the same gate that serializes live broadcast, so
+                // the new observer is either added before a concurrent OnNext (and sees the initial value
+                // first, then the live value) or after it (and the live value becomes its initial value).
+                // It can never observe a newer live value ahead of, or in addition to, its initial value.
                 _broadcaster.Add(observer);
-                v = _lastValue;
-                subscription = new(owner, observer);
+                var subscription = new BehaviorWitnessHandler<T>(owner, observer);
+                observer.OnNext(_lastValue!);
+                return subscription;
             }
-            else
-            {
-                ex = _lastError;
-            }
-        }
 
-        if (subscription is not null)
-        {
-            observer.OnNext(v!);
-            return subscription;
+            ex = _lastError;
         }
 
         if (ex is not null)
