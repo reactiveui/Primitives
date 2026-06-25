@@ -585,170 +585,29 @@ public static partial class LinqExtensions
     /// <typeparam name="T">The source value type.</typeparam>
     private sealed class RaceCoordinator<T> : IDisposable
     {
-        /// <summary>The downstream observer.</summary>
-        private readonly IObserver<T> _observer;
-
-        /// <summary>The active subscriptions.</summary>
-        private readonly MultipleDisposable _subscriptions = [];
-
-        /// <summary>Serializes source registration and winner finalization.</summary>
-        private readonly Lock _gate = new();
-
-        /// <summary>Active source subscriptions by source index.</summary>
-        private readonly Dictionary<int, IDisposable> _sourceSubscriptions = [];
-
-        /// <summary>The winning source index.</summary>
-        private int _winner = -1;
-
-        /// <summary>The next source index.</summary>
-        private int _index;
+        /// <summary>The shared race-arm bookkeeping.</summary>
+        private readonly RaceArms<T> _arms;
 
         /// <summary>Initializes a new instance of the <see cref="RaceCoordinator{T}"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
-        internal RaceCoordinator(IObserver<T> observer) => _observer = observer;
+        internal RaceCoordinator(IObserver<T> observer) => _arms = new(observer);
 
         /// <summary>Releases the active subscriptions.</summary>
-        public void Dispose()
-        {
-            _subscriptions.Dispose();
-            lock (_gate)
-            {
-                _sourceSubscriptions.Clear();
-            }
-        }
+        public void Dispose() => _arms.Dispose();
 
         /// <summary>Starts observing the candidate source streams.</summary>
         /// <param name="sources">The candidate source streams.</param>
         /// <returns>The coordinator that owns the subscription cleanup.</returns>
         internal RaceCoordinator<T> Run(IObservable<IObservable<T>> sources)
         {
-            _subscriptions.Add(sources.Subscribe(OnSource, _observer.OnError, OnOuterCompleted));
+            _arms.Add(sources.Subscribe(_arms.OnSource, _arms.OnOuterError, OnOuterCompleted));
             return this;
         }
 
-        /// <summary>Forwards a value from a candidate source.</summary>
-        /// <param name="candidate">The candidate source index.</param>
-        /// <param name="value">The value to forward.</param>
-        private void OnNext(int candidate, T value)
-        {
-            if (!Win(candidate))
-            {
-                return;
-            }
-
-            _observer.OnNext(value);
-        }
-
-        /// <summary>Forwards an error from a candidate source.</summary>
-        /// <param name="candidate">The candidate source index.</param>
-        /// <param name="error">The error to forward.</param>
-        private void OnError(int candidate, Exception error)
-        {
-            if (!Win(candidate))
-            {
-                return;
-            }
-
-            _observer.OnError(error);
-        }
-
-        /// <summary>Forwards completion from a candidate source.</summary>
-        /// <param name="candidate">The candidate source index.</param>
-        private void OnCompleted(int candidate)
-        {
-            if (!Win(candidate))
-            {
-                return;
-            }
-
-            _observer.OnCompleted();
-        }
-
         /// <summary>Handles completion of the outer sequence.</summary>
-        private void OnOuterCompleted()
+        private static void OnOuterCompleted()
         {
             // Race completion is controlled by the first inner source to win.
-        }
-
-        /// <summary>Subscribes to a candidate source.</summary>
-        /// <param name="source">The source to observe.</param>
-        private void OnSource(IObservable<T> source)
-        {
-            var current = Interlocked.Increment(ref _index) - 1;
-            var subscription = source.Subscribe(
-                value => OnNext(current, value),
-                error => OnError(current, error),
-                () => OnCompleted(current));
-            _subscriptions.Add(subscription);
-
-            lock (_gate)
-            {
-                if (_winner < 0)
-                {
-                    _sourceSubscriptions[current] = subscription;
-                    return;
-                }
-
-                if (_winner == current)
-                {
-                    _sourceSubscriptions[current] = subscription;
-                    return;
-                }
-
-                _ = _subscriptions.Remove(subscription);
-            }
-        }
-
-        /// <summary>Attempts to make a candidate source the winner.</summary>
-        /// <param name="candidate">The candidate source index.</param>
-        /// <returns><c>true</c> when the candidate is the winning source; otherwise, <c>false</c>.</returns>
-        private bool Win(int candidate)
-        {
-            var current = Volatile.Read(ref _winner);
-            if (current == candidate)
-            {
-                return true;
-            }
-
-            if (current >= 0)
-            {
-                return false;
-            }
-
-            if (Interlocked.CompareExchange(ref _winner, candidate, -1) != -1)
-            {
-                return false;
-            }
-
-            DiscardLosers(candidate);
-            return true;
-        }
-
-        /// <summary>Disposes all inner subscriptions except the winner.</summary>
-        /// <param name="winner">The winning source index.</param>
-        private void DiscardLosers(int winner)
-        {
-            List<(int Candidate, IDisposable Subscription)> losers = [];
-            lock (_gate)
-            {
-                foreach (var pair in _sourceSubscriptions)
-                {
-                    if (pair.Key != winner)
-                    {
-                        losers.Add((pair.Key, pair.Value));
-                    }
-                }
-
-                for (var i = 0; i < losers.Count; i++)
-                {
-                    _ = _sourceSubscriptions.Remove(losers[i].Candidate);
-                }
-            }
-
-            for (var i = 0; i < losers.Count; i++)
-            {
-                _ = _subscriptions.Remove(losers[i].Subscription);
-            }
         }
     }
 
