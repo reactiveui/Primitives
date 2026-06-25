@@ -21,6 +21,9 @@ public sealed class AutoShareSignal<T> : IObservable<T>
     /// <summary>Active source connection.</summary>
     private IDisposable? _connection;
 
+    /// <summary>Set while a connect operation is in progress.</summary>
+    private bool _isConnecting;
+
     /// <summary>Initializes a new instance of the <see cref="AutoShareSignal{T}"/> class.</summary>
     /// <param name="source">Connectable signal being reference-counted.</param>
     public AutoShareSignal(ConnectableSignal<T> source)
@@ -40,12 +43,22 @@ public sealed class AutoShareSignal<T> : IObservable<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        IDisposable subscription;
+        var subscription = Source.Subscribe(observer);
+        var shouldConnect = false;
+
         lock (_gate)
         {
-            subscription = Source.Subscribe(observer);
             _count++;
-            _connection ??= Source.Connect();
+            if (_count == 1 && _connection is null && !_isConnecting)
+            {
+                _isConnecting = true;
+                shouldConnect = true;
+            }
+        }
+
+        if (shouldConnect)
+        {
+            ConnectOutsideGate(subscription);
         }
 
         return new AutoShareSubscription<T>(this, subscription);
@@ -56,14 +69,80 @@ public sealed class AutoShareSignal<T> : IObservable<T>
     internal void Release(IDisposable subscription)
     {
         subscription.Dispose();
+
+        IDisposable? connection;
         lock (_gate)
         {
-            _count--;
             if (_count == 0)
             {
-                _connection?.Dispose();
-                _connection = null;
+                return;
             }
+
+            _count--;
+            if (_count != 0)
+            {
+                return;
+            }
+
+            connection = _connection;
+            _connection = null;
+        }
+
+        connection?.Dispose();
+    }
+
+    /// <summary>Connects the source outside <see cref="_gate"/> and publishes or drops the connection.</summary>
+    /// <param name="subscription">The inner source subscription owned by the connecting observer.</param>
+    /// <remarks>
+    /// Connecting runs outside the lock so a synchronous source cannot drive user callbacks while the
+    /// gate is held. A re-entrant or concurrent <see cref="Release"/> can drop the subscriber count to
+    /// zero before the connection is published; in that case the freshly returned connection is orphaned
+    /// and is disposed here rather than stored.
+    /// </remarks>
+    private void ConnectOutsideGate(IDisposable subscription)
+    {
+        var connection = ConnectOrUnwind(subscription);
+
+        lock (_gate)
+        {
+            _isConnecting = false;
+
+            // _connection is null here: _isConnecting gated every other subscriber out of Connect, and
+            // Release only ever nulls _connection. Publish the connection while subscribers remain.
+            if (_count != 0)
+            {
+                _connection = connection;
+                return;
+            }
+        }
+
+        // A re-entrant or concurrent Release drained the count while connecting, so the connection is
+        // orphaned and disposed here.
+        connection.Dispose();
+    }
+
+    /// <summary>Connects the source, unwinding the connect intent if <see cref="ConnectableSignal{T}.Connect"/> throws.</summary>
+    /// <param name="subscription">The inner source subscription owned by the connecting observer.</param>
+    /// <returns>The active source connection.</returns>
+    private IDisposable ConnectOrUnwind(IDisposable subscription)
+    {
+        try
+        {
+            return Source.Connect();
+        }
+        catch
+        {
+            lock (_gate)
+            {
+                _isConnecting = false;
+                if (_count > 0)
+                {
+                    _count--;
+                }
+            }
+
+            subscription.Dispose();
+            throw;
         }
     }
 }

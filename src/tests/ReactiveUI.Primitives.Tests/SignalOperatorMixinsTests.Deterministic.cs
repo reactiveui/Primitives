@@ -508,6 +508,19 @@ public partial class SignalOperatorMixinsTests
         int[] expectedRace = [One];
         await Assert.That(race.Values.SequenceEqual(expectedRace)).IsTrue();
         await Assert.That(race.Errors.Count).IsEqualTo(0);
+
+        TrackingDisposableObservable<int> raceLosing = new();
+        TrackingDisposableObservable<int> raceWinning = new();
+        RecordingWitness<int> raceWithDisposables = new();
+        using (Signal.Race(raceWinning, raceLosing).Subscribe(raceWithDisposables))
+        {
+            raceWinning.Observer!.OnNext(Three);
+            await Assert.That(raceLosing.DisposeCount).IsEqualTo(1);
+            await Assert.That(raceWinning.DisposeCount).IsEqualTo(0);
+            await Assert.That(raceWithDisposables.Values.SequenceEqual([Three])).IsTrue();
+        }
+
+        await Assert.That(raceWinning.DisposeCount).IsEqualTo(1);
         Signal<IObservable<int>> raceCompletionOuter = new();
         Signal<int> raceCompletionWinner = new();
         CapturingObservable<int> raceCompletionLoser = new();
@@ -1004,6 +1017,24 @@ public partial class SignalOperatorMixinsTests
         {
             Observer = observer;
             return EmptyDisposable.Instance;
+        }
+    }
+
+    /// <summary>Observable with a tracked disposable subscription and captured observer.</summary>
+    /// <typeparam name="T">The source value type.</typeparam>
+    private sealed class TrackingDisposableObservable<T> : IObservable<T>
+    {
+        /// <summary>Gets the captured observer.</summary>
+        public IObserver<T>? Observer { get; private set; }
+
+        /// <summary>Gets the number of times this subscription was disposed.</summary>
+        public int DisposeCount { get; private set; }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            Observer = observer;
+            return new ActionDisposable(() => DisposeCount++);
         }
     }
 }
