@@ -591,6 +591,12 @@ public static partial class LinqExtensions
         /// <summary>The active subscriptions.</summary>
         private readonly MultipleDisposable _subscriptions = [];
 
+        /// <summary>Serializes source registration and winner finalization.</summary>
+        private readonly Lock _gate = new();
+
+        /// <summary>Active source subscriptions by source index.</summary>
+        private readonly Dictionary<int, IDisposable> _sourceSubscriptions = [];
+
         /// <summary>The winning source index.</summary>
         private int _winner = -1;
 
@@ -602,7 +608,14 @@ public static partial class LinqExtensions
         internal RaceCoordinator(IObserver<T> observer) => _observer = observer;
 
         /// <summary>Releases the active subscriptions.</summary>
-        public void Dispose() => _subscriptions.Dispose();
+        public void Dispose()
+        {
+            _subscriptions.Dispose();
+            lock (_gate)
+            {
+                _sourceSubscriptions.Clear();
+            }
+        }
 
         /// <summary>Starts observing the candidate source streams.</summary>
         /// <param name="sources">The candidate source streams.</param>
@@ -662,10 +675,28 @@ public static partial class LinqExtensions
         private void OnSource(IObservable<T> source)
         {
             var current = Interlocked.Increment(ref _index) - 1;
-            _subscriptions.Add(source.Subscribe(
+            var subscription = source.Subscribe(
                 value => OnNext(current, value),
                 error => OnError(current, error),
-                () => OnCompleted(current)));
+                () => OnCompleted(current));
+            _subscriptions.Add(subscription);
+
+            lock (_gate)
+            {
+                if (_winner < 0)
+                {
+                    _sourceSubscriptions[current] = subscription;
+                    return;
+                }
+
+                if (_winner == current)
+                {
+                    _sourceSubscriptions[current] = subscription;
+                    return;
+                }
+
+                _ = _subscriptions.Remove(subscription);
+            }
         }
 
         /// <summary>Attempts to make a candidate source the winner.</summary>
@@ -679,7 +710,45 @@ public static partial class LinqExtensions
                 return true;
             }
 
-            return current >= 0 ? false : Interlocked.CompareExchange(ref _winner, candidate, -1) == -1;
+            if (current >= 0)
+            {
+                return false;
+            }
+
+            if (Interlocked.CompareExchange(ref _winner, candidate, -1) != -1)
+            {
+                return false;
+            }
+
+            DiscardLosers(candidate);
+            return true;
+        }
+
+        /// <summary>Disposes all inner subscriptions except the winner.</summary>
+        /// <param name="winner">The winning source index.</param>
+        private void DiscardLosers(int winner)
+        {
+            List<(int Candidate, IDisposable Subscription)> losers = [];
+            lock (_gate)
+            {
+                foreach (var pair in _sourceSubscriptions)
+                {
+                    if (pair.Key != winner)
+                    {
+                        losers.Add((pair.Key, pair.Value));
+                    }
+                }
+
+                for (var i = 0; i < losers.Count; i++)
+                {
+                    _ = _sourceSubscriptions.Remove(losers[i].Candidate);
+                }
+            }
+
+            for (var i = 0; i < losers.Count; i++)
+            {
+                _ = _subscriptions.Remove(losers[i].Subscription);
+            }
         }
     }
 

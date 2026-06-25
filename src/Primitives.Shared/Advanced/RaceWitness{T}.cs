@@ -12,6 +12,12 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The value type.</typeparam>
 public sealed class RaceWitness<T> : IDisposable
 {
+    /// <summary>Serializes source registration and winner finalization.</summary>
+    private readonly Lock _gate = new();
+
+    /// <summary>Active source subscriptions by source index.</summary>
+    private readonly Dictionary<int, IDisposable> _sourceSubscriptions = [];
+
     /// <summary>The winning source index, or -1 before a source wins.</summary>
     private int _winner = -1;
 
@@ -29,7 +35,14 @@ public sealed class RaceWitness<T> : IDisposable
     private MultipleDisposable Subscriptions { get; } = [];
 
     /// <inheritdoc/>
-    public void Dispose() => Subscriptions.Dispose();
+    public void Dispose()
+    {
+        Subscriptions.Dispose();
+        lock (_gate)
+        {
+            _sourceSubscriptions.Clear();
+        }
+    }
 
     /// <summary>Starts observing an outer observable of candidates.</summary>
     /// <param name="sources">The outer source.</param>
@@ -71,10 +84,28 @@ public sealed class RaceWitness<T> : IDisposable
         }
 
         var current = Interlocked.Increment(ref _index) - 1;
-        Subscriptions.Add(source.Subscribe(
+        var subscription = source.Subscribe(
             value => OnNext(current, value),
             error => OnError(current, error),
-            () => OnCompleted(current)));
+            () => OnCompleted(current));
+        Subscriptions.Add(subscription);
+
+        lock (_gate)
+        {
+            if (_winner < 0)
+            {
+                _sourceSubscriptions[current] = subscription;
+                return;
+            }
+
+            if (_winner == current)
+            {
+                _sourceSubscriptions[current] = subscription;
+                return;
+            }
+
+            _ = Subscriptions.Remove(subscription);
+        }
     }
 
     /// <summary>Forwards a value from the winning candidate.</summary>
@@ -126,6 +157,44 @@ public sealed class RaceWitness<T> : IDisposable
             return true;
         }
 
-        return current >= 0 ? false : Interlocked.CompareExchange(ref _winner, candidate, -1) == -1;
+        if (current >= 0)
+        {
+            return false;
+        }
+
+        if (Interlocked.CompareExchange(ref _winner, candidate, -1) != -1)
+        {
+            return false;
+        }
+
+        DiscardLosers(candidate);
+        return true;
+    }
+
+    /// <summary>Disposes all inner subscriptions except the winner.</summary>
+    /// <param name="winner">The winning source index.</param>
+    private void DiscardLosers(int winner)
+    {
+        List<(int Candidate, IDisposable Subscription)> losers = [];
+        lock (_gate)
+        {
+            foreach (var pair in _sourceSubscriptions)
+            {
+                if (pair.Key != winner)
+                {
+                    losers.Add((pair.Key, pair.Value));
+                }
+            }
+
+            for (var i = 0; i < losers.Count; i++)
+            {
+                _ = _sourceSubscriptions.Remove(losers[i].Candidate);
+            }
+        }
+
+        for (var i = 0; i < losers.Count; i++)
+        {
+            _ = Subscriptions.Remove(losers[i].Subscription);
+        }
     }
 }
