@@ -12,6 +12,9 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The source value type.</typeparam>
 public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
 {
+    /// <summary>The synchronization gate for downstream observer calls.</summary>
+    private readonly Lock _gate = new();
+
     /// <summary>The source observable.</summary>
     private readonly IObservable<T> _source;
 
@@ -71,48 +74,69 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
     /// <inheritdoc/>
     public void OnCompleted()
     {
-        if (Interlocked.Exchange(ref _done, 1) != 0)
-        {
-            return;
-        }
-
+        var shouldDispose = false;
         try
         {
-            _observer.OnCompleted();
+            lock (_gate)
+            {
+                if (_done != 0)
+                {
+                    return;
+                }
+
+                _done = 1;
+                shouldDispose = true;
+                _observer.OnCompleted();
+            }
         }
         finally
         {
-            Dispose();
+            if (shouldDispose)
+            {
+                Dispose();
+            }
         }
     }
 
     /// <inheritdoc/>
     public void OnError(Exception error)
     {
-        if (Interlocked.Exchange(ref _done, 1) != 0)
-        {
-            return;
-        }
-
+        var shouldDispose = false;
         try
         {
-            _observer.OnError(error);
+            lock (_gate)
+            {
+                if (_done != 0)
+                {
+                    return;
+                }
+
+                _done = 1;
+                shouldDispose = true;
+                _observer.OnError(error);
+            }
         }
         finally
         {
-            Dispose();
+            if (shouldDispose)
+            {
+                Dispose();
+            }
         }
     }
 
     /// <inheritdoc/>
     public void OnNext(T value)
     {
-        if (Volatile.Read(ref _done) != 0)
+        lock (_gate)
         {
-            return;
-        }
+            if (_done != 0)
+            {
+                return;
+            }
 
-        _observer.OnNext(value);
+            _observer.OnNext(value);
+        }
     }
 
     /// <summary>Starts observing the source and timeout timer.</summary>
@@ -134,18 +158,27 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
     /// <returns>An empty disposable.</returns>
     private EmptyDisposable EmitTimeout()
     {
-        if (Interlocked.Exchange(ref _done, 1) != 0)
-        {
-            return EmptyDisposable.Instance;
-        }
-
+        var shouldDispose = false;
         try
         {
-            _observer.OnError(new TimeoutException());
+            lock (_gate)
+            {
+                if (_done != 0)
+                {
+                    return EmptyDisposable.Instance;
+                }
+
+                _done = 1;
+                shouldDispose = true;
+                _observer.OnError(new TimeoutException());
+            }
         }
         finally
         {
-            Dispose();
+            if (shouldDispose)
+            {
+                Dispose();
+            }
         }
 
         return EmptyDisposable.Instance;
