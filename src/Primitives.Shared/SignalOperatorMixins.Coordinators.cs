@@ -970,6 +970,9 @@ public static partial class LinqExtensions
         /// <summary>The current inner source version.</summary>
         private int _version;
 
+        /// <summary>A value indicating whether a terminal notification has been emitted.</summary>
+        private bool _done;
+
         /// <summary>Initializes a new instance of the <see cref="SwitchCoordinator{T}"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         internal SwitchCoordinator(IObserver<T> observer) => _observer = observer;
@@ -987,7 +990,7 @@ public static partial class LinqExtensions
         internal SwitchCoordinator<T> Run(IObservable<IObservable<T>> sources)
         {
             _subscriptions.Add(_innerSlot);
-            _subscriptions.Add(sources.Subscribe(OnSource, _observer.OnError, OnOuterCompleted));
+            _subscriptions.Add(sources.Subscribe(OnSource, OnOuterError, OnOuterCompleted));
             return this;
         }
 
@@ -998,6 +1001,11 @@ public static partial class LinqExtensions
             int current;
             lock (_gate)
             {
+                if (_done)
+                {
+                    return;
+                }
+
                 current = _version + 1;
 
                 // Publish the new version so the lock-free reader in IsCurrent observes it.
@@ -1016,10 +1024,30 @@ public static partial class LinqExtensions
         {
             lock (_gate)
             {
-                _outerCompleted = true;
-            }
+                if (_done)
+                {
+                    return;
+                }
 
-            TryComplete();
+                _outerCompleted = true;
+                TryComplete();
+            }
+        }
+
+        /// <summary>Forwards an outer source error once.</summary>
+        /// <param name="error">The error to forward.</param>
+        private void OnOuterError(Exception error)
+        {
+            lock (_gate)
+            {
+                if (_done)
+                {
+                    return;
+                }
+
+                _done = true;
+                _observer.OnError(error);
+            }
         }
 
         /// <summary>Forwards an inner value when it belongs to the current source.</summary>
@@ -1027,12 +1055,15 @@ public static partial class LinqExtensions
         /// <param name="value">The value to forward.</param>
         private void OnNext(int version, T value)
         {
-            if (!IsCurrent(version))
+            lock (_gate)
             {
-                return;
-            }
+                if (_done || version != _version)
+                {
+                    return;
+                }
 
-            _observer.OnNext(value);
+                _observer.OnNext(value);
+            }
         }
 
         /// <summary>Forwards an inner error when it belongs to the current source.</summary>
@@ -1040,12 +1071,16 @@ public static partial class LinqExtensions
         /// <param name="error">The error to forward.</param>
         private void OnError(int version, Exception error)
         {
-            if (!IsCurrent(version))
+            lock (_gate)
             {
-                return;
-            }
+                if (_done || version != _version)
+                {
+                    return;
+                }
 
-            _observer.OnError(error);
+                _done = true;
+                _observer.OnError(error);
+            }
         }
 
         /// <summary>Completes an inner source when it belongs to the current source.</summary>
@@ -1054,30 +1089,26 @@ public static partial class LinqExtensions
         {
             lock (_gate)
             {
-                if (version == _version)
+                if (_done || version != _version)
                 {
-                    _innerActive = false;
+                    return;
                 }
+
+                _innerActive = false;
+                TryComplete();
             }
-
-            TryComplete();
         }
-
-        /// <summary>Determines whether a version is the current inner source.</summary>
-        /// <param name="version">The candidate version.</param>
-        /// <returns><c>true</c> if the version is current; otherwise, <c>false</c>.</returns>
-        private bool IsCurrent(int version) => version == Volatile.Read(ref _version);
 
         /// <summary>Completes the observer when both outer and inner sources are complete.</summary>
         private void TryComplete()
         {
-            lock (_gate)
+            if (_done || !_outerCompleted || _innerActive)
             {
-                if (_outerCompleted && !_innerActive)
-                {
-                    _observer.OnCompleted();
-                }
+                return;
             }
+
+            _done = true;
+            _observer.OnCompleted();
         }
     }
 }

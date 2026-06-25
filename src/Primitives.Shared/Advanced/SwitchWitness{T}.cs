@@ -37,6 +37,9 @@ public sealed class SwitchWitness<T> : IDisposable
     /// <summary>Gets or sets a value indicating whether an inner source is active.</summary>
     private bool IsInnerActive { get; set; }
 
+    /// <summary>Gets or sets a value indicating whether a terminal notification has been emitted.</summary>
+    private bool IsDone { get; set; }
+
     /// <inheritdoc/>
     public void Dispose()
     {
@@ -50,7 +53,7 @@ public sealed class SwitchWitness<T> : IDisposable
     public SwitchWitness<T> Run(IObservable<IObservable<T>> sources)
     {
         Subscriptions.Add(InnerSlot);
-        Subscriptions.Add(sources.Subscribe(OnSource, Observer.OnError, OnOuterCompleted));
+        Subscriptions.Add(sources.Subscribe(OnSource, OnOuterError, OnOuterCompleted));
         return this;
     }
 
@@ -61,6 +64,11 @@ public sealed class SwitchWitness<T> : IDisposable
         int current;
         lock (_gate)
         {
+            if (IsDone)
+            {
+                return;
+            }
+
             current = _version + 1;
             Volatile.Write(ref _version, current);
             IsInnerActive = true;
@@ -77,10 +85,30 @@ public sealed class SwitchWitness<T> : IDisposable
     {
         lock (_gate)
         {
-            IsOuterCompleted = true;
-        }
+            if (IsDone)
+            {
+                return;
+            }
 
-        TryComplete();
+            IsOuterCompleted = true;
+            TryComplete();
+        }
+    }
+
+    /// <summary>Forwards the outer source error once.</summary>
+    /// <param name="error">The error to forward.</param>
+    private void OnOuterError(Exception error)
+    {
+        lock (_gate)
+        {
+            if (IsDone)
+            {
+                return;
+            }
+
+            IsDone = true;
+            Observer.OnError(error);
+        }
     }
 
     /// <summary>Forwards a current inner value.</summary>
@@ -88,12 +116,15 @@ public sealed class SwitchWitness<T> : IDisposable
     /// <param name="value">The value to forward.</param>
     private void OnNext(int version, T value)
     {
-        if (!IsCurrent(version))
+        lock (_gate)
         {
-            return;
-        }
+            if (IsDone || version != _version)
+            {
+                return;
+            }
 
-        Observer.OnNext(value);
+            Observer.OnNext(value);
+        }
     }
 
     /// <summary>Forwards a current inner error.</summary>
@@ -101,12 +132,16 @@ public sealed class SwitchWitness<T> : IDisposable
     /// <param name="error">The error to forward.</param>
     private void OnError(int version, Exception error)
     {
-        if (!IsCurrent(version))
+        lock (_gate)
         {
-            return;
-        }
+            if (IsDone || version != _version)
+            {
+                return;
+            }
 
-        Observer.OnError(error);
+            IsDone = true;
+            Observer.OnError(error);
+        }
     }
 
     /// <summary>Marks a current inner source complete.</summary>
@@ -115,29 +150,25 @@ public sealed class SwitchWitness<T> : IDisposable
     {
         lock (_gate)
         {
-            if (version == _version)
+            if (IsDone || version != _version)
             {
-                IsInnerActive = false;
+                return;
             }
+
+            IsInnerActive = false;
+            TryComplete();
         }
-
-        TryComplete();
     }
-
-    /// <summary>Determines whether a version is current.</summary>
-    /// <param name="version">The candidate version.</param>
-    /// <returns><see langword="true"/> when the version is current.</returns>
-    private bool IsCurrent(int version) => version == Volatile.Read(ref _version);
 
     /// <summary>Completes once the outer source and current inner source are done.</summary>
     private void TryComplete()
     {
-        lock (_gate)
+        if (IsDone || !IsOuterCompleted || IsInnerActive)
         {
-            if (IsOuterCompleted && !IsInnerActive)
-            {
-                Observer.OnCompleted();
-            }
+            return;
         }
+
+        IsDone = true;
+        Observer.OnCompleted();
     }
 }
