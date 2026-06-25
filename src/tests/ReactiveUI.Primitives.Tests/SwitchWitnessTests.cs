@@ -17,6 +17,9 @@ public sealed class SwitchWitnessTests
     /// <summary>The integer constant two.</summary>
     private const int Two = 2;
 
+    /// <summary>Window used to confirm a gated operation stays blocked while a delivery is in flight.</summary>
+    private const int GateProbeMilliseconds = 200;
+
     /// <summary>Timeout used while waiting for background work in these tests.</summary>
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
 
@@ -38,7 +41,7 @@ public sealed class SwitchWitnessTests
         await Assert.That(observer.Completed).IsEqualTo(One);
     }
 
-    /// <summary>Verifies the public switch operator serializes consecutive inner values through the same observer gate.</summary>
+    /// <summary>Verifies the public switch operator serializes a source switch against an in-flight inner delivery.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SwitchToDoesNotEnterObserverConcurrentlyWhenSwitchingInnerSources()
@@ -46,26 +49,26 @@ public sealed class SwitchWitnessTests
         Signal<IObservable<int>> outer = new();
         CapturingObservable<int> first = new();
         CapturingObservable<int> second = new();
-        using BlockingObserver observer = new();
+        using GatedObserver observer = new();
         using var subscription = outer.SwitchTo().Subscribe(observer);
 
         outer.OnNext(first);
-        var firstValueTask = Task.Run(() => first.Observer!.OnNext(One));
-        await Assert.That(observer.OnNextEntered.Wait(WaitTimeout)).IsTrue();
 
-        var switchTask = Task.Run(() => outer.OnNext(second));
-        await Task.Delay(TimeSpan.FromMilliseconds(50)).ConfigureAwait(false);
-        second.Observer?.OnNext(Two);
+        // The first inner value enters the observer and blocks while the coordinator holds its gate.
+        Task firstDelivery = Task.Run(() => first.Observer!.OnNext(One));
+        await Assert.That(observer.FirstEntered.Wait(WaitTimeout)).IsTrue();
 
+        // Switching sources is gated too: OnSource cannot subscribe the new inner until the delivery releases.
+        Task switchTask = Task.Run(() => outer.OnNext(second));
+        await Assert.That(SpinWait.SpinUntil(() => second.Observer is not null, GateProbeMilliseconds)).IsFalse();
         await Assert.That(observer.ConcurrentOnNext).IsFalse();
-        observer.ReleaseOnNext.Set();
-        await firstValueTask.WaitAsync(WaitTimeout).ConfigureAwait(false);
+
+        observer.ReleaseFirst.Set();
+        await firstDelivery.WaitAsync(WaitTimeout).ConfigureAwait(false);
         await switchTask.WaitAsync(WaitTimeout).ConfigureAwait(false);
 
-        if (observer.Values == One)
-        {
-            second.Observer!.OnNext(Two);
-        }
+        // Once the switch completes the new inner delivers serially behind the first value.
+        second.Observer!.OnNext(Two);
 
         await Assert.That(observer.ConcurrentOnNext).IsFalse();
         await Assert.That(observer.Values).IsEqualTo(Two);
@@ -306,23 +309,29 @@ public sealed class SwitchWitnessTests
         }
     }
 
-    /// <summary>Observer that blocks the first value so concurrent re-entry can be detected.</summary>
-    private sealed class BlockingObserver : IObserver<int>, IDisposable
+    /// <summary>Observer that blocks its first value so any concurrent re-entry is detected with thread-safe state.</summary>
+    private sealed class GatedObserver : IObserver<int>, IDisposable
     {
+        /// <summary>Tracks how many threads are currently inside <see cref="OnNext"/>.</summary>
+        private int _inOnNext;
+
+        /// <summary>Counts forwarded values.</summary>
+        private int _values;
+
+        /// <summary>Set when more than one thread is inside <see cref="OnNext"/> at once.</summary>
+        private int _concurrent;
+
         /// <summary>Gets the event set when the first <see cref="OnNext"/> call is entered.</summary>
-        public ManualResetEventSlim OnNextEntered { get; } = new();
+        public ManualResetEventSlim FirstEntered { get; } = new();
 
         /// <summary>Gets the event released by the test to unblock the first <see cref="OnNext"/> call.</summary>
-        public ManualResetEventSlim ReleaseOnNext { get; } = new();
+        public ManualResetEventSlim ReleaseFirst { get; } = new();
 
         /// <summary>Gets the number of forwarded values.</summary>
-        public int Values { get; private set; }
+        public int Values => Volatile.Read(ref _values);
 
         /// <summary>Gets a value indicating whether <see cref="OnNext"/> was entered concurrently.</summary>
-        public bool ConcurrentOnNext { get; private set; }
-
-        /// <summary>Gets or sets a value indicating whether an <see cref="OnNext"/> call is active.</summary>
-        private bool IsInOnNext { get; set; }
+        public bool ConcurrentOnNext => Volatile.Read(ref _concurrent) != 0;
 
         /// <inheritdoc/>
         public void OnCompleted()
@@ -337,27 +346,29 @@ public sealed class SwitchWitnessTests
         /// <inheritdoc/>
         public void OnNext(int value)
         {
-            if (IsInOnNext)
+            if (Interlocked.Increment(ref _inOnNext) != 1)
             {
-                ConcurrentOnNext = true;
+                _ = Interlocked.Exchange(ref _concurrent, 1);
             }
 
-            Values++;
-            IsInOnNext = true;
-            OnNextEntered.Set();
-            if (value == One && !ReleaseOnNext.Wait(WaitTimeout))
+            var index = Interlocked.Increment(ref _values);
+            if (index == 1)
             {
-                throw new TimeoutException("Timed out waiting to release the blocked OnNext call.");
+                FirstEntered.Set();
+                if (!ReleaseFirst.Wait(WaitTimeout))
+                {
+                    throw new TimeoutException("Timed out waiting to release the blocked OnNext call.");
+                }
             }
 
-            IsInOnNext = false;
+            _ = Interlocked.Decrement(ref _inOnNext);
         }
 
         /// <inheritdoc/>
         public void Dispose()
         {
-            OnNextEntered.Dispose();
-            ReleaseOnNext.Dispose();
+            FirstEntered.Dispose();
+            ReleaseFirst.Dispose();
         }
     }
 }
