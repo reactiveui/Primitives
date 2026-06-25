@@ -34,8 +34,7 @@ public sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
             ? CancellationTokenSource.CreateLinkedTokenSource(CancellationToken)
             : new();
         var disposed = 0;
-        IAsyncEnumerator<T>? enumerator = null;
-        _ = RunAsync();
+        _ = PumpAsync(observer, cts);
 
         return new ActionDisposable(() =>
         {
@@ -50,52 +49,35 @@ public sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
             }
             catch (ObjectDisposedException)
             {
-                return;
-            }
-
-            var current = Volatile.Read(ref enumerator);
-            if (current is null)
-            {
-                return;
-            }
-
-            try
-            {
-                _ = current.DisposeAsync().AsTask();
-            }
-            catch (NotSupportedException)
-            {
-                // Some enumerators only support disposal from the enumeration path.
+                // The pump already completed and disposed the cancellation source.
             }
         });
-
-        async Task RunAsync()
-        {
-            try
-            {
-                await PumpAsync(observer, cts, current => Volatile.Write(ref enumerator, current)).ConfigureAwait(false);
-            }
-            finally
-            {
-                Volatile.Write(ref disposed, 1);
-            }
-        }
     }
 
     /// <summary>Pumps the async enumerable into an observer.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="cts">The subscription cancellation source.</param>
-    /// <param name="setEnumerator">Captures the active enumerator.</param>
     /// <returns>The asynchronous pump task.</returns>
-    private async Task PumpAsync(IObserver<T> observer, CancellationTokenSource cts, Action<IAsyncEnumerator<T>> setEnumerator)
+    /// <remarks>
+    /// Disposal is single-owner: this method's <c>finally</c> is the only path that disposes the
+    /// enumerator. The subscription disposer merely cancels <paramref name="cts"/>, which unblocks
+    /// <see cref="IAsyncEnumerator{T}.MoveNextAsync"/> so the pump terminates and cleans up exactly once.
+    /// </remarks>
+    private async Task PumpAsync(IObserver<T> observer, CancellationTokenSource cts)
     {
         IAsyncEnumerator<T>? enumerator = null;
         try
         {
             enumerator = Values.GetAsyncEnumerator(cts.Token);
-            setEnumerator(enumerator);
             while (!cts.IsCancellationRequested && await enumerator.MoveNextAsync().ConfigureAwait(false))
             {
+                // Re-check after the await: disposal may have torn down the observer while the
+                // element was in flight, so a buffered value must not reach a stopped observer.
+                if (cts.IsCancellationRequested)
+                {
+                    break;
+                }
+
                 observer.OnNext(enumerator.Current);
             }
 
