@@ -28,6 +28,9 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
     /// <summary>The configured capacity.</summary>
     private int _maximumCount;
 
+    /// <summary>Prevents multiple concurrent drain loops from forwarding downstream at once.</summary>
+    private bool _isDraining;
+
     /// <summary>Initializes a new instance of the <see cref="PrioritySemaphoreSignal{T}"/> class.</summary>
     /// <param name="maxCount">The maximum number of values to forward before release is required.</param>
     public PrioritySemaphoreSignal(int maxCount)
@@ -75,7 +78,17 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
     /// <summary>Releases one semaphore slot and drains queued values when capacity is available.</summary>
     public void Release()
     {
-        _ = Interlocked.Decrement(ref _count);
+        int previousCount;
+        do
+        {
+            previousCount = Volatile.Read(ref _count);
+            if (previousCount <= 0)
+            {
+                return;
+            }
+        }
+        while (Interlocked.CompareExchange(ref _count, previousCount - 1, previousCount) != previousCount);
+
         YieldUntilEmptyOrBlocked();
     }
 
@@ -156,9 +169,45 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
     /// <summary>Dequeue and forwards values while capacity is available.</summary>
     private void YieldUntilEmptyOrBlocked()
     {
-        while (TryDequeue(out var next))
+        T next;
+        var ownsDrain = false;
+        lock (_gate)
         {
-            _inner.OnNext(next);
+            if (_isDraining || !TryDequeue(out next))
+            {
+                return;
+            }
+
+            _isDraining = true;
+            ownsDrain = true;
+        }
+
+        try
+        {
+            while (true)
+            {
+                _inner.OnNext(next);
+
+                lock (_gate)
+                {
+                    if (!TryDequeue(out next))
+                    {
+                        _isDraining = false;
+                        ownsDrain = false;
+                        return;
+                    }
+                }
+            }
+        }
+        finally
+        {
+            if (ownsDrain)
+            {
+                lock (_gate)
+                {
+                    _isDraining = false;
+                }
+            }
         }
     }
 
@@ -167,18 +216,15 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
     /// <returns><see langword="true"/> when a value was dequeued; otherwise, <see langword="false"/>.</returns>
     private bool TryDequeue(out T next)
     {
-        lock (_gate)
+        var queue = _nextItems;
+        if (queue is null || queue.Count == 0 || Volatile.Read(ref _count) >= Volatile.Read(ref _maximumCount))
         {
-            var queue = _nextItems;
-            if (queue is null || queue.Count == 0 || Volatile.Read(ref _count) >= Volatile.Read(ref _maximumCount))
-            {
-                next = default!;
-                return false;
-            }
-
-            next = queue.Dequeue();
-            _ = Interlocked.Increment(ref _count);
-            return true;
+            next = default!;
+            return false;
         }
+
+        next = queue.Dequeue();
+        _ = Interlocked.Increment(ref _count);
+        return true;
     }
 }
