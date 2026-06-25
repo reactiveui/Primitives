@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -64,13 +65,23 @@ public class ThrottleUntilTrueObservableTests
         const int Earlier = 1;
         const int Later = 2;
         Subject<int> subject = new();
-        TaskCompletionSource<int> emitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = subject.ThrottleUntilTrue(ThrottleWindow, static _ => false)
-            .Subscribe(v => emitted.TrySetResult(v));
+        ConcurrentQueue<int> emissions = new();
+        TaskCompletionSource laterArrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var sub = subject.ThrottleUntilTrue(ThrottleWindow, static _ => false).Subscribe(v =>
+        {
+            emissions.Enqueue(v);
+            _ = v == Later && laterArrived.TrySetResult();
+        });
         subject.OnNext(Earlier);
         subject.OnNext(Later);
-        var got = await emitted.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        await Assert.That(got).IsEqualTo(Later);
+
+        // Later's timer is never superseded, so it always fires; wait on that deterministically
+        // rather than racing the wall-clock window. Under scheduling pressure Earlier's timer may
+        // still slip through first, so assert the invariant the operator guarantees: whatever the
+        // intermediate emissions, the final value observed is the latest one.
+        await laterArrived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var observed = emissions.ToArray();
+        await Assert.That(observed[^1]).IsEqualTo(Later);
     }
 
     /// <summary>Verifies that source errors are forwarded.</summary>

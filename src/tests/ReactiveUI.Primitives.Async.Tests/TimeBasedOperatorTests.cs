@@ -671,14 +671,21 @@ public class TimeBasedOperatorTests
         DirectSource<int> source = new();
         List<int> items = [];
         TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource lastEmitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await source.Throttle(TimeSpan.FromMilliseconds(50), manualProvider).SubscribeAsync(
-            (x, ct) =>
+            async (x, ct) =>
             {
                 _ = ct;
                 items.Add(x);
-                _ = x == LastValue && lastEmitted.TrySetResult();
-                return default;
+
+                // Drive completion re-entrantly from the throttled emission itself. The emission
+                // runs on a pooled timer continuation; completing the source from the test thread
+                // would race that still-unwinding OnNext call and trip the witness's concurrent-call
+                // guard, silently dropping the completion. Completing from inside the handler keeps
+                // both notifications on the same thread, where re-entrant calls are permitted.
+                if (x == LastValue)
+                {
+                    await source.Complete(Result.Success);
+                }
             },
             null,
             _ =>
@@ -692,8 +699,6 @@ public class TimeBasedOperatorTests
 
         await Assert.That(manualProvider.TimerCount).IsEqualTo(LastValue);
         manualProvider.FireAll();
-        await lastEmitted.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        await source.Complete(Result.Success);
         await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(items).Contains(LastValue);
     }
