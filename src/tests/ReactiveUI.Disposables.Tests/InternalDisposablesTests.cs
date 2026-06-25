@@ -116,6 +116,23 @@ public class InternalDisposablesTests
         await Assert.That(ex).IsNotNull();
     }
 
+    /// <summary>Verifies assigning <see cref="EmptyDisposable.Instance"/> does not mark disposed and does not drop a later real assignment.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenOnceDisposableAssignedEmptyDisposable_ThenNotDisposedAndLaterRealAssignmentNotDropped()
+    {
+        OnceDisposable holder = new();
+        holder.Disposable = EmptyDisposable.Instance;
+
+        await Assert.That(holder.IsDisposed).IsFalse();
+        await Assert.That(holder.Disposable).IsSameReferenceAs(EmptyDisposable.Instance);
+
+        CountingDisposable late = new();
+        var ex = Assert.Throws<InvalidOperationException>(() => holder.Disposable = late);
+        await Assert.That(ex).IsNotNull();
+        await Assert.That(late.DisposeCount).IsEqualTo(0);
+    }
+
     /// <summary>Verifies that assigning after dispose disposes the supplied value and reports null via the getter.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
