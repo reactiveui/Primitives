@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
@@ -144,6 +145,342 @@ public class SignalFromTaskTest
         await Assert.That(finalValues[0]).IsEqualTo(SuccessValue);
         await Assert.That(finalErrors).Contains(nameof(InvalidOperationException));
         await Assert.That(finalErrors).Contains(nameof(TaskCanceledException));
+    }
+
+    /// <summary>A synchronously completed task emits its result and completes through the immediate path.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task ImmediateSynchronousSuccessEmitsResultAndCompletes()
+    {
+        ConcurrentQueue<int> values = new();
+        ConcurrentQueue<string> errors = new();
+        var completed = 0;
+        var taskSignal = Signal.FromTask(_ => Task.FromResult(SuccessValue), Sequencer.Immediate);
+        try
+        {
+            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => Interlocked.Increment(ref completed));
+            await Assert.That(values.SequenceEqual([SuccessValue])).IsTrue();
+            await Assert.That(errors).IsEmpty();
+            await Assert.That(Volatile.Read(ref completed)).IsEqualTo(1);
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>A synchronously canceled task errors with a cancellation through the immediate path.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task ImmediateSynchronousCanceledTaskErrors()
+    {
+        ConcurrentQueue<int> values = new();
+        ConcurrentQueue<string> errors = new();
+        var taskSignal = Signal.FromTask(_ => Task.FromCanceled<int>(new(true)), Sequencer.Immediate);
+        try
+        {
+            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => { });
+            await Assert.That(values).IsEmpty();
+            await Assert.That(errors.SequenceEqual([nameof(OperationCanceledException)])).IsTrue();
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>A synchronously faulted task forwards the exception through the immediate path.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task ImmediateSynchronousFaultedTaskForwardsError()
+    {
+        ConcurrentQueue<int> values = new();
+        ConcurrentQueue<string> errors = new();
+        var taskSignal = Signal.FromTask(_ => Task.FromException<int>(new InvalidOperationException(BreakExecutionMessage)), Sequencer.Immediate);
+        try
+        {
+            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => { });
+            await Assert.That(values).IsEmpty();
+            await Assert.That(errors.SequenceEqual([nameof(InvalidOperationException)])).IsTrue();
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>A throwing task factory forwards the exception through the immediate path.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task ImmediateFactoryThrowForwardsError()
+    {
+        ConcurrentQueue<int> values = new();
+        ConcurrentQueue<string> errors = new();
+        var taskSignal = Signal.FromTask<int>(_ => throw new InvalidOperationException(BreakExecutionMessage), Sequencer.Immediate);
+        try
+        {
+            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => { });
+            await Assert.That(values).IsEmpty();
+            await Assert.That(errors.SequenceEqual([nameof(InvalidOperationException)])).IsTrue();
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>A throwing task factory forwards the exception through the scheduled path.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task ScheduledFactoryThrowForwardsError()
+    {
+        ConcurrentQueue<int> values = new();
+        ConcurrentQueue<string> errors = new();
+        var taskSignal = Signal.FromTask<int>(_ => throw new InvalidOperationException(BreakExecutionMessage));
+        try
+        {
+            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => { });
+            await TestPolling.SpinUntil(() => !errors.IsEmpty, TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            await Assert.That(values).IsEmpty();
+            await Assert.That(errors.SequenceEqual([nameof(InvalidOperationException)])).IsTrue();
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>A synchronously completed task emits its result through the scheduled synchronous fast path.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task ScheduledSynchronousSuccessEmitsResultAndCompletes()
+    {
+        ConcurrentQueue<int> values = new();
+        ConcurrentQueue<string> errors = new();
+        var completed = 0;
+        var taskSignal = Signal.FromTask(_ => Task.FromResult(SuccessValue), Sequencer.CurrentThread);
+        try
+        {
+            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => Interlocked.Increment(ref completed));
+            await TestPolling.SpinUntil(() => Volatile.Read(ref completed) == 1, TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            await Assert.That(values.SequenceEqual([SuccessValue])).IsTrue();
+            await Assert.That(errors).IsEmpty();
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>A synchronously canceled task errors through the scheduled synchronous fast path.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task ScheduledSynchronousCanceledTaskErrors()
+    {
+        ConcurrentQueue<int> values = new();
+        ConcurrentQueue<string> errors = new();
+        var taskSignal = Signal.FromTask(_ => Task.FromCanceled<int>(new(true)), Sequencer.CurrentThread);
+        try
+        {
+            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => { });
+            await TestPolling.SpinUntil(() => !errors.IsEmpty, TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            await Assert.That(values).IsEmpty();
+            await Assert.That(errors.SequenceEqual([nameof(OperationCanceledException)])).IsTrue();
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>Disposing a subscription whose cancellation source was already disposed swallows the resulting error.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task DisposeAfterCancellationSourceDisposedSwallowsObjectDisposedException()
+    {
+        ConcurrentQueue<int> values = new();
+        ConcurrentQueue<string> errors = new();
+        TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cts = new CancellationTokenSource();
+        var taskSignal = Signal.FromTask(_ => gate.Task, Sequencer.Immediate, cts);
+        try
+        {
+            var subscription = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => { });
+
+            // Dispose the cancellation source out from under the subscription, then dispose the
+            // subscription. The disposer wins the gate and calls Cancel on the disposed source,
+            // which must swallow the ObjectDisposedException.
+            cts.Dispose();
+            subscription.Dispose();
+
+            gate.SetResult(SuccessValue);
+            await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(false);
+            await Assert.That(values).IsEmpty();
+            await Assert.That(errors).IsEmpty();
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>A pending task that faults after subscription forwards the exception via the continuation through the immediate path.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task ImmediatePendingTaskFaultForwardsErrorViaContinuation()
+    {
+        ConcurrentQueue<int> values = new();
+        ConcurrentQueue<string> errors = new();
+        TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var taskSignal = Signal.FromTask(_ => gate.Task, Sequencer.Immediate);
+        try
+        {
+            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => { });
+            gate.SetException(new InvalidOperationException(BreakExecutionMessage));
+            await TestPolling.SpinUntil(() => !errors.IsEmpty, TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            await Assert.That(values).IsEmpty();
+            await Assert.That(errors.SequenceEqual([nameof(InvalidOperationException)])).IsTrue();
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>A pending task that completes after subscription emits the result via the continuation through the immediate path.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task ImmediatePendingTaskSuccessEmitsResultViaContinuation()
+    {
+        ConcurrentQueue<int> values = new();
+        ConcurrentQueue<string> errors = new();
+        var completed = 0;
+        TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var taskSignal = Signal.FromTask(_ => gate.Task, Sequencer.Immediate);
+        try
+        {
+            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => Interlocked.Increment(ref completed));
+            gate.SetResult(SuccessValue);
+            await TestPolling.SpinUntil(() => Volatile.Read(ref completed) == 1, TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            await Assert.That(values.SequenceEqual([SuccessValue])).IsTrue();
+            await Assert.That(errors).IsEmpty();
+            await Assert.That(Volatile.Read(ref completed)).IsEqualTo(1);
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>Disposing the immediate subscription before the awaited task completes suppresses the terminal notification.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task DisposeBeforeImmediateTaskCompletionSuppressesTerminalNotification()
+    {
+        ConcurrentQueue<int> values = new();
+        ConcurrentQueue<string> errors = new();
+        var completed = 0;
+        TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var taskSignal = Signal.FromTask(_ => gate.Task, Sequencer.Immediate);
+        try
+        {
+            var subscription = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => Interlocked.Increment(ref completed));
+
+            // Dispose while the awaited task is still pending, then release the continuation.
+            subscription.Dispose();
+            gate.SetResult(SuccessValue);
+
+            // Give the continuation ample time to run; it must observe the dispose and stay silent.
+            await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(false);
+            await Assert.That(values).IsEmpty();
+            await Assert.That(errors).IsEmpty();
+            await Assert.That(Volatile.Read(ref completed)).IsEqualTo(0);
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>Disposing the scheduled subscription before the awaited task completes suppresses the terminal notification.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task DisposeBeforeScheduledTaskCompletionSuppressesTerminalNotification()
+    {
+        ConcurrentQueue<int> values = new();
+        ConcurrentQueue<string> errors = new();
+        var completed = 0;
+        TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var taskSignal = Signal.FromTask(_ => gate.Task);
+        try
+        {
+            var subscription = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => Interlocked.Increment(ref completed));
+
+            // Dispose while the awaited task is still pending, then release the continuation.
+            subscription.Dispose();
+            gate.SetResult(SuccessValue);
+
+            // Give the continuation ample time to run; it must observe the dispose and stay silent.
+            await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(false);
+            await Assert.That(values).IsEmpty();
+            await Assert.That(errors).IsEmpty();
+            await Assert.That(Volatile.Read(ref completed)).IsEqualTo(0);
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>The non-generic RxVoid factory honors the scheduler overload and emits a completion.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task RxVoidFactoryWithSchedulerEmitsCompletion()
+    {
+        var completed = 0;
+        var taskSignal = Signal.FromTask(_ => Task.FromResult(RxVoid.Default), Sequencer.Immediate);
+        try
+        {
+            _ = taskSignal.Subscribe(_ => { }, error => throw error, () => Interlocked.Increment(ref completed));
+            await Assert.That(Volatile.Read(ref completed)).IsEqualTo(1);
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>The immediate signal reports cancellation and disposal state and fires the cancellation callback once disposed.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task ImmediateSignalReportsStateAndFiresCancellationCallbackOnDispose()
+    {
+        TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var taskSignal = Signal.FromTask(_ => gate.Task, Sequencer.Immediate);
+        var canceledRaised = 0;
+        await Assert.That(taskSignal.IsCancellationRequested).IsFalse();
+        await Assert.That(taskSignal.IsDisposed).IsFalse();
+        taskSignal.GetOperationCanceled(Witness.Create<Exception>(_ => Interlocked.Increment(ref canceledRaised)));
+
+        ((IDisposable)taskSignal).Dispose();
+
+        await Assert.That(taskSignal.IsDisposed).IsTrue();
+        await Assert.That(taskSignal.IsCancellationRequested).IsTrue();
+        await TestPolling.SpinUntil(() => Volatile.Read(ref canceledRaised) == 1, TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+        await Assert.That(Volatile.Read(ref canceledRaised)).IsEqualTo(1);
+
+        // A second dispose is a no-op (covers the already-disposed early return).
+        ((IDisposable)taskSignal).Dispose();
+        await Assert.That(taskSignal.IsDisposed).IsTrue();
+    }
+
+    /// <summary>Subscribing to a disposed immediate signal throws.</summary>
+    [Test]
+    public void ImmediateSignalSubscribeAfterDisposeThrows()
+    {
+        var taskSignal = Signal.FromTask(_ => Task.FromResult(SuccessValue), Sequencer.Immediate);
+        ((IDisposable)taskSignal).Dispose();
+        _ = Assert.Throws<ObjectDisposedException>(() => taskSignal.Subscribe(_ => { }));
     }
 
     /// <summary>Signals from task handles user exceptions.</summary>
