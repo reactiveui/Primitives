@@ -4,6 +4,7 @@
 
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Reflection;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
@@ -18,6 +19,9 @@ public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : IObserva
     where TEventHandler : Delegate
     where TEventArgs : EventArgs
 {
+    /// <summary>The compatible handler forwarder method for this closed generic signal.</summary>
+    private static readonly MethodInfo ForwarderOnEvent = typeof(Forwarder).GetMethod(nameof(Forwarder.OnEvent))!;
+
     /// <summary>Initializes a new instance of the <see cref="FromEventPatternSignal{TEventHandler, TEventArgs}"/> class.</summary>
     /// <param name="addHandler">The action that attaches the generated handler.</param>
     /// <param name="removeHandler">The action that detaches the generated handler.</param>
@@ -78,6 +82,37 @@ public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : IObserva
             return (TEventHandler)(object)typed;
         }
 
-        throw new NotSupportedException($"Event handler type '{typeof(TEventHandler)}' is not supported.");
+        return CreateCompatibleHandler(observer);
+    }
+
+    /// <summary>Creates a delegate for event handler shapes compatible with <c>void Handler(object, TEventArgs)</c>.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <returns>The generated event handler.</returns>
+    private static TEventHandler CreateCompatibleHandler(IObserver<EventPattern<TEventArgs>> observer)
+    {
+        var forwarder = new Forwarder(observer);
+
+        try
+        {
+#if NET8_0_OR_GREATER
+            return ForwarderOnEvent.CreateDelegate<TEventHandler>(forwarder);
+#else
+            return (TEventHandler)Delegate.CreateDelegate(typeof(TEventHandler), forwarder, ForwarderOnEvent);
+#endif
+        }
+        catch (ArgumentException ex)
+        {
+            throw new NotSupportedException($"Event handler type '{typeof(TEventHandler)}' is not supported.", ex);
+        }
+    }
+
+    /// <summary>Forwards compatible delegate invocations to the subscribed observer.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    private sealed class Forwarder(IObserver<EventPattern<TEventArgs>> observer)
+    {
+        /// <summary>Forwards event arguments to the observer.</summary>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="args">The event arguments.</param>
+        public void OnEvent(object? sender, TEventArgs args) => observer.OnNext(new(sender, args));
     }
 }

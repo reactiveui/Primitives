@@ -4,6 +4,7 @@
 
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -25,6 +26,9 @@ public partial class SignalFactoriesTests
 
     /// <summary>The integer constant five.</summary>
     private const int Five = 5;
+
+    /// <summary>The integer constant six.</summary>
+    private const int Six = 6;
 
     /// <summary>The integer constant seven.</summary>
     private const int Seven = 7;
@@ -500,5 +504,84 @@ public partial class SignalFactoriesTests
         List<int> values = [];
         _ = Signal.Timeout(Signal.FromEnumerable(ExpectedOneTwoThree), TimeSpan.FromTicks(One), clock).Subscribe(values.Add);
         await Assert.That(values.SequenceEqual(ExpectedOneTwoThree)).IsTrue();
+    }
+
+    /// <summary>Verifies Rx-named factory aliases delegate to the matching Primitives factories.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RxFactoryAliasesRepeatGenerateUsingIfAndCase()
+    {
+        List<int> repeated = [];
+        List<int> repeatedCount = [];
+        List<int> repeatedZero = [];
+        List<int> generated = [];
+        List<int> conditional = [];
+        List<int> selectedCase = [];
+        List<int> defaultCase = [];
+        List<int> resumedPair = [];
+        var disposed = 0;
+        var useCompleted = 0;
+        var repeatedZeroCompleted = 0;
+
+        _ = Signal.Repeat(Seven).Take(Three).Subscribe(repeated.Add);
+        _ = Signal.Repeat(Five, Two).Subscribe(repeatedCount.Add);
+        _ = Signal.Repeat(Five, 0).Subscribe(repeatedZero.Add, ex => throw ex, () => repeatedZeroCompleted++);
+        _ = Signal.Generate(One, value => value <= Three, value => value + One, value => value * Two)
+            .Subscribe(generated.Add);
+        _ = Signal.OnErrorResumeNext(
+            Signal.Fail<int>(new InvalidOperationException("resume")),
+            Signal.Emit(Four))
+            .Subscribe(resumedPair.Add);
+
+        var chooseThen = true;
+        var conditionalSource = Signal.If(() => chooseThen, Signal.Emit(One), Signal.Emit(Two));
+        _ = conditionalSource.Subscribe(conditional.Add);
+        chooseThen = false;
+        _ = conditionalSource.Subscribe(conditional.Add);
+
+        Dictionary<string, IObservable<int>> cases = new(StringComparer.Ordinal)
+        {
+            ["one"] = Signal.Emit(One)
+        };
+        _ = Signal.Case(() => "one", cases, Signal.Emit(Two)).Subscribe(selectedCase.Add);
+        _ = Signal.Case(() => "missing", cases, Signal.Emit(Two)).Subscribe(defaultCase.Add);
+        _ = Signal.Using(
+            () => new TrackedDisposable(() => disposed++),
+            _ => Signal.Emit(Three))
+            .Subscribe(static _ => { }, ex => throw ex, () => useCompleted++);
+
+        await Assert.That(repeated.SequenceEqual(ExpectedSevenSevenSeven)).IsTrue();
+        await Assert.That(repeatedCount.SequenceEqual(ExpectedFiveFive)).IsTrue();
+        await Assert.That(repeatedZero).IsEmpty();
+        await Assert.That(repeatedZeroCompleted).IsEqualTo(One);
+        await Assert.That(generated.SequenceEqual([Two, Four, Six])).IsTrue();
+        await Assert.That(conditional.SequenceEqual([One, Two])).IsTrue();
+        await Assert.That(selectedCase.SequenceEqual([One])).IsTrue();
+        await Assert.That(defaultCase.SequenceEqual([Two])).IsTrue();
+        await Assert.That(resumedPair.SequenceEqual([Four])).IsTrue();
+        await Assert.That(disposed).IsEqualTo(One);
+        await Assert.That(useCompleted).IsEqualTo(One);
+
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Repeat(One, -1));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Generate<int, int>(One, null!, value => value, value => value));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Generate<int, int>(One, _ => true, null!, value => value));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Generate<int, int>(One, _ => true, value => value, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.If<int>(null!, Signal.Emit(One)));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.If(() => true, null!, Signal.Emit(One)));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.If(() => true, Signal.Emit(One), null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Case<string, int>(null!, cases));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Case<string, int>(() => "one", null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Case(() => "one", cases, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Using<IDisposable, int>(null!, _ => Signal.Emit(One)));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            Signal.Using(() => EmptyDisposable.Instance, (Func<IDisposable, IObservable<int>>)null!));
+    }
+
+    /// <summary>Disposable used by factory alias tests.</summary>
+    /// <param name="onDispose">Action invoked when disposed.</param>
+    private sealed class TrackedDisposable(Action onDispose) : IDisposable
+    {
+        /// <inheritdoc/>
+        public void Dispose() => onDispose();
     }
 }
