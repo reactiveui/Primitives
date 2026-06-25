@@ -1008,7 +1008,7 @@ public static partial class LinqExtensions
 
                 current = _version + 1;
 
-                // Publish the new version so the lock-free reader in IsCurrent observes it.
+                // Publish the new version so readers in gated operations observe it.
                 Volatile.Write(ref _version, current);
                 _innerActive = true;
             }
