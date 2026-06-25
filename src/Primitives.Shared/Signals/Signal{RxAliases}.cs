@@ -27,6 +27,63 @@ public static partial class Signal
         return new DeferSignal<T>(observableFactory);
     }
 
+    /// <summary>Returns the source selected by the condition for each subscription.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="condition">The condition used to choose the source.</param>
+    /// <param name="thenSource">The source used when <paramref name="condition"/> returns <see langword="true"/>.</param>
+    /// <returns>A deferred conditional observable sequence.</returns>
+    public static IObservable<T> If<T>(Func<bool> condition, IObservable<T> thenSource) =>
+        If(condition, thenSource, Empty<T>());
+
+    /// <summary>Returns the source selected by the condition for each subscription.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="condition">The condition used to choose the source.</param>
+    /// <param name="thenSource">The source used when <paramref name="condition"/> returns <see langword="true"/>.</param>
+    /// <param name="elseSource">The source used when <paramref name="condition"/> returns <see langword="false"/>.</param>
+    /// <returns>A deferred conditional observable sequence.</returns>
+    public static IObservable<T> If<T>(Func<bool> condition, IObservable<T> thenSource, IObservable<T> elseSource)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(condition);
+
+        ArgumentExceptionHelper.ThrowIfNull(thenSource);
+
+        ArgumentExceptionHelper.ThrowIfNull(elseSource);
+
+        return new DeferSignal<T>(() => condition() ? thenSource : elseSource);
+    }
+
+    /// <summary>Returns the source selected by the dictionary key for each subscription.</summary>
+    /// <typeparam name="TKey">The key type.</typeparam>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="selector">The selector used to choose the source key.</param>
+    /// <param name="sources">The keyed source map.</param>
+    /// <returns>A deferred conditional observable sequence.</returns>
+    public static IObservable<T> Case<TKey, T>(Func<TKey> selector, IDictionary<TKey, IObservable<T>> sources)
+        where TKey : notnull =>
+        Case(selector, sources, Empty<T>());
+
+    /// <summary>Returns the source selected by the dictionary key for each subscription.</summary>
+    /// <typeparam name="TKey">The key type.</typeparam>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="selector">The selector used to choose the source key.</param>
+    /// <param name="sources">The keyed source map.</param>
+    /// <param name="defaultSource">The source used when the selected key is not present.</param>
+    /// <returns>A deferred conditional observable sequence.</returns>
+    public static IObservable<T> Case<TKey, T>(
+        Func<TKey> selector,
+        IDictionary<TKey, IObservable<T>> sources,
+        IObservable<T> defaultSource)
+        where TKey : notnull
+    {
+        ArgumentExceptionHelper.ThrowIfNull(selector);
+
+        ArgumentExceptionHelper.ThrowIfNull(sources);
+
+        ArgumentExceptionHelper.ThrowIfNull(defaultSource);
+
+        return new DeferSignal<T>(() => sources.TryGetValue(selector(), out var source) ? source : defaultSource);
+    }
+
     /// <summary>Returns an observable sequence that contains a single value.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="value">The value to emit.</param>
@@ -44,6 +101,25 @@ public static partial class Signal
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
         return scheduler == Sequencer.Immediate ? new ImmediateReturnSignal<T>(value) : new ReturnSignal<T>(value, scheduler);
+    }
+
+    /// <summary>Returns an observable sequence that repeats a value indefinitely.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="value">The value to repeat.</param>
+    /// <returns>An observable sequence that repeats <paramref name="value"/> indefinitely.</returns>
+    public static IObservable<T> Repeat<T>(T value) =>
+        new LoopSignal<T>(value);
+
+    /// <summary>Returns an observable sequence that repeats a value a fixed number of times.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="value">The value to repeat.</param>
+    /// <param name="repeatCount">The number of times to repeat the value.</param>
+    /// <returns>An observable sequence that repeats <paramref name="value"/> <paramref name="repeatCount"/> times.</returns>
+    public static IObservable<T> Repeat<T>(T value, int repeatCount)
+    {
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(repeatCount);
+
+        return repeatCount == 0 ? ImmutableEmptySignal<T>.Instance : new RepeatSignal<T>(value, repeatCount);
     }
 
     /// <summary>Returns an empty observable sequence.</summary>
@@ -135,6 +211,29 @@ public static partial class Signal
         return scheduler == Sequencer.Immediate || scheduler == Sequencer.CurrentThread
             ? new RangeSignal(start, count)
             : new SequenceSignal(start, count, scheduler);
+    }
+
+    /// <summary>Generates a finite observable sequence from state.</summary>
+    /// <typeparam name="TState">The state type.</typeparam>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="initialState">The initial state.</param>
+    /// <param name="condition">The condition that determines whether to continue.</param>
+    /// <param name="iterate">The function that advances the state.</param>
+    /// <param name="resultSelector">The function that produces the result from the state.</param>
+    /// <returns>An observable sequence generated from state.</returns>
+    public static IObservable<T> Generate<TState, T>(
+        TState initialState,
+        Func<TState, bool> condition,
+        Func<TState, TState> iterate,
+        Func<TState, T> resultSelector)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(condition);
+
+        ArgumentExceptionHelper.ThrowIfNull(iterate);
+
+        ArgumentExceptionHelper.ThrowIfNull(resultSelector);
+
+        return new UnfoldSignal<TState, T>(initialState, condition, iterate, resultSelector);
     }
 
     /// <summary>Returns an observable sequence that emits a single tick after the due time.</summary>
@@ -281,6 +380,59 @@ public static partial class Signal
         ArgumentExceptionHelper.ThrowIfNull(sources);
 
         return new EnumerableBlendSignal<T>(sources);
+    }
+
+    /// <summary>Continues with the second sequence after the first sequence completes or errors.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="first">The first source.</param>
+    /// <param name="second">The second source.</param>
+    /// <returns>An observable sequence that forwards both sources in order.</returns>
+    public static IObservable<T> OnErrorResumeNext<T>(IObservable<T> first, IObservable<T> second)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(first);
+
+        ArgumentExceptionHelper.ThrowIfNull(second);
+
+        return new OnErrorResumeNextSignal<T>([first, second]);
+    }
+
+    /// <summary>Continues through the supplied sequences after each sequence completes or errors.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="sources">The sources to subscribe in order.</param>
+    /// <returns>An observable sequence that forwards every source in order.</returns>
+    public static IObservable<T> OnErrorResumeNext<T>(params IObservable<T>[] sources)
+    {
+        _ = ValidateSources(sources);
+        return new OnErrorResumeNextSignal<T>(sources);
+    }
+
+    /// <summary>Continues through the supplied sequences after each sequence completes or errors.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="sources">The sources to subscribe in order.</param>
+    /// <returns>An observable sequence that forwards every source in order.</returns>
+    public static IObservable<T> OnErrorResumeNext<T>(IEnumerable<IObservable<T>> sources)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(sources);
+
+        return new OnErrorResumeNextSignal<T>(sources);
+    }
+
+    /// <summary>Creates a signal whose subscription lifetime owns a resource.</summary>
+    /// <typeparam name="TResource">The type of the resource.</typeparam>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="resourceFactory">The factory that creates the resource.</param>
+    /// <param name="observableFactory">The factory that creates the observable from the resource.</param>
+    /// <returns>An observable sequence that owns the resource for the subscription lifetime.</returns>
+    public static IObservable<T> Using<TResource, T>(
+        Func<TResource> resourceFactory,
+        Func<TResource, IObservable<T>> observableFactory)
+        where TResource : IDisposable
+    {
+        ArgumentExceptionHelper.ThrowIfNull(resourceFactory);
+
+        ArgumentExceptionHelper.ThrowIfNull(observableFactory);
+
+        return new UseSignal<TResource, T>(resourceFactory, observableFactory);
     }
 
     /// <summary>Switches to the most recent inner observable sequence.</summary>

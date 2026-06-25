@@ -107,6 +107,48 @@ public sealed class ConnectableSignalTests
         await Assert.That(replayValues.SequenceEqual(ExpectedReplayValues[..1])).IsTrue();
     }
 
+    /// <summary>Verifies AutoConnect reports the connection disposable once the subscriber threshold is reached.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AutoConnectReportsConnectionDisposableAtThreshold()
+    {
+        Signal<int> source = new();
+        var sourceSubscriptions = 0;
+        var sourceDisposals = 0;
+        var cold = Signal.Create<int>(observer =>
+        {
+            sourceSubscriptions++;
+            var inner = source.Subscribe(observer);
+            return new ActionDisposable(() =>
+            {
+                sourceDisposals++;
+                inner.Dispose();
+            });
+        });
+
+        List<IDisposable> connections = [];
+        var auto = cold.Publish().AutoConnect(2, connections.Add);
+        List<int> first = [];
+        List<int> second = [];
+        using var firstSubscription = auto.Subscribe(first.Add);
+        source.OnNext(FirstSharedValue);
+        using var secondSubscription = auto.Subscribe(second.Add);
+        source.OnNext(SecondSharedValue);
+
+        await Assert.That(connections.Count).IsEqualTo(1);
+        await Assert.That(sourceSubscriptions).IsEqualTo(1);
+        await Assert.That(first.SequenceEqual(ExpectedSecondSharedValues[1..])).IsTrue();
+        await Assert.That(second.SequenceEqual(ExpectedSecondSharedValues[1..])).IsTrue();
+
+        connections[0].Dispose();
+        source.OnNext(UnobservedSharedValue);
+
+        await Assert.That(sourceDisposals).IsEqualTo(1);
+        await Assert.That(first.SequenceEqual(ExpectedSecondSharedValues[1..])).IsTrue();
+        await Assert.That(second.SequenceEqual(ExpectedSecondSharedValues[1..])).IsTrue();
+        _ = Assert.Throws<ArgumentNullException>(() => cold.Publish().AutoConnect(1, null!));
+    }
+
     /// <summary>Verifies direct connect handles reuse, terminate, and dispose idempotently.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
