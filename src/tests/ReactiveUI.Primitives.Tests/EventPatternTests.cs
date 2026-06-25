@@ -70,6 +70,29 @@ public class EventPatternTests
             Signal.FromEventPattern<Action, EventArgs>(_ => { }, _ => { }).Subscribe(_ => { }));
     }
 
+    /// <summary>Verifies generic event factories support WPF-style non-generic event handler shapes.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task GenericFromEventPatternSupportsCompatibleNonGenericHandlerShape()
+    {
+        AssemblyLoadEventSource source = new();
+        var assembly = typeof(EventPatternTests).Assembly;
+        List<EventPattern<AssemblyLoadEventArgs>> events = [];
+        using (Signal.FromEventPattern<AssemblyLoadEventHandler, AssemblyLoadEventArgs>(
+                   handler => source.AssemblyLoaded += handler,
+                   handler => source.AssemblyLoaded -= handler).Subscribe(events.Add))
+        {
+            source.Raise(assembly);
+        }
+
+        source.Raise(typeof(string).Assembly);
+
+        await Assert.That(events).Count().IsEqualTo(1);
+        await Assert.That(events[0].Sender!).IsSameReferenceAs(source);
+        await Assert.That(events[0].EventArgs.LoadedAssembly).IsSameReferenceAs(assembly);
+        await Assert.That(source.SubscriberCount).IsEqualTo(0);
+    }
+
     /// <summary>Verifies generic event factories support collection and list event handlers used by binding sources.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -146,6 +169,32 @@ public class EventPatternTests
         /// <summary>Raises <see cref="Changed"/> with the supplied value.</summary>
         /// <param name="value">The value supplied to the event arguments.</param>
         public void Raise(int value) => Changed?.Invoke(this, new(value));
+    }
+
+    /// <summary>Source used to exercise a WPF-style non-generic event handler shape.</summary>
+    private sealed class AssemblyLoadEventSource
+    {
+        /// <summary>Raised by the test source.</summary>
+        [SuppressMessage(
+            "Roslynator",
+            "RCS1159:Use EventHandler<T>",
+            Justification = "This test deliberately covers WPF-style non-generic event handler delegates.")]
+        [SuppressMessage(
+            "Major Code Smell",
+            "S3908:Refactor this delegate to use 'System.EventHandler<TEventArgs>'.",
+            Justification = "This test deliberately covers WPF-style non-generic event handler delegates.")]
+        [SuppressMessage(
+            "Major Code Smell",
+            "S3906:Event Handlers should have the correct signature",
+            Justification = "This test deliberately covers WPF-style non-generic event handler delegates.")]
+        public event AssemblyLoadEventHandler? AssemblyLoaded;
+
+        /// <summary>Gets the current subscriber count.</summary>
+        public int SubscriberCount => AssemblyLoaded?.GetInvocationList().Length ?? 0;
+
+        /// <summary>Raises <see cref="AssemblyLoaded"/> with the supplied assembly.</summary>
+        /// <param name="assembly">The assembly supplied to the event arguments.</param>
+        public void Raise(System.Reflection.Assembly assembly) => AssemblyLoaded?.Invoke(this, new(assembly));
     }
 
     /// <summary>Source used to exercise <see cref="PropertyChangedEventHandler"/> event conversion.</summary>

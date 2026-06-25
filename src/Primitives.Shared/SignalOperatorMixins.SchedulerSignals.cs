@@ -116,6 +116,45 @@ public static partial class LinqExtensions
         }
     }
 
+    /// <summary>Dedicated signal for absolute <c>Shift</c> overloads.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class AbsoluteShiftSignal<T> : IRequireCurrentThread<T>
+    {
+        /// <summary>The source observable.</summary>
+        private readonly IObservable<T> _source;
+
+        /// <summary>The absolute time at which notifications may be forwarded.</summary>
+        private readonly DateTimeOffset _dueTime;
+
+        /// <summary>The sequencer used to schedule delayed notifications.</summary>
+        private readonly ISequencer _scheduler;
+
+        /// <summary>Initializes a new instance of the <see cref="AbsoluteShiftSignal{T}"/> class.</summary>
+        /// <param name="source">The source observable.</param>
+        /// <param name="dueTime">The absolute time at which notifications may be forwarded.</param>
+        /// <param name="scheduler">The sequencer used to schedule delayed notifications.</param>
+        internal AbsoluteShiftSignal(IObservable<T> source, DateTimeOffset dueTime, ISequencer scheduler)
+        {
+            _source = source;
+            _dueTime = dueTime;
+            _scheduler = scheduler;
+        }
+
+        /// <inheritdoc/>
+        public bool IsRequiredSubscribeOnCurrentThread() => _scheduler == Sequencer.CurrentThread;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(observer);
+
+            var dueTime = Sequencer.Normalize(_dueTime - _scheduler.Now);
+            return _source is RangeSignal range && CanReadRangeAs(typeof(T))
+                ? new ShiftedRangeSignal<T>(range, dueTime, _scheduler).Subscribe(observer)
+                : new ShiftSignal<T>(_source, dueTime, _scheduler).Subscribe(observer);
+        }
+    }
+
     /// <summary>Dedicated signal for <c>SubscribeOn</c> (defer subscription to a sequencer).</summary>
     /// <typeparam name="T">The value type.</typeparam>
     private sealed class SubscribeOnSignal<T> : IObservable<T>
@@ -178,6 +217,81 @@ public static partial class LinqExtensions
             MultipleDisposable pocket = [];
             pocket.Add(_scheduler.Schedule(Sequencer.Normalize(_dueTime), () => pocket.Add(_source.Subscribe(observer))));
             return pocket;
+        }
+    }
+
+    /// <summary>Dedicated signal for absolute <c>DelayStart</c>/<c>DelaySubscription</c> overloads.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class AbsoluteDelayStartSignal<T> : IObservable<T>
+    {
+        /// <summary>The source observable.</summary>
+        private readonly IObservable<T> _source;
+
+        /// <summary>The absolute time at which to subscribe to the source.</summary>
+        private readonly DateTimeOffset _dueTime;
+
+        /// <summary>The sequencer used to schedule the delayed subscription.</summary>
+        private readonly ISequencer _scheduler;
+
+        /// <summary>Initializes a new instance of the <see cref="AbsoluteDelayStartSignal{T}"/> class.</summary>
+        /// <param name="source">The source observable.</param>
+        /// <param name="dueTime">The absolute time at which to subscribe to the source.</param>
+        /// <param name="scheduler">The sequencer used to schedule the delayed subscription.</param>
+        internal AbsoluteDelayStartSignal(IObservable<T> source, DateTimeOffset dueTime, ISequencer scheduler)
+        {
+            _source = source;
+            _dueTime = dueTime;
+            _scheduler = scheduler;
+        }
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(observer);
+
+            var dueTime = Sequencer.Normalize(_dueTime - _scheduler.Now);
+            return _source is RangeSignal range && CanReadRangeAs(typeof(T))
+                ? new ShiftedRangeSignal<T>(range, dueTime, _scheduler).Subscribe(observer)
+                : new DelayStartSignal<T>(_source, dueTime, _scheduler).Subscribe(observer);
+        }
+    }
+
+    /// <summary>Dedicated signal for absolute <c>Expire</c>/<c>Timeout</c> overloads.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class AbsoluteExpireSignal<T> : IRequireCurrentThread<T>
+    {
+        /// <summary>The source observable.</summary>
+        private readonly IObservable<T> _source;
+
+        /// <summary>The absolute timeout time.</summary>
+        private readonly DateTimeOffset _dueTime;
+
+        /// <summary>The sequencer used to schedule the timeout.</summary>
+        private readonly ISequencer _scheduler;
+
+        /// <summary>Initializes a new instance of the <see cref="AbsoluteExpireSignal{T}"/> class.</summary>
+        /// <param name="source">The source observable.</param>
+        /// <param name="dueTime">The absolute timeout time.</param>
+        /// <param name="scheduler">The sequencer used to schedule the timeout.</param>
+        internal AbsoluteExpireSignal(IObservable<T> source, DateTimeOffset dueTime, ISequencer scheduler)
+        {
+            _source = source;
+            _dueTime = dueTime;
+            _scheduler = scheduler;
+        }
+
+        /// <inheritdoc/>
+        public bool IsRequiredSubscribeOnCurrentThread() =>
+            _scheduler == Sequencer.CurrentThread ||
+            (_source is IRequireCurrentThread<T> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread());
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(observer);
+
+            var dueTime = Sequencer.Normalize(_dueTime - _scheduler.Now);
+            return new ExpireSignal<T>(_source, dueTime, _scheduler).Subscribe(observer);
         }
     }
 
