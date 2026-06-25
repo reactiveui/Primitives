@@ -72,6 +72,11 @@ internal sealed class SequencerWorkItem<TSequencer, TState> : IDisposable
             return;
         }
 
+        if (!ReferenceEquals(Interlocked.CompareExchange(ref _disposable, EmptyDisposable.Instance, disposable), disposable))
+        {
+            return;
+        }
+
         disposable.Dispose();
     }
 }

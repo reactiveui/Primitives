@@ -840,6 +840,23 @@ public partial class SignalOperatorMixinsTests
         await invoke;
         await Assert.That(beforeInvokeDisposed).IsEqualTo(1);
 
+        int invokeFirstDisposed = 0;
+        using ManualResetEventSlim startedFirst = new();
+        using ManualResetEventSlim releaseFirst = new();
+        SequencerWorkItem<ISequencer, int> invokeFirst = new(Sequencer.Immediate, One, (_, _) =>
+        {
+            startedFirst.Set();
+            _ = releaseFirst.Wait(DelayForRaceMilliseconds);
+            return new ActionDisposable(() => Interlocked.Increment(ref invokeFirstDisposed));
+        });
+        Task invokeFirstTask = Task.Run(invokeFirst.Invoke);
+        await Assert.That(startedFirst.Wait(DelayForRaceMilliseconds)).IsTrue();
+        releaseFirst.Set();
+        await Task.Yield();
+        invokeFirst.Dispose();
+        await invokeFirstTask;
+        await Assert.That(invokeFirstDisposed).IsEqualTo(1);
+
         int afterInvokeDisposed = 0;
         SequencerWorkItem<ISequencer, int> after = new(Sequencer.Immediate, One, (_, _) =>
             new ActionDisposable(() => Interlocked.Increment(ref afterInvokeDisposed)));
