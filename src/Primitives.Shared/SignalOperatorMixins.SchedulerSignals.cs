@@ -189,8 +189,11 @@ public static partial class LinqExtensions
                 return;
             }
 
-            _timer.Dispose();
-            _subscriptions.Dispose();
+            lock (_gate)
+            {
+                _timer.Dispose();
+                _subscriptions.Dispose();
+            }
         }
 
         /// <summary>Starts the delayed notification coordinator.</summary>
