@@ -232,9 +232,9 @@ public sealed class SyncLatest13Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="values">When the method returns <see langword="true"/>, the snapshot.</param>
     /// <returns><see langword="true"/> when every source has produced a value; otherwise <see langword="false"/>.</returns>
     [SuppressMessage(
-        "Major Code Smell",
-        "S1541:Methods and properties should not be too complex",
-        Justification = "Short-circuited checks over every source's Optional are the snapshot semantic.")]
+        "Maintainability",
+        "SST1442:A function has too many direct branch points",
+        Justification = "One short-circuited Optional check per source is the snapshot semantic; the branch count is inherent to the operator arity.")]
     private bool TryReadValues(out (T1 V1, T2 V2, T3 V3, T4 V4, T5 V5, T6 V6, T7 V7, T8 V8, T9 V9, T10 V10, T11 V11, T12 V12, T13 V13) values)
     {
         if (Value1.TryGetValue(out var value1)
