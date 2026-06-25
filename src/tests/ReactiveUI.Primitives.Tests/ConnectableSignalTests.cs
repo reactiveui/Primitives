@@ -180,6 +180,160 @@ public sealed class ConnectableSignalTests
         await Assert.That(sourceDisposals).IsEqualTo(1);
     }
 
+    /// <summary>Verifies AutoShare connects on the first subscriber and disconnects when the last one leaves.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AutoShareConnectsOnFirstSubscriberAndDisconnectsOnLast()
+    {
+        Signal<int> source = new();
+        var sourceSubscriptions = 0;
+        var sourceDisposals = 0;
+        var cold = Signal.Create<int>(observer =>
+        {
+            sourceSubscriptions++;
+            var inner = source.Subscribe(observer);
+            return new ActionDisposable(() =>
+            {
+                sourceDisposals++;
+                inner.Dispose();
+            });
+        });
+
+        var shared = cold.Share().AutoShare();
+        List<int> first = [];
+        List<int> second = [];
+
+        var firstSubscription = shared.Subscribe(first.Add);
+        await Assert.That(sourceSubscriptions).IsEqualTo(1);
+
+        var secondSubscription = shared.Subscribe(second.Add);
+        source.OnNext(FirstSharedValue);
+
+        // The single upstream connection feeds every observer.
+        await Assert.That(sourceSubscriptions).IsEqualTo(1);
+
+        firstSubscription.Dispose();
+        await Assert.That(sourceDisposals).IsEqualTo(0);
+
+        secondSubscription.Dispose();
+
+        // The connection is disposed only once the final subscriber leaves.
+        await Assert.That(sourceDisposals).IsEqualTo(1);
+        await Assert.That(first.SequenceEqual(ExpectedFirstSharedValues)).IsTrue();
+        await Assert.That(second.SequenceEqual(ExpectedFirstSharedValues)).IsTrue();
+    }
+
+    /// <summary>Verifies AutoShare reconnects to the source after every subscriber leaves and a new one arrives.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AutoShareReconnectsAfterAllSubscribersLeave()
+    {
+        const int ExpectedConnections = 2;
+        Signal<int> source = new();
+        var sourceSubscriptions = 0;
+        var sourceDisposals = 0;
+        var cold = Signal.Create<int>(observer =>
+        {
+            sourceSubscriptions++;
+            var inner = source.Subscribe(observer);
+            return new ActionDisposable(() =>
+            {
+                sourceDisposals++;
+                inner.Dispose();
+            });
+        });
+
+        var shared = cold.Share().AutoShare();
+
+        shared.Subscribe(static _ => { }).Dispose();
+        await Assert.That(sourceSubscriptions).IsEqualTo(1);
+        await Assert.That(sourceDisposals).IsEqualTo(1);
+
+        // A fresh subscriber after the count returned to zero forces a new connection.
+        using var second = shared.Subscribe(static _ => { });
+        await Assert.That(sourceSubscriptions).IsEqualTo(ExpectedConnections);
+        await Assert.That(sourceDisposals).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies a throwing Connect propagates and unwinds the refcount so a later subscribe reconnects.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AutoShareConnectFailureUnwindsRefcount()
+    {
+        const int ExpectedSubscribeAttempts = 2;
+        var subscribeAttempts = 0;
+        var shouldThrow = true;
+        InvalidOperationException expected = new("connect");
+        var cold = Signal.Create<int>(observer =>
+        {
+            subscribeAttempts++;
+            if (shouldThrow)
+            {
+                throw expected;
+            }
+
+            observer.OnNext(FirstSharedValue);
+            return Scope.Empty;
+        });
+
+        var shared = cold.Share().AutoShare();
+
+        // Connect runs outside the gate; a synchronous failure surfaces to the caller.
+        var thrown = Assert.Throws<InvalidOperationException>(() => shared.Subscribe(static _ => { }));
+        await Assert.That(thrown).IsSameReferenceAs(expected);
+        await Assert.That(subscribeAttempts).IsEqualTo(1);
+
+        // The failed attempt unwound the count, so the next subscriber reconnects rather than stalling.
+        shouldThrow = false;
+        List<int> values = [];
+        using var recovered = shared.Subscribe(values.Add);
+        await Assert.That(subscribeAttempts).IsEqualTo(ExpectedSubscribeAttempts);
+        await Assert.That(values.SequenceEqual(ExpectedFirstSharedValues)).IsTrue();
+    }
+
+    /// <summary>Verifies AutoShare maintains a single connection under concurrent subscribe and dispose churn.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AutoShareKeepsSingleConnectionUnderConcurrentChurn()
+    {
+        const int Workers = 8;
+        const int IterationsPerWorker = 200;
+        var peakConnections = 0;
+        var liveConnections = 0;
+        var cold = Signal.Create<int>(observer =>
+        {
+            var live = Interlocked.Increment(ref liveConnections);
+            var peak = Volatile.Read(ref peakConnections);
+            while (live > peak && Interlocked.CompareExchange(ref peakConnections, live, peak) != peak)
+            {
+                peak = Volatile.Read(ref peakConnections);
+            }
+
+            observer.OnNext(FirstSharedValue);
+            return new ActionDisposable(() => Interlocked.Decrement(ref liveConnections));
+        });
+
+        var shared = cold.Share().AutoShare();
+
+        var workers = new Task[Workers];
+        for (var worker = 0; worker < Workers; worker++)
+        {
+            workers[worker] = Task.Run(() =>
+            {
+                for (var iteration = 0; iteration < IterationsPerWorker; iteration++)
+                {
+                    shared.Subscribe(static _ => { }).Dispose();
+                }
+            });
+        }
+
+        await Task.WhenAll(workers);
+
+        // Refcount churn must never run two upstream connections at once and must release the last one.
+        await Assert.That(peakConnections).IsEqualTo(1);
+        await Assert.That(liveConnections).IsEqualTo(0);
+    }
+
     /// <summary>Verifies direct connect handles reuse, terminate, and dispose idempotently.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
