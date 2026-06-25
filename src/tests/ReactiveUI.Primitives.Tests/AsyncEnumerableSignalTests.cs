@@ -64,6 +64,36 @@ public sealed class AsyncEnumerableSignalTests
         await Assert.That(source.DisposeCount).IsEqualTo(1);
     }
 
+    /// <summary>Verifies disposal disposes a non-cooperative enumerator without waiting on its <c>MoveNextAsync</c>.</summary>
+    /// <param name="token">The test cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    [Timeout(30_000)]
+    public async Task DisposeDisposesNonCooperativeEnumeratorWithoutHanging(CancellationToken token)
+    {
+        NeverCompletingAsyncEnumerable source = new();
+        AsyncEnumerableSignal<int> signal = new(source, CancellationToken.None);
+        RecordingWitness<int> observer = new();
+
+        var subscription = signal.Subscribe(observer);
+
+        // Wait until the pump is parked inside the MoveNextAsync that never completes.
+        await source.MoveNextEntered.Task.WaitAsync(token);
+
+        // Disposal must dispose the enumerator promptly even though MoveNextAsync ignores cancellation.
+        subscription.Dispose();
+
+        await source.Disposed.Task.WaitAsync(token);
+
+        // Dispose again to confirm the second call never reaches the enumerator.
+        subscription.Dispose();
+
+        await Assert.That(source.DisposeCount).IsEqualTo(1);
+        await Assert.That(observer.Values).IsEmpty();
+        await Assert.That(observer.Completed).IsEqualTo(0);
+        await Assert.That(observer.Errors).IsEmpty();
+    }
+
     /// <summary>Verifies a normally completing sequence delivers all values then completes.</summary>
     /// <param name="token">The test cancellation token.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -124,6 +154,51 @@ public sealed class AsyncEnumerableSignalTests
         {
             DisposeCount++;
             _ = Disposed.TrySetResult();
+            return default;
+        }
+    }
+
+    /// <summary>An async enumerable whose <c>MoveNextAsync</c> never completes and ignores cancellation.</summary>
+    private sealed class NeverCompletingAsyncEnumerable : IAsyncEnumerable<int>, IAsyncEnumerator<int>
+    {
+        /// <summary>The task that never completes, modelling a non-cooperative source.</summary>
+        private readonly TaskCompletionSource<bool> _never =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Gets the signal completed once the pump enters <c>MoveNextAsync</c>.</summary>
+        public TaskCompletionSource MoveNextEntered { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Gets the signal completed once the enumerator is disposed.</summary>
+        public TaskCompletionSource Disposed { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Gets the number of times the enumerator has been disposed.</summary>
+        public int DisposeCount { get; private set; }
+
+        /// <summary>Gets the current value.</summary>
+        public int Current => 0;
+
+        /// <inheritdoc/>
+        public IAsyncEnumerator<int> GetAsyncEnumerator(CancellationToken cancellationToken = default) => this;
+
+        /// <inheritdoc/>
+        public async ValueTask<bool> MoveNextAsync()
+        {
+            _ = MoveNextEntered.TrySetResult();
+
+            // Deliberately ignores the cancellation token: the pump must not depend on this completing.
+            return await _never.Task.ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
+        public ValueTask DisposeAsync()
+        {
+            DisposeCount++;
+            _ = Disposed.TrySetResult();
+
+            // Release the parked MoveNextAsync so the pump task can drain without leaking.
+            _ = _never.TrySetResult(false);
             return default;
         }
     }
