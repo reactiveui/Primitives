@@ -74,6 +74,50 @@ public sealed class ExpireCoordinatorTests
         await Assert.That(errors.SequenceEqual([nameof(TimeoutException)])).IsTrue();
     }
 
+    /// <summary>Verifies no timer fires once the source has terminated.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task NoTimeoutFiresAfterCompletion()
+    {
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        Signal<int> source = new();
+        List<int> values = [];
+        List<string> errors = [];
+        var completed = false;
+        using var subscription = source.Expire(TimeSpan.FromTicks(DueTicks), clock)
+            .Subscribe(values.Add, ex => errors.Add(ex.GetType().Name), () => completed = true);
+
+        clock.AdvanceBy(TimeSpan.FromTicks(ShortGapTicks));
+        source.OnNext(One);
+        source.OnCompleted();
+        clock.AdvanceBy(TimeSpan.FromTicks(DueTicks * ValueCount));
+
+        await Assert.That(completed).IsTrue();
+        await Assert.That(values.SequenceEqual([One])).IsTrue();
+        await Assert.That(errors.Count).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies no timer fires once the source has errored.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task NoTimeoutFiresAfterError()
+    {
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        Signal<int> source = new();
+        List<int> values = [];
+        List<string> errors = [];
+        using var subscription = source.Expire(TimeSpan.FromTicks(DueTicks), clock)
+            .Subscribe(values.Add, ex => errors.Add(ex.GetType().Name));
+
+        clock.AdvanceBy(TimeSpan.FromTicks(ShortGapTicks));
+        source.OnNext(One);
+        source.OnError(new InvalidOperationException());
+        clock.AdvanceBy(TimeSpan.FromTicks(DueTicks * ValueCount));
+
+        await Assert.That(values.SequenceEqual([One])).IsTrue();
+        await Assert.That(errors.SequenceEqual([nameof(InvalidOperationException)])).IsTrue();
+    }
+
     /// <summary>Verifies an in-flight value wins the race and suppresses the superseded timeout.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

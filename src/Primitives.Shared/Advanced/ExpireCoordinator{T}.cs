@@ -169,10 +169,25 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
 
     /// <summary>Schedules a fresh inactivity timer for the given epoch and discards the in-flight one.</summary>
     /// <param name="epoch">The version this timer must still match to fire.</param>
+    /// <remarks>Scheduled outside the gate to avoid reentrant <see cref="Lock"/> acquisition on a synchronous
+    /// sequencer; the publish is re-checked under the gate so a timer never survives a terminal notification.</remarks>
     private void ArmTimer(long epoch)
     {
         var timer = _sequencer.Schedule((Coordinator: this, Epoch: epoch), _dueTime, static (_, state) => state.Coordinator.EmitTimeout(state.Epoch));
-        Interlocked.Exchange(ref _timer, timer)?.Dispose();
+
+        IDisposable? previous;
+        lock (_gate)
+        {
+            if (_done != 0)
+            {
+                timer.Dispose();
+                return;
+            }
+
+            previous = Interlocked.Exchange(ref _timer, timer);
+        }
+
+        previous?.Dispose();
     }
 
     /// <summary>Emits the timeout error when the firing timer is still current.</summary>
