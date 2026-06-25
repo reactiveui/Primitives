@@ -52,11 +52,11 @@ public sealed class PrioritySemaphoreSignalTests
     /// <summary>The spin delay used to amplify overlap detection.</summary>
     private const int ProbeSpinWaitIterations = 1000;
 
-    /// <summary>The wait duration for terminal serialization probes.</summary>
-    private const int TerminalProbeTimeoutSeconds = 1;
-
     /// <summary>Task-group offsets for the concurrent operations phase.</summary>
     private const int OnNextTaskOffsetMultiplier = 2;
+
+    /// <summary>The wait duration for terminal serialization probes.</summary>
+    private static readonly TimeSpan TerminalProbeTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Constructor and observer validation follow the inner signal contract.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -278,21 +278,23 @@ public sealed class PrioritySemaphoreSignalTests
     {
         using var signal = new PrioritySemaphoreSignal<int>(0);
         using var releaseOnNext = new ManualResetEventSlim();
-        var observer = new TerminalOverlapProbe(releaseOnNext);
+        using var observer = new TerminalOverlapProbe(releaseOnNext);
         using var subscription = signal.Subscribe(observer);
 
         signal.OnNext(ThirdValue);
         signal.OnNext(FirstValue);
         signal.OnNext(SecondValue);
 
-        var drainTask = Task.Run(() => signal.MaximumCount = 1);
-        await observer.OnNextStarted.WaitAsync(TimeSpan.FromSeconds(TerminalProbeTimeoutSeconds));
+        // Drive the drain on a dedicated thread so the probe can block it without starving the
+        // thread pool; the started gate is observed synchronously to keep the race deterministic.
+        var drainThread = StartThread(() => signal.MaximumCount = 1);
+        await Assert.That(observer.WaitForOnNextStarted(TerminalProbeTimeout)).IsTrue();
 
-        var completionTask = Task.Run(signal.OnCompleted);
+        var completionThread = StartThread(signal.OnCompleted);
 
         releaseOnNext.Set();
-        await drainTask;
-        await completionTask;
+        drainThread.Join();
+        completionThread.Join();
 
         await Assert.That(observer.Completed).IsEqualTo(1);
         await Assert.That(observer.Values.SequenceEqual([FirstValue, SecondValue, ThirdValue])).IsTrue();
@@ -306,7 +308,7 @@ public sealed class PrioritySemaphoreSignalTests
     {
         using var signal = new PrioritySemaphoreSignal<int>(0);
         using var releaseOnNext = new ManualResetEventSlim();
-        var observer = new TerminalOverlapProbe(releaseOnNext);
+        using var observer = new TerminalOverlapProbe(releaseOnNext);
         using var subscription = signal.Subscribe(observer);
         var expected = new InvalidOperationException("expected");
 
@@ -314,18 +316,30 @@ public sealed class PrioritySemaphoreSignalTests
         signal.OnNext(FirstValue);
         signal.OnNext(SecondValue);
 
-        var drainTask = Task.Run(() => signal.MaximumCount = 1);
-        await observer.OnNextStarted.WaitAsync(TimeSpan.FromSeconds(TerminalProbeTimeoutSeconds));
+        // Drive the drain on a dedicated thread so the probe can block it without starving the
+        // thread pool; the started gate is observed synchronously to keep the race deterministic.
+        var drainThread = StartThread(() => signal.MaximumCount = 1);
+        await Assert.That(observer.WaitForOnNextStarted(TerminalProbeTimeout)).IsTrue();
 
-        var errorTask = Task.Run(() => signal.OnError(expected));
+        var errorThread = StartThread(() => signal.OnError(expected));
 
         releaseOnNext.Set();
-        await drainTask;
-        await errorTask;
+        drainThread.Join();
+        errorThread.Join();
 
         await Assert.That(observer.Errors[0]).IsSameReferenceAs(expected);
         await Assert.That(observer.Values.Length).IsEqualTo(1);
         await Assert.That(observer.OverlapDetected).IsFalse();
+    }
+
+    /// <summary>Starts a background thread running the supplied action.</summary>
+    /// <param name="action">The work to run.</param>
+    /// <returns>The started thread.</returns>
+    private static Thread StartThread(Action action)
+    {
+        var thread = new Thread(() => action()) { IsBackground = true };
+        thread.Start();
+        return thread;
     }
 
     /// <summary>Test sequencer that queues scheduled work until drained explicitly.</summary>
@@ -450,7 +464,7 @@ public sealed class PrioritySemaphoreSignalTests
     }
 
     /// <summary>Observer used to detect concurrent <see cref="IObserver{T}.OnCompleted"/> and <see cref="IObserver{T}.OnError"/> overlap.</summary>
-    private sealed class TerminalOverlapProbe : IObserver<int>
+    private sealed class TerminalOverlapProbe : IObserver<int>, IDisposable
     {
         /// <summary>Gate to hold the first value until assertions can observe interleaving.</summary>
         private readonly ManualResetEventSlim _releaseOnNext;
@@ -465,7 +479,7 @@ public sealed class PrioritySemaphoreSignalTests
         private readonly List<int> _values = [];
 
         /// <summary>Signals that one <see cref="OnNext"/> value started delivering.</summary>
-        private readonly TaskCompletionSource _onNextStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly ManualResetEventSlim _onNextStarted = new();
 
         /// <summary>Whether the observer is currently inside <see cref="OnNext"/>.</summary>
         private int _insideOnNext;
@@ -488,9 +502,6 @@ public sealed class PrioritySemaphoreSignalTests
 
         /// <summary>Gets whether overlapping terminal and value notifications were observed.</summary>
         public bool OverlapDetected => Volatile.Read(ref _overlapDetected) != 0;
-
-        /// <summary>Gets whether <see cref="OnNext"/> has started delivering at least one value.</summary>
-        public Task OnNextStarted => _onNextStarted.Task;
 
         /// <summary>Gets the number of delivered values.</summary>
         public int[] Values
@@ -519,6 +530,14 @@ public sealed class PrioritySemaphoreSignalTests
             }
         }
 
+        /// <summary>Blocks until <see cref="OnNext"/> has started delivering at least one value.</summary>
+        /// <param name="timeout">The maximum time to wait.</param>
+        /// <returns><see langword="true"/> when delivery started within the timeout.</returns>
+        public bool WaitForOnNextStarted(TimeSpan timeout) => _onNextStarted.Wait(timeout);
+
+        /// <inheritdoc />
+        public void Dispose() => _onNextStarted.Dispose();
+
         /// <inheritdoc />
         public void OnNext(int value)
         {
@@ -533,7 +552,7 @@ public sealed class PrioritySemaphoreSignalTests
                 _values.Add(value);
             }
 
-            _ = _onNextStarted.TrySetResult();
+            _onNextStarted.Set();
             _releaseOnNext.Wait();
             _ = Interlocked.Exchange(ref _insideOnNext, 0);
         }

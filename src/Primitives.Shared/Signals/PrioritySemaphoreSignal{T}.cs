@@ -190,36 +190,46 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
     }
 
     /// <summary>Dequeue and forwards values while capacity is available.</summary>
+    /// <remarks>
+    /// Only a single thread ever delivers downstream at a time. A caller that finds a drain
+    /// already in progress hands its work to the active owner and returns; the owner re-checks
+    /// for newly queued work under the gate before relinquishing ownership, so no wakeup is lost
+    /// and no two threads can deliver to the inner signal concurrently.
+    /// </remarks>
     private void YieldUntilEmptyOrBlocked()
     {
-        if (!TryBeginDrain(out var item))
+        if (!TryBeginDrain())
         {
             return;
         }
 
+        var owned = true;
         try
         {
-            do
+            while (TryTakeNextDrainItem(out var item))
             {
                 Deliver(item);
             }
-            while (TryTakeNextDrainItem(out item));
+
+            // TryTakeNextDrainItem cleared ownership when it returned false.
+            owned = false;
         }
         finally
         {
-            EndDrain();
+            if (owned)
+            {
+                EndDrain();
+            }
         }
     }
 
     /// <summary>Attempts to become the single drain owner.</summary>
-    /// <param name="item">The first drain item to deliver.</param>
     /// <returns><see langword="true"/> when this caller owns the drain.</returns>
-    private bool TryBeginDrain(out DrainItem item)
+    private bool TryBeginDrain()
     {
-        item = DrainItem.Empty;
         lock (_gate)
         {
-            if (_isDraining || !TryTakeNextDrainItemCore(out item))
+            if (_isDraining)
             {
                 return false;
             }
@@ -229,14 +239,31 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
         }
     }
 
-    /// <summary>Attempts to take the next drain item while holding the gate.</summary>
+    /// <summary>Captures the next drain item, or relinquishes ownership when nothing is left to deliver.</summary>
     /// <param name="item">The next item to drain.</param>
-    /// <returns><see langword="true"/> when an item was captured.</returns>
+    /// <returns><see langword="true"/> when an item was captured and the caller retains ownership.</returns>
     private bool TryTakeNextDrainItem(out DrainItem item)
     {
         lock (_gate)
         {
-            return TryTakeNextDrainItemCore(out item);
+            if (TryTakeNextDrainItemCore(out item))
+            {
+                return true;
+            }
+
+            // No work remains; release ownership atomically with the empty check so a
+            // producer that queues work after this point will be able to begin a fresh drain.
+            _isDraining = false;
+            return false;
+        }
+    }
+
+    /// <summary>Releases drain ownership after an exceptional exit from the drain loop.</summary>
+    private void EndDrain()
+    {
+        lock (_gate)
+        {
+            _isDraining = false;
         }
     }
 
@@ -252,15 +279,6 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
         }
 
         return TryTakeTerminalNotification(out item);
-    }
-
-    /// <summary>Ends the single-owner drain.</summary>
-    private void EndDrain()
-    {
-        lock (_gate)
-        {
-            _isDraining = false;
-        }
     }
 
     /// <summary>Attempts to dequeue and capture the next value when capacity is available.</summary>
