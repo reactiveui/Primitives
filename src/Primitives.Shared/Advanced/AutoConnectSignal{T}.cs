@@ -22,6 +22,15 @@ public sealed class AutoConnectSignal<T> : IObservable<T>
     /// <param name="source">Connectable signal being auto-connected.</param>
     /// <param name="subscriberCount">Number of observers required before connecting.</param>
     public AutoConnectSignal(ConnectableSignal<T> source, int subscriberCount)
+        : this(source, subscriberCount, null)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="AutoConnectSignal{T}"/> class.</summary>
+    /// <param name="source">Connectable signal being auto-connected.</param>
+    /// <param name="subscriberCount">Number of observers required before connecting.</param>
+    /// <param name="onConnect">Action invoked with the connection disposable when the source connects.</param>
+    public AutoConnectSignal(ConnectableSignal<T> source, int subscriberCount, Action<IDisposable>? onConnect)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -29,6 +38,7 @@ public sealed class AutoConnectSignal<T> : IObservable<T>
 
         Source = source;
         SubscriberCount = subscriberCount;
+        OnConnect = onConnect;
     }
 
     /// <summary>Gets the connectable signal being auto-connected.</summary>
@@ -36,6 +46,9 @@ public sealed class AutoConnectSignal<T> : IObservable<T>
 
     /// <summary>Gets the number of observers required before connecting.</summary>
     private int SubscriberCount { get; }
+
+    /// <summary>Gets the callback invoked with the connection disposable.</summary>
+    private Action<IDisposable>? OnConnect { get; }
 
     /// <summary>Subscribes an observer and connects when the threshold is reached.</summary>
     /// <param name="observer">Observer to subscribe.</param>
@@ -51,7 +64,8 @@ public sealed class AutoConnectSignal<T> : IObservable<T>
         var count = Interlocked.Increment(ref _count);
         if (count >= SubscriberCount && Interlocked.CompareExchange(ref _connected, 1, 0) == 0)
         {
-            _ = Source.Connect();
+            var connection = Source.Connect();
+            OnConnect?.Invoke(connection);
         }
 
         return subscription;

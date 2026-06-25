@@ -54,6 +54,21 @@ public static class ConnectableSignalExtensions
 
             return new AutoConnectSignal<T>(source, subscriberCount);
         }
+
+        /// <summary>Connects after <paramref name="subscriberCount"/> observers have subscribed and reports the connection.</summary>
+        /// <param name="subscriberCount">Number of observers required before connecting.</param>
+        /// <param name="onConnect">Action invoked with the connection disposable when the source connects.</param>
+        /// <returns>A sequence that connects after the requested number of subscriptions.</returns>
+        public IObservable<T> AutoConnect(int subscriberCount, Action<IDisposable> onConnect)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            ArgumentExceptionHelper.ThrowIfNull(onConnect);
+
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(subscriberCount);
+
+            return new AutoConnectSignal<T>(source, subscriberCount, onConnect);
+        }
     }
 
     /// <summary>Hot-sharing operators for an observable source sequence.</summary>
