@@ -1,1 +1,33 @@
 #nullable enable
+ReactiveUI.Primitives.Reactive.Advanced.AutoConnectSignal<T>.AutoConnectSignal(ReactiveUI.Primitives.ConnectableSignal<T>! source, int subscriberCount, System.Action<System.IDisposable!>? onConnect) -> void
+ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.extension<T>(ReactiveUI.Primitives.ConnectableSignal<T>!).AutoConnect(int subscriberCount, System.Action<System.IDisposable!>! onConnect) -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension(System.IObservable<object?>!).Cast<TResult>() -> System.IObservable<TResult>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension(System.IObservable<object?>!).OfType<TResult>() -> System.IObservable<TResult>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).DelaySubscription(System.DateTimeOffset dueTime) -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).DelaySubscription(System.DateTimeOffset dueTime, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).OnErrorResumeNext(System.IObservable<T>! second) -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<TLeft>(System.IObservable<TLeft>!).Delay(System.DateTimeOffset dueTime) -> System.IObservable<TLeft>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<TLeft>(System.IObservable<TLeft>!).Delay(System.DateTimeOffset dueTime, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<TLeft>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<TLeft>(System.IObservable<TLeft>!).Timeout(System.DateTimeOffset dueTime) -> System.IObservable<TLeft>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<TLeft>(System.IObservable<TLeft>!).Timeout(System.DateTimeOffset dueTime, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<TLeft>!
+static ReactiveUI.Primitives.Reactive.ConnectableSignalExtensions.AutoConnect<T>(this ReactiveUI.Primitives.ConnectableSignal<T>! source, int subscriberCount, System.Action<System.IDisposable!>! onConnect) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.Cast<TResult>(this System.IObservable<object?>! source) -> System.IObservable<TResult>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.Delay<TLeft>(this System.IObservable<TLeft>! left, System.DateTimeOffset dueTime) -> System.IObservable<TLeft>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.Delay<TLeft>(this System.IObservable<TLeft>! left, System.DateTimeOffset dueTime, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<TLeft>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.DelaySubscription<T>(this System.IObservable<T>! source, System.DateTimeOffset dueTime) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.DelaySubscription<T>(this System.IObservable<T>! source, System.DateTimeOffset dueTime, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.OfType<TResult>(this System.IObservable<object?>! source) -> System.IObservable<TResult>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.OnErrorResumeNext<T>(this System.IObservable<T>! source, System.IObservable<T>! second) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.Timeout<TLeft>(this System.IObservable<TLeft>! left, System.DateTimeOffset dueTime) -> System.IObservable<TLeft>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.Timeout<TLeft>(this System.IObservable<TLeft>! left, System.DateTimeOffset dueTime, System.Reactive.Concurrency.IScheduler? scheduler) -> System.IObservable<TLeft>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.Case<TKey, T>(System.Func<TKey>! selector, System.Collections.Generic.IDictionary<TKey, System.IObservable<T>!>! sources) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.Case<TKey, T>(System.Func<TKey>! selector, System.Collections.Generic.IDictionary<TKey, System.IObservable<T>!>! sources, System.IObservable<T>! defaultSource) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.Generate<TState, T>(TState initialState, System.Func<TState, bool>! condition, System.Func<TState, TState>! iterate, System.Func<TState, T>! resultSelector) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.If<T>(System.Func<bool>! condition, System.IObservable<T>! thenSource) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.If<T>(System.Func<bool>! condition, System.IObservable<T>! thenSource, System.IObservable<T>! elseSource) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.OnErrorResumeNext<T>(params System.IObservable<T>![]! sources) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.OnErrorResumeNext<T>(System.Collections.Generic.IEnumerable<System.IObservable<T>!>! sources) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.OnErrorResumeNext<T>(System.IObservable<T>! first, System.IObservable<T>! second) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.Repeat<T>(T value) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.Repeat<T>(T value, int repeatCount) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.Signals.Signal.Using<TResource, T>(System.Func<TResource>! resourceFactory, System.Func<TResource, System.IObservable<T>!>! observableFactory) -> System.IObservable<T>!

@@ -167,6 +167,17 @@ public static partial class LinqExtensions
                 : new DelayStartSignal<T>(source, dueTime, ThreadPoolSequencer.Instance);
         }
 
+        /// <summary>Alias for <c>DelayStart</c> using an absolute due time.</summary>
+        /// <param name="dueTime">The absolute time at which to subscribe to the source.</param>
+        /// <returns>A sequence that subscribes to the source at <paramref name="dueTime"/>.</returns>
+        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        public IObservable<T> DelaySubscription(DateTimeOffset dueTime)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new AbsoluteDelayStartSignal<T>(source, dueTime, ThreadPoolSequencer.Instance);
+        }
+
         /// <summary>Alias for <c>DelayStart</c> using the System.Reactive operator name.</summary>
         /// <param name="dueTime">The delay before subscribing to the source.</param>
         /// <param name="scheduler">The sequencer used to schedule the delayed subscription.</param>
@@ -180,6 +191,19 @@ public static partial class LinqExtensions
             return source is RangeSignal range && CanReadRangeAs(typeof(T))
                 ? new ShiftedRangeSignal<T>(range, Sequencer.Normalize(dueTime), scheduler)
                 : new DelayStartSignal<T>(source, dueTime, scheduler);
+        }
+
+        /// <summary>Alias for <c>DelayStart</c> using an absolute due time.</summary>
+        /// <param name="dueTime">The absolute time at which to subscribe to the source.</param>
+        /// <param name="scheduler">The sequencer used to schedule the delayed subscription.</param>
+        /// <returns>A sequence that subscribes to the source at <paramref name="dueTime"/>.</returns>
+        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        public IObservable<T> DelaySubscription(DateTimeOffset dueTime, ISequencer? scheduler)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            scheduler ??= ThreadPoolSequencer.Instance;
+            return new AbsoluteDelayStartSignal<T>(source, dueTime, scheduler);
         }
 
         /// <summary>Invokes actions for each element in the observable sequence, for error notifications, and for successful completion.</summary>
