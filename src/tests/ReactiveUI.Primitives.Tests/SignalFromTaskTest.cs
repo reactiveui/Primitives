@@ -146,6 +146,66 @@ public class SignalFromTaskTest
         await Assert.That(finalErrors).Contains(nameof(TaskCanceledException));
     }
 
+    /// <summary>Disposing the immediate subscription before the awaited task completes suppresses the terminal notification.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task DisposeBeforeImmediateTaskCompletionSuppressesTerminalNotification()
+    {
+        ConcurrentQueue<int> values = new();
+        ConcurrentQueue<string> errors = new();
+        var completed = 0;
+        TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var taskSignal = Signal.FromTask(_ => gate.Task, Sequencer.Immediate);
+        try
+        {
+            var subscription = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => Interlocked.Increment(ref completed));
+
+            // Dispose while the awaited task is still pending, then release the continuation.
+            subscription.Dispose();
+            gate.SetResult(SuccessValue);
+
+            // Give the continuation ample time to run; it must observe the dispose and stay silent.
+            await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(false);
+            await Assert.That(values).IsEmpty();
+            await Assert.That(errors).IsEmpty();
+            await Assert.That(Volatile.Read(ref completed)).IsEqualTo(0);
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>Disposing the scheduled subscription before the awaited task completes suppresses the terminal notification.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task DisposeBeforeScheduledTaskCompletionSuppressesTerminalNotification()
+    {
+        ConcurrentQueue<int> values = new();
+        ConcurrentQueue<string> errors = new();
+        var completed = 0;
+        TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var taskSignal = Signal.FromTask(_ => gate.Task);
+        try
+        {
+            var subscription = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => Interlocked.Increment(ref completed));
+
+            // Dispose while the awaited task is still pending, then release the continuation.
+            subscription.Dispose();
+            gate.SetResult(SuccessValue);
+
+            // Give the continuation ample time to run; it must observe the dispose and stay silent.
+            await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(false);
+            await Assert.That(values).IsEmpty();
+            await Assert.That(errors).IsEmpty();
+            await Assert.That(Volatile.Read(ref completed)).IsEqualTo(0);
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
     /// <summary>Signals from task handles user exceptions.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
     [Test]
