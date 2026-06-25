@@ -228,6 +228,54 @@ public class ReplaySignalTests
         await Assert.That(state.ParamName).IsEqualTo("selector");
     }
 
+    /// <summary>
+    /// A new subscriber that races a live <see cref="ReplaySignal{T}.OnNext"/> must receive each value exactly
+    /// once: the replayed buffer must not duplicate or reorder a value that is also delivered live.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task Subscribe_RacingOnNext_DeliversEachValueOnce()
+    {
+        await RaceSubscribeAgainstProducer(() => new(1));
+        await RaceSubscribeAgainstProducer(() => new(Three));
+    }
+
+    /// <summary>
+    /// Continuously emits increasing values from one thread while another thread repeatedly subscribes and
+    /// disposes, asserting that no subscriber ever receives a value out of order or twice.
+    /// </summary>
+    /// <param name = "factory">Factory used to create the replay signal under test.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task RaceSubscribeAgainstProducer(Func<ReplaySignal<int>> factory)
+    {
+        const int subscribeAttempts = 50_000;
+
+        using var signal = factory();
+        using CancellationTokenSource stop = new();
+        var firstFailure = default(OrderingWitness<int>.OutOfOrderDelivery);
+
+        var producer = Task.Run(() =>
+        {
+            var value = 1;
+            while (!stop.IsCancellationRequested)
+            {
+                signal.OnNext(value++);
+            }
+        });
+
+        for (var attempt = 0; attempt < subscribeAttempts && firstFailure is null; attempt++)
+        {
+            OrderingWitness<int> witness = new();
+            signal.Subscribe(witness).Dispose();
+            firstFailure = witness.OutOfOrder;
+        }
+
+        await stop.CancelAsync();
+        await producer;
+
+        await Assert.That(firstFailure).IsNull();
+    }
+
     /// <summary>Creates a replay signal and disposes it immediately.</summary>
     /// <param name = "factory">Factory used to create the signal.</param>
     private static void CreateAndDispose(Func<ReplaySignal<int>> factory)
