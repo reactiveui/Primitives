@@ -15,6 +15,9 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <summary>Stores synchronous command execution.</summary>
     private readonly Func<TResult>? _executeSync;
 
+    /// <summary>Serializes running-flag writes with running-state stream notifications so the two never diverge.</summary>
+    private readonly Lock _runningGate = new();
+
     /// <summary>Stores null, a single result observer, or an observer array.</summary>
     private object? _resultObservers;
 
@@ -123,11 +126,11 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
             var current = Interlocked.CompareExchange(ref _isRunningState, signal, null);
             if (current is null)
             {
-                // Re-sync against the authoritative flag: a SetRunning call may have run
-                // between the snapshot above and the install, leaving the new stream with a
-                // stale value and no future correcting notification. Closing the window from
-                // the install side complements the re-read in SetRunning.
-                signal.Value = Volatile.Read(ref _isRunning);
+                // The snapshot above may already be stale: a SetRunning call can run between it and
+                // the install. Reconcile under the running gate so the just-installed stream cannot
+                // latch a stale value, and so a concurrent SetRunning cannot lose its update to a
+                // late seed write here.
+                ReconcileRunningState();
                 return signal;
             }
 
@@ -304,18 +307,14 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <param name="value">The running state.</param>
     private void SetRunning(bool value)
     {
-        Volatile.Write(ref _isRunning, value);
-        var state = Volatile.Read(ref _isRunningState);
-        if (state is not null)
+        // Hold the gate across the flag write and the stream notification so the running flag and
+        // the stream value are always observed together. The getter reconciles under the same gate
+        // after installing the stream, which closes the lazy-init window without either side losing
+        // an update to the other.
+        lock (_runningGate)
         {
-            state.Value = value;
-        }
-        else
-        {
-            // The stream may be installed concurrently by IsRunningSignal after we wrote the
-            // flag but before reading it back. Re-read and reconcile so the just-installed
-            // stream cannot latch at a stale value; the getter performs the symmetric re-sync.
-            ReconcileRunningState();
+            _isRunning = value;
+            Volatile.Read(ref _isRunningState)?.OnNext(value);
         }
 
         if (value)
@@ -326,22 +325,24 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
         Volatile.Write(ref _running, 0);
     }
 
-    /// <summary>Pushes the authoritative flag onto a concurrently installed stream when it has drifted.</summary>
+    /// <summary>Seeds a just-installed stream from the authoritative flag without losing a concurrent update.</summary>
     private void ReconcileRunningState()
     {
-        var state = Volatile.Read(ref _isRunningState);
-        if (state is null)
+        lock (_runningGate)
         {
-            return;
-        }
+            var state = Volatile.Read(ref _isRunningState);
+            if (state is null)
+            {
+                return;
+            }
 
-        var authoritative = Volatile.Read(ref _isRunning);
-        if (state.TryGetValue(out var current) && current == authoritative)
-        {
-            return;
-        }
+            if (state.TryGetValue(out var current) && current == _isRunning)
+            {
+                return;
+            }
 
-        state.Value = authoritative;
+            state.OnNext(_isRunning);
+        }
     }
 
     /// <summary>Publishes a successful result when the results surface has been requested.</summary>
