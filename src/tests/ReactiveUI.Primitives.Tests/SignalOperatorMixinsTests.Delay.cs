@@ -15,6 +15,9 @@ public partial class SignalOperatorMixinsTests
     /// <summary>Observation window used to verify disposal waits for in-flight delivery.</summary>
     private const int DisposeObservationMilliseconds = 200;
 
+    /// <summary>Generous bound for the in-flight delivery to begin, tolerant of a saturated thread pool.</summary>
+    private const int InflightDeliveryTimeoutSeconds = 30;
+
     /// <summary>Verifies shift uses one ordered drain for a burst of delayed notifications.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -49,6 +52,15 @@ public partial class SignalOperatorMixinsTests
     public async Task ShiftDisposeWaitsForInflightDeliveryAndDisallowsFurtherDelivery()
     {
         TimeSpan dueTime = TimeSpan.FromMilliseconds(One);
+
+        // Drain on dedicated threads so a saturated thread pool cannot stall the
+        // blocking in-flight delivery this test relies on; only the brief timer
+        // callback stays on the pool.
+        TaskPoolSequencer sequencer = new(new TaskFactory(
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskContinuationOptions.None,
+            TaskScheduler.Default));
         Signal<int> source = new();
         using ManualResetEventSlim onNextEntered = new(false);
         using ManualResetEventSlim onNextRelease = new(false);
@@ -57,7 +69,7 @@ public partial class SignalOperatorMixinsTests
         var delivered = 0;
 
         using var subscription = source
-            .Shift(dueTime, TaskPoolSequencer.Instance)
+            .Shift(dueTime, sequencer)
             .Subscribe(
                 value =>
                 {
@@ -76,9 +88,13 @@ public partial class SignalOperatorMixinsTests
         source.OnNext(Two);
         source.OnCompleted();
 
-        await Assert.That(onNextEntered.Wait(TimeSpan.FromSeconds(1))).IsTrue();
+        await Assert.That(onNextEntered.Wait(TimeSpan.FromSeconds(InflightDeliveryTimeoutSeconds))).IsTrue();
 
-        Task disposeTask = Task.Run(subscription.Dispose);
+        Task disposeTask = Task.Factory.StartNew(
+            subscription.Dispose,
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
         Task disposeObservation = Task.Delay(TimeSpan.FromMilliseconds(DisposeObservationMilliseconds));
         var disposeCompleted = await Task.WhenAny(disposeTask, disposeObservation) == disposeTask;
 
