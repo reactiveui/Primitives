@@ -60,23 +60,6 @@ internal sealed class SequencerWorkItem<TSequencer, TState> : IDisposable
         }
 
         var disposable = _action(_sequencer, _state) ?? EmptyDisposable.Instance;
-        var previous = Interlocked.CompareExchange(ref _disposable, disposable, null);
-        if (previous is not null)
-        {
-            disposable.Dispose();
-            return;
-        }
-
-        if (Volatile.Read(ref _isDisposed) == 0)
-        {
-            return;
-        }
-
-        if (!ReferenceEquals(Interlocked.CompareExchange(ref _disposable, EmptyDisposable.Instance, disposable), disposable))
-        {
-            return;
-        }
-
-        disposable.Dispose();
+        SequencerWorkItemDisposal.Publish(ref _disposable, disposable);
     }
 }
