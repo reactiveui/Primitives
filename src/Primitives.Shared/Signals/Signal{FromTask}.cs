@@ -168,7 +168,10 @@ public static partial class Signal
     {
         if (task.Status == TaskStatus.RanToCompletion)
         {
-            disposable = EmitResult(gate, observer, task.Result, shouldEmit(task.Result));
+            var result = task.Result;
+            disposable = shouldEmit(result)
+                ? EmitResult(gate, observer, result)
+                : EmitError(gate, observer, new OperationCanceledException());
             return true;
         }
 
@@ -188,30 +191,21 @@ public static partial class Signal
         return false;
     }
 
-    /// <summary>Emits a successful result (or cancellation) through the gate.</summary>
+    /// <summary>Emits a successful result and completion through the gate.</summary>
     /// <typeparam name="TResult">The TResult type.</typeparam>
     /// <param name="gate">The terminal-notification gate shared with the disposer.</param>
     /// <param name="observer">The observer value.</param>
     /// <param name="result">The task result.</param>
-    /// <param name="shouldEmit">Whether the result should be emitted.</param>
     /// <returns>An empty disposable.</returns>
-    private static EmptyDisposable EmitResult<TResult>(TaskStopGate gate, IObserver<TResult> observer, TResult result, bool shouldEmit)
+    private static EmptyDisposable EmitResult<TResult>(TaskStopGate gate, IObserver<TResult> observer, TResult result)
     {
         if (!gate.TryStop())
         {
             return EmptyDisposable.Instance;
         }
 
-        if (shouldEmit)
-        {
-            observer.OnNext(result);
-            observer.OnCompleted();
-        }
-        else
-        {
-            observer.OnError(new OperationCanceledException());
-        }
-
+        observer.OnNext(result);
+        observer.OnCompleted();
         return EmptyDisposable.Instance;
     }
 
@@ -254,8 +248,9 @@ public static partial class Signal
         try
         {
             var (result, isCanceled) = await cancellableTask.ConfigureAwait(false);
-            var shouldEmitResult = !isCanceled && !token.IsCancellationRequested && shouldEmit(result);
-            _ = EmitResult(gate, observer, result, shouldEmitResult);
+            _ = !isCanceled && !token.IsCancellationRequested && shouldEmit(result)
+                ? EmitResult(gate, observer, result)
+                : EmitError(gate, observer, new OperationCanceledException());
         }
         catch (Exception error)
         {
