@@ -52,6 +52,9 @@ public sealed class PrioritySemaphoreSignalTests
     /// <summary>The spin delay used to amplify overlap detection.</summary>
     private const int ProbeSpinWaitIterations = 1000;
 
+    /// <summary>The wait duration for terminal serialization probes.</summary>
+    private const int TerminalProbeTimeoutSeconds = 1;
+
     /// <summary>Task-group offsets for the concurrent operations phase.</summary>
     private const int OnNextTaskOffsetMultiplier = 2;
 
@@ -268,6 +271,63 @@ public sealed class PrioritySemaphoreSignalTests
         subscription.Dispose();
     }
 
+    /// <summary>Terminal completion notifications remain serialized with value delivery under concurrent drain.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ConcurrentCompletionDoesNotOverlapObserverOnNext()
+    {
+        using var signal = new PrioritySemaphoreSignal<int>(0);
+        using var releaseOnNext = new ManualResetEventSlim();
+        var observer = new TerminalOverlapProbe(releaseOnNext);
+        using var subscription = signal.Subscribe(observer);
+
+        signal.OnNext(ThirdValue);
+        signal.OnNext(FirstValue);
+        signal.OnNext(SecondValue);
+
+        var drainTask = Task.Run(() => signal.MaximumCount = 1);
+        await observer.OnNextStarted.WaitAsync(TimeSpan.FromSeconds(TerminalProbeTimeoutSeconds));
+
+        var completionTask = Task.Run(signal.OnCompleted);
+
+        releaseOnNext.Set();
+        await drainTask;
+        await completionTask;
+
+        await Assert.That(observer.Completed).IsEqualTo(1);
+        await Assert.That(observer.Values.SequenceEqual([FirstValue, SecondValue, ThirdValue])).IsTrue();
+        await Assert.That(observer.OverlapDetected).IsFalse();
+    }
+
+    /// <summary>Terminal error notifications remain serialized with value delivery under concurrent drain.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ConcurrentErrorDoesNotOverlapObserverOnNext()
+    {
+        using var signal = new PrioritySemaphoreSignal<int>(0);
+        using var releaseOnNext = new ManualResetEventSlim();
+        var observer = new TerminalOverlapProbe(releaseOnNext);
+        using var subscription = signal.Subscribe(observer);
+        var expected = new InvalidOperationException("expected");
+
+        signal.OnNext(ThirdValue);
+        signal.OnNext(FirstValue);
+        signal.OnNext(SecondValue);
+
+        var drainTask = Task.Run(() => signal.MaximumCount = 1);
+        await observer.OnNextStarted.WaitAsync(TimeSpan.FromSeconds(TerminalProbeTimeoutSeconds));
+
+        var errorTask = Task.Run(() => signal.OnError(expected));
+
+        releaseOnNext.Set();
+        await drainTask;
+        await errorTask;
+
+        await Assert.That(observer.Errors[0]).IsSameReferenceAs(expected);
+        await Assert.That(observer.Values.Length).IsEqualTo(1);
+        await Assert.That(observer.OverlapDetected).IsFalse();
+    }
+
     /// <summary>Test sequencer that queues scheduled work until drained explicitly.</summary>
     private sealed class QueuedSequencer : ISequencer
     {
@@ -385,6 +445,121 @@ public sealed class PrioritySemaphoreSignalTests
             lock (_gate)
             {
                 _values.Add(value);
+            }
+        }
+    }
+
+    /// <summary>Observer used to detect concurrent <see cref="IObserver{T}.OnCompleted"/> and <see cref="IObserver{T}.OnError"/> overlap.</summary>
+    private sealed class TerminalOverlapProbe : IObserver<int>
+    {
+        /// <summary>Gate to hold the first value until assertions can observe interleaving.</summary>
+        private readonly ManualResetEventSlim _releaseOnNext;
+
+        /// <summary>Guards internal state.</summary>
+        private readonly Lock _gate = new();
+
+        /// <summary>Captured errors.</summary>
+        private readonly List<Exception> _errors = [];
+
+        /// <summary>Captured values.</summary>
+        private readonly List<int> _values = [];
+
+        /// <summary>Signals that one <see cref="OnNext"/> value started delivering.</summary>
+        private readonly TaskCompletionSource _onNextStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Whether the observer is currently inside <see cref="OnNext"/>.</summary>
+        private int _insideOnNext;
+
+        /// <summary>Whether a terminal notification was observed while a value was being delivered.</summary>
+        private int _overlapDetected;
+
+        /// <summary>Whether a value was emitted.</summary>
+        private int _onNextCount;
+
+        /// <summary>Completed notification count.</summary>
+        private int _completed;
+
+        /// <summary>Initializes a new instance of the <see cref="TerminalOverlapProbe"/> class.</summary>
+        /// <param name="releaseOnNext">Gate used by tests to hold <see cref="OnNext"/> in-flight.</param>
+        public TerminalOverlapProbe(ManualResetEventSlim releaseOnNext)
+        {
+            _releaseOnNext = releaseOnNext;
+        }
+
+        /// <summary>Gets whether overlapping terminal and value notifications were observed.</summary>
+        public bool OverlapDetected => Volatile.Read(ref _overlapDetected) != 0;
+
+        /// <summary>Gets whether <see cref="OnNext"/> has started delivering at least one value.</summary>
+        public Task OnNextStarted => _onNextStarted.Task;
+
+        /// <summary>Gets the number of delivered values.</summary>
+        public int[] Values
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return [.. _values];
+                }
+            }
+        }
+
+        /// <summary>Gets the number of completed notifications.</summary>
+        public int Completed => Volatile.Read(ref _completed);
+
+        /// <summary>Gets the errors delivered to this observer.</summary>
+        public Exception[] Errors
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return [.. _errors];
+                }
+            }
+        }
+
+        /// <inheritdoc />
+        public void OnNext(int value)
+        {
+            if (Interlocked.Exchange(ref _insideOnNext, 1) != 0)
+            {
+                _ = Interlocked.Exchange(ref _overlapDetected, 1);
+            }
+
+            lock (_gate)
+            {
+                _onNextCount++;
+                _values.Add(value);
+            }
+
+            _ = _onNextStarted.TrySetResult();
+            _releaseOnNext.Wait();
+            _ = Interlocked.Exchange(ref _insideOnNext, 0);
+        }
+
+        /// <inheritdoc />
+        public void OnCompleted()
+        {
+            if (Volatile.Read(ref _insideOnNext) != 0)
+            {
+                _ = Interlocked.Exchange(ref _overlapDetected, 1);
+            }
+
+            _ = Interlocked.Increment(ref _completed);
+        }
+
+        /// <inheritdoc />
+        public void OnError(Exception error)
+        {
+            if (Volatile.Read(ref _insideOnNext) != 0)
+            {
+                _ = Interlocked.Exchange(ref _overlapDetected, 1);
+            }
+
+            lock (_gate)
+            {
+                _errors.Add(error);
             }
         }
     }

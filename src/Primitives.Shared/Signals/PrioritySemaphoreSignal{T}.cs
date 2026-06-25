@@ -31,6 +31,15 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
     /// <summary>Prevents multiple concurrent drain loops from forwarding downstream at once.</summary>
     private bool _isDraining;
 
+    /// <summary>Queued terminal state waiting to be emitted by the drain owner.</summary>
+    private TerminalNotification _terminalNotification;
+
+    /// <summary>Queued values flushed on completion, ignoring semaphore capacity.</summary>
+    private PriorityQueue<T>? _terminalQueue;
+
+    /// <summary>Terminal error to forward when terminating with error.</summary>
+    private Exception? _terminalError;
+
     /// <summary>Initializes a new instance of the <see cref="PrioritySemaphoreSignal{T}"/> class.</summary>
     /// <param name="maxCount">The maximum number of values to forward before release is required.</param>
     public PrioritySemaphoreSignal(int maxCount)
@@ -45,6 +54,19 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
     {
         _inner = sched is not null ? new ScheduledSignal<T>(sched) : new Signal<T>();
         _maximumCount = maxCount;
+    }
+
+    /// <summary>Terminal states consumed by the drain owner.</summary>
+    private enum TerminalNotification
+    {
+        /// <summary>No terminal notification has been queued.</summary>
+        None,
+
+        /// <summary>Completion notification.</summary>
+        Completed,
+
+        /// <summary>Error notification.</summary>
+        Error,
     }
 
     /// <inheritdoc />
@@ -95,18 +117,20 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
     /// <inheritdoc />
     public void OnCompleted()
     {
-        var queue = CompleteQueue();
-        if (queue is null)
+        lock (_gate)
         {
-            return;
+            if (_nextItems is null)
+            {
+                return;
+            }
+
+            _terminalQueue = _nextItems;
+            _nextItems = null;
+            _terminalNotification = TerminalNotification.Completed;
+            _terminalError = null;
         }
 
-        while (queue.Count > 0)
-        {
-            _inner.OnNext(queue.Dequeue());
-        }
-
-        _inner.OnCompleted();
+        YieldUntilEmptyOrBlocked();
     }
 
     /// <inheritdoc />
@@ -116,10 +140,18 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
 
         lock (_gate)
         {
+            if (_nextItems is null)
+            {
+                return;
+            }
+
             _nextItems = null;
+            _terminalQueue = null;
+            _terminalNotification = TerminalNotification.Error;
+            _terminalError = error;
         }
 
-        _inner.OnError(error);
+        YieldUntilEmptyOrBlocked();
     }
 
     /// <inheritdoc />
@@ -131,21 +163,12 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
         lock (_gate)
         {
             _nextItems = null;
+            _terminalQueue = null;
+            _terminalNotification = TerminalNotification.None;
+            _terminalError = null;
         }
 
         _inner.Dispose();
-    }
-
-    /// <summary>Completes the priority queue and returns the remaining queued values.</summary>
-    /// <returns>The completed queue, or <see langword="null"/> when the signal was already terminal.</returns>
-    private PriorityQueue<T>? CompleteQueue()
-    {
-        lock (_gate)
-        {
-            var queue = _nextItems;
-            _nextItems = null;
-            return queue;
-        }
     }
 
     /// <summary>Queues a value when the signal is still accepting input.</summary>
@@ -169,49 +192,78 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
     /// <summary>Dequeue and forwards values while capacity is available.</summary>
     private void YieldUntilEmptyOrBlocked()
     {
-        T next;
-        var ownsDrain = false;
-        lock (_gate)
+        if (!TryBeginDrain(out var item))
         {
-            if (_isDraining || !TryDequeue(out next))
-            {
-                return;
-            }
-
-            _isDraining = true;
-            ownsDrain = true;
+            return;
         }
 
         try
         {
-            while (true)
+            do
             {
-                _inner.OnNext(next);
-
-                lock (_gate)
-                {
-                    if (!TryDequeue(out next))
-                    {
-                        _isDraining = false;
-                        ownsDrain = false;
-                        return;
-                    }
-                }
+                Deliver(item);
             }
+            while (TryTakeNextDrainItem(out item));
         }
         finally
         {
-            if (ownsDrain)
-            {
-                lock (_gate)
-                {
-                    _isDraining = false;
-                }
-            }
+            EndDrain();
         }
     }
 
-    /// <summary>Attempts to dequeue the next value when capacity is available.</summary>
+    /// <summary>Attempts to become the single drain owner.</summary>
+    /// <param name="item">The first drain item to deliver.</param>
+    /// <returns><see langword="true"/> when this caller owns the drain.</returns>
+    private bool TryBeginDrain(out DrainItem item)
+    {
+        item = DrainItem.Empty;
+        lock (_gate)
+        {
+            if (_isDraining || !TryTakeNextDrainItemCore(out item))
+            {
+                return false;
+            }
+
+            _isDraining = true;
+            return true;
+        }
+    }
+
+    /// <summary>Attempts to take the next drain item while holding the gate.</summary>
+    /// <param name="item">The next item to drain.</param>
+    /// <returns><see langword="true"/> when an item was captured.</returns>
+    private bool TryTakeNextDrainItem(out DrainItem item)
+    {
+        lock (_gate)
+        {
+            return TryTakeNextDrainItemCore(out item);
+        }
+    }
+
+    /// <summary>Attempts to take the next drain item.</summary>
+    /// <param name="item">The next item to drain.</param>
+    /// <returns><see langword="true"/> when an item was captured.</returns>
+    private bool TryTakeNextDrainItemCore(out DrainItem item)
+    {
+        if (TryDequeue(out var next))
+        {
+            item = DrainItem.Next(next);
+            return true;
+        }
+
+        return TryTakeTerminalNotification(out item);
+    }
+
+    /// <summary>Ends the single-owner drain.</summary>
+    private void EndDrain()
+    {
+        lock (_gate)
+        {
+            _isDraining = false;
+        }
+    }
+
+    /// <summary>Attempts to dequeue and capture the next value when capacity is available.</summary>
     /// <param name="next">The dequeued value.</param>
     /// <returns><see langword="true"/> when a value was dequeued; otherwise, <see langword="false"/>.</returns>
     private bool TryDequeue(out T next)
@@ -226,5 +278,107 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
         next = queue.Dequeue();
         _ = Interlocked.Increment(ref _count);
         return true;
+    }
+
+    /// <summary>Attempts to read and consume a pending terminal notification.</summary>
+    /// <param name="item">The terminal drain item.</param>
+    /// <returns><see langword="true"/> when a terminal notification was found.</returns>
+    private bool TryTakeTerminalNotification(out DrainItem item)
+    {
+        var terminalNotification = _terminalNotification;
+        item = terminalNotification switch
+        {
+            TerminalNotification.Completed => DrainItem.Completed(_terminalQueue),
+            TerminalNotification.Error => DrainItem.Error(_terminalError!),
+            _ => DrainItem.Empty
+        };
+
+        if (terminalNotification == TerminalNotification.None)
+        {
+            return false;
+        }
+
+        _terminalNotification = TerminalNotification.None;
+        _terminalQueue = null;
+        _terminalError = null;
+        return true;
+    }
+
+    /// <summary>Delivers one captured drain item.</summary>
+    /// <param name="item">The item to deliver.</param>
+    private void Deliver(DrainItem item)
+    {
+        switch (item.Kind)
+        {
+            case TerminalNotification.Completed:
+            {
+                while (item.Queue is { Count: > 0 })
+                {
+                    _inner.OnNext(item.Queue.Dequeue());
+                }
+
+                _inner.OnCompleted();
+                break;
+            }
+
+            case TerminalNotification.Error:
+            {
+                _inner.OnError(item.Exception!);
+                break;
+            }
+
+            default:
+            {
+                _inner.OnNext(item.Value);
+                break;
+            }
+        }
+    }
+
+    /// <summary>A captured value or terminal notification to deliver outside the gate.</summary>
+    private sealed class DrainItem
+    {
+        /// <summary>An empty drain item used for failed capture paths.</summary>
+        public static readonly DrainItem Empty = new(TerminalNotification.None, default!, null, null);
+
+        /// <summary>Initializes a new instance of the <see cref="DrainItem"/> class.</summary>
+        /// <param name="kind">The captured item kind.</param>
+        /// <param name="value">The captured value.</param>
+        /// <param name="queue">The completion queue to flush.</param>
+        /// <param name="error">The captured error.</param>
+        private DrainItem(TerminalNotification kind, T value, PriorityQueue<T>? queue, Exception? error)
+        {
+            Kind = kind;
+            Value = value;
+            Queue = queue;
+            Exception = error;
+        }
+
+        /// <summary>Gets the captured item kind.</summary>
+        public TerminalNotification Kind { get; }
+
+        /// <summary>Gets the captured value.</summary>
+        public T Value { get; }
+
+        /// <summary>Gets the completion queue to flush.</summary>
+        public PriorityQueue<T>? Queue { get; }
+
+        /// <summary>Gets the captured error.</summary>
+        public Exception? Exception { get; }
+
+        /// <summary>Creates a value drain item.</summary>
+        /// <param name="value">The value to deliver.</param>
+        /// <returns>The captured drain item.</returns>
+        public static DrainItem Next(T value) => new(TerminalNotification.None, value, null, null);
+
+        /// <summary>Creates a completion drain item.</summary>
+        /// <param name="queue">The queued values to flush before completion.</param>
+        /// <returns>The captured drain item.</returns>
+        public static DrainItem Completed(PriorityQueue<T>? queue) => new(TerminalNotification.Completed, default!, queue, null);
+
+        /// <summary>Creates an error drain item.</summary>
+        /// <param name="exception">The error to deliver.</param>
+        /// <returns>The captured drain item.</returns>
+        public static DrainItem Error(Exception exception) => new(TerminalNotification.Error, default!, null, exception);
     }
 }
