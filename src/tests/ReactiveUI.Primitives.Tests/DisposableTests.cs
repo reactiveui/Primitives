@@ -107,7 +107,7 @@ public class DisposableTests
         SingleDisposable lateSingle = new(() => disposedBeforeAssign++);
         lateSingle.Dispose();
         lateSingle.Create(new ActionDisposable(() => disposedBeforeAssign++));
-        await Assert.That(disposedBeforeAssign).IsEqualTo(DoubleDisposalCount);
+        await Assert.That(disposedBeforeAssign).IsEqualTo(1);
         _ = Assert.Throws<ArgumentNullException>(() => lateSingle.Create(null!));
         var replaced = 0;
         SingleReplaceableDisposable replaceable = new(

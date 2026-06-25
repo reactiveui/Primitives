@@ -62,7 +62,6 @@ public class SingleDisposable : IsDisposed
 
         if (ReferenceEquals(current, DisposedSentinel))
         {
-            _action?.Invoke();
             disposable.Dispose();
             return;
         }
