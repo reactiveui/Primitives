@@ -279,7 +279,7 @@ internal static class R3AsyncBridge
 
         context.RegisterSourceOutput(context.CompilationProvider, static (output, compilation) =>
         {
-            if (compilation.GetTypeByMetadataName("R3.Observable`1") is null)
+            if (!HasR3ObservableShapes(compilation))
             {
                 return;
             }
@@ -289,7 +289,7 @@ internal static class R3AsyncBridge
 
         context.RegisterSourceOutput(context.CompilationProvider, static (output, compilation) =>
         {
-            if (compilation.GetTypeByMetadataName("R3.Observable`1") is null ||
+            if (!HasR3ObservableShapes(compilation) ||
                 compilation.GetTypeByMetadataName("ReactiveUI.Primitives.Async.IObservableAsync`1") is null)
             {
                 return;
@@ -298,4 +298,12 @@ internal static class R3AsyncBridge
             output.AddSource("R3AsyncBridge.g.cs", SourceText.From(AsyncBridgeSource, Encoding.UTF8));
         });
     }
+
+    /// <summary>Checks whether the consumer compilation exposes the R3 shapes used by generated adapters.</summary>
+    /// <param name="compilation">Consumer compilation inspected by the generator.</param>
+    /// <returns><see langword="true"/> when the required R3 observable, observer, and result shapes exist.</returns>
+    private static bool HasR3ObservableShapes(Compilation compilation) =>
+        compilation.GetTypeByMetadataName("R3.Observable`1") is not null &&
+        compilation.GetTypeByMetadataName("R3.Observer`1") is not null &&
+        compilation.GetTypeByMetadataName("R3.Result") is not null;
 }
