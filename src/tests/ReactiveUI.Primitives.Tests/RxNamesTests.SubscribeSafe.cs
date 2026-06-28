@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Signals;
 using PrimitivesLinqExtensions = ReactiveUI.Primitives.LinqExtensions;
 
@@ -99,5 +100,115 @@ public partial class RxNamesTests
 
         await Assert.That(values.SequenceEqual((int?[])[null, One, null, Two])).IsTrue();
         await Assert.That(observed).IsNull();
+    }
+
+    /// <summary>Verifies static alias <c>SubscribeSafe</c> accepts nullable observer overloads with Rx imports present.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubscribeSafeStaticAliasAcceptsNullableObserverOverloadsWithRxImports()
+    {
+        IObservable<object?> referenceSource = Signal.FromEnumerable<object?>([null, SubscribeSafeValue]);
+        List<object?> referenceValues = [];
+        var referenceObserver = Witness.Create<object>(
+            referenceValues.Add,
+            static _ => { });
+
+        using var referenceSubscription = PrimitivesLinqExtensions.SubscribeSafe(referenceSource, referenceObserver);
+
+        IObservable<int?> valueSource = Signal.FromEnumerable<int?>([null, One, null, Two]);
+        List<int?> valueValues = [];
+        var valueObserver = Witness.Create<int?>(
+            valueValues.Add,
+            static _ => { });
+
+        using var valueSubscription = PrimitivesLinqExtensions.SubscribeSafe(valueSource, valueObserver);
+
+        await Assert.That(referenceValues.SequenceEqual((object?[])[null, SubscribeSafeValue])).IsTrue();
+        await Assert.That(valueValues.SequenceEqual((int?[])[null, One, null, Two])).IsTrue();
+    }
+
+    /// <summary>Verifies static alias <c>SubscribeSafe</c> accepts nullable completion callback overloads with Rx imports present.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubscribeSafeStaticAliasAcceptsNullableCompletionCallbackOverloadsWithRxImports()
+    {
+        IObservable<object?> referenceSource = Signal.FromEnumerable<object?>([null, SubscribeSafeValue]);
+        List<object?> referenceValues = [];
+        Exception? referenceObserved = null;
+        var referenceCompleted = 0;
+
+        void OnReferenceNext(object? value) => referenceValues.Add(value);
+
+        using var referenceSubscription = PrimitivesLinqExtensions.SubscribeSafe(
+            referenceSource,
+            OnReferenceNext,
+            error => referenceObserved = error,
+            () => referenceCompleted++);
+
+        IObservable<int?> valueSource = Signal.FromEnumerable<int?>([null, One, null, Two]);
+        List<int?> valueValues = [];
+        Exception? valueObserved = null;
+        var valueCompleted = 0;
+
+        void OnValueNext(int? value) => valueValues.Add(value);
+
+        using var valueSubscription = PrimitivesLinqExtensions.SubscribeSafe(
+            valueSource,
+            OnValueNext,
+            error => valueObserved = error,
+            () => valueCompleted++);
+
+        await Assert.That(referenceValues.SequenceEqual((object?[])[null, SubscribeSafeValue])).IsTrue();
+        await Assert.That(referenceObserved).IsNull();
+        await Assert.That(referenceCompleted).IsEqualTo(1);
+        await Assert.That(valueValues.SequenceEqual((int?[])[null, One, null, Two])).IsTrue();
+        await Assert.That(valueObserved).IsNull();
+        await Assert.That(valueCompleted).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies static alias <c>SubscribeSafe</c> accepts nullable error-only overloads with Rx imports present.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubscribeSafeStaticAliasAcceptsNullableErrorOnlyOverloadsWithRxImports()
+    {
+        InvalidOperationException referenceError = new("reference");
+        InvalidOperationException valueError = new("value");
+        Exception? observedReferenceError = null;
+        Exception? observedValueError = null;
+
+        using var referenceSubscription = PrimitivesLinqExtensions.SubscribeSafe(
+            Signal.Fail<object?>(referenceError),
+            error => observedReferenceError = error);
+        using var valueSubscription = PrimitivesLinqExtensions.SubscribeSafe(
+            Signal.Fail<int?>(valueError),
+            error => observedValueError = error);
+
+        await Assert.That(observedReferenceError).IsSameReferenceAs(referenceError);
+        await Assert.That(observedValueError).IsSameReferenceAs(valueError);
+    }
+
+    /// <summary>Verifies static alias <c>SubscribeSafe</c> accepts nullable terminal completion overloads with Rx imports present.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubscribeSafeStaticAliasAcceptsNullableTerminalCompletionOverloadsWithRxImports()
+    {
+        Exception? referenceObserved = null;
+        Exception? valueObserved = null;
+        var referenceCompleted = 0;
+        var valueCompleted = 0;
+
+        using var referenceSubscription = PrimitivesLinqExtensions.SubscribeSafe(
+            Signal.FromEnumerable<object?>([null, SubscribeSafeValue]),
+            error => referenceObserved = error,
+            () => referenceCompleted++);
+        using var valueSubscription = PrimitivesLinqExtensions.SubscribeSafe(
+            Signal.FromEnumerable<int?>([null, One, null, Two]),
+            error => valueObserved = error,
+            () => valueCompleted++);
+
+        await Assert.That(referenceObserved).IsNull();
+        await Assert.That(referenceCompleted).IsEqualTo(1);
+        await Assert.That(valueObserved).IsNull();
+        await Assert.That(valueCompleted).IsEqualTo(1);
     }
 }
