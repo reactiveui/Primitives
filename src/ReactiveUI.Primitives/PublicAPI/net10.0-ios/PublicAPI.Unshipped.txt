@@ -18,6 +18,14 @@ static ReactiveUI.Primitives.LinqExtensions.DelaySubscription<T>(this System.IOb
 static ReactiveUI.Primitives.LinqExtensions.DelaySubscription<T>(this System.IObservable<T>! source, System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) -> System.IObservable<T>!
 static ReactiveUI.Primitives.LinqExtensions.OfType<TResult>(this System.IObservable<object?>! source) -> System.IObservable<TResult>!
 static ReactiveUI.Primitives.LinqExtensions.OnErrorResumeNext<T>(this System.IObservable<T>! source, System.IObservable<T>! second) -> System.IObservable<T>!
+static ReactiveUI.Primitives.LinqExtensions.SubscribeSafe<T>(System.IObservable<T?>! source, System.Action<System.Exception!>! onError, System.Action! onCompleted, params bool[]! allowNullable) -> System.IDisposable!
+static ReactiveUI.Primitives.LinqExtensions.SubscribeSafe<T>(System.IObservable<T?>! source, System.Action<System.Exception!>! onError, params bool[]! allowNullable) -> System.IDisposable!
+static ReactiveUI.Primitives.LinqExtensions.SubscribeSafe<T>(System.IObservable<T?>! source, System.Action<T!>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted, params bool[]! allowNullable) -> System.IDisposable!
+static ReactiveUI.Primitives.LinqExtensions.SubscribeSafe<T>(System.IObservable<T?>! source, System.Action<T!>! onNext, System.Action<System.Exception!>! onError, params bool[]! allowNullable) -> System.IDisposable!
+static ReactiveUI.Primitives.LinqExtensions.SubscribeSafe<T>(System.IObservable<T?>! source, System.Action<T?>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted, params bool[]! allowNullable) -> System.IDisposable!
+static ReactiveUI.Primitives.LinqExtensions.SubscribeSafe<T>(System.IObservable<T?>! source, System.Action<T?>! onNext, System.Action<System.Exception!>! onError, params bool[]! allowNullable) -> System.IDisposable!
+static ReactiveUI.Primitives.LinqExtensions.SubscribeSafe<T>(System.IObservable<T?>! source, System.IObserver<T!>! observer, params bool[]! allowNullable) -> System.IDisposable!
+static ReactiveUI.Primitives.LinqExtensions.SubscribeSafe<T>(System.IObservable<T?>! source, System.IObserver<T?>! observer, params bool[]! allowNullable) -> System.IDisposable!
 static ReactiveUI.Primitives.LinqExtensions.Timeout<TLeft>(this System.IObservable<TLeft>! left, System.DateTimeOffset dueTime) -> System.IObservable<TLeft>!
 static ReactiveUI.Primitives.LinqExtensions.Timeout<TLeft>(this System.IObservable<TLeft>! left, System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) -> System.IObservable<TLeft>!
 static ReactiveUI.Primitives.Signals.Signal.Case<TKey, T>(System.Func<TKey>! selector, System.Collections.Generic.IDictionary<TKey, System.IObservable<T>!>! sources) -> System.IObservable<T>!
