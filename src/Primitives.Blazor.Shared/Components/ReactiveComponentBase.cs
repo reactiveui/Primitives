@@ -22,7 +22,7 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
 
     /// <summary>Initializes a new instance of the <see cref="ReactiveComponentBase"/> class.</summary>
     protected ReactiveComponentBase() =>
-        RendererSequencer = new BlazorRendererSequencer(InvokeAsync);
+        RendererSequencer = new BlazorRendererSequencer(InvokeGuardedAsync);
 
     /// <summary>Gets a value indicating whether the component has been disposed.</summary>
     protected bool IsDisposed => _disposed;
@@ -103,12 +103,12 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
         ArgumentExceptionHelper.ThrowIfNull(onNext);
 
         return Track(source.Subscribe(
-            value => _ = InvokeAsync(() =>
+            value => _ = InvokeGuardedAsync(() =>
             {
                 onNext(value);
                 Refresh(refreshAfterCallbacks);
             }),
-            error => _ = InvokeAsync(() =>
+            error => _ = InvokeGuardedAsync(() =>
             {
                 if (onError is null)
                 {
@@ -121,7 +121,7 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
 
                 Refresh(refreshAfterCallbacks);
             }),
-            () => _ = InvokeAsync(() =>
+            () => _ = InvokeGuardedAsync(() =>
             {
                 onCompleted?.Invoke();
                 Refresh(refreshAfterCallbacks);
@@ -153,6 +153,25 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
 
         _disposed = true;
         _subscriptions.Dispose();
+    }
+
+    /// <summary>
+    /// Runs a callback through the renderer and routes failures into Blazor's error handling
+    /// (<see cref="ComponentBase.DispatchExceptionAsync(Exception)"/>) so error boundaries observe them
+    /// instead of the fault being lost with the discarded task.
+    /// </summary>
+    /// <param name="callback">Callback to run on the renderer dispatcher.</param>
+    /// <returns>A task that completes when the callback (or its failure dispatch) has finished.</returns>
+    private async Task InvokeGuardedAsync(Action callback)
+    {
+        try
+        {
+            await InvokeAsync(callback).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            await DispatchExceptionAsync(ex).ConfigureAwait(false);
+        }
     }
 
     /// <summary>Refreshes the component when requested and when it is still active.</summary>

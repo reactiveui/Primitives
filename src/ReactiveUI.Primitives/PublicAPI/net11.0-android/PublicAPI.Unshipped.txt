@@ -39,3 +39,10 @@ static ReactiveUI.Primitives.Signals.Signal.OnErrorResumeNext<T>(System.IObserva
 static ReactiveUI.Primitives.Signals.Signal.Repeat<T>(T value) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Signals.Signal.Repeat<T>(T value, int repeatCount) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Signals.Signal.Using<TResource, T>(System.Func<TResource>! resourceFactory, System.Func<TResource, System.IObservable<T>!>! observableFactory) -> System.IObservable<T>!
+ReactiveUI.Primitives.Concurrency.WasmSequencer
+ReactiveUI.Primitives.Concurrency.WasmSequencer.Dispose() -> void
+ReactiveUI.Primitives.Concurrency.WasmSequencer.Now.get -> System.DateTimeOffset
+ReactiveUI.Primitives.Concurrency.WasmSequencer.Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem! item) -> void
+ReactiveUI.Primitives.Concurrency.WasmSequencer.Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem! item, long dueTimestamp) -> void
+ReactiveUI.Primitives.Concurrency.WasmSequencer.Timestamp.get -> long
+static ReactiveUI.Primitives.Concurrency.WasmSequencer.Default.get -> ReactiveUI.Primitives.Concurrency.WasmSequencer!

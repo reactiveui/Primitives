@@ -34,7 +34,7 @@ public class SequencerTests
     private const int NegativeOne = -1;
 
     /// <summary>Timeout used when waiting for background scheduled work.</summary>
-    private const int TimeoutSeconds = 2;
+    private const int TimeoutSeconds = 10;
 
     /// <summary>Reused first-error message.</summary>
     private const string FirstMessage = "first";

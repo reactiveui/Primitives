@@ -3,17 +3,12 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
 /// <summary>Mutable state for a completing async signal.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-[SuppressMessage(
-    "Style",
-    "SST1802:Replace set accessor with init",
-    Justification = "This record is the mutable state container for the flat helper implementation.")]
-internal sealed record SignalAsyncState<T>
+internal sealed class SignalAsyncState<T>
 {
     /// <summary>The lock used to synchronize mutable state.</summary>
     private readonly Lock _gate = new();

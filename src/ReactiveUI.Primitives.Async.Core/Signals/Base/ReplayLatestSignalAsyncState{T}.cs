@@ -9,12 +9,8 @@ namespace ReactiveUI.Primitives.Async.Signals;
 
 /// <summary>Mutable state for a replay-latest async signal.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-/// <param name="InitialValue">The initial value to replay, if any.</param>
-[SuppressMessage(
-    "Style",
-    "SST1802:Replace set accessor with init",
-    Justification = "This record is the mutable state container for the flat helper implementation.")]
-internal sealed record ReplayLatestSignalAsyncState<T>(Optional<T> InitialValue) : IDisposable
+/// <param name="initialValue">The initial value to replay, if any.</param>
+internal sealed class ReplayLatestSignalAsyncState<T>(Optional<T> initialValue) : IDisposable
 {
     /// <summary>The asynchronous gate used to synchronize mutable state.</summary>
     [SuppressMessage(
@@ -27,7 +23,7 @@ internal sealed record ReplayLatestSignalAsyncState<T>(Optional<T> InitialValue)
     public CancellationTokenSource DisposedCts { get; } = new();
 
     /// <summary>Gets the most recently published value, replayed to new subscribers upon subscription.</summary>
-    public Optional<T> LastValue { get; internal set; } = InitialValue;
+    public Optional<T> LastValue { get; internal set; } = initialValue;
 
     /// <summary>Gets the currently subscribed observers.</summary>
     public ImmutableArray<IObserverAsync<T>> Observers { get; internal set; } = [];

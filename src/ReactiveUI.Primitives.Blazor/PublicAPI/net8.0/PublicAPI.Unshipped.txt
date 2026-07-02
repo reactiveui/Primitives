@@ -1,1 +1,8 @@
 #nullable enable
+ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer.BlazorRendererSequencer(Microsoft.AspNetCore.Components.Dispatcher! dispatcher) -> void
+ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer.UnhandledExceptionHandler.get -> System.Action<System.Exception!>?
+ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer.UnhandledExceptionHandler.set -> void
+ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencerExtensions
+ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencerExtensions.extension(Microsoft.AspNetCore.Components.Dispatcher!)
+ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencerExtensions.extension(Microsoft.AspNetCore.Components.Dispatcher!).ToSequencer() -> ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer!
+static ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencerExtensions.ToSequencer(this Microsoft.AspNetCore.Components.Dispatcher! dispatcher) -> ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer!
