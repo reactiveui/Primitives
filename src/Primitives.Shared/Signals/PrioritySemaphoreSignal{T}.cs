@@ -353,13 +353,16 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
         }
     }
 
-    /// <summary>A captured value or terminal notification to deliver outside the gate.</summary>
-    private sealed class DrainItem
+    /// <summary>
+    /// A captured value or terminal notification to deliver outside the gate. A readonly struct: one is produced
+    /// per delivered value on the drain path, so it is passed by value instead of allocating per item.
+    /// </summary>
+    private readonly record struct DrainItem
     {
         /// <summary>An empty drain item used for failed capture paths.</summary>
         public static readonly DrainItem Empty = new(TerminalNotification.None, default!, null, null);
 
-        /// <summary>Initializes a new instance of the <see cref="DrainItem"/> class.</summary>
+        /// <summary>Initializes a new instance of the <see cref="DrainItem"/> struct.</summary>
         /// <param name="kind">The captured item kind.</param>
         /// <param name="value">The captured value.</param>
         /// <param name="queue">The completion queue to flush.</param>
