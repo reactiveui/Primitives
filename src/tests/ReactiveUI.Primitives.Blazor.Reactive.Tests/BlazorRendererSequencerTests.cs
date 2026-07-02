@@ -90,6 +90,35 @@ public sealed class BlazorRendererSequencerTests
         await Assert.That(caught!.InnerException).IsSameReferenceAs(error);
     }
 
+    /// <summary>Verifies tracking after disposal immediately disposes the incoming subscription.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ReactiveComponentTrackAfterDisposeReturnsEmptyAndDisposesInput()
+    {
+        TestReactiveComponent component = new();
+        var inputDisposed = false;
+        component.Dispose();
+
+        var tracked = component.TrackSubscription(new FlagDisposable(() => inputDisposed = true));
+
+        await Assert.That(inputDisposed).IsTrue();
+        await Assert.That(tracked).IsSameReferenceAs(EmptyDisposable.Instance);
+        await Assert.That(component.IsDisposedState).IsTrue();
+    }
+
+    /// <summary>Verifies tracking before disposal returns the original subscription.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ReactiveComponentTrackBeforeDisposeReturnsOriginalSubscription()
+    {
+        TestReactiveComponent component = new();
+        var subscription = new FlagDisposable(static () => { });
+
+        var tracked = component.TrackSubscription(subscription);
+
+        await Assert.That(tracked).IsSameReferenceAs(subscription);
+    }
+
     /// <summary>Verifies immediate work is marshalled through the renderer delegate and executed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
@@ -143,12 +172,20 @@ public sealed class BlazorRendererSequencerTests
     /// <summary>Test component that exposes protected reactive component members.</summary>
     private sealed class TestReactiveComponent : ReactiveComponentBase
     {
+        /// <summary>Gets a value indicating whether this component is disposed.</summary>
+        public bool IsDisposedState => IsDisposed;
+
         /// <summary>Calls the protected observe method.</summary>
         /// <typeparam name="T">The observed value type.</typeparam>
         /// <param name="source">The source sequence.</param>
         /// <param name="onNext">The value callback.</param>
         /// <returns>The tracked subscription.</returns>
         public IDisposable ObserveSource<T>(IObservable<T> source, Action<T> onNext) => Observe(source, onNext);
+
+        /// <summary>Calls the protected track method.</summary>
+        /// <param name="subscription">The subscription to track.</param>
+        /// <returns>The tracked subscription.</returns>
+        public IDisposable TrackSubscription(IDisposable subscription) => Track(subscription);
 
         /// <summary>Calls the protected observed-error handler.</summary>
         /// <param name="error">The observed error.</param>
@@ -161,5 +198,31 @@ public sealed class BlazorRendererSequencerTests
     {
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer) => EmptyDisposable.Instance;
+    }
+
+    /// <summary>Disposable that invokes a callback once.</summary>
+    private sealed class FlagDisposable : IDisposable
+    {
+        /// <summary>The callback to invoke on dispose.</summary>
+        private readonly Action _onDispose;
+
+        /// <summary>A value indicating whether dispose already ran.</summary>
+        private bool _disposed;
+
+        /// <summary>Initializes a new instance of the <see cref="FlagDisposable"/> class.</summary>
+        /// <param name="onDispose">The dispose callback.</param>
+        public FlagDisposable(Action onDispose) => _onDispose = onDispose;
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            _onDispose();
+        }
     }
 }
