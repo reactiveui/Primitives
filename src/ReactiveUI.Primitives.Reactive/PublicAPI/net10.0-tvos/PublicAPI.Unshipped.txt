@@ -68,3 +68,17 @@ static ReactiveUI.Primitives.Reactive.LinqExtensions.ToTask<T>(this System.Threa
 *REMOVED*ReactiveUI.Primitives.Reactive.Advanced.PublishSelectorWitness<T>.OnNext(T value) -> void
 *REMOVED*ReactiveUI.Primitives.Reactive.Advanced.PublishSelectorWitness<T>.PublishSelectorWitness(System.IObserver<T>! observer) -> void
 *REMOVED*ReactiveUI.Primitives.Reactive.Advanced.PublishSelectorWitness<T>.SetCancel(System.IDisposable! cancel) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CreateSink<T>
+ReactiveUI.Primitives.Reactive.Advanced.CreateSink<T>.CreateSink(System.IObserver<T>! observer, bool disposeOnNextThrow) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CreateSink<T>.CreateSink(System.IObserver<T>! observer, System.IDisposable! cancel, bool disposeOnNextThrow) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CreateSink<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.CreateSink<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.CreateSink<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CreateSink<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.CreateSink<T>.SetCancel(System.IDisposable! cancel) -> void
+ReactiveUI.Primitives.Reactive.Advanced.GuardedWitness<T>
+ReactiveUI.Primitives.Reactive.Advanced.GuardedWitness<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.GuardedWitness<T>.GuardedWitness(System.IObserver<T>! observer, System.IDisposable! cancel) -> void
+ReactiveUI.Primitives.Reactive.Advanced.GuardedWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.GuardedWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.GuardedWitness<T>.OnNext(T value) -> void

@@ -11,11 +11,11 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>
 /// The observer handed to create-style subscription factories: forwards until terminated, owns the factory's
 /// cancel resource, and optionally releases it when a downstream <c>OnNext</c> throws (the safe-create contract).
-/// The shared sink used by <see cref="CreateSignal{T}"/> and <see cref="CreateSafeSignal{T}"/>, which previously
-/// each nested an identical copy.
+/// The shared sink behind <see cref="CreateSignal{T}"/> and <see cref="CreateSafeSignal{T}"/>, usable by any
+/// implementation that hands an observer to a caller-supplied subscribe delegate.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
-internal sealed class CreateSink<T> : IDisposable, IObserver<T>
+public sealed class CreateSink<T> : IDisposable, IObserver<T>
 {
     /// <summary>A value indicating whether a throwing downstream <c>OnNext</c> releases the subscription.</summary>
     private readonly bool _disposeOnNextThrow;
@@ -32,8 +32,11 @@ internal sealed class CreateSink<T> : IDisposable, IObserver<T>
     /// <summary>Initializes a new instance of the <see cref="CreateSink{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="disposeOnNextThrow">Whether a throwing downstream <c>OnNext</c> releases the subscription.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <see langword="null"/>.</exception>
     public CreateSink(IObserver<T> observer, bool disposeOnNextThrow)
     {
+        ArgumentExceptionHelper.ThrowIfNull(observer);
+
         _observer = observer;
         _disposeOnNextThrow = disposeOnNextThrow;
     }
@@ -42,8 +45,13 @@ internal sealed class CreateSink<T> : IDisposable, IObserver<T>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="cancel">The subscription's cancel resource.</param>
     /// <param name="disposeOnNextThrow">Whether a throwing downstream <c>OnNext</c> releases the subscription.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> or <paramref name="cancel"/> is <see langword="null"/>.</exception>
     public CreateSink(IObserver<T> observer, IDisposable cancel, bool disposeOnNextThrow)
     {
+        ArgumentExceptionHelper.ThrowIfNull(observer);
+
+        ArgumentExceptionHelper.ThrowIfNull(cancel);
+
         _observer = observer;
         _cancel = cancel;
         _disposeOnNextThrow = disposeOnNextThrow;

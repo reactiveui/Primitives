@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -15,14 +16,19 @@ public sealed class GuardedWitnessTests
     /// <summary>Second value used to verify forwarding continues after a value.</summary>
     private const int Two = 2;
 
-    /// <summary>Verifies the constructor rejects a null cancel resource.</summary>
+    /// <summary>Verifies the constructor rejects null arguments.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task ConstructorRejectsNullCancel()
+    public async Task ConstructorRejectsNullArguments()
     {
         _ = Assert.Throws<ArgumentNullException>(() =>
         {
             GuardedWitness<int> invalid = new(new RecordingWitness<int>(), null!);
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            GuardedWitness<int> invalid = new(null!, EmptyDisposable.Instance);
             GC.KeepAlive(invalid);
         });
 

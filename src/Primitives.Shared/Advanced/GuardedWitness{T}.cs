@@ -10,11 +10,11 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>
 /// Forwarding observer that releases its upstream cancel resource when the sequence terminates or a downstream
-/// <c>OnNext</c> throws. The shared guard used by the scheduled factory signals (Empty, Return, Throw, Defer),
-/// which previously each nested an identical copy.
+/// <c>OnNext</c> throws. The shared guard behind the scheduled factory signals (Empty, Return, Throw, Defer),
+/// usable by any signal implementation that needs terminate-and-release semantics around a downstream observer.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
-internal sealed class GuardedWitness<T> : IObserver<T>, IDisposable
+public sealed class GuardedWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>Stores the downstream observer.</summary>
     private readonly IObserver<T> _observer;
@@ -28,9 +28,11 @@ internal sealed class GuardedWitness<T> : IObserver<T>, IDisposable
     /// <summary>Initializes a new instance of the <see cref="GuardedWitness{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="cancel">The upstream cancel resource released on termination.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="cancel"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> or <paramref name="cancel"/> is <see langword="null"/>.</exception>
     public GuardedWitness(IObserver<T> observer, IDisposable cancel)
     {
+        ArgumentExceptionHelper.ThrowIfNull(observer);
+
         _cancel = cancel ?? throw new ArgumentNullException(nameof(cancel));
         _observer = observer;
     }

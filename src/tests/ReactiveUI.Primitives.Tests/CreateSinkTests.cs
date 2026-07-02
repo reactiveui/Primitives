@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Tests;
 
@@ -14,6 +15,30 @@ public sealed class CreateSinkTests
 
     /// <summary>Value used for late notifications that must be suppressed.</summary>
     private const int Two = 2;
+
+    /// <summary>Verifies the constructors reject null arguments.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ConstructorRejectsNullArguments()
+    {
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            CreateSink<int> invalid = new(null!, disposeOnNextThrow: false);
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            CreateSink<int> invalid = new(null!, EmptyDisposable.Instance, disposeOnNextThrow: false);
+            GC.KeepAlive(invalid);
+        });
+        _ = Assert.Throws<ArgumentNullException>(() =>
+        {
+            CreateSink<int> invalid = new(new RecordingWitness<int>(), null!, disposeOnNextThrow: false);
+            GC.KeepAlive(invalid);
+        });
+
+        await Task.CompletedTask;
+    }
 
     /// <summary>Verifies values forward until a terminal notification and late notifications are suppressed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
