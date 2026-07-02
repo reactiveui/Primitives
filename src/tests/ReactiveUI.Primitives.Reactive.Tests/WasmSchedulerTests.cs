@@ -98,6 +98,20 @@ public sealed class WasmSchedulerTests
     [Test]
     public async Task DisposedImmediateItemIsSkipped()
     {
+        // Park the single event-loop drain on a gate item so the dispose below is guaranteed to happen before the
+        // cancelled item is ever run. Without this the immediate drain races the synchronous Dispose on a
+        // multi-threaded runtime (it never can on single-threaded WebAssembly, which the type targets).
+        TaskCompletionSource gateEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using ManualResetEventSlim release = new(false);
+        _ = WasmScheduler.Default.Schedule(0, (_, _) =>
+        {
+            _ = gateEntered.TrySetResult();
+            _ = release.Wait(WaitTimeout);
+            return Disposable.Empty;
+        });
+
+        await gateEntered.Task.WaitAsync(WaitTimeout);
+
         TaskCompletionSource<bool> markerRan = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var cancelledRan = false;
 
@@ -112,6 +126,9 @@ public sealed class WasmSchedulerTests
             _ = markerRan.TrySetResult(true);
             return Disposable.Empty;
         });
+
+        // Let the drain proceed: it runs the gate, then the (now disposed) cancelled item, then the marker.
+        release.Set();
 
         _ = await markerRan.Task.WaitAsync(WaitTimeout);
         await Assert.That(cancelledRan).IsFalse();

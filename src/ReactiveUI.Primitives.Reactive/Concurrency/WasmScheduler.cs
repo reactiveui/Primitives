@@ -19,6 +19,15 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 /// </summary>
 public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposable
 {
+    /// <summary>Drain state indicating no drain is in flight.</summary>
+    private const int DrainIdle = 0;
+
+    /// <summary>Drain state indicating a drain is running.</summary>
+    private const int DrainRunning = 1;
+
+    /// <summary>Drain state indicating a drain is running and more work arrived while it ran.</summary>
+    private const int DrainRunningPending = 2;
+
     /// <summary>Smallest period the underlying timers reliably support.</summary>
     private static readonly TimeSpan OneMillisecond = TimeSpan.FromMilliseconds(1);
 
@@ -31,8 +40,13 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
     /// <summary>Approximate number of ready items; snapshots a drain batch.</summary>
     private int _readyCount;
 
-    /// <summary>Gate that keeps at most one armed drain pending.</summary>
-    private int _drainPosted;
+    /// <summary>
+    /// Single-flight drain state: <c>0</c> idle, <c>1</c> a drain is running, <c>2</c> a drain is running and more
+    /// work arrived while it ran. Keeping at most one drain in flight preserves the single-threaded, FIFO,
+    /// one-drain-per-event-loop-turn semantics the type promises even though the backing timer may fire callbacks
+    /// on more than one thread-pool thread.
+    /// </summary>
+    private int _drainState;
 
     /// <summary>Initializes a new instance of the <see cref="WasmScheduler"/> class.</summary>
     private WasmScheduler() =>
@@ -128,54 +142,71 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         PostDrain();
     }
 
-    /// <summary>Arms the drain timer if queued work is waiting.</summary>
+    /// <summary>Arms a single drain if none is in flight, otherwise flags the running drain to loop again.</summary>
     private void PostDrain()
     {
-        if (Volatile.Read(ref _readyCount) == 0)
+        while (true)
         {
-            return;
-        }
+            if (Volatile.Read(ref _readyCount) == 0)
+            {
+                return;
+            }
 
-        if (Interlocked.Exchange(ref _drainPosted, 1) != 0)
-        {
-            return;
-        }
+            var state = Volatile.Read(ref _drainState);
+            if (state == DrainIdle)
+            {
+                // Become the sole drainer, then yield a batch to the event loop.
+                if (Interlocked.CompareExchange(ref _drainState, DrainRunning, DrainIdle) != DrainIdle)
+                {
+                    continue;
+                }
 
-        try
-        {
-            if (_drainTimer.Change(TimeSpan.Zero, Timeout.InfiniteTimeSpan))
+                try
+                {
+                    _ = _drainTimer.Change(TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+                }
+                catch
+                {
+                    Volatile.Write(ref _drainState, DrainIdle);
+                    throw;
+                }
+
+                return;
+            }
+
+            // A drain is already running; flag that more work arrived so it drains again.
+            if (Interlocked.CompareExchange(ref _drainState, DrainRunningPending, state) == state)
             {
                 return;
             }
         }
-        catch
-        {
-            Volatile.Write(ref _drainPosted, 0);
-            throw;
-        }
-
-        Volatile.Write(ref _drainPosted, 0);
     }
 
-    /// <summary>Runs one event-loop batch.</summary>
+    /// <summary>Runs event-loop batches for the single in-flight drain until no more work is queued.</summary>
     private void RunDrain()
     {
-        Volatile.Write(ref _drainPosted, 0);
-
-        try
+        while (true)
         {
+            // Claim this pass; a concurrent PostDrain that observes DrainRunning will bump it to DrainRunningPending.
+            Volatile.Write(ref _drainState, DrainRunning);
+
             var remaining = Volatile.Read(ref _readyCount);
             while (remaining-- > 0 && _ready.TryDequeue(out var item))
             {
                 _ = Interlocked.Decrement(ref _readyCount);
                 item.Run();
             }
-        }
-        finally
-        {
-            if (Volatile.Read(ref _readyCount) != 0)
+
+            // Finish only when no work was flagged during this pass.
+            if (Interlocked.CompareExchange(ref _drainState, DrainIdle, DrainRunning) == DrainRunning)
             {
-                PostDrain();
+                // Cover the narrow window where an item was enqueued but its PostDrain has not run yet.
+                if (Volatile.Read(ref _readyCount) != 0)
+                {
+                    PostDrain();
+                }
+
+                return;
             }
         }
     }
