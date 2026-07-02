@@ -223,7 +223,9 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            return _cancellationToken.Register(() => observer.OnNext(RxVoid.Default));
+            return _cancellationToken.UnsafeRegister(
+                static state => ((IObserver<RxVoid>)state!).OnNext(RxVoid.Default),
+                observer);
         }
     }
 

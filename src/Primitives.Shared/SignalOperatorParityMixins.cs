@@ -746,7 +746,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T)) ? Task.FromResult((T)(object)range.Start) : source.FirstOrDefaultCoreAsync(false, default!);
+            return source.FirstCoreAsync(false, default!, CancellationToken.None);
         }
 
         /// <summary>Awaits the first source value.</summary>
@@ -758,12 +758,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return Task.FromCanceled<T>(cancellationToken);
-            }
-
-            return source is RangeSignal range && CanReadRangeAs(typeof(T)) ? Task.FromResult((T)(object)range.Start) : source.FirstOrDefaultCoreAsync(false, default!, cancellationToken);
+            return source.FirstCoreAsync(false, default!, cancellationToken);
         }
 
         /// <summary>Awaits the first source value, returning a default value when the source is empty.</summary>
@@ -773,7 +768,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T)) ? Task.FromResult((T)(object)range.Start) : source.FirstOrDefaultCoreAsync(true, default!);
+            return source.FirstCoreAsync(true, default!, CancellationToken.None);
         }
 
         /// <summary>Awaits the first source value, returning a default value when the source is empty.</summary>
@@ -784,23 +779,21 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T)) ? Task.FromResult((T)(object)range.Start) : source.FirstOrDefaultCoreAsync(true, defaultValue);
+            return source.FirstCoreAsync(true, defaultValue, CancellationToken.None);
         }
 
         /// <summary>Awaits the first source value, returning a default value when the source is empty.</summary>
         /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
         /// <returns>A task that completes with the first source value, or <see langword="default"/> when the source is empty.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <remarks>Deprioritized so calls like <c>FirstOrDefaultAsync(default!)</c> keep binding to the
+        /// <c>FirstOrDefaultAsync(T)</c> overload they compiled against before this overload existed.</remarks>
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
         public Task<T> FirstOrDefaultAsync(CancellationToken cancellationToken)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return Task.FromCanceled<T>(cancellationToken);
-            }
-
-            return source is RangeSignal range && CanReadRangeAs(typeof(T)) ? Task.FromResult((T)(object)range.Start) : source.FirstOrDefaultCoreAsync(true, default!, cancellationToken);
+            return source.FirstCoreAsync(true, default!, cancellationToken);
         }
 
         /// <summary>Awaits the first source value, returning a default value when the source is empty.</summary>
@@ -812,12 +805,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return Task.FromCanceled<T>(cancellationToken);
-            }
-
-            return source is RangeSignal range && CanReadRangeAs(typeof(T)) ? Task.FromResult((T)(object)range.Start) : source.FirstOrDefaultCoreAsync(true, defaultValue, cancellationToken);
+            return source.FirstCoreAsync(true, defaultValue, cancellationToken);
         }
 
         /// <summary>Awaits source completion and returns the last value produced by the source.</summary>
@@ -869,6 +857,9 @@ public static partial class LinqExtensions
         /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
         /// <returns>A task that completes with the final source value, or <see langword="default"/> when the source is empty.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        /// <remarks>Deprioritized so calls like <c>LastOrDefaultAsync(default!)</c> keep binding to the
+        /// <c>LastOrDefaultAsync(T)</c> overload they compiled against before this overload existed.</remarks>
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
         public Task<T> LastOrDefaultAsync(CancellationToken cancellationToken) =>
             source.LastOrDefaultAsync(default!, cancellationToken);
 
@@ -1035,67 +1026,31 @@ public static partial class LinqExtensions
         /// <returns>A task that completes with all source values in a list.</returns>
         public Task<IList<T>> ToListAsync() => source.CollectListAsync();
 
-        /// <summary>Awaits the first source value and applies the configured empty-source behavior.</summary>
-        /// <param name="hasDefault">A value indicating whether to use <paramref name="defaultValue"/> when the source is empty.</param>
-        /// <param name="defaultValue">The fallback value to use when the source is empty.</param>
-        /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
-        private Task<T> FirstOrDefaultCoreAsync(bool hasDefault, T defaultValue)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            TaskCompletionSource<T> completion = new();
-            var seen = false;
-            _ = source.Subscribe(
-                value =>
-                {
-                    if (seen)
-                    {
-                        return;
-                    }
-
-                    seen = true;
-                    _ = completion.TrySetResult(value);
-                },
-                error => completion.TrySetException(error),
-                () =>
-                {
-                    if (seen)
-                    {
-                        return;
-                    }
-
-                    if (hasDefault)
-                    {
-                        _ = completion.TrySetResult(defaultValue);
-                    }
-                    else
-                    {
-                        _ = completion.TrySetException(new InvalidOperationException("The source completed without producing a value."));
-                    }
-                });
-            return completion.Task;
-        }
-
-        /// <summary>Awaits the first source value with cancellation support, applying the configured empty-source behavior.</summary>
+        /// <summary>Awaits the first source value, applying the configured empty-source behavior and optional cancellation.</summary>
         /// <param name="hasDefault">A value indicating whether to use <paramref name="defaultValue"/> when the source is empty.</param>
         /// <param name="defaultValue">The fallback value to use when the source is empty.</param>
         /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
         /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
-        private Task<T> FirstOrDefaultCoreAsync(bool hasDefault, T defaultValue, CancellationToken cancellationToken)
+        private Task<T> FirstCoreAsync(bool hasDefault, T defaultValue, CancellationToken cancellationToken)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<T>(cancellationToken);
+            }
+
+            if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
+            {
+                return Task.FromResult((T)(object)range.Start);
+            }
+
             TaskCompletionSource<T> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
             var seen = false;
             var subscription = default(IDisposable);
             CancellationTokenRegistration cancellationRegistration = default;
-            if (cancellationToken.CanBeCanceled)
-            {
-                cancellationRegistration = cancellationToken.Register(() =>
-                {
-                    subscription?.Dispose();
-                    _ = completion.TrySetCanceled(cancellationToken);
-                });
-            }
 
+            // Subscribe before registering: synchronous sources complete here and never pay for a
+            // registration, and registering afterwards publishes the subscription write to the thread
+            // that later runs the cancellation callback.
             subscription = source.Subscribe(
                 value =>
                 {
@@ -1137,6 +1092,26 @@ public static partial class LinqExtensions
             if (completion.Task.IsCompleted)
             {
                 subscription.Dispose();
+                return completion.Task;
+            }
+
+            if (cancellationToken.CanBeCanceled)
+            {
+                cancellationRegistration = cancellationToken.UnsafeRegister(
+                    _ =>
+                    {
+                        subscription?.Dispose();
+                        _ = completion.TrySetCanceled(cancellationToken);
+                    },
+                    null);
+
+                // The source may have completed while the registration was being created; the observer
+                // callbacks saw a default registration then, so release the real one here (without
+                // waiting on an in-flight callback, whose effects are already race-safe).
+                if (completion.Task.IsCompleted)
+                {
+                    _ = cancellationRegistration.Unregister();
+                }
             }
 
             return completion.Task;
@@ -1212,11 +1187,20 @@ public static partial class LinqExtensions
     /// <returns>A task that completes with the supplied task's outcome or cancels when <paramref name="cancellationToken"/> is canceled.</returns>
     private static async Task<T> AwaitWithCancellationAsync<T>(Task<T> task, CancellationToken cancellationToken)
     {
-        TaskCompletionSource<T> cancellation = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using (cancellationToken.Register(() => cancellation.TrySetCanceled(cancellationToken)))
+        try
         {
-            var completed = await Task.WhenAny(task, cancellation.Task).ConfigureAwait(false);
-            return await completed.ConfigureAwait(false);
+            return await task.WaitAsync(System.Threading.Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // The wait was abandoned while the underlying task may still be running; observe any later
+            // fault so it cannot surface as an UnobservedTaskException on the finalizer thread.
+            _ = task.ContinueWith(
+                static abandoned => _ = abandoned.Exception,
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+            throw;
         }
     }
 }

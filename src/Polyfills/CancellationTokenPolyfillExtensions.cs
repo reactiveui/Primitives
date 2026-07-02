@@ -34,5 +34,18 @@ internal static class CancellationTokenPolyfillExtensions
                 (callback, state, token),
                 useSynchronizationContext: false);
     }
+
+    /// <summary>Polyfill removal operations for a cancellation token registration.</summary>
+    /// <param name="registration">The registration to remove.</param>
+    extension(CancellationTokenRegistration registration)
+    {
+        /// <summary>Removes the registered callback; on this framework the removal may wait for an in-flight callback.</summary>
+        /// <returns><see langword="true"/> when the registration was released.</returns>
+        public bool Unregister()
+        {
+            registration.Dispose();
+            return true;
+        }
+    }
 }
 #endif

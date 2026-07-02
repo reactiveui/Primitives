@@ -75,15 +75,10 @@ public static partial class Signal
         var last = default(TSource);
         var subscription = default(IDisposable);
         CancellationTokenRegistration cancellationRegistration = default;
-        if (cancellationToken.CanBeCanceled)
-        {
-            cancellationRegistration = cancellationToken.Register(() =>
-            {
-                subscription?.Dispose();
-                _ = completion.TrySetCanceled(cancellationToken);
-            });
-        }
 
+        // Subscribe before registering: synchronous sources complete here and never pay for a
+        // registration, and registering afterwards publishes the subscription write to the thread
+        // that later runs the cancellation callback.
         subscription = source.Subscribe(
             value =>
             {
@@ -113,6 +108,26 @@ public static partial class Signal
         if (completion.Task.IsCompleted)
         {
             subscription.Dispose();
+            return completion.Task;
+        }
+
+        if (cancellationToken.CanBeCanceled)
+        {
+            cancellationRegistration = cancellationToken.UnsafeRegister(
+                _ =>
+                {
+                    subscription?.Dispose();
+                    _ = completion.TrySetCanceled(cancellationToken);
+                },
+                null);
+
+            // The source may have completed while the registration was being created; the observer
+            // callbacks saw a default registration then, so release the real one here (without
+            // waiting on an in-flight callback, whose effects are already race-safe).
+            if (completion.Task.IsCompleted)
+            {
+                _ = cancellationRegistration.Unregister();
+            }
         }
 
         return completion.Task;
