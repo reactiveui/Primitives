@@ -1,6 +1,0 @@
-ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler
-ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler.SchedulePeriodic<TState>(TState state, System.TimeSpan period, System.Func<TState, TState>! action) -> System.IDisposable!
-override ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler.Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler!, TState, System.IDisposable!>! action) -> System.IDisposable!
-override ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler.Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler!, TState, System.IDisposable!>! action) -> System.IDisposable!
-static ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler.Default.get -> ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler!
-ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler.Dispose() -> void
