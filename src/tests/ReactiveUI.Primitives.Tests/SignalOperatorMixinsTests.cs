@@ -470,6 +470,15 @@ public partial class SignalOperatorMixinsTests
         var taskValue = await Task.FromResult(Three).ToSignal().FirstAsync().ConfigureAwait(false);
         await Assert.That(taskValue).IsEqualTo(Three);
 
+        RecordingWitness<int> canceledTaskSignal = new();
+        _ = Task.FromCanceled<int>(new CancellationToken(true)).ToSignal().Subscribe(canceledTaskSignal);
+        await Assert.That(canceledTaskSignal.Errors[0]).IsTypeOf<TaskCanceledException>();
+
+        InvalidOperationException taskError = new("task-signal");
+        RecordingWitness<int> faultedTaskSignal = new();
+        _ = Task.FromException<int>(taskError).ToSignal().Subscribe(faultedTaskSignal);
+        await Assert.That(faultedTaskSignal.Errors[0]).IsSameReferenceAs(taskError);
+
         _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.MapIndexed<int, int>(null!, static (value, _) => value));
         _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.MapIndexed<int, int>(source, null!));
         _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<Task<int>>)null!).Chain());

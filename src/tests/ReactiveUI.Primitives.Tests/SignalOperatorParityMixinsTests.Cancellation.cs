@@ -19,6 +19,16 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(ReferenceEquals(task.ToTask(CancellationToken.None), task)).IsTrue();
     }
 
+    /// <summary>Verifies that <c>ToTask</c> on a task returns the same instance without a token.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ToTaskOnTaskWithoutTokenReturnsSameInstance()
+    {
+        var task = Task.FromResult(One);
+
+        await Assert.That(ReferenceEquals(task.ToTask(), task)).IsTrue();
+    }
+
     /// <summary>Verifies that <c>ToTask</c> on a completed task returns the same instance even with a cancelable token.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -35,6 +45,7 @@ public partial class SignalOperatorParityMixinsTests
     [Test]
     public async Task ToTaskOnNullTaskThrowsArgumentNull()
     {
+        await Assert.That(() => ((Task<int>)null!).ToTask()).ThrowsExactly<ArgumentNullException>();
         await Assert.That(() => ((Task<int>)null!).ToTask(CancellationToken.None)).ThrowsExactly<ArgumentNullException>();
     }
 
