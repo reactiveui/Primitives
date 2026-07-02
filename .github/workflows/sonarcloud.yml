@@ -20,7 +20,7 @@ jobs:
             sonarOrganization: reactiveui
             sonarExclusions: '**/tests/**,**/tools/**,**/benchmarks/**,**/TestResults/**'
             sonarCoverageExclusions: '**/tests/**,**/tools/**,**/benchmarks/**,**/*Tests/**,**/*Tests.cs,**/Generated/**'
-            sonarCpdExclusions: '**/tests/**,**/tools/**,**/benchmarks/**,**/Operators/SyncLatest*.cs,**/SyncLatest*Coordinator*.cs,**/SyncLatest*Signal*.cs,**/SyncLatest*State*.cs,**/SyncLatestWitness*.cs,**/SequencerSchedulingExtensions.cs,**/Signal*RxAliases*.cs,**/ReactiveUI.Primitives.Blazor/**,**/ReactiveUI.Primitives.Maui/**,**/ReactiveUI.Primitives.WinUI/**,**/ReactiveUI.Primitives.WinForms/**,**/ReactiveUI.Primitives.Wpf/**,**/SignalOperatorMixins.CombineLatest.cs,**/SignalOperatorMixins.SyncLatest.MultiSource.cs,**/SignalOperatorParityMixins.RxNames.cs,**/SignalOperatorParityMixins.RxNames.CombineLatest.cs'
+            sonarCpdExclusions: '**/tests/**,**/tools/**,**/benchmarks/**,**/Operators/SyncLatest*.cs,**/SyncLatest*Coordinator*.cs,**/SyncLatest*Signal*.cs,**/SyncLatest*State*.cs,**/SyncLatestWitness*.cs,**/SynchronizeWitness.cs,**/SynchronizeObjectWitness*.cs,**/SequencerSchedulingExtensions.cs,**/Signal*RxAliases*.cs,**/ReactiveUI.Primitives.Blazor/**,**/ReactiveUI.Primitives.Maui/**,**/ReactiveUI.Primitives.WinUI/**,**/ReactiveUI.Primitives.WinForms/**,**/ReactiveUI.Primitives.Wpf/**,**/SignalOperatorMixins.CombineLatest.cs,**/SignalOperatorMixins.SyncLatest.MultiSource.cs,**/SignalOperatorParityMixins.RxNames.cs,**/SignalOperatorParityMixins.RxNames.CombineLatest.cs'
             sonarTestExclusions: '**/tests/**,**/tools/**,**/benchmarks/**'
             testTimeout: '15m'
         secrets:
