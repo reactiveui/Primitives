@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Concurrency;
+using Microsoft.AspNetCore.Components;
 using ReactiveUI.Primitives.Blazor.Reactive.Components;
 using ReactiveUI.Primitives.Blazor.Reactive.Concurrency;
 using ReactiveUI.Primitives.Disposables;
@@ -19,7 +20,47 @@ public sealed class BlazorRendererSequencerTests
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullDelegate() =>
-        await Assert.That(() => new BlazorRendererSequencer(null!)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(() => new BlazorRendererSequencer((Func<Action, Task>)null!)).ThrowsExactly<ArgumentNullException>();
+
+    /// <summary>Verifies the constructor rejects a null dispatcher.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ConstructorRejectsNullDispatcher() =>
+        await Assert.That(() => new BlazorRendererSequencer((Dispatcher)null!)).ThrowsExactly<ArgumentNullException>();
+
+    /// <summary>Verifies the dispatcher adapter extension rejects a null dispatcher.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ToSequencerRejectsNullDispatcher() =>
+        await Assert.That(() => ((Dispatcher)null!).ToSequencer()).ThrowsExactly<ArgumentNullException>();
+
+    /// <summary>Verifies a dispatcher-backed scheduler marshals and executes work.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DispatcherSchedulerExecutesWork()
+    {
+        var scheduler = Dispatcher.CreateDefault().ToSequencer();
+        TaskCompletionSource<bool> executed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _ = scheduler.Schedule(() => executed.TrySetResult(true));
+
+        await Assert.That(await executed.Task.WaitAsync(TimeSpan.FromSeconds(5))).IsTrue();
+    }
+
+    /// <summary>Verifies renderer-task faults reach the unhandled-exception handler instead of vanishing.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FaultedRendererTaskRoutesToHandler()
+    {
+        TaskCompletionSource<Exception> observed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        InvalidOperationException fault = new("renderer rejected");
+        BlazorRendererSequencer scheduler = new(_ => Task.FromException(fault));
+        scheduler.UnhandledExceptionHandler = ex => observed.TrySetResult(ex);
+
+        _ = scheduler.Schedule(static () => { });
+
+        await Assert.That(await observed.Task.WaitAsync(TimeSpan.FromSeconds(5))).IsSameReferenceAs(fault);
+    }
 
     /// <summary>Verifies reactive component observation guards reject null inputs.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
