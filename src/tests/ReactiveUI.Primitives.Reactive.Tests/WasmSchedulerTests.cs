@@ -262,12 +262,14 @@ public sealed class WasmSchedulerTests
     {
         TaskCompletionSource returnedDisposed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var returned = Disposable.Create(() => returnedDisposed.TrySetResult());
-        IDisposable? subscription = null;
 
-        subscription = WasmScheduler.Default.Schedule(0, (_, _) =>
+        // Holder class to capture subscription in closure (works around race condition on net8.0/Linux)
+        var holder = new SubscriptionHolder { Subscription = null };
+
+        holder.Subscription = WasmScheduler.Default.Schedule(0, (_, _) =>
         {
             // Cancel while running: the run/cancel handshake must dispose the disposable the action returns next.
-            subscription!.Dispose();
+            holder.Subscription?.Dispose();
             return returned;
         });
 
@@ -305,5 +307,12 @@ public sealed class WasmSchedulerTests
     public async Task SchedulePeriodicWithNullActionThrows()
     {
         await Assert.That(() => WasmScheduler.Default.SchedulePeriodic(0, TimeSpan.FromMilliseconds(100), null!)).Throws<ArgumentNullException>();
+    }
+
+    /// <summary>Simple holder to work around race condition in closure.</summary>
+    private sealed class SubscriptionHolder
+    {
+        /// <summary>Gets or sets the subscription held by this holder.</summary>
+        public IDisposable? Subscription { get; set; }
     }
 }
