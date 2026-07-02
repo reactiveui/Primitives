@@ -39,3 +39,9 @@ static ReactiveUI.Primitives.Reactive.Signals.Signal.OnErrorResumeNext<T>(System
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Repeat<T>(T value) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Repeat<T>(T value, int repeatCount) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.Signals.Signal.Using<TResource, T>(System.Func<TResource>! resourceFactory, System.Func<TResource, System.IObservable<T>!>! observableFactory) -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler
+ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler.SchedulePeriodic<TState>(TState state, System.TimeSpan period, System.Func<TState, TState>! action) -> System.IDisposable!
+override ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler.Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler!, TState, System.IDisposable!>! action) -> System.IDisposable!
+override ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler.Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler!, TState, System.IDisposable!>! action) -> System.IDisposable!
+static ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler.Default.get -> ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler!
+ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler.Dispose() -> void
