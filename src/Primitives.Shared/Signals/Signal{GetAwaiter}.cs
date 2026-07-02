@@ -70,67 +70,29 @@ public static partial class Signal
             return rangeTask;
         }
 
-        TaskCompletionSource<TSource> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskTerminalCompletion<TSource> completion = new();
         var seen = false;
         var last = default(TSource);
-        var subscription = default(IDisposable);
-        CancellationTokenRegistration cancellationRegistration = default;
-
-        // Subscribe before registering: synchronous sources complete here and never pay for a
-        // registration, and registering afterwards publishes the subscription write to the thread
-        // that later runs the cancellation callback.
-        subscription = source.Subscribe(
+        var subscription = source.Subscribe(
             value =>
             {
                 seen = true;
                 last = value;
             },
-            error =>
-            {
-                cancellationRegistration.Dispose();
-                subscription?.Dispose();
-                _ = completion.TrySetException(error);
-            },
+            completion.Fail,
             () =>
             {
-                cancellationRegistration.Dispose();
-                subscription?.Dispose();
                 if (seen)
                 {
-                    _ = completion.TrySetResult(last!);
+                    completion.Resolve(last!);
                 }
                 else
                 {
-                    _ = completion.TrySetException(new InvalidOperationException("The source completed without producing a value."));
+                    completion.FailEmpty();
                 }
             });
 
-        if (completion.Task.IsCompleted)
-        {
-            subscription.Dispose();
-            return completion.Task;
-        }
-
-        if (cancellationToken.CanBeCanceled)
-        {
-            cancellationRegistration = cancellationToken.UnsafeRegister(
-                _ =>
-                {
-                    subscription?.Dispose();
-                    _ = completion.TrySetCanceled(cancellationToken);
-                },
-                null);
-
-            // The source may have completed while the registration was being created; the observer
-            // callbacks saw a default registration then, so release the real one here (without
-            // waiting on an in-flight callback, whose effects are already race-safe).
-            if (completion.Task.IsCompleted)
-            {
-                _ = cancellationRegistration.Unregister();
-            }
-        }
-
-        return completion.Task;
+        return completion.Attach(subscription, cancellationToken);
     }
 
     /// <summary>Executes the Cancel operation.</summary>

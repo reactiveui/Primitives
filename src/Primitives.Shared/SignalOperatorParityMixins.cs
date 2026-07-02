@@ -1043,15 +1043,9 @@ public static partial class LinqExtensions
                 return Task.FromResult((T)(object)range.Start);
             }
 
-            TaskCompletionSource<T> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskTerminalCompletion<T> completion = new();
             var seen = false;
-            var subscription = default(IDisposable);
-            CancellationTokenRegistration cancellationRegistration = default;
-
-            // Subscribe before registering: synchronous sources complete here and never pay for a
-            // registration, and registering afterwards publishes the subscription write to the thread
-            // that later runs the cancellation callback.
-            subscription = source.Subscribe(
+            var subscription = source.Subscribe(
                 value =>
                 {
                     if (seen)
@@ -1060,20 +1054,11 @@ public static partial class LinqExtensions
                     }
 
                     seen = true;
-                    cancellationRegistration.Dispose();
-                    subscription?.Dispose();
-                    _ = completion.TrySetResult(value);
+                    completion.Resolve(value);
                 },
-                error =>
-                {
-                    cancellationRegistration.Dispose();
-                    subscription?.Dispose();
-                    _ = completion.TrySetException(error);
-                },
+                completion.Fail,
                 () =>
                 {
-                    cancellationRegistration.Dispose();
-                    subscription?.Dispose();
                     if (seen)
                     {
                         return;
@@ -1081,40 +1066,15 @@ public static partial class LinqExtensions
 
                     if (hasDefault)
                     {
-                        _ = completion.TrySetResult(defaultValue);
+                        completion.Resolve(defaultValue);
                     }
                     else
                     {
-                        _ = completion.TrySetException(new InvalidOperationException("The source completed without producing a value."));
+                        completion.FailEmpty();
                     }
                 });
 
-            if (completion.Task.IsCompleted)
-            {
-                subscription.Dispose();
-                return completion.Task;
-            }
-
-            if (cancellationToken.CanBeCanceled)
-            {
-                cancellationRegistration = cancellationToken.UnsafeRegister(
-                    _ =>
-                    {
-                        subscription?.Dispose();
-                        _ = completion.TrySetCanceled(cancellationToken);
-                    },
-                    null);
-
-                // The source may have completed while the registration was being created; the observer
-                // callbacks saw a default registration then, so release the real one here (without
-                // waiting on an in-flight callback, whose effects are already race-safe).
-                if (completion.Task.IsCompleted)
-                {
-                    _ = cancellationRegistration.Unregister();
-                }
-            }
-
-            return completion.Task;
+            return completion.Attach(subscription, cancellationToken);
         }
     }
 
