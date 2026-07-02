@@ -12,13 +12,9 @@ namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Stores the mutable state for a connectable signal without requiring a base class.</summary>
 /// <typeparam name="T">The type of elements produced by the source sequence.</typeparam>
-/// <param name="Source">The cold source sequence that is subscribed when the signal connects.</param>
-/// <param name="Signal">The signal that multicasts source notifications to subscribed observers.</param>
-[SuppressMessage(
-    "Style",
-    "SST1802:Replace set accessor with init",
-    Justification = "This record is the mutable state container for the flat helper implementation.")]
-internal sealed record ConnectableSignalAsyncState<T>(IObservableAsync<T> Source, ISignalAsync<T> Signal) : IDisposable
+/// <param name="source">The cold source sequence that is subscribed when the signal connects.</param>
+/// <param name="signal">The signal that multicasts source notifications to subscribed observers.</param>
+internal sealed class ConnectableSignalAsyncState<T>(IObservableAsync<T> source, ISignalAsync<T> signal) : IDisposable
 {
     /// <summary>The asynchronous gate that serializes connection changes.</summary>
     [SuppressMessage(
@@ -29,6 +25,12 @@ internal sealed record ConnectableSignalAsyncState<T>(IObservableAsync<T> Source
 
     /// <summary>The monitor used to make synchronous disposal idempotent.</summary>
     private readonly Lock _disposalGate = new();
+
+    /// <summary>Gets the cold source sequence that is subscribed when the signal connects.</summary>
+    public IObservableAsync<T> Source { get; } = source;
+
+    /// <summary>Gets the signal that multicasts source notifications to subscribed observers.</summary>
+    public ISignalAsync<T> Signal { get; } = signal;
 
     /// <summary>Gets the cancellation source that is canceled when the connectable signal is disposed.</summary>
     public CancellationTokenSource DisposedCts { get; } = new();
