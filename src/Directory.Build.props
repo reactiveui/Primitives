@@ -46,8 +46,9 @@
     <WindowsNetTargetFrameworks>net8.0-windows;net9.0-windows;net10.0-windows;net11.0-windows</WindowsNetTargetFrameworks>
     <WindowsLibraryTargetFrameworks>$(WindowsNetTargetFrameworks);$(NetFrameworkTargetFrameworks)</WindowsLibraryTargetFrameworks>
     <BlazorTargetFrameworks>$(NetTargetFrameworks)</BlazorTargetFrameworks>
-    <MauiTargetFrameworks>net9.0;net10.0;net11.0</MauiTargetFrameworks>
-    <MauiTestTargetFrameworks>net9.0;net10.0;net11.0</MauiTestTargetFrameworks>
+    <!-- MAUI 9 left support May 2026; MAUI 10 is the only supported release until 11 GAs. -->
+    <MauiTargetFrameworks>net10.0;net11.0</MauiTargetFrameworks>
+    <MauiTestTargetFrameworks>net10.0;net11.0</MauiTestTargetFrameworks>
     <WinUITargetFrameworks>net8.0-windows10.0.19041.0;net9.0-windows10.0.19041.0;net10.0-windows10.0.19041.0;net11.0-windows10.0.19041.0</WinUITargetFrameworks>
     <TestTargetFrameworks>$(NetTargetFrameworks)</TestTargetFrameworks>
     <!-- OS-platform sequencers that live in the core package: the platform SDK comes from the TFM itself
