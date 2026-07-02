@@ -10,13 +10,20 @@ ReactiveUI.Primitives.Blazor.Reactive.Components.ReactiveComponentBase.ReactiveC
 ReactiveUI.Primitives.Blazor.Reactive.Components.ReactiveComponentBase.RendererSequencer.get -> System.Reactive.Concurrency.IScheduler!
 ReactiveUI.Primitives.Blazor.Reactive.Components.ReactiveComponentBase.Track(System.IDisposable! subscription) -> System.IDisposable!
 ReactiveUI.Primitives.Blazor.Reactive.Concurrency.BlazorRendererSequencer
+ReactiveUI.Primitives.Blazor.Reactive.Concurrency.BlazorRendererSequencer.BlazorRendererSequencer(Microsoft.AspNetCore.Components.Dispatcher! dispatcher) -> void
 ReactiveUI.Primitives.Blazor.Reactive.Concurrency.BlazorRendererSequencer.BlazorRendererSequencer(System.Func<System.Action!, System.Threading.Tasks.Task!>! invokeAsync) -> void
+ReactiveUI.Primitives.Blazor.Reactive.Concurrency.BlazorRendererSequencer.UnhandledExceptionHandler.get -> System.Action<System.Exception!>?
+ReactiveUI.Primitives.Blazor.Reactive.Concurrency.BlazorRendererSequencer.UnhandledExceptionHandler.set -> void
+ReactiveUI.Primitives.Blazor.Reactive.Concurrency.BlazorRendererSequencerExtensions
+ReactiveUI.Primitives.Blazor.Reactive.Concurrency.BlazorRendererSequencerExtensions.extension(Microsoft.AspNetCore.Components.Dispatcher!)
+ReactiveUI.Primitives.Blazor.Reactive.Concurrency.BlazorRendererSequencerExtensions.extension(Microsoft.AspNetCore.Components.Dispatcher!).ToSequencer() -> ReactiveUI.Primitives.Blazor.Reactive.Concurrency.BlazorRendererSequencer!
 ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler
 ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.CoalescingDispatchScheduler() -> void
 ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.RequestDrain() -> void
 abstract ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.Post(System.Action! drain) -> bool
 override ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler!, TState, System.IDisposable!>! action) -> System.IDisposable!
 override ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler!, TState, System.IDisposable!>! action) -> System.IDisposable!
+static ReactiveUI.Primitives.Blazor.Reactive.Concurrency.BlazorRendererSequencerExtensions.ToSequencer(this Microsoft.AspNetCore.Components.Dispatcher! dispatcher) -> ReactiveUI.Primitives.Blazor.Reactive.Concurrency.BlazorRendererSequencer!
 virtual ReactiveUI.Primitives.Blazor.Reactive.Components.ReactiveComponentBase.Dispose(bool disposing) -> void
 virtual ReactiveUI.Primitives.Blazor.Reactive.Components.ReactiveComponentBase.OnObservedError(System.Exception! error) -> void
 virtual ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.ScheduleOnDispatcher(System.Action! work, System.TimeSpan dueTime) -> System.IDisposable!

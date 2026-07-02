@@ -35,7 +35,7 @@ internal sealed class DeferSignal<T> : IRequireCurrentThread<T>
     /// <returns>The result.</returns>
     private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel)
     {
-        observer = new Defer(observer, cancel);
+        observer = new GuardedWitness<T>(observer, cancel);
 
         IObservable<T> source;
         try
@@ -48,72 +48,5 @@ internal sealed class DeferSignal<T> : IRequireCurrentThread<T>
         }
 
         return source.Subscribe(observer);
-    }
-
-    /// <summary>Represents the Defer class.</summary>
-    private sealed class Defer : IObserver<T>, IDisposable
-    {
-        /// <summary>Stores the downstream observer.</summary>
-        private readonly IObserver<T> _observer;
-
-        /// <summary>Stores the upstream subscription.</summary>
-        private IDisposable? _cancel;
-
-        /// <summary>Disposed latch; 0 when alive, 1 once disposed.</summary>
-        private int _disposed;
-
-        /// <summary>Initializes a new instance of the <see cref="Defer"/> class.</summary>
-        /// <param name="observer">The observer value.</param>
-        /// <param name="cancel">The cancel value.</param>
-        public Defer(IObserver<T> observer, IDisposable cancel)
-        {
-            _cancel = cancel ?? throw new ArgumentNullException(nameof(cancel));
-            _observer = observer;
-        }
-
-        /// <summary>Executes the OnNext operation.</summary>
-        /// <param name="value">The value.</param>
-        public void OnNext(T value)
-        {
-            try
-            {
-                _observer.OnNext(value);
-            }
-            catch
-            {
-                Dispose();
-                throw;
-            }
-        }
-
-        /// <summary>Executes the OnError operation.</summary>
-        /// <param name="error">The error value.</param>
-        public void OnError(Exception error)
-        {
-            try
-            {
-                _observer.OnError(error);
-            }
-            finally
-            {
-                Dispose();
-            }
-        }
-
-        /// <summary>Executes the OnCompleted operation.</summary>
-        public void OnCompleted()
-        {
-            try
-            {
-                _observer.OnCompleted();
-            }
-            finally
-            {
-                Dispose();
-            }
-        }
-
-        /// <summary>Executes the Dispose operation.</summary>
-        public void Dispose() => WitnessTeardown.Dispose(ref _disposed, ref _cancel);
     }
 }

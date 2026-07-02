@@ -149,6 +149,61 @@ public class ObservableMixinsTests
         await Assert.That(otherDisposable.DisposeCount).IsEqualTo(1);
     }
 
+    /// <summary>Verifies that <c>TakeUntil(CancellationToken)</c> completes when the token is canceled.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task WhenTokenIsCanceled_ThenCompletesAndStopsForwardingSource()
+    {
+        using Subject<int> source = new();
+        using CancellationTokenSource cts = new();
+        List<int> values = [];
+        var completed = false;
+        using var subscription =
+            source.TakeUntil(cts.Token).Subscribe(values.Add, ThrowUnexpectedError, () => completed = true);
+        source.OnNext(FirstValue);
+        await cts.CancelAsync();
+        source.OnNext(SecondValue);
+        await Assert.That(values.SequenceEqual([FirstValue])).IsTrue();
+        await Assert.That(completed).IsTrue();
+    }
+
+    /// <summary>Verifies that <c>TakeUntil(CancellationToken)</c> returns the source unchanged for a token that cannot be canceled.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task WhenTokenCannotBeCanceled_ThenReturnsSourceUnchanged()
+    {
+        using Subject<int> source = new();
+
+        await Assert.That(source.TakeUntil(CancellationToken.None)).IsSameReferenceAs(source);
+    }
+
+    /// <summary>Verifies that <c>TakeUntil(CancellationToken)</c> completes immediately for a pre-canceled token.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task WhenTokenIsPreCanceled_ThenCompletesWithoutForwardingSource()
+    {
+        using Subject<int> source = new();
+        using CancellationTokenSource cts = new();
+        await cts.CancelAsync();
+        var completed = false;
+        using var subscription = source.TakeUntil(cts.Token).Subscribe(
+            static _ => throw new InvalidOperationException("Source value should not be forwarded."),
+            ThrowUnexpectedError,
+            () => completed = true);
+        source.OnNext(FirstValue);
+        await Assert.That(completed).IsTrue();
+    }
+
+    /// <summary>Verifies that <c>TakeUntil(CancellationToken)</c> validates a null source.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task WhenTokenOverloadSourceIsNull_ThenThrowsArgumentNull()
+    {
+        using CancellationTokenSource cts = new();
+
+        await Assert.That(() => ((IObservable<int>)null!).TakeUntil(cts.Token)).ThrowsExactly<ArgumentNullException>();
+    }
+
     /// <summary>Throws when an unexpected error arrives.</summary>
     /// <param name = "exception">The unexpected exception.</param>
     private static void ThrowUnexpectedError(Exception exception) =>

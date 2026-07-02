@@ -56,7 +56,7 @@ public sealed class PublishSelectorSignal<TSource, TResult> : IObservable<TResul
             return EmptyDisposable.Instance;
         }
 
-        PublishSelectorWitness<TResult> selectedObserver = new(observer);
+        CreateWitness<TResult> selectedObserver = new(observer);
         var subscription = selected.Subscribe(selectedObserver);
         var connection = connectable.Connect();
         selectedObserver.SetCancel(new MultipleDisposable(subscription, connection));

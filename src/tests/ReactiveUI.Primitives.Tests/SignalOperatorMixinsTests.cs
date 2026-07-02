@@ -191,6 +191,56 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(timeoutErrors.SequenceEqual(ExpectedTimeoutErrors)).IsTrue();
     }
 
+    /// <summary>Covers deterministic shortcut branches in primitive-vocabulary operator wrappers.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task PrimitiveShortcutBranchesCoverCancelableFallbackAndPendingTaskPaths()
+    {
+        using CancellationTokenSource conversion = new();
+        List<int> cancelableToSignal = [];
+        _ = new[] { One, Two }.ToSignal(conversion.Token).Subscribe(cancelableToSignal.Add);
+
+        List<int> emptyLoopTake = [];
+        var emptyLoopCompleted = 0;
+        _ = Signal.Loop(One).Take(0).Subscribe(emptyLoopTake.Add, ex => throw ex, () => emptyLoopCompleted++);
+
+        List<int> uniqueValues = [];
+        _ = Signal.FromEnumerable([One, One, Two]).Unique(null).Subscribe(uniqueValues.Add);
+
+        await Assert.That(cancelableToSignal.SequenceEqual(ExpectedOneTwo)).IsTrue();
+        await Assert.That(emptyLoopTake.Count).IsEqualTo(0);
+        await Assert.That(emptyLoopCompleted).IsEqualTo(1);
+        await Assert.That(uniqueValues.SequenceEqual(ExpectedOneTwo)).IsTrue();
+
+        await Assert.That(Signal.Sequence(One, Two).Shift(TimeSpan.Zero)).IsNotNull();
+        await Assert.That(Signal.FromEnumerable([One]).Shift(TimeSpan.Zero, null)).IsNotNull();
+        await Assert.That(Signal.Silent<int>().Expire(TimeSpan.FromTicks(One), null)).IsNotNull();
+        await Assert.That(Signal.Emit(One).ToSignal()).IsNotNull();
+
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Emit(One).Rescue(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).ToSignal());
+
+        TaskCompletionSource<int> pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RecordingWitness<int> pendingSignal = new();
+        using var pendingSubscription = pending.Task.ToSignal().Subscribe(pendingSignal);
+        pending.SetResult(Three);
+        await TestPolling.SpinUntil(() => pendingSignal.Values.Count == 1, TimeSpan.FromSeconds(One));
+        await Assert.That(pendingSignal.Values.SequenceEqual([Three])).IsTrue();
+
+        RecordingWitness<int> emptySwitch = new();
+        _ = Signal.FromEnumerable<IObservable<int>>([]).SwitchTo().Subscribe(emptySwitch);
+        await Assert.That(emptySwitch.Values.Count).IsEqualTo(0);
+        await Assert.That(emptySwitch.Completed).IsEqualTo(1);
+
+        List<int> iteratorSwitch = [];
+        _ = Signal.FromEnumerable(YieldInners()).SwitchTo().Subscribe(iteratorSwitch.Add);
+        await Assert.That(iteratorSwitch.SequenceEqual(ExpectedOneTwo)).IsTrue();
+
+        List<string> stringSwitch = [];
+        _ = Signal.FromEnumerable<IObservable<string>>([Signal.Emit("value")]).SwitchTo().Subscribe(stringSwitch.Add);
+        await Assert.That(stringSwitch.SequenceEqual(ExpectedSingleValue)).IsTrue();
+    }
+
     /// <summary>Covers immutable boolean and rx-void return-signal inline subscription branches.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -470,6 +520,15 @@ public partial class SignalOperatorMixinsTests
         var taskValue = await Task.FromResult(Three).ToSignal().FirstAsync().ConfigureAwait(false);
         await Assert.That(taskValue).IsEqualTo(Three);
 
+        RecordingWitness<int> canceledTaskSignal = new();
+        _ = Task.FromCanceled<int>(new CancellationToken(true)).ToSignal().Subscribe(canceledTaskSignal);
+        await Assert.That(canceledTaskSignal.Errors[0]).IsTypeOf<TaskCanceledException>();
+
+        InvalidOperationException taskError = new("task-signal");
+        RecordingWitness<int> faultedTaskSignal = new();
+        _ = Task.FromException<int>(taskError).ToSignal().Subscribe(faultedTaskSignal);
+        await Assert.That(faultedTaskSignal.Errors[0]).IsSameReferenceAs(taskError);
+
         _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.MapIndexed<int, int>(null!, static (value, _) => value));
         _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.MapIndexed<int, int>(source, null!));
         _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<Task<int>>)null!).Chain());
@@ -746,6 +805,14 @@ public partial class SignalOperatorMixinsTests
         _ = Assert.Throws<ArgumentOutOfRangeException>(() => source.Take(-1));
         _ = Assert.Throws<ArgumentOutOfRangeException>(() => source.Skip(-1));
         _ = Assert.Throws<ArgumentOutOfRangeException>(() => source.Reattempt(-1));
+    }
+
+    /// <summary>Yields inner signals without exposing an indexable backing collection.</summary>
+    /// <returns>The yielded inner signals.</returns>
+    private static IEnumerable<IObservable<int>> YieldInners()
+    {
+        yield return Signal.Emit(One);
+        yield return Signal.Emit(Two);
     }
 
     /// <summary>Telemetry metric value type used by high-throughput scenarios.</summary>

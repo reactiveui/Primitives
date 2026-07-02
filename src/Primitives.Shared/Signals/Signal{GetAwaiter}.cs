@@ -70,52 +70,29 @@ public static partial class Signal
             return rangeTask;
         }
 
-        TaskCompletionSource<TSource> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskTerminalCompletion<TSource> completion = new();
         var seen = false;
         var last = default(TSource);
-        var subscription = default(IDisposable);
-        CancellationTokenRegistration cancellationRegistration = default;
-        if (cancellationToken.CanBeCanceled)
-        {
-            cancellationRegistration = cancellationToken.Register(() =>
-            {
-                subscription?.Dispose();
-                _ = completion.TrySetCanceled(cancellationToken);
-            });
-        }
-
-        subscription = source.Subscribe(
+        var subscription = source.Subscribe(
             value =>
             {
                 seen = true;
                 last = value;
             },
-            error =>
-            {
-                cancellationRegistration.Dispose();
-                subscription?.Dispose();
-                _ = completion.TrySetException(error);
-            },
+            completion.Fail,
             () =>
             {
-                cancellationRegistration.Dispose();
-                subscription?.Dispose();
                 if (seen)
                 {
-                    _ = completion.TrySetResult(last!);
+                    completion.Resolve(last!);
                 }
                 else
                 {
-                    _ = completion.TrySetException(new InvalidOperationException("The source completed without producing a value."));
+                    completion.FailEmpty();
                 }
             });
 
-        if (completion.Task.IsCompleted)
-        {
-            subscription.Dispose();
-        }
-
-        return completion.Task;
+        return completion.Attach(subscription, cancellationToken);
     }
 
     /// <summary>Executes the Cancel operation.</summary>

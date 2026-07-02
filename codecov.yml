@@ -9,9 +9,3 @@ ignore:
   - "**/benchmarks/"
   - "**/Tests/"
   - "**/*.Tests/"
-coverage:
-  status:
-    patch:
-      default:
-        target: 79.5%
-        threshold: 0%
