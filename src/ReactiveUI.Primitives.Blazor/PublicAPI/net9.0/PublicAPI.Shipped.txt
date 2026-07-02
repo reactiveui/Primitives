@@ -10,10 +10,17 @@ ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase.ReactiveComponentB
 ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase.RendererSequencer.get -> ReactiveUI.Primitives.Concurrency.ISequencer!
 ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase.Track(System.IDisposable! subscription) -> System.IDisposable!
 ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer
+ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer.BlazorRendererSequencer(Microsoft.AspNetCore.Components.Dispatcher! dispatcher) -> void
 ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer.BlazorRendererSequencer(System.Func<System.Action!, System.Threading.Tasks.Task!>! invokeAsync) -> void
 ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer.Now.get -> System.DateTimeOffset
 ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer.Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem! item) -> void
 ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer.Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem! item, long dueTimestamp) -> void
 ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer.Timestamp.get -> long
+ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer.UnhandledExceptionHandler.get -> System.Action<System.Exception!>?
+ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer.UnhandledExceptionHandler.set -> void
+ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencerExtensions
+ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencerExtensions.extension(Microsoft.AspNetCore.Components.Dispatcher!)
+ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencerExtensions.extension(Microsoft.AspNetCore.Components.Dispatcher!).ToSequencer() -> ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer!
+static ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencerExtensions.ToSequencer(this Microsoft.AspNetCore.Components.Dispatcher! dispatcher) -> ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer!
 virtual ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase.Dispose(bool disposing) -> void
 virtual ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase.OnObservedError(System.Exception! error) -> void
