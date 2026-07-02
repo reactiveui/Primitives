@@ -21,8 +21,11 @@ public class R3BridgeGeneratorTests
     /// <summary>Generated R3 async bridge type marker.</summary>
     private const string R3AsyncBridgeName = "R3AsyncBridge";
 
-    /// <summary>Generated marker attribute type name.</summary>
-    private const string GeneratedMarkerName = "PrimitivesR3BridgeGeneratedAttribute";
+    /// <summary>Generated metadata attribute key.</summary>
+    private const string GeneratedMetadataKey = "ReactiveUI.Primitives.R3Bridge.Generator";
+
+    /// <summary>Legacy generated marker attribute type name.</summary>
+    private const string LegacyGeneratedMarkerName = "PrimitivesR3BridgeGeneratedAttribute";
 
     /// <summary>Compiler diagnostic raised when a source type conflicts with an imported type.</summary>
     private const string ConflictingTypeDiagnosticId = "CS0436";
@@ -111,19 +114,27 @@ public class R3BridgeGeneratorTests
             static text => text.Contains(R3BridgeName, StringComparison.Ordinal))).IsTrue();
     }
 
-    /// <summary>Verifies the generated marker stays private across project-reference-like compilations.</summary>
+    /// <summary>Verifies generated metadata does not conflict across project-reference-like compilations.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [RequiresAssemblyFiles]
-    public async Task R3BridgeGeneratedMarkerDoesNotConflictAcrossProjectReferenceCompilations()
+    public async Task R3BridgeGeneratedMetadataDoesNotConflictAcrossProjectReferenceCompilations()
     {
         const string LibrarySource = """
-                                     public static class GeneratedLibrary
+                                     using System.Runtime.CompilerServices;
+
+                                     [assembly: InternalsVisibleTo("GeneratedConsumer")]
+
+                                     namespace GeneratedReference;
+
+                                     internal static class GeneratedLibrary
                                      {
-                                         public static int Value => 42;
+                                         internal static int Value => 42;
                                      }
                                      """;
         const string ConsumerSource = """
+                                      using GeneratedReference;
+
                                       public static class GeneratedConsumer
                                       {
                                           public static int Use() => GeneratedLibrary.Value;
@@ -133,13 +144,16 @@ public class R3BridgeGeneratorTests
         var libraryEmit = EmitToMetadataReference(libraryRun.Compilation);
         await Assert.That(ContainsError(libraryRun.GeneratorDiagnostics.Concat(libraryEmit.Diagnostics))).IsFalse();
         await Assert.That(libraryEmit.Reference).IsNotNull();
-        await Assert.That(GeneratedMarkerIsInternal(libraryRun.GeneratedSources)).IsTrue();
+        await Assert.That(GeneratedMetadataExists(libraryRun.GeneratedSources)).IsTrue();
+        await Assert.That(LegacyGeneratedMarkerTypeExists(libraryRun.GeneratedSources)).IsFalse();
         var consumerRun = RunGeneratorsCore("GeneratedConsumer", ConsumerSource, [libraryEmit.Reference!]);
         var consumerDiagnostics = consumerRun.GeneratorDiagnostics
             .Concat(consumerRun.Compilation.GetDiagnostics())
             .ToArray();
-        await Assert.That(Array.Exists(consumerDiagnostics, IsConflictingMarkerTypeDiagnostic)).IsFalse();
+        await Assert.That(Array.Exists(consumerDiagnostics, IsConflictingGeneratedTypeDiagnostic)).IsFalse();
         await Assert.That(Array.Exists(consumerDiagnostics, IsErrorDiagnostic)).IsFalse();
+        await Assert.That(GeneratedMetadataExists(consumerRun.GeneratedSources)).IsTrue();
+        await Assert.That(LegacyGeneratedMarkerTypeExists(consumerRun.GeneratedSources)).IsFalse();
     }
 
     /// <summary>Verifies the generator skips bridge sources when required R3 shapes are incomplete.</summary>
@@ -290,12 +304,11 @@ public class R3BridgeGeneratorTests
     /// <returns><see langword="true"/> when the diagnostic is an error.</returns>
     private static bool IsErrorDiagnostic(Diagnostic diagnostic) => diagnostic.Severity == DiagnosticSeverity.Error;
 
-    /// <summary>Checks whether a diagnostic is the marker-attribute type conflict.</summary>
+    /// <summary>Checks whether a diagnostic is the generated-type conflict seen in project-reference builds.</summary>
     /// <param name="diagnostic">Diagnostic to inspect.</param>
     /// <returns><see langword="true"/> when the diagnostic is the expected conflict shape.</returns>
-    private static bool IsConflictingMarkerTypeDiagnostic(Diagnostic diagnostic) =>
-        diagnostic.Id == ConflictingTypeDiagnosticId &&
-        diagnostic.GetMessage().Contains(GeneratedMarkerName, StringComparison.Ordinal);
+    private static bool IsConflictingGeneratedTypeDiagnostic(Diagnostic diagnostic) =>
+        diagnostic.Id == ConflictingTypeDiagnosticId;
 
     /// <summary>Checks whether generated source contains the named bridge type.</summary>
     /// <param name="generatedSources">Generated source text to inspect.</param>
@@ -305,10 +318,17 @@ public class R3BridgeGeneratorTests
         generatedSources,
         text => text.Contains($"internal static class {typeName}", StringComparison.Ordinal));
 
-    /// <summary>Checks whether the generated marker attribute type is internal.</summary>
+    /// <summary>Checks whether generated source contains the assembly metadata marker.</summary>
     /// <param name="generatedSources">Generated source text to inspect.</param>
-    /// <returns><see langword="true"/> when the marker source declares the attribute as internal.</returns>
-    private static bool GeneratedMarkerIsInternal(string[] generatedSources) => Array.Exists(
+    /// <returns><see langword="true"/> when the metadata marker source is emitted.</returns>
+    private static bool GeneratedMetadataExists(string[] generatedSources) => Array.Exists(
         generatedSources,
-        static text => text.Contains($"internal sealed class {GeneratedMarkerName}", StringComparison.Ordinal));
+        static text => text.Contains($"AssemblyMetadata(\"{GeneratedMetadataKey}\"", StringComparison.Ordinal));
+
+    /// <summary>Checks whether generated source contains the removed custom marker attribute type.</summary>
+    /// <param name="generatedSources">Generated source text to inspect.</param>
+    /// <returns><see langword="true"/> when the legacy generated marker type is emitted.</returns>
+    private static bool LegacyGeneratedMarkerTypeExists(string[] generatedSources) => Array.Exists(
+        generatedSources,
+        static text => text.Contains(LegacyGeneratedMarkerName, StringComparison.Ordinal));
 }
