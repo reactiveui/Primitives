@@ -15,10 +15,10 @@ Default to the non-Core leaf packages for applications. Choose Core packages onl
 | --- | --- | --- |
 | `ReactiveUI.Disposables` | The project only needs disposable lifetime helpers. | `ReactiveUI.Primitives.Disposables`; `Scope`, `MultipleDisposable`, `DisposableBag`, `Pocket`, `Slot`, `AssignmentSlot`, `SingleDisposable`, `SingleReplaceableDisposable`, `MutableDisposable`, `SwapDisposable`, `OnceDisposable`, `BooleanDisposable`, `CancellationDisposable`, `EmptyDisposable`. |
 | `ReactiveUI.Primitives.Core` | Building a low-level library that needs the shared Primitives type layer without the full leaf package. | Root namespace remains `ReactiveUI.Primitives`. Includes core signal/state contracts and shared types such as `Result`, `Optional<T>`, `ISignal<T>`, `Signal<T>`, `BehaviorSignal<T>`, `StateSignal<T>`, `ReadOnlyState<T>`, `ConnectableSignal<T>`, `CommandSignal`, concurrency contracts, and advanced witnesses. Depends on `ReactiveUI.Disposables`. |
-| `ReactiveUI.Primitives` | Most BCL `IObservable<T>` usage. | Lean package using Primitives `RxVoid` and `ISequencer`. Includes core package, shared signal factories/operators, `CurrentThreadSequencer`, `ImmediateSequencer`, `SynchronizationContextSequencer`, `TaskPoolSequencer`, `ThreadPoolSequencer`, virtual time, `ReplaySignal<T>`, `ScheduledSignal<T>`, `PrioritySemaphoreSignal<T>`, `LinqExtensions`, `SignalExtensions`, and R3 bridge analyzer packaging. |
+| `ReactiveUI.Primitives` | Most BCL `IObservable<T>` usage. | Lean package using Primitives `RxVoid` and `ISequencer`. Includes core package, shared signal factories/operators, `CurrentThreadSequencer`, `ImmediateSequencer`, `SynchronizationContextSequencer`, `TaskPoolSequencer`, `ThreadPoolSequencer`, virtual time, `ReplaySignal<T>`, `ScheduledSignal<T>`, `PrioritySemaphoreSignal<T>`, `LinqExtensions`, and `SignalExtensions`. |
 | `ReactiveUI.Primitives.Reactive` | The project is System.Reactive-first and wants Primitives operators compiled with `System.Reactive.Unit` and `System.Reactive.Concurrency.IScheduler`. | Uses `.Reactive` namespaces such as `ReactiveUI.Primitives.Reactive`, `.Reactive.Concurrency`, `.Reactive.Signals`, and `.Reactive.Core`. Adds `System.Reactive`. This is a package variant, not a source-generator bridge. |
 | `ReactiveUI.Primitives.Async.Core` | Building a low-level async library around Primitives async contracts. | `ReactiveUI.Primitives.Async`; `IObservableAsync<T>`, `IObserverAsync<T>`, `SignalAsync<T>`, `SignalAsync`, async signal factories, async operators, async disposables, helpers, and async signal implementations. Depends on `ReactiveUI.Primitives.Core`. |
-| `ReactiveUI.Primitives.Async` | The app needs async-native observable pipelines where observer calls can await or observe cancellation. | Lean async leaf using Primitives `RxVoid` and `ISequencer`. Adds `AsyncContext`, `ContextSwitchSignalAsync<T>`, `SignalAsyncReactiveExtensions`, `Yield`, `WitnessOn`, `ObserveOnSafe`, `ObserveOnIf`, and R3/R3Async bridge analyzer packaging. Depends on `ReactiveUI.Primitives` and `ReactiveUI.Primitives.Async.Core`. |
+| `ReactiveUI.Primitives.Async` | The app needs async-native observable pipelines where observer calls can await or observe cancellation. | Lean async leaf using Primitives `RxVoid` and `ISequencer`. Adds `AsyncContext`, `ContextSwitchSignalAsync<T>`, `SignalAsyncReactiveExtensions`, `Yield`, `WitnessOn`, `ObserveOnSafe`, and `ObserveOnIf`. Depends on `ReactiveUI.Primitives` and `ReactiveUI.Primitives.Async.Core`. |
 | `ReactiveUI.Primitives.Async.Reactive` | Async-native pipelines in a System.Reactive-first project. | System.Reactive-flavoured async leaf with `System.Reactive.Unit` and `IScheduler` conventions. Depends on `ReactiveUI.Primitives.Reactive` and `ReactiveUI.Primitives.Async.Core`. |
 | `ReactiveUI.Primitives.Extensions.Core` | Building a library that needs shared extension implementations without choosing lean or System.Reactive scheduler/unit conventions. | Root namespace remains `ReactiveUI.Primitives.Extensions`. Includes type-agnostic extension support such as `CurrentValueSubject<T>`, `Continuation`, `ConcurrencyLimiter<T>`, `Heartbeat<T>`, `Stale<T>`, `IHeartbeat<T>`, `IStale<T>`, and shared operator implementation types. |
 | `ReactiveUI.Primitives.Extensions` | The app needs convenience operators over lean BCL `IObservable<T>` pipelines. | `ReactiveUI.Primitives.Extensions`; `ReactiveExtensions`, `ObservableSubscriptionExtensions`, buffering, debounce/throttle, stale detection, retry/backoff, heartbeat, observe-on helpers, pairwise/partition, `ToHotTask`, `ToHotValueTask`, `SubscribeAsync`, `WaitUntil`, `AsSignal`. Depends on `ReactiveUI.Primitives` and `ReactiveUI.Primitives.Extensions.Core`. |
@@ -60,7 +60,11 @@ dotnet add package ReactiveUI.Primitives.Extensions.Reactive
 dotnet add package ReactiveUI.Primitives.Wpf.Reactive
 ```
 
-Do not add `ReactiveUI.Primitives.R3Bridge.Generator` as a package. It is a non-packable Roslyn component whose output is packed as an analyzer by `ReactiveUI.Primitives` and `ReactiveUI.Primitives.Async`.
+Add `ReactiveUI.Primitives.R3Bridge.Generator` only when the project needs generated R3 or R3Async bridge methods. It is a standalone analyzer package and is not embedded in the runtime packages.
+
+```bash
+dotnet add package ReactiveUI.Primitives.R3Bridge.Generator
+```
 
 ## Selection Rules
 
@@ -218,14 +222,14 @@ dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Maui.R
 
 ## R3 And R3Async Bridges
 
-R3 bridges are generated into the consuming assembly only when the consumer already references the required R3 symbols. The generated namespace is `ReactiveUI.Primitives.R3Bridge`.
+R3 bridges are generated into the consuming assembly only when the consumer references `ReactiveUI.Primitives.R3Bridge.Generator` and already references the required R3 symbols. The generated namespace is `ReactiveUI.Primitives.R3Bridge`.
 
-When `R3.Observable<T>` is visible, `ReactiveUI.Primitives` emits:
+When `R3.Observable<T>` is visible, the generator emits:
 
 - `AsPrimitivesSignal<T>(this R3.Observable<T>)`
 - `AsR3Observable<T>(this System.IObservable<T>)`
 
-When both `R3.Observable<T>` and `ReactiveUI.Primitives.Async.IObservableAsync<T>` are visible, `ReactiveUI.Primitives.Async` emits:
+When both `R3.Observable<T>` and `ReactiveUI.Primitives.Async.IObservableAsync<T>` are visible, the generator emits:
 
 - `AsPrimitivesAsyncObservable<T>(this R3.Observable<T>)`
 - `AsR3Observable<T>(this IObservableAsync<T>)`
@@ -255,4 +259,4 @@ When editing this repository:
 - Tests use Microsoft.Testing.Platform with TUnit; write TUnit tests and TUnit assertions only.
 - Shipping public API baselines live under each package's `PublicAPI/<tfm>/PublicAPI.Shipped.txt` and `PublicAPI.Unshipped.txt`.
 - `Skill.md` is the canonical skill file. `ReactiveUI.Primitives.csproj` packs it both at package root as `Skill.md` and at `.agents/skills/reactiveui-primitives/SKILL.md`; keep this filename singular and casing intact.
-- Keep package guidance synchronized with packable projects in the solution. Tests, benchmarks, and `ReactiveUI.Primitives.R3Bridge.Generator` are not NuGet packages to add directly.
+- Keep package guidance synchronized with packable projects in the solution. Tests and benchmarks are not NuGet packages to add directly.

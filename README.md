@@ -117,10 +117,11 @@ integration point. Every package below ships at the same version and targets the
 |---------|-------|----------|
 | [ReactiveUI.Disposables][Disp] | [![DispB]][Disp] | You only need the disposable primitives such as `Disposable`, `MultipleDisposable`, `Slot`, or `Pocket`. |
 | [ReactiveUI.Primitives.Core][Core] | [![CoreB]][Core] | The type-agnostic core shared by the lean and System.Reactive-flavoured leaves (usually a transitive dependency). |
-| [ReactiveUI.Primitives][Prim] | [![PrimB]][Prim] | The default lean signal/operator/sequencer package, with optional generated R3/R3Async bridges. |
+| [ReactiveUI.Primitives][Prim] | [![PrimB]][Prim] | The default lean signal/operator/sequencer package. |
 | [ReactiveUI.Primitives.Reactive][Rx] | [![RxB]][Rx] | The Primitives API compiled against System.Reactive `Unit` and `IScheduler`. |
 | [ReactiveUI.Primitives.Async.Core][AsyncCore] | [![AsyncCoreB]][AsyncCore] | The type-agnostic async core shared by the async leaves. |
-| [ReactiveUI.Primitives.Async][Async] | [![AsyncB]][Async] | Native `IObservableAsync<T>` / `IObserverAsync<T>` signals and generated R3/R3Async bridges. |
+| [ReactiveUI.Primitives.Async][Async] | [![AsyncB]][Async] | Native `IObservableAsync<T>` / `IObserverAsync<T>` signals. |
+| [ReactiveUI.Primitives.R3Bridge.Generator][R3Bridge] | [![R3BridgeB]][R3Bridge] | Optional analyzer package that generates R3 and R3Async bridge adapters. |
 | [ReactiveUI.Primitives.Async.Reactive][AsyncRx] | [![AsyncRxB]][AsyncRx] | Async Primitives compiled against System.Reactive `Unit` and `IScheduler`. |
 | [ReactiveUI.Primitives.Extensions.Core][ExtCore] | [![ExtCoreB]][ExtCore] | The type-agnostic core for the migrated `ReactiveUI.Extensions` helpers. |
 | [ReactiveUI.Primitives.Extensions][Ext] | [![ExtB]][Ext] | The migrated non-async `ReactiveUI.Extensions` helper operators on lean Primitives. |
@@ -148,6 +149,8 @@ integration point. Every package below ships at the same version and targets the
 [AsyncCoreB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Async.Core.svg
 [Async]: https://www.nuget.org/packages/ReactiveUI.Primitives.Async/
 [AsyncB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Async.svg
+[R3Bridge]: https://www.nuget.org/packages/ReactiveUI.Primitives.R3Bridge.Generator/
+[R3BridgeB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.R3Bridge.Generator.svg
 [AsyncRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Async.Reactive/
 [AsyncRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Async.Reactive.svg
 [ExtCore]: https://www.nuget.org/packages/ReactiveUI.Primitives.Extensions.Core/
@@ -238,14 +241,17 @@ using ReactiveUI.Primitives.Signals;
 
 The package metadata is configured to include this README in the NuGet package via `PackageReadmeFile=README.md`. The
 base package also packs `Skill.md` at the package root and a Codex-ready copy at
-`.agents/skills/reactiveui-primitives/SKILL.md`. The base and async packages pack the R3 bridge source-generator assembly
-under `analyzers/dotnet/cs`:
+`.agents/skills/reactiveui-primitives/SKILL.md`.
 
-- `ReactiveUI.Primitives.R3Bridge.Generator.dll`
+R3 and R3Async bridge generation lives in the standalone `ReactiveUI.Primitives.R3Bridge.Generator` analyzer package:
 
-That generator is an analyzer. It does not add runtime R3 or R3Async dependencies to ReactiveUI.Primitives. It emits
-bridge code only when the consuming compilation already references the relevant external library symbols. System.Reactive
-interop is provided by the `.Reactive` package variants rather than by generated System.Reactive bridge methods.
+```bash
+dotnet add package ReactiveUI.Primitives.R3Bridge.Generator
+```
+
+That generator does not add runtime R3 or R3Async dependencies to ReactiveUI.Primitives. It emits bridge code only when
+the consuming compilation already references the relevant external library symbols. System.Reactive interop is provided
+by the `.Reactive` package variants rather than by generated System.Reactive bridge methods.
 
 ## Agent Skills
 
@@ -316,10 +322,8 @@ Package TFM groups are:
 - `ReactiveUI.Primitives.Maui` and `ReactiveUI.Primitives.Maui.Reactive`: `net9.0`, `net10.0`, `net11.0`.
 
 Runtime package dependencies are intentionally small. The default production packages do not depend on System.Reactive,
-R3, or R3Async. `ReactiveUI.Primitives` references `ReactiveUI.Disposables`, `ReactiveUI.Primitives.Core`, and the
-non-packable R3 source-generator project with `ReferenceOutputAssembly=false`; the generated analyzer DLL is embedded in
-the NuGet package rather than shipped as a separate runtime dependency. `ReactiveUI.Disposables` references
-`System.ValueTuple` only for `net462`.
+R3, R3Async, or the optional R3 bridge generator. `ReactiveUI.Primitives` references `ReactiveUI.Disposables` and
+`ReactiveUI.Primitives.Core`. `ReactiveUI.Disposables` references `System.ValueTuple` only for `net462`.
 
 The `.Reactive` leaf packages intentionally reference `System.Reactive` through `src/Directory.Build.props`. They
 recompile the shared Primitives source with `RxVoid` aliased to `System.Reactive.Unit`, `ISequencer` aliased to
@@ -329,9 +333,9 @@ recompile the shared Primitives source with `RxVoid` aliased to `System.Reactive
 `ReactiveUI.Primitives.Extensions.Core`, `ReactiveUI.Primitives.Extensions`, and
 `ReactiveUI.Primitives.Extensions.Reactive` add .NET Framework compatibility/support packages where required, such as
 `System.ValueTuple`, Microsoft.Bcl.TimeProvider, System.Threading.Channels, System.Runtime.CompilerServices.Unsafe,
-System.ComponentModel.Annotations, System.Buffers, System.Memory, and System.Collections.Immutable. The async lean
-package also embeds `ReactiveUI.Primitives.R3Bridge.Generator.dll` so R3/R3Async bridge methods can be generated in
-consuming projects that already reference those external libraries.
+System.ComponentModel.Annotations, System.Buffers, System.Memory, and System.Collections.Immutable. Add the standalone
+`ReactiveUI.Primitives.R3Bridge.Generator` analyzer package to generate R3/R3Async bridge methods in consuming projects
+that already reference those external libraries.
 
 `ReactiveUI.Primitives.Blazor` and `ReactiveUI.Primitives.Blazor.Reactive` reference `Microsoft.AspNetCore.Components`.
 `ReactiveUI.Primitives.Maui` and `ReactiveUI.Primitives.Maui.Reactive` reference `Microsoft.Maui.Core` and
@@ -837,8 +841,8 @@ await using IAsyncDisposable subscription = await SignalAsync.Sequence(1, 3)
     .SubscribeAsync(static value => Console.WriteLine(value));
 ```
 
-`ReactiveUI.Primitives.Async` also packs the R3 bridge source generator as an analyzer. A consumer that references R3 and
-`ReactiveUI.Primitives.Async` can use generated
+`ReactiveUI.Primitives.R3Bridge.Generator` also emits async bridge adapters. A consumer that references R3,
+`ReactiveUI.Primitives.Async`, and the generator can use generated
 `AsPrimitivesAsyncObservable<T>(this R3.Observable<T>)` and
 `AsR3Observable<T>(this IObservableAsync<T>)`; a consumer that references R3Async can use
 `AsPrimitivesAsyncObservable<T>(this R3Async.AsyncObservable<T>)` and
@@ -1068,27 +1072,42 @@ ReactiveUI.Primitives follows the BCL observer contract and keeps ownership expl
 
 ## Source-generator bridge behavior
 
-A source generator is a compiler component that writes extra C# code into your project at build time. The base
-`ReactiveUI.Primitives` package and the `ReactiveUI.Primitives.Async` package embed one bridge generator as an
-analyzer:
+A source generator is a compiler component that writes extra C# code into your project at build time. R3 and R3Async
+bridge generation is opt-in through the standalone analyzer package:
+
+```bash
+dotnet add package ReactiveUI.Primitives.R3Bridge.Generator
+```
+
+The package ships one analyzer assembly:
 
 - `ReactiveUI.Primitives.R3Bridge.Generator.dll`
 
-The generator project is not shipped as its own NuGet package. It is built as a Roslyn component and packed under
-`analyzers/dotnet/cs` by the host packages.
+The generator is no longer embedded in `ReactiveUI.Primitives` or `ReactiveUI.Primitives.Async`, and those runtime
+packages do not depend on it. Add the generator package only to projects that need generated R3 or R3Async bridge
+methods.
 
 That assembly currently contains two conditional generators:
 
 - `R3BridgeGenerator` for R3 `Observable<T>` boundaries and R3-to-Primitives.Async adapters.
 - `R3AsyncBridgeGenerator` for R3Async `AsyncObservable<T>` boundaries.
 
-The generators always emit an internal marker attribute,
-`ReactiveUI.Primitives.R3Bridge.Generated.PrimitivesR3BridgeGeneratedAttribute`, stamped with the generator contract
-version. They emit bridge extension methods only when the consumer project already references the relevant external
-library symbols:
+The generator stamps the consuming assembly with an assembly metadata attribute:
 
-- R3 bridge checks for `R3.Observable<T>`.
-- R3-to-Primitives.Async bridge checks for both `R3.Observable<T>` and `ReactiveUI.Primitives.Async.IObservableAsync<T>`.
+```csharp
+[assembly: System.Reflection.AssemblyMetadata("ReactiveUI.Primitives.R3Bridge.Generator", "0.1.0")]
+```
+
+It does not generate a custom marker attribute type. This avoids duplicate generated type identities across
+project-reference and `InternalsVisibleTo` builds, including the CS0436 warning path seen when two compilations both
+generate the same internal marker type.
+
+Bridge extension methods are emitted only when the consumer project already references the relevant external library
+symbols:
+
+- R3 bridge checks for `R3.Observable<T>`, `R3.Observer<T>`, and `R3.Result`.
+- R3-to-Primitives.Async bridge checks for the same R3 symbols plus
+  `ReactiveUI.Primitives.Async.IObservableAsync<T>`.
 - R3Async bridge checks for `R3Async.AsyncObservable<T>`, `R3Async.AsyncObserver<T>`, `R3Async.Result`, and
   `ReactiveUI.Primitives.Async.IObservableAsync<T>`.
 
@@ -1111,7 +1130,13 @@ Generated R3Async bridge methods:
 - `AsR3AsyncObservable<T>(this ReactiveUI.Primitives.Async.IObservableAsync<T> source)` when R3Async and
   `ReactiveUI.Primitives.Async` are referenced
 
-R3 bridge example, when the consuming project already references R3:
+R3 bridge example, when the consuming project references R3 and the generator package:
+
+```bash
+dotnet add package ReactiveUI.Primitives
+dotnet add package ReactiveUI.Primitives.R3Bridge.Generator
+dotnet add package R3
+```
 
 ```csharp
 using ReactiveUI.Primitives;
@@ -1123,7 +1148,14 @@ IObservable<int> primitivesSource = r3Source.AsPrimitivesSignal();
 R3.Observable<int> r3Again = Signal.Sequence(1, 3).AsR3Observable();
 ```
 
-R3 async bridge example, when the consuming project already references R3 and `ReactiveUI.Primitives.Async`:
+R3 async bridge example, when the consuming project references R3, `ReactiveUI.Primitives.Async`, and the generator
+package:
+
+```bash
+dotnet add package ReactiveUI.Primitives.Async
+dotnet add package ReactiveUI.Primitives.R3Bridge.Generator
+dotnet add package R3
+```
 
 ```csharp
 using ReactiveUI.Primitives.Async;
@@ -1134,7 +1166,14 @@ IObservableAsync<int> primitivesAsync = r3Source.AsPrimitivesAsyncObservable();
 R3.Observable<int> r3Again = primitivesAsync.AsR3Observable();
 ```
 
-R3Async bridge example, when the consuming project already references R3Async and `ReactiveUI.Primitives.Async`:
+R3Async bridge example, when the consuming project references R3Async, `ReactiveUI.Primitives.Async`, and the generator
+package:
+
+```bash
+dotnet add package ReactiveUI.Primitives.Async
+dotnet add package ReactiveUI.Primitives.R3Bridge.Generator
+dotnet add package R3Async
+```
 
 ```csharp
 using ReactiveUI.Primitives.Async;
@@ -1146,9 +1185,9 @@ R3Async.AsyncObservable<int> r3AsyncAgain = primitivesAsync.AsR3AsyncObservable(
 ```
 
 The R3 snippets are intentionally shown as migration shapes because they require the consuming application to reference
-R3 or R3Async. ReactiveUI.Primitives itself remains free of R3 and R3Async runtime dependencies. System.Reactive
-interop lives in the `.Reactive` package variants, which recompile the same Primitives APIs against
-System.Reactive `Unit` and `IScheduler`.
+R3 or R3Async and opt into `ReactiveUI.Primitives.R3Bridge.Generator`. ReactiveUI.Primitives itself remains free of R3
+and R3Async runtime dependencies. System.Reactive interop lives in the `.Reactive` package variants, which recompile the
+same Primitives APIs against System.Reactive `Unit` and `IScheduler`.
 
 ## System.Reactive to ReactiveUI.Primitives migration guide
 
@@ -1740,7 +1779,7 @@ duration is indistinguishable from empty method overhead; the benchmark run stil
 | `src/ReactiveUI.Primitives.Blazor.Reactive`            | Optional Blazor renderer scheduler integration library for System.Reactive consumers.       |
 | `src/ReactiveUI.Primitives.Maui`                       | Optional MAUI dispatcher integration library.                                              |
 | `src/ReactiveUI.Primitives.Maui.Reactive`              | Optional MAUI dispatcher scheduler integration library for System.Reactive consumers.       |
-| `src/ReactiveUI.Primitives.R3Bridge.Generator`         | Non-packable analyzer project embedded by the lean base and async packages for R3 bridges. |
+| `src/ReactiveUI.Primitives.R3Bridge.Generator`         | Standalone analyzer package for optional R3 and R3Async bridge generation.                 |
 | `src/Primitives.Shared`                                | Linked lean/Reactive synchronous source.                                                   |
 | `src/Primitives.Async.Shared`                          | Linked lean/Reactive async source.                                                         |
 | `src/Primitives.Extensions.Shared`                     | Linked lean/Reactive Extensions source.                                                    |

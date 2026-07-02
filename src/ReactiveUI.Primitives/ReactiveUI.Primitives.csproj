@@ -49,13 +49,11 @@
   <ItemGroup>
     <ProjectReference Include="..\ReactiveUI.Disposables\ReactiveUI.Disposables.csproj" />
     <ProjectReference Include="..\ReactiveUI.Primitives.Core\ReactiveUI.Primitives.Core.csproj" />
-    <ProjectReference Include="..\ReactiveUI.Primitives.R3Bridge.Generator\ReactiveUI.Primitives.R3Bridge.Generator.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="..\..\Skill.md" Pack="true" PackagePath="Skill.md" Visible="false" />
     <None Include="..\..\Skill.md" Pack="true" PackagePath=".agents/skills/reactiveui-primitives/SKILL.md" Visible="false" />
-    <None Include="..\ReactiveUI.Primitives.R3Bridge.Generator\bin\$(Configuration)\netstandard2.0\ReactiveUI.Primitives.R3Bridge.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
 </Project>
