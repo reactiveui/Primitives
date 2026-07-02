@@ -348,9 +348,9 @@ public partial class SignalOperatorMixinsTests
         _ = Assert.Throws<InvalidOperationException>(() =>
             new ThrowSignal<int>(new InvalidOperationException("throw-signal"), Sequencer.Immediate)
                 .Subscribe(new ThrowingWitness<int>(throwOnError: true)).Dispose());
-        ReturnSignal<int>.Return returnWitness = new(new RecordingWitness<int>(), EmptyDisposable.Instance);
+        GuardedWitness<int> returnWitness = new(new RecordingWitness<int>(), EmptyDisposable.Instance);
         returnWitness.OnError(new InvalidOperationException("return-inner"));
-        EmptySignal<int>.Empty emptyWitness = new(new RecordingWitness<int>(), EmptyDisposable.Instance);
+        GuardedWitness<int> emptyWitness = new(new RecordingWitness<int>(), EmptyDisposable.Instance);
         emptyWitness.OnNext(One);
         emptyWitness.OnError(new InvalidOperationException("empty-inner"));
         RecordingWitness<int> mapObserver = new();

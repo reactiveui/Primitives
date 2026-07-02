@@ -62,3 +62,10 @@ static ReactiveUI.Primitives.LinqExtensions.LastOrDefaultAsync<T>(this System.IO
 static ReactiveUI.Primitives.LinqExtensions.LastOrDefaultAsync<T>(this System.IObservable<T>! source, T defaultValue, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
 static ReactiveUI.Primitives.LinqExtensions.TakeUntil<T>(this System.IObservable<T>! source, System.Threading.CancellationToken cancellationToken) -> System.IObservable<T>!
 static ReactiveUI.Primitives.LinqExtensions.ToTask<T>(this System.Threading.Tasks.Task<T>! task, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
+*REMOVED*ReactiveUI.Primitives.Advanced.PublishSelectorWitness<T>
+*REMOVED*ReactiveUI.Primitives.Advanced.PublishSelectorWitness<T>.Dispose() -> void
+*REMOVED*ReactiveUI.Primitives.Advanced.PublishSelectorWitness<T>.OnCompleted() -> void
+*REMOVED*ReactiveUI.Primitives.Advanced.PublishSelectorWitness<T>.OnError(System.Exception! error) -> void
+*REMOVED*ReactiveUI.Primitives.Advanced.PublishSelectorWitness<T>.OnNext(T value) -> void
+*REMOVED*ReactiveUI.Primitives.Advanced.PublishSelectorWitness<T>.PublishSelectorWitness(System.IObserver<T>! observer) -> void
+*REMOVED*ReactiveUI.Primitives.Advanced.PublishSelectorWitness<T>.SetCancel(System.IDisposable! cancel) -> void

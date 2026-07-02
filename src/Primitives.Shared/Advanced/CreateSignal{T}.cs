@@ -47,7 +47,7 @@ internal sealed class CreateSignal<T> : IRequireCurrentThread<T>
             return SignalSubscription.Subscribe(observer, _currentThreadRequired, SubscribeCore);
         }
 
-        Create sink = new(observer);
+        CreateSink<T> sink = new(observer, disposeOnNextThrow: false);
         sink.SetCancel(_subscribe(sink) ?? EmptyDisposable.Instance);
         return sink;
     }
@@ -58,110 +58,7 @@ internal sealed class CreateSignal<T> : IRequireCurrentThread<T>
     /// <returns>The result.</returns>
     private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel)
     {
-        Create sink = new(observer, cancel);
+        CreateSink<T> sink = new(observer, cancel, disposeOnNextThrow: false);
         return _subscribe(sink) ?? EmptyDisposable.Instance;
-    }
-
-    /// <summary>Represents the Create class.</summary>
-    private sealed class Create : IDisposable, IObserver<T>
-    {
-        /// <summary>Wrapped observer.</summary>
-        private IObserver<T> _observer;
-
-        /// <summary>Cancellation resource.</summary>
-        private IDisposable? _cancel;
-
-        /// <summary>Non-zero after disposal or termination.</summary>
-        private int _stopped;
-
-        /// <summary>Initializes a new instance of the <see cref="Create"/> class.</summary>
-        /// <param name="observer">The observer value.</param>
-        public Create(IObserver<T> observer) => _observer = observer;
-
-        /// <summary>Initializes a new instance of the <see cref="Create"/> class.</summary>
-        /// <param name="observer">The observer value.</param>
-        /// <param name="cancel">The cancel value.</param>
-        public Create(IObserver<T> observer, IDisposable cancel)
-        {
-            _observer = observer;
-            _cancel = cancel;
-        }
-
-        /// <summary>Assigns the cancellation resource.</summary>
-        /// <param name="cancel">Cancellation resource.</param>
-        public void SetCancel(IDisposable cancel)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(cancel);
-
-            if (Interlocked.CompareExchange(ref _cancel, cancel, null) is not null)
-            {
-                cancel.Dispose();
-                return;
-            }
-
-            if (Volatile.Read(ref _stopped) == 0)
-            {
-                return;
-            }
-
-            Interlocked.Exchange(ref _cancel, null)?.Dispose();
-        }
-
-        /// <summary>Executes the OnNext operation.</summary>
-        /// <param name="value">The value.</param>
-        public void OnNext(T value)
-        {
-            if (Volatile.Read(ref _stopped) != 0)
-            {
-                return;
-            }
-
-            _observer.OnNext(value);
-        }
-
-        /// <summary>Executes the OnError operation.</summary>
-        /// <param name="error">The error value.</param>
-        public void OnError(Exception error)
-        {
-            if (Interlocked.Exchange(ref _stopped, 1) != 0)
-            {
-                return;
-            }
-
-            try
-            {
-                _observer.OnError(error);
-            }
-            finally
-            {
-                Dispose();
-            }
-        }
-
-        /// <summary>Executes the OnCompleted operation.</summary>
-        public void OnCompleted()
-        {
-            if (Interlocked.Exchange(ref _stopped, 1) != 0)
-            {
-                return;
-            }
-
-            try
-            {
-                _observer.OnCompleted();
-            }
-            finally
-            {
-                Dispose();
-            }
-        }
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            _observer = EmptyWitness<T>.Instance;
-            Interlocked.Exchange(ref _cancel, null)?.Dispose();
-            Volatile.Write(ref _stopped, 1);
-        }
     }
 }

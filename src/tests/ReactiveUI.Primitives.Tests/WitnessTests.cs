@@ -835,20 +835,20 @@ public class WitnessTests
         await Assert.That(loser.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>Verifies publish selector witnesses dispose cancellation resources on terminal and disposal.</summary>
+    /// <summary>Verifies create witnesses dispose cancellation resources on terminal and disposal.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task PublishSelectorWitnessDisposesCancellationOnTerminalAndDisposal()
+    public async Task CreateWitnessDisposesCancellationOnTerminalAndDisposal()
     {
         _ = Assert.Throws<ArgumentNullException>(() =>
         {
-            PublishSelectorWitness<int> invalid = new(null!);
+            CreateWitness<int> invalid = new(null!);
             GC.KeepAlive(invalid);
         });
 
         RecordingWitness<int> completedObserver = new();
         RecordingDisposable completedCancel = new();
-        PublishSelectorWitness<int> completed = new(completedObserver);
+        CreateWitness<int> completed = new(completedObserver);
         completed.SetCancel(completedCancel);
         _ = Assert.Throws<ArgumentNullException>(() => completed.SetCancel(null!));
         completed.OnNext(One);
@@ -863,7 +863,7 @@ public class WitnessTests
         RecordingWitness<int> errorObserver = new();
         RecordingDisposable firstCancel = new();
         RecordingDisposable duplicateCancel = new();
-        PublishSelectorWitness<int> error = new(errorObserver);
+        CreateWitness<int> error = new(errorObserver);
         error.SetCancel(firstCancel);
         error.SetCancel(duplicateCancel);
         error.OnError(expected);
@@ -873,18 +873,18 @@ public class WitnessTests
         await Assert.That(duplicateCancel.DisposeCount).IsEqualTo(One);
 
         RecordingDisposable completionThrowCancel = new();
-        PublishSelectorWitness<int> completionThrow = new(new ThrowingWitness<int>(throwOnCompleted: true));
+        CreateWitness<int> completionThrow = new(new ThrowingWitness<int>(throwOnCompleted: true));
         completionThrow.SetCancel(completionThrowCancel);
         _ = Assert.Throws<InvalidOperationException>(completionThrow.OnCompleted);
         await Assert.That(completionThrowCancel.DisposeCount).IsEqualTo(One);
 
         RecordingDisposable errorThrowCancel = new();
-        PublishSelectorWitness<int> errorThrow = new(new ThrowingWitness<int>(throwOnError: true));
+        CreateWitness<int> errorThrow = new(new ThrowingWitness<int>(throwOnError: true));
         errorThrow.SetCancel(errorThrowCancel);
         _ = Assert.Throws<InvalidOperationException>(() => errorThrow.OnError(expected));
         await Assert.That(errorThrowCancel.DisposeCount).IsEqualTo(One);
 
-        PublishSelectorWitness<int> disposed = new(new RecordingWitness<int>());
+        CreateWitness<int> disposed = new(new RecordingWitness<int>());
         RecordingDisposable lateCancel = new();
         disposed.Dispose();
         disposed.SetCancel(lateCancel);

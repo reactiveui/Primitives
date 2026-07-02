@@ -55,4 +55,65 @@ public class TaskTerminalCompletionTests
         await Assert.That(() => task).Throws<TaskCanceledException>();
         await Assert.That(subscription.DisposeCount).IsEqualTo(1);
     }
+
+    /// <summary>Verifies that attaching with an already-canceled token cancels inline and releases the registration.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AttachWithAlreadyCanceledTokenCancelsAndDisposesSubscription()
+    {
+        TaskTerminalCompletion<int> completion = new();
+        RecordingDisposable subscription = new();
+
+        var task = completion.Attach(subscription, new CancellationToken(true));
+
+        await Assert.That(() => task).Throws<TaskCanceledException>();
+        await Assert.That(subscription.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies that a fault releases the subscription and surfaces through the terminal task.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FailReleasesSubscriptionAndFaultsTask()
+    {
+        TaskTerminalCompletion<int> completion = new();
+        RecordingDisposable subscription = new();
+        InvalidOperationException error = new("terminal");
+
+        var task = completion.Attach(subscription, CancellationToken.None);
+        completion.Fail(error);
+
+        var caught = await Assert.That(() => task).Throws<InvalidOperationException>();
+        await Assert.That(caught!).IsSameReferenceAs(error);
+        await Assert.That(subscription.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies the shared empty-source failure shape.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FailEmptyFaultsWithEmptySourceError()
+    {
+        TaskTerminalCompletion<int> completion = new();
+
+        completion.FailEmpty();
+
+        var caught = await Assert.That(() => completion.Task).Throws<InvalidOperationException>();
+        await Assert.That(caught!.Message).Contains("without producing a value");
+    }
+
+    /// <summary>Verifies that resolving after attach releases the registration so later cancellation is a no-op.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ResolveAfterAttachReleasesRegistration()
+    {
+        TaskTerminalCompletion<int> completion = new();
+        RecordingDisposable subscription = new();
+        using CancellationTokenSource cts = new();
+
+        var task = completion.Attach(subscription, cts.Token);
+        completion.Resolve(ExpectedValue);
+        await cts.CancelAsync();
+
+        await Assert.That(await task).IsEqualTo(ExpectedValue);
+        await Assert.That(subscription.DisposeCount).IsEqualTo(1);
+    }
 }
