@@ -274,4 +274,62 @@ public partial class SignalOperatorParityMixinsTests
         _ = Assert.Throws<ArgumentNullException>(() => new[] { One }.ToObservable(null!));
         _ = Assert.Throws<ArgumentNullException>(() => ((Task<int>)null!).ToObservable());
     }
+
+    /// <summary>Covers deterministic shortcut branches in System.Reactive-name parity operators.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ParityShortcutBranchesCoverDefaultsAndRangeFastPaths()
+    {
+        var source = Signal.FromEnumerable([One, Two]);
+        using CancellationTokenSource conversion = new();
+        List<int> cancelableObservable = [];
+        _ = new[] { One, Two }.ToObservable(conversion.Token).Subscribe(cancelableObservable.Add);
+        List<int> nonCancelableObservable = [];
+        _ = new[] { One, Two }.ToObservable(CancellationToken.None).Subscribe(nonCancelableObservable.Add);
+
+        int[] singlePrefix = [Three];
+        List<int> singleParamsPrepend = [];
+        _ = source.Prepend(singlePrefix).Subscribe(singleParamsPrepend.Add);
+
+        List<int> defaultFallback = [];
+        _ = Signal.FromEnumerable([One]).DefaultIfEmpty().Subscribe(defaultFallback.Add);
+
+        List<int> uniqueByDefaultComparer = [];
+        _ = Signal.FromEnumerable([One, One, Two]).UniqueBy(value => value, null).Subscribe(uniqueByDefaultComparer.Add);
+
+        List<bool> containsDefaultComparer = [];
+        _ = source.Contains(Two, null).Subscribe(containsDefaultComparer.Add);
+
+        await Assert.That(cancelableObservable.SequenceEqual(ExpectedOneTwo)).IsTrue();
+        await Assert.That(nonCancelableObservable.SequenceEqual(ExpectedOneTwo)).IsTrue();
+        await Assert.That(singleParamsPrepend.SequenceEqual([Three, One, Two])).IsTrue();
+        await Assert.That(defaultFallback.SequenceEqual([One])).IsTrue();
+        await Assert.That(uniqueByDefaultComparer.SequenceEqual(ExpectedOneTwo)).IsTrue();
+        await Assert.That(containsDefaultComparer.SequenceEqual(ExpectedTrueValues)).IsTrue();
+
+        await Assert.That(Signal.Range(One, Two).DelaySubscription(TimeSpan.Zero)).IsNotNull();
+        await Assert.That(Signal.Range(One, Two).DelaySubscription(TimeSpan.Zero, null)).IsNotNull();
+        await Assert.That(Signal.Range(One, Two).DelayStart(TimeSpan.Zero)).IsNotNull();
+        await Assert.That(Signal.Range(One, Two).DelayStart(TimeSpan.Zero, null)).IsNotNull();
+        await Assert.That(source.Calm(TimeSpan.Zero, null)).IsNotNull();
+        await Assert.That(source.Stabilize(TimeSpan.Zero, null)).IsNotNull();
+        await Assert.That(source.Probe(TimeSpan.FromTicks(One), null)).IsNotNull();
+        await Assert.That(source.Timestamp()).IsNotNull();
+        await Assert.That(source.Timestamp(null)).IsNotNull();
+        await Assert.That(Signal.Range(One, Two).Timestamp(null)).IsNotNull();
+        await Assert.That(source.TimeInterval()).IsNotNull();
+        await Assert.That(source.TimeInterval(null)).IsNotNull();
+        await Assert.That(Signal.Range(One, Two).TimeInterval(null)).IsNotNull();
+
+        List<int> pairedRanges = [];
+        _ = Signal.Range(One, Two).PairLatest(Signal.Range(Three, Two), (left, right) => left + right)
+            .Subscribe(pairedRanges.Add);
+        List<int> fusedRanges = [];
+        _ = Signal.Range(One, Two).FuseLatest(Signal.Range(Three, Two), (left, right) => left + right)
+            .Subscribe(fusedRanges.Add);
+
+        int[] expectedLatest = [Two + Three, Two + Four];
+        await Assert.That(pairedRanges.SequenceEqual(expectedLatest)).IsTrue();
+        await Assert.That(fusedRanges.SequenceEqual(expectedLatest)).IsTrue();
+    }
 }
