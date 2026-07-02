@@ -274,4 +274,36 @@ public sealed class WasmSchedulerTests
         await returnedDisposed.Task.WaitAsync(WaitTimeout);
         await Assert.That(returnedDisposed.Task.IsCompletedSuccessfully).IsTrue();
     }
+
+    /// <summary>Verifies that scheduling with a null action returns proper exception.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ScheduleWithNullActionThrows()
+    {
+        await Assert.That(() => WasmScheduler.Default.Schedule(0, null!)).Throws<ArgumentNullException>();
+    }
+
+    /// <summary>Verifies that scheduling delayed with a null action returns proper exception.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ScheduleDelayedWithNullActionThrows()
+    {
+        await Assert.That(() => WasmScheduler.Default.Schedule(0, TimeSpan.FromMilliseconds(100), null!)).Throws<ArgumentNullException>();
+    }
+
+    /// <summary>Verifies that scheduling periodic with negative period throws.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SchedulePeriodicWithNegativePeriodThrows()
+    {
+        await Assert.That(() => WasmScheduler.Default.SchedulePeriodic(0, TimeSpan.FromMilliseconds(-1), static s => s)).Throws<ArgumentOutOfRangeException>();
+    }
+
+    /// <summary>Verifies that scheduling periodic with null action returns proper exception.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SchedulePeriodicWithNullActionThrows()
+    {
+        await Assert.That(() => WasmScheduler.Default.SchedulePeriodic(0, TimeSpan.FromMilliseconds(100), null!)).Throws<ArgumentNullException>();
+    }
 }
