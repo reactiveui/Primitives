@@ -4,7 +4,6 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
 using Timer = System.Threading.Timer;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
@@ -213,42 +212,24 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
 
     /// <summary>
     /// A cancellable scheduled work item carrying closure-free state and the scheduler passed back to the action;
-    /// also the target that roots a delayed one-shot timer.
+    /// also the target that roots a delayed one-shot timer. The run/cancel handshake lives in the shared
+    /// <see cref="DispatchWorkItemBase{TState}"/>; this item only adds the optional one-shot timer a delayed schedule
+    /// attaches.
     /// </summary>
     /// <typeparam name="TState">The scheduled state type.</typeparam>
-    private sealed class StatefulWorkItem<TState> : IReadyWorkItem, IDisposable
+    private sealed class StatefulWorkItem<TState> : DispatchWorkItemBase<TState>, IReadyWorkItem, IDisposable
     {
-        /// <summary>The scheduler passed back to the scheduled action.</summary>
-        private readonly WasmScheduler _scheduler;
-
-        /// <summary>Scheduled state.</summary>
-        private readonly TState _state;
-
-        /// <summary>Scheduled action.</summary>
-        private readonly Func<IScheduler, TState, IDisposable> _action;
-
         /// <summary>Timer driving a delayed item; <see langword="null"/> for immediate work.</summary>
         private Timer? _timer;
-
-        /// <summary>Disposable returned by the scheduled action after it starts.</summary>
-        private IDisposable? _disposable;
-
-        /// <summary>Tracks cancellation.</summary>
-        private int _isDisposed;
 
         /// <summary>Initializes a new instance of the <see cref="StatefulWorkItem{TState}"/> class.</summary>
         /// <param name="scheduler">The scheduler passed back to the scheduled action.</param>
         /// <param name="state">Scheduled state.</param>
         /// <param name="action">Scheduled action.</param>
         public StatefulWorkItem(WasmScheduler scheduler, TState state, Func<IScheduler, TState, IDisposable> action)
+            : base(scheduler, state, action)
         {
-            _scheduler = scheduler;
-            _state = state;
-            _action = action;
         }
-
-        /// <summary>Gets a value indicating whether the work item has been cancelled.</summary>
-        private bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
 
         /// <summary>Stores the one-shot timer so the caller's disposable cancels and releases it.</summary>
         /// <param name="timer">The armed timer.</param>
@@ -264,39 +245,17 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         }
 
         /// <inheritdoc/>
-        public void Run()
-        {
-            if (IsDisposed)
-            {
-                return;
-            }
-
-            var disposable = _action(_scheduler, _state) ?? Disposable.Empty;
-            var previous = Interlocked.CompareExchange(ref _disposable, disposable, null);
-            if (previous is not null)
-            {
-                disposable.Dispose();
-                return;
-            }
-
-            if (!IsDisposed)
-            {
-                return;
-            }
-
-            disposable.Dispose();
-        }
-
-        /// <inheritdoc/>
         public void Dispose()
         {
-            if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
+            // Claim cancellation first so a racing AttachTimer observes the disposed state and releases the timer it
+            // just stored, then reclaim any timer this item already owns and the disposable the action returned.
+            if (!TryClaimDispose())
             {
                 return;
             }
 
             Interlocked.Exchange(ref _timer, null)?.Dispose();
-            Interlocked.Exchange(ref _disposable, Disposable.Empty)?.Dispose();
+            ReleaseStartedWork();
         }
     }
 

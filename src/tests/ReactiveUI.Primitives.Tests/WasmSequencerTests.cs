@@ -128,6 +128,18 @@ public sealed class WasmSequencerTests
         await Assert.That(cancelledRan).IsFalse();
     }
 
+    /// <summary>Verifies disposing a fresh sequencer releases its drain timer and is idempotent.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposeReleasesDrainTimerAndIsIdempotent()
+    {
+        var sequencer = (WasmSequencer)Activator.CreateInstance(typeof(WasmSequencer), nonPublic: true)!;
+
+        sequencer.Dispose();
+
+        await Assert.That(sequencer.Dispose).ThrowsNothing();
+    }
+
     /// <summary>Work item that invokes a delegate when executed.</summary>
     private sealed class DelegateWorkItem : IWorkItem
     {

@@ -38,6 +38,13 @@
     <Compile Include="..\Primitives.Platform.Reactive.Shared\**\*.cs" Link="Primitives.Platform.Reactive.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
+  <!-- WasmScheduler compiles on every TFM and shares its run/cancel core with the mobile DispatchWorkItem via
+       DispatchWorkItemBase. Pull just that base type in on the non-platform (library) TFMs, where the whole shared
+       folder above is not linked. -->
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == ''">
+    <Compile Include="..\Primitives.Platform.Reactive.Shared\DispatchWorkItemBase.cs" Link="Primitives.Platform.Reactive.Shared\DispatchWorkItemBase.cs" />
+  </ItemGroup>
+
   <!-- The RxVoid/ISequencer-aware shared source, compiled here under the .Reactive namespace (REACTIVE_SHIM). -->
   <ItemGroup>
     <Compile Include="..\Primitives.Shared\**\*.cs" Link="Primitives.Shared\%(RecursiveDir)%(Filename)%(Extension)" />

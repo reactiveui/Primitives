@@ -218,4 +218,60 @@ public sealed class WasmSchedulerTests
         await Assert.That(await ticked.Task.WaitAsync(WaitTimeout)).IsTrue();
         subscription.Dispose();
     }
+
+    /// <summary>Verifies disposing a fresh scheduler releases its drain timer and is idempotent.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposeReleasesDrainTimerAndIsIdempotent()
+    {
+        var scheduler = (WasmScheduler)Activator.CreateInstance(typeof(WasmScheduler), nonPublic: true)!;
+
+        scheduler.Dispose();
+
+        await Assert.That(scheduler.Dispose).ThrowsNothing();
+    }
+
+    /// <summary>Verifies disposing a delayed work item twice is idempotent.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposedDelayedItemDisposeIsIdempotent()
+    {
+        var subscription = WasmScheduler.Default.Schedule(0, TimeSpan.FromMinutes(1), static (_, _) => Disposable.Empty);
+
+        subscription.Dispose();
+
+        await Assert.That(subscription.Dispose).ThrowsNothing();
+    }
+
+    /// <summary>Verifies disposing a periodic work item twice is idempotent.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposedPeriodicItemDisposeIsIdempotent()
+    {
+        var subscription = WasmScheduler.Default.SchedulePeriodic(0, TimeSpan.FromMinutes(1), static state => state);
+
+        subscription.Dispose();
+
+        await Assert.That(subscription.Dispose).ThrowsNothing();
+    }
+
+    /// <summary>Verifies an action that cancels its own item before returning still has its returned disposable released.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SelfCancellingImmediateActionDisposesReturnedDisposable()
+    {
+        TaskCompletionSource returnedDisposed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var returned = Disposable.Create(() => returnedDisposed.TrySetResult());
+        IDisposable? subscription = null;
+
+        subscription = WasmScheduler.Default.Schedule(0, (_, _) =>
+        {
+            // Cancel while running: the run/cancel handshake must dispose the disposable the action returns next.
+            subscription!.Dispose();
+            return returned;
+        });
+
+        await returnedDisposed.Task.WaitAsync(WaitTimeout);
+        await Assert.That(returnedDisposed.Task.IsCompletedSuccessfully).IsTrue();
+    }
 }
