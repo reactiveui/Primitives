@@ -208,6 +208,25 @@ public static partial class LinqExtensions
         }
     }
 
+    /// <summary>An observable that emits a single <see cref="RxVoid"/> value when its cancellation token is canceled; the stop source for <c>TakeUntil(CancellationToken)</c>.</summary>
+    private sealed class CancellationSignal : IObservable<RxVoid>
+    {
+        /// <summary>The token whose cancellation triggers the emission.</summary>
+        private readonly CancellationToken _cancellationToken;
+
+        /// <summary>Initializes a new instance of the <see cref="CancellationSignal"/> class.</summary>
+        /// <param name="cancellationToken">The token whose cancellation triggers the emission.</param>
+        internal CancellationSignal(CancellationToken cancellationToken) => _cancellationToken = cancellationToken;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<RxVoid> observer)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(observer);
+
+            return _cancellationToken.Register(() => observer.OnNext(RxVoid.Default));
+        }
+    }
+
     /// <summary>Dedicated signal for <c>Skip</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     private sealed class SkipSignal<T> : IObservable<T>

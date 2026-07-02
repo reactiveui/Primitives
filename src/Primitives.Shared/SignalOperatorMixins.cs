@@ -275,6 +275,19 @@ public static partial class LinqExtensions
             return new TakeUntilSignal<T, TOther>(source, other);
         }
 
+        /// <summary>Forwards source values until <paramref name="cancellationToken"/> is canceled; cancellation completes the sequence gracefully.</summary>
+        /// <param name="cancellationToken">The token whose cancellation stops the source.</param>
+        /// <returns>An observable that completes when the source completes or <paramref name="cancellationToken"/> is canceled.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+        public IObservable<T> TakeUntil(CancellationToken cancellationToken)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return cancellationToken.CanBeCanceled
+                ? new TakeUntilSignal<T, RxVoid>(source, new CancellationSignal(cancellationToken))
+                : source;
+        }
+
         /// <summary>Skips the first <paramref name="count"/> source values.</summary>
         /// <param name="count">The number of values to skip.</param>
         /// <returns>A sequence containing source values after the skipped prefix.</returns>

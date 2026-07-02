@@ -45,3 +45,19 @@ override ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler.Schedule<TStat
 override ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler.Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler!, TState, System.IDisposable!>! action) -> System.IDisposable!
 static ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler.Default.get -> ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler!
 ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler.Dispose() -> void
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).FirstAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).FirstOrDefaultAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).FirstOrDefaultAsync(T defaultValue, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).LastAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).LastOrDefaultAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).LastOrDefaultAsync(T defaultValue, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.IObservable<T>!).TakeUntil(System.Threading.CancellationToken cancellationToken) -> System.IObservable<T>!
+ReactiveUI.Primitives.Reactive.LinqExtensions.extension<T>(System.Threading.Tasks.Task<T>!).ToTask(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.FirstAsync<T>(this System.IObservable<T>! source, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.FirstOrDefaultAsync<T>(this System.IObservable<T>! source, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.FirstOrDefaultAsync<T>(this System.IObservable<T>! source, T defaultValue, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.LastAsync<T>(this System.IObservable<T>! source, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.LastOrDefaultAsync<T>(this System.IObservable<T>! source, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.LastOrDefaultAsync<T>(this System.IObservable<T>! source, T defaultValue, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.TakeUntil<T>(this System.IObservable<T>! source, System.Threading.CancellationToken cancellationToken) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.ToTask<T>(this System.Threading.Tasks.Task<T>! task, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
